@@ -4194,7 +4194,7 @@
 
                     // --- Interceptar si no hay entrada (incluso si llenó la salida manual) ---
                     if (!e) {
-                        const { ayerStr: ayer, regAyer, ayerAbierto } = detectarAyerAbierto(UILogic.obtenerFechaHoy(), registros);
+                        const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(UILogic.obtenerFechaHoy(), registros);
                         const regHoy = registros.find(r => r.fecha === f);
 
                         // Si ayer está abierto, hoy está vacío, Y no pasaron 24hs → redirigir a ayer

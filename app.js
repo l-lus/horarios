@@ -2698,7 +2698,7 @@
         let modoLoteActivo = false;
         let tiempoExpansionBotones = null;
         let timerAutoCierreBotones = null;
-        let modoEstadisticas = 'mensual'; // 'mensual' | 'anual'
+        let modoEstadisticas = 'mensual';
         let _modalAbiertoDesdeLista = false;
 
         function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
@@ -2722,7 +2722,6 @@
             }, { passive: true });
         }
 
-        // FUNCIÓN DEBOUNCE REUTILIZABLE
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -2753,14 +2752,12 @@
         // HELPERS COMPARTIDOS DE EXPORTACIÓN
         // ----------------------------------------------------------------
 
-        // Devuelve el nombre del perfil activo sanitizado para usar en nombres de archivo
         function obtenerNombrePerfilSafe() {
             let nombre = 'Backup';
             if (window.PerfilManager) nombre = window.PerfilManager.obtenerDatosPerfil().nombre;
             return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
         }
 
-        // Descarga un objeto JS como archivo .json con el nombre indicado
         function descargarJSON(data, nombreArchivo) {
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -2775,11 +2772,7 @@
             const textoLimpio = S.sanitizeString(mensaje, 200);
             const ultimo = _toastQueue[_toastQueue.length - 1];
             const actual = _toastRunning ? $('toast')?.textContent : null;
-
-            // Previene mostrar exactamente el mismo toast 2 veces seguidas
             if ((ultimo && ultimo.mensaje === textoLimpio) || actual === textoLimpio) return;
-
-            // Encolamos agregando el parámetro de tiempo
             _toastQueue.push({ mensaje: textoLimpio, tipo, duracionBase: 3000 });
             if (!_toastRunning) _procesarToastQueue();
         }
@@ -2793,14 +2786,11 @@
             _toastRunning = true;
             const actual = _toastQueue.shift();
             const toast = $('toast');
-
             toast.classList.remove('show');
             toast.textContent = actual.mensaje;
             toast.className = `toast ${actual.tipo}`;
-
-            // --- LÓGICA DE ACELERACIÓN ---
             let duracionFinal = actual.duracionBase || 3000;
-            if (_toastQueue.length >= 3) { // Si quedan 3 o más en cola (eran 4+)
+            if (_toastQueue.length >= 2) {
                 duracionFinal = Math.floor(duracionFinal / 2);
             }
 
@@ -2809,9 +2799,8 @@
                 toastTimeout = setTimeout(() => {
                     toast.classList.remove('show');
                     toastTimeout = null;
-                    // Esperar a que termine la animación de salida antes del siguiente
                     setTimeout(() => _procesarToastQueue(), 350);
-                }, duracionFinal); // Usamos el tiempo dinámico aquí
+                }, duracionFinal);
             }, 10);
         }
 
@@ -2846,24 +2835,13 @@
 
         function obtenerSemanaActual() {
             const hoy = new Date();
-
-            // Normalizar a medianoche LOCAL (evita problemas de zona horaria)
             hoy.setHours(0, 0, 0, 0);
-
-            const diaSemana = hoy.getDay(); // 0=Domingo, 1=Lunes...
-
-            // Calcular offset al lunes (sin mutar el objeto original)
+            const diaSemana = hoy.getDay();
             const offsetLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-
-            // Crear NUEVA instancia para el lunes
             const lunes = new Date(hoy);
             lunes.setDate(hoy.getDate() + offsetLunes);
-
-            // Crear NUEVA instancia para el domingo
             const domingo = new Date(lunes);
             domingo.setDate(lunes.getDate() + 6);
-
-            // Formatear a YYYY-MM-DD en hora local (no UTC)
             const formatearFecha = (fecha) => {
                 const y = fecha.getFullYear();
                 const m = String(fecha.getMonth() + 1).padStart(2, '0');
@@ -7570,6 +7548,7 @@ Generado por Sistema Lushibosca
             // ===================================
             // EVENT DELEGATION - TOGGLE MESES
             // ===================================
+            
             lista.addEventListener('click', (e) => {
                 const header = e.target.closest('.registro-mes-header');
                 if (!header || header.dataset.accion !== 'toggle-mes') return;
@@ -8279,7 +8258,7 @@ Generado por Sistema Lushibosca
             };
             const cerrar = (e) => {
                 const diaClickeado = e.target.closest('.calendario-dia');
-                if (diaClickeado && diaClickeado.getAttribute('onclick')?.includes(popup.dataset.registroId)) return;
+                if (diaClickeado && diaClickeado.dataset.regId === popup.dataset.registroId) return;
                 if (!popup.contains(e.target)) cerrarPopup();
             };
             setTimeout(() => {

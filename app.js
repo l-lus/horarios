@@ -358,10 +358,14 @@
 
         function obtenerTodosPerfiles() { return perfiles; }
 
+        function perfilKey(base) {
+            return base + '_' + perfilActual;
+        }
+
         return {
             inicializar, cambiarPerfil, guardarDatosPerfilActual, cargarDatosPerfilActual,
             obtenerPerfilActual, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
-            guardarPerfiles
+            guardarPerfiles, perfilKey
         };
 
     })(SecurityAndUtils);
@@ -840,6 +844,13 @@
     const DataManagement = (function (S) {
         let registros = [], diasHabiles = [1, 2, 3, 4, 5], horasDiarias = 7, editandoId = null; let vistaActual = 'diaria'; let ignorarTiempoFuera = false;
         let filtroActivo = false;
+
+        function ordenarRegistros() {
+            registros.sort((a, b) => {
+                if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
+                return (b.entrada || '').localeCompare(a.entrada || '');
+            });
+        }
         let filtroDesde = null;
         let filtroHasta = null;
         let filtroTipo = null;
@@ -982,10 +993,7 @@
                 });
 
                 registros.push(...nuevosRegistros);
-                registros.sort((a, b) => {
-                    if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
-                    return (b.entrada || '').localeCompare(a.entrada || '');
-                });
+                ordenarRegistros();
 
                 HistoryManager.saveState(registros);
                 const saved = await guardarYActualizar(nuevosRegistros.map(r => r.id));
@@ -1063,10 +1071,7 @@
                 total: t?.total || 0
             });
 
-            registros.sort((a, b) => {
-                if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
-                return (b.entrada || '').localeCompare(a.entrada || '');
-            });
+            ordenarRegistros();
 
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar(nuevoId);
@@ -1119,9 +1124,9 @@
                     horasDiarias: horasFinal,
                     temaOscuro: t,
                     vistaActual: (v === 'semana' || v === 'diaria') ? v : 'diaria',
-                    ignorarTiempoFuera: localStorage.getItem('ignorarTiempoFuera_' + (window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default')) === 'true',
+                    ignorarTiempoFuera: localStorage.getItem(window.PerfilManager ? PerfilManager.perfilKey('ignorarTiempoFuera') : 'ignorarTiempoFuera_default') === 'true',
                     modoEstadisticas: localStorage.getItem('modoEstadisticas') || 'mensual',
-                    fondoCard: localStorage.getItem('fondoCard_' + (window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default')) || 'golden-gate'
+                    fondoCard: localStorage.getItem(window.PerfilManager ? PerfilManager.perfilKey('fondoCard') : 'fondoCard_default') || 'golden-gate'
                 };
             } catch (e) {
                 console.error('Error config:', e);
@@ -1366,10 +1371,7 @@
                 total: t?.total || 0
             });
 
-            registros.sort((a, b) => {
-                if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
-                return (b.entrada || '').localeCompare(a.entrada || '');
-            });
+            ordenarRegistros();
 
             HistoryManager.saveState(registros);
 
@@ -1668,10 +1670,7 @@
             r.total = t?.total || 0;
 
             // Ordenar
-            registros.sort((a, b) => {
-                if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
-                return (b.entrada || '').localeCompare(a.entrada || '');
-            });
+            ordenarRegistros();
 
             HistoryManager.saveState(registros);
 
@@ -2029,10 +2028,7 @@
         }
 
         async function finalizarImportacionAndSave(mensajeExito) {
-            registros.sort((a, b) => {
-                if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
-                return (b.entrada || '').localeCompare(a.entrada || '');
-            });
+            ordenarRegistros();
 
             HistoryManager.saveState(registros);
 
@@ -2287,10 +2283,7 @@
                 });
             });
 
-            registros.sort((a, b) => {
-                if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
-                return (b.entrada || '').localeCompare(a.entrada || '');
-            });
+            ordenarRegistros();
 
             HistoryManager.saveState(registros);
 
@@ -2307,6 +2300,28 @@
                 }
             } else {
                 throw new Error('Error al guardar');
+            }
+        }
+
+        function _aplicarEstadoHistorial(estado, mensaje) {
+            if (!estado) return;
+            registros.splice(0, registros.length, ...estado);
+            registros.forEach(r => {
+                if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
+                    const t = calcularHoras(r.entrada, r.salida, r.tiempoFuera || null, r.credito || null);
+                    if (t) { r.horas = t.horas; r.minutos = t.minutos; r.total = t.total; }
+                }
+            });
+            guardarYActualizar(null, true);
+            UILogic.mostrarToast(mensaje, 'info');
+            if (window.UILogic && window.UILogic.actualizarBotonLote) {
+                const modoLote = document.getElementById('modo-lote');
+                if (modoLote && getComputedStyle(modoLote).display !== 'none') {
+                    window.UILogic.actualizarBotonLote();
+                }
+            }
+            if (window.UILogic && window.UILogic.iniciarTimerAutoCierreBotones) {
+                window.UILogic.iniciarTimerAutoCierreBotones();
             }
         }
 
@@ -2392,61 +2407,11 @@
             eliminarGrupoActual,
             setGrupoEnEdicion: (val) => grupoEnEdicion = val,
             undoAction: function () {
-                const prevState = HistoryManager.undo();
-                if (prevState) {
-                    registros.splice(0, registros.length, ...prevState);
-                    // Recalcular en memoria para reflejar el flag actual sin tocar el historial
-                    registros.forEach(r => {
-                        if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
-                            const t = calcularHoras(r.entrada, r.salida, r.tiempoFuera || null, r.credito || null);
-                            if (t) { r.horas = t.horas; r.minutos = t.minutos; r.total = t.total; }
-                        }
-                    });
-                    guardarYActualizar(null, true);
-                    UILogic.mostrarToast('Deshecho', 'info');
-
-                    // Solo actualizar si estamos en modo lote
-                    if (window.UILogic && window.UILogic.actualizarBotonLote) {
-                        const modoLote = document.getElementById('modo-lote');
-                        if (modoLote && getComputedStyle(modoLote).display !== 'none') {
-                            window.UILogic.actualizarBotonLote();
-                        }
-                    }
-
-                    // Iniciar timer de auto-cierre
-                    if (window.UILogic && window.UILogic.iniciarTimerAutoCierreBotones) {
-                        window.UILogic.iniciarTimerAutoCierreBotones();
-                    }
-                }
+                _aplicarEstadoHistorial(HistoryManager.undo(), 'Deshecho');
             },
 
             redoAction: function () {
-                const nextState = HistoryManager.redo();
-                if (nextState) {
-                    registros.splice(0, registros.length, ...nextState);
-                    // Recalcular en memoria para reflejar el flag actual sin tocar el historial
-                    registros.forEach(r => {
-                        if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
-                            const t = calcularHoras(r.entrada, r.salida, r.tiempoFuera || null, r.credito || null);
-                            if (t) { r.horas = t.horas; r.minutos = t.minutos; r.total = t.total; }
-                        }
-                    });
-                    guardarYActualizar(null, true);
-                    UILogic.mostrarToast('Rehecho', 'info');
-
-                    // Solo actualizar si estamos en modo lote
-                    if (window.UILogic && window.UILogic.actualizarBotonLote) {
-                        const modoLote = document.getElementById('modo-lote');
-                        if (modoLote && getComputedStyle(modoLote).display !== 'none') {
-                            window.UILogic.actualizarBotonLote();
-                        }
-                    }
-
-                    // Iniciar timer de auto-cierre
-                    if (window.UILogic && window.UILogic.iniciarTimerAutoCierreBotones) {
-                        window.UILogic.iniciarTimerAutoCierreBotones();
-                    }
-                }
+                _aplicarEstadoHistorial(HistoryManager.redo(), 'Rehecho');
             }
         };
 
@@ -3601,8 +3566,7 @@
         }
 
         function _perfilKey(base) {
-            const pid = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-            return base + '_' + pid;
+            return window.PerfilManager ? PerfilManager.perfilKey(base) : base + '_default';
         }
 
         let _fondoCard = 'golden-gate'; // se sobreescribe en init desde config

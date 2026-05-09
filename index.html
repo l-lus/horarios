@@ -4,9 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Políticas de Seguridad -->
-    <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self';
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self';
          script-src 'self'; 
          style-src 'self' 'unsafe-inline'; 
          img-src 'self' data: blob:; 
@@ -25,7 +23,6 @@
     <link rel="stylesheet" href="./styles.css">
     <script src="./app.js" defer></script>
     <title>Horarios</title>
-
 </head>
 
 <body>
@@ -315,7 +312,8 @@
                             <label>Fecha</label>
                             <div class="input-with-btn">
                                 <input type="date" id="fecha" />
-                                <button class="time-btn flex-shrink-0" id="btn-ir-modo-lote" title="Ir al modo lote/especial">
+                                <button class="time-btn flex-shrink-0" id="btn-ir-modo-lote"
+                                    title="Ir al modo lote/especial">
                                     <svg class="icon">
                                         <use href="#icon-arrow-right" />
                                     </svg>
@@ -359,7 +357,8 @@
                                 <select id="lote-tipo">
                                     <option value="normal">🕒 Jornadas (borrar)</option>
                                 </select>
-                                <button class="time-btn flex-shrink-0" id="btn-ir-modo-normal" title="Ir al modo normal">
+                                <button class="time-btn flex-shrink-0" id="btn-ir-modo-normal"
+                                    title="Ir al modo normal">
                                     <svg class="icon">
                                         <use href="#icon-arrow-left" />
                                     </svg>
@@ -563,7 +562,7 @@
                         </svg>
                         Ajustes
                     </span>
-                    <span class="version-text">LUSHIBOSCA-300</span>
+                    <span class="version-text">LUSHIBOSCA-302</span>
                 </h3>
             </div>
             <div class="modal-panel-body custom-scroll">
@@ -915,7 +914,8 @@
                     <label>Entrada</label>
                     <div class="input-with-btn">
                         <input type="text" id="edit-entrada" inputmode="numeric" maxlength="5" />
-                        <button class="time-btn" id="btn-edit-entrada" title="Pegar hora actual o limpiar"><svg class="icon">
+                        <button class="time-btn" id="btn-edit-entrada" title="Pegar hora actual o limpiar"><svg
+                                class="icon">
                                 <use href="#icon-clock" />
                             </svg>
                         </button>
@@ -925,7 +925,8 @@
                     <label>Salida</label>
                     <div class="input-with-btn">
                         <input type="text" id="edit-salida" inputmode="numeric" maxlength="5" />
-                        <button class="time-btn" id="btn-edit-salida" title="Pegar hora actual o limpiar"><svg class="icon">
+                        <button class="time-btn" id="btn-edit-salida" title="Pegar hora actual o limpiar"><svg
+                                class="icon">
                                 <use href="#icon-clock" />
                             </svg>
                         </button>
@@ -1290,7 +1291,7 @@
 </html>
 
 <!--// ====================================================================
-    //                 NOTAS SISTEMA LUSHIBOSCA VERSION 300
+    //                 NOTAS SISTEMA LUSHIBOSCA VERSION 302
     // ====================================================================
     
       - CAMBIOS:

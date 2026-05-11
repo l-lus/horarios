@@ -280,9 +280,9 @@ button:disabled {
 }
 
 :where(#btn-toggle-ignorar-tf,
-#btn-toggle-fondo,
-#btn-toggle-gist-backup,
-#btn-toggle-gist-merge) {
+    #btn-toggle-fondo,
+    #btn-toggle-gist-backup,
+    #btn-toggle-gist-merge) {
     justify-content: center;
     padding: 0.875rem 1rem;
     border: 1px solid var(--border);
@@ -728,96 +728,6 @@ button:disabled {
     padding: 0.4rem 0.2rem 0.1rem;
     border-bottom: 1px solid var(--border);
     margin-bottom: 0.1rem;
-}
-
-@keyframes slideDownFade {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes calPopupIn {
-    from {
-        opacity: 0;
-        transform: translateY(24px) scale(0.96);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes llamarAtencion {
-    0% {
-        transform: scale(1, 1);
-    }
-
-    5% {
-        transform: scale(1.25, 0.75);
-    }
-
-    10% {
-        transform: scale(0.75, 1.25);
-    }
-
-    15% {
-        transform: scale(1.15, 0.85);
-    }
-
-    20% {
-        transform: scale(1, 1);
-    }
-
-    100% {
-        transform: scale(1, 1);
-    }
-}
-
-@keyframes fade-blur {
-    from {
-        opacity: 0;
-        filter: blur(5px);
-    }
-
-    to {
-        opacity: 1;
-        filter: blur(0);
-    }
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 var(--c-red-pulse);
-    }
-
-    70% {
-        box-shadow: 0 0 0 10px rgba(192, 93, 118, 0);
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(192, 93, 118, 0);
-    }
-}
-
-@keyframes shimmer {
-    0% {
-        left: -80%;
-    }
-
-    20% {
-        left: 130%;
-    }
-
-    100% {
-        left: 130%;
-    }
 }
 
 .animated-card {
@@ -1450,24 +1360,201 @@ button:disabled {
     margin: 0.5rem 0;
 }
 
+.chevron-mes-icon {
+    width: 1.2em;
+    height: 1.2em;
+    vertical-align: middle;
+}
+
+.buffer-semanal-punto {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.break-counter-label {
+    font-size: 0.8em;
+    font-weight: 500;
+    color: var(--c-red);
+    margin-left: 0.3em;
+}
+
+.empty-state--calendario {
+    grid-column: span 3;
+    padding: 1rem;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.text-green {
+    color: var(--c-green);
+}
+
+.text-blue {
+    color: var(--c-blue);
+}
+
+.gist-resumen-footer {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.75rem;
+}
+
+.cal-popup-badge--purple {
+    background: var(--c-purple);
+}
+
+.cal-popup-badge--blue {
+    background: var(--c-blue);
+}
+
+.cal-popup-badge--green {
+    background: var(--c-green);
+}
+
+.cal-popup-badge--red {
+    background: var(--c-red);
+}
+
+.cal-popup-badge--gold {
+    background: var(--c-gold);
+}
+
+.cal-popup-badge--orange {
+    background: var(--c-orange);
+}
+
+.cal-popup-info--blue {
+    color: var(--c-blue);
+}
+
+.cal-popup-info--gold {
+    color: var(--c-gold);
+}
+
+.card-bg-svg {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.card-bg-svg--left {
+    left: 0;
+}
+
+.card-bg-svg--right {
+    right: 0;
+}
+
+@keyframes slideDownFade {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes calPopupIn {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes llamarAtencion {
+    0% {
+        transform: scale(1, 1);
+    }
+
+    5% {
+        transform: scale(1.25, 0.75);
+    }
+
+    10% {
+        transform: scale(0.75, 1.25);
+    }
+
+    15% {
+        transform: scale(1.15, 0.85);
+    }
+
+    20% {
+        transform: scale(1, 1);
+    }
+
+    100% {
+        transform: scale(1, 1);
+    }
+}
+
+@keyframes fade-blur {
+    from {
+        opacity: 0;
+        filter: blur(5px);
+    }
+
+    to {
+        opacity: 1;
+        filter: blur(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--c-red-pulse);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(192, 93, 118, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(192, 93, 118, 0);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        left: -80%;
+    }
+
+    20% {
+        left: 130%;
+    }
+
+    100% {
+        left: 130%;
+    }
+}
+
 @media (hover: hover) and (pointer: fine) {
 
-    :is(
-        [id^="btn-toggle-"],
+    :is([id^="btn-toggle-"],
         #btn-reporte,
         .icon-btn, .time-btn, .btn-increment, .filter-btn,
         .btn-delete, .btn-cancel, .btn-export, .btn-backup, .btn-edit,
-        .calendario-nav button
-    ):hover:not(:disabled) {
+        .calendario-nav button):hover:not(:disabled) {
         filter: var(--hover);
     }
 
-    :is(
-        .registro-item, .header-profile-btn,
+    :is(.registro-item, .header-profile-btn,
         .btn-perfil-select, .btn-perfil-edit,
         .registro-mes-header, .btn-mes-calendario,
-        .calendario-titulo
-    ):hover {
+        .calendario-titulo):hover {
         filter: var(--hover);
     }
 

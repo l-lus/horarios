@@ -1,5 +1,5 @@
 
-(function () { //Evitar parpadeo al actualizar, (modo oscuro)
+(function () {
     try {
         var stored = localStorage.getItem('temaOscuro');
         if (stored === 'true' || stored === null) {
@@ -12,7 +12,6 @@
 
     const $ = id => document.getElementById(id);
 
-    // Aplica colores dinámicos desde data-color al style.color (CSP: evita inline styles en HTML)
     function _applyDataColors(root) {
         root.querySelectorAll('[data-color]').forEach(el => {
             el.style.color = el.dataset.color;
@@ -27,33 +26,23 @@
         const btnInstall = document.getElementById('btn-install');
 
         function init() {
-            // Detectar si ya está instalada
             if (window.matchMedia('(display-mode: standalone)').matches ||
                 window.navigator.standalone === true) {
-                // Ya está instalada, no mostrar botón
                 if (btnInstall) btnInstall.style.display = 'none';
                 return;
             }
 
-            // Capturar el evento beforeinstallprompt
             window.addEventListener('beforeinstallprompt', (e) => {
-                // Prevenir el prompt automático
                 e.preventDefault();
-                // Guardar el evento para usarlo después
                 deferredPrompt = e;
-                // Mostrar el botón de instalación
                 if (btnInstall) {
                     btnInstall.style.display = 'flex';
                 }
             });
 
-            // Detectar cuando se instala la app
             window.addEventListener('appinstalled', () => {
-                // Ocultar el botón
                 if (btnInstall) btnInstall.style.display = 'none';
                 deferredPrompt = null;
-
-                // Mostrar notificación de éxito
                 if (window.UILogic) {
                     UILogic.mostrarToast('¡App instalada con éxito!', 'success');
                 }
@@ -231,7 +220,7 @@
     // PERFIL MANAGER MODULE
     // ====================================================================
     const PerfilManager = (function (S) {
-        const MAX_PERFILES = 7; // cantidad maxima de perfiles permitida (1 de 3)
+        const MAX_PERFILES = 7;
         let perfilActual = 'default';
         let perfiles = {};
 
@@ -259,7 +248,6 @@
                     };
                 }
 
-                // Determinar perfil activo
                 perfilActual = localStorage.getItem('perfilActivo') || 'default';
                 if (!perfiles[perfilActual]) {
                     const availableIds = Object.keys(perfiles);
@@ -305,7 +293,6 @@
                 registros: [...window.DataManagement.registros()],
                 diasHabiles: window.DataManagement.diasHabiles(),
                 horasDiarias: window.DataManagement.horasDiarias(),
-                // Preservar datos de Gist si existen
                 ...(actual.gistId && { gistId: actual.gistId }),
                 ...(actual.gistLastSync && { gistLastSync: actual.gistLastSync }),
                 ...(actual.gistAutoSync != null && { gistAutoSync: actual.gistAutoSync }),
@@ -323,7 +310,6 @@
         function cargarDatosPerfilActual() { return perfiles[perfilActual]; }
 
         function actualizarSelector() {
-            // Actualiza el TEXTO del botón del header en lugar del select
             const btnTexto = document.getElementById('nombre-perfil-header');
             if (btnTexto && perfiles[perfilActual]) {
                 btnTexto.textContent = perfiles[perfilActual].nombre;
@@ -344,7 +330,7 @@
         }
 
         function cambiarPerfil(nuevoId) {
-            if (!nuevoId) return; // Si viene del select antiguo (ya no existe)
+            if (!nuevoId) return;
             if (nuevoId === perfilActual) return;
 
             guardarDatosPerfilActual();
@@ -382,10 +368,8 @@
     // ====================================================================
     const ModalManager = (function () {
 
-        // Mapa de relaciones hijo → padre registradas vía alternar()
         const _padres = {};
 
-        // Mapa de acciones "volver" por modal (se poblará después de que UILogic esté listo)
         function _getAccionVolver(modalId) {
             const acciones = {
                 'modal-gist': () => window.UILogic?.cerrarModalGist(),
@@ -403,8 +387,6 @@
             return acciones[modalId] || null;
         }
 
-        // Función para manejar clics fuera del modal
-        // Solo cierra si el mousedown también ocurrió en el overlay (no en un drag desde adentro)
         let _mousedownEnOverlay = false;
 
         function _handleOverlayMousedown(event) {
@@ -416,7 +398,6 @@
             if (event.target.classList.contains('modal') && event.target.classList.contains('show')) {
                 const modalId = event.target.id;
 
-                // Si este modal fue abierto desde otro, el overlay actúa como "volver"
                 const accionVolver = _getAccionVolver(modalId);
                 if (accionVolver) {
                     accionVolver();
@@ -441,6 +422,8 @@
                 modal.addEventListener('click', handleOutsideClick);
             }, 100);
 
+            BackNavigationManager.onModalAbierto();
+
             if (callback) callback();
         }
 
@@ -456,14 +439,14 @@
             modal.removeEventListener('mousedown', _handleOverlayMousedown);
             modal.removeEventListener('click', handleOutsideClick);
 
-            // Limpiar relación padre si existía
             delete _padres[modalId];
+
+            BackNavigationManager.onModalCerrado();
 
             if (callback) callback();
         }
 
         function alternar(modalIdCerrar, modalIdAbrir, callbackCerrar = null, callbackAbrir = null) {
-            // Si hay un modal padre cerrándose para abrir un hijo, registrar la relación
             if (modalIdCerrar && modalIdAbrir) {
                 _padres[modalIdAbrir] = modalIdCerrar;
             }
@@ -472,17 +455,141 @@
         }
 
         function cerrarTodos() {
+            const cantidadAbiertos = document.querySelectorAll('.modal.show').length;
             document.querySelectorAll('.modal.show').forEach(modal => {
                 modal.classList.remove('show');
                 modal.removeEventListener('mousedown', _handleOverlayMousedown);
                 modal.removeEventListener('click', handleOutsideClick);
             });
-            // Limpiar todas las relaciones
             Object.keys(_padres).forEach(k => delete _padres[k]);
             document.body.classList.remove('modal-open');
+            // Sincronizar el historial: retroceder tantos estados como modales había
+            for (let i = 0; i < cantidadAbiertos; i++) {
+                BackNavigationManager.onModalCerrado();
+            }
         }
 
         return { abrir, cerrar, alternar, cerrarTodos };
+    })();
+
+    // ====================================================================
+    // BACK NAVIGATION MANAGER MODULE
+    // Intercepta el botón atrás de Android (y el historial del navegador)
+    // para cerrar modales de a uno antes de salir de la app.
+    // ====================================================================
+    const BackNavigationManager = (function () {
+
+        // Cuántos pushState hicimos — representa la profundidad de modales abiertos
+        let _profundidad = 0;
+
+        // Control del "presioná de nuevo para salir"
+        let _esperandoSegundoBack = false;
+        let _timerSalida = null;
+        const TIEMPO_SALIDA_MS = 2500;
+
+        // Estado base en el historial: lo empujamos al init para tener
+        // siempre un estado "raíz" al que volver sin cerrar la pestaña.
+        function init() {
+            // Reemplazamos el estado actual con nuestro estado raíz
+            history.replaceState({ modalDepth: 0 }, '');
+
+            window.addEventListener('popstate', _onPopState);
+        }
+
+        // Se llama desde ModalManager.abrir() — empuja un estado al historial
+        function onModalAbierto() {
+            _profundidad++;
+            history.pushState({ modalDepth: _profundidad }, '');
+        }
+
+        // Se llama desde ModalManager.cerrar() — si el cierre fue programático
+        // (no desde el botón atrás) necesitamos consumir el estado que habíamos empujado.
+        function onModalCerrado() {
+            if (_profundidad > 0) {
+                _profundidad--;
+                // history.back() dispararía otro popstate; usamos go(-1) de forma
+                // silenciosa bloqueando temporalmente el listener.
+                _ignorarProximoPopstate = true;
+                history.back();
+            }
+        }
+
+        let _ignorarProximoPopstate = false;
+
+        function _onPopState(event) {
+            // Si el cierre fue programático, lo ignoramos y reseteamos la bandera
+            if (_ignorarProximoPopstate) {
+                _ignorarProximoPopstate = false;
+                return;
+            }
+
+            const depth = event.state?.modalDepth ?? 0;
+
+            // Hay modales abiertos: cerrar el más reciente usando la acción correcta
+            const modalAbierto = _getModalActualAbierto();
+            if (modalAbierto) {
+                // Volvemos a empujar el estado para que el historial no quede desincronizado
+                // (el cierre programático del modal se encargará de hacer history.back() limpio)
+                history.pushState({ modalDepth: _profundidad }, '');
+                const accion = _getAccionVolverPublica(modalAbierto);
+                if (accion) {
+                    accion();
+                } else {
+                    ModalManager.cerrar(modalAbierto);
+                }
+                return;
+            }
+
+            // No hay modales: lógica de "presioná de nuevo para salir"
+            if (_esperandoSegundoBack) {
+                // Segundo back dentro del tiempo → salir
+                clearTimeout(_timerSalida);
+                _esperandoSegundoBack = false;
+                // Dejamos que el navegador siga su curso normal (cierra la pestaña/app)
+                return;
+            }
+
+            // Primer back: mostrar aviso y volver a pushear el estado raíz
+            // para que la app no se cierre todavía
+            history.pushState({ modalDepth: 0 }, '');
+            _esperandoSegundoBack = true;
+
+            if (window.UILogic?.mostrarToast) {
+                UILogic.mostrarToast('Presioná atrás de nuevo para salir', 'info');
+            }
+
+            _timerSalida = setTimeout(() => {
+                _esperandoSegundoBack = false;
+            }, TIEMPO_SALIDA_MS);
+        }
+
+        // Devuelve el id del modal con clase .show más "profundo" (el último abierto)
+        function _getModalActualAbierto() {
+            const abiertos = document.querySelectorAll('.modal.show');
+            if (!abiertos.length) return null;
+            // El último en el DOM con .show es el que está encima
+            return abiertos[abiertos.length - 1].id;
+        }
+
+        // Espejo público de _getAccionVolver del ModalManager
+        function _getAccionVolverPublica(modalId) {
+            const acciones = {
+                'modal-gist': () => window.UILogic?.cerrarModalGist(),
+                'modal-gist-merge': () => window.UILogic?.gistMergeCancelar(),
+                'modal-config': () => window.UILogic?.cerrarConfig(),
+                'modal-selector-perfiles': () => window.UILogic?.cerrarSelectorPerfiles(),
+                'modal-editar': () => window.UILogic?.cerrarEdicion(),
+                'modal-importar': () => window.UILogic?.cerrarImportar(),
+                'modal-exportar': () => window.UILogic?.cerrarExportar(),
+                'modal-filtros': () => window.UILogic?.cerrarFiltros(),
+                'modal-editar-perfil': () => window.UILogic?.cerrarEditorPerfil(),
+                'modal-editar-grupo': () => window.UILogic?.cerrarEdicionGrupo(),
+                'modal-confirmar': () => document.getElementById('modal-confirmar-cancel')?.click(),
+            };
+            return acciones[modalId] || null;
+        }
+
+        return { init, onModalAbierto, onModalCerrado };
     })();
 
     // ====================================================================
@@ -506,19 +613,14 @@
         }
 
         function saveState(registros) {
-            // CRÍTICO: Hacer copia profunda INMEDIATAMENTE
             const copiaSegura = deepClone(registros);
 
-            // Si estamos en medio del historial (después de un undo),
-            // eliminar todos los estados "futuros"
             if (currentIndex < history.length - 1) {
                 history.splice(currentIndex + 1);
             }
 
-            // Guardar la copia profunda
             history.push(copiaSegura);
 
-            // Limitar tamaño del historial
             if (history.length > MAX_HISTORY) {
                 history.shift();
                 currentIndex = MAX_HISTORY - 1;
@@ -527,7 +629,6 @@
             }
 
             updateButtons();
-            // Guardar en localStorage
             saveToLocalStorage();
         }
 
@@ -601,22 +702,18 @@
                         return value;
                     });
 
-                    // Verificar que el historial no tenga más de 24 horas
                     const ahora = Date.now();
                     const tiempoTranscurrido = ahora - (historyData.timestamp || 0);
                     const limiteEnMs = 24 * 60 * 60 * 1000;
 
                     if (tiempoTranscurrido < limiteEnMs) {
-                        // Historial válido - restaurar
                         history = historyData.history || [];
                         currentIndex = historyData.currentIndex !== undefined ? historyData.currentIndex : -1;
 
                         console.log(`✓ Historial restaurado: ${history.length} estados, índice actual: ${currentIndex}`);
 
-                        // CRÍTICO: Si hay estados y el índice es válido, retornar TRUE
                         return history.length > 0 && currentIndex >= 0;
                     } else {
-                        // Historial expirado - limpiar
                         console.log('Historial expirado (más de 24hs), limpiando...');
                         localStorage.removeItem(storageKey);
                         history = [];
@@ -630,7 +727,7 @@
             }
 
             updateButtons();
-            return false; // No se cargó historial válido
+            return false;
         }
 
         function clearStorage() {
@@ -877,7 +974,6 @@
             $('edit-grupo-desde').value = grupoEnEdicion.fechaDesde;
             $('edit-grupo-hasta').value = grupoEnEdicion.fechaHasta;
 
-            // Hint con cantidad de registros y tipo
             UILogic.actualizarHintGrupo();
 
             ModalManager.abrir('modal-editar-grupo');
@@ -892,12 +988,10 @@
             btnGuardar.disabled = true;
 
             try {
-                // --- 1. Sanitización y captura de inputs ---
                 const nuevoTipo = S.sanitizeString($('edit-grupo-tipo').value.trim(), 20);
                 const nuevaDesde = S.sanitizeString($('edit-grupo-desde').value.trim(), 10);
                 const nuevaHasta = S.sanitizeString($('edit-grupo-hasta').value.trim(), 10);
 
-                // --- 2. Validaciones básicas ---
                 if (!nuevaDesde || !nuevaHasta) {
                     UILogic.mostrarToast('Verifica ambas fechas', 'error');
                     return;
@@ -915,7 +1009,6 @@
                     return;
                 }
 
-                // --- 3. Validación de rango razonable (2 años) ---
                 const hoy = new Date();
                 const fechaInicioObj = S.parsearFechaLocal(nuevaDesde);
                 const fechaFinObj = S.parsearFechaLocal(nuevaHasta);
@@ -930,20 +1023,17 @@
                     return;
                 }
 
-                // --- 4. Validación de tipo ---
                 if (!TiposRegistro.validarTipoPermitido(nuevoTipo)) {
                     UILogic.mostrarToast('Tipo de registro inválido', 'error');
                     return;
                 }
 
-                // --- 5. Validación de límite de 60 días ---
                 const diffDays = Math.ceil(Math.abs(fechaFinObj - fechaInicioObj) / (1000 * 60 * 60 * 24)) + 1;
                 if (diffDays > 60) {
                     UILogic.mostrarToast(`El rango contiene ${diffDays} días.\n Máximo: 60 días por operación.`, 'error');
                     return;
                 }
 
-                // --- 6. Detección de cambios ---
                 const huboCambios =
                     nuevoTipo !== grupoEnEdicion.subtipo ||
                     nuevaDesde !== grupoEnEdicion.fechaDesde ||
@@ -955,7 +1045,6 @@
                     return;
                 }
 
-                // --- 7. Generar lista de fechas nuevas ---
                 const fechasNuevas = [];
                 let checkFecha = S.parsearFechaLocal(nuevaDesde);
                 const checkFin = S.parsearFechaLocal(nuevaHasta);
@@ -965,7 +1054,6 @@
                     checkFecha.setDate(checkFecha.getDate() + 1);
                 }
 
-                // --- 8. Validación de conflictos ---
                 const idsDelGrupo = new Set(grupoEnEdicion.registros.map(r => r.id));
                 const fechasSet = new Set(fechasNuevas);
                 const conflictos = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
@@ -979,7 +1067,6 @@
                     return;
                 }
 
-                // --- 9. Actualización ---
                 registros = registros.filter(r => !idsDelGrupo.has(r.id));
 
                 const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
@@ -1017,7 +1104,6 @@
         async function eliminarGrupoActual() {
             if (!grupoEnEdicion) return;
 
-            // VALIDACIÓN DE LÍMITE
             if (grupoEnEdicion.registros.length > 60) {
                 UILogic.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: 60 registros por operación.`, 'error');
                 return;
@@ -1038,7 +1124,6 @@
         function setGrupoEnEdicion(val) { grupoEnEdicion = val; }
 
         async function registrarDiaEspecial(fecha, tipo) {
-            // Verificar si ya existe un registro para hoy
             const registroExistente = registros.find(r => r.fecha === fecha);
 
             if (registroExistente) {
@@ -1046,7 +1131,6 @@
                 throw new Error('Registro ya existe');
             }
 
-            // Obtener códigos del tipo especial
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
             if (!tipoConfig) {
                 UILogic.mostrarToast('Tipo inválido', 'error');
@@ -1057,13 +1141,11 @@
             const salida = tipoConfig.codigo;
             const tipoTexto = `${tipoConfig.emoji} ${tipoConfig.label}`;
 
-            // Verificar límite
             if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) {
                 UILogic.mostrarToast('Límite de registros alcanzado', 'error');
                 throw new Error('Límite alcanzado');
             }
 
-            // Crear registro
             const nuevoId = S.generarIDSeguro();
             const t = calcularHoras(entrada, salida, null);
 
@@ -1152,7 +1234,6 @@
             const tfMinutos = tfEfectivo ? tiempoEnMinutos(tfEfectivo) : 0;
             const crMinutos = cr ? tiempoEnMinutos(cr) : 0;
 
-            // NO verificar tipo especial si es cálculo temporal (hora actual)
             if (!esCalculoTemporal) {
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(e, s);
                 if (tipoEspecial) {
@@ -1192,11 +1273,9 @@
             registros.forEach(r => {
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
 
-                // Solo descontar si es especial Y NO es remoto
                 if (r.fecha >= inicio && r.fecha <= fin && tipoEspecial) {
-                    // Si es remoto, NO descontar (porque suma horas al total)
                     if (tipoEspecial.id === 'remoto') {
-                        return; // Saltar este registro
+                        return;
                     }
 
                     const fechaObj = S.parsearFechaLocal(r.fecha);
@@ -1245,24 +1324,20 @@
             btn.disabled = true;
             let usaHoraActual = false;
 
-            // --- cambiamos 'const' por 'let' para reescribir la fecha si es necesario ---
             let f = S.sanitizeString($('fecha').value, 10);
             let e = S.sanitizeString($('entrada').value.trim(), 5);
             let s = S.sanitizeString($('salida').value.trim(), 5);
 
-            // --- Interceptar si no hay entrada (incluso si llenó la salida manual) ---
             if (!e) {
                 const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(UILogic.obtenerFechaHoy(), registros);
                 const regHoy = registros.find(r => r.fecha === f);
 
-                // Si ayer está abierto, hoy está vacío, Y no pasaron 24hs → redirigir a ayer
                 if (ayerAbierto && !regHoy) {
                     f = ayer;
-                    $('fecha').value = f; // Sincronizamos la UI con ayer
+                    $('fecha').value = f; 
                 }
             }
 
-            // --- cambiamos 'const' por 'let' ---
             let registroExistente = registros.find(r => r.fecha === f);
 
             if (!e && !s) {
@@ -1303,7 +1378,6 @@
             }
 
             if (registroExistente && !e && s && registroExistente.entrada && !registroExistente.salida) {
-                // Capturamos si el timer fue detenido
                 const timerDetenido = detenerYRegistrarTimer(registroExistente);
 
                 registroExistente.salida = s;
@@ -1314,10 +1388,8 @@
 
                 HistoryManager.saveState(registros);
 
-                // PASAMOS EL ID DEL REGISTRO ACTUALIZADO PARA ANIMARLO
                 const saved = await guardarYActualizar(registroExistente.id);
                 if (saved) {
-                    // FEEDBACK VISUAL (solo salida manual)
                     const salidaManual = !usaHoraActual;
                     if (salidaManual) {
                         UILogic.aplicarFeedbackCampos([
@@ -1326,17 +1398,13 @@
                         ]);
                     }
 
-                    // Mensaje diferenciado según si había timer activo
                     let mensaje;
                     if (timerDetenido && usaHoraActual) {
-                        // Caso: Salida con hora actual Y timer activo
                         const tiempoFuera = registroExistente.tiempoFuera || '00:00';
                         mensaje = `Salida registrada con hora actual \nDescanso finalizado: +${tiempoFuera} \n(entrada: ${registroExistente.entrada})`;
                     } else if (usaHoraActual) {
-                        // Caso: Salida con hora actual SIN timer
                         mensaje = `Salida registrada con hora actual \n(entrada: ${registroExistente.entrada})`;
                     } else {
-                        // Caso: Salida manual
                         mensaje = `Salida ${s} agregada \n(entrada: ${registroExistente.entrada})`;
                     }
 
@@ -1363,7 +1431,6 @@
                 return;
             }
 
-            // GENERAMOS ID
             const nuevoId = S.generarIDSeguro();
 
             const t = calcularHoras(e || null, s || null, null);
@@ -1382,11 +1449,9 @@
 
             HistoryManager.saveState(registros);
 
-            // PASAMOS EL ID NUEVO AQUI
             const saved = await guardarYActualizar(nuevoId);
 
             if (saved) {
-                // FEEDBACK VISUAL (entrada y/o salida manual)
                 const entradaManual = e && !usaHoraActual;
                 const salidaManual = s && !usaHoraActual;
 
@@ -1416,7 +1481,6 @@
                 const hoy = UILogic.obtenerFechaHoy();
 
                 if (registroABorrar && registroABorrar.fecha === hoy) {
-                    // LIMPIAR TIMER DEL PERFIL ACTUAL
                     const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
                     const storageKey = `breakStartTime_${perfilId}`;
                     if (localStorage.getItem(storageKey)) {
@@ -1435,7 +1499,6 @@
                 if (saved) {
                     UILogic.mostrarToast('Registro eliminado', 'success');
                     UILogic.cerrarEdicion();
-                    // Forzamos actualización del botón visualmente
                     UILogic.actualizarEstadoBotonTimerMain();
 
                     if (window.UILogic && window.UILogic.actualizarBotonLote) {
@@ -1446,12 +1509,10 @@
         }
 
         function editarRegistro(id) {
-            // 1. Validaciones iniciales (si ya se está editando o no existe el ID)
             if (editandoId !== null) return;
             const r = registros.find(x => x.id === id);
             if (!r) return;
 
-            // 2. Cargar datos en los inputs
             editandoId = id;
             $('edit-fecha').value = r.fecha;
             $('edit-entrada').value = r.entrada || '';
@@ -1459,15 +1520,12 @@
             $('edit-tiempo-fuera').value = r.tiempoFuera || '';
             $('edit-notas').value = r.notas || '';
 
-            // 3. CONFIGURAR EL BOTÓN DE CRÉDITO
             const btnCredito = document.getElementById('btn-toggle-credito');
 
-            // A) Limpieza total
             btnCredito.style.background = '';
             btnCredito.style.color = '';
             btnCredito.style.border = '';
 
-            // B) Decidir si se pinta de verde o se queda gris
             if (r.credito && r.credito !== '00:00') {
                 btnCredito.dataset.activo = "true";
                 btnCredito.classList.add('btn-activo');
@@ -1476,7 +1534,6 @@
                 btnCredito.classList.remove('btn-activo');
             }
 
-            // 4. Mostrar el modal y activar bloqueos
             ModalManager.abrir('modal-editar');
 
             UILogic.setBloqueoEdicion(true);
@@ -1497,7 +1554,6 @@
             const btnGuardar = modal.querySelector('.btn-edit');
             btnGuardar.disabled = true;
 
-            // --- 1. OBTENER VALORES DE LOS INPUTS ---
             const f = S.sanitizeString($('edit-fecha').value, 10);
             const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
             const s = S.sanitizeString($('edit-salida').value.trim(), 5);
@@ -1509,33 +1565,26 @@
             if (notas) notas = S.sanitizeNotas(notas, true) || null;
             if (notas === '') notas = null;
 
-            // --- CALCULAR CRÉDITO SEGÚN EL BOTÓN ---
             let cr = null;
             const btnCredito = document.getElementById('btn-toggle-credito');
 
-            // Solo calculamos si el botón existe y está marcado como activo
             if (btnCredito && btnCredito.dataset.activo === "true") {
-                // Calculamos las horas trabajadas reales (sin crédito)
                 const calcTemp = calcularHoras(e, s, tf, null);
 
                 if (calcTemp) {
                     const horasTrabajadas = calcTemp.total;
-                    const horasObjetivo = horasDiarias; // Variable global de configuración
+                    const horasObjetivo = horasDiarias;
 
-                    // Diferencia: Lo que falta para llegar al objetivo
                     const diferencia = horasObjetivo - horasTrabajadas;
 
-                    if (diferencia > 0.01) { // Usamos 0.01 para evitar errores de redondeo pequeños
-                        // Convertimos la diferencia a formato HH:MM
+                    if (diferencia > 0.01) { 
                         let h = Math.floor(diferencia);
                         let m = Math.round((diferencia - h) * 60);
                         if (m === 60) { h++; m = 0; }
                         cr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                     }
-                    // Si diferencia <= 0, significa que ya cumplió el horario, así que cr se queda en null
                 }
             }
-            // --- VALIDACIÓN DE FUTURO PARA NORMALES ---
             const hoy = UILogic.obtenerFechaHoy();
             if (f > hoy) {
                 const esEspecial = TiposRegistro.esRegistroEspecial(e, s);
@@ -1547,15 +1596,12 @@
                 }
             }
 
-            // --- 2. DETECTAR SI HUBO CAMBIOS ---
             const actualEntrada = r.entrada || '';
             const nuevaEntrada = e || '';
             const actualSalida = r.salida || '';
             const nuevaSalida = s || '';
             const actualTF = r.tiempoFuera || '';
             const nuevoTF = tf || '';
-
-            // Comparar crédito también
             const actualCR = r.credito || '';
             const nuevoCR = cr || '';
             const actualNotas = r.notas || '';
@@ -1574,7 +1620,6 @@
                 return;
             }
 
-            // --- 3. VALIDACIONES DE SEGURIDAD ---
             if (!S.validarFechaSegura(f)) {
                 UILogic.restaurarBotonGuardarEdicion(btnGuardar);
                 UILogic.mostrarToast('Fecha inválida', 'error');
@@ -1605,7 +1650,6 @@
                 return;
             }
 
-            // Caso: Borrar registro si todo está vacío
             if (!e && !s) {
                 const registroABorrar = registros.find(r => r.id === editandoId);
                 if (registroABorrar && registroABorrar.fecha === UILogic.obtenerFechaHoy()) {
@@ -1627,7 +1671,6 @@
                 return;
             }
 
-            // Verificar duplicados de fecha
             const existeFecha = registros.some(reg => reg.fecha === f && reg.id !== editandoId);
             if (existeFecha) {
                 UILogic.restaurarBotonGuardarEdicion(btnGuardar);
@@ -1635,7 +1678,6 @@
                 return;
             }
 
-            // Tiempo Fuera no puede superar tiempo trabajado
             if (e && s && tf) {
                 const [hE, mE] = e.split(':').map(Number);
                 const [hS, mS] = s.split(':').map(Number);
@@ -1655,7 +1697,6 @@
                 }
             }
 
-            // --- 4. ACTUALIZAR EL OBJETO ---
             r.fecha = f;
             r.entrada = e || null;
 
@@ -1669,14 +1710,12 @@
             r.credito = cr;
             r.notas = notas;
 
-            // --- 5. RECALCULAR TOTALES ---
             const t = calcularHoras(r.entrada, r.salida, r.tiempoFuera, r.credito);
 
             r.horas = t?.horas || 0;
             r.minutos = t?.minutos || 0;
             r.total = t?.total || 0;
 
-            // Ordenar
             ordenarRegistros();
 
             HistoryManager.saveState(registros);
@@ -1684,7 +1723,6 @@
             const saved = await guardarYActualizar(null, true);
 
             if (saved) {
-                // Mensaje personalizado si se aplicó compensación
                 if (cr) {
                     UILogic.mostrarToast(`Guardado con Salida Temprano (+${cr})`, 'success');
                 } else {
@@ -1707,13 +1745,11 @@
 
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
 
-            // Resetear variables locales del módulo directamente
             diasHabiles = [1, 2, 3, 4, 5];
             horasDiarias = 7;
             registros.splice(0, registros.length);
             ignorarTiempoFuera = false;
 
-            // Limpiar claves localStorage por perfil
             localStorage.removeItem(`breakStartTime_${perfilId}`);
             localStorage.removeItem(`history_${perfilId}`);
             localStorage.removeItem(`fondoCard_${perfilId}`);
@@ -1723,7 +1759,6 @@
             localStorage.removeItem(`cardVisible_historico_${perfilId}`);
             localStorage.removeItem(`ordenCards_${perfilId}`);
 
-            // Limpiar gistId y lastSync del perfil activo
             if (window.PerfilManager) {
                 const perfil = PerfilManager.obtenerDatosPerfil();
                 if (perfil) {
@@ -1747,10 +1782,6 @@
             }
         }
 
-        // ----------------------------------------------------------------
-        // HELPER COMPARTIDO: filtra, sanitiza y recalcula una lista de
-        // registros crudos (usada por importarDatos y gistBajar).
-        // ----------------------------------------------------------------
         function normalizarRegistrosImportados(rawList, calcularHorasFn) {
             const validarHora = (h) => h && S.REGEX_PATTERNS.HORA.test(h) ? S.sanitizeString(h, 5) : null;
 
@@ -1771,7 +1802,6 @@
                         : null,
                 }));
 
-            // Recalcular totales para asegurar consistencia interna
             normalizados.forEach(r => {
                 const t = calcularHorasFn(r.entrada, r.salida, r.tiempoFuera || null, r.credito || null);
                 r.horas = t?.horas || 0;
@@ -1818,7 +1848,6 @@
                 return;
             }
 
-            // Validación estricta de MIME
             if (!file.type || file.type !== 'application/json') {
                 UILogic.mostrarToast('Solo se permiten archivos JSON', 'error');
                 return;
@@ -1827,20 +1856,17 @@
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
-                    // Validar que el contenido no esté vacío
                     const contenido = e.target.result;
                     if (!contenido || contenido.trim().length === 0) {
                         UILogic.mostrarToast('Archivo vacío', 'error');
                         return;
                     }
 
-                    // Validar tamaño del contenido antes de parsear
                     if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) {
                         UILogic.mostrarToast('Contenido del archivo demasiado grande', 'error');
                         return;
                     }
 
-                    // Parse seguro con protección contra Prototype Pollution
                     const data = JSON.parse(contenido, (key, value) => {
                         if (['__proto__', 'constructor', 'prototype'].includes(key)) {
                             console.warn('⚠️ Intento de prototype pollution bloqueado');
@@ -1849,7 +1875,6 @@
                         return value;
                     });
 
-                    // VALIDACIÓN DE CLAVES PERMITIDAS (ACTUALIZADA)
                     const allowedRootKeys = [
                         'registros',
                         'diasHabiles',
@@ -1868,7 +1893,6 @@
                         return;
                     }
 
-                    // Validación estricta de estructura
                     if (!data || typeof data !== 'object' || Array.isArray(data)) {
                         UILogic.mostrarToast('Estructura de archivo inválida', 'error');
                         return;
@@ -1879,25 +1903,20 @@
                         return;
                     }
 
-                    // Advertir si el schema es de una versión futura
                     if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
                         console.warn(`⚠️ Archivo exportado con schema v${data.version}, app en v${S.SECURITY_LIMITS.SCHEMA_VERSION}`);
                         UILogic.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
                     }
 
-                    // NUEVA VALIDACIÓN: rangoExportado
                     if (data.rangoExportado !== undefined) {
-                        // Sanitizar y validar formato
                         const rangoSafe = S.sanitizeString(String(data.rangoExportado), 100);
 
-                        // Validar que solo contenga caracteres seguros
                         const regexRangoSeguro = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-:]+$/;
                         if (!regexRangoSeguro.test(rangoSafe)) {
                             UILogic.mostrarToast('Metadatos de rango inválidos', 'error');
                             return;
                         }
 
-                        // Opcional: Validar coherencia (si viene rango, verificar que los registros coincidan)
                         if (rangoSafe.includes('Mes')) {
                             const mesMatch = rangoSafe.match(/(\d{4}-\d{2})/);
                             if (mesMatch && data.registros.length > 0) {
@@ -1907,13 +1926,11 @@
                                 );
                                 if (!todosDelMes) {
                                     console.warn('⚠️ Advertencia: Registros no coinciden con el rango declarado');
-                                    // No bloqueamos, solo advertimos
                                 }
                             }
                         }
                     }
 
-                    // Verificar integridad del hash
                     if (data.hash) {
                         const hashCalculado = await S.calcularHashSHA256(data.registros);
                         if (hashCalculado !== data.hash) {
@@ -1926,13 +1943,11 @@
                         if (!continuar) return;
                     }
 
-                    // Validar límite de registros antes de procesar
                     if (data.registros.length > S.SECURITY_LIMITS.MAX_REGISTROS) {
                         UILogic.mostrarToast(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`, 'error');
                         return;
                     }
 
-                    // Filtrar, normalizar y recalcular datos
                     const registrosImportados = normalizarRegistrosImportados(data.registros, calcularHoras);
 
                     if (registrosImportados.length === 0) {
@@ -1940,11 +1955,9 @@
                         return;
                     }
 
-                    // --- MODO REEMPLAZAR ---
                     if (modo === 'replace') {
                         registros = registrosImportados;
 
-                        // Validar diasHabiles (formato array)
                         if (Array.isArray(data.diasHabiles)) {
                             const diasValidos = data.diasHabiles.filter(d =>
                                 Number.isInteger(d) && d >= 0 && d <= 6
@@ -1952,7 +1965,6 @@
                             if (diasValidos.length > 0) diasHabiles = diasValidos;
                         }
 
-                        // VALIDACIÓN DE horasDiarias
                         if (data.horasDiarias !== undefined) {
                             const horasParsed = typeof data.horasDiarias === 'string'
                                 ? parseFloat(data.horasDiarias)
@@ -1970,19 +1982,15 @@
                         finalizarImportacionAndSave(mensaje);
                     }
 
-                    // --- MODO COMBINAR ---
                     else if (modo === 'merge') {
                         const fechasExistentes = new Set(registros.map(r => r.fecha));
                         const nuevos = registrosImportados.filter(imp => !fechasExistentes.has(imp.fecha));
 
-                        // Registros que existen en ambos pero el importado complementa al local
                         const complementarios = registrosImportados.filter(imp => {
                             if (!fechasExistentes.has(imp.fecha)) return false;
                             const local = registros.find(r => r.fecha === imp.fecha);
                             if (!local) return false;
-                            // El importado aporta salida que el local no tiene
                             const aportaSalida = !local.salida && imp.salida;
-                            // El importado aporta tiempoFuera que el local no tiene
                             const aportaTF = !local.tiempoFuera && imp.tiempoFuera;
                             return aportaSalida || aportaTF;
                         });
@@ -1997,13 +2005,11 @@
                             return;
                         }
 
-                        // Aplicar complementarios: actualizar campos faltantes en local
                         complementarios.forEach(imp => {
                             const local = registros.find(r => r.fecha === imp.fecha);
                             if (!local) return;
                             if (!local.salida && imp.salida) local.salida = imp.salida;
                             if (!local.tiempoFuera && imp.tiempoFuera) local.tiempoFuera = imp.tiempoFuera;
-                            // Recalcular total
                             const t = calcularHoras(local.entrada, local.salida, local.tiempoFuera || null, local.credito || null);
                             if (t) { local.horas = t.horas; local.minutos = t.minutos; local.total = t.total; }
                         });
@@ -2026,7 +2032,6 @@
                 }
             };
 
-            // Manejar errores de lectura
             reader.onerror = () => {
                 UILogic.mostrarToast('Error al leer el archivo', 'error');
             };
@@ -2045,7 +2050,6 @@
                     const esPerfilDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
 
                     if (esPerfilDefault) {
-                        // Solo guardamos diasHabiles y horasDiarias (NO el tema)
                         localStorage.setItem('diasHabiles', JSON.stringify(diasHabiles));
                         localStorage.setItem('horasDiarias', horasDiarias);
                     }
@@ -2060,46 +2064,35 @@
             }
         }
 
-        //  FUNCIÓN HELPER PARA DETENER TIMER
         function detenerYRegistrarTimer(registro) {
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             const storageKey = `breakStartTime_${perfilId}`;
             const storedStart = localStorage.getItem(storageKey);
 
-            if (!storedStart) return false; // No hay timer corriendo
+            if (!storedStart) return false; 
 
             const start = parseInt(storedStart);
             const end = Date.now();
             const diffMs = end - start;
             const segundosTranscurridos = Math.floor(diffMs / 1000);
 
-            // Si el tiempo es menor a 30 segundos, no registrar
             if (segundosTranscurridos < 30) {
                 localStorage.removeItem(storageKey);
                 return false;
             }
 
-            // Calcular minutos con umbral de 30 segundos
             let minutosTranscurridos = Math.floor(segundosTranscurridos / 60);
             const segundosRestantes = segundosTranscurridos % 60;
             if (segundosRestantes >= 30) minutosTranscurridos += 1;
 
-            // Sumar al tiempo existente
             const tiempoActual = registro.tiempoFuera || '00:00';
             registro.tiempoFuera = UILogic.sumarMinutosAHora(tiempoActual, minutosTranscurridos);
 
-            // Limpiar timer
             localStorage.removeItem(storageKey);
 
-            return true; // Timer detenido exitosamente
+            return true; 
         }
 
-        // ---------------------------------------------------------
-        // HELPER: detectarAyerAbierto(fechaHoy, registros)
-        // Centraliza la detección de turno activo cruzando medianoche.
-        // Acepta registros como Array o Map.
-        // Retorna: { ayerStr, regAyer, ayerAbierto }
-        // ---------------------------------------------------------
         function detectarAyerAbierto(fechaHoy, regs) {
             const ayerObj = S.parsearFechaLocal(fechaHoy);
             ayerObj.setDate(ayerObj.getDate() - 1);
@@ -2130,7 +2123,6 @@
             let fechaIteracion = S.parsearFechaLocal(inicioSemana);
             let fechaLimite = S.parsearFechaLocal(fechaHoy);
 
-            // --- Detectar si ayer quedó en Standby ---
             const { ayerStr, ayerAbierto } = detectarAyerAbierto(fechaHoy, registrosMap);
 
             while (fechaIteracion <= fechaLimite) {
@@ -2147,14 +2139,13 @@
                 const tieneSalida = r && r.salida && !esEspecial;
                 const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
 
-                // --- NUEVO: ¿El día está cerrado para contabilizarlo? ---
                 let diaTerminado = false;
                 if (isoDate === fechaHoy) {
                     diaTerminado = tieneSalida;
                 } else if (ayerAbierto && isoDate === ayerStr) {
-                    diaTerminado = false; // ¡Standby!
+                    diaTerminado = false; 
                 } else {
-                    diaTerminado = true; // Pasado normal
+                    diaTerminado = true; 
                 }
 
                 if (esRemoto) {
@@ -2162,7 +2153,6 @@
                     horasHechasDia = horasDiariasLocal;
                 } else {
                     if (esDiaLaboralConfigurado && !esEspecial) {
-                        // Solo sumamos el objetivo si el día ya se dio por terminado
                         if (diaTerminado) {
                             horasObjetivoDia = horasDiariasLocal;
                         }
@@ -2214,7 +2204,6 @@
             if (!filtroActivo) return registros;
 
             return registros.filter(r => {
-                // Filtro por fechas
                 if (filtroDesde && r.fecha < filtroDesde) return false;
                 if (filtroHasta && r.fecha > filtroHasta) return false;
 
@@ -2222,10 +2211,8 @@
                     const tipoRegistro = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
 
                     if (filtroTipo === 'normal') {
-                        // Si el filtro es "normal", excluir todos los especiales
                         if (tipoRegistro) return false;
                     } else {
-                        // Si el filtro es un tipo especial, solo mostrar ese tipo
                         if (!tipoRegistro || tipoRegistro.id !== filtroTipo) return false;
                     }
                 }
@@ -2256,7 +2243,6 @@
                 fechaActual.setDate(fechaActual.getDate() + 1);
             }
 
-            // VALIDACIÓN DE LÍMITE
             if (fechasARegistrar.length > 60) {
                 UILogic.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: 60 días por operación.`, 'error');
                 throw new Error('Límite de días excedido');
@@ -2269,14 +2255,13 @@
                 throw new Error('Sin fechas nuevas');
             }
 
-            //  1: Creamos array para guardar IDs ---
             const idsNuevosParaAnimar = [];
 
             nuevosRegistros.forEach(fecha => {
                 const t = calcularHoras(entrada, salida, null);
-                const nuevoId = S.generarIDSeguro(); // Generamos ID
+                const nuevoId = S.generarIDSeguro();
 
-                idsNuevosParaAnimar.push(nuevoId); // Lo guardamos para animar
+                idsNuevosParaAnimar.push(nuevoId);
 
                 registros.push({
                     id: nuevoId,
@@ -2294,7 +2279,6 @@
 
             HistoryManager.saveState(registros);
 
-            //  2: Enviamos el array de IDs a la UI ---
             const saved = await guardarYActualizar(idsNuevosParaAnimar);
 
             if (saved) {
@@ -2333,11 +2317,9 @@
         }
 
         async function borrarPeriodoDirecto(desde, hasta) {
-            // Solo borra registros normales (eliminamos parámetro 'tipo')
             const registrosAEliminar = registros.filter(r => {
                 if (r.fecha < desde || r.fecha > hasta) return false;
 
-                // Excluir todos los tipos especiales
                 const esEspecial = TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
 
                 return !esEspecial;
@@ -2430,7 +2412,7 @@
     const GistSync = (function (S) {
 
         const GIST_FILENAME = 'horarios_backup.json';
-        const KEY_TOKEN = 'gistToken'; // Global del dispositivo
+        const KEY_TOKEN = 'gistToken'; 
 
         const GIST_ID_REGEX = /^[a-f0-9]{20,40}$/i;
 
@@ -2438,17 +2420,14 @@
             return id && GIST_ID_REGEX.test(id.trim());
         }
 
-        // Helper privado: ejecuta fn(perfil) y guarda si PerfilManager está disponible
         function _conPerfil(fn) {
             if (!window.PerfilManager) return;
             const perfil = PerfilManager.obtenerDatosPerfil();
             if (perfil) { fn(perfil); PerfilManager.guardarPerfiles(); }
         }
 
-        // Token: global del dispositivo
         function getToken() { return localStorage.getItem(KEY_TOKEN) || ''; }
 
-        // Gist ID y lastSync: por perfil activo
         function getGistId() {
             const perfil = window.PerfilManager ? PerfilManager.obtenerDatosPerfil() : null;
             return perfil?.gistId || '';
@@ -2459,7 +2438,6 @@
             return perfil?.gistLastSync || null;
         }
 
-        // 0 = sin automatizar, 1 = restaurar al inicio, 2 = respaldo automático
         function getMergeBehavior() {
             const perfil = window.PerfilManager ? PerfilManager.obtenerDatosPerfil() : null;
             return perfil?.gistMergeBehavior || 'replace';
@@ -2473,7 +2451,6 @@
             const perfil = window.PerfilManager ? PerfilManager.obtenerDatosPerfil() : null;
             const val = perfil?.gistAutoSync;
             if (val === 1 || val === 2) return val;
-            // Migración: si era true (estado anterior), mapear a 1
             if (val === true) return 1;
             return 0;
         }
@@ -2499,7 +2476,6 @@
             return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')} ${String(ahora.getHours()).padStart(2, '0')}`;
         }
 
-        // tipo: 'subir' | 'bajar', limite: max intentos por hora
         function getSyncCount(tipo) {
             const perfil = window.PerfilManager ? PerfilManager.obtenerDatosPerfil() : null;
             const key = `gistSyncCount_${tipo}`;
@@ -2509,7 +2485,7 @@
         }
 
         function marcarSync(tipo) {
-            if (getSyncLimite(tipo) === 0) return; // modo siempre: no acumular
+            if (getSyncLimite(tipo) === 0) return;
             _conPerfil(perfil => {
                 const key = `gistSyncCount_${tipo}`;
                 const keyFecha = `gistSyncFecha_${tipo}`;
@@ -2531,7 +2507,6 @@
         function setSyncLimite(tipo, valor) {
             const anteriorLimite = getSyncLimite(tipo);
             try { localStorage.setItem(`gistSyncLimite_${tipo}`, valor); } catch (e) { }
-            // Si se pasa de "siempre" (0) a numérico, resetear el contador
             if (anteriorLimite === 0 && valor > 0 && window.PerfilManager) {
                 const perfil = PerfilManager.obtenerDatosPerfil();
                 if (perfil) {
@@ -2544,7 +2519,7 @@
 
         function superaLimite(tipo) {
             const limite = getSyncLimite(tipo);
-            if (limite === 0) return false; // 0 = siempre
+            if (limite === 0) return false; 
             return getSyncCount(tipo) >= limite;
         }
 
@@ -2552,8 +2527,6 @@
             const { desde, hasta } = getRangoHorario();
             const ahora = new Date();
             const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
-            // Si desde <= hasta: rango normal (ej. 09:00 - 17:00)
-            // Si desde > hasta: rango cruza medianoche (ej. 21:00 - 01:00)
             if (desde <= hasta) {
                 return horaActual >= desde && horaActual <= hasta;
             } else {
@@ -2563,14 +2536,11 @@
 
         function saveCredentials(token, gistId) {
             try {
-                // Token: global
                 if (token) {
                     localStorage.setItem(KEY_TOKEN, S.sanitizeString(token.trim()));
                 } else {
                     localStorage.removeItem(KEY_TOKEN);
                 }
-                // Gist ID: en el perfil activo — guardarPerfiles() directamente
-                // para no depender de window.DataManagement (que puede no existir aún)
                 if (window.PerfilManager) {
                     const perfil = PerfilManager.obtenerDatosPerfil();
                     if (perfil) {
@@ -2674,7 +2644,6 @@
                 return value;
             });
 
-            // Verificar integridad
             if (data.hash) {
                 const hashCalculado = await S.calcularHashSHA256(data.registros);
                 if (hashCalculado !== data.hash) {
@@ -2919,7 +2888,6 @@
         }
 
         function agruparRegistrosPorMes(registros) {
-            // Validar entrada
             if (!Array.isArray(registros)) {
                 console.warn('agruparRegistrosPorMes: entrada inválida');
                 return new Map();
@@ -2927,12 +2895,10 @@
 
             const grupos = new Map();
             registros.forEach(r => {
-                // Validar cada registro
                 if (!r || typeof r !== 'object' || !r.fecha || typeof r.fecha !== 'string') {
                     return;
                 }
 
-                // Validar longitud mínima
                 if (r.fecha.length < 7) {
                     return;
                 }
@@ -2946,15 +2912,13 @@
             return grupos;
         }
 
-        // Función auxiliar para identificar tipo de registro
         function obtenerTipoRegistro(registro) {
             if (!registro) return null;
 
             const tipo = TiposRegistro.obtenerTipoPorCodigo(registro.entrada, registro.salida);
-            return tipo ? tipo.id : null; // Retorna el id o null si es normal
+            return tipo ? tipo.id : null; 
         }
 
-        // Función auxiliar para verificar si una fecha es consecutiva a otra
         function esFechaConsecutiva(fechaActual, fechaSiguiente) {
             const actual = S.parsearFechaLocal(fechaActual);
             const siguiente = S.parsearFechaLocal(fechaSiguiente);
@@ -2962,7 +2926,6 @@
             return S.formatearFechaLocal(actual) === fechaSiguiente;
         }
 
-        // Función principal mejorada
         function agruparRegistrosConsecutivos(registros) {
             if (!registros || registros.length === 0) return [];
 
@@ -2973,7 +2936,6 @@
                 const registroActual = registros[i];
                 const tipoActual = obtenerTipoRegistro(registroActual);
 
-                // Si es un registro normal, agregar individualmente
                 if (tipoActual === null) {
                     resultado.push({
                         tipo: 'individual',
@@ -2983,7 +2945,6 @@
                     continue;
                 }
 
-                // Buscar registros consecutivos del mismo tipo
                 const grupo = [registroActual];
                 let j = i + 1;
 
@@ -2991,19 +2952,15 @@
                     const registroSiguiente = registros[j];
                     const tipoSiguiente = obtenerTipoRegistro(registroSiguiente);
 
-                    // Si cambió el tipo, terminar el grupo
                     if (tipoSiguiente !== tipoActual) break;
 
-                    // Verificar si es fecha consecutiva
                     const ultimaFecha = grupo[grupo.length - 1].fecha;
                     if (!esFechaConsecutiva(ultimaFecha, registroSiguiente.fecha)) break;
 
-                    // Agregar al grupo
                     grupo.push(registroSiguiente);
                     j++;
                 }
 
-                // Agregar al resultado (grupo o individual)
                 if (grupo.length > 1) {
                     resultado.push({
                         tipo: 'grupo',
@@ -3161,7 +3118,6 @@
         function actualizarListaRegistros(registros, idNuevo = null) {
             const lista = $('lista-registros');
 
-            // Guardar estado de meses abiertos
             const mesesExpandidos = new Set();
             lista.querySelectorAll('.registro-mes-container').forEach(container => {
                 const detalle = container.querySelector('.registro-mes-detalle');
@@ -3258,10 +3214,8 @@
             const container = document.createElement('div');
             container.className = 'registro-grupo-container';
 
-            // Encabezado del grupo
             const header = document.createElement('div');
 
-            // --- Lógica de detección de IDs nuevos ---
             let className = 'registro-item';
             let animarGrupo = false;
 
@@ -3305,7 +3259,6 @@
             info.appendChild(totalEl);
             header.appendChild(info);
 
-            // Preparar datos para event delegation
             header.dataset.accion = 'editar-grupo';
             header.dataset.grupoData = JSON.stringify({
                 registros: grupo.registros.map(r => r.id),
@@ -3333,7 +3286,6 @@
         function _calcularEstadisticasRango(registrosRango, opciones = {}) {
             const { regularidadPorMes = false } = opciones;
 
-            // Contar cada tipo especial dinámicamente desde TiposRegistro
             const conteosPorTipo = {};
             TiposRegistro.obtenerTodosLosTipos().forEach(t => {
                 conteosPorTipo[t.labelPlural.toLowerCase()] = registrosRango.filter(
@@ -3341,7 +3293,6 @@
                 ).length;
             });
 
-            // Compensaciones (crédito) — no es un tipo especial, se mantiene aparte
             const compensaciones = registrosRango.filter(r => r.credito && r.credito !== '00:00').length;
 
             let tiempoFueraTotalMinutos = 0;
@@ -3405,7 +3356,6 @@
                 regJornada = calcularRegularidad(desviacionEstandar(registrosValidos.map(r => Math.round(r.total * 60))));
             }
 
-            // Calcular buffer del período iterando todos los días del rango
             const horasDiariasObj = D.horasDiarias();
             let bufferPeriodo = null;
             if (horasDiariasObj > 0 && opciones.desde && opciones.hasta) {
@@ -3413,7 +3363,6 @@
                 const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
                 const hoy = obtenerFechaHoy();
 
-                // --- Standby para estadísticas ---
                 const { ayerStr, ayerAbierto } = D.detectarAyerAbierto(hoy, regsPorFecha);
 
                 let objetivo = 0;
@@ -3429,12 +3378,11 @@
                     const esHoy = iso === hoy;
                     const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
 
-                    // --- NUEVO: Evaluar terminación ---
                     let diaTerminado = true;
                     if (esHoy) {
                         diaTerminado = (r && r.salida);
                     } else if (ayerAbierto && iso === ayerStr) {
-                        diaTerminado = false; // ¡Standby!
+                        diaTerminado = false; 
                     }
 
                     if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) {
@@ -3481,7 +3429,6 @@
             };
             toggleStatItem('stat-dias-trabajados', stats.diasTrabajados);
 
-            // Tipos especiales — dinámico desde TiposRegistro
             TiposRegistro.obtenerTodosLosTipos().forEach(t => {
                 const clave = t.labelPlural.toLowerCase();
                 toggleStatItem(`stat-${clave}`, stats[clave] || 0);
@@ -3553,7 +3500,7 @@
             return window.PerfilManager ? PerfilManager.perfilKey(base) : base + '_default';
         }
 
-        let _fondoCard = 'golden-gate'; // se sobreescribe en init desde config
+        let _fondoCard = 'golden-gate'; 
 
         function setFondoCard(valor) {
             _fondoCard = valor;
@@ -3573,25 +3520,15 @@
 
         function _svgSkylineBA(color) {
             return `<svg viewBox="0 0 800 200" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg" class="card-bg-svg card-bg-svg--left"><g fill="${color}">` +
-                // Río
                 `<rect x="0" y="148" width="800" height="52"/>` +
-                // Fondo edificios izq
                 `<rect x="0" y="110" width="18" height="40"/><rect x="20" y="100" width="22" height="50"/><rect x="44" y="118" width="14" height="32"/>` +
-                // Fondo edificios der
                 `<rect x="580" y="108" width="20" height="42"/><rect x="604" y="95" width="16" height="55"/><rect x="624" y="112" width="22" height="38"/><rect x="650" y="100" width="18" height="50"/><rect x="672" y="115" width="25" height="35"/><rect x="700" y="105" width="20" height="45"/><rect x="724" y="118" width="16" height="32"/><rect x="744" y="98" width="22" height="52"/><rect x="770" y="110" width="30" height="40"/>` +
-                // Grúas Puerto Madero
                 `<rect x="62" y="90" width="5" height="58"/><rect x="46" y="92" width="38" height="4"/><rect x="84" y="94" width="4" height="30"/><rect x="105" y="98" width="5" height="50"/><rect x="90" y="100" width="36" height="4"/><rect x="125" y="102" width="4" height="24"/><rect x="145" y="108" width="4" height="40"/><rect x="133" y="110" width="28" height="3"/><rect x="160" y="111" width="3" height="18"/>` +
-                // Kavanagh
                 `<rect x="185" y="130" width="38" height="18"/><rect x="188" y="95" width="32" height="36"/><rect x="191" y="75" width="26" height="22"/><rect x="194" y="60" width="20" height="17"/><rect x="197" y="48" width="14" height="14"/><rect x="200" y="38" width="8" height="12"/><rect x="203" y="28" width="2" height="12"/>` +
-                // Barolo
                 `<rect x="258" y="118" width="42" height="30"/><rect x="260" y="75" width="38" height="44"/><rect x="270" y="55" width="18" height="22"/><rect x="273" y="44" width="12" height="13"/><ellipse cx="279" cy="44" rx="8" ry="6"/><rect x="277" y="32" width="4" height="14"/><ellipse cx="279" cy="32" rx="4" ry="3"/>` +
-                // Obelisco (tenue)
                 `<polygon points="348,22 354,22 358,118 344,118" opacity="0.5"/><polygon points="348,22 354,22 351,10" opacity="0.5"/>` +
-                // Relleno centro
                 `<rect x="168" y="120" width="16" height="28"/><rect x="238" y="115" width="18" height="33"/><rect x="304" y="108" width="14" height="40"/><rect x="322" y="115" width="20" height="33"/><rect x="370" y="100" width="16" height="48"/><rect x="390" y="112" width="14" height="36"/><rect x="406" y="118" width="12" height="30"/>` +
-                // Congreso
                 `<rect x="420" y="120" width="60" height="28"/><rect x="422" y="90" width="56" height="32"/><rect x="428" y="78" width="44" height="14"/><rect x="434" y="60" width="32" height="20"/><path d="M434,60 Q450,30 466,60 Z"/><rect x="447" y="28" width="6" height="14"/><ellipse cx="450" cy="28" rx="5" ry="4"/>` +
-                // Relleno der
                 `<rect x="484" y="110" width="20" height="38"/><rect x="508" y="102" width="16" height="46"/><rect x="528" y="115" width="18" height="33"/><rect x="550" y="108" width="14" height="40"/>` +
                 `</g></svg>`;
         }
@@ -3633,10 +3570,6 @@
             }
         }
 
-        // =========================================================
-        // CAPA 1: calcularEstadoCard()
-        // Lee datos, no toca el DOM ni toma decisiones visuales.
-        // =========================================================
         function calcularEstadoCard() {
             const hoy = obtenerFechaHoy();
             const { inicio: ini, fin: fn } = obtenerSemanaActual();
@@ -3646,7 +3579,6 @@
             const diasHabiles = D.diasHabiles();
             const { ayerStr: ayer, regAyer, ayerAbierto } = D.detectarAyerAbierto(hoy, registros);
 
-            // --- Día hábil hoy (compatible array v6.63 y fallback numérico) ---
             const diaSemanaHoy = new Date().getDay();
             let esDiaHabil = true;
             if (Array.isArray(diasHabiles)) {
@@ -3655,7 +3587,6 @@
                 esDiaHabil = diaSemanaHoy === 0 ? (diasHabiles === 7) : (diaSemanaHoy <= diasHabiles);
             }
 
-            // --- Semana abierta ---
             const mapDia = d => d === 0 ? 7 : d;
             const hoyIndex = mapDia(diaSemanaHoy);
             let quedanDiasFuturos = false;
@@ -3669,10 +3600,8 @@
             const regHoy = registros.find(r => r.fecha === hoy) ?? null;
             const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
 
-            // --- Buffer semanal ---
             const bufferSemanal = D.calcularBufferSemanal(ini, hoy);
 
-            // --- Total semana ---
             const fechaLimite = hoy < fn ? hoy : fn;
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
             let totalSemana = 0;
@@ -3682,11 +3611,9 @@
                 else if (!tipo) totalSemana += r.total;
             });
 
-            // --- Objetivo ajustado ---
             const horasDescontar = D.calcularHorasFeriadoEnRango(ini, fn);
             const objetivoSemana = Math.max(0, horasSemanales - horasDescontar);
 
-            // --- Todos los días laborables cubiertos por especiales ---
             let todosEspeciales = false;
             if (Array.isArray(diasHabiles) && diasHabiles.length > 0 && horasDiarias > 0) {
                 const fechasLaborables = [];
@@ -3715,15 +3642,12 @@
                 }
             }
 
-            // --- Tipo especial hoy (FIX: solo si entrada === salida) ---
             const tipoEspecialHoy = (regHoy && regHoy.salida && regHoy.entrada === regHoy.salida)
                 ? TiposRegistro.obtenerTipoPorCodigo(regHoy.entrada, regHoy.salida)
                 : null;
 
-            // --- Tiempo transcurrido hoy ---
             let tiempoHoy = 0;
             if (ayerAbierto && !regHoy) {
-                // Si ayer está abierto y hoy no hay nada, el timer sigue contando desde la entrada de ayer
                 const ahora = new Date();
                 const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
                 const t = D.calcularHoras(regAyer.entrada, horaActual, regAyer.tiempoFuera || null, null, true);
@@ -3743,19 +3667,15 @@
                 hoy, ini, fn,
                 registros, regHoy,
                 horasDiarias, horasSemanales,
-                diasHabiles, esDiaHabil, // Asegurate de que esDiaHabil esté definido como en tu código
+                diasHabiles, esDiaHabil, 
                 semanaAbierta, bufferSemanal,
                 totalSemana, objetivoSemana,
                 tipoEspecialHoy, tiempoHoy,
                 todosEspeciales,
-                ayerAbierto, ayerStr: ayer, regAyer // turno cruzando medianoche
+                ayerAbierto, ayerStr: ayer, regAyer
             };
         }
 
-        // =========================================================
-        // CAPA 2A: derivarVistaSemana(est)
-        // Devuelve decisiones visuales para vista "semana". Sin DOM.
-        // =========================================================
         function derivarVistaSemana(est) {
             const { totalSemana: tot, objetivoSemana, semanaAbierta, horasDiarias, todosEspeciales } = est;
 
@@ -3803,18 +3723,12 @@
             };
         }
 
-        // =========================================================
-        // CAPA 2B: derivarVistaHoy(est)
-        // Devuelve decisiones visuales para vista "hoy". Sin DOM.
-        // =========================================================
         function derivarVistaHoy(est) {
             const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanal, diasHabiles } = est;
             const objetivoDiario = horasDiarias;
 
-            // SIN REGISTRO HOY
             if (!regHoy || !regHoy.entrada) {
 
-                // --- NUEVO: Mostrar tarjeta contando el turno de ayer ---
                 if (est.ayerAbierto) {
                     const prog = objetivoDiario > 0 ? Math.min((tiempoHoy / objetivoDiario) * 100, 100) : 100;
                     const cumplido = objetivoDiario === 0 || tiempoHoy >= objetivoDiario;
@@ -3838,13 +3752,9 @@
                         mensaje = bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
                     }
 
-                    // --- CALCULAR NOMBRE DEL DÍA DE AYER ---
                     const nombreDiaAyer = obtenerNombreDia(est.ayerStr);
-
-                    // --- CALCULAR SALIDA ESTIMADA PARA AYER ---
                     let hint = 'Toca Fichar para registrar salida';
                     let hintEsHTML = false;
-
                     const regAyer = est.regAyer;
 
                     if (regAyer && regAyer.entrada && objetivoDiario > 0 && !TiposRegistro.esRegistroEspecial(regAyer.entrada, regAyer.salida)) {
@@ -3895,7 +3805,6 @@
                     };
                 }
 
-                // DIA NORMAL SIN REGISTRO
                 return {
                     titulo: `<svg class="icon"><use href="#icon-clock" /></svg>${obtenerNombreDia(obtenerFechaHoy())}`,
                     stats: esDiaHabil ? '🎒' : '🌞',
@@ -3909,7 +3818,6 @@
                 };
             }
 
-            // DÍA ESPECIAL HOY
             if (tipoEspecialHoy) {
                 return {
                     titulo: `<svg class="icon"><use href="#icon-clock" /></svg>${obtenerNombreDia(obtenerFechaHoy())}`,
@@ -3923,7 +3831,6 @@
                 };
             }
 
-            // DÍA NORMAL CON REGISTRO (HOY)
             const dayClosed = !!regHoy.salida;
             const prog = objetivoDiario > 0 ? Math.min((tiempoHoy / objetivoDiario) * 100, 100) : 100;
             const cumplido = objetivoDiario === 0 || tiempoHoy >= objetivoDiario;
@@ -4005,9 +3912,6 @@
             };
         }
 
-        // =========================================================
-        // CAPA 3: Renderers — cada uno escribe solo su parte del DOM
-        // =========================================================
         const _COLORES_BORDE = ['blue', 'green', 'red', 'purple', 'orange', 'gold', 'transparent'];
 
         function _renderTitulo(vista) {
@@ -4015,7 +3919,6 @@
             if (el) el.innerHTML = vista.titulo;
         }
 
-        // --- Ciclo stats / entrada / salida ---
         let _cicloStatsInterval = null;
         let _cicloStatsValorHoras = '';
         let _cicloStatsEntrada = '';
@@ -4032,7 +3935,7 @@
 
         function _iniciarCicloStats() {
             _detenerCicloStats();
-            if (!_cicloStatsEntrada) return; // sin entrada no hay ciclo
+            if (!_cicloStatsEntrada) return; 
 
             const fases = [
                 _cicloStatsValorHoras,
@@ -4050,7 +3953,7 @@
 
                 setTimeout(() => {
                     idx++;
-                    if (idx >= fases.length) { // ciclo completo, volver a horas y terminar
+                    if (idx >= fases.length) { 
                         el.classList.remove('ciclo-fade-out');
                         el.classList.add('ciclo-fade-in');
                         el.textContent = _cicloStatsValorHoras;
@@ -4077,7 +3980,6 @@
             const el = $('stats-semana');
             if (!el) return;
 
-            // Obtener entrada y salida del día de hoy si estamos en vista diaria
             const esDiaria = D.vistaActual() !== 'semana';
             const hoy = S.formatearFechaLocal(new Date());
             const regHoy = D.registros().find(r => r.fecha === hoy) ?? null;
@@ -4089,8 +3991,6 @@
             _cicloStatsEntrada = entradaHoy;
             _cicloStatsSalida = salidaHoy;
 
-            // Solo actualizar el texto si el ciclo no está corriendo,
-            // para no pisar la fase que se esté mostrando en ese momento
             if (!_cicloStatsInterval) {
                 el.textContent = vista.stats;
             }
@@ -4172,9 +4072,6 @@
             }
         }
 
-        // =========================================================
-        // actualizarUI — orquestador
-        // =========================================================
         function _animarCambioCard(renderFn) {
             const els = [
                 $('stats-semana'),
@@ -4242,12 +4139,10 @@
             let temaOscuro = !D.cargarConfiguracion().temaOscuro;
             document.body.classList.toggle('dark-mode');
 
-            // Guardar en la raíz (NO dentro del perfil)
             try {
                 localStorage.setItem('temaOscuro', temaOscuro);
             } catch (e) { }
 
-            // Actualizar iconos de todos los botones
             const botonesTema = [
                 'theme-toggle',
                 'theme-toggle-modal',
@@ -4269,42 +4164,35 @@
             const card = document.getElementById('stats-card');
             const content = document.getElementById('stats-card-content');
 
-            // 1. Iniciamos animación de la tarjeta Y del contenido
             if (card) card.classList.add('cambiando-vista');
             if (content) content.classList.add('fade-out');
 
-            // 2. Delay para permitir que la animación se vea
             setTimeout(() => {
-                // Lógica original de cambio de datos
                 let vistaActual = D.vistaActual() === 'semana' ? 'diaria' : 'semana';
                 D.setVistaActual(vistaActual);
                 try {
                     localStorage.setItem('vistaActual', vistaActual);
                 } catch (e) { }
 
-                _detenerCicloStats(); // El ciclo es exclusivo de la vista diaria
-                actualizarUI(); // Se actualizan los textos (mientras está invisible)
+                _detenerCicloStats(); 
+                actualizarUI(); 
 
-                // 3. Removemos fade-out para que vuelva a aparecer
                 if (content) content.classList.remove('fade-out');
 
-                // 4. Terminamos la animación de la tarjeta
                 if (card) card.classList.remove('cambiando-vista');
 
-            }, 300); // sincronizado con la transición CSS
+            }, 300); 
         }
 
         function pegarHoraActual(id) {
             const c = document.getElementById(id);
             if (!c) return;
 
-            // 1. Si el campo tiene contenido, limpiarlo (toggle)
             if (c.value.trim() !== '') {
                 c.value = '';
                 UILogic.limpiarError('entrada', 'error-entrada');
                 UILogic.limpiarError('salida', 'error-salida');
 
-                // --- Avisar que se borró para bloquear el botón ---
                 if (id === 'edit-entrada' || id === 'edit-salida') {
                     verificarBloqueoCredito();
                     c.dispatchEvent(new Event('input'));
@@ -4312,13 +4200,11 @@
                 return;
             }
 
-            // 2. Si está vacío, pegar hora actual
             const now = new Date();
             const h = String(now.getHours()).padStart(2, '0');
             const m = String(now.getMinutes()).padStart(2, '0');
             c.value = `${h}:${m}`;
 
-            // --- Avisar que se pegó para habilitar el botón ---
             if (id === 'edit-entrada' || id === 'edit-salida') {
                 verificarBloqueoCredito();
                 c.dispatchEvent(new Event('input'));
@@ -4350,7 +4236,6 @@
                 else el.textContent = `(Total semanal: ${total}hs)`;
             }
 
-            // Aplicar días laborales inmediatamente si hay al menos uno seleccionado
             if (seleccionados > 0) {
                 const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
                 D.setDiasHabiles(nuevosDias);
@@ -4364,14 +4249,11 @@
         }
 
         function iniciarCambioHoras(incremento) {
-            // Cambio inmediato al presionar
             cambiarHorasDiarias(incremento);
-
-            // Esperar 500ms antes de iniciar repetición
             timeoutInicial = setTimeout(() => {
                 intervaloPulsacion = setInterval(() => {
                     cambiarHorasDiarias(incremento);
-                }, 100); // Repetir cada 100ms
+                }, 100);
             }, 500);
         }
 
@@ -4412,7 +4294,6 @@
             D.setIgnorarTiempoFuera(nuevoValor);
             try { localStorage.setItem(_perfilKey('ignorarTiempoFuera'), nuevoValor); } catch (e) { }
             actualizarEstadoBotonIgnorarTF();
-            // Recalcular totales en memoria (sin guardar en historial ni perfil)
             D.recalcularTotalesEnMemoria();
             actualizarUI();
             mostrarToast(nuevoValor ? 'Tiempo fuera ignorado en cálculos' : 'Tiempo fuera incluido en cálculos', 'info');
@@ -4509,7 +4390,6 @@
                 }
             });
 
-            // Reordenar filas en ajustes
             const lista = document.getElementById('lista-orden-cards');
             if (lista) {
                 orden.forEach(cual => {
@@ -4523,25 +4403,23 @@
             const lista = document.getElementById('lista-orden-cards');
             if (!lista) return;
 
-            let draggingEl = null;   // Original (actúa como hueco en la lista)
-            let dragClone = null;    // Clon visual que sigue al dedo
+            let draggingEl = null;
+            let dragClone = null;
             let startY = 0;
             let initialYOffset = 0;
             let dragTimer = null;
-            const DRAG_DELAY = 150; // Corto: se siente instantáneo pero permite hacer scroll
+            const DRAG_DELAY = 150; 
 
             function getCardFromItem(el) {
                 const handle = el?.classList?.contains('drag-handle') ? el : el?.querySelector('.drag-handle');
                 return handle?.dataset?.card;
             }
 
-            // Inicializa el clon y oculta el original
             function initDrag(item, clientY) {
                 draggingEl = item;
                 const rect = item.getBoundingClientRect();
                 initialYOffset = clientY - rect.top;
 
-                // 1. Clon visual DENTRO DEL BODY para evadir el bug del transform del modal
                 dragClone = item.cloneNode(true);
                 dragClone.style.position = 'fixed';
                 dragClone.style.top = `${rect.top}px`;
@@ -4549,14 +4427,12 @@
                 dragClone.style.width = `${rect.width}px`;
                 dragClone.style.height = `${rect.height}px`;
                 dragClone.style.zIndex = '999999';
-                dragClone.style.pointerEvents = 'none'; // Clave para que los eventos pasen al fondo
+                dragClone.style.pointerEvents = 'none'; 
                 dragClone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
                 dragClone.style.margin = '0';
                 dragClone.style.transform = 'scale(1.02)';
                 dragClone.style.opacity = '0.9';
                 document.body.appendChild(dragClone);
-
-                // 2. El original se vuelve fantasma (ocupa espacio, pero es invisible)
                 draggingEl.style.opacity = '0';
 
                 if (navigator.vibrate) navigator.vibrate(30);
@@ -4565,22 +4441,18 @@
             function moveDrag(clientY) {
                 if (!dragClone || !draggingEl) return;
 
-                // Mover el clon en la pantalla
                 dragClone.style.top = `${clientY - initialYOffset}px`;
 
-                // Detectar qué tarjeta estamos sobrevolando
                 const target = [...lista.querySelectorAll('.orden-card-item')].find(item => {
                     if (item === draggingEl) return false;
                     const r = item.getBoundingClientRect();
                     return clientY >= r.top && clientY <= r.bottom;
                 });
 
-                // Desplazar el elemento original (fantasma) por el DOM
                 if (target) {
                     const targetRect = target.getBoundingClientRect();
                     const targetMiddle = targetRect.top + targetRect.height / 2;
 
-                    // Flexbox reacomoda automáticamente en tiempo real
                     if (clientY < targetMiddle) {
                         lista.insertBefore(draggingEl, target);
                     } else {
@@ -4593,19 +4465,16 @@
                 clearTimeout(dragTimer);
                 if (!draggingEl) return;
 
-                // Destruir el clon y hacer visible el original
                 if (dragClone) {
                     dragClone.remove();
                     dragClone = null;
                 }
                 draggingEl.style.opacity = '';
 
-                // Guardar nuevo orden leyendo el estado final del DOM
                 const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
                 const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
 
                 try {
-                    // Usamos el helper existente _perfilKey
                     localStorage.setItem(_perfilKey('ordenCards'), JSON.stringify(nuevoOrden));
                 } catch (e) { }
 
@@ -4616,7 +4485,6 @@
                 draggingEl = null;
             }
 
-            // --- TOUCH EVENTS (CELULARES) ---
             lista.addEventListener('touchstart', (e) => {
                 const handle = e.target.closest('.drag-handle');
                 if (!handle) return;
@@ -4631,18 +4499,16 @@
 
             lista.addEventListener('touchmove', (e) => {
                 if (!draggingEl) {
-                    // Si mueve mucho el dedo antes del delay, es scroll: cancelar drag
                     if (Math.abs(e.touches[0].clientY - startY) > 10) clearTimeout(dragTimer);
                     return;
                 }
-                e.preventDefault(); // Evita que se scrollee el modal mientras arrastramos
+                e.preventDefault(); 
                 moveDrag(e.touches[0].clientY);
             }, { passive: false });
 
             lista.addEventListener('touchend', endDrag);
             lista.addEventListener('touchcancel', endDrag);
 
-            // --- MOUSE EVENTS (PC) ---
             lista.addEventListener('mousedown', (e) => {
                 const handle = e.target.closest('.drag-handle');
                 if (!handle) return;
@@ -4699,7 +4565,6 @@
                     btnVolverI.lastChild.textContent = desdeLista ? ' Cerrar' : ' Volver';
                     btnVolverI.querySelector('use').setAttribute('href', desdeLista ? '#icon-cancelar' : '#icon-undo');
                 }
-                // Abrir selector de archivo automáticamente al abrir el modal
                 setTimeout(() => $('file-import').click(), 50);
             });
         }
@@ -4719,7 +4584,6 @@
             const selectAnio = $('select-anio-stats');
             if (!selectAnio) return;
 
-            // Guardar año seleccionado actual
             const anioActualmenteSeleccionado = selectAnio.value;
 
             const aniosUnicos = new Set();
@@ -4738,7 +4602,6 @@
 
             const anioActual = String(new Date().getFullYear());
 
-            // Si había un año seleccionado y aún existe, mantenerlo
             let anioASeleccionar;
             if (anioActualmenteSeleccionado && aniosOrdenados.includes(anioActualmenteSeleccionado)) {
                 anioASeleccionar = anioActualmenteSeleccionado;
@@ -4811,7 +4674,6 @@
                 actualizarEstadisticasSemana(null);
                 return;
             }
-            // Agrupar semanas por año
             const semanasPorAnio = new Map();
             semanas.forEach(key => {
                 const anio = key.substring(0, 4);
@@ -4819,7 +4681,6 @@
                 semanasPorAnio.get(anio).push(key);
             });
 
-            // Determinar valor a seleccionar
             let seleccionar;
             if (selActual && semanas.includes(selActual)) {
                 seleccionar = selActual;
@@ -4828,7 +4689,6 @@
                 seleccionar = semanas.includes(lunesISO) ? lunesISO : semanas[0];
             }
 
-            // Crear opciones agrupadas por año
             semanasPorAnio.forEach((keys, anio) => {
                 const grupo = document.createElement('optgroup');
                 grupo.label = anio;
@@ -4911,24 +4771,15 @@
         function poblarSelectorMeses() {
             const selectMes = $('select-mes-stats');
             if (!selectMes) return;
-
-            // Guardar mes seleccionado actual
             const mesActualmenteSeleccionado = selectMes.value;
-
-            // Obtener todos los meses únicos de los registros
             const mesesUnicos = new Set();
             D.registros().forEach(r => {
                 const mesAnio = r.fecha.substring(0, 7);
                 mesesUnicos.add(mesAnio);
             });
 
-            // Convertir a array y ordenar (más reciente primero)
             const mesesOrdenados = Array.from(mesesUnicos).sort().reverse();
-
-            // Limpiar opciones previas
             selectMes.innerHTML = '';
-
-            // Si no hay registros
             if (mesesOrdenados.length === 0) {
                 const option = document.createElement('option');
                 option.value = '';
@@ -4938,22 +4789,17 @@
                 return;
             }
 
-            // Mes actual
             const hoy = new Date();
             const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
 
-            // Determinar qué mes debe quedar seleccionado
             let mesASeleccionar = mesActual;
 
-            // Si había un mes seleccionado y aún existe, mantenerlo
             if (mesActualmenteSeleccionado && mesesOrdenados.includes(mesActualmenteSeleccionado)) {
                 mesASeleccionar = mesActualmenteSeleccionado;
             } else if (!mesesOrdenados.includes(mesActual)) {
-                // Si el mes actual no tiene registros, usar el más reciente
                 mesASeleccionar = mesesOrdenados[0];
             }
 
-            // Agrupar meses por año
             const mesesPorAnio = new Map();
             mesesOrdenados.forEach(mesAnio => {
                 const anio = mesAnio.substring(0, 4);
@@ -4961,7 +4807,6 @@
                 mesesPorAnio.get(anio).push(mesAnio);
             });
 
-            // Crear opciones agrupadas por año
             mesesPorAnio.forEach((meses, anio) => {
                 const grupo = document.createElement('optgroup');
                 grupo.label = anio;
@@ -4970,13 +4815,11 @@
                     const option = document.createElement('option');
                     option.value = mesAnio;
 
-                    // Formatear solo el nombre del mes (sin el año)
                     const [a, m] = mesAnio.split('-');
                     const fecha = new Date(a, m - 1, 1);
                     const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long' });
                     option.textContent = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
 
-                    // Seleccionar el mes correcto
                     if (mesAnio === mesASeleccionar) {
                         option.selected = true;
                     }
@@ -4987,7 +4830,6 @@
                 selectMes.appendChild(grupo);
             });
 
-            // Actualizar stats con el mes correcto
             actualizarEstadisticas(mesASeleccionar);
         }
 
@@ -5000,14 +4842,12 @@
             const esAnual = modoEstadisticas === 'anual';
             const horasDiariasObjetivo = D.horasDiarias();
 
-            // Helper local: evita triplicar el mismo cálculo de h/m
             const fmtHM = (total) => {
                 let h = Math.floor(total), m = Math.round((total - h) * 60);
                 if (m === 60) { h++; m = 0; }
                 return `${h}h ${String(m).padStart(2, '0')}m`;
             };
 
-            // Helper local: suma horas de un array de registros
             const sumarHoras = (regs) => regs.reduce((sum, r) => {
                 const t = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                 if (t && t.id === 'remoto') return sum + horasDiariasObjetivo;
@@ -5015,7 +4855,6 @@
                 return sum;
             }, 0);
 
-            // --- PERÍODO Y REGISTROS ---
             let periodoLabel, registrosPeriodo, stats, nombreArchivo, mesSeleccionado;
 
             if (esAnual) {
@@ -5078,7 +4917,6 @@ ${lineasTipos}
 
                 detallePeriodo: () => {
                     if (esAnual) {
-                        // --- TOTALES POR MES ---
                         const mesesOrdenados = Array.from(
                             new Set(registrosPeriodo.map(r => r.fecha.substring(0, 7)))
                         ).sort();
@@ -5106,7 +4944,6 @@ ${lineasTipos}
                                 })
                                 .filter(Boolean);
 
-                            // Usa formatoTituloMes — ya existe para esto
                             const nombreMesCap = formatoTituloMes(claveMes).split(' ')[0];
 
                             seccion += `   ${nombreMesCap.padEnd(12)} ${fmtHM(sumarHoras(regsM)).padEnd(10)}  (${normales.length} jornadas)`;
@@ -5116,7 +4953,6 @@ ${lineasTipos}
                         return seccion;
 
                     } else {
-                        // --- DETALLE DIARIO ---
                         let seccion = `
 
 ──────────────────────────────────────────────────────────────────
@@ -5151,7 +4987,6 @@ ${lineasTipos}
                 },
 
                 totalesPorSemana: () => {
-                    // mesSeleccionado ya está disponible en el closure, no hace falta releer el DOM
                     if (esAnual || !mesSeleccionado) return '';
 
                     const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
@@ -5174,8 +5009,6 @@ ${lineasTipos}
                             if (semana[categoria]) semana[categoria].push(r);
                         } else {
                             semana.trabajados.push(r);
-                            // Nota: registros con crédito son jornadas normales (salida temprana),
-                            // no se clasifican como asuetos
                         }
                     });
 
@@ -5290,11 +5123,9 @@ Generado por Sistema Lushibosca
             }
         }
 
-        // Función auxiliar para sumar minutos a un formato HH:MM
         function sumarMinutosAHora(horaString, minutosASumar) {
             let totalMinutos = minutosASumar;
 
-            // Si ya existe un valor en el input (ej: 00:20), lo sumamos
             if (horaString && horaString.includes(':')) {
                 const [h, m] = horaString.split(':').map(Number);
                 if (!isNaN(h) && !isNaN(m)) {
@@ -5305,10 +5136,8 @@ Generado por Sistema Lushibosca
             let horas = Math.floor(totalMinutos / 60);
             let mins = Math.round(totalMinutos % 60);
 
-            // Capear a 23:59
             if (horas > 23) { horas = 23; mins = 59; }
 
-            // Formatear a HH:MM
             return `${String(horas).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
         }
 
@@ -5317,20 +5146,15 @@ Generado por Sistema Lushibosca
             const card = document.getElementById('stats-card');
             if (!btn) return;
 
-            // Verificamos si estamos en modo lote
             if (modoLoteActivo) {
-                // Si estamos en modo lote, nos aseguramos que el botón siga oculto y SALIMOS
                 btn.style.display = 'none';
                 return;
             }
 
-            // Si no estamos en modo lote, nos aseguramos que se vea
             btn.style.display = '';
 
             const hoy = obtenerFechaHoy();
             const registroHoy = D.registros().find(r => r.fecha === hoy);
-
-            //  CLAVE ESPECÍFICA POR PERFIL
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             const storageKey = `breakStartTime_${perfilId}`;
             const isRunning = localStorage.getItem(storageKey) !== null;
@@ -5351,7 +5175,6 @@ Generado por Sistema Lushibosca
             }
 
             if (isRunning) {
-                // Estado ACTIVO
                 btn.classList.add('running');
                 btn.style.color = 'var(--c-red)';
                 btn.style.borderColor = 'var(--c-red)';
@@ -5361,7 +5184,6 @@ Generado por Sistema Lushibosca
                     card.classList.add('timer-running');
                     const titulo = card.querySelector('h2');
 
-                    // Mantener contexto de vista
                     const vistaActual = D.vistaActual();
                     const icono = vistaActual === 'semana'
                         ? '<svg class="icon"><use href="#icon-calendar-simple"/></svg>'
@@ -5380,7 +5202,6 @@ Generado por Sistema Lushibosca
                 }
 
             } else {
-                // Estado INACTIVO
                 btn.classList.remove('running');
                 btn.style.color = 'var(--text-main)';
                 btn.style.borderColor = 'var(--border)';
@@ -5391,7 +5212,6 @@ Generado por Sistema Lushibosca
             }
         }
 
-        // --- Contador visual de tiempo fuera en curso ---
         let _breakCounterInterval = null;
 
         function _iniciarContadorBreak(storageKey) {
@@ -5423,40 +5243,33 @@ Generado por Sistema Lushibosca
         }
 
         async function toggleTimerBreakMain() {
-            //  CLAVE ESPECÍFICA POR PERFIL
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             const storageKey = `breakStartTime_${perfilId}`;
             const storedStart = localStorage.getItem(storageKey);
             const hoy = obtenerFechaHoy();
             const registroHoy = D.registros().find(r => r.fecha === hoy);
 
-            // Doble verificación de seguridad
             if (!storedStart && !registroHoy) {
                 mostrarToast('Debes crear un registro para hoy primero', 'warning');
                 return;
             }
 
             if (!storedStart) {
-                // --- INICIAR ---
                 localStorage.setItem(storageKey, Date.now());
                 mostrarToast('Tiempo fuera iniciado', 'info');
             } else {
-                // --- DETENER ---
                 const start = parseInt(storedStart);
                 const end = Date.now();
                 const diffMs = end - start;
 
-                // NUEVO: Calcular minutos con umbral de 30 segundos
                 const segundosTranscurridos = Math.floor(diffMs / 1000);
                 let minutosTranscurridos = Math.floor(segundosTranscurridos / 60);
                 const segundosRestantes = segundosTranscurridos % 60;
 
-                // Si los segundos restantes son >= 30, sumar 1 minuto más
                 if (segundosRestantes >= 30) {
                     minutosTranscurridos += 1;
                 }
 
-                // Si el tiempo es menor a 30 segundos, no registrar nada
                 if (segundosTranscurridos < 30) {
                     localStorage.removeItem(storageKey);
                     mostrarToast('Tiempo muy corto, no se registró', 'info');
@@ -5465,7 +5278,6 @@ Generado por Sistema Lushibosca
                     return;
                 }
 
-                // Calcular nuevo tiempo
                 if (!registroHoy) {
                     localStorage.removeItem(storageKey);
                     mostrarToast('No hay registro para hoy, tiempo fuera descartado', 'warning');
@@ -5475,20 +5287,15 @@ Generado por Sistema Lushibosca
                 }
                 const tiempoActual = registroHoy.tiempoFuera || '00:00';
                 const nuevoTiempoFuera = sumarMinutosAHora(tiempoActual, minutosTranscurridos);
-
-                // Actualizar el registro en memoria
                 registroHoy.tiempoFuera = nuevoTiempoFuera;
-
-                // Recalcular totales del registro (horas netas)
                 const t = D.calcularHoras(registroHoy.entrada, registroHoy.salida, nuevoTiempoFuera);
                 registroHoy.horas = t?.horas || 0;
                 registroHoy.minutos = t?.minutos || 0;
                 registroHoy.total = t?.total || 0;
                 HistoryManager.saveState(D.registros());
 
-                // Guardar en base de datos
                 localStorage.removeItem(storageKey);
-                await D.guardarYActualizar(registroHoy.id); // Guardamos y refrescamos UI
+                await D.guardarYActualizar(registroHoy.id); 
 
                 const mensaje = minutosTranscurridos === 1
                     ? 'Se descontó 1 minuto al registro de hoy'
@@ -5510,14 +5317,12 @@ Generado por Sistema Lushibosca
                 btnLock.style.color = bloqueado ? 'var(--c-red)' : 'var(--text-main)';
             }
 
-            // Bloquear Inputs (Menos el botón de crédito, que se maneja aparte)
             const inputs = ['edit-fecha', 'edit-entrada', 'edit-salida', 'edit-tiempo-fuera', 'edit-notas'];
             inputs.forEach(id => {
                 const el = $(id);
                 if (el) el.disabled = bloqueado;
             });
 
-            // Bloquear Botones generales
             const modal = $('modal-editar');
             if (modal) {
                 const botones = modal.querySelectorAll('button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)');
@@ -5525,8 +5330,6 @@ Generado por Sistema Lushibosca
                     btn.disabled = bloqueado;
                 });
             }
-
-            // IMPORTANTE: Forzamos la revisión del botón de crédito AHORA MISMO
             verificarBloqueoCredito();
         }
 
@@ -5614,7 +5417,6 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            // Poblar selector antes de medir altura
             const registros = D.registros();
             const mesesUnicos = new Set();
             registros.forEach(r => mesesUnicos.add(r.fecha.substring(0, 7)));
@@ -5631,7 +5433,6 @@ Generado por Sistema Lushibosca
                 const anioActual = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
                 const mesActual = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
 
-                // Agrupar meses por año
                 const mesesPorAnio = new Map();
                 mesesOrdenados.forEach(mesAnio => {
                     const anioStr = mesAnio.substring(0, 4);
@@ -5640,7 +5441,6 @@ Generado por Sistema Lushibosca
                 });
 
                 mesesPorAnio.forEach((meses, anioStr) => {
-                    // Encabezado de año
                     const separador = document.createElement('div');
                     separador.className = 'selector-meses-anio-header';
                     separador.textContent = anioStr;
@@ -5674,7 +5474,6 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            // Abrir: medir altura real del grid antes de ocultarlo
             const alturaCalendario = grid.offsetHeight;
             selector.style.height = alturaCalendario + 'px';
 
@@ -5686,7 +5485,7 @@ Generado por Sistema Lushibosca
                 titulo.textContent = 'Selector de mes';
                 selector.style.display = 'grid';
                 selector.classList.add('fade-out');
-                selector.offsetHeight; // reflow
+                selector.offsetHeight; 
                 selector.classList.remove('fade-out');
             }, 300);
         }
@@ -5716,7 +5515,6 @@ Generado por Sistema Lushibosca
             const input = document.getElementById('nombre-nuevo-perfil-selector');
             if (!input) return;
 
-            // 1. Limpieza básica
             const nombre = S.sanitizeString(input.value.trim(), 30);
 
             if (!nombre) {
@@ -5724,7 +5522,6 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            // Permite: Letras, Números, Espacios, Guiones, Tildes y Ñ
             const regexSeguro = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/;
 
             if (!regexSeguro.test(nombre)) {
@@ -5734,7 +5531,6 @@ Generado por Sistema Lushibosca
 
             const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
 
-            //  VALIDACIÓN DE NOMBRE DUPLICADO (case-insensitive)
             const nombreNormalizado = nombre.toLowerCase().trim();
             const nombreExiste = Object.values(perfiles).some(perfil =>
                 perfil.nombre.toLowerCase().trim() === nombreNormalizado
@@ -5754,7 +5550,7 @@ Generado por Sistema Lushibosca
             perfiles[id] = {
                 nombre: nombre,
                 registros: [],
-                diasHabiles: [1, 2, 3, 4, 5], // Array por defecto
+                diasHabiles: [1, 2, 3, 4, 5], 
                 horasDiarias: 7
             };
 
@@ -5762,14 +5558,12 @@ Generado por Sistema Lushibosca
                 localStorage.setItem('perfiles', JSON.stringify(perfiles));
             } catch (e) {
                 console.error('Error al guardar perfil:', e);
-                delete perfiles[id]; // revertir
+                delete perfiles[id];
                 mostrarToast('Error al guardar: almacenamiento lleno', 'error');
                 return;
             }
 
-            // FORZAR ACTUALIZACIÓN DEL PERFILMANAGER
             if (window.PerfilManager) {
-                // Recargar los perfiles internamente
                 window.PerfilManager.inicializar();
             }
 
@@ -5777,10 +5571,8 @@ Generado por Sistema Lushibosca
 
             input.value = '';
 
-            // RENDERIZAR LISTA ACTUALIZADA
             renderizarListaPerfiles();
 
-            // Resaltar nuevo perfil
             requestAnimationFrame(() => {
                 const lista = document.getElementById('lista-perfiles-botones');
                 const nuevoPerfilElement = lista?.lastElementChild;
@@ -5827,13 +5619,11 @@ Generado por Sistema Lushibosca
             document.getElementById('nombre-perfil-editar').value = perfil.nombre;
             document.getElementById('id-perfil-editar').value = perfilId;
 
-            // Deshabilitar botón eliminar si es el perfil default
             const btnEliminar = document.getElementById('btn-eliminar-perfil-editor');
             if (btnEliminar) {
                 btnEliminar.disabled = (perfilId === 'default');
             }
 
-            // Cerrar selector y abrir editor
             ModalManager.alternar('modal-selector-perfiles', 'modal-editar-perfil');
         }
 
@@ -5849,7 +5639,6 @@ Generado por Sistema Lushibosca
         function guardarEdicionPerfil() {
             if (!perfilEnEdicion) return;
 
-            // 1. Limpieza básica
             const nuevoNombre = S.sanitizeString(document.getElementById('nombre-perfil-editar').value.trim(), 30);
 
             if (!nuevoNombre) {
@@ -5857,7 +5646,6 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            // --- VALIDACIÓN ESTRICTA ---
             const regexSeguro = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/;
 
             if (!regexSeguro.test(nuevoNombre)) {
@@ -5872,17 +5660,15 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            // Detectar cambios
             if (perfiles[perfilEnEdicion].nombre === nuevoNombre) {
                 mostrarToast('Sin cambios', 'info');
                 cerrarEditorPerfil();
                 return;
             }
 
-            // VALIDACIÓN DE NOMBRE DUPLICADO (case-insensitive)
             const nombreNormalizado = nuevoNombre.toLowerCase().trim();
             const nombreExiste = Object.entries(perfiles).some(([id, perfil]) =>
-                id !== perfilEnEdicion && // Excluir el perfil que estamos editando
+                id !== perfilEnEdicion && 
                 perfil.nombre.toLowerCase().trim() === nombreNormalizado
             );
 
@@ -5897,7 +5683,7 @@ Generado por Sistema Lushibosca
                 localStorage.setItem('perfiles', JSON.stringify(perfiles));
             } catch (e) {
                 console.error('Error al guardar perfil:', e);
-                perfiles[perfilEnEdicion].nombre = nombreAnterior; // revertir
+                perfiles[perfilEnEdicion].nombre = nombreAnterior;
                 mostrarToast('Error al guardar: almacenamiento lleno', 'error');
                 return;
             }
@@ -5934,8 +5720,6 @@ Generado por Sistema Lushibosca
 
             if (!confirmacion) return;
 
-            // Eliminar el perfil
-            // Limpiar claves localStorage del perfil eliminado
             const pid = perfilEnEdicion;
             localStorage.removeItem(`breakStartTime_${pid}`);
             localStorage.removeItem(`history_${pid}`);
@@ -5946,7 +5730,6 @@ Generado por Sistema Lushibosca
             localStorage.removeItem(`cardVisible_historico_${pid}`);
             localStorage.removeItem(`ordenCards_${pid}`);
 
-            // Eliminar el perfil
             delete perfiles[perfilEnEdicion];
             try {
                 localStorage.setItem('perfiles', JSON.stringify(perfiles));
@@ -5956,7 +5739,6 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            // Si era el perfil actual, cambiar a default
             const perfilActual = window.PerfilManager.obtenerPerfilActual();
             if (perfilEnEdicion === perfilActual) {
                 try {
@@ -5969,7 +5751,6 @@ Generado por Sistema Lushibosca
                 mostrarToast('Perfil eliminado. Recargando...', 'success');
                 setTimeout(() => location.reload(), 1000);
             } else {
-                // --- Actualizar memoria del PerfilManager ---
                 if (window.PerfilManager) {
                     window.PerfilManager.inicializar();
                 }
@@ -5989,7 +5770,6 @@ Generado por Sistema Lushibosca
             modoLoteActivo = !modoLoteActivo;
 
             if (modoLoteActivo) {
-                // Cambiar a modo lote
                 modoNormal.classList.add('fade-out');
 
                 setTimeout(() => {
@@ -5998,7 +5778,6 @@ Generado por Sistema Lushibosca
                     modoLote.offsetHeight;
                     modoLote.classList.remove('fade-out');
 
-                    // Limpiar campos
                     document.getElementById('lote-tipo').value = 'feriado';
                     document.getElementById('lote-fecha-desde').value = '';
                     document.getElementById('lote-fecha-hasta').value = '';
@@ -6016,7 +5795,6 @@ Generado por Sistema Lushibosca
                 }, 300);
 
             } else {
-                // Volver a modo normal
                 modoLote.classList.add('fade-out');
 
                 setTimeout(() => {
@@ -6038,7 +5816,6 @@ Generado por Sistema Lushibosca
                 await DataManagement.agregarRegistro();
             }
 
-            // Actualizar el estado del botón después de la operación
             if (modoLoteActivo) {
                 setTimeout(() => actualizarBotonLote(), 100);
             }
@@ -6049,7 +5826,6 @@ Generado por Sistema Lushibosca
             const inputHasta = document.getElementById('lote-fecha-hasta');
             const tipo = document.getElementById('lote-tipo').value;
 
-            // VALIDACIÓN: Verificar si el usuario escribió algo inválido
             if (inputDesde.value === '' && inputDesde.validity && !inputDesde.validity.valid) {
                 mostrarToast('Fecha inicial inválida', 'error');
                 return;
@@ -6063,9 +5839,7 @@ Generado por Sistema Lushibosca
             const desde = inputDesde.value;
             const hasta = inputHasta.value;
 
-            // --- CASO 1: Sin fechas (registrar HOY) ---
             if (!desde && !hasta) {
-                // Verificar que realmente estén vacíos y no inválidos
                 if (!inputDesde.checkValidity() || !inputHasta.checkValidity()) {
                     mostrarToast('Revisa las fechas ingresadas', 'error');
                     return;
@@ -6076,7 +5850,6 @@ Generado por Sistema Lushibosca
                     return;
                 }
 
-                // ... resto del código del CASO 1
 
                 const fechaHoy = UILogic.obtenerFechaHoy();
                 const registroExistente = DataManagement.registros().find(r => r.fecha === fechaHoy);
@@ -6085,37 +5858,30 @@ Generado por Sistema Lushibosca
                     return;
                 }
 
-                // Intentar registrar
                 try {
                     await DataManagement.registrarDiaEspecial(fechaHoy, tipo);
-                    // Solo limpiar si fue exitoso
                     document.getElementById('lote-fecha-desde').value = '';
                     document.getElementById('lote-fecha-hasta').value = '';
                 } catch (error) {
-                    // No limpiar campos si hubo error
                     console.error('Error al registrar:', error);
                 }
                 return;
             }
 
-            // --- CASO 2: Solo campo "Desde" (registrar día único) ---
             if (desde && !hasta) {
                 if (tipo === 'normal') {
                     mostrarToast('Completa ambos campos', 'info');
                     return;
                 }
 
-                // Verificar si ya existe algo en esa fecha
                 const registroExistente = DataManagement.registros().find(r => r.fecha === desde);
                 if (registroExistente) {
                     mostrarToast('Ya existe un registro para esa fecha', 'warning');
                     return;
                 }
 
-                // Intentar registrar
                 try {
                     await DataManagement.registrarDiaEspecial(desde, tipo);
-                    // Solo limpiar si fue exitoso
                     aplicarFeedbackCampos([
                         { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                         { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
@@ -6123,13 +5889,11 @@ Generado por Sistema Lushibosca
                     document.getElementById('lote-fecha-desde').value = '';
                     document.getElementById('lote-fecha-hasta').value = '';
                 } catch (error) {
-                    // No limpiar campos si hubo error
                     console.error('Error al registrar:', error);
                 }
                 return;
             }
 
-            // --- CASO 3: Solo "Hasta" sin "Desde" (error) ---
             if (!desde && hasta) {
                 mostrarToast('Completa ambos campos', 'info');
                 return;
@@ -6140,18 +5904,15 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            // --- LÓGICA DE RANGO ---
             let registrosDelTipoEnRango;
 
             if (tipo === 'normal') {
-                // Contar registros NORMALES (no especiales) en el rango
                 registrosDelTipoEnRango = DataManagement.registros().filter(r => {
                     const dentroDelRango = r.fecha >= desde && r.fecha <= hasta;
                     const esEspecial = TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
                     return dentroDelRango && !esEspecial;
                 });
             } else {
-                //  Obtener códigos del tipo seleccionado
                 const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(tipo);
 
                 if (!codigosTipo) {
@@ -6167,7 +5928,6 @@ Generado por Sistema Lushibosca
                 );
             }
 
-            // Intentar la operación (registrar o borrar)
             try {
                 if (tipo === 'normal') {
                     await DataManagement.borrarPeriodoDirecto(desde, hasta);
@@ -6175,7 +5935,6 @@ Generado por Sistema Lushibosca
                     await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
                 }
 
-                // Solo limpiar campos si la operación fue exitosa
                 aplicarFeedbackCampos([
                     { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
@@ -6183,7 +5942,6 @@ Generado por Sistema Lushibosca
                 document.getElementById('lote-fecha-desde').value = '';
                 document.getElementById('lote-fecha-hasta').value = '';
             } catch (error) {
-                // No limpiar campos si hubo error
                 console.error('Error en operación de lote:', error);
             }
         }
@@ -6196,10 +5954,8 @@ Generado por Sistema Lushibosca
         function poblarSelectoresTipos() {
             const tipos = TiposRegistro.obtenerTodosLosTipos();
 
-            // lote-tipo: tipos especiales + opción "normal" al final
             const selectLote = $('lote-tipo');
             if (selectLote) {
-                // Conservar la opción "normal" que ya está en el HTML
                 selectLote.innerHTML = '';
                 tipos.forEach(t => {
                     const opt = document.createElement('option');
@@ -6213,7 +5969,6 @@ Generado por Sistema Lushibosca
                 selectLote.appendChild(optNormal);
             }
 
-            // filtro-tipo: "Todos" + "Normales" + tipos especiales en plural
             const selectFiltro = $('filtro-tipo');
             if (selectFiltro) {
                 selectFiltro.innerHTML = '<option value="">Todos</option><option value="normal">🕒 Jornadas</option>';
@@ -6225,7 +5980,6 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            // edit-grupo-tipo: solo tipos especiales en singular
             const selectGrupo = $('edit-grupo-tipo');
             if (selectGrupo) {
                 selectGrupo.innerHTML = '';
@@ -6245,18 +5999,15 @@ Generado por Sistema Lushibosca
             const btn = document.getElementById('btn-agregar');
             const btnTexto = document.getElementById('btn-registrar-texto');
 
-            // 1. LIMPIEZA: Reseteamos siempre al estilo original
             btn.style.background = '';
             btn.style.color = '';
 
-            // 2. Si faltan fechas, mostramos "Fichar" estándar y salimos
             if (!desde && !hasta) {
                 btnTexto.textContent = 'Fichar';
                 setIconoBtn(btn, '#icon-save');
                 return;
             }
 
-            // Solo "Desde" (día único)
             if (desde && !hasta) {
                 if (tipo === 'normal') {
                     btnTexto.textContent = 'Requiere Rango';
@@ -6265,7 +6016,6 @@ Generado por Sistema Lushibosca
                     return;
                 }
 
-                // Verificar si ya existe
                 const registroExiste = DataManagement.registros().find(r => r.fecha === desde);
                 if (registroExiste) {
                     btnTexto.textContent = 'Fichado';
@@ -6277,14 +6027,12 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            // Solo "Hasta" (error)
             if (!desde && hasta) {
                 btnTexto.textContent = 'Requiere Rango';
                 btn.style.color = 'var(--c-red)';
                 return;
             }
 
-            // VALIDACIÓN DE FECHAS ANTES DE PROCESAR
             if (!S.validarFechaSegura(desde)) {
                 btnTexto.textContent = 'Fecha Inicial Inválida';
                 btn.style.color = 'var(--c-red)';
@@ -6306,13 +6054,11 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            // 3. Calcular días totales en el rango
             const fechaInicio = S.parsearFechaLocal(desde);
             const fechaFin = S.parsearFechaLocal(hasta);
             const diffTime = Math.abs(fechaFin - fechaInicio);
             const diasTotales = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-            // 4. Buscamos registros en el rango
             let registrosDelTipoEnRango;
 
             if (tipo === 'normal') {
@@ -6373,8 +6119,6 @@ Generado por Sistema Lushibosca
 
         function toggleCredito() {
             const btn = document.getElementById('btn-toggle-credito');
-
-            // Usamos el dataset como fuente de verdad
             const estaActivo = btn.dataset.activo === "true";
 
             btn.dataset.activo = estaActivo ? "false" : "true";
@@ -6385,15 +6129,12 @@ Generado por Sistema Lushibosca
         function mostrarExportar(desdeLista = false) {
             _modalAbiertoDesdeLista = desdeLista;
             ModalManager.alternar(desdeLista ? null : 'modal-config', 'modal-exportar', null, () => {
-                // Reset del selector
                 const tipoSelect = document.getElementById('tipo-exportacion');
                 if (tipoSelect) tipoSelect.value = 'todo';
 
-                // Ocultar campos de rango
                 const camposRango = document.getElementById('campos-rango-exportar');
                 if (camposRango) { camposRango.style.maxHeight = '0'; camposRango.style.opacity = '0'; }
 
-                // Limpiar fechas
                 document.getElementById('export-fecha-desde').value = '';
                 document.getElementById('export-fecha-hasta').value = '';
 
@@ -6431,18 +6172,15 @@ Generado por Sistema Lushibosca
 
             try {
                 if (tipo === 'todo') {
-                    // Exportación completa (función existente)
                     D.exportarJSON();
                     cerrarExportar();
 
                 } else if (tipo === 'mes-actual') {
-                    // Exportar solo mes actual
                     const hoy = new Date();
                     const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
                     await exportarRango(mesActual, mesActual, true);
 
                 } else if (tipo === 'rango') {
-                    // Exportar rango personalizado
                     const desde = S.sanitizeString(document.getElementById('export-fecha-desde').value, 10);
                     const hasta = S.sanitizeString(document.getElementById('export-fecha-hasta').value, 10);
 
@@ -6476,18 +6214,15 @@ Generado por Sistema Lushibosca
         }
 
         async function exportarRango(desde, hasta, esMes = false) {
-            // Filtrar registros por rango
             let registrosFiltrados;
 
             if (esMes) {
-                // Mes completo: "2025-01" incluye del 01 al 31
                 const [año, mes] = desde.split('-').map(Number);
                 registrosFiltrados = D.registros().filter(r => {
                     const [aReg, mReg] = r.fecha.split('-').map(Number);
                     return aReg === año && mReg === mes;
                 });
             } else {
-                // Rango exacto
                 registrosFiltrados = D.registros().filter(r =>
                     r.fecha >= desde && r.fecha <= hasta
                 );
@@ -6498,7 +6233,6 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            // Generar fecha local
             const ahora = new Date();
             const año = ahora.getFullYear();
             const mes = String(ahora.getMonth() + 1).padStart(2, '0');
@@ -6549,7 +6283,6 @@ Generado por Sistema Lushibosca
 
             PerfilManager.inicializar();
 
-            // --- EXPORTAR MÓDULOS (Mantener igual) ---
             window.DataManagement = {
                 agregarRegistro: D.agregarRegistro,
                 exportarJSON: D.exportarJSON,
@@ -6601,7 +6334,6 @@ Generado por Sistema Lushibosca
             }
 
             function abrirModalGist() {
-                // Recordar qué modal está abierto para volver al cerrar
                 const modalAbierto = document.querySelector('.modal.show');
                 _gistModalPadre = modalAbierto ? modalAbierto.id : null;
 
@@ -6616,7 +6348,6 @@ Generado por Sistema Lushibosca
                     lastSyncEl.textContent = last ? `Sincronizado: ${last}` : 'No sincronizado';
                 }
 
-                // Cargar rango horario
                 const rango = GistSync.getRangoHorario();
                 const desdeEl = document.getElementById('gist-rango-desde');
                 const hastaEl = document.getElementById('gist-rango-hasta');
@@ -6656,7 +6387,6 @@ Generado por Sistema Lushibosca
 
                 const tieneGist = GistSync.esGistIdValido(GistSync.getGistId());
 
-                // Clonar para eliminar listeners anteriores
                 const newRespaldar = btnRespaldar.cloneNode(true);
                 const newRestaurar = btnRestaurar.cloneNode(true);
                 btnRespaldar.parentNode.replaceChild(newRespaldar, btnRespaldar);
@@ -6874,7 +6604,6 @@ Generado por Sistema Lushibosca
                 if (label) label.textContent = c.texto;
                 if (hint) { hint.textContent = c.hint; hint.style.color = c.color; }
 
-                // Mostrar/ocultar inputs de rango en estado 1 y 2
                 if (rangoEl) {
                     const mostrar = estado === 1 || estado === 2;
                     rangoEl.style.maxHeight = mostrar ? '60px' : '0';
@@ -6957,10 +6686,8 @@ Generado por Sistema Lushibosca
                         D.diasHabiles(),
                         D.horasDiarias()
                     );
-                    // Actualizar el campo con el ID si era nuevo
                     const gistIdInput = document.getElementById('gist-id');
                     if (gistIdInput) gistIdInput.value = nuevoId;
-                    // Actualizar última sync
                     const lastSyncEl = document.getElementById('gist-ultima-sync');
                     if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${GistSync.getLastSync()}`;
                     mostrarToast('Datos respaldados en Gist', 'success');
@@ -6988,12 +6715,10 @@ Generado por Sistema Lushibosca
                         throw new Error('Datos inválidos en el Gist');
                     }
 
-                    // Validar claves permitidas
                     const allowedRootKeys = ['registros', 'diasHabiles', 'horasDiarias', 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
                     const hasInvalidKeys = Object.keys(data).some(k => !allowedRootKeys.includes(k));
                     if (hasInvalidKeys) throw new Error('Estructura del Gist sospechosa');
 
-                    // Hash no coincide — preguntar igual que en importación local
                     if (data._hashNoCoincide) {
                         const continuar = await confirmarModal('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
                         if (!continuar) {
@@ -7002,39 +6727,30 @@ Generado por Sistema Lushibosca
                         }
                     }
 
-                    // Advertir schema futuro
                     if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
                         mostrarToast(`Gist de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
                     }
 
-                    // Filtrar, normalizar y recalcular registros (mismo helper que importarDatos)
                     const registrosNormalizados = D.normalizarRegistrosImportados(data.registros, D.calcularHoras);
 
                     if (registrosNormalizados.length === 0) throw new Error('No se encontraron registros válidos');
                     if (registrosNormalizados.length > S.SECURITY_LIMITS.MAX_REGISTROS) throw new Error(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`);
 
-                    // Análisis: comparar Gist vs local
                     const fechasLocales = new Set(D.registros().map(r => r.fecha));
                     const soloEnGist = registrosNormalizados.filter(r => !fechasLocales.has(r.fecha));
                     const enAmbos = registrosNormalizados.filter(r => fechasLocales.has(r.fecha));
                     const soloLocal = D.registros().filter(r => !registrosNormalizados.some(g => g.fecha === r.fecha));
-
-                    // Registros que el Gist puede complementar (tienen datos que el local no tiene)
                     const complementarios = enAmbos.filter(imp => {
                         const local = D.registros().find(r => r.fecha === imp.fecha);
                         if (!local) return false;
                         return (!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera);
                     });
 
-                    // Guardar datos para que gistMergeAplicar los use
                     _gistMergeData = { registrosNormalizados, soloEnGist, complementarios, data };
 
                     if (modoAutomatico) {
-                        // En automático: usar el toggle configurado sin preguntar
                         await gistMergeAplicar(GistSync.getMergeBehavior(), true);
                     } else {
-                        // Manual: mostrar modal de análisis
-                        // Detectar cambios de configuración
                         const configCambios = [];
                         if (Array.isArray(data.diasHabiles)) {
                             const diasGist = [...data.diasHabiles].sort().join(',');
@@ -7099,32 +6815,25 @@ Generado por Sistema Lushibosca
                 obtenerNombrePerfilSafe, descargarJSON,
             };
 
-            // === LISTENERS E INTERACTIVIDAD ===
-
-            // A) Inputs normales del formulario principal (Solo formato)
             ['entrada', 'salida'].forEach(id => {
                 const el = $(id);
                 if (el) el.addEventListener('input', formatearInput);
             });
 
-            // B) Inputs del Modal Editar (Formato + Verificación OPTIMIZADA)
             const verificarBloqueCreditoDebounced = debounce(verificarBloqueoCredito, 200);
 
             ['edit-entrada', 'edit-salida'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    // Input: formato inmediato + validación debounced
                     el.addEventListener('input', (e) => {
-                        formatearInput(e); // Inmediato (visual)
-                        verificarBloqueCreditoDebounced(); // Debounced (lógica)
+                        formatearInput(e); 
+                        verificarBloqueCreditoDebounced(); 
                     });
 
-                    // Change: validación inmediata al perder foco
                     el.addEventListener('change', verificarBloqueoCredito);
                 }
             });
 
-            // C) Otros inputs
             const tf = document.getElementById('edit-tiempo-fuera');
             if (tf) tf.addEventListener('input', (e) => {
                 formatearInput(e);
@@ -7142,13 +6851,11 @@ Generado por Sistema Lushibosca
                 }
             });
 
-            // D) modal gist
             ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.addEventListener('input', formatearInput);
             });
 
-            // D) Hint resumen en tiempo real
             function actualizarHintEdicion() {
                 const hint = document.getElementById('edit-hint-resumen');
                 if (!hint) return;
@@ -7184,9 +6891,6 @@ Generado por Sistema Lushibosca
             // ===================================
             // LISTENERS PARA TECLA ENTER MODULE
             // ===================================
-
-            // --- TARJETA REGISTRAR ---
-            // A) Enter en campo Entrada → Pasa a Salida
             const inputEntrada = document.getElementById('entrada');
             if (inputEntrada) {
                 inputEntrada.addEventListener('keydown', (e) => {
@@ -7198,7 +6902,6 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            // B) Enter en campo Salida → Ejecuta Registrar Y cierra teclado
             const inputSalida = document.getElementById('salida');
             if (inputSalida) {
                 inputSalida.addEventListener('keydown', (e) => {
@@ -7214,8 +6917,6 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            // --- MODAL EDITAR ---
-            // C) Enter en campo Entrada (editar) → Pasa a Salida
             const editEntrada = document.getElementById('edit-entrada');
             if (editEntrada) {
                 editEntrada.addEventListener('keydown', (e) => {
@@ -7227,7 +6928,6 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            // D) Enter en campo Salida (editar) → Pasa a Tiempo Fuera
             const editSalida = document.getElementById('edit-salida');
             if (editSalida) {
                 editSalida.addEventListener('keydown', (e) => {
@@ -7239,60 +6939,52 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            // E) Enter en campo Tiempo Fuera (editar) → Guarda Y cierra teclado
             const editTiempoFuera = document.getElementById('edit-tiempo-fuera');
             if (editTiempoFuera) {
                 editTiempoFuera.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        editTiempoFuera.blur(); // Cierra el teclado
+                        editTiempoFuera.blur(); 
 
                         const btnGuardar = document.querySelector('#modal-editar .btn-edit');
                         if (btnGuardar && !btnGuardar.disabled) {
-                            btnGuardar.click(); // Ejecuta guardar
+                            btnGuardar.click(); 
                         }
                     }
                 });
             }
 
-            // --- PERFILES ---
-            // F) Enter en campo "Agregar Nuevo Perfil" → Crea el perfil
             const inputNuevoPerfil = document.getElementById('nombre-nuevo-perfil-selector');
             if (inputNuevoPerfil) {
                 inputNuevoPerfil.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        inputNuevoPerfil.blur(); // Cierra teclado
+                        inputNuevoPerfil.blur();
 
-                        // Ejecutar la función de crear perfil
                         UILogic.crearPerfilDesdeSelector();
                     }
                 });
             }
 
-            // G) Enter en campo "Editar Perfil" → Guarda cambios
             const inputEditarPerfil = document.getElementById('nombre-perfil-editar');
             if (inputEditarPerfil) {
                 inputEditarPerfil.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        inputEditarPerfil.blur(); // Cierra teclado
+                        inputEditarPerfil.blur();
 
                         const btnGuardarPerfil = document.querySelector('#modal-editar-perfil .btn-edit');
                         if (btnGuardarPerfil && !btnGuardarPerfil.disabled) {
-                            btnGuardarPerfil.click(); // Ejecuta guardar perfil
+                            btnGuardarPerfil.click(); 
                         }
                     }
                 });
             }
 
-            // Swipe en stats-card (solo touch/móvil)
             registrarSwipe(document.getElementById('stats-card'), () => alternarVista());
 
-            // Swipe en form-registro para alternar modo normal/lote (ignora si hay un campo con foco)
             registrarSwipe(document.getElementById('form-registro'), () => toggleModoLote(), { ignoreInputs: true });
 
-            // Generar stat-items de tipos especiales dinámicamente desde TiposRegistro
             const anchor = document.getElementById('stat-items-tipos-anchor');
             if (anchor) {
                 TiposRegistro.obtenerTodosLosTipos().forEach(t => {
@@ -7311,7 +7003,6 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            // CARGAR CONFIGURACIÓN
             const config = D.cargarConfiguracion();
             const temaOscuro = config.temaOscuro;
             D.setVistaActual(config.vistaActual);
@@ -7334,18 +7025,15 @@ Generado por Sistema Lushibosca
             const registrosCargados = perfilActual.registros || [];
             D.registros().splice(0, D.registros().length, ...registrosCargados);
 
-            // Cargar historial guardado (si existe y es válido)
             const historialCargado = HistoryManager.loadFromLocalStorage();
 
             if (historialCargado) {
-                // Si se cargó historial válido, restaurar el estado actual de ese historial
                 const estadoActual = HistoryManager.getCurrentState();
                 if (estadoActual && estadoActual.length > 0) {
                     D.registros().splice(0, D.registros().length, ...estadoActual);
                     console.log('✓ Registros restaurados desde historial');
                 }
             }
-            // Siempre recalcular al cargar para reflejar el flag actual (cubre historial y sin historial)
             D.recalcularTotalesEnMemoria();
             if (!historialCargado) {
                 HistoryManager.saveState(D.registros());
@@ -7354,11 +7042,9 @@ Generado por Sistema Lushibosca
 
             HistoryManager.updateButtons();
 
-            // TEMA
             if (temaOscuro) {
                 document.body.classList.add('dark-mode');
             }
-            // Restaurar iconos de tema...
             const toggleBtnEl = $('theme-toggle');
             if (toggleBtnEl) {
                 const tBtn = toggleBtnEl.querySelector('use');
@@ -7372,15 +7058,12 @@ Generado por Sistema Lushibosca
 
             $('fecha').value = obtenerFechaHoy();
 
-            // RESTAURAR ESTADO VISUAL
             try {
                 const persistir = localStorage.getItem('persistirTarjetas') !== 'false';
                 if (persistir && localStorage.getItem('formularioExpandido') === 'true') toggleFormulario();
                 if (persistir && localStorage.getItem('statsExpandido') === 'true') toggleStats();
 
-                // Restaurar estado de Histórico (3 estados)
                 const estadoHistoricoGuardado = persistir ? localStorage.getItem('historicoExpandido') : null;
-                // Si estaba completo (con botones), restaurar solo con registros
                 const estadoHistorico = estadoHistoricoGuardado === 'completo' ? 'meses' : estadoHistoricoGuardado;
                 if (estadoHistorico === 'meses' || estadoHistorico === 'completo') {
                     const contenido = $('contenido-historico');
@@ -7388,13 +7071,11 @@ Generado por Sistema Lushibosca
                     if (contenido) contenido.classList.add('expanded');
 
                     if (estadoHistorico === 'meses') {
-                        // Estado 2: Chevron arriba (180°)
                         if (icon) {
                             icon.style.transform = '';
-                            icon.classList.add('rotated'); // 180°
+                            icon.classList.add('rotated');
                         }
                     } else if (estadoHistorico === 'completo') {
-                        // Estado 3: Chevron lateral derecha (90°)
                         const botones = $('botones-historico');
                         if (botones) {
                             botones.classList.add('expanded');
@@ -7402,11 +7083,10 @@ Generado por Sistema Lushibosca
                         }
                         if (icon) {
                             icon.classList.remove('rotated');
-                            icon.style.transform = 'rotate(-90deg)'; // 90°
+                            icon.style.transform = 'rotate(-90deg)';
                         }
                     }
                 } else {
-                    // Estado 1: Chevron abajo (0°)
                     const botones = $('botones-historico');
                     const icon = $('icon-indicator-historico');
                     if (botones) botones.classList.remove('expanded');
@@ -7416,7 +7096,6 @@ Generado por Sistema Lushibosca
                     }
                 }
 
-                // Default: calendario si no hay nada guardado (primera vez)
                 const vistaGuardada = localStorage.getItem('vistaHistoricoCalendario');
                 const usarCalendario = vistaGuardada === null ? true : vistaGuardada === 'true';
                 if (usarCalendario) {
@@ -7438,22 +7117,17 @@ Generado por Sistema Lushibosca
             _iniciarCicloStats();
             actualizarBotonesHistorico();
 
-            // Auto-transición: si la página carga en vista semanal,
-            // cambiar a "Hoy" luego de 2,5 segundos e iniciar cicloStats
             if (D.vistaActual() === 'semana') {
                 setTimeout(() => {
                     alternarVista();
-                    // alternarVista detiene el ciclo; lo relanzamos tras el delay de su animación
                     setTimeout(() => { _iniciarCicloStats(); }, 350);
                 }, 2500);
             }
 
-            // Auto-sync al iniciar
             const _autoSyncEstado = GistSync.getAutoSync();
             const _tieneCredenciales = GistSync.getToken() && GistSync.esGistIdValido(GistSync.getGistId());
             if (_tieneCredenciales) {
                 if (_autoSyncEstado === 1) {
-                    // Estado 1: restaurar al inicio si está en rango — máx 2 bajas por hora
                     if (GistSync.dentroDelRangoHorario() && !GistSync.superaLimite('bajar')) {
                         setTimeout(async () => {
                             await gistBajar(true);
@@ -7461,7 +7135,6 @@ Generado por Sistema Lushibosca
                         }, 2000);
                     }
                 } else if (_autoSyncEstado === 2) {
-                    // Estado 2: respaldo automático — máx 1 subida por hora
                     if (GistSync.dentroDelRangoHorario() && !GistSync.superaLimite('subir')) {
                         setTimeout(async () => {
                             await gistSubir();
@@ -7474,7 +7147,6 @@ Generado por Sistema Lushibosca
             setInterval(() => actualizarUI(null, true), 20000);
             console.log('Sistema iniciado correctamente');
 
-            // Escape cierra el modal abierto simulando su botón cerrar/volver
             document.addEventListener('keydown', (e) => {
                 if (e.key !== 'Escape') return;
                 const modal = document.querySelector('.modal.show');
@@ -7497,13 +7169,9 @@ Generado por Sistema Lushibosca
                 if (accion) accion();
             });
 
-            // ===================================
-            // EVENT DELEGATION - LISTA REGISTROS
-            // ===================================
             const lista = document.getElementById('lista-registros');
             if (lista) {
                 lista.addEventListener('click', (e) => {
-                    // Buscar el elemento clickeado o su ancestro con data-accion
                     const target = e.target.closest('[data-accion]');
                     if (!target) return;
 
@@ -7531,9 +7199,6 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            // ===================================
-            // EVENT DELEGATION - TOGGLE AÑOS
-            // ===================================
             lista.addEventListener('click', (e) => {
                 const headerAnio = e.target.closest('.registro-mes-header[data-accion="toggle-anio"]');
                 if (!headerAnio) return;
@@ -7559,10 +7224,6 @@ Generado por Sistema Lushibosca
                 }
             });
 
-            // ===================================
-            // EVENT DELEGATION - TOGGLE MESES
-            // ===================================
-            
             lista.addEventListener('click', (e) => {
                 const header = e.target.closest('.registro-mes-header');
                 if (!header || header.dataset.accion !== 'toggle-mes') return;
@@ -7578,26 +7239,21 @@ Generado por Sistema Lushibosca
                 const estaExpandido = detalle.classList.contains('expanded');
 
                 if (estaExpandido) {
-                    // CERRAR
                     detalle.classList.remove('expanded');
                     chevronIcon.style.transform = 'rotate(0deg)';
 
-                    // Guardar estado
                     try {
                         localStorage.setItem(`mes-${header.dataset.mesId}-expandido`, 'false');
                     } catch (e) { }
 
                 } else {
-                    // ABRIR
                     const otrosMesesAbiertos = lista.querySelectorAll('.registro-mes-detalle.expanded');
                     const esContenedorAnio = (el) => {
                         const h = el.closest('.registro-mes-container')?.querySelector('.registro-mes-header');
                         return h && h.dataset.accion === 'toggle-anio';
                     };
-                    // Año padre del mes actual (no debe cerrarse)
                     const detalleAnioPadre = contenedor.parentElement?.closest('.registro-mes-detalle') || null;
 
-                    // Cerrar otros años abiertos que no sean el padre
                     otrosMesesAbiertos.forEach(otroDetalle => {
                         if (esContenedorAnio(otroDetalle) && otroDetalle !== detalleAnioPadre) {
                             otroDetalle.classList.remove('expanded');
@@ -7614,15 +7270,12 @@ Generado por Sistema Lushibosca
                     const hayOtrosAbiertos = Array.from(otrosMesesAbiertos).some(otro => otro !== detalle && !esContenedorAnio(otro));
 
                     if (hayOtrosAbiertos) {
-                        // Calcular y reservar altura antes de cerrar
                         otrosMesesAbiertos.forEach(otroDetalle => {
                             if (otroDetalle !== detalle && !esContenedorAnio(otroDetalle)) {
                                 const alturaActual = otroDetalle.scrollHeight;
 
-                                // Fijar altura actual como mínima temporalmente
                                 otroDetalle.style.minHeight = `${alturaActual}px`;
 
-                                // Cerrar visualmente
                                 otroDetalle.classList.remove('expanded');
                                 const otroContainer = otroDetalle.closest('.registro-mes-container');
                                 const otroChevron = otroContainer?.querySelector('.chevron-mes');
@@ -7630,14 +7283,12 @@ Generado por Sistema Lushibosca
 
                                 if (otroChevron) otroChevron.style.transform = 'rotate(0deg)';
 
-                                // Guardar que se cerró
                                 if (otroHeader && otroHeader.dataset.mesId) {
                                     try {
                                         localStorage.setItem(`mes-${otroHeader.dataset.mesId}-expandido`, 'false');
                                     } catch (e) { }
                                 }
 
-                                // Liberar la altura después de la animación
                                 setTimeout(() => {
                                     otroDetalle.style.minHeight = '';
                                 }, 350);
@@ -7648,12 +7299,10 @@ Generado por Sistema Lushibosca
                             detalle.classList.add('expanded');
                             chevronIcon.style.transform = 'rotate(180deg)';
 
-                            // Guardar que se abrió
                             try {
                                 localStorage.setItem(`mes-${header.dataset.mesId}-expandido`, 'true');
                             } catch (e) { }
 
-                            // Scroll inteligente
                             setTimeout(() => {
                                 const margenHeader = 80;
                                 const alturaVentana = window.innerHeight;
@@ -7676,16 +7325,13 @@ Generado por Sistema Lushibosca
                         }, 300);
 
                     } else {
-                        // No hay otros meses abiertos
                         detalle.classList.add('expanded');
                         chevronIcon.style.transform = 'rotate(180deg)';
 
-                        // Guardar que se abrió
                         try {
                             localStorage.setItem(`mes-${header.dataset.mesId}-expandido`, 'true');
                         } catch (e) { }
 
-                        // Scroll inteligente
                         setTimeout(() => {
                             const margenHeader = 80;
                             const alturaVentana = window.innerHeight;
@@ -7709,27 +7355,24 @@ Generado por Sistema Lushibosca
                 }
             });
 
-            // Listeners Lote
             const loteDesde = document.getElementById('lote-fecha-desde');
             const loteHasta = document.getElementById('lote-fecha-hasta');
             const actualizarBotonLoteDebounced = debounce(actualizarBotonLote, 300);
 
             const agregarListenersFecha = (el) => {
                 if (!el) return;
-                el.addEventListener('change', () => actualizarBotonLote()); // Inmediato
-                el.addEventListener('input', () => actualizarBotonLoteDebounced()); // Debounced
+                el.addEventListener('change', () => actualizarBotonLote()); 
+                el.addEventListener('input', () => actualizarBotonLoteDebounced()); 
             };
             agregarListenersFecha(loteDesde);
             agregarListenersFecha(loteHasta);
 
-            // Listener para mostrar/ocultar campos de rango en exportación
             const tipoExportSelect = document.getElementById('tipo-exportacion');
             if (tipoExportSelect) {
                 tipoExportSelect.addEventListener('change', () => {
                     UILogic.toggleCamposRangoExport();
                 });
             }
-            // Listener para mostrar nombre de archivo seleccionado
             const fileInput = document.getElementById('file-import');
             if (fileInput) {
                 fileInput.addEventListener('change', (e) => {
@@ -7738,14 +7381,12 @@ Generado por Sistema Lushibosca
                     const btnReemplazar = document.getElementById('btn-reemplazar');
 
                     if (e.target.files.length > 0) {
-                        // Mostrar nombre del archivo
                         if (nombreEl) {
                             const nombreArchivo = e.target.files[0].name;
                             nombreEl.textContent = `✓ ${nombreArchivo}`;
                             nombreEl.style.display = 'block';
                         }
 
-                        // Habilitar botones
                         if (btnCombinar) {
                             btnCombinar.disabled = false;
                             btnCombinar.style.opacity = '1';
@@ -7755,7 +7396,6 @@ Generado por Sistema Lushibosca
                             btnReemplazar.style.opacity = '1';
                         }
                     } else {
-                        // Si se cancela la selección, ocultar y deshabilitar
                         if (nombreEl) {
                             nombreEl.style.display = 'none';
                             nombreEl.textContent = '';
@@ -7771,7 +7411,6 @@ Generado por Sistema Lushibosca
             }
         }
 
-        // E) Hint resumen en tiempo real para editar grupo
         function actualizarHintGrupo() {
             const hint = document.getElementById('edit-grupo-hint');
             if (!hint) return;
@@ -7797,16 +7436,13 @@ Generado por Sistema Lushibosca
         });
 
         function mostrarFiltros() {
-            // Si hay filtro activo, limpiarlo directamente
             if (D.obtenerRegistrosFiltrados().length !== D.registros().length) {
                 D.limpiarFiltros();
                 return;
             }
 
-            // Si no hay filtro, mostrar modal
             ModalManager.abrir('modal-filtros');
 
-            // Aplicar cambios al instante
             const aplicarInmediato = () => {
                 const desde = $('filtro-fecha-desde').value;
                 const hasta = $('filtro-fecha-hasta').value;
@@ -7827,7 +7463,6 @@ Generado por Sistema Lushibosca
             ModalManager.cerrar('modal-filtros');
         }
 
-        // --- FUNCIÓN GENÉRICA PARA COLAPSABLES ---
         function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
             const el = $(elementId);
             const icon = $(iconId);
@@ -7846,7 +7481,6 @@ Generado por Sistema Lushibosca
                 try { localStorage.setItem(storageKey, isExpanded); } catch (e) { }
             }
 
-            // Ejecutar lógica extra si es necesario (ej: cargar stats)
             if (isExpanded && callback) callback();
         }
 
@@ -7854,31 +7488,25 @@ Generado por Sistema Lushibosca
             const el = $('form-registro');
             const estabaExpandido = el.classList.contains('expanded');
 
-            // 1. Ejecuta la animación visual de contraer/expandir
             toggleSeccionGen('form-registro', 'icon-indicator-form', 'formularioExpandido');
 
-            // 2. Si la tarjeta estaba abierta y ahora se está cerrando...
             if (estabaExpandido) {
 
-                // --- Limpieza de Modo Normal ---
                 $('entrada').value = '';
                 $('salida').value = '';
-                $('fecha').value = obtenerFechaHoy(); // Resetea la fecha a hoy
+                $('fecha').value = obtenerFechaHoy(); 
 
-                // --- Limpieza de Modo Lote ---
                 const loteDesde = $('lote-fecha-desde');
                 const loteHasta = $('lote-fecha-hasta');
                 const loteTipo = $('lote-tipo');
 
                 if (loteDesde) loteDesde.value = '';
                 if (loteHasta) loteHasta.value = '';
-                if (loteTipo) loteTipo.value = 'feriado'; // Vuelve al valor por defecto
+                if (loteTipo) loteTipo.value = 'feriado'; 
 
-                // 3. Si estaba activo el modo lote, resetearlo al modo normal
                 if (modoLoteActivo) {
                     toggleModoLote();
                 } else {
-                    // Si ya estaba en modo normal, refrescamos el estado del botón principal
                     actualizarEstadoBotonTimerMain();
                 }
             }
@@ -7899,16 +7527,14 @@ Generado por Sistema Lushibosca
 
             try {
                 if (!contenidoExpandido) {
-                    // ESTADO 1 → ESTADO 2: Abrir meses (chevron a 180°)
                     contenido.classList.add('expanded');
                     if (icon) {
-                        icon.style.transform = ''; // Resetear inline
-                        icon.classList.add('rotated'); // 180° arriba
+                        icon.style.transform = ''; 
+                        icon.classList.add('rotated'); 
                     }
                     localStorage.setItem('historicoExpandido', 'meses');
                     tiempoExpansionBotones = null;
 
-                    // Si la vista calendario estaba activa, aplicarla al abrir
                     if (_vistaHistoricoCalendario) {
                         const lista = document.getElementById('lista-registros');
                         const cal = document.getElementById('vista-calendario-historico');
@@ -7921,36 +7547,32 @@ Generado por Sistema Lushibosca
                     }
 
                 } else if (contenidoExpandido && !botonesExpandidos) {
-                    // ESTADO 2 → ESTADO 3: Mostrar botones (chevron a 90°)
                     botones.classList.add('expanded');
                     if (icon) {
-                        icon.classList.remove('rotated'); // Quitar 180°
-                        icon.style.transform = 'rotate(-90deg)'; // Lateral derecha
+                        icon.classList.remove('rotated');
+                        icon.style.transform = 'rotate(-90deg)'; 
                     }
                     localStorage.setItem('historicoExpandido', 'completo');
                     tiempoExpansionBotones = Date.now();
 
                 } else {
-                    // ESTADO 3 → Verificar tiempo
                     const tiempoTranscurrido = Date.now() - (tiempoExpansionBotones || 0);
                     const history_toggle_timer = tiempoTranscurrido > 500;
 
                     if (history_toggle_timer) {
-                        // Solo ocultar botones (3 → 2, chevron a 180°)
                         botones.classList.remove('expanded');
                         if (icon) {
-                            icon.style.transform = ''; // Resetear inline
-                            icon.classList.add('rotated'); // Volver a 180°
+                            icon.style.transform = ''; 
+                            icon.classList.add('rotated'); 
                         }
                         localStorage.setItem('historicoExpandido', 'meses');
                         tiempoExpansionBotones = null;
                     } else {
-                        // Cerrar todo (3 → 1, chevron a 0°)
                         botones.classList.remove('expanded');
                         contenido.classList.remove('expanded');
                         if (icon) {
-                            icon.classList.remove('rotated'); // Quitar clase
-                            icon.style.transform = ''; // Resetear a 0° (abajo)
+                            icon.classList.remove('rotated'); 
+                            icon.style.transform = ''; 
                         }
                         localStorage.setItem('historicoExpandido', 'cerrado');
                         tiempoExpansionBotones = null;
@@ -7962,26 +7584,22 @@ Generado por Sistema Lushibosca
         }
 
         function iniciarTimerAutoCierreBotones() {
-            // Limpiar timer anterior si existe
             if (timerAutoCierreBotones) {
                 clearTimeout(timerAutoCierreBotones);
                 timerAutoCierreBotones = null;
             }
 
-            // Iniciar nuevo timer 
             timerAutoCierreBotones = setTimeout(() => {
                 const botones = $('botones-historico');
                 const contenido = $('contenido-historico');
                 const icon = $('icon-indicator-historico');
 
-                // Solo cerrar si están expandidos
                 if (botones && botones.classList.contains('expanded')) {
-                    // ESTADO 3 → ESTADO 2 (Solo ocultar botones)
                     botones.classList.remove('expanded');
 
                     if (icon) {
-                        icon.style.transform = ''; // Resetear inline
-                        icon.classList.add('rotated'); // Volver a 180°
+                        icon.style.transform = ''; 
+                        icon.classList.add('rotated');
                     }
 
                     try {
@@ -7994,7 +7612,7 @@ Generado por Sistema Lushibosca
                 }
 
                 timerAutoCierreBotones = null;
-            }, 3000); // 3 segundos timer autocierre
+            }, 3000);
         }
 
         function cancelarTimerAutoCierreBotones() {
@@ -8004,14 +7622,13 @@ Generado por Sistema Lushibosca
             }
         }
 
-        let _calendarioMes = null; // { anio, mes } — null = mes actual
+        let _calendarioMes = null; 
 
         function _renderizarCalendario(idResaltar = null) {
             const grid = document.getElementById('calendario-grid');
             const titulo = document.getElementById('calendario-titulo-mes');
             if (!grid) return;
 
-            // Swipe para móvil (se adjunta una sola vez)
             registrarSwipe(grid, dir => navegarCalendario(dir));
 
             const hoy = new Date();
@@ -8020,12 +7637,10 @@ Generado por Sistema Lushibosca
             const nombresMes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
             if (titulo) titulo.textContent = `${nombresMes[mes]} ${anio}`;
             const fechaStr = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            // ← CAMBIO: usar registros filtrados
             const registrosFiltrados = D.obtenerRegistrosFiltrados();
             const todosLosRegistros = D.registros();
             const regsPorFecha = {};
             registrosFiltrados.forEach(r => { regsPorFecha[r.fecha] = r; });
-            // Para saber si un día tiene registro pero fue filtrado
             const todosRegsPorFecha = {};
             todosLosRegistros.forEach(r => { todosRegsPorFecha[r.fecha] = r; });
             const horasDiariasObj = D.horasDiarias();
@@ -8036,7 +7651,7 @@ Generado por Sistema Lushibosca
                 if (!r) return 'dia-sin-registro';
                 if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
                     const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                    return `dia-especial-${tipo ? tipo.color : 'purple'}`;  // ← cambio
+                    return `dia-especial-${tipo ? tipo.color : 'purple'}`; 
                 }
                 if (r.entrada && !r.salida) {
                     const fechaHoy = obtenerFechaHoy();
@@ -8091,8 +7706,6 @@ Generado por Sistema Lushibosca
             const lista = document.getElementById('lista-registros');
             const cal = document.getElementById('vista-calendario-historico');
             const btnFiltro = document.getElementById('btn-filtro');
-
-            // Fade-out del elemento visible
             const saliente = _vistaHistoricoCalendario ? lista : cal;
             const entrante = _vistaHistoricoCalendario ? cal : lista;
             if (saliente) saliente.classList.add('fade-out');
@@ -8102,7 +7715,7 @@ Generado por Sistema Lushibosca
                 if (entrante) {
                     entrante.classList.remove('hidden');
                     entrante.classList.add('fade-out');
-                    entrante.offsetHeight; // forzar reflow
+                    entrante.offsetHeight; 
                     entrante.classList.remove('fade-out');
                 }
 
@@ -8114,7 +7727,6 @@ Generado por Sistema Lushibosca
                 }
             }, 300);
 
-            // RESETEAR SELECTOR SI ESTÁ ABIERTO AL CAMBIAR DE VISTA
             const selector = document.getElementById('calendario-selector-meses');
             const grid = document.getElementById('calendario-grid');
             const navBotones = document.getElementById('calendario-nav-botones');
@@ -8138,13 +7750,11 @@ Generado por Sistema Lushibosca
             const reg = D.registros().find(r => r.id === registroId);
             if (!reg) return;
 
-            // Helper para escapar datos de usuario antes de insertarlos en innerHTML
             const _esc = s => s == null ? '' : String(s)
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
 
-            // Detectar si pertenece a un grupo reutilizando la lógica existente
             const claveMes = reg.fecha.substring(0, 7);
             const registrosDelMes = D.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
             const grupos = agruparRegistrosConsecutivos(registrosDelMes);
@@ -8193,14 +7803,12 @@ Generado por Sistema Lushibosca
                     ${tfStr ? `<div class="cal-popup-3l">${_esc(tfStr)}</div>` : ''}`;
             }
 
-            // Botón editar grupo (solo si pertenece a uno)
             const btnGrupoHtml = grupoDelRegistro ? `
         <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
             <svg class="icon"><use href="#icon-grid-group"/></svg>
             Editar grupo
         </button>` : '';
 
-            // Antes de crear el popup, si hay grupo:
             if (grupoDelRegistro) {
                 window._calPopupGrupo = grupoDelRegistro;
             }
@@ -8219,16 +7827,12 @@ Generado por Sistema Lushibosca
         ${btnGrupoHtml}
     `;
 
-
-            // Aplicar colores dinámicos (data-color -> style.color) para cumplir CSP sin unsafe-inline
             _applyDataColors(popup);
-            // Ocultar visualmente mientras se calcula la posición real post-layout
             popup.style.visibility = 'hidden';
 
             document.body.appendChild(popup);
             _popupCalendarioEl = popup;
 
-            // Event listeners para botones del popup (no se pueden poner como onclick= por CSP)
             const btnEditPopup = popup.querySelector('#_cal-popup-btn-edit');
             if (btnEditPopup) {
                 btnEditPopup.addEventListener('click', () => {
@@ -8244,7 +7848,6 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            // En desktop: si el mouse entra al popup cancelar el cierre por hover
             popup.addEventListener('mouseenter', () => {
                 clearTimeout(_popupCalendarioHoverTimer);
             });
@@ -8260,7 +7863,6 @@ Generado por Sistema Lushibosca
                 }
             });
 
-            // Cerrar al tocar fuera — definidos acá para que cerrarPopup pueda referenciar cerrarPorScroll
             const cerrarPorScroll = () => {
                 popup.remove();
                 _popupCalendarioEl = null;
@@ -8283,7 +7885,6 @@ Generado por Sistema Lushibosca
                 document.addEventListener('scroll', cerrarPorScroll, true);
             }, 10);
 
-            // Posicionar cerca del elemento tocado usando dimensiones reales post-layout (fix parpadeo)
             const el = event.currentTarget || event.target;
             const rect = el.getBoundingClientRect();
             const margin = 8;
@@ -8300,14 +7901,12 @@ Generado por Sistema Lushibosca
                 if (top + ph > window.innerHeight - margin) {
                     top = rect.top - ph - 12;
                 }
-                // Evitar que se salga por arriba de la pantalla
                 if (top < margin) top = margin;
 
                 popup.style.top = top + 'px';
                 popup.style.left = left + 'px';
-                popup.style.visibility = ''; // mostrar recién cuando la posición es correcta
+                popup.style.visibility = ''; 
 
-                // Habilitar pointer-events al terminar la animación (fix ciclo hover)
                 setTimeout(() => popup.classList.add('listo'), 350);
             });
         }
@@ -8316,7 +7915,6 @@ Generado por Sistema Lushibosca
         let _popupCalendarioHoverTimer = null;
 
         function _popupCalendarioHover(event, registroId) {
-            // Ignorar si el evento fue precedido por un touch (browsers Android simulan mouse events)
             if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
             if (!window.matchMedia('(hover: hover)').matches) return;
             const stored = localStorage.getItem('hoverPopupCalendario');
@@ -8344,7 +7942,6 @@ Generado por Sistema Lushibosca
                 clearTimeout(_popupCalendarioHoverTimer);
                 DataManagement.editarRegistro(registroId);
             } else {
-                // Si el popup ya está abierto para este mismo registro, no hacer nada
                 if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
                 _popupCalendario(event, registroId);
             }
@@ -8365,7 +7962,6 @@ Generado por Sistema Lushibosca
         }
 
         function navegarCalendario(delta) {
-            // Cerrar popup si está abierto
             if (_popupCalendarioEl) {
                 _popupCalendarioEl.remove();
                 _popupCalendarioEl = null;
@@ -8394,7 +7990,7 @@ Generado por Sistema Lushibosca
             const hoy = new Date();
             if (_calendarioMes === null ||
                 (_calendarioMes.anio === hoy.getFullYear() && _calendarioMes.mes === hoy.getMonth())) {
-                return; // Ya estamos en el mes actual
+                return;
             }
             _calendarioMes = null;
             const grid = document.getElementById('calendario-grid');
@@ -8411,10 +8007,7 @@ Generado por Sistema Lushibosca
 
         function toggleStats() {
             toggleSeccionGen('form-stats', 'icon-indicator-stats', 'statsExpandido', () => {
-                // Swipe para alternar período (mensual/anual/semanal)
                 registrarSwipe($('form-stats'), dir => togglePeriodoStats(dir));
-
-                // Lógica específica de stats al abrir
                 if (modoEstadisticas === 'anual') {
                     poblarSelectorAnios();
                 } else if (modoEstadisticas === 'semanal') {
@@ -8435,17 +8028,13 @@ Generado por Sistema Lushibosca
         function alternarFechaActual(id) {
             const c = document.getElementById(id);
             if (!c) return;
-
-            // Si tiene datos, limpiar. Si está vacío, poner hoy.
             if (c.value.trim() !== '') {
                 c.value = '';
             } else {
                 c.value = obtenerFechaHoy();
             }
 
-            // Actualizar el estado del botón principal
             actualizarBotonLote();
-            // Actualizar hint si es campo del grupo
             if (id === 'edit-grupo-desde' || id === 'edit-grupo-hasta') {
                 c.dispatchEvent(new Event('change'));
             }
@@ -8453,7 +8042,7 @@ Generado por Sistema Lushibosca
 
         function verificarBloqueoCredito() {
             const btnCredito = document.getElementById('btn-toggle-credito');
-            if (!btnCredito) return; // Seguridad
+            if (!btnCredito) return;
 
             const _bloquear = () => {
                 btnCredito.disabled = true;
@@ -8466,10 +8055,8 @@ Generado por Sistema Lushibosca
                 btnCredito.style.cursor = 'pointer';
             };
 
-            // 1. Candado global: si el modal está bloqueado, cortar directo
             if (document.getElementById('edit-fecha').disabled) return _bloquear();
 
-            // 2. Obtenemos valores y validamos horario completo
             const e = document.getElementById('edit-entrada').value.trim();
             const s = document.getElementById('edit-salida').value.trim();
             const tf = document.getElementById('edit-tiempo-fuera').value.trim() || null;
@@ -8480,10 +8067,8 @@ Generado por Sistema Lushibosca
                 return _bloquear();
             }
 
-            // 3. Días especiales
             if (TiposRegistro.esRegistroEspecial(e, s)) return _bloquear();
 
-            // 4. Horas trabajadas (sin crédito) deben ser menores al objetivo diario
             const calcTemp = D.calcularHoras(e, s, tf, null);
             if (!calcTemp || calcTemp.total >= D.horasDiarias()) return _bloquear();
 
@@ -8586,6 +8171,7 @@ Generado por Sistema Lushibosca
     })(SecurityAndUtils, DataManagement, GistSync);
 
     UILogic.init();
+    BackNavigationManager.init();
 })();
 
 if ('serviceWorker' in navigator) {
@@ -8597,7 +8183,6 @@ if ('serviceWorker' in navigator) {
                     const newWorker = registration.installing;
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // Lógica visual para avisar al usuario
                             if (window.UILogic) UILogic.mostrarToast('Se actualizará la versión al recargar', 'info');
                         }
                     });
@@ -8607,7 +8192,6 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// ====================================================================
 document.addEventListener('DOMContentLoaded', function () {
     const $ = id => document.getElementById(id);
 
@@ -8619,30 +8203,24 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('touchend', (e) => { e.preventDefault(); onStop(); }, { passive: false });
     };
 
-    // --- Header ---
     $('btn-install')?.addEventListener('click', () => PWAInstaller.instalarApp());
     document.querySelector('.header-profile-btn')?.addEventListener('click', () => UILogic.abrirSelectorPerfiles());
 
-    // --- Stats card ---
     $('stats-card')?.addEventListener('click', () => UILogic.alternarVista());
 
-    // --- Card registrar ---
     $('btn-timer-main')?.addEventListener('click', () => UILogic.toggleTimerBreakMain());
     $('btn-agregar')?.addEventListener('click', () => UILogic.ejecutarAccionRegistro());
     $('icon-indicator-form')?.addEventListener('click', () => UILogic.toggleFormulario());
 
-    // --- Modo normal ---
     $('btn-ir-modo-lote')?.addEventListener('click', () => UILogic.toggleModoLote());
     $('btn-pegar-entrada')?.addEventListener('click', () => UILogic.pegarHoraActual('entrada'));
     $('btn-pegar-salida')?.addEventListener('click', () => UILogic.pegarHoraActual('salida'));
 
-    // --- Modo lote ---
     $('lote-tipo')?.addEventListener('change', () => UILogic.actualizarBotonLote());
     $('btn-ir-modo-normal')?.addEventListener('click', () => UILogic.toggleModoLote());
     $('btn-lote-desde')?.addEventListener('click', () => UILogic.alternarFechaActual('lote-fecha-desde'));
     $('btn-lote-hasta')?.addEventListener('click', () => UILogic.alternarFechaActual('lote-fecha-hasta'));
 
-    // --- Card estadísticas ---
     document.querySelector('#card-estadisticas .card-header-clickable')?.addEventListener('click', () => UILogic.toggleStats());
     $('select-mes-stats')?.addEventListener('change', () => UILogic.cambiarMesStats());
     $('select-anio-stats')?.addEventListener('change', () => UILogic.cambiarAnioStats());
@@ -8650,15 +8228,12 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-periodo')?.addEventListener('click', () => UILogic.togglePeriodoStats());
     $('btn-reporte')?.addEventListener('click', () => UILogic.generarReporte());
 
-    // --- Card histórico ---
     document.querySelector('#card-historico .card-header-clickable')?.addEventListener('click', () => UILogic.toggleHistorico());
     $('btn-vista-calendario')?.addEventListener('click', () => UILogic.toggleVistaHistorico());
     $('btn-filtro')?.addEventListener('click', () => UILogic.mostrarFiltros());
-    // btn-hist-restaurar y btn-hist-respaldar: manejados por actualizarBotonesHistorico()
     $('btn-undo')?.addEventListener('click', () => HistoryManager.undo());
     $('btn-redo')?.addEventListener('click', () => HistoryManager.redo());
 
-    // --- Calendario ---
     $('calendario-titulo-mes')?.addEventListener('click', () => UILogic.abrirSelectorMesesCalendario());
     document.querySelector('.btn-hoy-calendario')?.addEventListener('click', () => UILogic.irHoyCalendario());
     const navBotones = $('calendario-nav-botones');
@@ -8668,7 +8243,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (navBtns[1]) navBtns[1].addEventListener('click', () => UILogic.navegarCalendario(1));
     }
 
-    // --- Modal Config ---
     $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
@@ -8682,7 +8256,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-delete')?.addEventListener('click', () => UILogic.cerrarConfig());
 
-    // Config: horas diarias +/-
     const inputHoras = $('config-horas-diarias');
     if (inputHoras) {
         const btnsHoras = inputHoras.closest('.input-number-group')?.querySelectorAll('.btn-increment');
@@ -8690,7 +8263,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnsHoras?.[1]) addHoldEvents(btnsHoras[1], () => UILogic.iniciarCambioHoras(-0.5), () => UILogic.detenerCambio());
     }
 
-    // --- Modal Gist ---
     $('gist-token')?.addEventListener('input', () => UILogic.actualizarEstadoBotonesGist());
     $('gist-id')?.addEventListener('input', () => UILogic.actualizarEstadoBotonesGist());
     $('btn-toggle-token')?.addEventListener('click', () => UILogic.toggleVerToken());
@@ -8701,7 +8273,6 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-gist-backup')?.addEventListener('click', () => UILogic.toggleGistBackup());
     $('btn-toggle-gist-merge')?.addEventListener('click', () => UILogic.toggleGistMerge());
 
-    // Gist: límite registros +/-
     const inputLimite = $('gist-limite-valor');
     if (inputLimite) {
         const btnsLimite = inputLimite.closest('.input-number-group')?.querySelectorAll('.btn-increment');
@@ -8712,12 +8283,10 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-gist-guardar')?.addEventListener('click', () => UILogic.guardarConfigGist());
     $('btn-gist-volver')?.addEventListener('click', () => UILogic.cerrarModalGist());
 
-    // --- Modal Gist Merge ---
     $('btn-gist-merge-combinar')?.addEventListener('click', () => UILogic.gistMergeAplicar('merge'));
     $('btn-gist-merge-reemplazar')?.addEventListener('click', () => UILogic.gistMergeAplicar('replace'));
     $('btn-gist-merge-cancelar')?.addEventListener('click', () => UILogic.gistMergeCancelar());
 
-    // --- Modal Editar Registro ---
     $('btn-toggle-credito')?.addEventListener('click', () => UILogic.toggleCredito());
     $('btn-lock-toggle')?.addEventListener('click', () => UILogic.toggleBloqueoEdicion());
     $('btn-edit-entrada')?.addEventListener('click', () => UILogic.pegarHoraActual('edit-entrada'));
@@ -8728,31 +8297,25 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar .btn-delete')?.addEventListener('click', () => DataManagement.eliminarRegistroActual());
     document.querySelector('#modal-editar .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicion());
 
-    // --- Modal Importar ---
     $('btn-seleccionar-archivo')?.addEventListener('click', () => $('file-import').click());
     $('btn-combinar')?.addEventListener('click', () => DataManagement.importarDatos('merge'));
     $('btn-reemplazar')?.addEventListener('click', () => DataManagement.importarDatos('replace'));
     $('btn-volver-importar')?.addEventListener('click', () => UILogic.cerrarImportar());
 
-    // --- Modal Exportar ---
     document.querySelector('#modal-exportar .btn-export')?.addEventListener('click', () => UILogic.ejecutarExportacion());
     $('btn-volver-exportar')?.addEventListener('click', () => UILogic.cerrarExportar());
 
-    // --- Modal Filtros ---
     document.querySelector('#modal-filtros .btn-cancel')?.addEventListener('click', () => UILogic.cerrarFiltros());
 
-    // --- Modal Selector Perfiles ---
     document.querySelector('#modal-selector-perfiles .btn-edit')?.addEventListener('click', () => UILogic.mostrarconfig());
     $('theme-toggle-modal')?.addEventListener('click', () => UILogic.alternarTema());
     document.querySelector('#modal-selector-perfiles .btn-cancel')?.addEventListener('click', () => UILogic.cerrarSelectorPerfiles());
     $('btn-crear-perfil')?.addEventListener('click', () => UILogic.crearPerfilDesdeSelector());
 
-    // --- Modal Editar Perfil ---
     document.querySelector('#modal-editar-perfil .btn-edit')?.addEventListener('click', () => UILogic.guardarEdicionPerfil());
     $('btn-eliminar-perfil-editor')?.addEventListener('click', () => UILogic.eliminarPerfilDesdeEditor());
     document.querySelector('#modal-editar-perfil .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEditorPerfil());
 
-    // --- Modal Editar Grupo ---
     $('btn-lock-grupo-toggle')?.addEventListener('click', () => UILogic.toggleBloqueoEdicionGrupo());
     $('btn-grupo-desde')?.addEventListener('click', () => UILogic.alternarFechaActual('edit-grupo-desde'));
     $('btn-grupo-hasta')?.addEventListener('click', () => UILogic.alternarFechaActual('edit-grupo-hasta'));

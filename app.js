@@ -476,7 +476,6 @@
         // _onPopState solo mira el DOM, nunca contadores.
 
         let _centinelaActivo = false;
-        let _ignorarProximoPopstate = false;
 
         let _esperandoSegundoBack = false;
         let _timerSalida = null;
@@ -503,18 +502,14 @@
                 history.pushState({ modal: true }, '');
             } else if (!hayModales && _centinelaActivo) {
                 _centinelaActivo = false;
-                _ignorarProximoPopstate = true;
-                history.back();
+                // Reemplazamos el centinela con el estado raíz sin consumir
+                // ninguna entrada del historial — así siempre queda algo que
+                // interceptar cuando el usuario toque atrás desde la pantalla principal
+                history.replaceState({ modal: false }, '');
             }
         }
 
-        function _onPopState(event) {
-            if (_ignorarProximoPopstate) {
-                _ignorarProximoPopstate = false;
-                return;
-            }
-
-            const modalAbierto = _getModalActualAbierto();
+        function _onPopState(event) {            const modalAbierto = _getModalActualAbierto();
 
             if (modalAbierto) {
                 // Reponemos el centinela ANTES de cerrar para que cuando

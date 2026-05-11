@@ -422,8 +422,6 @@
                 modal.addEventListener('click', handleOutsideClick);
             }, 100);
 
-            BackNavigationManager.onModalAbierto();
-
             if (callback) callback();
         }
 
@@ -440,8 +438,6 @@
             modal.removeEventListener('click', handleOutsideClick);
 
             delete _padres[modalId];
-
-            BackNavigationManager.onModalCerrado();
 
             if (callback) callback();
         }
@@ -462,8 +458,6 @@
             });
             Object.keys(_padres).forEach(k => delete _padres[k]);
             document.body.classList.remove('modal-open');
-            // Retirar el centinela del historial si estaba activo
-            BackNavigationManager.onModalCerrado();
         }
 
         return { abrir, cerrar, alternar, cerrarTodos };
@@ -476,48 +470,43 @@
     // ====================================================================
     const BackNavigationManager = (function () {
 
-        // Estrategia: un único estado centinela {modal: true} en el historial.
-        // Si hay al menos un modal abierto → el centinela está arriba.
-        // Si no hay modales → estamos en el estado raíz.
-        // Así, alternar() (cerrar+abrir) no desincroniza nada porque
-        // solo miramos el DOM, no un contador.
+        // Estrategia: MutationObserver observa cambios de clase .show en los modales.
+        // Es la única fuente de verdad — no depende de hooks en abrir/cerrar/alternar.
+        // Mantenemos un único pushState centinela mientras haya algún modal visible.
+        // _onPopState solo mira el DOM, nunca contadores.
 
         let _centinelaActivo = false;
+        let _ignorarProximoPopstate = false;
 
-        // Control del "presioná de nuevo para salir"
         let _esperandoSegundoBack = false;
         let _timerSalida = null;
         const TIEMPO_SALIDA_MS = 2500;
 
         function init() {
             history.replaceState({ modal: false }, '');
+
+            // Observar todos los .modal del DOM para detectar cambios en .show
+            const observer = new MutationObserver(_sincronizarCentinela);
+            document.querySelectorAll('.modal').forEach(m => {
+                observer.observe(m, { attributes: true, attributeFilter: ['class'] });
+            });
+
             window.addEventListener('popstate', _onPopState);
         }
 
-        // Llamado desde ModalManager.abrir() — asegura que el centinela esté activo
-        function onModalAbierto() {
-            if (!_centinelaActivo) {
+        // Dispara cada vez que un .modal gana o pierde la clase .show
+        function _sincronizarCentinela() {
+            const hayModales = document.querySelectorAll('.modal.show').length > 0;
+
+            if (hayModales && !_centinelaActivo) {
                 _centinelaActivo = true;
                 history.pushState({ modal: true }, '');
+            } else if (!hayModales && _centinelaActivo) {
+                _centinelaActivo = false;
+                _ignorarProximoPopstate = true;
+                history.back();
             }
-            // Si ya estaba activo (ej: alternar abrió otro modal) no hace nada
         }
-
-        // Llamado desde ModalManager.cerrar() — si ya no quedan modales, retira el centinela
-        function onModalCerrado() {
-            // Usamos setTimeout(0) para esperar a que el DOM refleje el cierre
-            // antes de contar los modales restantes
-            setTimeout(() => {
-                const quedanModales = document.querySelectorAll('.modal.show').length > 0;
-                if (!quedanModales && _centinelaActivo) {
-                    _centinelaActivo = false;
-                    _ignorarProximoPopstate = true;
-                    history.back();
-                }
-            }, 0);
-        }
-
-        let _ignorarProximoPopstate = false;
 
         function _onPopState(event) {
             if (_ignorarProximoPopstate) {
@@ -525,12 +514,14 @@
                 return;
             }
 
-            // El botón atrás del sistema disparó este evento
             const modalAbierto = _getModalActualAbierto();
 
             if (modalAbierto) {
-                // Hay modal visible: reponemos el centinela y cerramos el modal actual
+                // Reponemos el centinela ANTES de cerrar para que cuando
+                // _sincronizarCentinela detecte el cierre, no haga otro history.back()
+                _centinelaActivo = true;
                 history.pushState({ modal: true }, '');
+
                 const accion = _getAccionVolverPublica(modalAbierto);
                 if (accion) {
                     accion();
@@ -540,15 +531,13 @@
                 return;
             }
 
-            // No hay modales: lógica "presioná de nuevo para salir"
+            // Sin modales: "presioná de nuevo para salir"
             if (_esperandoSegundoBack) {
                 clearTimeout(_timerSalida);
                 _esperandoSegundoBack = false;
-                // Segundo back → dejamos que el navegador cierre la app
-                return;
+                return; // deja que el navegador cierre la app
             }
 
-            // Primer back: frenar la salida y mostrar aviso
             history.pushState({ modal: false }, '');
             _esperandoSegundoBack = true;
 
@@ -561,32 +550,30 @@
             }, TIEMPO_SALIDA_MS);
         }
 
-        // Devuelve el id del modal .show más reciente (el que está encima visualmente)
         function _getModalActualAbierto() {
             const abiertos = document.querySelectorAll('.modal.show');
             if (!abiertos.length) return null;
             return abiertos[abiertos.length - 1].id;
         }
 
-        // Mapa de acciones de cierre — idéntico al _getAccionVolver interno del ModalManager
         function _getAccionVolverPublica(modalId) {
             const acciones = {
-                'modal-gist':            () => window.UILogic?.cerrarModalGist(),
-                'modal-gist-merge':      () => window.UILogic?.gistMergeCancelar(),
-                'modal-config':          () => window.UILogic?.cerrarConfig(),
+                'modal-gist':              () => window.UILogic?.cerrarModalGist(),
+                'modal-gist-merge':        () => window.UILogic?.gistMergeCancelar(),
+                'modal-config':            () => window.UILogic?.cerrarConfig(),
                 'modal-selector-perfiles': () => window.UILogic?.cerrarSelectorPerfiles(),
-                'modal-editar':          () => window.UILogic?.cerrarEdicion(),
-                'modal-importar':        () => window.UILogic?.cerrarImportar(),
-                'modal-exportar':        () => window.UILogic?.cerrarExportar(),
-                'modal-filtros':         () => window.UILogic?.cerrarFiltros(),
-                'modal-editar-perfil':   () => window.UILogic?.cerrarEditorPerfil(),
-                'modal-editar-grupo':    () => window.UILogic?.cerrarEdicionGrupo(),
-                'modal-confirmar':       () => document.getElementById('modal-confirmar-cancel')?.click(),
+                'modal-editar':            () => window.UILogic?.cerrarEdicion(),
+                'modal-importar':          () => window.UILogic?.cerrarImportar(),
+                'modal-exportar':          () => window.UILogic?.cerrarExportar(),
+                'modal-filtros':           () => window.UILogic?.cerrarFiltros(),
+                'modal-editar-perfil':     () => window.UILogic?.cerrarEditorPerfil(),
+                'modal-editar-grupo':      () => window.UILogic?.cerrarEdicionGrupo(),
+                'modal-confirmar':         () => document.getElementById('modal-confirmar-cancel')?.click(),
             };
             return acciones[modalId] || null;
         }
 
-        return { init, onModalAbierto, onModalCerrado };
+        return { init };
     })();
 
     // ====================================================================

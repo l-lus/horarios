@@ -367,8 +367,11 @@
     // MODAL MANAGER MODULE
     // ====================================================================
     const ModalManager = (function () {
-
         const _padres = {};
+        
+        // Banderas para controlar el historial de navegación
+        let _navegandoHaciaAtras = false;
+        let _ignorandoPopstate = false;
 
         function _getAccionVolver(modalId) {
             const acciones = {
@@ -386,6 +389,33 @@
             };
             return acciones[modalId] || null;
         }
+
+        // INTEGRACIÓN: Detectar el botón "Atrás" de Android
+        window.addEventListener('popstate', (event) => {
+            // Si venimos de un cierre manual (botón cancelar/X), ignoramos este evento
+            if (_ignorandoPopstate) {
+                _ignorandoPopstate = false;
+                return;
+            }
+
+            _navegandoHaciaAtras = true;
+            
+            // Buscamos cuál es el modal superior que está abierto actualmente
+            const modalesAbiertos = Array.from(document.querySelectorAll('.modal.show'));
+            if (modalesAbiertos.length > 0) {
+                const topModal = modalesAbiertos[modalesAbiertos.length - 1];
+                const accionVolver = _getAccionVolver(topModal.id);
+                
+                // Ejecutamos tu función de cierre específica (que a su vez abre el modal padre si lo hay)
+                if (accionVolver) {
+                    accionVolver();
+                } else {
+                    cerrar(topModal.id);
+                }
+            }
+            
+            setTimeout(() => { _navegandoHaciaAtras = false; }, 50);
+        });
 
         let _mousedownEnOverlay = false;
 
@@ -417,6 +447,14 @@
             modal.classList.add('show');
             document.body.classList.add('modal-open');
 
+            // INTEGRACIÓN: Agregar estado al historial al abrir
+            if (!_navegandoHaciaAtras) {
+                // Usamos un pequeño delay para evitar conflictos cuando alternar() cierra y abre modales casi al mismo tiempo
+                setTimeout(() => {
+                    history.pushState({ modalId: modalId }, "");
+                }, 10);
+            }
+
             setTimeout(() => {
                 modal.addEventListener('mousedown', _handleOverlayMousedown);
                 modal.addEventListener('click', handleOutsideClick);
@@ -433,11 +471,22 @@
             }
 
             modal.classList.remove('show');
-            document.body.classList.remove('modal-open');
+            
+            // PEQUEÑA MEJORA: Evita que al cerrar un modal anidado se habilite el scroll si el modal padre sigue abierto
+            if (document.querySelectorAll('.modal.show').length === 0) {
+                document.body.classList.remove('modal-open');
+            }
+            
             modal.removeEventListener('mousedown', _handleOverlayMousedown);
             modal.removeEventListener('click', handleOutsideClick);
 
             delete _padres[modalId];
+
+            // INTEGRACIÓN: Limpiar el historial si el modal se cierra mediante botones de la app
+            if (!_navegandoHaciaAtras) {
+                _ignorandoPopstate = true; // Avisamos que este "back" es nuestro, no del usuario
+                history.back();
+            }
 
             if (callback) callback();
         }

@@ -495,47 +495,43 @@
             window.addEventListener('popstate', _onPopState);
         }
 
+        // Flag para suprimir pushState extra cuando un cierre abre otro modal inmediatamente
+        let _enTransicion = false;
+
         function _sincronizarCentinela() {
             const hayModales = document.querySelectorAll('.modal.show').length > 0;
 
             if (hayModales && !_centinelaActivo) {
+                if (_enTransicion) return; // cierre→apertura inmediata: no acumular
                 _centinelaActivo = true;
-                // pushState solo cuando pasamos de sin-centinela a con-centinela
                 history.pushState({ modal: true }, '');
-            } else if (hayModales && _centinelaActivo) {
-                // Sigue habiendo modales (cerró hijo, queda padre): actualizamos sin acumular
-                history.replaceState({ modal: true }, '');
-            } else if (!hayModales && _centinelaActivo) {
-                _centinelaActivo = false;
-                history.replaceState({ modal: false }, '');
-            }
+            } 
         }
 
         function _onPopState(event) {
             const modalAbierto = _getModalActualAbierto();
 
             if (modalAbierto) {
-                // El popstate consumió el centinela; lo reponemos de inmediato
-                // con replaceState para no acumular, ANTES de cerrar el modal.
                 history.pushState({ modal: true }, '');
-
+                _enTransicion = true;
                 const accion = _getAccionVolverPublica(modalAbierto);
                 if (accion) {
                     accion();
                 } else {
                     ModalManager.cerrar(modalAbierto);
                 }
+                // Micro-delay: deja que el callback de cierre abra el siguiente modal
+                // antes de levantar el flag
+                setTimeout(() => { _enTransicion = false; }, 50);
                 return;
             }
 
-            // Sin modales abiertos: lógica "presioná de nuevo para salir"
-            // Reponemos el centinela con replaceState para no acumular entradas
+            // Sin modales: "presioná de nuevo para salir"
             history.pushState({ modal: false }, '');
 
             if (_esperandoSegundoBack) {
                 clearTimeout(_timerSalida);
                 _esperandoSegundoBack = false;
-                // Segundo back confirmado: navegamos hacia atrás de verdad
                 history.back();
                 return;
             }
@@ -544,7 +540,6 @@
             if (window.UILogic?.mostrarToast) {
                 UILogic.mostrarToast('Presioná atrás de nuevo para salir', 'info');
             }
-
             _timerSalida = setTimeout(() => {
                 _esperandoSegundoBack = false;
             }, TIEMPO_SALIDA_MS);

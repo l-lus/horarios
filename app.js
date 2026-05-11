@@ -4450,6 +4450,7 @@
         function cerrarEdicion() {
             ModalManager.cerrar('modal-editar', () => {
                 D.setEditandoId(null);
+                document.dispatchEvent(new Event('scroll'));
             });
         }
 
@@ -8021,7 +8022,8 @@ Generado por Sistema Lushibosca
 
         function cerrarEdicionGrupo() {
             ModalManager.cerrar('modal-editar-grupo', () => {
-                D.setGrupoEnEdicion(null);                
+                D.setGrupoEnEdicion(null);      
+                document.dispatchEvent(new Event('scroll'));          
             });
         }
 
@@ -8236,3 +8238,5 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
+
+// lushibosca version 260511-v1

@@ -3775,6 +3775,9 @@
                     let colorBorde = cumplido ? 'green' : 'blue';
                     let mensaje = '';
 
+                    const faltanteParaNotificar = objetivoDiario - tiempoHoy;
+                    if (window.NotificacionesManager) NotificacionesManager.comprobarYNotificar(faltanteParaNotificar);
+
                     if (objetivoDiario === 0) {
                         mensaje = 'En curso (cruce de medianoche)';
                     } else if (cumplido) {
@@ -3785,9 +3788,8 @@
                             mensaje = extra > 0 ? `Te podes ir (+${horasATexto(extra)})` : 'Te podes ir';
                         }
                     } else {
-                        const faltante = objetivoDiario - tiempoHoy;
-                        const faltanteTexto = `Faltan ${horasATexto(faltante)}`;
-                        mensaje = bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
+                        const faltanteTexto = `Faltan ${horasATexto(faltanteParaNotificar)}`;
+                        mensaje = bufferSemanal >= faltanteParaNotificar ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
                     }
 
                     const nombreDiaAyer = obtenerNombreDia(est.ayerStr);
@@ -3891,6 +3893,9 @@
                 colorBorde = cumplido ? 'green' : 'blue';
                 estadoFondo = 'en_curso';
                 mostrarMensaje = true;
+                const faltanteParaNotificar = objetivoDiario - tiempoHoy;
+                if (window.NotificacionesManager) NotificacionesManager.comprobarYNotificar(faltanteParaNotificar);
+                
                 if (cumplido) {
                     const extra = tiempoHoy - objetivoDiario;
                     if (bufferSemanal < 0 && Math.abs(bufferSemanal) > extra) {
@@ -3899,10 +3904,8 @@
                         mensaje = extra > 0 ? `Te podes ir (+${horasATexto(extra)})` : 'Te podes ir';
                     }
                 } else {
-                    const faltante = objetivoDiario - tiempoHoy;
-                    if (window.NotificacionesManager) NotificacionesManager.comprobarYNotificar(faltante);
-                    const faltanteTexto = `Faltan ${horasATexto(faltante)}`;
-                    mensaje = bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
+                    const faltanteTexto = `Faltan ${horasATexto(faltanteParaNotificar)}`;
+                    mensaje = bufferSemanal >= faltanteParaNotificar ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
                 }
             }
 

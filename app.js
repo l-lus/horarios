@@ -19,6 +19,130 @@
     }
 
     // ====================================================================
+    // NOTIFICACIONES MANAGER MODULE
+    // ====================================================================
+    const NotificacionesManager = (function () {
+        let habilitadas = false;
+        let minutosAntes = 0;
+        let ultimaNotificacionFecha = null;
+
+        function inicializar() {
+            cargarConfiguracion();
+            actualizarUI();
+        }
+
+        function cargarConfiguracion() {
+            try {
+                habilitadas = localStorage.getItem('noti_habilitadas') === 'true';
+                minutosAntes = parseInt(localStorage.getItem('noti_minutos') || '0', 10);
+                ultimaNotificacionFecha = localStorage.getItem('noti_ultima_fecha');
+            } catch (e) {
+                console.error("Error al cargar config de notificaciones", e);
+            }
+        }
+
+        function guardarConfiguracion() {
+            try {
+                localStorage.setItem('noti_habilitadas', habilitadas);
+                localStorage.setItem('noti_minutos', minutosAntes);
+                if (ultimaNotificacionFecha) {
+                    localStorage.setItem('noti_ultima_fecha', ultimaNotificacionFecha);
+                }
+            } catch (e) {}
+        }
+
+        async function alternarHabilitacion() {
+            if (!habilitadas) {
+                if (!('Notification' in window)) {
+                    if (window.UILogic) UILogic.mostrarToast('Tu navegador no soporta notificaciones.', 'error');
+                    return;
+                }
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    habilitadas = true;
+                    if (window.UILogic) UILogic.mostrarToast('Notificaciones activadas', 'success');
+                } else {
+                    habilitadas = false;
+                    if (window.UILogic) UILogic.mostrarToast('Permiso de notificaciones denegado', 'error');
+                }
+            } else {
+                habilitadas = false;
+                if (window.UILogic) UILogic.mostrarToast('Notificaciones desactivadas', 'info');
+            }
+            guardarConfiguracion();
+            actualizarUI();
+        }
+
+        function setMinutosAntes(minutos) {
+            minutosAntes = minutos;
+            guardarConfiguracion();
+        }
+
+        function actualizarUI() {
+            const btn = document.getElementById('btn-toggle-notificaciones');
+            const label = document.getElementById('label-notificaciones-estado');
+            const grupoTiempo = document.getElementById('grupo-notificaciones-tiempo');
+            const selectTiempo = document.getElementById('select-notificaciones-tiempo');
+
+            if (btn && label && grupoTiempo && selectTiempo) {
+                if (habilitadas) {
+                    label.textContent = 'Habilitadas';
+                    btn.classList.add('active');
+                    grupoTiempo.classList.remove('hidden');
+                    selectTiempo.value = minutosAntes.toString();
+                } else {
+                    label.textContent = 'Deshabilitadas';
+                    btn.classList.remove('active');
+                    grupoTiempo.classList.add('hidden');
+                }
+            }
+        }
+
+        function comprobarYNotificar(faltanteHoras) {
+            if (!habilitadas || Notification.permission !== 'granted') return;
+            if (!window.DataManagement) return;
+
+            const faltanteMinutos = faltanteHoras * 60;
+            if (faltanteMinutos <= minutosAntes && faltanteMinutos >= (minutosAntes - 1.5)) {
+                const hoy = window.SecurityAndUtils ? SecurityAndUtils.formatearFechaLocal(new Date()) : new Date().toISOString().split('T')[0];
+                if (ultimaNotificacionFecha !== hoy) {
+                    enviarNotificacion(`¡Tu jornada está por terminar!`, `Faltan aprox. ${Math.max(0, Math.round(faltanteMinutos))} minutos para cumplir tu objetivo.`);
+                    ultimaNotificacionFecha = hoy;
+                    guardarConfiguracion();
+                }
+            }
+        }
+
+        function enviarNotificacion(titulo, cuerpo) {
+            if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification(titulo, {
+                        body: cuerpo,
+                        icon: './icon.svg',
+                        vibrate: [200, 100, 200],
+                        tag: 'horarios-alerta',
+                        renotify: true
+                    }).catch(err => {
+                        new Notification(titulo, { body: cuerpo, icon: './icon.svg' });
+                    });
+                }).catch(err => {
+                    new Notification(titulo, { body: cuerpo, icon: './icon.svg' });
+                });
+            } else {
+                new Notification(titulo, { body: cuerpo, icon: './icon.svg' });
+            }
+        }
+
+        return {
+            inicializar,
+            alternarHabilitacion,
+            setMinutosAntes,
+            comprobarYNotificar,
+            actualizarUI
+        };
+    })();
+
+    // ====================================================================
     // PWA INSTALLER MODULE
     // ====================================================================
     const PWAInstaller = (function () {
@@ -3776,6 +3900,7 @@
                     }
                 } else {
                     const faltante = objetivoDiario - tiempoHoy;
+                    if (window.NotificacionesManager) NotificacionesManager.comprobarYNotificar(faltante);
                     const faltanteTexto = `Faltan ${horasATexto(faltante)}`;
                     mensaje = bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
                 }
@@ -6707,6 +6832,9 @@ Generado por Sistema Lushibosca
                 }
             }
 
+            window.ModalManager = ModalManager;
+            window.NotificacionesManager = NotificacionesManager;
+
             window.UILogic = {
                 alternarTema, cerrarConfig, pegarHoraActual, alternarVista, poblarSelectoresTipos,
                 cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
@@ -8109,6 +8237,8 @@ if ('serviceWorker' in navigator) {
 
 document.addEventListener('DOMContentLoaded', function () {
     const $ = id => document.getElementById(id);
+    
+    if (window.NotificacionesManager) NotificacionesManager.inicializar();
 
     const addHoldEvents = (btn, onStart, onStop) => {
         btn.addEventListener('mousedown', onStart);
@@ -8237,6 +8367,13 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => DataManagement.guardarEdicionGrupo());
     document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
+
+    $('btn-config-notificaciones')?.addEventListener('click', () => {
+        ModalManager.alternar('modal-config', 'modal-notificaciones', null, () => window.NotificacionesManager && NotificacionesManager.actualizarUI());
+    });
+    $('btn-toggle-notificaciones')?.addEventListener('click', () => window.NotificacionesManager && NotificacionesManager.alternarHabilitacion());
+    $('select-notificaciones-tiempo')?.addEventListener('change', (e) => window.NotificacionesManager && NotificacionesManager.setMinutosAntes(parseInt(e.target.value, 10)));
+    $('btn-cerrar-notificaciones')?.addEventListener('click', () => ModalManager.alternar('modal-notificaciones', 'modal-config'));
 });
 
 // lushibosca version 260511-v1

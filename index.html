@@ -642,6 +642,15 @@
                                 <span>Recordar estado</span>
                             </button>
                         </div>
+                        <div class="form-group">
+                            <label>Notificaciones</label>
+                            <button id="btn-config-notificaciones">
+                                <svg class="icon">
+                                    <use href="#icon-bell" />
+                                </svg>
+                                <span>Configurar alertas</span>
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <div class="form-group">
@@ -709,6 +718,52 @@
             <div class="modal-panel-footer">
                 <div class="btn-group">
                     <button class="btn-delete">
+                        <svg class="icon">
+                            <use href="#icon-undo" />
+                        </svg> Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal modal-scrollable" id="modal-notificaciones">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3>
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-bell" />
+                        </svg> Notificaciones
+                    </span>
+                </h3>
+            </div>
+            <div class="modal-panel-body custom-scroll">
+                <div class="form-group">
+                    <label>Estado</label>
+                    <button id="btn-toggle-notificaciones">
+                        <svg class="icon">
+                            <use href="#icon-bell" />
+                        </svg>
+                        <span id="label-notificaciones-estado">Deshabilitadas</span>
+                    </button>
+                    <div class="config-hint-text">Te avisaremos cuando tu jornada esté por terminar.</div>
+                </div>
+                <div class="form-group hidden" id="grupo-notificaciones-tiempo">
+                    <label>Cuándo notificar</label>
+                    <div class="input-with-btn">
+                        <select id="select-notificaciones-tiempo">
+                            <option value="0">En punto (0 min)</option>
+                            <option value="5">5 minutos antes</option>
+                            <option value="10">10 minutos antes</option>
+                            <option value="15">15 minutos antes</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-delete" id="btn-cerrar-notificaciones">
                         <svg class="icon">
                             <use href="#icon-undo" />
                         </svg> Volver

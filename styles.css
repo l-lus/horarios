@@ -326,6 +326,11 @@ button:disabled {
     transition: opacity 0.3s ease;
 }
 
+.btn-fantasma {
+    visibility: hidden;
+    pointer-events: none;
+}
+
 #gist-rango-horario.disabled,
 #gist-limite-sync.disabled {
     opacity: 0.35;

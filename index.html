@@ -173,6 +173,10 @@
             <polyline points="6 9 12 15 18 9" class="icon-line" stroke="currentColor" stroke-width="2" fill="none">
             </polyline>
         </symbol>
+        <symbol id="icon-chevron-right" viewBox="0 0 24 24">
+            <polyline points="9 6 15 12 9 18" class="icon-line" stroke="currentColor" stroke-width="2" fill="none">
+            </polyline>
+        </symbol>
         <symbol id="icon-lock" viewBox="0 0 24 24">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" class="icon-line" stroke="currentColor"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4" class="icon-line" stroke="currentColor"></path>
@@ -608,38 +612,42 @@
                         </div>
                         <div class="form-group">
                             <label>Fondo del dashboard</label>
-                            <button id="btn-toggle-fondo">
+                            <button id="btn-toggle-fondo" class="config-row-btn config-row-btn--chevron">
                                 <svg class="icon">
                                     <use href="#icon-landscape" />
                                 </svg>
-                                <span id="hint-fondo-label">Golden Gate</span>
+                                <span id="hint-fondo-label" class="config-row-label">Golden Gate</span>
+                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
                             </button>
                         </div>
                         <div class="form-group">
                             <label>Tiempo Fuera</label>
-                            <button id="btn-toggle-ignorar-tf">
+                            <button id="btn-toggle-ignorar-tf" class="config-row-btn config-row-btn--toggle">
                                 <svg class="icon">
                                     <use href="#icon-exit" />
                                 </svg>
-                                <span>Ignorar calculo TF</span>
+                                <span class="config-row-label">Ignorar calculo TF</span>
+                                <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
                             </button>
                         </div>
                         <div class="form-group">
                             <label>Calendario</label>
-                            <button id="btn-toggle-hover-popup">
+                            <button id="btn-toggle-hover-popup" class="config-row-btn config-row-btn--toggle">
                                 <svg class="icon">
                                     <use href="#icon-calendar-simple" />
                                 </svg>
-                                <span>Popup al pasar mouse (PC)</span>
+                                <span class="config-row-label">Popup al pasar mouse (PC)</span>
+                                <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
                             </button>
                         </div>
                         <div class="form-group">
                             <label>Estado de Tarjetas</label>
-                            <button id="btn-toggle-persistir-tarjetas">
+                            <button id="btn-toggle-persistir-tarjetas" class="config-row-btn config-row-btn--toggle">
                                 <svg class="icon">
                                     <use href="#icon-save" />
                                 </svg>
-                                <span>Recordar estado</span>
+                                <span class="config-row-label">Recordar estado</span>
+                                <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
                             </button>
                         </div>
                     </div>
@@ -648,59 +656,66 @@
                             <label>Tarjetas y posición</label>
                             <div id="lista-orden-cards">
                                 <div class="orden-card-item" id="orden-item-registrar">
-                                    <button id="btn-toggle-card-registrar" class="drag-handle flex-1"
+                                    <button id="btn-toggle-card-registrar" class="drag-handle flex-1 config-row-btn config-row-btn--toggle"
                                         data-card="registrar">
                                         <svg class="icon">
                                             <use href="#icon-save" />
                                         </svg>
-                                        <span>Fichar</span>
+                                        <span class="config-row-label">Fichar</span>
+                                        <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
                                     </button>
                                 </div>
                                 <div class="orden-card-item" id="orden-item-estadisticas">
-                                    <button id="btn-toggle-card-estadisticas" class="drag-handle flex-1"
+                                    <button id="btn-toggle-card-estadisticas" class="drag-handle flex-1 config-row-btn config-row-btn--toggle"
                                         data-card="estadisticas">
                                         <svg class="icon">
                                             <use href="#icon-stats" />
                                         </svg>
-                                        <span>Estadísticas</span>
+                                        <span class="config-row-label">Estadísticas</span>
+                                        <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
                                     </button>
                                 </div>
                                 <div class="orden-card-item" id="orden-item-historico">
-                                    <button id="btn-toggle-card-historico" class="drag-handle flex-1"
+                                    <button id="btn-toggle-card-historico" class="drag-handle flex-1 config-row-btn config-row-btn--toggle"
                                         data-card="historico">
                                         <svg class="icon">
                                             <use href="#icon-list" />
                                         </svg>
-                                        <span>Registros</span>
+                                        <span class="config-row-label">Registros</span>
+                                        <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <div class="config-actions">
                             <label>Datos</label>
-                            <button class="btn-edit">
+                            <button class="btn-edit config-row-btn config-row-btn--chevron">
                                 <svg class="icon">
                                     <use href="#icon-gist" />
                                 </svg>
-                                GitHub Gist
+                                <span class="config-row-label">GitHub Gist</span>
+                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
                             </button>
-                            <button class="btn-backup">
+                            <button class="btn-backup config-row-btn config-row-btn--chevron">
                                 <svg class="icon">
                                     <use href="#icon-upload" />
                                 </svg>
-                                Restaurar
+                                <span class="config-row-label">Restaurar</span>
+                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
                             </button>
-                            <button class="btn-export">
+                            <button class="btn-export config-row-btn config-row-btn--chevron">
                                 <svg class="icon">
                                     <use href="#icon-download" />
                                 </svg>
-                                Respaldar
+                                <span class="config-row-label">Respaldar</span>
+                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
                             </button>
-                            <button class="btn-delete">
+                            <button class="btn-delete config-row-btn config-row-btn--chevron">
                                 <svg class="icon">
                                     <use href="#icon-trash" />
                                 </svg>
-                                Restablecer
+                                <span class="config-row-label">Restablecer</span>
+                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
                             </button>
                         </div>
                     </div>
@@ -808,7 +823,6 @@
                     </div>
                 </div>
                 <div class="config-hint-text" id="gist-ultima-sync">Sin sincronizar</div>
-                <div class="config-hint-text">Anotá tu Token e ID para no perderlos.</div>
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">

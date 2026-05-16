@@ -612,42 +612,38 @@
                         </div>
                         <div class="form-group">
                             <label>Fondo del dashboard</label>
-                            <button id="btn-toggle-fondo" class="config-row-btn config-row-btn--chevron">
+                            <button id="btn-toggle-fondo">
                                 <svg class="icon">
                                     <use href="#icon-landscape" />
                                 </svg>
-                                <span id="hint-fondo-label" class="config-row-label">Golden Gate</span>
-                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
+                                <span id="hint-fondo-label">Golden Gate</span>
                             </button>
                         </div>
                         <div class="form-group">
                             <label>Tiempo Fuera</label>
-                            <button id="btn-toggle-ignorar-tf" class="config-row-btn config-row-btn--toggle">
+                            <button id="btn-toggle-ignorar-tf">
                                 <svg class="icon">
                                     <use href="#icon-exit" />
                                 </svg>
-                                <span class="config-row-label">Ignorar calculo TF</span>
-                                <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
+                                <span>Ignorar calculo TF</span>
                             </button>
                         </div>
                         <div class="form-group">
                             <label>Calendario</label>
-                            <button id="btn-toggle-hover-popup" class="config-row-btn config-row-btn--toggle">
+                            <button id="btn-toggle-hover-popup">
                                 <svg class="icon">
                                     <use href="#icon-calendar-simple" />
                                 </svg>
-                                <span class="config-row-label">Popup al pasar mouse (PC)</span>
-                                <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
+                                <span>Popup al pasar mouse (PC)</span>
                             </button>
                         </div>
                         <div class="form-group">
                             <label>Estado de Tarjetas</label>
-                            <button id="btn-toggle-persistir-tarjetas" class="config-row-btn config-row-btn--toggle">
+                            <button id="btn-toggle-persistir-tarjetas">
                                 <svg class="icon">
                                     <use href="#icon-save" />
                                 </svg>
-                                <span class="config-row-label">Recordar estado</span>
-                                <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
+                                <span>Recordar estado</span>
                             </button>
                         </div>
                     </div>
@@ -656,66 +652,59 @@
                             <label>Tarjetas y posición</label>
                             <div id="lista-orden-cards">
                                 <div class="orden-card-item" id="orden-item-registrar">
-                                    <button id="btn-toggle-card-registrar" class="drag-handle flex-1 config-row-btn config-row-btn--toggle"
+                                    <button id="btn-toggle-card-registrar" class="drag-handle flex-1"
                                         data-card="registrar">
                                         <svg class="icon">
                                             <use href="#icon-save" />
                                         </svg>
-                                        <span class="config-row-label">Fichar</span>
-                                        <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
+                                        <span>Fichar</span>
                                     </button>
                                 </div>
                                 <div class="orden-card-item" id="orden-item-estadisticas">
-                                    <button id="btn-toggle-card-estadisticas" class="drag-handle flex-1 config-row-btn config-row-btn--toggle"
+                                    <button id="btn-toggle-card-estadisticas" class="drag-handle flex-1"
                                         data-card="estadisticas">
                                         <svg class="icon">
                                             <use href="#icon-stats" />
                                         </svg>
-                                        <span class="config-row-label">Estadísticas</span>
-                                        <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
+                                        <span>Estadísticas</span>
                                     </button>
                                 </div>
                                 <div class="orden-card-item" id="orden-item-historico">
-                                    <button id="btn-toggle-card-historico" class="drag-handle flex-1 config-row-btn config-row-btn--toggle"
+                                    <button id="btn-toggle-card-historico" class="drag-handle flex-1"
                                         data-card="historico">
                                         <svg class="icon">
                                             <use href="#icon-list" />
                                         </svg>
-                                        <span class="config-row-label">Registros</span>
-                                        <span class="config-toggle-slider"><span class="config-toggle-thumb"></span></span>
+                                        <span>Registros</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <div class="config-actions">
                             <label>Datos</label>
-                            <button class="btn-edit config-row-btn config-row-btn--chevron">
+                            <button class="btn-edit">
                                 <svg class="icon">
                                     <use href="#icon-gist" />
                                 </svg>
-                                <span class="config-row-label">GitHub Gist</span>
-                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
+                                GitHub Gist
                             </button>
-                            <button class="btn-backup config-row-btn config-row-btn--chevron">
+                            <button class="btn-backup">
                                 <svg class="icon">
                                     <use href="#icon-upload" />
                                 </svg>
-                                <span class="config-row-label">Restaurar</span>
-                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
+                                Restaurar
                             </button>
-                            <button class="btn-export config-row-btn config-row-btn--chevron">
+                            <button class="btn-export">
                                 <svg class="icon">
                                     <use href="#icon-download" />
                                 </svg>
-                                <span class="config-row-label">Respaldar</span>
-                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
+                                Respaldar
                             </button>
-                            <button class="btn-delete config-row-btn config-row-btn--chevron">
+                            <button class="btn-delete">
                                 <svg class="icon">
                                     <use href="#icon-trash" />
                                 </svg>
-                                <span class="config-row-label">Restablecer</span>
-                                <svg class="icon config-row-chevron"><use href="#icon-chevron-right" /></svg>
+                                Restablecer
                             </button>
                         </div>
                     </div>
@@ -823,6 +812,7 @@
                     </div>
                 </div>
                 <div class="config-hint-text" id="gist-ultima-sync">Sin sincronizar</div>
+                <div class="config-hint-text">Anotá tu Token e ID para no perderlos.</div>
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">
@@ -1298,6 +1288,7 @@
     
       - CAMBIOS:
     1) Se mueve el boton de bloqueo al lado del boton cancelar
+    2) mejoras de seguridad
 
      - BUGS CONOCIDOS:
     1)

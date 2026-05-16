@@ -6678,23 +6678,71 @@ Generado por Sistema Lushibosca
 
                         const resumenEl = document.getElementById('gist-merge-resumen');
                         if (resumenEl) {
-                            resumenEl.innerHTML =
-                                `<div>` +
-                                `<div><svg class="icon"><use href="#icon-cloud"/></svg> En Gist <strong class="text-green">${soloEnGist.length}</strong> registro${soloEnGist.length !== 1 ? 's' : ''} nuevos</div>` +
-                                `<div><svg class="icon"><use href="#icon-combine"/></svg> En ambos <strong>${enAmbos.length}</strong> registro${enAmbos.length !== 1 ? 's' : ''} (por fecha${complementarios.length > 0 ? `, <strong class="text-blue">${complementarios.length}</strong> para completar` : ''})</div>` +
-                                `<div><svg class="icon"><use href="#icon-save"/></svg> Local <strong>${soloLocal.length}</strong> registro${soloLocal.length !== 1 ? 's' : ''} no subidos</div>` +
-                                `</div>` +
-                                `<div id="_gist-config-cambios"></div>` +
-                                `<div class="gist-resumen-footer">` +
-                                `<strong>Combinar</strong>: agrega ${soloEnGist.length} nuevo(s)${complementarios.length > 0 ? `, completa ${complementarios.length} registro(s)` : ''}, mantiene los locales<br>` +
-                                `<strong>Reemplazar</strong>: usa los ${registrosNormalizados.length} registros del Gist` +
-                                `</div>`;
-                            const configEl = resumenEl.querySelector('#_gist-config-cambios');
-                            if (configEl) {
-                                configEl.textContent = configCambios.length > 0
-                                    ? `⚙ Reemplazar cambiará: ${configCambios.join(', ')}`
-                                    : `⚙ Sin cambios de configuración`;
+                            resumenEl.innerHTML = '';
+
+                            const _mkSvg = (id) => {
+                                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                                svg.setAttribute('class', 'icon');
+                                const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                                use.setAttribute('href', id);
+                                svg.appendChild(use);
+                                return svg;
+                            };
+                            const _mkStrong = (text, cls) => {
+                                const s = document.createElement('strong');
+                                if (cls) s.className = cls;
+                                s.textContent = String(text);
+                                return s;
+                            };
+                            const _mkRow = (...nodes) => {
+                                const d = document.createElement('div');
+                                nodes.forEach(n => d.appendChild(typeof n === 'string' ? document.createTextNode(n) : n));
+                                return d;
+                            };
+
+                            const bloqueFilas = document.createElement('div');
+                            bloqueFilas.appendChild(_mkRow(
+                                _mkSvg('#icon-cloud'), ` En Gist `,
+                                _mkStrong(soloEnGist.length, 'text-green'),
+                                ` registro${soloEnGist.length !== 1 ? 's' : ''} nuevos`
+                            ));
+                            const filaAmbos = _mkRow(
+                                _mkSvg('#icon-combine'), ` En ambos `,
+                                _mkStrong(enAmbos.length),
+                                ` registro${enAmbos.length !== 1 ? 's' : ''} (por fecha`
+                            );
+                            if (complementarios.length > 0) {
+                                filaAmbos.appendChild(document.createTextNode(', '));
+                                filaAmbos.appendChild(_mkStrong(complementarios.length, 'text-blue'));
+                                filaAmbos.appendChild(document.createTextNode(' para completar'));
                             }
+                            filaAmbos.appendChild(document.createTextNode(')'));
+                            bloqueFilas.appendChild(filaAmbos);
+                            bloqueFilas.appendChild(_mkRow(
+                                _mkSvg('#icon-save'), ` Local `,
+                                _mkStrong(soloLocal.length),
+                                ` registro${soloLocal.length !== 1 ? 's' : ''} no subidos`
+                            ));
+                            resumenEl.appendChild(bloqueFilas);
+
+                            const configEl = document.createElement('div');
+                            configEl.id = '_gist-config-cambios';
+                            configEl.textContent = configCambios.length > 0
+                                ? `⚙ Reemplazar cambiará: ${configCambios.join(', ')}`
+                                : `⚙ Sin cambios de configuración`;
+                            resumenEl.appendChild(configEl);
+
+                            const footer = document.createElement('div');
+                            footer.className = 'gist-resumen-footer';
+                            footer.appendChild(_mkStrong('Combinar'));
+                            let txtCombinar = `: agrega ${soloEnGist.length} nuevo(s)`;
+                            if (complementarios.length > 0) txtCombinar += `, completa ${complementarios.length} registro(s)`;
+                            txtCombinar += ', mantiene los locales';
+                            footer.appendChild(document.createTextNode(txtCombinar));
+                            footer.appendChild(document.createElement('br'));
+                            footer.appendChild(_mkStrong('Reemplazar'));
+                            footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros del Gist`));
+                            resumenEl.appendChild(footer);
                         }
                         ModalManager.cerrar('modal-gist');
                         ModalManager.abrir('modal-gist-merge');
@@ -7577,12 +7625,22 @@ Generado por Sistema Lushibosca
             };
 
             const diasNombre = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-            let html = diasNombre.map(d => `<div class="calendario-dia-nombre">${d}</div>`).join('');
             const primerDia = new Date(anio, mes, 1);
             const ultimoDia = new Date(anio, mes + 1, 0);
-            let offsetInicio = primerDia.getDay();
+            const frag = document.createDocumentFragment();
+
+            diasNombre.forEach(d => {
+                const cell = document.createElement('div');
+                cell.className = 'calendario-dia-nombre';
+                cell.textContent = d;
+                frag.appendChild(cell);
+            });
+
+            const offsetInicio = primerDia.getDay();
             for (let i = 0; i < offsetInicio; i++) {
-                html += `<div class="calendario-dia vacio"></div>`;
+                const vacio = document.createElement('div');
+                vacio.className = 'calendario-dia vacio';
+                frag.appendChild(vacio);
             }
 
             for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
@@ -7590,10 +7648,24 @@ Generado por Sistema Lushibosca
                 const clase = claseDelDia(fecha);
                 const esHoy = anio === hoy.getFullYear() && mes === hoy.getMonth() && dia === hoy.getDate();
                 const reg = regsPorFecha[fecha];
-                const cursor = reg ? ' cursor-pointer' : '';
-                const esNuevo = idResaltar && reg && reg.id === idResaltar ? ' nuevo-registro-animacion' : '';
-                const dataId = reg ? ` data-reg-id="${reg.id}"` : '';
-                html += `<div class="calendario-dia ${clase}${esHoy ? ' hoy' : ''}${esNuevo}${cursor}"${dataId}>${dia}</div>`;
+                const esNuevo = idResaltar && reg && reg.id === idResaltar;
+
+                const cell = document.createElement('div');
+                let clases = `calendario-dia ${clase}`;
+                if (esHoy) clases += ' hoy';
+                if (esNuevo) clases += ' nuevo-registro-animacion';
+                if (reg) clases += ' cursor-pointer';
+                cell.className = clases;
+                cell.textContent = dia;
+
+                if (reg) {
+                    cell.dataset.regId = reg.id;
+                    cell.addEventListener('click', (e) => UILogic._onclickCalendarioDia(e, reg.id));
+                    cell.addEventListener('mouseenter', (e) => UILogic._popupCalendarioHover(e, reg.id));
+                    cell.addEventListener('mouseleave', (e) => UILogic._cerrarPopupCalendarioHover(e));
+                }
+
+                frag.appendChild(cell);
             }
 
             if (filtroActivo) {
@@ -7601,14 +7673,8 @@ Generado por Sistema Lushibosca
             } else {
                 grid.classList.remove('calendario-filtro-activo');
             }
-            grid.innerHTML = html;
-
-            grid.querySelectorAll('.calendario-dia[data-reg-id]').forEach(el => {
-                const id = el.dataset.regId;
-                el.addEventListener('click', (e) => UILogic._onclickCalendarioDia(e, id));
-                el.addEventListener('mouseenter', (e) => UILogic._popupCalendarioHover(e, id));
-                el.addEventListener('mouseleave', (e) => UILogic._cerrarPopupCalendarioHover(e));
-            });
+            grid.innerHTML = '';
+            grid.appendChild(frag);
 
         }
 
@@ -8239,4 +8305,4 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
 
-// lushibosca version 260511-v1
+// lushibosca version 260516

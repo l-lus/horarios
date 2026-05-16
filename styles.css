@@ -26,7 +26,7 @@
     --transition-anim: opacity 0.3s ease, transform 0.3s ease;
     --transition-collapse: max-height 0.3s ease-out, opacity 0.3s ease-out;
     --modal-overlay: rgba(0, 0, 0, 0.5);
-    --touch-target: 44px;
+    --touch-target: 48px;
     --input-height: 48px;
 }
 
@@ -76,6 +76,7 @@ body {
     max-width: 1400px;
     margin: 0 auto;
     padding: 0.5rem;
+    margin-bottom: 5rem;
 }
 
 .header {
@@ -192,8 +193,7 @@ select {
     font-size: 1rem;
     background: var(--input-bg);
     color: var(--text-main);
-    appearance: none; /* Agrega esto */
-    -webkit-appearance: none; /* Soporte para Safari/iOS */
+    height: var(--input-height);
 }
 
 input:disabled,
@@ -240,7 +240,7 @@ input.error {
 
 button {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.875rem;
     border: 1px solid transparent;
     border-radius: var(--radius);
     font-weight: 600;
@@ -683,11 +683,6 @@ button:disabled {
     margin-top: 1rem;
 }
 
-#vista-calendario-historico {
-    min-height: 635px; /* Ajusta este valor al tamaño ideal de tu tarjeta */
-    transition: var(--transition-collapse), transform 0.3s ease;
-}
-
 .btn-mes-calendario {
     display: flex;
     flex-direction: column;
@@ -701,7 +696,7 @@ button:disabled {
     font-family: inherit;
     cursor: pointer;
     transition: transform 0.2s, background 0.2s, border-color 0.2s;
-    height: 44px;
+    height: 50px;
     font-size: 0.9rem;
 }
 
@@ -835,8 +830,7 @@ button:disabled {
     color: var(--text-main);
 }
 
-.cal-popup-3l,
-.btn-perfil-badge {
+.cal-popup-3l {
     font-size: 0.8rem;
     color: var(--text-muted)
 }
@@ -1041,6 +1035,11 @@ button:disabled {
     font-weight: 600;
 }
 
+.btn-perfil-badge {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
 .btn-perfil-edit {
     background: transparent;
     border: 1px solid var(--border);
@@ -1158,6 +1157,7 @@ button:disabled {
 
 #btn-toggle-periodo {
     width: 100px;
+    height: var(--input-height);
     padding: 0.25rem 0;
     font-size: 0.8rem;
     gap: 0.25rem;

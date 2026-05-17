@@ -19,7 +19,48 @@ window.FONDOS_SVG = [
     {
         id: 'obelisco',
         label: 'Skyline BA',
-        svg: (color) => `<svg viewBox="0 0 800 200" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg" class="card-bg-svg card-bg-svg--left"><g fill="${color}"><rect x="0" y="148" width="800" height="52"/><rect x="0" y="110" width="18" height="40"/><rect x="20" y="100" width="22" height="50"/><rect x="44" y="118" width="14" height="32"/><rect x="580" y="108" width="20" height="42"/><rect x="604" y="95" width="16" height="55"/><rect x="624" y="112" width="22" height="38"/><rect x="650" y="100" width="18" height="50"/><rect x="672" y="115" width="25" height="35"/><rect x="700" y="105" width="20" height="45"/><rect x="724" y="118" width="16" height="32"/><rect x="744" y="98" width="22" height="52"/><rect x="770" y="110" width="30" height="40"/><rect x="62" y="90" width="5" height="58"/><rect x="46" y="92" width="38" height="4"/><rect x="84" y="94" width="4" height="30"/><rect x="105" y="98" width="5" height="50"/><rect x="90" y="100" width="36" height="4"/><rect x="125" y="102" width="4" height="24"/><rect x="145" y="108" width="4" height="40"/><rect x="133" y="110" width="28" height="3"/><rect x="160" y="111" width="3" height="18"/><rect x="185" y="130" width="38" height="18"/><rect x="188" y="95" width="32" height="36"/><rect x="191" y="75" width="26" height="22"/><rect x="194" y="60" width="20" height="17"/><rect x="197" y="48" width="14" height="14"/><rect x="200" y="38" width="8" height="12"/><rect x="203" y="28" width="2" height="12"/><rect x="258" y="118" width="42" height="30"/><rect x="260" y="75" width="38" height="44"/><rect x="270" y="55" width="18" height="22"/><rect x="273" y="44" width="12" height="13"/><ellipse cx="279" cy="44" rx="8" ry="6"/><rect x="277" y="32" width="4" height="14"/><ellipse cx="279" cy="32" rx="4" ry="3"/><polygon points="348,22 354,22 358,118 344,118" opacity="0.5"/><polygon points="348,22 354,22 351,10" opacity="0.5"/><rect x="168" y="120" width="16" height="28"/><rect x="238" y="115" width="18" height="33"/><rect x="304" y="108" width="14" height="40"/><rect x="322" y="115" width="20" height="33"/><rect x="370" y="100" width="16" height="48"/><rect x="390" y="112" width="14" height="36"/><rect x="406" y="118" width="12" height="30"/><rect x="420" y="120" width="60" height="28"/><rect x="422" y="90" width="56" height="32"/><rect x="428" y="78" width="44" height="14"/><rect x="434" y="60" width="32" height="20"/><path d="M434,60 Q450,30 466,60 Z"/><rect x="447" y="28" width="6" height="14"/><ellipse cx="450" cy="28" rx="5" ry="4"/><rect x="484" y="110" width="20" height="38"/><rect x="508" y="102" width="16" height="46"/><rect x="528" y="115" width="18" height="33"/><rect x="550" y="108" width="14" height="40"/></g></svg>`
+        svg: (color) => `<svg viewBox="160 10 330 160" preserveAspectRatio="xMaxYMax meet" xmlns="http://www.w3.org/2000/svg" class="card-bg-svg card-bg-svg--right">
+            <g fill="${color}">
+                <rect x="0" y="148" width="1000" height="52"/>
+                
+                <rect x="168" y="120" width="16" height="28"/>
+                
+                <rect x="188" y="95" width="32" height="53"/>
+                <rect x="191" y="75" width="26" height="22"/>
+                <rect x="194" y="60" width="20" height="17"/>
+                <rect x="197" y="48" width="14" height="14"/>
+                <rect x="200" y="38" width="8" height="12"/>
+                <rect x="203" y="28" width="2" height="12"/>
+
+                <rect x="238" y="115" width="18" height="33"/>
+
+                <rect x="258" y="118" width="42" height="30"/>
+                <rect x="260" y="75" width="38" height="44"/>
+                <rect x="270" y="55" width="18" height="22"/>
+                <rect x="273" y="44" width="12" height="13"/>
+                <ellipse cx="279" cy="44" rx="8" ry="6"/>
+                <rect x="277" y="32" width="4" height="14"/>
+                <ellipse cx="279" cy="32" rx="4" ry="3"/>
+
+                <rect x="304" y="108" width="14" height="40"/>
+                <rect x="322" y="115" width="20" height="33"/>
+
+                <polygon points="348,22 354,22 358,148 344,148" opacity="0.5"/>
+                <polygon points="348,22 354,22 351,10" opacity="0.5"/>
+
+                <rect x="370" y="100" width="16" height="48"/>
+                <rect x="390" y="112" width="14" height="36"/>
+                <rect x="406" y="118" width="12" height="30"/>
+
+                <rect x="420" y="120" width="60" height="28"/>
+                <rect x="422" y="90" width="56" height="32"/>
+                <rect x="428" y="78" width="44" height="14"/>
+                <rect x="434" y="60" width="32" height="20"/>
+                <path d="M434,60 Q450,30 466,60 Z"/>
+                <rect x="447" y="28" width="6" height="14"/>
+                <ellipse cx="450" cy="28" rx="5" ry="4"/>
+            </g>
+        </svg>`
     },
     {
         id: 'cordillera-himalaya',

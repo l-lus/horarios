@@ -1,4 +1,4 @@
-const CACHE_NAME = 'horarios-v260517.1741-cache';
+const CACHE_NAME = 'horarios-v260517.1817-cache';
 const urlsToCache = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const urlsToCache = [
   './app.js',
   './styles.css',
   './fondos.js',
+  './tema.js',
 ];
 
 // Instalación

@@ -1,13 +1,5 @@
 
 (function () {
-    try {
-        var stored = localStorage.getItem('temaOscuro');
-        if (stored === 'true' || stored === null) {
-            document.body.classList.add('dark-mode');
-        }
-    } catch (e) { }
-})();
-(function () {
     'use strict';
 
     const $ = id => document.getElementById(id);

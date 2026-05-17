@@ -34,6 +34,7 @@
     --input-height: 48px;
 }
 
+html.dark-mode body,
 body.dark-mode {
     --bg-body: #131314;
     --bg-card: #1e1f20;

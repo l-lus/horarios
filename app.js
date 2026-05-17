@@ -6545,9 +6545,9 @@ Generado por Sistema Lushibosca
             function abrirGistEnBrowser() {
                 const gistId = document.getElementById('gist-id')?.value.trim() || GistSync.getGistId();
                 if (gistId) {
-                    window.open(`https://gist.github.com/${gistId}`, '_blank');
+                    window.open(`https://gist.github.com/${gistId}`, '_blank', 'noopener,noreferrer');
                 } else {
-                    window.open('https://gist.github.com', '_blank');
+                    window.open('https://gist.github.com', '_blank', 'noopener,noreferrer');
                 }
             }
 

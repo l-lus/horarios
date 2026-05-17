@@ -21,7 +21,6 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="./icon.svg">
     <link rel="stylesheet" href="./styles.css">
-    <script src="./fondos.js"></script>
     <script src="./app.js" defer></script>
     <title>Horarios</title>
 </head>
@@ -172,10 +171,6 @@
         </symbol>
         <symbol id="icon-chevron-down" viewBox="0 0 24 24">
             <polyline points="6 9 12 15 18 9" class="icon-line" stroke="currentColor" stroke-width="2" fill="none">
-            </polyline>
-        </symbol>
-        <symbol id="icon-chevron-right" viewBox="0 0 24 24">
-            <polyline points="9 6 15 12 9 18" class="icon-line" stroke="currentColor" stroke-width="2" fill="none">
             </polyline>
         </symbol>
         <symbol id="icon-lock" viewBox="0 0 24 24">
@@ -563,7 +558,7 @@
                         </svg>
                         Ajustes
                     </span>
-                    <span class="version-text">LUSHIBOSCA-260516</span>
+                    <span class="version-text">LUSHIBOSCA-301</span>
                 </h3>
             </div>
             <div class="modal-panel-body custom-scroll">
@@ -795,17 +790,17 @@
                             <span id="hint-gist-merge">Reemplazar</span>
                         </button>
                     </div>
-                    <div id="gist-limite-sync">
+                    <div id="gist-limite-sync" class="collapsible">
                         <div class="form-group form-group-mb-half">
                             <label id="gist-limite-label">Límite por hora</label>
                             <div class="input-number-group">
                                 <input type="number" id="gist-limite-valor" min="0" max="99" step="1" readonly />
                                 <button class="btn-increment">+</button>
-                                <button class="btn-increment">-</button>
+                                <button class="btn-increment">−</button>
                             </div>
                         </div>
                     </div>
-                    <div id="gist-rango-horario">
+                    <div id="gist-rango-horario" class="collapsible">
                         <span>Desde</span>
                         <input type="text" id="gist-rango-desde" inputmode="numeric" maxlength="5" />
                         <span>Hasta</span>
@@ -813,6 +808,7 @@
                     </div>
                 </div>
                 <div class="config-hint-text" id="gist-ultima-sync">Sin sincronizar</div>
+                <div class="config-hint-text">Anotá tu Token e ID para no perderlos.</div>
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">
@@ -898,6 +894,11 @@
                                 <use href="#icon-exit" />
                             </svg>
                         </button>
+                        <button class="time-btn" id="btn-lock-toggle" title="Desbloquear edición">
+                            <svg class="icon">
+                                <use href="#icon-lock" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -958,11 +959,6 @@
                     <button class="btn-cancel"><svg class="icon">
                             <use href="#icon-cancelar" />
                         </svg> Cancelar</button>
-                    <button class="time-btn" id="btn-lock-toggle" title="Desbloquear edición">
-                        <svg class="icon">
-                            <use href="#icon-lock" />
-                        </svg>
-                    </button>
                 </div>
             </div>
         </div>
@@ -1191,7 +1187,11 @@
                     <div class="input-with-btn">
                         <select id="edit-grupo-tipo">
                         </select>
-                        <div class="time-btn flex-shrink-0 btn-fantasma"></div>
+                        <button class="time-btn" id="btn-lock-grupo-toggle" title="Desbloquear edición">
+                            <svg class="icon">
+                                <use href="#icon-lock" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -1236,11 +1236,6 @@
                             <use href="#icon-cancelar" />
                         </svg> Cancelar
                     </button>
-                    <button class="time-btn" id="btn-lock-grupo-toggle" title="Desbloquear edición">
-                        <svg class="icon">
-                            <use href="#icon-lock" />
-                        </svg>
-                    </button>
                 </div>
             </div>
         </div>
@@ -1281,11 +1276,16 @@
 
 </body>
 
-<!-- lushibosca version 260516
-
-    CAMBIOS:
-
-    BUGS:
-
--->
 </html>
+
+<!--// ====================================================================
+    //             NOTAS SISTEMA LUSHIBOSCA HORARIOS VERSION 303
+    // ====================================================================
+    
+      - CAMBIOS:
+    1) Se quita el unsafe inline del codigo
+
+     - BUGS CONOCIDOS:
+    1)
+
+    -->

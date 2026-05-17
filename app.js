@@ -3490,7 +3490,7 @@
                 en_curso: coloresVar.blue,
                 finalizado_ok: coloresVar.green,
                 finalizado_fail: coloresVar.red,
-                especial: coloresVar.pruple
+                especial: coloresVar.purple
             };
 
             const color = colorOverride

@@ -150,10 +150,13 @@
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" class="icon-line" stroke="currentColor"></path>
             <line x1="12" y1="17" x2="12.01" y2="17" class="icon-line" stroke-width="3" stroke="currentColor"></line>
         </symbol>
-        <symbol id="icon-install" viewBox="0 0 24 24">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" class="icon-line" stroke="currentColor"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" class="icon-line" stroke="currentColor"></path>
-            <line x1="12" y1="16" x2="12" y2="16.01" class="icon-line" stroke-width="3" stroke="currentColor"></line>
+        <symbol id="icon-install" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+            <polyline points="9 10 12 13 15 10"></polyline>
+            <line x1="12" y1="6" x2="12" y2="13"></line>
         </symbol>
         <symbol id="icon-landscape" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -564,7 +567,7 @@
                         </svg>
                         Ajustes
                     </span>
-                    <span class="version-text">LUSHIBOSCA-260517</span>
+                    <span class="version-text">LUSHIBOSCA-260518</span>
                 </h3>
             </div>
             <div class="modal-panel-body custom-scroll">
@@ -716,7 +719,7 @@
                 <div class="btn-group">
                     <button class="btn-delete">
                         <svg class="icon">
-                            <use href="#icon-undo" />
+                            <use href="#icon-back" />
                         </svg> Volver
                     </button>
                 </div>
@@ -825,7 +828,7 @@
                     </button>
                     <button class="btn-delete" id="btn-gist-volver">
                         <svg class="icon">
-                            <use href="#icon-undo" />
+                            <use href="#icon-back" />
                         </svg>
                         Volver
                     </button>
@@ -1000,7 +1003,7 @@
                 </button>
                 <button class="btn-cancel" id="btn-volver-importar">
                     <svg class="icon">
-                        <use href="#icon-undo" />
+                        <use href="#icon-back" />
                     </svg>
                     Volver
                 </button>
@@ -1044,7 +1047,7 @@
                 </button>
                 <button class="btn-cancel" id="btn-volver-exportar">
                     <svg class="icon">
-                        <use href="#icon-undo" />
+                        <use href="#icon-back" />
                     </svg>
                     Volver
                 </button>
@@ -1166,7 +1169,7 @@
             <div class="btn-group">
                 <button class="btn-cancel">
                     <svg class="icon">
-                        <use href="#icon-undo" />
+                        <use href="#icon-back" />
                     </svg>
                     Volver
                 </button>
@@ -1282,11 +1285,14 @@
 
 </body>
 
-<!-- lushibosca version 260517.1739
+<!-- lushibosca version 260518.1035
 
-    CAMBIOS:
-
-    BUGS:
+    changelog: 
+    1) cambiada etiqueta selector de mes por volver.
+    2) se agrega listener para cerrar el selector de mes al tocar un espacio vacio de la tarjeta
+    3) Se mejora la validacion al guardar tiempo fuera desde el modal editar
+    4) Se cambia el padding-top del selector de mes para corregir el salto que se producia
+    al abrirlo.
 
 -->
 

@@ -819,7 +819,7 @@ button:disabled {
     grid-template-columns: repeat(3, 1fr);
     align-content: start;
     gap: 0.5rem;
-    margin-top: 1rem;
+    margin-top: 0.75rem;
 }
 
 .btn-mes-calendario {

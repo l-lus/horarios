@@ -1584,21 +1584,30 @@
                 return;
             }
 
-            if (e && s && tf) {
+            if (e && tf) {
                 const [hE, mE] = e.split(':').map(Number);
-                const [hS, mS] = s.split(':').map(Number);
                 const [hF, mF] = tf.split(':').map(Number);
-
                 const minutosEntrada = hE * 60 + mE;
-                const minutosSalida = hS * 60 + mS;
                 const minutosFuera = hF * 60 + mF;
 
-                let tiempoTranscurrido = minutosSalida - minutosEntrada;
+                let minutosLimite;
+                if (s) {
+                    const [hS, mS] = s.split(':').map(Number);
+                    minutosLimite = hS * 60 + mS;
+                } else {
+                    const ahora = new Date();
+                    minutosLimite = ahora.getHours() * 60 + ahora.getMinutes();
+                }
+
+                let tiempoTranscurrido = minutosLimite - minutosEntrada;
                 if (tiempoTranscurrido < 0) tiempoTranscurrido += 24 * 60;
 
                 if (minutosFuera > tiempoTranscurrido) {
                     UILogic.restaurarBotonGuardarEdicion(btnGuardar);
-                    UILogic.mostrarToast('El tiempo fuera no puede superar el tiempo trabajado', 'error');
+                    const msg = s
+                        ? 'El tiempo fuera no puede superar el tiempo efectivo'
+                        : 'El tiempo fuera no puede superar el tiempo transcurrido desde la entrada';
+                    UILogic.mostrarToast(msg, 'error');
                     return;
                 }
             }
@@ -5409,7 +5418,7 @@ Generado por Sistema Lushibosca
                 grid.classList.remove('fade-out');
                 grid.style.display = 'none';
                 navBotones.style.display = 'none';
-                titulo.textContent = 'Selector de mes';
+                titulo.innerHTML = '<svg class="icon"><use href="#icon-back" /></svg> Volver';
                 selector.style.display = 'grid';
                 selector.classList.add('fade-out');
                 selector.offsetHeight;
@@ -6802,6 +6811,12 @@ Generado por Sistema Lushibosca
                     });
 
                     el.addEventListener('change', verificarBloqueoCredito);
+                }
+            });
+
+            $('calendario-selector-meses')?.addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) {
+                    _cerrarSelectorMeses();
                 }
             });
 
@@ -8313,4 +8328,4 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
 
-// lushibosca version 260518.0024
+// lushibosca version 260518.1033

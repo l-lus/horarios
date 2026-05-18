@@ -4061,7 +4061,7 @@
 
         function alternarTema() {
             let temaOscuro = !D.cargarConfiguracion().temaOscuro;
-            document.body.classList.toggle('dark-mode');
+            document.documentElement.classList.toggle('dark-mode');
 
             try {
                 localStorage.setItem('temaOscuro', temaOscuro);
@@ -5424,7 +5424,7 @@ Generado por Sistema Lushibosca
 
                 renderizarListaPerfiles();
 
-                const temaOscuro = document.body.classList.contains('dark-mode');
+                const temaOscuro = document.documentElement.classList.contains('dark-mode');
                 const toggleBtnModal = document.getElementById('theme-toggle-modal');
 
                 if (toggleBtnModal) {
@@ -7014,7 +7014,7 @@ Generado por Sistema Lushibosca
             HistoryManager.updateButtons();
 
             if (temaOscuro) {
-                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
             }
             const toggleBtnEl = $('theme-toggle');
             if (toggleBtnEl) {

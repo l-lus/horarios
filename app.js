@@ -2588,9 +2588,14 @@
             if (!el || el.dataset.swipeInit) return;
             el.dataset.swipeInit = '1';
             let _x = null, _y = null;
+            const _reset = () => { _x = null; _y = null; };
             el.addEventListener('touchstart', e => {
                 if (e.touches.length !== 1) return;
-                if (ignoreInputs && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+                if (ignoreInputs) {
+                    const tag = e.target?.tagName;
+                    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(tag)) return;
+                    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+                }
                 _x = e.touches[0].clientX;
                 _y = e.touches[0].clientY;
             }, { passive: true });
@@ -2598,11 +2603,12 @@
                 if (_x === null) return;
                 const dx = e.changedTouches[0].clientX - _x;
                 const dy = e.changedTouches[0].clientY - _y;
-                _x = null; _y = null;
+                _reset();
                 if (Math.abs(dy) > maxY) return;
                 if (Math.abs(dx) < minX) return;
                 callback(dx < 0 ? 1 : -1);
             }, { passive: true });
+            el.addEventListener('touchcancel', _reset, { passive: true });
         }
 
         function debounce(func, wait) {
@@ -4061,7 +4067,7 @@
 
         function alternarTema() {
             let temaOscuro = !D.cargarConfiguracion().temaOscuro;
-            document.body.classList.toggle('dark-mode');
+            document.documentElement.classList.toggle('dark-mode');
 
             try {
                 localStorage.setItem('temaOscuro', temaOscuro);
@@ -5424,7 +5430,7 @@ Generado por Sistema Lushibosca
 
                 renderizarListaPerfiles();
 
-                const temaOscuro = document.body.classList.contains('dark-mode');
+                const temaOscuro = document.documentElement.classList.contains('dark-mode');
                 const toggleBtnModal = document.getElementById('theme-toggle-modal');
 
                 if (toggleBtnModal) {
@@ -7014,7 +7020,7 @@ Generado por Sistema Lushibosca
             HistoryManager.updateButtons();
 
             if (temaOscuro) {
-                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
             }
             const toggleBtnEl = $('theme-toggle');
             if (toggleBtnEl) {

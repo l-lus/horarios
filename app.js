@@ -4,11 +4,6 @@
 
     const $ = id => document.getElementById(id);
 
-    if (!sessionStorage.getItem('_historyBaseLength')) {
-        sessionStorage.setItem('_historyBaseLength', String(window.history.length));
-    }
-    sessionStorage.removeItem('_reloadPendiente');
-
     function _applyDataColors(root) {
         root.querySelectorAll('[data-color]').forEach(el => {
             el.style.color = el.dataset.color;
@@ -339,19 +334,7 @@
                 mostrarToast('Error al guardar: almacenamiento lleno', 'error');
                 return;
             }
-
-            const baseLength = parseInt(sessionStorage.getItem('_historyBaseLength') || '0', 10);
-            const pasos = window.history.length - baseLength;
-            if (pasos > 0) {
-                sessionStorage.setItem('_reloadPendiente', '1');
-                window.addEventListener('popstate', function _reloadHandler() {
-                    window.removeEventListener('popstate', _reloadHandler);
-                    location.reload();
-                }, { once: true });
-                window.history.go(-pasos);
-            } else {
-                location.reload();
-            }
+            location.reload();
         }
 
         function obtenerPerfilActual() { return perfilActual; }
@@ -401,9 +384,6 @@
         }
 
         window.addEventListener('popstate', (event) => {
-            // Si hay un reload pendiente por cambio de perfil, no procesar como modal
-            if (sessionStorage.getItem('_reloadPendiente')) return;
-
             if (_ignorandoPopstate) {
                 _ignorandoPopstate = false;
                 return;
@@ -8347,3 +8327,5 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
+
+// lushibosca version 260518.1033

@@ -4,6 +4,15 @@
 
     const $ = id => document.getElementById(id);
 
+    // Guardar el largo base del historial para poder limpiar entradas
+    // acumuladas por pushState de modales antes de un cambio de perfil.
+    // Solo se guarda si no hay ya un valor (es decir, es una carga limpia).
+    if (!sessionStorage.getItem('_historyBaseLength')) {
+        sessionStorage.setItem('_historyBaseLength', String(window.history.length));
+    }
+    // Limpiar flag de reload pendiente si quedó de una sesión anterior rota.
+    sessionStorage.removeItem('_reloadPendiente');
+
     function _applyDataColors(root) {
         root.querySelectorAll('[data-color]').forEach(el => {
             el.style.color = el.dataset.color;
@@ -334,7 +343,24 @@
                 mostrarToast('Error al guardar: almacenamiento lleno', 'error');
                 return;
             }
-            location.reload();
+
+            // Limpiar entradas de historial acumuladas por pushState de modales
+            // para que el botón Atrás del móvil no quede "bloqueado" tras el reload.
+            const baseLength = parseInt(sessionStorage.getItem('_historyBaseLength') || '0', 10);
+            const pasos = window.history.length - baseLength;
+            if (pasos > 0) {
+                // Retrocedemos N pasos y cuando el popstate dispare, recargamos.
+                // Usamos _reloadPendiente para que el listener de popstate no intente
+                // cerrar ningún modal sino simplemente recargar.
+                sessionStorage.setItem('_reloadPendiente', '1');
+                window.addEventListener('popstate', function _reloadHandler() {
+                    window.removeEventListener('popstate', _reloadHandler);
+                    location.reload();
+                }, { once: true });
+                window.history.go(-pasos);
+            } else {
+                location.reload();
+            }
         }
 
         function obtenerPerfilActual() { return perfilActual; }
@@ -384,6 +410,9 @@
         }
 
         window.addEventListener('popstate', (event) => {
+            // Si hay un reload pendiente por cambio de perfil, no procesar como modal
+            if (sessionStorage.getItem('_reloadPendiente')) return;
+
             if (_ignorandoPopstate) {
                 _ignorandoPopstate = false;
                 return;

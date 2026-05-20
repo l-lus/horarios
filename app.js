@@ -4,13 +4,9 @@
 
     const $ = id => document.getElementById(id);
 
-    // Guardar el largo base del historial para poder limpiar entradas
-    // acumuladas por pushState de modales antes de un cambio de perfil.
-    // Solo se guarda si no hay ya un valor (es decir, es una carga limpia).
     if (!sessionStorage.getItem('_historyBaseLength')) {
         sessionStorage.setItem('_historyBaseLength', String(window.history.length));
     }
-    // Limpiar flag de reload pendiente si quedó de una sesión anterior rota.
     sessionStorage.removeItem('_reloadPendiente');
 
     function _applyDataColors(root) {
@@ -344,14 +340,9 @@
                 return;
             }
 
-            // Limpiar entradas de historial acumuladas por pushState de modales
-            // para que el botón Atrás del móvil no quede "bloqueado" tras el reload.
             const baseLength = parseInt(sessionStorage.getItem('_historyBaseLength') || '0', 10);
             const pasos = window.history.length - baseLength;
             if (pasos > 0) {
-                // Retrocedemos N pasos y cuando el popstate dispare, recargamos.
-                // Usamos _reloadPendiente para que el listener de popstate no intente
-                // cerrar ningún modal sino simplemente recargar.
                 sessionStorage.setItem('_reloadPendiente', '1');
                 window.addEventListener('popstate', function _reloadHandler() {
                     window.removeEventListener('popstate', _reloadHandler);
@@ -8356,5 +8347,3 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
-
-// lushibosca version 260518.1033

@@ -117,9 +117,78 @@
             return `${String(horas).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
         }
 
+        function obtenerNombreDia(f) {
+            if (!f) return '';
+            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const date = parsearFechaLocal(f);
+            return isNaN(date.getTime()) ? '' : dias[date.getDay()];
+        }
+
+        function obtenerLunes(fechaInput = new Date()) {
+            const date = typeof fechaInput === 'string' ? parsearFechaLocal(fechaInput) : new Date(fechaInput);
+            const diaSemana = date.getDay();
+            const offsetLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+            const lunes = new Date(date);
+            lunes.setDate(date.getDate() + offsetLunes);
+            return lunes;
+        }
+
+        function obtenerLunesSemanaISO(fechaStr) {
+            return formatearFechaLocal(obtenerLunes(fechaStr));
+        }
+
+        function obtenerSemanaRangoActual() {
+            const lunes = obtenerLunes();
+            const domingo = new Date(lunes);
+            domingo.setDate(lunes.getDate() + 6);
+            return {
+                inicio: formatearFechaLocal(lunes),
+                fin: formatearFechaLocal(domingo)
+            };
+        }
+
+        function descomponerHorasDecimales(totalHoras) {
+            const abs = Math.abs(totalHoras);
+            let h = Math.floor(abs);
+            let m = Math.round((abs - h) * 60);
+            if (m === 60) { h++; m = 0; }
+            return { horas: h, minutos: m, esNegativo: totalHoras < 0 };
+        }
+
+        function horasATexto(totalHoras, modo = 'long') {
+            const { horas, minutos, esNegativo } = descomponerHorasDecimales(totalHoras);
+            const signo = esNegativo ? '-' : '';
+            if (modo === 'short') {
+                return horas > 0 ? `${signo}${horas}h${minutos > 0 ? ' ' + minutos + 'm' : ''}` : `${signo}${minutos}m`;
+            }
+            let partes = [];
+            if (horas > 0) partes.push(`${horas} ${horas === 1 ? 'hora' : 'horas'}`);
+            if (minutos > 0) partes.push(`${minutos} ${minutos === 1 ? 'minuto' : 'minutos'}`);
+            if (horas === 0 && minutos === 0) partes.push('0 minutos');
+            return signo + partes.join(' ');
+        }
+
+        function formatoDiferencia(totalHoras, horasDiariasObjetivo) {
+            const diffMinutos = Math.round(totalHoras * 60) - (horasDiariasObjetivo * 60);
+            if (diffMinutos === 0) return '';
+            const abs = Math.abs(diffMinutos);
+            const h = Math.floor(abs / 60);
+            const m = abs % 60;
+            return (diffMinutos > 0 ? '+' : '-') + (h > 0 ? `${h}h` : '') + (h > 0 && m > 0 ? ' ' : '') + (m > 0 || h === 0 ? `${m}m` : '');
+        }
+
+        function formatoTituloMes(claveMes) {
+            const [año, mes] = claveMes.split('-');
+            const fecha = new Date(año, mes - 1, 1);
+            let nombre = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+        }
+
         return {
             validarFecha, validarHora, parsearFechaLocal, formatearFechaLocal,
-            obtenerFechaHoy, fechaLocalISOFull, horaAMinutos, sumarMinutosAHora
+            obtenerFechaHoy, fechaLocalISOFull, horaAMinutos, sumarMinutosAHora,
+            obtenerNombreDia, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
+            horasATexto, formatoDiferencia, formatoTituloMes
         };
     })();
 
@@ -1010,24 +1079,15 @@
         }
 
         function cargarConfiguracion() {
-            try {
-                let d = JSON.parse(localStorage.getItem('diasHabiles'));
-                const hd = parseFloat(localStorage.getItem('horasDiarias'));
-                const diasFinal = Array.isArray(d) ? d : [1, 2, 3, 4, 5];
-                let t = localStorage.getItem('temaOscuro') === 'true';
-                if (localStorage.getItem('temaOscuro') === null) t = true;
-                const v = localStorage.getItem('vistaActual');
-                const horasFinal = (!isNaN(hd) && Number.isFinite(hd) && hd >= 0 && hd <= 24) ? hd : 7;
-                return {
-                    diasHabiles: diasFinal, horasDiarias: horasFinal, temaOscuro: t,
-                    vistaActual: (v === 'semana' || v === 'diaria') ? v : 'diaria',
-                    ignorarTiempoFuera: localStorage.getItem(window.PerfilManager ? PerfilManager.perfilKey('ignorarTiempoFuera') : 'ignorarTiempoFuera_default') === 'true',
-                    modoEstadisticas: localStorage.getItem('modoEstadisticas') || 'mensual',
-                    fondoCard: localStorage.getItem(window.PerfilManager ? PerfilManager.perfilKey('fondoCard') : 'fondoCard_default') || 'golden-gate'
-                };
-            } catch (e) {
-                return { diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7, temaOscuro: true, vistaActual: 'diaria' };
-            }
+            return {
+                diasHabiles: StorageHelper.getObject('diasHabiles', [1, 2, 3, 4, 5]),
+                horasDiarias: StorageHelper.getNumber('horasDiarias', 7),
+                temaOscuro: StorageHelper.getBoolean('temaOscuro', true),
+                vistaActual: StorageHelper.getItem('vistaActual', 'diaria'),
+                ignorarTiempoFuera: StorageHelper.getBoolean('ignorarTiempoFuera', false, true),
+                modoEstadisticas: StorageHelper.getItem('modoEstadisticas', 'mensual'),
+                fondoCard: StorageHelper.getItem('fondoCard', 'golden-gate', true)
+            };
         }
 
         function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
@@ -1214,10 +1274,8 @@
                 const hoy = TimeUtils.obtenerFechaHoy();
 
                 if (registroABorrar && registroABorrar.fecha === hoy) {
-                    const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-                    const storageKey = `breakStartTime_${perfilId}`;
-                    if (localStorage.getItem(storageKey)) {
-                        localStorage.removeItem(storageKey);
+                    if (StorageHelper.getItem('breakStartTime', null, true)) {
+                        StorageHelper.removeItem('breakStartTime', true);
                         UILogic.mostrarToast('Timer detenido al borrar el registro', 'info');
                     }
                 }
@@ -1338,8 +1396,7 @@
             if (!e && !s) {
                 const registroABorrar = registros.find(r => r.id === editandoId);
                 if (registroABorrar && registroABorrar.fecha === TimeUtils.obtenerFechaHoy()) {
-                    const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-                    localStorage.removeItem(`breakStartTime_${perfilId}`);
+                    StorageHelper.removeItem('breakStartTime', true);
                     UILogic.actualizarEstadoBotonTimerMain();
                 }
                 registros = registros.filter(r => r.id !== editandoId);
@@ -1405,14 +1462,13 @@
             const confirmar = await confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${totalRegistros} registro${totalRegistros !== 1 ? 's' : ''} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
             if (!confirmar) return;
 
-            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             diasHabiles = [1, 2, 3, 4, 5];
             horasDiarias = 7;
             registros.splice(0, registros.length);
             ignorarTiempoFuera = false;
 
             const keys = ['breakStartTime', 'history', 'fondoCard', 'ignorarTiempoFuera', 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', 'ordenCards'];
-            keys.forEach(k => localStorage.removeItem(`${k}_${perfilId}`));
+            keys.forEach(k => StorageHelper.removeItem(k, true));
 
             if (window.PerfilManager) {
                 const perfil = PerfilManager.obtenerDatosPerfil();
@@ -1559,15 +1615,10 @@
             ordenarRegistros();
             HistoryManager.saveState(registros);
             if (await guardarYActualizar()) {
-                try {
-                    const esPerfilDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
-                    if (esPerfilDefault) {
-                        localStorage.setItem('diasHabiles', JSON.stringify(diasHabiles));
-                        localStorage.setItem('horasDiarias', horasDiarias);
-                    }
-                } catch (ex) {
-                    console.error('Error guardando configuración:', ex);
-                    UILogic.mostrarToast('Datos importados pero ajustes no guardados', 'warning');
+                const esPerfilDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
+                if (esPerfilDefault) {
+                    StorageHelper.setItem('diasHabiles', diasHabiles);
+                    StorageHelper.setItem('horasDiarias', horasDiarias);
                 }
                 UILogic.mostrarToast(mensajeExito, 'success');
                 UILogic.cerrarImportar();
@@ -1576,21 +1627,19 @@
         }
 
         function detenerYRegistrarTimer(registro) {
-            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-            const storageKey = `breakStartTime_${perfilId}`;
-            const storedStart = localStorage.getItem(storageKey);
+            const storedStart = StorageHelper.getItem('breakStartTime', null, true);
             if (!storedStart) return false;
 
             const diffMs = Date.now() - parseInt(storedStart);
             const segundosTranscurridos = Math.floor(diffMs / 1000);
-            if (segundosTranscurridos < 30) { localStorage.removeItem(storageKey); return false; }
+            if (segundosTranscurridos < 30) { StorageHelper.removeItem('breakStartTime', true); return false; }
 
             let minutosTranscurridos = Math.floor(segundosTranscurridos / 60);
             if ((segundosTranscurridos % 60) >= 30) minutosTranscurridos += 1;
 
             const tiempoActual = registro.tiempoFuera || '00:00';
             registro.tiempoFuera = TimeUtils.sumarMinutosAHora(tiempoActual, minutosTranscurridos);
-            localStorage.removeItem(storageKey);
+            StorageHelper.removeItem('breakStartTime', true);
             return true;
         }
 
@@ -2071,99 +2120,7 @@
             btnGuardar.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> Guardar';
         }
 
-        function obtenerFechaHoy() {
-            const now = new Date();
-            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        }
 
-        function obtenerNombreDia(f) {
-            if (!f) return '';
-            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            try {
-                const [y, m, d] = f.split('-').map(Number);
-                const date = new Date(y, m - 1, d);
-                if (isNaN(date.getTime())) return '';
-                return dias[date.getDay()];
-            } catch (e) { return ''; }
-        }
-
-        function obtenerSemanaActual() {
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-            const diaSemana = hoy.getDay();
-            const offsetLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-            const lunes = new Date(hoy);
-            lunes.setDate(hoy.getDate() + offsetLunes);
-            const domingo = new Date(lunes);
-            domingo.setDate(lunes.getDate() + 6);
-            const formatearFecha = (fecha) => {
-                const y = fecha.getFullYear();
-                const m = String(fecha.getMonth() + 1).padStart(2, '0');
-                const d = String(fecha.getDate()).padStart(2, '0');
-                return `${y}-${m}-${d}`;
-            };
-
-            return {
-                inicio: formatearFecha(lunes),
-                fin: formatearFecha(domingo)
-            };
-        }
-
-        function obtenerLunesSemana(fecha) {
-            const date = S.parsearFechaLocal(fecha);
-            const dia = date.getDay();
-            const offset = dia === 0 ? -6 : 1 - dia;
-            const lunes = new Date(date);
-            lunes.setDate(date.getDate() + offset);
-            return S.formatearFechaLocal(lunes);
-        }
-
-        function horasATexto(t) {
-            const totalHoras = Math.max(0, t);
-
-            let h = Math.floor(totalHoras);
-            let m = Math.round((totalHoras - h) * 60);
-            if (m === 60) { h++; m = 0; }
-            let partes = [];
-
-            if (h > 0) {
-                partes.push(`${h} ${h === 1 ? 'hora' : 'horas'}`);
-            }
-
-            if (m > 0) {
-                partes.push(`${m} ${m === 1 ? 'minuto' : 'minutos'}`);
-            } else if (h === 0 && m === 0) {
-                partes.push('0 minutos');
-            }
-
-            return partes.join(' ');
-        }
-
-        function horasATextoCorto(totalHoras) {
-            const abs = Math.abs(totalHoras);
-            let h = Math.floor(abs);
-            let m = Math.round((abs - h) * 60);
-            if (m === 60) { h++; m = 0; }
-            const signo = totalHoras >= 0 ? '+' : '-';
-            return h > 0 ? `${signo}${h}h${m > 0 ? ' ' + m + 'm' : ''}` : `${signo}${m}m`;
-        }
-
-        function formatoDiferencia(tiempoTotalHoras) {
-            const diffMinutos = Math.round(tiempoTotalHoras * 60) - D.horasDiarias() * 60;
-            if (diffMinutos === 0) return '';
-            const abs = Math.abs(diffMinutos);
-            const h = Math.floor(abs / 60);
-            const m = abs % 60;
-            return (diffMinutos > 0 ? '+' : '-') + (h > 0 ? `${h}h` : '') + (h > 0 && m > 0 ? ' ' : '') + (m > 0 || h === 0 ? `${m}m` : '');
-        }
-
-        function formatoTituloMes(claveMes) {
-            const [año, mes] = claveMes.split('-');
-            const fecha = new Date(año, mes - 1, 1);
-            const opciones = { month: 'long', year: 'numeric' };
-            let nombre = fecha.toLocaleDateString('es-ES', opciones);
-            return nombre.charAt(0).toUpperCase() + nombre.slice(1);
-        }
 
         function agruparRegistrosPorMes(registros) {
             if (!Array.isArray(registros)) {
@@ -3430,28 +3387,14 @@
             }
         }
 
+        // ─── TOGGLES DE UI Y STORAGE ───────────────────────────────────────
         function alternarTema() {
-            let temaOscuro = !D.cargarConfiguracion().temaOscuro;
-            document.documentElement.classList.toggle('dark-mode');
-
-            try {
-                localStorage.setItem('temaOscuro', temaOscuro);
-            } catch (e) { }
-
-            const botonesTema = [
-                'theme-toggle',
-                'theme-toggle-modal',
-                'btn-tema-selector'
-            ];
-
-            botonesTema.forEach(id => {
-                const btn = document.getElementById(id);
-                if (btn) {
-                    const icon = btn.querySelector('use');
-                    if (icon) {
-                        icon.setAttribute('href', temaOscuro ? '#icon-sun' : '#icon-moon');
-                    }
-                }
+            const temaOscuro = !StorageHelper.getBoolean('temaOscuro', true);
+            document.documentElement.classList.toggle('dark-mode', temaOscuro);
+            StorageHelper.setItem('temaOscuro', temaOscuro);
+            ['theme-toggle', 'theme-toggle-modal', 'btn-tema-selector'].forEach(id => {
+                const icon = document.getElementById(id)?.querySelector('use');
+                if (icon) icon.setAttribute('href', temaOscuro ? '#icon-sun' : '#icon-moon');
             });
         }
 
@@ -3459,212 +3402,81 @@
             if (_timerAutoVista) { clearTimeout(_timerAutoVista); _timerAutoVista = null; }
             const card = document.getElementById('stats-card');
             const content = document.getElementById('stats-card-content');
-
             if (card) card.classList.add('cambiando-vista');
             if (content) content.classList.add('fade-out');
 
             setTimeout(() => {
-                let vistaActual = D.vistaActual() === 'semana' ? 'diaria' : 'semana';
+                const vistaActual = D.vistaActual() === 'semana' ? 'diaria' : 'semana';
                 D.setVistaActual(vistaActual);
-                try {
-                    localStorage.setItem('vistaActual', vistaActual);
-                } catch (e) { }
-
+                StorageHelper.setItem('vistaActual', vistaActual);
                 _detenerCicloStats();
                 actualizarUI();
-
                 if (content) content.classList.remove('fade-out');
-
                 if (card) card.classList.remove('cambiando-vista');
-
             }, 300);
         }
 
-        function pegarHoraActual(id) {
-            const c = document.getElementById(id);
-            if (!c) return;
-
-            if (c.value.trim() !== '') {
-                c.value = '';
-                UILogic.limpiarError('entrada', 'error-entrada');
-                UILogic.limpiarError('salida', 'error-salida');
-
-                if (id === 'edit-entrada' || id === 'edit-salida') {
-                    verificarBloqueoCredito();
-                    c.dispatchEvent(new Event('input'));
-                }
-                return;
-            }
-
-            const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            c.value = `${h}:${m}`;
-
-            if (id === 'edit-entrada' || id === 'edit-salida') {
-                verificarBloqueoCredito();
-                c.dispatchEvent(new Event('input'));
-            }
-        }
-
-        function limpiarCampo(id) {
-            const c = document.getElementById(id);
-            if (!c) return;
-            c.value = '';
-            c.dispatchEvent(new Event('input'));
-        }
-
-        function formatearInput(e) {
-            let v = e.target.value.replace(/[^0-9]/g, '');
-            if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2, 4);
-            e.target.value = v;
-        }
-
-        function actualizarFeedbackConfig() {
-            const checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
-            const seleccionados = checkboxes.length;
-            const horas = parseFloat($('config-horas-diarias').value) || 0;
-            const total = seleccionados * horas;
-
-            const el = $('config-total-feedback');
-            if (el) {
-                if (horas === 0) el.textContent = `(Registro libre sin objetivos)`;
-                else el.textContent = `(Total semanal: ${total}hs)`;
-            }
-
-            if (seleccionados > 0) {
-                const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-                D.setDiasHabiles(nuevosDias);
-                try {
-                    const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
-                    if (esDefault) localStorage.setItem('diasHabiles', JSON.stringify(nuevosDias));
-                } catch (e) { }
-                D.guardarYActualizar();
-            }
-            actualizarEstadoBotonPersistir();
-        }
-
-        function iniciarCambioHoras(incremento) {
-            cambiarHorasDiarias(incremento);
-            timeoutInicial = setTimeout(() => {
-                intervaloPulsacion = setInterval(() => {
-                    cambiarHorasDiarias(incremento);
-                }, 100);
-            }, 500);
-        }
-
-        function detenerCambio() {
-            if (timeoutInicial) {
-                clearTimeout(timeoutInicial);
-                timeoutInicial = null;
-            }
-            if (intervaloPulsacion) {
-                clearInterval(intervaloPulsacion);
-                intervaloPulsacion = null;
-            }
-        }
-
-        function cambiarHorasDiarias(incremento) {
-            let valorActual = parseFloat($('config-horas-diarias').value);
-            if (isNaN(valorActual)) valorActual = D.horasDiarias();
-            let nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
-            if (isNaN(nuevoValor)) return;
-            $('config-horas-diarias').value = nuevoValor;
-            actualizarFeedbackConfig();
-            D.setHorasDiarias(nuevoValor);
-            try {
-                const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
-                if (esDefault) localStorage.setItem('horasDiarias', nuevoValor);
-            } catch (e) { }
-            D.guardarYActualizar();
-        }
-
-        function cerrarConfig() {
-            ModalManager.cerrar('modal-config', () => {
-                UILogic.abrirSelectorPerfiles();
-            });
+        function _setBtnActivo(id, activo) {
+            const btn = document.getElementById(id);
+            if (btn) btn.classList.toggle('btn-activo', activo);
         }
 
         function toggleIgnorarTiempoFuera() {
             const nuevoValor = !D.getIgnorarTiempoFuera();
             D.setIgnorarTiempoFuera(nuevoValor);
-            try { localStorage.setItem(_perfilKey('ignorarTiempoFuera'), nuevoValor); } catch (e) { }
+            StorageHelper.setItem('ignorarTiempoFuera', nuevoValor, true);
             actualizarEstadoBotonIgnorarTF();
             D.recalcularTotalesEnMemoria();
             actualizarUI();
-            mostrarToast(nuevoValor ? 'Tiempo fuera ignorado en cálculos' : 'Tiempo fuera incluido en cálculos', 'info');
+            mostrarToast(nuevoValor ? 'Tiempo fuera ignorado' : 'Tiempo fuera incluido', 'info');
         }
-
-        function _setBtnActivo(id, activo) {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-            btn.classList.toggle('btn-activo', activo);
-        }
-
-        function actualizarEstadoBotonIgnorarTF() {
-            _setBtnActivo('btn-toggle-ignorar-tf', D.getIgnorarTiempoFuera());
-        }
+        function actualizarEstadoBotonIgnorarTF() { _setBtnActivo('btn-toggle-ignorar-tf', D.getIgnorarTiempoFuera()); }
 
         function toggleHoverPopupCalendario() {
-            const actual = localStorage.getItem('hoverPopupCalendario') !== 'false';
-            const nuevo = !actual;
-            try { localStorage.setItem('hoverPopupCalendario', nuevo); } catch (e) { }
+            const nuevo = !StorageHelper.getBoolean('hoverPopupCalendario', true);
+            StorageHelper.setItem('hoverPopupCalendario', nuevo);
             actualizarEstadoBotonHoverPopup();
-            mostrarToast(nuevo ? 'Popup al pasar mouse activado' : 'Popup al pasar mouse desactivado', 'info');
+            mostrarToast(nuevo ? 'Popup activado' : 'Popup desactivado', 'info');
         }
-
-        function actualizarEstadoBotonHoverPopup() {
-            _setBtnActivo('btn-toggle-hover-popup', localStorage.getItem('hoverPopupCalendario') !== 'false');
-        }
+        function actualizarEstadoBotonHoverPopup() { _setBtnActivo('btn-toggle-hover-popup', StorageHelper.getBoolean('hoverPopupCalendario', true)); }
 
         function togglePersistirTarjetas() {
-            const actual = localStorage.getItem('persistirTarjetas') !== 'false';
-            const nuevo = !actual;
-            try { localStorage.setItem('persistirTarjetas', nuevo); } catch (e) { }
+            const nuevo = !StorageHelper.getBoolean('persistirTarjetas', true);
+            StorageHelper.setItem('persistirTarjetas', nuevo);
             actualizarEstadoBotonPersistir();
-            mostrarToast(nuevo ? 'Estado de tarjetas guardado' : 'Tarjetas siempre cerradas al iniciar', 'info');
+            mostrarToast(nuevo ? 'Estado guardado' : 'Tarjetas no se recuerdan al iniciar', 'info');
         }
-
-        function actualizarEstadoBotonPersistir() {
-            _setBtnActivo('btn-toggle-persistir-tarjetas', localStorage.getItem('persistirTarjetas') !== 'false');
-        }
+        function actualizarEstadoBotonPersistir() { _setBtnActivo('btn-toggle-persistir-tarjetas', StorageHelper.getBoolean('persistirTarjetas', true)); }
 
         function toggleVisibilidadCard(cual) {
-            const key = _perfilKey('cardVisible_' + cual);
-            const actual = localStorage.getItem(key) !== 'false';
-            const nuevoValor = !actual;
-            try { localStorage.setItem(key, nuevoValor); } catch (e) { }
-            aplicarVisibilidadCard(cual, nuevoValor);
-            actualizarEstadoBotonCard(cual, nuevoValor);
-            mostrarToast('Tarjeta ' + cual + (nuevoValor ? ' visible' : ' oculta'), 'info');
+            const key = 'cardVisible_' + cual;
+            const nuevo = !StorageHelper.getBoolean(key, true, true);
+            StorageHelper.setItem(key, nuevo, true);
+            aplicarVisibilidadCard(cual, nuevo);
+            _setBtnActivo('btn-toggle-card-' + cual, nuevo);
+            mostrarToast('Tarjeta ' + cual + (nuevo ? ' visible' : ' oculta'), 'info');
         }
-
+        
         function aplicarVisibilidadCard(cual, visible) {
             const card = document.getElementById('card-' + cual);
             if (card) card.style.display = visible ? '' : 'none';
         }
 
-        function actualizarEstadoBotonCard(cual, activo) {
-            _setBtnActivo('btn-toggle-card-' + cual, activo);
-        }
-
         function aplicarVisibilidadCards() {
             ['registrar', 'estadisticas', 'historico'].forEach(cual => {
-                const visible = localStorage.getItem(_perfilKey('cardVisible_' + cual)) !== 'false';
+                const visible = StorageHelper.getBoolean('cardVisible_' + cual, true, true);
                 aplicarVisibilidadCard(cual, visible);
-                actualizarEstadoBotonCard(cual, visible);
+                _setBtnActivo('btn-toggle-card-' + cual, visible);
             });
         }
 
         function obtenerOrdenCards() {
-            try {
-                const guardado = JSON.parse(localStorage.getItem(_perfilKey('ordenCards')));
-                const validos = ['registrar', 'estadisticas', 'historico'];
-                if (Array.isArray(guardado) && guardado.length === 3 && validos.every(v => guardado.includes(v))) {
-                    return guardado;
-                }
-            } catch (e) { }
-            return ['registrar', 'estadisticas', 'historico'];
+            const guardado = StorageHelper.getObject('ordenCards', null, true);
+            const validos = ['registrar', 'estadisticas', 'historico'];
+            if (Array.isArray(guardado) && guardado.length === 3 && validos.every(v => guardado.includes(v))) {
+                return guardado;
+            }
+            return validos;
         }
 
         function aplicarOrdenCards(orden) {
@@ -3924,12 +3736,42 @@
             _renderizarStats(stats, { mostrarBtnReporte: true });
         }
 
-        function _getLunes(fecha = new Date()) {
-            const dow = fecha.getDay();
-            const diff = (dow === 0) ? -6 : 1 - dow;
-            const lunes = new Date(fecha);
-            lunes.setDate(fecha.getDate() + diff);
-            return lunes;
+        // ─── PROXIES A TIMEUTILS ───────────────────────────────────────────
+        const obtenerFechaHoy = TimeUtils.obtenerFechaHoy;
+        const obtenerNombreDia = TimeUtils.obtenerNombreDia;
+        const horasATexto = TimeUtils.horasATexto;
+        const horasATextoCorto = (t) => TimeUtils.horasATexto(t, 'short');
+        const formatoTituloMes = TimeUtils.formatoTituloMes;
+        const obtenerLunesSemana = TimeUtils.obtenerLunesSemanaISO;
+        const _getLunes = TimeUtils.obtenerLunes;
+        const obtenerSemanaActual = TimeUtils.obtenerSemanaRangoActual;
+        
+        function formatoDiferencia(tiempoTotal) {
+            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
+        }
+
+        function pegarHoraActual(id) {
+            const input = document.getElementById(id);
+            if (!input) return;
+            if (input.value.trim() !== '') {
+                input.value = '';
+            } else {
+                const ahora = new Date();
+                input.value = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+            }
+            input.dispatchEvent(new Event('input'));
+        }
+
+        function limpiarCampo(id) {
+            const input = document.getElementById(id);
+            if (input) {
+                input.value = '';
+                input.dispatchEvent(new Event('input'));
+            }
+        }
+
+        function cerrarConfig() {
+            ModalManager.cerrar('modal-config');
         }
 
         function _obtenerSemanas() {
@@ -6407,48 +6249,28 @@ Generado por Sistema Lushibosca
             $('fecha').value = obtenerFechaHoy();
 
             try {
-                const persistir = localStorage.getItem('persistirTarjetas') !== 'false';
-                if (persistir && localStorage.getItem('formularioExpandido') === 'true') toggleFormulario();
-                if (persistir && localStorage.getItem('statsExpandido') === 'true') toggleStats();
+                const persistir = StorageHelper.getBoolean('persistirTarjetas', true);
+                if (persistir && StorageHelper.getBoolean('formularioExpandido')) toggleFormulario();
+                if (persistir && StorageHelper.getBoolean('statsExpandido')) toggleStats();
 
-                const estadoHistoricoGuardado = persistir ? localStorage.getItem('historicoExpandido') : null;
-                const estadoHistorico = estadoHistoricoGuardado === 'completo' ? 'meses' : estadoHistoricoGuardado;
+                const estadoHistorico = persistir ? StorageHelper.getItem('historicoExpandido', 'cerrado') : 'cerrado';
                 if (estadoHistorico === 'meses' || estadoHistorico === 'completo') {
                     const contenido = $('contenido-historico');
                     const icon = $('icon-indicator-historico');
                     if (contenido) contenido.classList.add('expanded');
 
                     if (estadoHistorico === 'meses') {
-                        if (icon) {
-                            icon.style.transform = '';
-                            icon.classList.add('rotated');
-                        }
+                        if (icon) { icon.style.transform = ''; icon.classList.add('rotated'); }
                     } else if (estadoHistorico === 'completo') {
                         const botones = $('botones-historico');
-                        if (botones) {
-                            botones.classList.add('expanded');
-                            tiempoExpansionBotones = Date.now();
-                        }
-                        if (icon) {
-                            icon.classList.remove('rotated');
-                            icon.style.transform = 'rotate(-90deg)';
-                        }
-                    }
-                } else {
-                    const botones = $('botones-historico');
-                    const icon = $('icon-indicator-historico');
-                    if (botones) botones.classList.remove('expanded');
-                    if (icon) {
-                        icon.classList.remove('rotated');
-                        icon.style.transform = '';
+                        if (botones) { botones.classList.add('expanded'); tiempoExpansionBotones = Date.now(); }
+                        if (icon) { icon.classList.remove('rotated'); icon.style.transform = 'rotate(-90deg)'; }
                     }
                 }
 
-                const vistaGuardada = localStorage.getItem('vistaHistoricoCalendario');
-                const usarCalendario = vistaGuardada === null ? true : vistaGuardada === 'true';
+                const usarCalendario = StorageHelper.getBoolean('vistaHistoricoCalendario', true);
                 if (usarCalendario) {
-                    const contenidoAbierto = $('contenido-historico')?.classList.contains('expanded');
-                    if (contenidoAbierto) {
+                    if ($('contenido-historico')?.classList.contains('expanded')) {
                         _vistaHistoricoCalendario = false;
                         toggleVistaHistorico();
                     } else {
@@ -6815,21 +6637,18 @@ Generado por Sistema Lushibosca
         function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
             const el = $(elementId);
             const icon = $(iconId);
-
             if (!el) return;
 
             el.classList.toggle('expanded');
             const isExpanded = el.classList.contains('expanded');
-
             if (icon) {
                 if (isExpanded) icon.classList.add('rotated');
                 else icon.classList.remove('rotated');
             }
-
-            if (localStorage.getItem('persistirTarjetas') !== 'false') {
-                try { localStorage.setItem(storageKey, isExpanded); } catch (e) { }
+            
+            if (StorageHelper.getBoolean('persistirTarjetas', true)) {
+                StorageHelper.setItem(storageKey, isExpanded);
             }
-
             if (isExpanded && callback) callback();
         }
 
@@ -7512,6 +7331,69 @@ Generado por Sistema Lushibosca
                     }
                 });
             }, 2000);
+        }
+
+        function actualizarFeedbackConfig() {
+            const checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+            const seleccionados = checkboxes.length;
+            const horas = parseFloat($('config-horas-diarias').value) || 0;
+            const total = seleccionados * horas;
+
+            const el = $('config-total-feedback');
+            if (el) {
+                if (horas === 0) el.textContent = `(Registro libre sin objetivos)`;
+                else el.textContent = `(Total semanal: ${total}hs)`;
+            }
+
+            if (seleccionados > 0) {
+                const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
+                D.setDiasHabiles(nuevosDias);
+                const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
+                if (esDefault) StorageHelper.setItem('diasHabiles', nuevosDias);
+                D.guardarYActualizar();
+            }
+            if (typeof actualizarEstadoBotonPersistir === 'function') {
+                actualizarEstadoBotonPersistir();
+            }
+        }
+
+        function iniciarCambioHoras(incremento) {
+            cambiarHorasDiarias(incremento);
+            timeoutInicial = setTimeout(() => {
+                intervaloPulsacion = setInterval(() => {
+                    cambiarHorasDiarias(incremento);
+                }, 100);
+            }, 500);
+        }
+
+        function detenerCambio() {
+            if (timeoutInicial) { clearTimeout(timeoutInicial); timeoutInicial = null; }
+            if (intervaloPulsacion) { clearInterval(intervaloPulsacion); intervaloPulsacion = null; }
+        }
+
+        function cambiarHorasDiarias(incremento) {
+            let valorActual = parseFloat($('config-horas-diarias').value);
+            if (isNaN(valorActual)) valorActual = D.horasDiarias();
+            let nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
+            if (isNaN(nuevoValor)) return;
+            
+            $('config-horas-diarias').value = nuevoValor;
+            actualizarFeedbackConfig();
+            D.setHorasDiarias(nuevoValor);
+            
+            const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
+            if (esDefault) StorageHelper.setItem('horasDiarias', nuevoValor);
+            D.guardarYActualizar();
+        }
+
+        function formatearInput(e) {
+            let v = e.target.value.replace(/\D/g, '');
+            if (v.length > 4) v = v.substring(0, 4);
+            if (v.length > 2) {
+                e.target.value = v.substring(0, 2) + ':' + v.substring(2);
+            } else {
+                e.target.value = v;
+            }
         }
 
         return {

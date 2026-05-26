@@ -3058,7 +3058,7 @@
                         }
 
                         let hS = Math.floor(minutosTotal / 60) % 24;
-                        const mS = Math.round(minutosTotal % 60);
+                        const mS = Math.floor(minutosTotal % 60); // FIX: Math.round → Math.floor
                         const horaSalida = `${String(hS).padStart(2, '0')}:${String(mS).padStart(2, '0')}`;
 
                         const esLaborable = Array.isArray(diasHabiles) && diasHabiles.includes(new Date().getDay());
@@ -3067,7 +3067,7 @@
                         if (mostrarBuffer) {
                             const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
                             let hSB = Math.floor(minutosConBuffer / 60) % 24;
-                            const mSB = Math.round(minutosConBuffer % 60);
+                            const mSB = Math.floor(minutosConBuffer % 60); // FIX: Math.round → Math.floor
                             const horaBuf = `${String(hSB).padStart(2, '0')}:${String(mSB).padStart(2, '0')}`;
                             const colorBuffer = bufferSemanal > 0 ? 'var(--c-green)' : bufferSemanal < 0 ? 'var(--c-red)' : 'var(--text-main)';
                             hint = `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color" data-color="${colorBuffer}">(<strong>${horaBuf}</strong>)</span>`;
@@ -3167,7 +3167,7 @@
                     if (mins > 0) minutosTotal += mins;
                 }
                 let hS = Math.floor(minutosTotal / 60) % 24;
-                const mS = Math.round(minutosTotal % 60);
+                const mS = Math.floor(minutosTotal % 60); // FIX: Math.round → Math.floor
                 const horaSalida = `${String(hS).padStart(2, '0')}:${String(mS).padStart(2, '0')}`;
 
                 const esLaborable = Array.isArray(diasHabiles) && diasHabiles.includes(new Date().getDay());
@@ -3176,7 +3176,7 @@
                 if (mostrarBuffer) {
                     const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
                     let hSB = Math.floor(minutosConBuffer / 60) % 24;
-                    const mSB = Math.round(minutosConBuffer % 60);
+                    const mSB = Math.floor(minutosConBuffer % 60); // FIX: Math.round → Math.floor
                     const horaBuf = `${String(hSB).padStart(2, '0')}:${String(mSB).padStart(2, '0')}`;
                     const colorBuffer = bufferSemanal > 0 ? 'var(--c-green)' : bufferSemanal < 0 ? 'var(--c-red)' : 'var(--text-main)';
                     hint = `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color" data-color="${colorBuffer}">(<strong>${horaBuf}</strong>)</span>`;
@@ -3488,7 +3488,7 @@
             _setBtnActivo('btn-toggle-card-' + cual, nuevo);
             mostrarToast('Tarjeta ' + cual + (nuevo ? ' visible' : ' oculta'), 'info');
         }
-        
+
         function aplicarVisibilidadCard(cual, visible) {
             const card = document.getElementById('card-' + cual);
             if (card) card.style.display = visible ? '' : 'none';
@@ -3711,6 +3711,10 @@
         }
 
         function cerrarImportar() {
+            if (!_modalAbiertoDesdeLista) {
+                // FIX: restaurar relación padre por si fue borrada por cerrarTodos (ej: desde Gist)
+                ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
+            }
             ModalManager.alternar('modal-importar', _modalAbiertoDesdeLista ? null : 'modal-config');
             _modalAbiertoDesdeLista = false;
         }
@@ -3777,7 +3781,7 @@
         const obtenerLunesSemana = TimeUtils.obtenerLunesSemanaISO;
         const _getLunes = TimeUtils.obtenerLunes;
         const obtenerSemanaActual = TimeUtils.obtenerSemanaRangoActual;
-        
+
         function formatoDiferencia(tiempoTotal) {
             return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
         }
@@ -4270,7 +4274,7 @@ ${lineasTipos}
 
 ────────────────────────────────────────────────────────────────
 
-Generado por Sistema Lushibosca
+Generado por Horarios
 `
             };
 
@@ -4299,23 +4303,8 @@ Generado por Sistema Lushibosca
             }
         }
 
-        function sumarMinutosAHora(horaString, minutosASumar) {
-            let totalMinutos = minutosASumar;
-
-            if (horaString && horaString.includes(':')) {
-                const [h, m] = horaString.split(':').map(Number);
-                if (!isNaN(h) && !isNaN(m)) {
-                    totalMinutos += (h * 60) + m;
-                }
-            }
-
-            let horas = Math.floor(totalMinutos / 60);
-            let mins = Math.round(totalMinutos % 60);
-
-            if (horas > 23) { horas = 23; mins = 59; }
-
-            return `${String(horas).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-        }
+        // FIX: sumarMinutosAHora duplicada eliminada — se usa TimeUtils.sumarMinutosAHora directamente
+        const sumarMinutosAHora = TimeUtils.sumarMinutosAHora;
 
         function actualizarEstadoBotonTimerMain() {
             const btn = document.getElementById('btn-timer-main');
@@ -4732,7 +4721,8 @@ Generado por Sistema Lushibosca
             };
 
             try {
-                localStorage.setItem('perfiles', JSON.stringify(perfiles));
+                // FIX: usar StorageHelper en vez de localStorage directo
+                if (!StorageHelper.setItem('perfiles', perfiles)) throw new Error('quota');
             } catch (e) {
                 console.error('Error al guardar perfil:', e);
                 delete perfiles[id];
@@ -4856,7 +4846,8 @@ Generado por Sistema Lushibosca
             const nombreAnterior = perfiles[perfilEnEdicion].nombre;
             perfiles[perfilEnEdicion].nombre = nuevoNombre;
             try {
-                localStorage.setItem('perfiles', JSON.stringify(perfiles));
+                // FIX: usar StorageHelper en vez de localStorage directo
+                if (!StorageHelper.setItem('perfiles', perfiles)) throw new Error('quota');
             } catch (e) {
                 console.error('Error al guardar perfil:', e);
                 perfiles[perfilEnEdicion].nombre = nombreAnterior;
@@ -4897,18 +4888,14 @@ Generado por Sistema Lushibosca
             if (!confirmacion) return;
 
             const pid = perfilEnEdicion;
-            localStorage.removeItem(`breakStartTime_${pid}`);
-            localStorage.removeItem(`history_${pid}`);
-            localStorage.removeItem(`fondoCard_${pid}`);
-            localStorage.removeItem(`ignorarTiempoFuera_${pid}`);
-            localStorage.removeItem(`cardVisible_registrar_${pid}`);
-            localStorage.removeItem(`cardVisible_estadisticas_${pid}`);
-            localStorage.removeItem(`cardVisible_historico_${pid}`);
-            localStorage.removeItem(`ordenCards_${pid}`);
+            // FIX: usar StorageHelper en vez de localStorage directo
+            ['breakStartTime', 'history', 'fondoCard', 'ignorarTiempoFuera',
+                'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', 'ordenCards'
+            ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
 
             delete perfiles[perfilEnEdicion];
             try {
-                localStorage.setItem('perfiles', JSON.stringify(perfiles));
+                if (!StorageHelper.setItem('perfiles', perfiles)) throw new Error('quota');
             } catch (e) {
                 console.error('Error al eliminar perfil:', e);
                 mostrarToast('Error al guardar: almacenamiento lleno', 'error');
@@ -4918,7 +4905,7 @@ Generado por Sistema Lushibosca
             const perfilActual = window.PerfilManager.obtenerPerfilActual();
             if (perfilEnEdicion === perfilActual) {
                 try {
-                    localStorage.setItem('perfilActivo', 'default');
+                    if (!StorageHelper.setItem('perfilActivo', 'default')) throw new Error('quota');
                 } catch (e) {
                     console.error('Error al guardar perfil activo:', e);
                     mostrarToast('Error al guardar: almacenamiento lleno', 'error');
@@ -5323,6 +5310,10 @@ Generado por Sistema Lushibosca
         }
 
         function cerrarExportar() {
+            if (!_modalAbiertoDesdeLista) {
+                // FIX: restaurar relación padre por si fue borrada por cerrarTodos (ej: desde Gist)
+                ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
+            }
             ModalManager.alternar('modal-exportar', _modalAbiertoDesdeLista ? null : 'modal-config');
             _modalAbiertoDesdeLista = false;
         }
@@ -6689,7 +6680,7 @@ Generado por Sistema Lushibosca
                 if (isExpanded) icon.classList.add('rotated');
                 else icon.classList.remove('rotated');
             }
-            
+
             if (StorageHelper.getBoolean('persistirTarjetas', true)) {
                 StorageHelper.setItem(storageKey, isExpanded);
             }
@@ -7422,11 +7413,11 @@ Generado por Sistema Lushibosca
             if (isNaN(valorActual)) valorActual = D.horasDiarias();
             let nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
             if (isNaN(nuevoValor)) return;
-            
+
             $('config-horas-diarias').value = nuevoValor;
             actualizarFeedbackConfig();
             D.setHorasDiarias(nuevoValor);
-            
+
             const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
             if (esDefault) StorageHelper.setItem('horasDiarias', nuevoValor);
             D.guardarYActualizar();
@@ -7618,4 +7609,4 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
 
-// lushibosca version 260525.2106
+// lushibosca version 260526.1047

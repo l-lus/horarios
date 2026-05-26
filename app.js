@@ -212,7 +212,7 @@
             try {
                 const finalKey = _getKey(key, useProfile);
                 const valueToStore = typeof value === 'object' ? JSON.stringify(value) : String(value);
-                StorageHelper.setItem(finalKey, valueToStore);
+                localStorage.setItem(finalKey, valueToStore); // FIX: era StorageHelper.setItem (recursión infinita)
                 return true;
             } catch (e) {
                 console.error(`Error guardando en Storage (${key}):`, e);

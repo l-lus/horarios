@@ -212,7 +212,7 @@
             try {
                 const finalKey = _getKey(key, useProfile);
                 const valueToStore = typeof value === 'object' ? JSON.stringify(value) : String(value);
-                localStorage.setItem(finalKey, valueToStore);
+                StorageHelper.setItem(finalKey, valueToStore);
                 return true;
             } catch (e) {
                 console.error(`Error guardando en Storage (${key}):`, e);
@@ -2346,7 +2346,7 @@
 
             let debeEstarExpandido = false;
             try {
-                const estadoGuardado = localStorage.getItem(`mes-${claveMes}-expandido`);
+                const estadoGuardado = StorageHelper.getItem(`mes-${claveMes}-expandido`);
                 debeEstarExpandido = estadoGuardado !== null ? estadoGuardado === 'true' : claveMes === mesHoy;
             } catch (e) {
                 debeEstarExpandido = claveMes === mesHoy;
@@ -2447,7 +2447,7 @@
 
                 let anioExpandido = false;
                 try {
-                    anioExpandido = localStorage.getItem(`anio-${anio}-expandido`) === 'true';
+                    anioExpandido = StorageHelper.getItem(`anio-${anio}-expandido`) === 'true';
                 } catch (e) { }
 
                 if (anioExpandido) {
@@ -2777,7 +2777,7 @@
             const ids = [...(window.FONDOS_SVG || []).map(f => f.id), 'ninguno'];
             const idx = ids.indexOf(_fondoCard);
             _fondoCard = ids[(idx + 1) % ids.length];
-            localStorage.setItem(_perfilKey('fondoCard'), _fondoCard);
+            StorageHelper.setItem('fondoCard', _fondoCard, true);
             const btn = $('hint-fondo-label');
             if (btn) btn.textContent = _getLabelFondo(_fondoCard);
             const bg = $('stats-card-bg');
@@ -3051,7 +3051,7 @@
                         }
 
                         const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-                        const inicioBreak = localStorage.getItem(`breakStartTime_${perfilId}`);
+                        const inicioBreak = StorageHelper.getItem(`breakStartTime_${perfilId}`);
                         if (inicioBreak && !D.getIgnorarTiempoFuera()) {
                             const mins = Math.floor((Date.now() - parseInt(inicioBreak)) / 60000);
                             if (mins > 0) minutosTotal += mins;
@@ -3161,7 +3161,7 @@
                     minutosTotal += (hF * 60) + mF;
                 }
                 const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-                const inicioBreak = localStorage.getItem(`breakStartTime_${perfilId}`);
+                const inicioBreak = StorageHelper.getItem(`breakStartTime_${perfilId}`);
                 if (inicioBreak && !D.getIgnorarTiempoFuera()) {
                     const mins = Math.floor((Date.now() - parseInt(inicioBreak)) / 60000);
                     if (mins > 0) minutosTotal += mins;
@@ -3488,7 +3488,7 @@
             _setBtnActivo('btn-toggle-card-' + cual, nuevo);
             mostrarToast('Tarjeta ' + cual + (nuevo ? ' visible' : ' oculta'), 'info');
         }
-
+        
         function aplicarVisibilidadCard(cual, visible) {
             const card = document.getElementById('card-' + cual);
             if (card) card.style.display = visible ? '' : 'none';
@@ -3615,7 +3615,7 @@
                 const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
 
                 try {
-                    localStorage.setItem(_perfilKey('ordenCards'), JSON.stringify(nuevoOrden));
+                    StorageHelper.setItem('ordenCards', nuevoOrden, true);
                 } catch (e) { }
 
                 if (typeof aplicarOrdenCards === 'function') {
@@ -3781,7 +3781,7 @@
         const obtenerLunesSemana = TimeUtils.obtenerLunesSemanaISO;
         const _getLunes = TimeUtils.obtenerLunes;
         const obtenerSemanaActual = TimeUtils.obtenerSemanaRangoActual;
-
+        
         function formatoDiferencia(tiempoTotal) {
             return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
         }
@@ -3926,7 +3926,7 @@
             const orden = ['mensual', 'anual', 'semanal'];
             const idx = orden.indexOf(modoEstadisticas);
             modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
-            try { localStorage.setItem('modoEstadisticas', modoEstadisticas); } catch (e) { }
+            try { StorageHelper.setItem('modoEstadisticas', modoEstadisticas); } catch (e) { }
 
             _animarCambioStats(() => {
                 selectMes.classList.add('hidden');
@@ -4274,7 +4274,7 @@ ${lineasTipos}
 
 ────────────────────────────────────────────────────────────────
 
-Generado por Horarios
+Generado por Sistema Lushibosca
 `
             };
 
@@ -4322,7 +4322,7 @@ Generado por Horarios
             const registroHoy = D.registros().find(r => r.fecha === hoy);
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             const storageKey = `breakStartTime_${perfilId}`;
-            const isRunning = localStorage.getItem(storageKey) !== null;
+            const isRunning = StorageHelper.getItem(storageKey) !== null;
             const icon = btn.querySelector('use');
 
             const diaCerrado = registroHoy && registroHoy.salida && registroHoy.salida.trim() !== '';
@@ -4384,7 +4384,7 @@ Generado por Horarios
             function _actualizarContador() {
                 const el = document.getElementById('break-counter');
                 if (!el) { _detenerContadorBreak(); return; }
-                const start = parseInt(localStorage.getItem(storageKey));
+                const start = parseInt(StorageHelper.getItem(storageKey));
                 if (isNaN(start)) { el.textContent = ''; _detenerContadorBreak(); return; }
                 const totalSeg = Math.floor((Date.now() - start) / 1000);
                 const mins = Math.floor(totalSeg / 60);
@@ -4410,7 +4410,7 @@ Generado por Horarios
         async function toggleTimerBreakMain() {
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             const storageKey = `breakStartTime_${perfilId}`;
-            const storedStart = localStorage.getItem(storageKey);
+            const storedStart = StorageHelper.getItem(storageKey);
             const hoy = obtenerFechaHoy();
             const registroHoy = D.registros().find(r => r.fecha === hoy);
 
@@ -4420,7 +4420,7 @@ Generado por Horarios
             }
 
             if (!storedStart) {
-                localStorage.setItem(storageKey, Date.now());
+                StorageHelper.setItem(storageKey, Date.now());
                 mostrarToast('Tiempo fuera iniciado', 'info');
             } else {
                 const start = parseInt(storedStart);
@@ -4436,7 +4436,7 @@ Generado por Horarios
                 }
 
                 if (segundosTranscurridos < 30) {
-                    localStorage.removeItem(storageKey);
+                    StorageHelper.removeItem(storageKey);
                     mostrarToast('Tiempo muy corto, no se registró', 'info');
                     actualizarEstadoBotonTimerMain();
                     actualizarUI();
@@ -4444,7 +4444,7 @@ Generado por Horarios
                 }
 
                 if (!registroHoy) {
-                    localStorage.removeItem(storageKey);
+                    StorageHelper.removeItem(storageKey);
                     mostrarToast('No hay registro para hoy, tiempo fuera descartado', 'warning');
                     actualizarEstadoBotonTimerMain();
                     actualizarUI();
@@ -4459,7 +4459,7 @@ Generado por Horarios
                 registroHoy.total = t?.total || 0;
                 HistoryManager.saveState(D.registros());
 
-                localStorage.removeItem(storageKey);
+                StorageHelper.removeItem(storageKey);
                 await D.guardarYActualizar(registroHoy.id);
 
                 const mensaje = minutosTranscurridos === 1
@@ -4890,7 +4890,7 @@ Generado por Horarios
             const pid = perfilEnEdicion;
             // FIX: usar StorageHelper en vez de localStorage directo
             ['breakStartTime', 'history', 'fondoCard', 'ignorarTiempoFuera',
-                'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', 'ordenCards'
+             'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', 'ordenCards'
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
 
             delete perfiles[perfilEnEdicion];
@@ -6422,11 +6422,11 @@ Generado por Horarios
                 if (estaExpandido) {
                     detalleAnio.classList.remove('expanded');
                     if (chevronAnio) chevronAnio.style.transform = 'rotate(0deg)';
-                    try { localStorage.setItem(`anio-${anioId}-expandido`, 'false'); } catch (e) { }
+                    try { StorageHelper.setItem(`anio-${anioId}-expandido`, 'false'); } catch (e) { }
                 } else {
                     detalleAnio.classList.add('expanded');
                     if (chevronAnio) chevronAnio.style.transform = 'rotate(180deg)';
-                    try { localStorage.setItem(`anio-${anioId}-expandido`, 'true'); } catch (e) { }
+                    try { StorageHelper.setItem(`anio-${anioId}-expandido`, 'true'); } catch (e) { }
                 }
             });
 
@@ -6449,7 +6449,7 @@ Generado por Horarios
                     chevronIcon.style.transform = 'rotate(0deg)';
 
                     try {
-                        localStorage.setItem(`mes-${header.dataset.mesId}-expandido`, 'false');
+                        StorageHelper.setItem(`mes-${header.dataset.mesId}-expandido`, 'false');
                     } catch (e) { }
 
                 } else {
@@ -6468,7 +6468,7 @@ Generado por Horarios
                             const otroHeader = otroContenedor?.querySelector('.registro-mes-header');
                             if (otroChevron) otroChevron.style.transform = 'rotate(0deg)';
                             if (otroHeader?.dataset.anioId) {
-                                try { localStorage.setItem(`anio-${otroHeader.dataset.anioId}-expandido`, 'false'); } catch (e) { }
+                                try { StorageHelper.setItem(`anio-${otroHeader.dataset.anioId}-expandido`, 'false'); } catch (e) { }
                             }
                         }
                     });
@@ -6491,7 +6491,7 @@ Generado por Horarios
 
                                 if (otroHeader && otroHeader.dataset.mesId) {
                                     try {
-                                        localStorage.setItem(`mes-${otroHeader.dataset.mesId}-expandido`, 'false');
+                                        StorageHelper.setItem(`mes-${otroHeader.dataset.mesId}-expandido`, 'false');
                                     } catch (e) { }
                                 }
 
@@ -6506,7 +6506,7 @@ Generado por Horarios
                             chevronIcon.style.transform = 'rotate(180deg)';
 
                             try {
-                                localStorage.setItem(`mes-${header.dataset.mesId}-expandido`, 'true');
+                                StorageHelper.setItem(`mes-${header.dataset.mesId}-expandido`, 'true');
                             } catch (e) { }
 
                             setTimeout(() => {
@@ -6535,7 +6535,7 @@ Generado por Horarios
                         chevronIcon.style.transform = 'rotate(180deg)';
 
                         try {
-                            localStorage.setItem(`mes-${header.dataset.mesId}-expandido`, 'true');
+                            StorageHelper.setItem(`mes-${header.dataset.mesId}-expandido`, 'true');
                         } catch (e) { }
 
                         setTimeout(() => {
@@ -6680,7 +6680,7 @@ Generado por Horarios
                 if (isExpanded) icon.classList.add('rotated');
                 else icon.classList.remove('rotated');
             }
-
+            
             if (StorageHelper.getBoolean('persistirTarjetas', true)) {
                 StorageHelper.setItem(storageKey, isExpanded);
             }
@@ -6735,7 +6735,7 @@ Generado por Horarios
                         icon.style.transform = '';
                         icon.classList.add('rotated');
                     }
-                    localStorage.setItem('historicoExpandido', 'meses');
+                    StorageHelper.setItem('historicoExpandido', 'meses');
                     tiempoExpansionBotones = null;
 
                     if (_vistaHistoricoCalendario) {
@@ -6755,7 +6755,7 @@ Generado por Horarios
                         icon.classList.remove('rotated');
                         icon.style.transform = 'rotate(-90deg)';
                     }
-                    localStorage.setItem('historicoExpandido', 'completo');
+                    StorageHelper.setItem('historicoExpandido', 'completo');
                     tiempoExpansionBotones = Date.now();
 
                 } else {
@@ -6768,7 +6768,7 @@ Generado por Horarios
                             icon.style.transform = '';
                             icon.classList.add('rotated');
                         }
-                        localStorage.setItem('historicoExpandido', 'meses');
+                        StorageHelper.setItem('historicoExpandido', 'meses');
                         tiempoExpansionBotones = null;
                     } else {
                         botones.classList.remove('expanded');
@@ -6777,7 +6777,7 @@ Generado por Horarios
                             icon.classList.remove('rotated');
                             icon.style.transform = '';
                         }
-                        localStorage.setItem('historicoExpandido', 'cerrado');
+                        StorageHelper.setItem('historicoExpandido', 'cerrado');
                         tiempoExpansionBotones = null;
                     }
                 }
@@ -6806,7 +6806,7 @@ Generado por Horarios
                     }
 
                     try {
-                        localStorage.setItem('historicoExpandido', 'meses');
+                        StorageHelper.setItem('historicoExpandido', 'meses');
                     } catch (e) {
                         console.warn('Error guardando estado histórico:', e);
                     }
@@ -6922,7 +6922,7 @@ Generado por Horarios
 
         function toggleVistaHistorico() {
             _vistaHistoricoCalendario = !_vistaHistoricoCalendario;
-            try { localStorage.setItem('vistaHistoricoCalendario', _vistaHistoricoCalendario); } catch (e) { }
+            try { StorageHelper.setItem('vistaHistoricoCalendario', _vistaHistoricoCalendario); } catch (e) { }
 
             const lista = document.getElementById('lista-registros');
             const cal = document.getElementById('vista-calendario-historico');
@@ -7413,11 +7413,11 @@ Generado por Horarios
             if (isNaN(valorActual)) valorActual = D.horasDiarias();
             let nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
             if (isNaN(nuevoValor)) return;
-
+            
             $('config-horas-diarias').value = nuevoValor;
             actualizarFeedbackConfig();
             D.setHorasDiarias(nuevoValor);
-
+            
             const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
             if (esDefault) StorageHelper.setItem('horasDiarias', nuevoValor);
             D.guardarYActualizar();
@@ -7609,4 +7609,4 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
 
-// lushibosca version 260526.1047
+// lushibosca version 260525.2106

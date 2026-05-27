@@ -93,6 +93,17 @@
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         }
 
+        function obtenerHoraActual() {
+            const d = new Date();
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function minutosAHora(totalMinutos) {
+            const h = Math.floor(Math.abs(totalMinutos) / 60);
+            const m = Math.abs(totalMinutos) % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
         function obtenerFechaHoy() {
             return formatearFechaLocal(new Date());
         }
@@ -186,7 +197,8 @@
 
         return {
             validarFecha, validarHora, parsearFechaLocal, formatearFechaLocal,
-            obtenerFechaHoy, fechaLocalISOFull, horaAMinutos, sumarMinutosAHora,
+            obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
+            horaAMinutos, sumarMinutosAHora,
             obtenerNombreDia, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
             horasATexto, formatoDiferencia, formatoTituloMes
         };
@@ -1194,8 +1206,7 @@
             let registroExistente = registros.find(r => r.fecha === f);
 
             if (!e && !s) {
-                const now = new Date();
-                const horaActual = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                const horaActual = TimeUtils.obtenerHoraActual();
                 if (registroExistente && registroExistente.entrada && !registroExistente.salida) {
                     s = horaActual; $('salida').value = s; usaHoraActual = true;
                 } else {
@@ -1437,11 +1448,9 @@
             if (existeFecha) { UILogic.restaurarBotonGuardarEdicion(btnGuardar); UILogic.mostrarToast('Ya existe otro registro para esa fecha', 'error'); return; }
 
             if (e && tf) {
-                const [hE, mE] = e.split(':').map(Number);
-                const [hF, mF] = tf.split(':').map(Number);
-                const minutosEntrada = hE * 60 + mE;
-                const minutosFuera = hF * 60 + mF;
-                let minutosLimite = s ? (Number(s.split(':')[0]) * 60 + Number(s.split(':')[1])) : (new Date().getHours() * 60 + new Date().getMinutes());
+                const minutosEntrada = TimeUtils.horaAMinutos(e);
+                const minutosFuera = TimeUtils.horaAMinutos(tf);
+                let minutosLimite = s ? TimeUtils.horaAMinutos(s) : (new Date().getHours() * 60 + new Date().getMinutes());
 
                 let tiempoTranscurrido = minutosLimite - minutosEntrada;
                 if (tiempoTranscurrido < 0) tiempoTranscurrido += 24 * 60;
@@ -1888,8 +1897,8 @@
         function setRangoHorario(desde, hasta) { _conPerfil(perfil => { perfil.gistRangoDesde = desde; perfil.gistRangoHasta = hasta; }); }
 
         function _claveHoraActual() {
-            const ahora = new Date();
-            return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')} ${String(ahora.getHours()).padStart(2, '0')}`;
+            // slice(0,13) → "YYYY-MM-DD HH" que es la clave de hora para límite de syncs
+            return TimeUtils.fechaLocalISOFull().slice(0, 13);
         }
 
         function getSyncCount(tipo) {
@@ -1936,8 +1945,7 @@
 
         function dentroDelRangoHorario() {
             const { desde, hasta } = getRangoHorario();
-            const ahora = new Date();
-            const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
+            const horaActual = TimeUtils.obtenerHoraActual();
             return desde <= hasta ? (horaActual >= desde && horaActual <= hasta) : (horaActual >= desde || horaActual <= hasta);
         }
 
@@ -2586,10 +2594,9 @@
             };
             if (registrosValidos.length === 0) return vacios;
 
-            const toMin = str => { const [h, m] = str.split(':').map(Number); return h * 60 + m; };
             const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
-            const promedioEntrada = avgMin(registrosValidos.map(r => toMin(r.entrada)));
-            const promedioSalida = avgMin(registrosValidos.map(r => toMin(r.salida)));
+            const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
+            const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
 
             const horasDiariasParaRemoto = D.horasDiarias();
             const remotos = conteosPorTipo['remotos'] || 0;
@@ -2610,7 +2617,7 @@
                 meses.forEach(mes => {
                     const regs = registrosValidos.filter(r => r.fecha.startsWith(mes));
                     if (regs.length >= 2) {
-                        const dE = desviacionEstandar(regs.map(r => toMin(r.entrada)));
+                        const dE = desviacionEstandar(regs.map(r => TimeUtils.horaAMinutos(r.entrada)));
                         const dJ = desviacionEstandar(regs.map(r => Math.round(r.total * 60)));
                         if (dE !== null) desE.push(dE);
                         if (dJ !== null) desJ.push(dJ);
@@ -2619,7 +2626,7 @@
                 regEntrada = calcularRegularidad(desE.length > 0 ? desE.reduce((a, b) => a + b, 0) / desE.length : null);
                 regJornada = calcularRegularidad(desJ.length > 0 ? desJ.reduce((a, b) => a + b, 0) / desJ.length : null);
             } else {
-                regEntrada = calcularRegularidad(desviacionEstandar(registrosValidos.map(r => toMin(r.entrada))));
+                regEntrada = calcularRegularidad(desviacionEstandar(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada))));
                 regJornada = calcularRegularidad(desviacionEstandar(registrosValidos.map(r => Math.round(r.total * 60))));
             }
 
@@ -2667,8 +2674,8 @@
             }
 
             return {
-                entradaPromedio: `${String(Math.floor(promedioEntrada / 60)).padStart(2, '0')}:${String(promedioEntrada % 60).padStart(2, '0')}`,
-                salidaPromedio: `${String(Math.floor(promedioSalida / 60)).padStart(2, '0')}:${String(promedioSalida % 60).padStart(2, '0')}`,
+                entradaPromedio: minutosAHora(promedioEntrada),
+                salidaPromedio: minutosAHora(promedioSalida),
                 diasTrabajados: registrosValidos.length,
                 promedioDiario: `${hPromedio}h ${mPromedio}m`,
                 tiempoFueraTotal: hTiempoFuera > 0 ? `${hTiempoFuera}h ${mTiempoFuera}m` : `${mTiempoFuera}m`,
@@ -2754,8 +2761,7 @@
                 const [año, mes] = mesAnio.split('-').map(Number);
                 const tieneRegs = D.registros().some(r => { const [a, m] = r.fecha.split('-').map(Number); return a === año && m === mes; });
                 if (!tieneRegs) {
-                    const hoy = new Date();
-                    mesAnio = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+                    mesAnio = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
                     if (selectMes) selectMes.value = mesAnio;
                 }
             }
@@ -2932,16 +2938,14 @@
 
             let tiempoHoy = 0;
             if (ayerAbierto && !regHoy) {
-                const ahora = new Date();
-                const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
+                const horaActual = obtenerHoraActual();
                 const t = D.calcularHoras(regAyer.entrada, horaActual, regAyer.tiempoFuera || null, null, true);
                 tiempoHoy = t ? t.total : 0;
             } else if (regHoy && regHoy.entrada && !tipoEspecialHoy) {
                 if (regHoy.salida) {
                     tiempoHoy = regHoy.total;
                 } else {
-                    const ahora = new Date();
-                    const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
+                    const horaActual = obtenerHoraActual();
                     const t = D.calcularHoras(regHoy.entrada, horaActual, regHoy.tiempoFuera || null, null, true);
                     tiempoHoy = t ? t.total : 0;
                 }
@@ -3774,6 +3778,8 @@
 
         // ─── PROXIES A TIMEUTILS ───────────────────────────────────────────
         const obtenerFechaHoy = TimeUtils.obtenerFechaHoy;
+        const obtenerHoraActual = TimeUtils.obtenerHoraActual;
+        const minutosAHora = TimeUtils.minutosAHora;
         const obtenerNombreDia = TimeUtils.obtenerNombreDia;
         const horasATexto = TimeUtils.horasATexto;
         const horasATextoCorto = (t) => TimeUtils.horasATexto(t, 'short');
@@ -3792,8 +3798,7 @@
             if (input.value.trim() !== '') {
                 input.value = '';
             } else {
-                const ahora = new Date();
-                input.value = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+                input.value = obtenerHoraActual();
             }
             input.dispatchEvent(new Event('input'));
         }
@@ -3969,9 +3974,7 @@
                 return;
             }
 
-            const hoy = new Date();
-            const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
-
+            const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
             let mesASeleccionar = mesActual;
 
             if (mesActualmenteSeleccionado && mesesOrdenados.includes(mesActualmenteSeleccionado)) {
@@ -5343,8 +5346,7 @@ Generado por Sistema Lushibosca
                     cerrarExportar();
 
                 } else if (tipo === 'mes-actual') {
-                    const hoy = new Date();
-                    const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+                    const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
                     await exportarRango(mesActual, mesActual, true);
 
                 } else if (tipo === 'rango') {

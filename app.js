@@ -6254,15 +6254,20 @@ Generado por Sistema Lushibosca
 
             if (historialCargado) {
                 const estadoActual = HistoryManager.getCurrentState();
+                // FIX: si el historial esta vacio (guardado corrupto antes del fix de StorageHelper),
+                // descartarlo y mantener los registros del perfil como fuente de verdad
                 if (estadoActual && estadoActual.length > 0) {
                     D.registros().splice(0, D.registros().length, ...estadoActual);
-                    console.log('✓ Registros restaurados desde historial');
+                    console.log('Registros restaurados desde historial');
+                } else {
+                    console.warn('Historial vacio o corrupto, descartado. Usando registros del perfil.');
+                    HistoryManager.clear();
                 }
             }
             D.recalcularTotalesEnMemoria();
             if (!historialCargado) {
                 HistoryManager.saveState(D.registros());
-                console.log('✓ Nuevo historial inicializado');
+                console.log('Nuevo historial inicializado');
             }
 
             HistoryManager.updateButtons();

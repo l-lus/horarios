@@ -3008,6 +3008,48 @@
             };
         }
 
+        // ─── HINT DE SALIDA ESTIMADA ───────────────────────────────────────
+        function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHabiles) {
+            const [hE, mE] = reg.entrada.split(':').map(Number);
+            let minutosTotal = (hE * 60) + mE + (objetivoDiario * 60);
+
+            if (reg.tiempoFuera && !D.getIgnorarTiempoFuera()) {
+                const [hF, mF] = reg.tiempoFuera.split(':').map(Number);
+                minutosTotal += (hF * 60) + mF;
+            }
+
+            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+            const inicioBreak = StorageHelper.getItem(`breakStartTime_${perfilId}`);
+            if (inicioBreak && !D.getIgnorarTiempoFuera()) {
+                const mins = Math.floor((Date.now() - parseInt(inicioBreak)) / 60000);
+                if (mins > 0) minutosTotal += mins;
+            }
+
+            let hS = Math.floor(minutosTotal / 60) % 24;
+            const mS = Math.floor(minutosTotal % 60);
+            const horaSalida = `${String(hS).padStart(2, '0')}:${String(mS).padStart(2, '0')}`;
+
+            const esLaborable = Array.isArray(diasHabiles) && diasHabiles.includes(new Date().getDay());
+            const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
+
+            if (mostrarBuffer) {
+                const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
+                let hSB = Math.floor(minutosConBuffer / 60) % 24;
+                const mSB = Math.floor(minutosConBuffer % 60);
+                const horaBuf = `${String(hSB).padStart(2, '0')}:${String(mSB).padStart(2, '0')}`;
+                const colorBuffer = bufferSemanal > 0 ? 'var(--c-green)' : bufferSemanal < 0 ? 'var(--c-red)' : 'var(--text-main)';
+                return {
+                    hint: `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color" data-color="${colorBuffer}">(<strong>${horaBuf}</strong>)</span>`,
+                    hintEsHTML: true
+                };
+            }
+
+            return {
+                hint: `Salida estimada: <strong>${horaSalida}</strong>`,
+                hintEsHTML: true
+            };
+        }
+
         function derivarVistaHoy(est) {
             const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanal, diasHabiles } = est;
             const objetivoDiario = horasDiarias;
@@ -3043,39 +3085,7 @@
                     const regAyer = est.regAyer;
 
                     if (regAyer && regAyer.entrada && objetivoDiario > 0 && !TiposRegistro.esRegistroEspecial(regAyer.entrada, regAyer.salida)) {
-                        const [hE, mE] = regAyer.entrada.split(':').map(Number);
-                        let minutosTotal = (hE * 60) + mE + (objetivoDiario * 60);
-
-                        if (regAyer.tiempoFuera && !D.getIgnorarTiempoFuera()) {
-                            const [hF, mF] = regAyer.tiempoFuera.split(':').map(Number);
-                            minutosTotal += (hF * 60) + mF;
-                        }
-
-                        const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-                        const inicioBreak = StorageHelper.getItem(`breakStartTime_${perfilId}`);
-                        if (inicioBreak && !D.getIgnorarTiempoFuera()) {
-                            const mins = Math.floor((Date.now() - parseInt(inicioBreak)) / 60000);
-                            if (mins > 0) minutosTotal += mins;
-                        }
-
-                        let hS = Math.floor(minutosTotal / 60) % 24;
-                        const mS = Math.floor(minutosTotal % 60);
-                        const horaSalida = `${String(hS).padStart(2, '0')}:${String(mS).padStart(2, '0')}`;
-
-                        const esLaborable = Array.isArray(diasHabiles) && diasHabiles.includes(new Date().getDay());
-                        const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
-
-                        if (mostrarBuffer) {
-                            const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
-                            let hSB = Math.floor(minutosConBuffer / 60) % 24;
-                            const mSB = Math.floor(minutosConBuffer % 60);
-                            const horaBuf = `${String(hSB).padStart(2, '0')}:${String(mSB).padStart(2, '0')}`;
-                            const colorBuffer = bufferSemanal > 0 ? 'var(--c-green)' : bufferSemanal < 0 ? 'var(--c-red)' : 'var(--text-main)';
-                            hint = `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color" data-color="${colorBuffer}">(<strong>${horaBuf}</strong>)</span>`;
-                        } else {
-                            hint = `Salida estimada: <strong>${horaSalida}</strong>`;
-                        }
-                        hintEsHTML = true;
+                        ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regAyer, objetivoDiario, bufferSemanal, diasHabiles));
                     }
 
                     return {
@@ -3155,36 +3165,7 @@
             let hint = 'Toca para ver la Semana';
             let hintEsHTML = false;
             if (regHoy.entrada && !dayClosed && objetivoDiario > 0 && !TiposRegistro.esRegistroEspecial(regHoy.entrada, regHoy.salida)) {
-                const [hE, mE] = regHoy.entrada.split(':').map(Number);
-                let minutosTotal = (hE * 60) + mE + (objetivoDiario * 60);
-                if (regHoy.tiempoFuera && !D.getIgnorarTiempoFuera()) {
-                    const [hF, mF] = regHoy.tiempoFuera.split(':').map(Number);
-                    minutosTotal += (hF * 60) + mF;
-                }
-                const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-                const inicioBreak = StorageHelper.getItem(`breakStartTime_${perfilId}`);
-                if (inicioBreak && !D.getIgnorarTiempoFuera()) {
-                    const mins = Math.floor((Date.now() - parseInt(inicioBreak)) / 60000);
-                    if (mins > 0) minutosTotal += mins;
-                }
-                let hS = Math.floor(minutosTotal / 60) % 24;
-                const mS = Math.floor(minutosTotal % 60); 
-                const horaSalida = `${String(hS).padStart(2, '0')}:${String(mS).padStart(2, '0')}`;
-
-                const esLaborable = Array.isArray(diasHabiles) && diasHabiles.includes(new Date().getDay());
-                const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
-
-                if (mostrarBuffer) {
-                    const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
-                    let hSB = Math.floor(minutosConBuffer / 60) % 24;
-                    const mSB = Math.floor(minutosConBuffer % 60); 
-                    const horaBuf = `${String(hSB).padStart(2, '0')}:${String(mSB).padStart(2, '0')}`;
-                    const colorBuffer = bufferSemanal > 0 ? 'var(--c-green)' : bufferSemanal < 0 ? 'var(--c-red)' : 'var(--text-main)';
-                    hint = `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color" data-color="${colorBuffer}">(<strong>${horaBuf}</strong>)</span>`;
-                } else {
-                    hint = `Salida estimada: <strong>${horaSalida}</strong>`;
-                }
-                hintEsHTML = true;
+                ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regHoy, objetivoDiario, bufferSemanal, diasHabiles));
             }
 
             return {

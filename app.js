@@ -383,12 +383,7 @@
             generarIDSeguro,
             calcularHashSHA256,
             validarRegistroSeguro,
-            // Proxies a TimeUtils para retrocompatibilidad interna
-            validarFechaSegura: TimeUtils.validarFecha,
-            validarHoraSegura: TimeUtils.validarHora,
-            fechaLocalISO: TimeUtils.fechaLocalISOFull,
-            formatearFechaLocal: TimeUtils.formatearFechaLocal,
-            parsearFechaLocal: TimeUtils.parsearFechaLocal
+            fechaLocalISO: TimeUtils.fechaLocalISOFull
         };
     })();
 
@@ -1163,9 +1158,9 @@
 
         function validarFormulario() {
             let valido = true;
-            const fecha = $('fecha').value;
-            const entrada = $('entrada').value.trim();
-            const salida = $('salida').value.trim();
+            const fecha = S.sanitizeString($('fecha').value, 10);
+            const entrada = S.sanitizeString($('entrada').value.trim(), 5);
+            const salida = S.sanitizeString($('salida').value.trim(), 5);
 
             UILogic.limpiarError('fecha', 'error-fecha');
             UILogic.limpiarError('entrada', 'error-entrada');
@@ -1297,8 +1292,10 @@
                 const hoy = TimeUtils.obtenerFechaHoy();
 
                 if (registroABorrar && registroABorrar.fecha === hoy) {
-                    if (StorageHelper.getItem('breakStartTime', null, true)) {
-                        StorageHelper.removeItem('breakStartTime', true);
+                    const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+                    const storageKey = `breakStartTime_${perfilId}`;
+                    if (StorageHelper.getItem(storageKey)) {
+                        StorageHelper.removeItem(storageKey);
                         UILogic.mostrarToast('Timer detenido al borrar el registro', 'info');
                     }
                 }
@@ -1419,7 +1416,8 @@
             if (!e && !s) {
                 const registroABorrar = registros.find(r => r.id === editandoId);
                 if (registroABorrar && registroABorrar.fecha === TimeUtils.obtenerFechaHoy()) {
-                    StorageHelper.removeItem('breakStartTime', true);
+                    const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+                    StorageHelper.removeItem(`breakStartTime_${perfilId}`);
                     UILogic.actualizarEstadoBotonTimerMain();
                 }
                 registros = registros.filter(r => r.id !== editandoId);
@@ -1488,7 +1486,9 @@
             registros.splice(0, registros.length);
             ignorarTiempoFuera = false;
 
-            const keys = ['breakStartTime', 'history', 'fondoCard', 'ignorarTiempoFuera', 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', 'ordenCards'];
+            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+            StorageHelper.removeItem(`breakStartTime_${perfilId}`);
+            const keys = ['history', 'fondoCard', 'ignorarTiempoFuera', 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', 'ordenCards'];
             keys.forEach(k => StorageHelper.removeItem(k, true));
 
             if (window.PerfilManager) {
@@ -1648,19 +1648,21 @@
         }
 
         function detenerYRegistrarTimer(registro) {
-            const storedStart = StorageHelper.getItem('breakStartTime', null, true);
+            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+            const storageKey = `breakStartTime_${perfilId}`;
+            const storedStart = StorageHelper.getItem(storageKey);
             if (!storedStart) return false;
 
             const diffMs = Date.now() - parseInt(storedStart);
             const segundosTranscurridos = Math.floor(diffMs / 1000);
-            if (segundosTranscurridos < 30) { StorageHelper.removeItem('breakStartTime', true); return false; }
+            if (segundosTranscurridos < 30) { StorageHelper.removeItem(storageKey); return false; }
 
             let minutosTranscurridos = Math.floor(segundosTranscurridos / 60);
             if ((segundosTranscurridos % 60) >= 30) minutosTranscurridos += 1;
 
             const tiempoActual = registro.tiempoFuera || '00:00';
             registro.tiempoFuera = TimeUtils.sumarMinutosAHora(tiempoActual, minutosTranscurridos);
-            StorageHelper.removeItem('breakStartTime', true);
+            StorageHelper.removeItem(storageKey);
             return true;
         }
 
@@ -2032,6 +2034,22 @@
         let _modalAbiertoDesdeLista = false;
         let _timerAutoVista = null;
 
+        // ─── PROXIES A TIMEUTILS ───────────────────────────────────────────
+        const obtenerFechaHoy = TimeUtils.obtenerFechaHoy;
+        const obtenerHoraActual = TimeUtils.obtenerHoraActual;
+        const minutosAHora = TimeUtils.minutosAHora;
+        const obtenerNombreDia = TimeUtils.obtenerNombreDia;
+        const horasATexto = TimeUtils.horasATexto;
+        const horasATextoCorto = (t) => TimeUtils.horasATexto(t, 'short');
+        const formatoTituloMes = TimeUtils.formatoTituloMes;
+        const obtenerLunesSemana = TimeUtils.obtenerLunesSemanaISO;
+        const _getLunes = TimeUtils.obtenerLunes;
+        const obtenerSemanaActual = TimeUtils.obtenerSemanaRangoActual;
+
+        function formatoDiferencia(tiempoTotal) {
+            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
+        }
+
         function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
             if (!el || el.dataset.swipeInit) return;
             el.dataset.swipeInit = '1';
@@ -2183,10 +2201,10 @@
         }
 
         function esFechaConsecutiva(fechaActual, fechaSiguiente) {
-            const actual = S.parsearFechaLocal(fechaActual);
-            const siguiente = S.parsearFechaLocal(fechaSiguiente);
+            const actual = TimeUtils.parsearFechaLocal(fechaActual);
+            const siguiente = TimeUtils.parsearFechaLocal(fechaSiguiente);
             actual.setDate(actual.getDate() - 1);
-            return S.formatearFechaLocal(actual) === fechaSiguiente;
+            return TimeUtils.formatearFechaLocal(actual) === fechaSiguiente;
         }
 
         function agruparRegistrosConsecutivos(registros) {
@@ -2629,10 +2647,10 @@
 
                 let objetivo = 0;
                 let hechas = 0;
-                let fechaIt = S.parsearFechaLocal(opciones.desde);
-                const fechaFin = S.parsearFechaLocal(opciones.hasta);
+                let fechaIt = TimeUtils.parsearFechaLocal(opciones.desde);
+                const fechaFin = TimeUtils.parsearFechaLocal(opciones.hasta);
                 while (fechaIt <= fechaFin) {
-                    const iso = S.formatearFechaLocal(fechaIt);
+                    const iso = TimeUtils.formatearFechaLocal(fechaIt);
                     if (iso > hoy) { fechaIt.setDate(fechaIt.getDate() + 1); continue; }
                     const esDiaHabil = diasHabilesConfig.includes(fechaIt.getDay());
                     const r = regsPorFecha.get(iso);
@@ -2738,7 +2756,7 @@
                 return a === añoActual && m === mesActual + 1;
             });
             const primerDia = `${añoActual}-${String(mesActual + 1).padStart(2, '0')}-01`;
-            const ultimoDia = S.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
+            const ultimoDia = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
             return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: primerDia, hasta: ultimoDia });
         }
 
@@ -2891,16 +2909,11 @@
             let todosEspeciales = false;
             if (Array.isArray(diasHabiles) && diasHabiles.length > 0 && horasDiarias > 0) {
                 const fechasLaborables = [];
-                const [yI, mI, dI] = ini.split('-').map(Number);
-                const [yF, mF, dF] = fn.split('-').map(Number);
-                let cur = new Date(yI, mI - 1, dI);
-                const fin = new Date(yF, mF - 1, dF);
+                let cur = TimeUtils.parsearFechaLocal(ini);
+                const fin = TimeUtils.parsearFechaLocal(fn);
                 while (cur <= fin) {
                     if (diasHabiles.includes(cur.getDay())) {
-                        const y = cur.getFullYear();
-                        const m = String(cur.getMonth() + 1).padStart(2, '0');
-                        const d = String(cur.getDate()).padStart(2, '0');
-                        fechasLaborables.push(`${y}-${m}-${d}`);
+                        fechasLaborables.push(TimeUtils.formatearFechaLocal(cur));
                     }
                     cur = new Date(cur);
                     cur.setDate(cur.getDate() + 1);
@@ -3253,7 +3266,7 @@
             if (!el) return;
 
             const esDiaria = D.vistaActual() !== 'semana';
-            const hoy = S.formatearFechaLocal(new Date());
+            const hoy = obtenerFechaHoy();
             const regHoy = D.registros().find(r => r.fecha === hoy) ?? null;
             const esEspecial = regHoy && TiposRegistro.esRegistroEspecial(regHoy.entrada, regHoy.salida);
             const entradaHoy = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
@@ -3759,22 +3772,6 @@
             _renderizarStats(stats, { mostrarBtnReporte: true });
         }
 
-        // ─── PROXIES A TIMEUTILS ───────────────────────────────────────────
-        const obtenerFechaHoy = TimeUtils.obtenerFechaHoy;
-        const obtenerHoraActual = TimeUtils.obtenerHoraActual;
-        const minutosAHora = TimeUtils.minutosAHora;
-        const obtenerNombreDia = TimeUtils.obtenerNombreDia;
-        const horasATexto = TimeUtils.horasATexto;
-        const horasATextoCorto = (t) => TimeUtils.horasATexto(t, 'short');
-        const formatoTituloMes = TimeUtils.formatoTituloMes;
-        const obtenerLunesSemana = TimeUtils.obtenerLunesSemanaISO;
-        const _getLunes = TimeUtils.obtenerLunes;
-        const obtenerSemanaActual = TimeUtils.obtenerSemanaRangoActual;
-        
-        function formatoDiferencia(tiempoTotal) {
-            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
-        }
-
         function pegarHoraActual(id) {
             const input = document.getElementById(id);
             if (!input) return;
@@ -3808,7 +3805,7 @@
             D.registros().forEach(r => {
                 const d = new Date(r.fecha + 'T00:00:00');
                 const lunes = _getLunes(d);
-                const key = S.formatearFechaLocal(lunes);
+                const key = TimeUtils.formatearFechaLocal(lunes);
                 if (!semanas.has(key)) semanas.set(key, lunes);
             });
             return Array.from(semanas.keys()).sort().reverse();
@@ -3853,7 +3850,7 @@
             if (selActual && semanas.includes(selActual)) {
                 seleccionar = selActual;
             } else {
-                const lunesISO = S.formatearFechaLocal(_getLunes());
+                const lunesISO = TimeUtils.formatearFechaLocal(_getLunes());
                 seleccionar = semanas.includes(lunesISO) ? lunesISO : semanas[0];
             }
 
@@ -3878,7 +3875,7 @@
             const lunes = new Date(lunesISO + 'T00:00:00');
             const domingo = new Date(lunes);
             domingo.setDate(lunes.getDate() + 6);
-            const hasta = S.formatearFechaLocal(domingo);
+            const hasta = TimeUtils.formatearFechaLocal(domingo);
             const registros = D.registros().filter(r => r.fecha >= lunesISO && r.fecha <= hasta);
             return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: lunesISO, hasta });
         }
@@ -4195,10 +4192,10 @@ ${lineasTipos}
                         let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
                         if (datos.remotos && datos.remotos.length > 0) totalSemanal += datos.remotos.length * horasDiariasObjetivo;
 
-                        const fechaLunes = S.parsearFechaLocal(lunesOriginal);
+                        const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
                         const fechaDomingo = new Date(fechaLunes);
                         fechaDomingo.setDate(fechaLunes.getDate() + 6);
-                        const domingo = S.formatearFechaLocal(fechaDomingo);
+                        const domingo = TimeUtils.formatearFechaLocal(fechaDomingo);
 
                         let lunes = lunesOriginal;
                         let fechaFin = domingo;
@@ -5179,14 +5176,14 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            if (!S.validarFechaSegura(desde)) {
+            if (!TimeUtils.validarFecha(desde)) {
                 btnTexto.textContent = 'Fecha Inicial Inválida';
                 btn.style.color = 'var(--c-red)';
                 setIconoBtn(btn, '#icon-save');
                 return;
             }
 
-            if (!S.validarFechaSegura(hasta)) {
+            if (!TimeUtils.validarFecha(hasta)) {
                 btnTexto.textContent = 'Fecha Final Inválida';
                 btn.style.color = 'var(--c-red)';
                 setIconoBtn(btn, '#icon-save');
@@ -5200,8 +5197,8 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            const fechaInicio = S.parsearFechaLocal(desde);
-            const fechaFin = S.parsearFechaLocal(hasta);
+            const fechaInicio = TimeUtils.parsearFechaLocal(desde);
+            const fechaFin = TimeUtils.parsearFechaLocal(hasta);
             const diffTime = Math.abs(fechaFin - fechaInicio);
             const diasTotales = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
@@ -5338,7 +5335,7 @@ Generado por Sistema Lushibosca
                         return;
                     }
 
-                    if (!S.validarFechaSegura(desde) || !S.validarFechaSegura(hasta)) {
+                    if (!TimeUtils.validarFecha(desde) || !TimeUtils.validarFecha(hasta)) {
                         mostrarToast('Fechas inválidas', 'error');
                         btn.disabled = false;
                         return;
@@ -5565,11 +5562,11 @@ Generado por Sistema Lushibosca
                 const desdeRaw = document.getElementById('gist-rango-desde')?.value || '';
                 const hastaRaw = document.getElementById('gist-rango-hasta')?.value || '';
 
-                if (desdeRaw && !S.validarHoraSegura(desdeRaw)) {
+                if (desdeRaw && !TimeUtils.validarHora(desdeRaw)) {
                     mostrarToast('Hora inicial inválida.', 'error');
                     return;
                 }
-                if (hastaRaw && !S.validarHoraSegura(hastaRaw)) {
+                if (hastaRaw && !TimeUtils.validarHora(hastaRaw)) {
                     mostrarToast('Hora final inválida.', 'error');
                     return;
                 }
@@ -6609,12 +6606,12 @@ Generado por Sistema Lushibosca
                 hint.textContent = `1 día`;
                 return;
             }
-            if (!S.validarFechaSegura(desde) || !S.validarFechaSegura(hasta) || desde > hasta) {
+            if (!TimeUtils.validarFecha(desde) || !TimeUtils.validarFecha(hasta) || desde > hasta) {
                 hint.textContent = 'Rango inválido';
                 return;
             }
-            const fechaInicio = S.parsearFechaLocal(desde);
-            const fechaFin = S.parsearFechaLocal(hasta);
+            const fechaInicio = TimeUtils.parsearFechaLocal(desde);
+            const fechaFin = TimeUtils.parsearFechaLocal(hasta);
             const diasTotales = Math.ceil(Math.abs(fechaFin - fechaInicio) / (1000 * 60 * 60 * 24)) + 1;
             hint.textContent = `${diasTotales} día${diasTotales !== 1 ? 's' : ''}`;
         }

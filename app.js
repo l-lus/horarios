@@ -5168,7 +5168,7 @@ Generado por Sistema Lushibosca
                 tipos.forEach(t => {
                     const opt = document.createElement('option');
                     opt.value = t.id;
-                    opt.textContent = `${t.emoji} ${t.label} (${t.codigo})`;
+                    opt.textContent = `${t.emoji} ${t.label}`;
                     selectLote.appendChild(opt);
                 });
                 const optNormal = document.createElement('option');

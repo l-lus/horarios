@@ -1559,7 +1559,7 @@
 
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-            const keys = [STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS];
+            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS];
             keys.forEach(k => StorageHelper.removeItem(k, true));
 
             if (window.PerfilManager) {
@@ -6332,11 +6332,11 @@ Generado por Sistema Lushibosca
 
             if (historialCargado) {
                 const estadoActual = HistoryManager.getCurrentState();
-                if (estadoActual && estadoActual.length > 0) {
+                if (estadoActual !== null && estadoActual !== undefined) {
                     D.registros().splice(0, D.registros().length, ...estadoActual);
                     console.log('Registros restaurados desde historial');
                 } else {
-                    console.warn('Historial vacio o corrupto, descartado. Usando registros del perfil.');
+                    console.warn('Historial corrupto, descartado. Usando registros del perfil.');
                     HistoryManager.clear();
                 }
             }
@@ -7537,7 +7537,7 @@ Generado por Sistema Lushibosca
     })(SecurityAndUtils, DataManagement, GistSync);
 
     // ====================================================================
-    // FERIADOS AR MODULE
+    // FERIADOS MODULE
     // ====================================================================
     const FeriadosAR = (function () {
         'use strict';
@@ -7548,6 +7548,7 @@ Generado por Sistema Lushibosca
                 { fecha: '2026-01-01', nombre: 'Año Nuevo' },
                 { fecha: '2026-02-16', nombre: 'Carnaval' },
                 { fecha: '2026-02-17', nombre: 'Carnaval' },
+                { fecha: '2026-03-23', nombre: 'Puente Turístico' },
                 { fecha: '2026-03-24', nombre: 'Día Nac. de la Memoria' },
                 { fecha: '2026-04-02', nombre: 'Día del Veterano y los Caídos en Malvinas' },
                 { fecha: '2026-04-03', nombre: 'Viernes Santo' },
@@ -7559,7 +7560,8 @@ Generado por Sistema Lushibosca
                 { fecha: '2026-07-10', nombre: 'Puente turístico' },
                 { fecha: '2026-08-17', nombre: 'Paso a la Inmortalidad del Gral. San Martín' },
                 { fecha: '2026-10-12', nombre: 'Día del Respeto a la Diversidad Cultural' },
-                { fecha: '2026-11-20', nombre: 'Día de la Soberanía Nacional' },
+                { fecha: '2026-11-23', nombre: 'Día de la Soberanía Nacional' },
+                { fecha: '2026-12-07', nombre: 'Puente Turístico' },
                 { fecha: '2026-12-08', nombre: 'Inmaculada Concepción de María' },
                 { fecha: '2026-12-25', nombre: 'Navidad' },
             ],
@@ -7640,7 +7642,7 @@ Generado por Sistema Lushibosca
                 if (elTitulo) elTitulo.textContent = 'Feriado Próximo';
                 if (cancelTextNode) cancelTextNode.textContent = ' No';
 
-                const confirmo = await confirmarModal(texto, 'Sí', '#icon-calendar-simple');
+                const confirmo = await confirmarModal(texto, 'Sí', '#icon-save');
 
                 _marcarProcesado(feriado.fecha);
 
@@ -7815,4 +7817,19 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
 
-// lushibosca version 260615.7
+// lushibosca version 260616.0058
+
+// MODULOS:
+
+    // STORAGE KEYS — MODULE
+    // PWA INSTALLER MODULE
+    // TIME AND DATE UTILITIES MODULE (TimeUtils)
+    // STORAGE HELPER MODULE
+    // SECURITY AND UTILS MODULE
+    // PERFIL MANAGER MODULE
+    // MODAL MANAGER MODULE
+    // HISTORY MANAGER MODULE
+    // TIPOS DE REGISTRO MODULE
+    // DATA MANAGEMENT MODULE 
+    // LISTENERS PARA TECLA ENTER MODULE
+    // FERIADOS MODULE

@@ -7536,7 +7536,133 @@ Generado por Sistema Lushibosca
 
     })(SecurityAndUtils, DataManagement, GistSync);
 
+    // ====================================================================
+    // FERIADOS AR MODULE
+    // ====================================================================
+    const FeriadosAR = (function () {
+        'use strict';
+
+        const SK_PROCESADOS = 'feriadosAR_procesados';
+        const FERIADOS = {
+            2026: [
+                { fecha: '2026-01-01', nombre: 'Año Nuevo' },
+                { fecha: '2026-02-16', nombre: 'Carnaval' },
+                { fecha: '2026-02-17', nombre: 'Carnaval' },
+                { fecha: '2026-03-24', nombre: 'Día Nac. de la Memoria' },
+                { fecha: '2026-04-02', nombre: 'Día del Veterano y los Caídos en Malvinas' },
+                { fecha: '2026-04-03', nombre: 'Viernes Santo' },
+                { fecha: '2026-05-01', nombre: 'Día del Trabajador' },
+                { fecha: '2026-05-25', nombre: 'Día de la Revolución de Mayo' },
+                { fecha: '2026-06-15', nombre: 'Paso a la Inmortalidad del Gral. Güemes' },
+                { fecha: '2026-06-20', nombre: 'Paso a la Inmortalidad del Gral. Belgrano' },
+                { fecha: '2026-07-09', nombre: 'Día de la Independencia' },
+                { fecha: '2026-07-10', nombre: 'Puente turístico' },
+                { fecha: '2026-08-17', nombre: 'Paso a la Inmortalidad del Gral. San Martín' },
+                { fecha: '2026-10-12', nombre: 'Día del Respeto a la Diversidad Cultural' },
+                { fecha: '2026-11-20', nombre: 'Día de la Soberanía Nacional' },
+                { fecha: '2026-12-08', nombre: 'Inmaculada Concepción de María' },
+                { fecha: '2026-12-25', nombre: 'Navidad' },
+            ],
+        };
+
+        function _cargarProcesados() {
+            const raw = StorageHelper.getItem(SK_PROCESADOS, null);
+            try {
+                if (!raw) return new Set();
+                const parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed)) return new Set();
+                // Solo admitir fechas válidas según TimeUtils
+                return new Set(parsed.filter(f => typeof f === 'string' && TimeUtils.validarFecha(f)));
+            } catch { return new Set(); }
+        }
+
+        function _marcarProcesado(fecha) {
+            const set = _cargarProcesados();
+            set.add(fecha);
+            const limite = new Date();
+            limite.setDate(limite.getDate() - 60);
+            const limiteStr = TimeUtils.formatearFechaLocal(limite);
+            set.forEach(f => { if (f < limiteStr) set.delete(f); });
+            StorageHelper.setItem(SK_PROCESADOS, JSON.stringify([...set]));
+        }
+
+        function _getFeriadosCercanos() {
+            const hoy = new Date();
+            const anioActual = hoy.getFullYear();
+            const fechas = [];
+            for (let offset = -1; offset <= 2; offset++) {
+                const d = new Date(hoy);
+                d.setDate(hoy.getDate() + offset);
+                fechas.push(TimeUtils.formatearFechaLocal(d));
+            }
+            const pool = [...(FERIADOS[anioActual] || []), ...(FERIADOS[anioActual + 1] || [])];
+            return pool.filter(f => fechas.includes(f.fecha));
+        }
+
+        function _etiquetaFecha(fechaISO) {
+            const hoy = new Date();
+            const labels = ['ayer', 'hoy', 'mañana', 'pasado mañana'];
+            for (let offset = -1; offset <= 2; offset++) {
+                const d = new Date(hoy);
+                d.setDate(hoy.getDate() + offset);
+                if (TimeUtils.formatearFechaLocal(d) === fechaISO) return labels[offset + 1];
+            }
+            return fechaISO;
+        }
+
+        async function chequearYNotificar() {
+            const candidatos = _getFeriadosCercanos();
+            if (!candidatos.length) return;
+
+            const procesados = _cargarProcesados();
+
+            const pendientes = candidatos.filter(f => {
+                if (procesados.has(f.fecha)) return false;
+                const yaExiste = DataManagement.registros().some(r => r.fecha === f.fecha);
+                if (yaExiste) { _marcarProcesado(f.fecha); return false; }
+                return true;
+            });
+
+            if (!pendientes.length) return;
+            const _delay = ms => new Promise(r => setTimeout(r, ms));
+            for (let _i = 0; _i < pendientes.length; _i++) {
+                const feriado = pendientes[_i];
+                const etiqueta = _etiquetaFecha(feriado.fecha);
+                const diaSemana = TimeUtils.obtenerNombreDia(feriado.fecha);
+                const texto = `🎉 ${feriado.nombre} — ${etiqueta} ${diaSemana} (${feriado.fecha})\n¿Querés agregar este día como Feriado?`;
+
+                const elTitulo = document.getElementById('modal-confirmar-titulo');
+                const btnCancel = document.getElementById('modal-confirmar-cancel');
+                const cancelTextNode = btnCancel
+                    ? [...btnCancel.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim())
+                    : null;
+                const labelCancelOriginal = cancelTextNode ? cancelTextNode.textContent : null;
+                if (elTitulo) elTitulo.textContent = 'Feriado Próximo';
+                if (cancelTextNode) cancelTextNode.textContent = ' No';
+
+                const confirmo = await confirmarModal(texto, 'Sí', '#icon-calendar-simple');
+
+                _marcarProcesado(feriado.fecha);
+
+                if (confirmo) {
+                    try {
+                        await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado');
+                    } catch (e) {
+                    }
+                }
+
+                if (elTitulo) elTitulo.textContent = 'Atención';
+                if (cancelTextNode && labelCancelOriginal !== null) cancelTextNode.textContent = labelCancelOriginal;
+                if (_i < pendientes.length - 1) await _delay(100);
+            }
+        }
+
+        return { chequearYNotificar };
+    })();
+
     UILogic.init();
+
+    setTimeout(() => FeriadosAR.chequearYNotificar(), 5000);
 })();
 
 if ('serviceWorker' in navigator) {
@@ -7689,4 +7815,4 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
 
-// lushibosca version 260525.2106
+// lushibosca version 260615.7

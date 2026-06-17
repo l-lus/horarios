@@ -6940,7 +6940,11 @@ Generado por Sistema Lushibosca
             const titulo = document.getElementById('calendario-titulo-mes');
             if (!grid) return;
 
-            registrarSwipe(grid, dir => navegarCalendario(dir));
+            if (grid.parentNode) {
+                registrarSwipe(grid.parentNode, dir => navegarCalendario(dir));
+            } else {
+                registrarSwipe(grid, dir => navegarCalendario(dir));
+            }
 
             const hoy = new Date();
             const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
@@ -7337,7 +7341,7 @@ Generado por Sistema Lushibosca
 
             // Wrapper con altura fija del mes viejo — no cambia durante la animacion
             const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:relative;overflow:hidden;width:' + anchoGrid + 'px;height:calc(' + altoGrid + 'px + ' + margenTopGrid + ');';
+            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoGrid + 'px;height:calc(' + altoGrid + 'px + ' + margenTopGrid + ');';
             wrapper.appendChild(snapViejo);
             wrapper.appendChild(snapNuevo);
 

@@ -9,39 +9,39 @@
     // ====================================================================
     const STORAGE_KEYS = Object.freeze({
         // ── Configuración global ──────────────────────────────────────
-        TEMA_OSCURO:           'temaOscuro',
-        VISTA_ACTUAL:          'vistaActual',
-        MODO_ESTADISTICAS:     'modoEstadisticas',
-        HOVER_POPUP:           'hoverPopupCalendario',
-        DIAS_HABILES:          'diasHabiles',
-        HORAS_DIARIAS:         'horasDiarias',
-        VISTA_HISTORICO_CAL:   'vistaHistoricoCalendario',
+        TEMA_OSCURO: 'temaOscuro',
+        VISTA_ACTUAL: 'vistaActual',
+        MODO_ESTADISTICAS: 'modoEstadisticas',
+        HOVER_POPUP: 'hoverPopupCalendario',
+        DIAS_HABILES: 'diasHabiles',
+        HORAS_DIARIAS: 'horasDiarias',
+        VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
 
         // ── Configuración por perfil (useProfile = true) ──────────────
-        IGNORAR_TF:            'ignorarTiempoFuera',
-        FONDO_CARD:            'fondoCard',
-        PERSISTIR_TARJETAS:    'persistirTarjetas',
-        ORDEN_CARDS:           'ordenCards',
+        IGNORAR_TF: 'ignorarTiempoFuera',
+        FONDO_CARD: 'fondoCard',
+        PERSISTIR_TARJETAS: 'persistirTarjetas',
+        ORDEN_CARDS: 'ordenCards',
 
         // ── Estado UI persistido ──────────────────────────────────────
-        FORMULARIO_EXPANDIDO:  'formularioExpandido',
-        STATS_EXPANDIDO:       'statsExpandido',
-        HISTORICO_EXPANDIDO:   'historicoExpandido',
+        FORMULARIO_EXPANDIDO: 'formularioExpandido',
+        STATS_EXPANDIDO: 'statsExpandido',
+        HISTORICO_EXPANDIDO: 'historicoExpandido',
 
         // ── Perfiles e historial ──────────────────────────────────────
-        PERFIL_ACTIVO:         'perfilActivo',
-        PERFILES:              'perfiles',
-        HISTORY:               'history',
+        PERFIL_ACTIVO: 'perfilActivo',
+        PERFILES: 'perfiles',
+        HISTORY: 'history',
 
         // ── Gist ──────────────────────────────────────────────────────
-        GIST_TOKEN:            'gistToken',
+        GIST_TOKEN: 'gistToken',
 
         // ── Plantillas (claves con parte dinámica) ────────────────────
-        BREAK_TIME:    (perfilId) => `breakStartTime_${perfilId}`,
-        GIST_LIMITE:   (tipo)     => `gistSyncLimite_${tipo}`,
-        MES_EXPANDIDO: (clave)    => `mes-${clave}-expandido`,
-        ANIO_EXPANDIDO:(anioId)   => `anio-${anioId}-expandido`,
-        CARD_VISIBLE:  (cual)     => `cardVisible_${cual}`,
+        BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
+        GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
+        MES_EXPANDIDO: (clave) => `mes-${clave}-expandido`,
+        ANIO_EXPANDIDO: (anioId) => `anio-${anioId}-expandido`,
+        CARD_VISIBLE: (cual) => `cardVisible_${cual}`,
     });
 
 
@@ -156,7 +156,7 @@
         }
 
         function horaAMinutos(h) {
-            if (!validarHora(h)) return 0; 
+            if (!validarHora(h)) return 0;
             const [hr, mn] = h.split(':').map(Number);
             return (hr * 60) + mn;
         }
@@ -1434,8 +1434,8 @@
 
             if (e && tf) {
                 const minutosEntrada = TimeUtils.horaAMinutos(e);
-                const minutosFuera  = TimeUtils.horaAMinutos(tf);
-                let minutosLimite   = s
+                const minutosFuera = TimeUtils.horaAMinutos(tf);
+                let minutosLimite = s
                     ? TimeUtils.horaAMinutos(s)
                     : TimeUtils.horaAMinutos(TimeUtils.obtenerHoraActual());
                 let tiempoTranscurrido = minutosLimite - minutosEntrada;
@@ -3555,32 +3555,32 @@
         // Necesita sincronizar también el estado en memoria de DataManagement.
         const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
             _crearToggleConfig({
-                getVal:    () => D.getIgnorarTiempoFuera(),
-                setVal:    (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
-                btnId:     'btn-toggle-ignorar-tf',
+                getVal: () => D.getIgnorarTiempoFuera(),
+                setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
+                btnId: 'btn-toggle-ignorar-tf',
                 mensajeOn: 'Tiempo fuera ignorado',
-                mensajeOff:'Tiempo fuera incluido',
+                mensajeOff: 'Tiempo fuera incluido',
                 onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
             });
 
         // ── hoverPopupCalendario ────────────────────────────────────────────
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
             _crearToggleConfig({
-                getVal:    () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, true),
-                setVal:    (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
-                btnId:     'btn-toggle-hover-popup',
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, true),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
+                btnId: 'btn-toggle-hover-popup',
                 mensajeOn: 'Popup activado',
-                mensajeOff:'Popup desactivado',
+                mensajeOff: 'Popup desactivado',
             });
 
         // ── persistirTarjetas ───────────────────────────────────────────────
         const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
             _crearToggleConfig({
-                getVal:    () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
-                setVal:    (v) => StorageHelper.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
-                btnId:     'btn-toggle-persistir-tarjetas',
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
+                btnId: 'btn-toggle-persistir-tarjetas',
                 mensajeOn: 'Estado guardado',
-                mensajeOff:'Tarjetas no se recuerdan al iniciar',
+                mensajeOff: 'Tarjetas no se recuerdan al iniciar',
             });
 
         function toggleVisibilidadCard(cual) {
@@ -3591,7 +3591,7 @@
             _setBtnActivo('btn-toggle-card-' + cual, nuevo);
             mostrarToast('Tarjeta ' + cual + (nuevo ? ' visible' : ' oculta'), 'info');
         }
-        
+
         function aplicarVisibilidadCard(cual, visible) {
             const card = document.getElementById('card-' + cual);
             if (card) card.style.display = visible ? '' : 'none';
@@ -4972,7 +4972,7 @@ Generado por Sistema Lushibosca
 
             const pid = perfilEnEdicion;
             ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF,
-             'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
+                'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
 
             delete perfiles[perfilEnEdicion];
@@ -6761,7 +6761,7 @@ Generado por Sistema Lushibosca
                 if (isExpanded) icon.classList.add('rotated');
                 else icon.classList.remove('rotated');
             }
-            
+
             if (StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true)) {
                 StorageHelper.setItem(storageKey, isExpanded);
             }
@@ -7264,6 +7264,56 @@ Generado por Sistema Lushibosca
             }, 500);
         }
 
+        function _animarCalendario(delta, renderFn) {
+            const grid = document.getElementById('calendario-grid');
+            if (!grid) { renderFn(); return; }
+
+            const anchoGrid = grid.offsetWidth;
+            const altoGrid = grid.offsetHeight; // altura fija durante toda la animacion
+            const margenTopGrid = getComputedStyle(grid).marginTop;
+
+            // Clonar mes viejo
+            const snapViejo = grid.cloneNode(true);
+            snapViejo.removeAttribute('id');
+            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoGrid + 'px;pointer-events:none;';
+
+            // Renderizar nuevo mes fuera del flujo para poder clonarlo
+            grid.style.position = 'absolute';
+            grid.style.visibility = 'hidden';
+            renderFn();
+            const snapNuevo = grid.cloneNode(true);
+            snapNuevo.removeAttribute('id');
+            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoGrid + 'px;pointer-events:none;left:' + (delta > 0 ? anchoGrid : -anchoGrid) + 'px;';
+
+            // Wrapper con altura fija del mes viejo — no cambia durante la animacion
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;overflow:hidden;width:' + anchoGrid + 'px;height:calc(' + altoGrid + 'px + ' + margenTopGrid + ');';
+            wrapper.appendChild(snapViejo);
+            wrapper.appendChild(snapNuevo);
+
+            // Reemplazar grid por wrapper en el flujo
+            grid.parentNode.insertBefore(wrapper, grid);
+            grid.style.display = 'none';
+            grid.style.position = '';
+            grid.style.visibility = '';
+
+            // Animar
+            wrapper.offsetHeight;
+            const tx = (delta > 0 ? -anchoGrid : anchoGrid) + 'px';
+            const easing = 'transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)';
+            snapViejo.style.transition = easing;
+            snapNuevo.style.transition = easing;
+            snapViejo.style.transform = 'translateX(' + tx + ')';
+            snapNuevo.style.transform = 'translateX(' + tx + ')';
+
+            // Al terminar: restaurar grid real y quitar wrapper
+            setTimeout(() => {
+                grid.style.display = '';
+                wrapper.parentNode.insertBefore(grid, wrapper);
+                wrapper.remove();
+            }, 340);
+        }
+
         function navegarCalendario(delta) {
             if (_popupCalendarioEl) {
                 _popupCalendarioEl.remove();
@@ -7277,16 +7327,7 @@ Generado por Sistema Lushibosca
             if (nuevoMes > 11) { nuevoMes = 0; nuevoAnio++; }
             if (nuevoMes < 0) { nuevoMes = 11; nuevoAnio--; }
             _calendarioMes = { anio: nuevoAnio, mes: nuevoMes };
-            const grid = document.getElementById('calendario-grid');
-            if (grid) {
-                grid.classList.add('fade-out');
-                setTimeout(() => {
-                    _renderizarCalendario();
-                    grid.classList.remove('fade-out');
-                }, 300);
-            } else {
-                _renderizarCalendario();
-            }
+            _animarCalendario(delta, () => _renderizarCalendario());
         }
 
         function irHoyCalendario() {
@@ -7295,17 +7336,10 @@ Generado por Sistema Lushibosca
                 (_calendarioMes.anio === hoy.getFullYear() && _calendarioMes.mes === hoy.getMonth())) {
                 return;
             }
+            const base = _calendarioMes;
+            const delta = (base.anio * 12 + base.mes) > (hoy.getFullYear() * 12 + hoy.getMonth()) ? -1 : 1;
             _calendarioMes = null;
-            const grid = document.getElementById('calendario-grid');
-            if (grid) {
-                grid.classList.add('fade-out');
-                setTimeout(() => {
-                    _renderizarCalendario();
-                    grid.classList.remove('fade-out');
-                }, 300);
-            } else {
-                _renderizarCalendario();
-            }
+            _animarCalendario(delta, () => _renderizarCalendario());
         }
 
         function toggleStats() {
@@ -7493,11 +7527,11 @@ Generado por Sistema Lushibosca
             if (isNaN(valorActual)) valorActual = D.horasDiarias();
             let nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
             if (isNaN(nuevoValor)) return;
-            
+
             $('config-horas-diarias').value = nuevoValor;
             actualizarFeedbackConfig();
             D.setHorasDiarias(nuevoValor);
-            
+
             const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
             if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
             D.guardarYActualizar();
@@ -7821,15 +7855,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // MODULOS:
 
-    // STORAGE KEYS — MODULE
-    // PWA INSTALLER MODULE
-    // TIME AND DATE UTILITIES MODULE (TimeUtils)
-    // STORAGE HELPER MODULE
-    // SECURITY AND UTILS MODULE
-    // PERFIL MANAGER MODULE
-    // MODAL MANAGER MODULE
-    // HISTORY MANAGER MODULE
-    // TIPOS DE REGISTRO MODULE
-    // DATA MANAGEMENT MODULE 
-    // LISTENERS PARA TECLA ENTER MODULE
-    // FERIADOS MODULE
+// STORAGE KEYS — MODULE
+// PWA INSTALLER MODULE
+// TIME AND DATE UTILITIES MODULE (TimeUtils)
+// STORAGE HELPER MODULE
+// SECURITY AND UTILS MODULE
+// PERFIL MANAGER MODULE
+// MODAL MANAGER MODULE
+// HISTORY MANAGER MODULE
+// TIPOS DE REGISTRO MODULE
+// DATA MANAGEMENT MODULE
+// LISTENERS PARA TECLA ENTER MODULE
+// FERIADOS MODULE

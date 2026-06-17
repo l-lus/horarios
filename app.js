@@ -7291,13 +7291,36 @@ Generado por Sistema Lushibosca
             }, 500);
         }
 
+        let _calendarioAnimTimeout = null;
+        let _calendarioWrapperActual = null;
+
+        function _finalizarAnimacionCalendarioPendiente() {
+            // Si habia una animacion en curso, la cerramos ya (sin esperar su setTimeout)
+            // para que el grid quede visible y medible antes de arrancar la siguiente.
+            if (_calendarioAnimTimeout) {
+                clearTimeout(_calendarioAnimTimeout);
+                _calendarioAnimTimeout = null;
+            }
+            if (_calendarioWrapperActual) {
+                const grid = document.getElementById('calendario-grid');
+                if (grid) {
+                    grid.style.display = '';
+                    _calendarioWrapperActual.parentNode?.insertBefore(grid, _calendarioWrapperActual);
+                }
+                _calendarioWrapperActual.remove();
+                _calendarioWrapperActual = null;
+            }
+        }
+
         function _animarCalendario(delta, renderFn) {
             const grid = document.getElementById('calendario-grid');
             if (!grid) { renderFn(); return; }
 
+            _finalizarAnimacionCalendarioPendiente();
+
             const anchoGrid = grid.offsetWidth;
             const altoGrid = grid.offsetHeight; // altura fija durante toda la animacion
-            const margenTopGrid = getComputedStyle(grid).marginTop;
+            const margenTopGrid = getComputedStyle(grid).marginTop; // el wrapper no tiene este margen, hay que compensarlo
 
             // Clonar mes viejo
             const snapViejo = grid.cloneNode(true);
@@ -7323,6 +7346,7 @@ Generado por Sistema Lushibosca
             grid.style.display = 'none';
             grid.style.position = '';
             grid.style.visibility = '';
+            _calendarioWrapperActual = wrapper;
 
             // Animar
             wrapper.offsetHeight;
@@ -7334,10 +7358,12 @@ Generado por Sistema Lushibosca
             snapNuevo.style.transform = 'translateX(' + tx + ')';
 
             // Al terminar: restaurar grid real y quitar wrapper
-            setTimeout(() => {
+            _calendarioAnimTimeout = setTimeout(() => {
                 grid.style.display = '';
                 wrapper.parentNode.insertBefore(grid, wrapper);
                 wrapper.remove();
+                _calendarioAnimTimeout = null;
+                _calendarioWrapperActual = null;
             }, 340);
         }
 

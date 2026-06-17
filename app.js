@@ -16,6 +16,7 @@
         DIAS_HABILES: 'diasHabiles',
         HORAS_DIARIAS: 'horasDiarias',
         VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
+        SALDO_DESDE_ENERO: 'saldoAnualDesdeEnero',
 
         // ── Configuración por perfil (useProfile = true) ──────────────
         IGNORAR_TF: 'ignorarTiempoFuera',
@@ -3573,6 +3574,17 @@
                 mensajeOff: 'Popup desactivado',
             });
 
+        // ── saldoDesdeEnero ──────────────────────────────────────────────────
+        const { toggle: toggleSaldoDesdeEnero, actualizarEstado: actualizarEstadoBotonSaldoDesdeEnero } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.SALDO_DESDE_ENERO, v),
+                btnId: 'btn-toggle-saldo-enero',
+                mensajeOn: 'Cálculo de saldo anual desde el primer dia del año',
+                mensajeOff: 'Cálculo de saldo anual desde el primer registro del año',
+                onAfterToggle: () => { actualizarUI(); }
+            });
+
         // ── persistirTarjetas ───────────────────────────────────────────────
         const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
             _crearToggleConfig({
@@ -3824,7 +3836,21 @@
         function calcularEstadisticasAnio(anio) {
             const anioNum = parseInt(anio);
             const registros = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
-            return _calcularEstadisticasRango(registros, { regularidadPorMes: true, desde: `${anioNum}-01-01`, hasta: `${anioNum}-12-31` });
+            let fechaDesde = `${anioNum}-01-01`;
+
+            const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
+            if (!desdeEnero && registros.length > 0) {
+                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
+                if (primerRegistro > fechaDesde) {
+                    fechaDesde = primerRegistro;
+                }
+            }
+
+            return _calcularEstadisticasRango(registros, {
+                regularidadPorMes: true,
+                desde: fechaDesde,
+                hasta: `${anioNum}-12-31`
+            });
         }
 
         function poblarSelectorAnios() {
@@ -6091,7 +6117,7 @@ Generado por Sistema Lushibosca
 
             window.UILogic = {
                 alternarTema, cerrarConfig, pegarHoraActual, alternarVista, poblarSelectoresTipos,
-                cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
+                cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, toggleSaldoDesdeEnero, actualizarEstadoBotonSaldoDesdeEnero,
                 mostrarError, limpiarError, resetearBoton, restaurarBotonGuardarEdicion, abrirSelectorMesesCalendario,
                 limpiarCampo, obtenerFechaHoy, mostrarFiltros, poblarSelectorMeses, actualizarBotonLote,
                 cerrarFiltros, registrarLoteDesdeCard, cambiarMesStats, generarReporte, toggleHistorico, toggleStats,
@@ -6313,6 +6339,7 @@ Generado por Sistema Lushibosca
             UILogic.actualizarEstadoBotonIgnorarTF();
             UILogic.poblarSelectoresTipos();
             UILogic.actualizarEstadoBotonHoverPopup();
+            UILogic.actualizarEstadoBotonSaldoDesdeEnero();
             UILogic.aplicarVisibilidadCards();
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
@@ -7549,12 +7576,12 @@ Generado por Sistema Lushibosca
 
         return {
             init, obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
-            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError,
+            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError, actualizarEstadoBotonSaldoDesdeEnero,
             limpiarError, resetearBoton, restaurarBotonGuardarEdicion, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
             cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
-            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote,
+            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote,
             eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
             iniciarCambioHoras, detenerCambio, mostrarconfig, alternarFechaActual, verificarBloqueoCredito,
@@ -7773,6 +7800,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
+    $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));

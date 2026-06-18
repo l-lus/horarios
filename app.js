@@ -622,6 +622,9 @@
             if (!_mousedownEnOverlay) return;
             if (event.target.classList.contains('modal') && event.target.classList.contains('show')) {
                 const modalId = event.target.id;
+                if (modalId === 'modal-confirmar') {
+                    return;
+                }
                 const accionVolver = _getAccionVolver(modalId);
                 if (accionVolver) {
                     accionVolver();
@@ -7319,11 +7322,13 @@ Generado por Sistema Lushibosca
 
             let info = DESCRIPCIONES_STATS[statId];
             if (statId === 'stat-saldo' && info) {
-                const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
-                const modoTexto = desdeEnero
-                    ? 'Actualmente configurado para calcular a partir del 1° de enero del año en curso.'
-                    : 'Actualmente configurado para calcular a partir del primer registro del año.';
-                info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                if (modoEstadisticas === 'anual') {
+                    const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
+                    const modoTexto = desdeEnero
+                        ? 'Actualmente configurado para calcular a partir del 1° de enero del año en curso.'
+                        : 'Actualmente configurado para calcular a partir del primer registro del año.';
+                    info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                }
             }
             if (!info) {
                 const valueEl = $(statId);
@@ -7442,8 +7447,8 @@ Generado por Sistema Lushibosca
             _finalizarAnimacionCalendarioPendiente();
 
             const anchoGrid = grid.offsetWidth;
-            const altoGrid = grid.offsetHeight; 
-            const margenTopGrid = getComputedStyle(grid).marginTop; 
+            const altoGrid = grid.offsetHeight;
+            const margenTopGrid = getComputedStyle(grid).marginTop;
 
             const snapViejo = grid.cloneNode(true);
             snapViejo.removeAttribute('id');

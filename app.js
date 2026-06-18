@@ -7325,16 +7325,16 @@ Generado por Sistema Lushibosca
                 if (modoEstadisticas === 'anual') {
                     const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
                     const modoTexto = desdeEnero
-                        ? 'La configuración actual calcula a partir del PRIMER DIA DEL AÑO en curso.'
-                        : 'La configuración actual calcula a partir del PRIMER REGISTRO DEL AÑO en curso.';
+                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del año.'
+                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.';
                     info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
                 }
             }
             if (statId === 'stat-tiempo-total' && info) {
                 const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
                 const modoTexto = ignorarTF
-                    ? 'La configuración actual IGNORA el tiempo fuera (no se resta del cálculo).'
-                    : 'La configuración actual RESTA el tiempo fuera del cálculo final.';
+                    ? 'Actualmente se IGNORA el tiempo fuera (no se resta del cálculo).'
+                    : 'Actualmente se RESTA el tiempo fuera del cálculo final.';
                 info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
             }
             if (!info) {

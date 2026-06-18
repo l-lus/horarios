@@ -4045,6 +4045,7 @@
         }
 
         function togglePeriodoStats(direccion = 1) {
+            if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
             const selectMes = $('select-mes-stats');
             const selectAnio = $('select-anio-stats');
             const label = $('label-periodo-toggle');

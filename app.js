@@ -9,39 +9,41 @@
     // ====================================================================
     const STORAGE_KEYS = Object.freeze({
         // ── Configuración global ──────────────────────────────────────
-        TEMA_OSCURO:           'temaOscuro',
-        VISTA_ACTUAL:          'vistaActual',
-        MODO_ESTADISTICAS:     'modoEstadisticas',
-        HOVER_POPUP:           'hoverPopupCalendario',
-        DIAS_HABILES:          'diasHabiles',
-        HORAS_DIARIAS:         'horasDiarias',
-        VISTA_HISTORICO_CAL:   'vistaHistoricoCalendario',
+        TEMA_OSCURO: 'temaOscuro',
+        VISTA_ACTUAL: 'vistaActual',
+        MODO_ESTADISTICAS: 'modoEstadisticas',
+        HOVER_POPUP: 'hoverPopupCalendario',
+        DIAS_HABILES: 'diasHabiles',
+        HORAS_DIARIAS: 'horasDiarias',
+        VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
+        SALDO_DESDE_ENERO: 'saldoAnualDesdeEnero',
+        SALDO_DESDE_PRIMERO_MES: 'saldoMensualDesdePrimero',
 
         // ── Configuración por perfil (useProfile = true) ──────────────
-        IGNORAR_TF:            'ignorarTiempoFuera',
-        FONDO_CARD:            'fondoCard',
-        PERSISTIR_TARJETAS:    'persistirTarjetas',
-        ORDEN_CARDS:           'ordenCards',
+        IGNORAR_TF: 'ignorarTiempoFuera',
+        FONDO_CARD: 'fondoCard',
+        PERSISTIR_TARJETAS: 'persistirTarjetas',
+        ORDEN_CARDS: 'ordenCards',
 
         // ── Estado UI persistido ──────────────────────────────────────
-        FORMULARIO_EXPANDIDO:  'formularioExpandido',
-        STATS_EXPANDIDO:       'statsExpandido',
-        HISTORICO_EXPANDIDO:   'historicoExpandido',
+        FORMULARIO_EXPANDIDO: 'formularioExpandido',
+        STATS_EXPANDIDO: 'statsExpandido',
+        HISTORICO_EXPANDIDO: 'historicoExpandido',
 
         // ── Perfiles e historial ──────────────────────────────────────
-        PERFIL_ACTIVO:         'perfilActivo',
-        PERFILES:              'perfiles',
-        HISTORY:               'history',
+        PERFIL_ACTIVO: 'perfilActivo',
+        PERFILES: 'perfiles',
+        HISTORY: 'history',
 
         // ── Gist ──────────────────────────────────────────────────────
-        GIST_TOKEN:            'gistToken',
+        GIST_TOKEN: 'gistToken',
 
         // ── Plantillas (claves con parte dinámica) ────────────────────
-        BREAK_TIME:    (perfilId) => `breakStartTime_${perfilId}`,
-        GIST_LIMITE:   (tipo)     => `gistSyncLimite_${tipo}`,
-        MES_EXPANDIDO: (clave)    => `mes-${clave}-expandido`,
-        ANIO_EXPANDIDO:(anioId)   => `anio-${anioId}-expandido`,
-        CARD_VISIBLE:  (cual)     => `cardVisible_${cual}`,
+        BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
+        GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
+        MES_EXPANDIDO: (clave) => `mes-${clave}-expandido`,
+        ANIO_EXPANDIDO: (anioId) => `anio-${anioId}-expandido`,
+        CARD_VISIBLE: (cual) => `cardVisible_${cual}`,
     });
 
 
@@ -156,7 +158,7 @@
         }
 
         function horaAMinutos(h) {
-            if (!validarHora(h)) return 0; 
+            if (!validarHora(h)) return 0;
             const [hr, mn] = h.split(':').map(Number);
             return (hr * 60) + mn;
         }
@@ -451,7 +453,7 @@
     // PERFIL MANAGER MODULE
     // ====================================================================
     const PerfilManager = (function (S) {
-        const MAX_PERFILES = 7;
+        const MAX_PERFILES = 9;
         let perfilActual = 'default';
         let perfiles = {};
 
@@ -621,6 +623,9 @@
             if (!_mousedownEnOverlay) return;
             if (event.target.classList.contains('modal') && event.target.classList.contains('show')) {
                 const modalId = event.target.id;
+                if (modalId === 'modal-confirmar') {
+                    return;
+                }
                 const accionVolver = _getAccionVolver(modalId);
                 if (accionVolver) {
                     accionVolver();
@@ -1434,8 +1439,8 @@
 
             if (e && tf) {
                 const minutosEntrada = TimeUtils.horaAMinutos(e);
-                const minutosFuera  = TimeUtils.horaAMinutos(tf);
-                let minutosLimite   = s
+                const minutosFuera = TimeUtils.horaAMinutos(tf);
+                let minutosLimite = s
                     ? TimeUtils.horaAMinutos(s)
                     : TimeUtils.horaAMinutos(TimeUtils.obtenerHoraActual());
                 let tiempoTranscurrido = minutosLimite - minutosEntrada;
@@ -1559,13 +1564,13 @@
 
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-            const keys = [STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS];
+            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS];
             keys.forEach(k => StorageHelper.removeItem(k, true));
 
             if (window.PerfilManager) {
                 const perfil = PerfilManager.obtenerDatosPerfil();
                 if (perfil) {
-                    ['gistId', 'gistLastSync', 'gistAutoSync', 'gistRangoDesde', 'gistRangoHasta', 'gistSyncFecha_subir', 'gistSyncCount_subir', 'gistSyncFecha_bajar', 'gistSyncCount_bajar', 'gistMergeBehavior'].forEach(k => delete perfil[k]);
+                    ['gistLastSync', 'gistAutoSync', 'gistRangoDesde', 'gistRangoHasta', 'gistSyncFecha_subir', 'gistSyncCount_subir', 'gistSyncFecha_bajar', 'gistSyncCount_bajar', 'gistMergeBehavior'].forEach(k => delete perfil[k]);
                 }
             }
 
@@ -2808,9 +2813,15 @@
                 const [a, m] = r.fecha.split('-').map(Number);
                 return a === añoActual && m === mesActual + 1;
             });
-            const primerDia = `${añoActual}-${String(mesActual + 1).padStart(2, '0')}-01`;
+            const primerDiaMes = `${añoActual}-${String(mesActual + 1).padStart(2, '0')}-01`;
             const ultimoDia = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
-            return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: primerDia, hasta: ultimoDia });
+            let fechaDesde = primerDiaMes;
+            const desdePrimeroDia = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
+            if (!desdePrimeroDia && registros.length > 0) {
+                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
+                if (primerRegistro > fechaDesde) fechaDesde = primerRegistro;
+            }
+            return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: fechaDesde, hasta: ultimoDia });
         }
 
         function actualizarEstadisticas(mesAnio = null) {
@@ -3092,12 +3103,6 @@
             };
         }
 
-        // ─── HINT DE SALIDA ESTIMADA ───────────────────────────────────────
-        // Calcula el texto de "Salida estimada" para un registro abierto,
-        // teniendo en cuenta el tiempo fuera activo, el timer de break y
-        // el buffer semanal. Devuelve { hint, hintEsHTML }.
-        // Precondición: el llamador ya verificó que reg.entrada existe,
-        // objetivoDiario > 0 y el registro no es de tipo especial.
         function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHabiles) {
             const [hE, mE] = reg.entrada.split(':').map(Number);
             let minutosTotal = (hE * 60) + mE + (objetivoDiario * 60);
@@ -3552,35 +3557,56 @@
         }
 
         // ── ignorarTiempoFuera ──────────────────────────────────────────────
-        // Necesita sincronizar también el estado en memoria de DataManagement.
         const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
             _crearToggleConfig({
-                getVal:    () => D.getIgnorarTiempoFuera(),
-                setVal:    (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
-                btnId:     'btn-toggle-ignorar-tf',
+                getVal: () => D.getIgnorarTiempoFuera(),
+                setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
+                btnId: 'btn-toggle-ignorar-tf',
                 mensajeOn: 'Tiempo fuera ignorado',
-                mensajeOff:'Tiempo fuera incluido',
+                mensajeOff: 'Tiempo fuera incluido',
                 onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
             });
 
         // ── hoverPopupCalendario ────────────────────────────────────────────
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
             _crearToggleConfig({
-                getVal:    () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, true),
-                setVal:    (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
-                btnId:     'btn-toggle-hover-popup',
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, true),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
+                btnId: 'btn-toggle-hover-popup',
                 mensajeOn: 'Popup activado',
-                mensajeOff:'Popup desactivado',
+                mensajeOff: 'Popup desactivado',
+            });
+
+        // ── saldoDesdeEnero ──────────────────────────────────────────────────
+        const { toggle: toggleSaldoDesdeEnero, actualizarEstado: actualizarEstadoBotonSaldoDesdeEnero } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.SALDO_DESDE_ENERO, v),
+                btnId: 'btn-toggle-saldo-enero',
+                mensajeOn: 'Cálculo de saldo anual desde el primer dia del año',
+                mensajeOff: 'Cálculo de saldo anual desde el primer registro del año',
+                onAfterToggle: () => { actualizarUI(); }
+            });
+
+        // ── saldoDesdePrimeroDiaMes ──────────────────────────────────────────
+        const { toggle: toggleSaldoDesdePrimeroDiaMes, actualizarEstado: actualizarEstadoBotonSaldoDesdePrimeroDiaMes } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, v),
+                btnId: 'btn-toggle-saldo-primero-mes',
+                mensajeOn: 'Cálculo de saldo mensual desde el 1° del mes',
+                mensajeOff: 'Cálculo de saldo mensual desde el primer registro del mes',
+                onAfterToggle: () => { actualizarUI(); }
             });
 
         // ── persistirTarjetas ───────────────────────────────────────────────
         const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
             _crearToggleConfig({
-                getVal:    () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
-                setVal:    (v) => StorageHelper.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
-                btnId:     'btn-toggle-persistir-tarjetas',
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
+                btnId: 'btn-toggle-persistir-tarjetas',
                 mensajeOn: 'Estado guardado',
-                mensajeOff:'Tarjetas no se recuerdan al iniciar',
+                mensajeOff: 'Tarjetas no se recuerdan al iniciar',
             });
 
         function toggleVisibilidadCard(cual) {
@@ -3591,7 +3617,7 @@
             _setBtnActivo('btn-toggle-card-' + cual, nuevo);
             mostrarToast('Tarjeta ' + cual + (nuevo ? ' visible' : ' oculta'), 'info');
         }
-        
+
         function aplicarVisibilidadCard(cual, visible) {
             const card = document.getElementById('card-' + cual);
             if (card) card.style.display = visible ? '' : 'none';
@@ -3824,7 +3850,21 @@
         function calcularEstadisticasAnio(anio) {
             const anioNum = parseInt(anio);
             const registros = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
-            return _calcularEstadisticasRango(registros, { regularidadPorMes: true, desde: `${anioNum}-01-01`, hasta: `${anioNum}-12-31` });
+            let fechaDesde = `${anioNum}-01-01`;
+
+            const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
+            if (!desdeEnero && registros.length > 0) {
+                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
+                if (primerRegistro > fechaDesde) {
+                    fechaDesde = primerRegistro;
+                }
+            }
+
+            return _calcularEstadisticasRango(registros, {
+                regularidadPorMes: true,
+                desde: fechaDesde,
+                hasta: `${anioNum}-12-31`
+            });
         }
 
         function poblarSelectorAnios() {
@@ -4005,6 +4045,7 @@
         }
 
         function togglePeriodoStats(direccion = 1) {
+            if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
             const selectMes = $('select-mes-stats');
             const selectAnio = $('select-anio-stats');
             const label = $('label-periodo-toggle');
@@ -4388,7 +4429,6 @@ Generado por Sistema Lushibosca
             }
         }
 
-        // FIX: sumarMinutosAHora duplicada eliminada — se usa TimeUtils.sumarMinutosAHora directamente
         const sumarMinutosAHora = TimeUtils.sumarMinutosAHora;
 
         function actualizarEstadoBotonTimerMain() {
@@ -4792,8 +4832,8 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            if (Object.keys(perfiles).length >= 7) {
-                mostrarToast('Máximo de perfiles alcanzado (7)', 'error');
+            if (Object.keys(perfiles).length >= MAX_PERFILES) {
+                mostrarToast(`Máximo de perfiles alcanzado (${MAX_PERFILES})`, 'error');
                 return;
             }
 
@@ -4972,7 +5012,7 @@ Generado por Sistema Lushibosca
 
             const pid = perfilEnEdicion;
             ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF,
-             'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
+                'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
 
             delete perfiles[perfilEnEdicion];
@@ -6091,7 +6131,7 @@ Generado por Sistema Lushibosca
 
             window.UILogic = {
                 alternarTema, cerrarConfig, pegarHoraActual, alternarVista, poblarSelectoresTipos,
-                cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
+                cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, toggleSaldoDesdeEnero, actualizarEstadoBotonSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
                 mostrarError, limpiarError, resetearBoton, restaurarBotonGuardarEdicion, abrirSelectorMesesCalendario,
                 limpiarCampo, obtenerFechaHoy, mostrarFiltros, poblarSelectorMeses, actualizarBotonLote,
                 cerrarFiltros, registrarLoteDesdeCard, cambiarMesStats, generarReporte, toggleHistorico, toggleStats,
@@ -6305,6 +6345,7 @@ Generado por Sistema Lushibosca
                     anchor.parentNode.insertBefore(item, anchor);
                 });
             }
+            _bindStatItemPopups(document.querySelector('.stats-grid'));
 
             const config = D.cargarConfiguracion();
             const temaOscuro = config.temaOscuro;
@@ -6313,6 +6354,8 @@ Generado por Sistema Lushibosca
             UILogic.actualizarEstadoBotonIgnorarTF();
             UILogic.poblarSelectoresTipos();
             UILogic.actualizarEstadoBotonHoverPopup();
+            UILogic.actualizarEstadoBotonSaldoDesdeEnero();
+            UILogic.actualizarEstadoBotonSaldoDesdePrimeroDiaMes();
             UILogic.aplicarVisibilidadCards();
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
@@ -6332,11 +6375,11 @@ Generado por Sistema Lushibosca
 
             if (historialCargado) {
                 const estadoActual = HistoryManager.getCurrentState();
-                if (estadoActual && estadoActual.length > 0) {
+                if (estadoActual !== null && estadoActual !== undefined) {
                     D.registros().splice(0, D.registros().length, ...estadoActual);
                     console.log('Registros restaurados desde historial');
                 } else {
-                    console.warn('Historial vacio o corrupto, descartado. Usando registros del perfil.');
+                    console.warn('Historial corrupto, descartado. Usando registros del perfil.');
                     HistoryManager.clear();
                 }
             }
@@ -6761,7 +6804,7 @@ Generado por Sistema Lushibosca
                 if (isExpanded) icon.classList.add('rotated');
                 else icon.classList.remove('rotated');
             }
-            
+
             if (StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true)) {
                 StorageHelper.setItem(storageKey, isExpanded);
             }
@@ -6913,7 +6956,11 @@ Generado por Sistema Lushibosca
             const titulo = document.getElementById('calendario-titulo-mes');
             if (!grid) return;
 
-            registrarSwipe(grid, dir => navegarCalendario(dir));
+            if (grid.parentNode) {
+                registrarSwipe(grid.parentNode, dir => navegarCalendario(dir));
+            } else {
+                registrarSwipe(grid, dir => navegarCalendario(dir));
+            }
 
             const hoy = new Date();
             const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
@@ -7264,6 +7311,217 @@ Generado por Sistema Lushibosca
             }, 500);
         }
 
+        // ── Popup descriptivo de stat-item ─────────────────────────────────
+        const DESCRIPCIONES_STATS = {
+            'stat-tiempo-total': { titulo: 'Tiempo Total', desc: 'Suma de todas las horas trabajadas en el período seleccionado.' },
+            'stat-promedio-diario': { titulo: 'Promedio Diario', desc: 'Promedio de horas trabajadas por jornada en el período.' },
+            'stat-entrada-promedio': { titulo: 'Entrada Promedio', desc: 'Hora de entrada promedio entre todas las jornadas del período.' },
+            'stat-salida-promedio': { titulo: 'Salida Promedio', desc: 'Hora de salida promedio entre todas las jornadas del período.' },
+            'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (Salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
+            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tu configuración de horas diarias, días hábiles y el flag de calculo de saldo anual.' },
+            'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
+            'stat-compensaciones': { titulo: 'Salidas Temprano', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
+        };
+
+        let _popupStatEl = null;
+
+        const _escHtml = s => s == null ? '' : String(s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        function _popupStat(event, statId) {
+            event.stopPropagation();
+
+            if (_popupStatEl) {
+                _popupStatEl.remove();
+                _popupStatEl = null;
+            }
+
+            let info = DESCRIPCIONES_STATS[statId];
+            if (statId === 'stat-saldo' && info) {
+                if (modoEstadisticas === 'anual') {
+                    const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
+                    const modoTexto = desdeEnero
+                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del año.'
+                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.';
+                    info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                } else if (modoEstadisticas === 'mensual') {
+                    const desdePrimero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
+                    const modoTexto = desdePrimero
+                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del mes.'
+                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.';
+                    info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                }
+            }
+            if (statId === 'stat-tiempo-total' && info) {
+                const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+                const modoTexto = ignorarTF
+                    ? 'Actualmente se IGNORA el tiempo fuera (no se resta del cálculo).'
+                    : 'Actualmente se RESTA el tiempo fuera del cálculo final.';
+                info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+            }
+            if (!info) {
+                const valueEl = $(statId);
+                const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');
+                const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${t.labelPlural.toLowerCase()}`);
+                info = {
+                    titulo: _escHtml(label ? label.textContent : 'Estadística'),
+                    desc: tipoMatch
+                        ? `Cantidad de jornadas registradas como "${_escHtml(tipoMatch.label)}" en el período.`
+                        : 'Detalle de esta estadística.'
+                };
+            }
+
+            const popup = document.createElement('div');
+            popup.className = 'stat-popup';
+            popup.id = '_stat-popup';
+            popup.dataset.statId = statId;
+            popup.innerHTML = `
+        <div class="stat-popup-titulo">${_escHtml(info.titulo)}</div>
+        <div class="stat-popup-desc">${info.desc}</div>
+    `;
+
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupStatEl = popup;
+
+            const cerrarPorScroll = () => {
+                popup.remove();
+                _popupStatEl = null;
+                document.removeEventListener('click', cerrar, true);
+                document.removeEventListener('scroll', cerrarPorScroll, true);
+            };
+            const cerrarPopup = () => {
+                popup.remove();
+                _popupStatEl = null;
+                document.removeEventListener('click', cerrar, true);
+                document.removeEventListener('scroll', cerrarPorScroll, true);
+            };
+            const cerrar = (e) => {
+                const itemClickeado = e.target.closest('.stat-item');
+                if (itemClickeado && itemClickeado.dataset.statId === popup.dataset.statId) return;
+                if (!popup.contains(e.target)) cerrarPopup();
+            };
+            setTimeout(() => {
+                document.addEventListener('click', cerrar, true);
+                document.addEventListener('scroll', cerrarPorScroll, true);
+            }, 10);
+
+            const el = event.currentTarget || event.target;
+            const rect = el.getBoundingClientRect();
+            const margin = 8;
+
+            requestAnimationFrame(() => {
+                const pw = popup.offsetWidth;
+                const ph = popup.offsetHeight;
+
+                let top = rect.bottom + 12;
+                let left = rect.left + (rect.width / 2) - (pw / 2);
+
+                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > window.innerHeight - margin) {
+                    top = rect.top - ph - 12;
+                }
+                if (top < margin) top = margin;
+
+                popup.style.top = top + 'px';
+                popup.style.left = left + 'px';
+                popup.style.visibility = '';
+
+                setTimeout(() => popup.classList.add('listo'), 350);
+            });
+        }
+
+        function _onclickStatItem(event) {
+            const item = event.currentTarget;
+            const valueEl = item.querySelector('.stat-value');
+            if (!valueEl || !valueEl.id) return;
+            if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) return;
+            item.dataset.statId = valueEl.id;
+            _popupStat(event, valueEl.id);
+        }
+
+        function _bindStatItemPopups(container) {
+            const root = container || document;
+            root.querySelectorAll('.stat-item').forEach(item => {
+                if (item._statPopupBound) return;
+                item._statPopupBound = true;
+                item.addEventListener('click', _onclickStatItem);
+            });
+        }
+
+        let _calendarioAnimTimeout = null;
+        let _calendarioWrapperActual = null;
+
+        function _finalizarAnimacionCalendarioPendiente() {
+            if (_calendarioAnimTimeout) {
+                clearTimeout(_calendarioAnimTimeout);
+                _calendarioAnimTimeout = null;
+            }
+            if (_calendarioWrapperActual) {
+                const grid = document.getElementById('calendario-grid');
+                if (grid) {
+                    grid.style.display = '';
+                    _calendarioWrapperActual.parentNode?.insertBefore(grid, _calendarioWrapperActual);
+                }
+                _calendarioWrapperActual.remove();
+                _calendarioWrapperActual = null;
+            }
+        }
+
+        function _animarCalendario(delta, renderFn) {
+            const grid = document.getElementById('calendario-grid');
+            if (!grid) { renderFn(); return; }
+
+            _finalizarAnimacionCalendarioPendiente();
+
+            const anchoGrid = grid.offsetWidth;
+            const altoGrid = grid.offsetHeight;
+            const margenTopGrid = getComputedStyle(grid).marginTop;
+
+            const snapViejo = grid.cloneNode(true);
+            snapViejo.removeAttribute('id');
+            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoGrid + 'px;pointer-events:none;';
+
+            grid.style.position = 'absolute';
+            grid.style.visibility = 'hidden';
+            renderFn();
+            const snapNuevo = grid.cloneNode(true);
+            snapNuevo.removeAttribute('id');
+            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoGrid + 'px;pointer-events:none;left:' + (delta > 0 ? anchoGrid : -anchoGrid) + 'px;';
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoGrid + 'px;height:calc(' + altoGrid + 'px + ' + margenTopGrid + ');';
+            wrapper.appendChild(snapViejo);
+            wrapper.appendChild(snapNuevo);
+
+            grid.parentNode.insertBefore(wrapper, grid);
+            grid.style.display = 'none';
+            grid.style.position = '';
+            grid.style.visibility = '';
+            _calendarioWrapperActual = wrapper;
+
+            wrapper.offsetHeight;
+            const tx = (delta > 0 ? -anchoGrid : anchoGrid) + 'px';
+            const easing = 'transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)';
+            snapViejo.style.transition = easing;
+            snapNuevo.style.transition = easing;
+            snapViejo.style.transform = 'translateX(' + tx + ')';
+            snapNuevo.style.transform = 'translateX(' + tx + ')';
+
+            _calendarioAnimTimeout = setTimeout(() => {
+                grid.style.display = '';
+                wrapper.parentNode.insertBefore(grid, wrapper);
+                wrapper.remove();
+                _calendarioAnimTimeout = null;
+                _calendarioWrapperActual = null;
+            }, 340);
+        }
+
         function navegarCalendario(delta) {
             if (_popupCalendarioEl) {
                 _popupCalendarioEl.remove();
@@ -7277,16 +7535,7 @@ Generado por Sistema Lushibosca
             if (nuevoMes > 11) { nuevoMes = 0; nuevoAnio++; }
             if (nuevoMes < 0) { nuevoMes = 11; nuevoAnio--; }
             _calendarioMes = { anio: nuevoAnio, mes: nuevoMes };
-            const grid = document.getElementById('calendario-grid');
-            if (grid) {
-                grid.classList.add('fade-out');
-                setTimeout(() => {
-                    _renderizarCalendario();
-                    grid.classList.remove('fade-out');
-                }, 300);
-            } else {
-                _renderizarCalendario();
-            }
+            _animarCalendario(delta, () => _renderizarCalendario());
         }
 
         function irHoyCalendario() {
@@ -7295,17 +7544,10 @@ Generado por Sistema Lushibosca
                 (_calendarioMes.anio === hoy.getFullYear() && _calendarioMes.mes === hoy.getMonth())) {
                 return;
             }
+            const base = _calendarioMes;
+            const delta = (base.anio * 12 + base.mes) > (hoy.getFullYear() * 12 + hoy.getMonth()) ? -1 : 1;
             _calendarioMes = null;
-            const grid = document.getElementById('calendario-grid');
-            if (grid) {
-                grid.classList.add('fade-out');
-                setTimeout(() => {
-                    _renderizarCalendario();
-                    grid.classList.remove('fade-out');
-                }, 300);
-            } else {
-                _renderizarCalendario();
-            }
+            _animarCalendario(delta, () => _renderizarCalendario());
         }
 
         function toggleStats() {
@@ -7493,11 +7735,11 @@ Generado por Sistema Lushibosca
             if (isNaN(valorActual)) valorActual = D.horasDiarias();
             let nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
             if (isNaN(nuevoValor)) return;
-            
+
             $('config-horas-diarias').value = nuevoValor;
             actualizarFeedbackConfig();
             D.setHorasDiarias(nuevoValor);
-            
+
             const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
             if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
             D.guardarYActualizar();
@@ -7515,12 +7757,12 @@ Generado por Sistema Lushibosca
 
         return {
             init, obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
-            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError,
+            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError, actualizarEstadoBotonSaldoDesdeEnero,
             limpiarError, resetearBoton, restaurarBotonGuardarEdicion, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
             cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
-            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote,
+            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote,
             eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
             iniciarCambioHoras, detenerCambio, mostrarconfig, alternarFechaActual, verificarBloqueoCredito,
@@ -7530,13 +7772,209 @@ Generado por Sistema Lushibosca
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover, toggleHoverPopupCalendario,
+            _popupStat, _onclickStatItem, _bindStatItemPopups,
 
 
         };
 
     })(SecurityAndUtils, DataManagement, GistSync);
 
+    // ====================================================================
+    // FERIADOS MODULE
+    // ====================================================================
+    const FeriadosAR = (function () {
+        'use strict';
+
+        const SK_PROCESADOS = 'feriadosAR_procesados';
+        const FERIADOS = {
+            2026: [
+                { fecha: '2026-01-01', nombre: 'Año Nuevo' },
+                { fecha: '2026-02-16', nombre: 'Carnaval' },
+                { fecha: '2026-02-17', nombre: 'Carnaval' },
+                { fecha: '2026-03-23', nombre: 'Puente Turístico' },
+                { fecha: '2026-03-24', nombre: 'Día Nac. de la Memoria' },
+                { fecha: '2026-04-02', nombre: 'Día del Veterano y los Caídos en Malvinas' },
+                { fecha: '2026-04-03', nombre: 'Viernes Santo' },
+                { fecha: '2026-05-01', nombre: 'Día del Trabajador' },
+                { fecha: '2026-05-25', nombre: 'Día de la Revolución de Mayo' },
+                { fecha: '2026-06-15', nombre: 'Paso a la Inmortalidad del Gral. Güemes' },
+                { fecha: '2026-06-20', nombre: 'Paso a la Inmortalidad del Gral. Belgrano' },
+                { fecha: '2026-07-09', nombre: 'Día de la Independencia' },
+                { fecha: '2026-07-10', nombre: 'Puente turístico' },
+                { fecha: '2026-08-17', nombre: 'Paso a la Inmortalidad del Gral. San Martín' },
+                { fecha: '2026-10-12', nombre: 'Día del Respeto a la Diversidad Cultural' },
+                { fecha: '2026-11-23', nombre: 'Día de la Soberanía Nacional' },
+                { fecha: '2026-12-07', nombre: 'Puente Turístico' },
+                { fecha: '2026-12-08', nombre: 'Inmaculada Concepción de María' },
+                { fecha: '2026-12-25', nombre: 'Navidad' },
+            ],
+            2027: [
+                { fecha: '2027-01-01', nombre: 'Año Nuevo' },
+            ],
+        };
+
+        function _cargarProcesados() {
+            const raw = StorageHelper.getItem(SK_PROCESADOS, null);
+            try {
+                if (!raw) return new Set();
+                const parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed)) return new Set();
+                return new Set(parsed.filter(f => typeof f === 'string' && TimeUtils.validarFecha(f)));
+            } catch { return new Set(); }
+        }
+
+        function _marcarProcesado(fecha) {
+            const set = _cargarProcesados();
+            set.add(fecha);
+            const limite = new Date();
+            limite.setDate(limite.getDate() - 60);
+            const limiteStr = TimeUtils.formatearFechaLocal(limite);
+            set.forEach(f => { if (f < limiteStr) set.delete(f); });
+            StorageHelper.setItem(SK_PROCESADOS, JSON.stringify([...set]));
+        }
+
+        function _getFeriadosCercanos() {
+            const hoy = new Date();
+            const anioActual = hoy.getFullYear();
+            const fechas = [];
+            for (let offset = -1; offset <= 2; offset++) {
+                const d = new Date(hoy);
+                d.setDate(hoy.getDate() + offset);
+                fechas.push(TimeUtils.formatearFechaLocal(d));
+            }
+            const pool = [...(FERIADOS[anioActual] || []), ...(FERIADOS[anioActual + 1] || [])];
+            return pool.filter(f => fechas.includes(f.fecha));
+        }
+
+        function _etiquetaFecha(fechaISO) {
+            const hoy = new Date();
+            const labels = ['ayer', 'hoy', 'mañana', 'pasado mañana'];
+            for (let offset = -1; offset <= 2; offset++) {
+                const d = new Date(hoy);
+                d.setDate(hoy.getDate() + offset);
+                if (TimeUtils.formatearFechaLocal(d) === fechaISO) return labels[offset + 1];
+            }
+            return fechaISO;
+        }
+
+        function _buscarFeriado(fechaISO) {
+            const anio = parseInt(fechaISO.slice(0, 4), 10);
+            const pool = FERIADOS[anio] || [];
+            return pool.find(f => f.fecha === fechaISO) || null;
+        }
+
+        function _sumarDias(fechaISO, n) {
+            const d = TimeUtils.parsearFechaLocal(fechaISO);
+            d.setDate(d.getDate() + n);
+            return TimeUtils.formatearFechaLocal(d);
+        }
+
+        function _expandirGrupoConsecutivo(fechaISO) {
+            let desde = fechaISO;
+            while (_buscarFeriado(_sumarDias(desde, -1))) desde = _sumarDias(desde, -1);
+
+            let hasta = fechaISO;
+            while (_buscarFeriado(_sumarDias(hasta, 1))) hasta = _sumarDias(hasta, 1);
+
+            const dias = [];
+            let cursor = desde;
+            while (cursor <= hasta) {
+                dias.push(_buscarFeriado(cursor));
+                cursor = _sumarDias(cursor, 1);
+            }
+            return dias;
+        }
+
+        function _agruparConsecutivos(candidatos) {
+            const vistos = new Set();
+            const grupos = [];
+            for (const candidato of candidatos) {
+                const grupo = _expandirGrupoConsecutivo(candidato.fecha);
+                const clave = grupo[0].fecha;
+                if (vistos.has(clave)) continue;
+                vistos.add(clave);
+                grupos.push(grupo);
+            }
+            return grupos;
+        }
+
+        function _esRangoContinuo(grupo) {
+            for (let i = 1; i < grupo.length; i++) {
+                if (_sumarDias(grupo[i - 1].fecha, 1) !== grupo[i].fecha) return false;
+            }
+            return true;
+        }
+
+        async function chequearYNotificar() {
+            const candidatos = _getFeriadosCercanos();
+            if (!candidatos.length) return;
+
+            const procesados = _cargarProcesados();
+            const yaExisteRegistro = fecha => DataManagement.registros().some(r => r.fecha === fecha);
+
+            const grupos = _agruparConsecutivos(candidatos)
+                .map(grupo => grupo.filter(f => {
+                    if (procesados.has(f.fecha)) return false;
+                    if (yaExisteRegistro(f.fecha)) { _marcarProcesado(f.fecha); return false; }
+                    return true;
+                }))
+                .filter(grupo => grupo.length > 0);
+
+            if (!grupos.length) return;
+            const _delay = ms => new Promise(r => setTimeout(r, ms));
+
+            for (let _i = 0; _i < grupos.length; _i++) {
+                const grupo = grupos[_i];
+                const esGrupal = grupo.length > 1;
+                const nombres = [...new Set(grupo.map(f => f.nombre))].join(' / ');
+
+                let descripcionFechas;
+                if (!esGrupal) {
+                    descripcionFechas = `${_etiquetaFecha(grupo[0].fecha)}, ${TimeUtils.obtenerNombreDia(grupo[0].fecha)} (${grupo[0].fecha})`;
+                } else if (_esRangoContinuo(grupo)) {
+                    descripcionFechas = `del ${TimeUtils.obtenerNombreDia(grupo[0].fecha)} (${grupo[0].fecha}) al ${TimeUtils.obtenerNombreDia(grupo[grupo.length - 1].fecha)} (${grupo[grupo.length - 1].fecha})`;
+                } else {
+                    descripcionFechas = grupo.map(f => `${TimeUtils.obtenerNombreDia(f.fecha)} (${f.fecha})`).join(', ');
+                }
+
+                const texto = esGrupal
+                    ? `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar estos ${grupo.length} días como Feriado?`
+                    : `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar este día como Feriado?`;
+
+                const elTitulo = document.getElementById('modal-confirmar-titulo');
+                const btnCancel = document.getElementById('modal-confirmar-cancel');
+                const cancelTextNode = btnCancel
+                    ? [...btnCancel.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim())
+                    : null;
+                const labelCancelOriginal = cancelTextNode ? cancelTextNode.textContent : null;
+                if (elTitulo) elTitulo.textContent = esGrupal ? 'Feriados Próximos' : 'Feriado Próximo';
+                if (cancelTextNode) cancelTextNode.textContent = ' No';
+
+                const confirmo = await confirmarModal(texto, 'Sí', '#icon-save');
+
+                grupo.forEach(f => _marcarProcesado(f.fecha));
+
+                if (confirmo) {
+                    for (const feriado of grupo) {
+                        try {
+                            await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado');
+                        } catch (e) {
+                        }
+                    }
+                }
+
+                if (elTitulo) elTitulo.textContent = 'Atención';
+                if (cancelTextNode && labelCancelOriginal !== null) cancelTextNode.textContent = labelCancelOriginal;
+                if (_i < grupos.length - 1) await _delay(100);
+            }
+        }
+
+        return { chequearYNotificar };
+    })();
+
     UILogic.init();
+
+    setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
 })();
 
 if ('serviceWorker' in navigator) {
@@ -7611,15 +8049,17 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
+    $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());
+    $('btn-toggle-saldo-primero-mes')?.addEventListener('click', () => UILogic.toggleSaldoDesdePrimeroDiaMes());
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));
     $('btn-toggle-card-historico')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('historico'));
-    document.querySelector('.config-actions .btn-edit')?.addEventListener('click', () => UILogic.abrirModalGist());
+    document.querySelector('.config-actions .btn-gist')?.addEventListener('click', () => UILogic.abrirModalGist());
     document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => UILogic.mostrarImportar());
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
-    document.querySelector('#modal-config .modal-panel-footer .btn-delete')?.addEventListener('click', () => UILogic.cerrarConfig());
+    document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => UILogic.cerrarConfig());
 
     const inputHoras = $('config-horas-diarias');
     if (inputHoras) {
@@ -7672,7 +8112,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelector('#modal-filtros .btn-cancel')?.addEventListener('click', () => UILogic.cerrarFiltros());
 
-    document.querySelector('#modal-selector-perfiles .btn-edit')?.addEventListener('click', () => UILogic.mostrarconfig());
+    document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => UILogic.mostrarconfig());
     $('theme-toggle-modal')?.addEventListener('click', () => UILogic.alternarTema());
     document.querySelector('#modal-selector-perfiles .btn-cancel')?.addEventListener('click', () => UILogic.cerrarSelectorPerfiles());
     $('btn-crear-perfil')?.addEventListener('click', () => UILogic.crearPerfilDesdeSelector());
@@ -7689,4 +8129,19 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
 
-// lushibosca version 260525.2106
+// lushibosca version 260616.0058
+
+// MODULOS:
+
+// STORAGE KEYS — MODULE
+// PWA INSTALLER MODULE
+// TIME AND DATE UTILITIES MODULE (TimeUtils)
+// STORAGE HELPER MODULE
+// SECURITY AND UTILS MODULE
+// PERFIL MANAGER MODULE
+// MODAL MANAGER MODULE
+// HISTORY MANAGER MODULE
+// TIPOS DE REGISTRO MODULE
+// DATA MANAGEMENT MODULE
+// LISTENERS PARA TECLA ENTER MODULE
+// FERIADOS MODULE

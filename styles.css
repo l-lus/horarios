@@ -343,6 +343,16 @@ button:disabled {
     transform-origin: bottom;
 }
 
+.btn-delete {
+    background: var(--c-red);
+    color: var(--c-white);
+}
+
+.btn-edit {
+    background: var(--c-blue);
+    color: var(--c-white);
+}
+
 :where(#btn-toggle-ignorar-tf,
     #btn-toggle-fondo,
     #btn-toggle-gist-backup,
@@ -1608,7 +1618,7 @@ button:disabled {
         align-items: start;
     }
 
-    #modal-config .modal-panel-footer .btn-delete {
+    #modal-config .modal-panel-footer .btn-cancel {
         width: 50%;
         margin: 0 auto;
     }
@@ -1628,11 +1638,3 @@ button:disabled {
         grid-template-columns: repeat(4, 1fr);
     }
 }
-
-/* lushibosca version 260517.1739
-    
-    CAMBIOS:
-    
-    BUGS:
-
-    */ 

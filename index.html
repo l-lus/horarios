@@ -317,6 +317,8 @@
                 </h2>
                 <div class="form-collapsible collapsible" id="form-registro">
 
+                    <div id="modo-contenedor">
+
                     <div id="modo-normal">
                         <div class="form-group form-group-pt">
                             <label>Fecha</label>
@@ -359,7 +361,7 @@
                         </div>
                     </div>
 
-                    <div id="modo-lote" class="fade-out">
+                    <div id="modo-lote">
                         <div class="form-group form-group-pt">
                             <label>Tipo de registro</label>
                             <div class="input-with-btn">
@@ -398,8 +400,10 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </div><!-- #modo-lote -->
+
+                    </div><!-- #modo-contenedor -->
+                </div><!-- #form-registro -->
             </div>
             <div class="card animated-card" id="card-estadisticas">
                 <h2 class="no-margin card-header-clickable">
@@ -571,7 +575,7 @@
                         </svg>
                         Ajustes
                     </span>
-                    <span class="version-text">LUSHIBOSCA-v260617</span>
+                    <span class="version-text">LUSHIBOSCA-v260618</span>
                 </h3>
             </div>
             <div class="modal-panel-body custom-scroll">
@@ -700,7 +704,7 @@
                         </div>
                         <div class="config-actions">
                             <label>Datos</label>
-                            <button class="btn-edit">
+                            <button class="btn-gist">
                                 <svg class="icon">
                                     <use href="#icon-gist" />
                                 </svg>
@@ -730,7 +734,7 @@
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">
-                    <button class="btn-delete">
+                    <button class="btn-cancel">
                         <svg class="icon">
                             <use href="#icon-back" />
                         </svg> Volver
@@ -839,7 +843,7 @@
                         </svg>
                         Guardar
                     </button>
-                    <button class="btn-delete" id="btn-gist-volver">
+                    <button class="btn-cancel" id="btn-gist-volver">
                         <svg class="icon">
                             <use href="#icon-back" />
                         </svg>
@@ -882,7 +886,7 @@
                     </button>
                 </div>
                 <div class="btn-group">
-                    <button class="btn-delete" id="btn-gist-merge-cancelar">
+                    <button class="btn-cancel" id="btn-gist-merge-cancelar">
                         <svg class="icon">
                             <use href="#icon-cancelar" />
                         </svg>
@@ -1008,7 +1012,7 @@
                     </svg>
                     Combinar
                 </button>
-                <button class="btn-delete" id="btn-reemplazar" disabled>
+                <button class="btn-merge" id="btn-reemplazar" disabled>
                     <svg class="icon">
                         <use href="#icon-replace-swap" />
                     </svg>
@@ -1125,7 +1129,7 @@
                 </div>
             </div>
             <div class="btn-group">
-                <button class="btn-edit flex-1">
+                <button class="btn-settings flex-1">
                     <svg class="icon">
                         <use href="#icon-settings" />
                     </svg>
@@ -1279,7 +1283,7 @@
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">
-                    <button class="btn-delete" id="modal-confirmar-ok">
+                    <button class="btn-edit" id="modal-confirmar-ok">
                         <svg class="icon">
                             <use href="#icon-trash" />
                         </svg>
@@ -1298,7 +1302,7 @@
 
 </body>
 
-<!-- lushibosca version 260617.1140
+<!-- lushibosca version 260618.0040
 
     changelog: 
     260611:
@@ -1315,6 +1319,9 @@
     2) Se agrega opcion para elegir calcular el saldo anual de estadisticas desde el primer registro del año o
     desde el primer dia del año
     3) fix en el cambio de mes con swipe (movil) para que funcione de forma fluida sin bloqueos por animacion
+    
+    260618:
+    1) cambios menores en colores de botones de edicion y configuración
     -->
 
 </html>

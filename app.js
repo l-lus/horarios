@@ -7656,6 +7656,9 @@ Generado por Sistema Lushibosca
                 { fecha: '2026-12-08', nombre: 'Inmaculada Concepción de María' },
                 { fecha: '2026-12-25', nombre: 'Navidad' },
             ],
+            2027: [
+                { fecha: '2027-01-01', nombre: 'Año Nuevo' },
+            ],
         };
 
         function _cargarProcesados() {
@@ -7664,7 +7667,6 @@ Generado por Sistema Lushibosca
                 if (!raw) return new Set();
                 const parsed = JSON.parse(raw);
                 if (!Array.isArray(parsed)) return new Set();
-                // Solo admitir fechas válidas según TimeUtils
                 return new Set(parsed.filter(f => typeof f === 'string' && TimeUtils.validarFecha(f)));
             } catch { return new Set(); }
         }
@@ -7703,26 +7705,89 @@ Generado por Sistema Lushibosca
             return fechaISO;
         }
 
+        function _buscarFeriado(fechaISO) {
+            const anio = parseInt(fechaISO.slice(0, 4), 10);
+            const pool = FERIADOS[anio] || [];
+            return pool.find(f => f.fecha === fechaISO) || null;
+        }
+
+        function _sumarDias(fechaISO, n) {
+            const d = TimeUtils.parsearFechaLocal(fechaISO);
+            d.setDate(d.getDate() + n);
+            return TimeUtils.formatearFechaLocal(d);
+        }
+
+        function _expandirGrupoConsecutivo(fechaISO) {
+            let desde = fechaISO;
+            while (_buscarFeriado(_sumarDias(desde, -1))) desde = _sumarDias(desde, -1);
+
+            let hasta = fechaISO;
+            while (_buscarFeriado(_sumarDias(hasta, 1))) hasta = _sumarDias(hasta, 1);
+
+            const dias = [];
+            let cursor = desde;
+            while (cursor <= hasta) {
+                dias.push(_buscarFeriado(cursor));
+                cursor = _sumarDias(cursor, 1);
+            }
+            return dias;
+        }
+
+        function _agruparConsecutivos(candidatos) {
+            const vistos = new Set();
+            const grupos = [];
+            for (const candidato of candidatos) {
+                const grupo = _expandirGrupoConsecutivo(candidato.fecha);
+                const clave = grupo[0].fecha;
+                if (vistos.has(clave)) continue;
+                vistos.add(clave);
+                grupos.push(grupo);
+            }
+            return grupos;
+        }
+
+        function _esRangoContinuo(grupo) {
+            for (let i = 1; i < grupo.length; i++) {
+                if (_sumarDias(grupo[i - 1].fecha, 1) !== grupo[i].fecha) return false;
+            }
+            return true;
+        }
+
         async function chequearYNotificar() {
             const candidatos = _getFeriadosCercanos();
             if (!candidatos.length) return;
 
             const procesados = _cargarProcesados();
+            const yaExisteRegistro = fecha => DataManagement.registros().some(r => r.fecha === fecha);
 
-            const pendientes = candidatos.filter(f => {
-                if (procesados.has(f.fecha)) return false;
-                const yaExiste = DataManagement.registros().some(r => r.fecha === f.fecha);
-                if (yaExiste) { _marcarProcesado(f.fecha); return false; }
-                return true;
-            });
+            const grupos = _agruparConsecutivos(candidatos)
+                .map(grupo => grupo.filter(f => {
+                    if (procesados.has(f.fecha)) return false;
+                    if (yaExisteRegistro(f.fecha)) { _marcarProcesado(f.fecha); return false; }
+                    return true;
+                }))
+                .filter(grupo => grupo.length > 0);
 
-            if (!pendientes.length) return;
+            if (!grupos.length) return;
             const _delay = ms => new Promise(r => setTimeout(r, ms));
-            for (let _i = 0; _i < pendientes.length; _i++) {
-                const feriado = pendientes[_i];
-                const etiqueta = _etiquetaFecha(feriado.fecha);
-                const diaSemana = TimeUtils.obtenerNombreDia(feriado.fecha);
-                const texto = `🎉 ${feriado.nombre} — ${etiqueta} ${diaSemana} (${feriado.fecha})\n¿Querés agregar este día como Feriado?`;
+
+            for (let _i = 0; _i < grupos.length; _i++) {
+                const grupo = grupos[_i];
+                const esGrupal = grupo.length > 1;
+                const nombres = [...new Set(grupo.map(f => f.nombre))].join(' / ');
+
+                let descripcionFechas;
+                if (!esGrupal) {
+                    descripcionFechas = `${_etiquetaFecha(grupo[0].fecha)} ${TimeUtils.obtenerNombreDia(grupo[0].fecha)} (${grupo[0].fecha})`;
+                } else if (_esRangoContinuo(grupo)) {
+                    descripcionFechas = `del ${TimeUtils.obtenerNombreDia(grupo[0].fecha)} (${grupo[0].fecha}) al ${TimeUtils.obtenerNombreDia(grupo[grupo.length - 1].fecha)} (${grupo[grupo.length - 1].fecha})`;
+                } else {
+                    descripcionFechas = grupo.map(f => `${TimeUtils.obtenerNombreDia(f.fecha)} (${f.fecha})`).join(', ');
+                }
+
+                const texto = esGrupal
+                    ? `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar estos ${grupo.length} días como Feriado?`
+                    : `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar este día como Feriado?`;
 
                 const elTitulo = document.getElementById('modal-confirmar-titulo');
                 const btnCancel = document.getElementById('modal-confirmar-cancel');
@@ -7730,23 +7795,25 @@ Generado por Sistema Lushibosca
                     ? [...btnCancel.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim())
                     : null;
                 const labelCancelOriginal = cancelTextNode ? cancelTextNode.textContent : null;
-                if (elTitulo) elTitulo.textContent = 'Feriado Próximo';
+                if (elTitulo) elTitulo.textContent = esGrupal ? 'Feriados Próximos' : 'Feriado Próximo';
                 if (cancelTextNode) cancelTextNode.textContent = ' No';
 
                 const confirmo = await confirmarModal(texto, 'Sí', '#icon-save');
 
-                _marcarProcesado(feriado.fecha);
+                grupo.forEach(f => _marcarProcesado(f.fecha));
 
                 if (confirmo) {
-                    try {
-                        await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado');
-                    } catch (e) {
+                    for (const feriado of grupo) {
+                        try {
+                            await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado');
+                        } catch (e) {
+                        }
                     }
                 }
 
                 if (elTitulo) elTitulo.textContent = 'Atención';
                 if (cancelTextNode && labelCancelOriginal !== null) cancelTextNode.textContent = labelCancelOriginal;
-                if (_i < pendientes.length - 1) await _delay(100);
+                if (_i < grupos.length - 1) await _delay(100);
             }
         }
 
@@ -7755,7 +7822,7 @@ Generado por Sistema Lushibosca
 
     UILogic.init();
 
-    setTimeout(() => FeriadosAR.chequearYNotificar(), 5000);
+    setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
 })();
 
 if ('serviceWorker' in navigator) {
@@ -7835,11 +7902,11 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));
     $('btn-toggle-card-historico')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('historico'));
-    document.querySelector('.config-actions .btn-edit')?.addEventListener('click', () => UILogic.abrirModalGist());
+    document.querySelector('.config-actions .btn-gist')?.addEventListener('click', () => UILogic.abrirModalGist());
     document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => UILogic.mostrarImportar());
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
-    document.querySelector('#modal-config .modal-panel-footer .btn-delete')?.addEventListener('click', () => UILogic.cerrarConfig());
+    document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => UILogic.cerrarConfig());
 
     const inputHoras = $('config-horas-diarias');
     if (inputHoras) {
@@ -7892,7 +7959,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelector('#modal-filtros .btn-cancel')?.addEventListener('click', () => UILogic.cerrarFiltros());
 
-    document.querySelector('#modal-selector-perfiles .btn-edit')?.addEventListener('click', () => UILogic.mostrarconfig());
+    document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => UILogic.mostrarconfig());
     $('theme-toggle-modal')?.addEventListener('click', () => UILogic.alternarTema());
     document.querySelector('#modal-selector-perfiles .btn-cancel')?.addEventListener('click', () => UILogic.cerrarSelectorPerfiles());
     $('btn-crear-perfil')?.addEventListener('click', () => UILogic.crearPerfilDesdeSelector());

@@ -17,6 +17,7 @@
         HORAS_DIARIAS: 'horasDiarias',
         VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
         SALDO_DESDE_ENERO: 'saldoAnualDesdeEnero',
+        SALDO_DESDE_PRIMERO_MES: 'saldoMensualDesdePrimero',
 
         // ── Configuración por perfil (useProfile = true) ──────────────
         IGNORAR_TF: 'ignorarTiempoFuera',
@@ -2812,9 +2813,15 @@
                 const [a, m] = r.fecha.split('-').map(Number);
                 return a === añoActual && m === mesActual + 1;
             });
-            const primerDia = `${añoActual}-${String(mesActual + 1).padStart(2, '0')}-01`;
+            const primerDiaMes = `${añoActual}-${String(mesActual + 1).padStart(2, '0')}-01`;
             const ultimoDia = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
-            return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: primerDia, hasta: ultimoDia });
+            let fechaDesde = primerDiaMes;
+            const desdePrimeroDia = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
+            if (!desdePrimeroDia && registros.length > 0) {
+                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
+                if (primerRegistro > fechaDesde) fechaDesde = primerRegistro;
+            }
+            return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: fechaDesde, hasta: ultimoDia });
         }
 
         function actualizarEstadisticas(mesAnio = null) {
@@ -3578,6 +3585,17 @@
                 btnId: 'btn-toggle-saldo-enero',
                 mensajeOn: 'Cálculo de saldo anual desde el primer dia del año',
                 mensajeOff: 'Cálculo de saldo anual desde el primer registro del año',
+                onAfterToggle: () => { actualizarUI(); }
+            });
+
+        // ── saldoDesdePrimeroDiaMes ──────────────────────────────────────────
+        const { toggle: toggleSaldoDesdePrimeroDiaMes, actualizarEstado: actualizarEstadoBotonSaldoDesdePrimeroDiaMes } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, v),
+                btnId: 'btn-toggle-saldo-primero-mes',
+                mensajeOn: 'Cálculo de saldo mensual desde el 1° del mes',
+                mensajeOff: 'Cálculo de saldo mensual desde el primer registro del mes',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -6112,7 +6130,7 @@ Generado por Sistema Lushibosca
 
             window.UILogic = {
                 alternarTema, cerrarConfig, pegarHoraActual, alternarVista, poblarSelectoresTipos,
-                cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, toggleSaldoDesdeEnero, actualizarEstadoBotonSaldoDesdeEnero,
+                cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, toggleSaldoDesdeEnero, actualizarEstadoBotonSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
                 mostrarError, limpiarError, resetearBoton, restaurarBotonGuardarEdicion, abrirSelectorMesesCalendario,
                 limpiarCampo, obtenerFechaHoy, mostrarFiltros, poblarSelectorMeses, actualizarBotonLote,
                 cerrarFiltros, registrarLoteDesdeCard, cambiarMesStats, generarReporte, toggleHistorico, toggleStats,
@@ -6336,6 +6354,7 @@ Generado por Sistema Lushibosca
             UILogic.poblarSelectoresTipos();
             UILogic.actualizarEstadoBotonHoverPopup();
             UILogic.actualizarEstadoBotonSaldoDesdeEnero();
+            UILogic.actualizarEstadoBotonSaldoDesdePrimeroDiaMes();
             UILogic.aplicarVisibilidadCards();
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
@@ -7328,6 +7347,12 @@ Generado por Sistema Lushibosca
                         ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del año.'
                         : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.';
                     info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                } else if (modoEstadisticas === 'mensual') {
+                    const desdePrimero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
+                    const modoTexto = desdePrimero
+                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del mes.'
+                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.';
+                    info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
                 }
             }
             if (statId === 'stat-tiempo-total' && info) {
@@ -7736,7 +7761,7 @@ Generado por Sistema Lushibosca
             limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
             cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
-            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero,
+            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote,
             eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
             iniciarCambioHoras, detenerCambio, mostrarconfig, alternarFechaActual, verificarBloqueoCredito,
@@ -8024,6 +8049,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());
+    $('btn-toggle-saldo-primero-mes')?.addEventListener('click', () => UILogic.toggleSaldoDesdePrimeroDiaMes());
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));

@@ -6331,6 +6331,7 @@ Generado por Sistema Lushibosca
                     anchor.parentNode.insertBefore(item, anchor);
                 });
             }
+            _bindStatItemPopups(document.querySelector('.stats-grid'));
 
             const config = D.cargarConfiguracion();
             const temaOscuro = config.temaOscuro;
@@ -7295,6 +7296,127 @@ Generado por Sistema Lushibosca
             }, 500);
         }
 
+        // ── Popup descriptivo de stat-item ─────────────────────────────────
+        const DESCRIPCIONES_STATS = {
+            'stat-tiempo-total': { titulo: 'Tiempo Total', desc: 'Suma de todas las horas trabajadas en el período seleccionado.' },
+            'stat-promedio-diario': { titulo: 'Promedio Diario', desc: 'Promedio de horas trabajadas por jornada en el período.' },
+            'stat-entrada-promedio': { titulo: 'Entrada Promedio', desc: 'Hora de entrada promedio entre todas las jornadas del período.' },
+            'stat-salida-promedio': { titulo: 'Salida Promedio', desc: 'Hora de salida promedio entre todas las jornadas del período.' },
+            'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (Salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
+            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tu configuración de horas diarias, días hábiles y el flag de calculo de saldo anual.' },
+            'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
+            'stat-compensaciones': { titulo: 'Salidas Temprano', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
+        };
+
+        let _popupStatEl = null;
+
+        function _popupStat(event, statId) {
+            event.stopPropagation();
+
+            if (_popupStatEl) {
+                _popupStatEl.remove();
+                _popupStatEl = null;
+            }
+
+            const _esc = s => s == null ? '' : String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+
+            let info = DESCRIPCIONES_STATS[statId];
+            if (!info) {
+                const valueEl = $(statId);
+                const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');
+                const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${t.labelPlural.toLowerCase()}`);
+                info = {
+                    titulo: _esc(label ? label.textContent : 'Estadística'),
+                    desc: tipoMatch
+                        ? `Cantidad de jornadas registradas como "${_esc(tipoMatch.label)}" en el período.`
+                        : 'Detalle de esta estadística.'
+                };
+            }
+
+            const popup = document.createElement('div');
+            popup.className = 'stat-popup';
+            popup.id = '_stat-popup';
+            popup.dataset.statId = statId;
+            popup.innerHTML = `
+        <div class="stat-popup-titulo">${info.titulo}</div>
+        <div class="stat-popup-desc">${info.desc}</div>
+    `;
+
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupStatEl = popup;
+
+            const cerrarPorScroll = () => {
+                popup.remove();
+                _popupStatEl = null;
+                document.removeEventListener('click', cerrar, true);
+                document.removeEventListener('scroll', cerrarPorScroll, true);
+            };
+            const cerrarPopup = () => {
+                popup.remove();
+                _popupStatEl = null;
+                document.removeEventListener('click', cerrar, true);
+                document.removeEventListener('scroll', cerrarPorScroll, true);
+            };
+            const cerrar = (e) => {
+                const itemClickeado = e.target.closest('.stat-item');
+                if (itemClickeado && itemClickeado.dataset.statId === popup.dataset.statId) return;
+                if (!popup.contains(e.target)) cerrarPopup();
+            };
+            setTimeout(() => {
+                document.addEventListener('click', cerrar, true);
+                document.addEventListener('scroll', cerrarPorScroll, true);
+            }, 10);
+
+            const el = event.currentTarget || event.target;
+            const rect = el.getBoundingClientRect();
+            const margin = 8;
+
+            requestAnimationFrame(() => {
+                const pw = popup.offsetWidth;
+                const ph = popup.offsetHeight;
+
+                let top = rect.bottom + 12;
+                let left = rect.left + (rect.width / 2) - (pw / 2);
+
+                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > window.innerHeight - margin) {
+                    top = rect.top - ph - 12;
+                }
+                if (top < margin) top = margin;
+
+                popup.style.top = top + 'px';
+                popup.style.left = left + 'px';
+                popup.style.visibility = '';
+
+                setTimeout(() => popup.classList.add('listo'), 350);
+            });
+        }
+
+        function _onclickStatItem(event) {
+            const item = event.currentTarget;
+            const valueEl = item.querySelector('.stat-value');
+            if (!valueEl || !valueEl.id) return;
+            if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) return;
+            item.dataset.statId = valueEl.id;
+            _popupStat(event, valueEl.id);
+        }
+
+        function _bindStatItemPopups(container) {
+            const root = container || document;
+            root.querySelectorAll('.stat-item').forEach(item => {
+                if (item._statPopupBound) return;
+                item._statPopupBound = true;
+                item.addEventListener('click', _onclickStatItem);
+            });
+        }
+
         let _calendarioAnimTimeout = null;
         let _calendarioWrapperActual = null;
 
@@ -7621,6 +7743,7 @@ Generado por Sistema Lushibosca
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover, toggleHoverPopupCalendario,
+            _popupStat, _onclickStatItem, _bindStatItemPopups,
 
 
         };

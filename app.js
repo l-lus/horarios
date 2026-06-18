@@ -7325,10 +7325,17 @@ Generado por Sistema Lushibosca
                 if (modoEstadisticas === 'anual') {
                     const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
                     const modoTexto = desdeEnero
-                        ? 'Actualmente configurado para calcular a partir del 1° de enero del año en curso.'
-                        : 'Actualmente configurado para calcular a partir del primer registro del año.';
+                        ? 'La configuración actual calcula a partir del PRIMER DIA DEL AÑO en curso.'
+                        : 'La configuración actual calcula a partir del PRIMER REGISTRO DEL AÑO en curso.';
                     info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
                 }
+            }
+            if (statId === 'stat-tiempo-total' && info) {
+                const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+                const modoTexto = ignorarTF
+                    ? 'La configuración actual IGNORA el tiempo fuera (no se resta del cálculo).'
+                    : 'La configuración actual RESTA el tiempo fuera del cálculo final.';
+                info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
             }
             if (!info) {
                 const valueEl = $(statId);
@@ -7897,7 +7904,7 @@ Generado por Sistema Lushibosca
 
                 let descripcionFechas;
                 if (!esGrupal) {
-                    descripcionFechas = `${_etiquetaFecha(grupo[0].fecha)} ${TimeUtils.obtenerNombreDia(grupo[0].fecha)} (${grupo[0].fecha})`;
+                    descripcionFechas = `${_etiquetaFecha(grupo[0].fecha)}, ${TimeUtils.obtenerNombreDia(grupo[0].fecha)} (${grupo[0].fecha})`;
                 } else if (_esRangoContinuo(grupo)) {
                     descripcionFechas = `del ${TimeUtils.obtenerNombreDia(grupo[0].fecha)} (${grupo[0].fecha}) al ${TimeUtils.obtenerNombreDia(grupo[grupo.length - 1].fecha)} (${grupo[grupo.length - 1].fecha})`;
                 } else {

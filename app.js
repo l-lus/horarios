@@ -453,7 +453,7 @@
     // PERFIL MANAGER MODULE
     // ====================================================================
     const PerfilManager = (function (S) {
-        const MAX_PERFILES = 7;
+        const MAX_PERFILES = 9;
         let perfilActual = 'default';
         let perfiles = {};
 
@@ -4831,8 +4831,8 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            if (Object.keys(perfiles).length >= 7) {
-                mostrarToast('Máximo de perfiles alcanzado (7)', 'error');
+            if (Object.keys(perfiles).length >= MAX_PERFILES) {
+                mostrarToast(`Máximo de perfiles alcanzado (${MAX_PERFILES})`, 'error');
                 return;
             }
 

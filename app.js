@@ -7326,6 +7326,13 @@ Generado por Sistema Lushibosca
                 .replace(/'/g, '&#39;');
 
             let info = DESCRIPCIONES_STATS[statId];
+            if (statId === 'stat-saldo' && info) {
+                const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
+                const modoTexto = desdeEnero
+                    ? 'Actualmente configurado para calcular a partir del 1° de enero del año en curso.'
+                    : 'Actualmente configurado para calcular a partir del primer registro del año.';
+                info = { titulo: info.titulo, desc: `${info.desc}<br><br>${modoTexto}` };
+            }
             if (!info) {
                 const valueEl = $(statId);
                 const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');

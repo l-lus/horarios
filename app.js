@@ -557,7 +557,7 @@
         return {
             inicializar, cambiarPerfil, guardarDatosPerfilActual, cargarDatosPerfilActual,
             obtenerPerfilActual, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
-            guardarPerfiles, perfilKey
+            guardarPerfiles, perfilKey, MAX_PERFILES
         };
 
     })(SecurityAndUtils);

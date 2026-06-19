@@ -2198,8 +2198,16 @@
             const actual = _toastQueue.shift();
             const toast = $('toast');
             toast.classList.remove('show');
-            toast.textContent = actual.mensaje;
+
+            // Limpiar SVG anterior si existe
+            const svgViejo = toast.querySelector('.toast-progress-svg');
+            if (svgViejo) svgViejo.remove();
+
+            // Limpiar nodos de texto anteriores (NodeList live → Array.from)
+            Array.from(toast.childNodes).forEach(n => { if (n.nodeType === Node.TEXT_NODE) n.remove(); });
             toast.className = `toast ${actual.tipo}`;
+            toast.appendChild(document.createTextNode(actual.mensaje));
+
             let duracionFinal = actual.duracionBase || 3000;
             if (_toastQueue.length >= 2) {
                 duracionFinal = Math.floor(duracionFinal / 2);
@@ -2207,6 +2215,41 @@
 
             setTimeout(() => {
                 toast.classList.add('show');
+
+                // Calcular perímetro real del toast para la animación
+                const rect = toast.getBoundingClientRect();
+                const w = rect.width;
+                const h = rect.height;
+                const r = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--radius')) || 20;
+                const perimeter = Math.round(2 * (w + h) - (8 - 2 * Math.PI) * r);
+
+                // Crear SVG de barra perimetral
+                const svgNS = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(svgNS, 'svg');
+                svg.classList.add('toast-progress-svg');
+                svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                svg.setAttribute('preserveAspectRatio', 'none');
+
+                const rectEl = document.createElementNS(svgNS, 'rect');
+                rectEl.classList.add('toast-progress-rect', actual.tipo);
+                rectEl.setAttribute('x', '1.5');
+                rectEl.setAttribute('y', '1.5');
+                rectEl.setAttribute('width', `${w - 3}`);
+                rectEl.setAttribute('height', `${h - 3}`);
+                rectEl.setAttribute('rx', r);
+                rectEl.setAttribute('ry', r);
+                rectEl.style.strokeDasharray = perimeter;
+                rectEl.style.strokeDashoffset = 0;
+                rectEl.style.setProperty('--toast-perimeter', perimeter);
+                rectEl.style.setProperty('--toast-duration', `${duracionFinal}ms`);
+
+                svg.appendChild(rectEl);
+                toast.insertBefore(svg, toast.firstChild);
+
+                // Forzar reflow para que la animación arranque desde cero
+                void rectEl.getBoundingClientRect();
+                rectEl.classList.add('animating');
+
                 toastTimeout = setTimeout(() => {
                     toast.classList.remove('show');
                     toastTimeout = null;

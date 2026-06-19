@@ -623,58 +623,46 @@
                             </div>
                             <div id="config-total-feedback" class="config-hint-text">(Total semanal: --hs)</div>
                         </div>
-                        <div class="form-group">
-                            <label>Fondo del dashboard</label>
+                        <div class="config-actions form-group">
+                            <label>Interfaz</label>
                             <button id="btn-toggle-fondo">
                                 <svg class="icon">
                                     <use href="#icon-landscape" />
                                 </svg>
                                 <span id="hint-fondo-label">Golden Gate</span>
                             </button>
-                        </div>
-                        <div class="form-group">
-                            <label>Tiempo Fuera</label>
-                            <button id="btn-toggle-ignorar-tf">
-                                <svg class="icon">
-                                    <use href="#icon-exit" />
-                                </svg>
-                                <span>Ignorar calculo TF</span>
-                            </button>
-                        </div>
-                        <div class="form-group">
-                            <label>Calendario</label>
                             <button id="btn-toggle-hover-popup">
                                 <svg class="icon">
                                     <use href="#icon-calendar-simple" />
                                 </svg>
-                                <span>Popup al pasar mouse (PC)</span>
+                                <span>Popup hover calendario (PC)</span>
                             </button>
-                        </div>
-                        <div class="form-group">
-                            <label>Estado de Tarjetas</label>
                             <button id="btn-toggle-persistir-tarjetas">
                                 <svg class="icon">
                                     <use href="#icon-save" />
                                 </svg>
-                                <span>Recordar estado</span>
+                                <span>Recordar estado de tarjetas</span>
                             </button>
                         </div>
-                        <div class="form-group">
-                            <label>Calculo de saldo anual</label>
+                        <div class="config-actions form-group">
+                            <label>Estadísticas</label>
+                            <button id="btn-toggle-ignorar-tf">
+                                <svg class="icon">
+                                    <use href="#icon-exit" />
+                                </svg>
+                                <span>Ignorar calculo tiempo fuera</span>
+                            </button>
                             <button id="btn-toggle-saldo-enero">
                                 <svg class="icon">
                                     <use href="#icon-calendar-simple" />
                                 </svg>
-                                <span>Saldo desde el 1° día del año</span>
+                                <span>Saldo desde 1° día del año</span>
                             </button>
-                        </div>
-                        <div class="form-group">
-                            <label>Calculo de saldo mensual</label>
                             <button id="btn-toggle-saldo-primero-mes">
                                 <svg class="icon">
                                     <use href="#icon-calendar-simple" />
                                 </svg>
-                                <span>Saldo desde el 1° día del mes</span>
+                                <span>Saldo desde 1° día del mes</span>
                             </button>
                         </div>
                     </div>
@@ -1333,6 +1321,7 @@
     1) cambios menores en colores de botones de edicion y configuración
     2) Se agrega un popup a cada stat-item con la descripcion, y flag opcional en "saldo" y "tiempo fuera" por mes y año
     3) Se incrementa la cantidad maxima de perfiles de 7 a 9 y se utiliza la variable definida pero no usada
+    4) fix boton crear perfil, luego de usar la variable
 
     -->
 

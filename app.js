@@ -557,7 +557,7 @@
         return {
             inicializar, cambiarPerfil, guardarDatosPerfilActual, cargarDatosPerfilActual,
             obtenerPerfilActual, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
-            guardarPerfiles, perfilKey
+            guardarPerfiles, perfilKey, MAX_PERFILES
         };
 
     })(SecurityAndUtils);
@@ -4832,8 +4832,8 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            if (Object.keys(perfiles).length >= MAX_PERFILES) {
-                mostrarToast(`Máximo de perfiles alcanzado (${MAX_PERFILES})`, 'error');
+            if (Object.keys(perfiles).length >= PerfilManager.MAX_PERFILES) {
+                mostrarToast(`Máximo de perfiles alcanzado (${PerfilManager.MAX_PERFILES})`, 'error');
                 return;
             }
 

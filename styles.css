@@ -656,6 +656,7 @@ button:disabled {
 
 .registro-total.green-text,
 .calendario-dia.dia-normal,
+.toast.success,
 .cal-popup-badge--green,
 .progress-fill.green {
     background: var(--c-green);
@@ -663,6 +664,8 @@ button:disabled {
 
 .registro-total.red-text,
 .registro-total.red-text-bg,
+.toast.error,
+.toast.warning,
 .calendario-dia.dia-incompleto,
 .calendario-dia.dia-especial-red,
 .progress-fill.red,
@@ -697,16 +700,11 @@ button:disabled {
 .calendario-dia.dia-especial-blue,
 .registro-total.blue-text,
 .calendario-dia.dia-en-curso,
+.toast.info,
 .cal-popup-badge--blue,
 .progress-fill.blue {
     background: var(--c-blue);
 }
-
-/* Toast: texto siempre en color principal, barra perimetral según tipo vía clase en el rect */
-.toast-progress-rect.success { stroke: var(--c-green); }
-.toast-progress-rect.error,
-.toast-progress-rect.warning { stroke: var(--c-red); }
-.toast-progress-rect.info    { stroke: var(--c-blue); }
 
 /* ─── MODAL ──────────────────────────────────────────────────────────────────── */
 
@@ -815,11 +813,11 @@ button:disabled {
     justify-content: center;
     transform: translateX(-50%) translateY(80px);
     transition: var(--transition-anim);
-    background: var(--bg-header);
-    color: var(--text-main);
+    background: var(--bg-toast);
+    color: white;
     padding: 1rem 1.5rem;
     border-radius: var(--radius);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     opacity: 0;
     z-index: 1000;
     display: flex;
@@ -827,44 +825,16 @@ button:disabled {
     gap: 0.75rem;
     white-space: pre-line;
     pointer-events: none;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(3px);
     width: calc(100% - 4rem);
     max-width: 400px;
     text-align: center;
-    overflow: hidden;
 }
 
 .toast.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
     pointer-events: auto;
-}
-
-/* Barra de progreso perimetral del toast */
-.toast-progress-svg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    border-radius: var(--radius);
-    overflow: visible;
-}
-
-.toast-progress-rect {
-    fill: none;
-    stroke-width: 3;
-    stroke-linecap: round;
-    opacity: 0.7;
-}
-
-@keyframes toastProgressAnim {
-    from { stroke-dashoffset: 0; }
-    to   { stroke-dashoffset: var(--toast-perimeter); }
-}
-
-.toast-progress-rect.animating {
-    animation: toastProgressAnim var(--toast-duration) linear forwards;
 }
 
 /* ─── CALENDARIO ─────────────────────────────────────────────────────────────── */

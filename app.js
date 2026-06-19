@@ -4832,8 +4832,8 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            if (Object.keys(perfiles).length >= MAX_PERFILES) {
-                mostrarToast(`Máximo de perfiles alcanzado (${MAX_PERFILES})`, 'error');
+            if (Object.keys(perfiles).length >= PerfilManager.MAX_PERFILES) {
+                mostrarToast(`Máximo de perfiles alcanzado (${PerfilManager.MAX_PERFILES})`, 'error');
                 return;
             }
 

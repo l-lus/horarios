@@ -316,91 +316,91 @@
                     </svg>
                 </h2>
                 <div class="form-collapsible collapsible" id="form-registro">
-
                     <div id="modo-contenedor">
+                        <div id="modo-normal">
+                            <div class="form-group form-group-pt">
+                                <label>Fecha</label>
+                                <div class="input-with-btn">
+                                    <input type="date" id="fecha" />
+                                    <button class="time-btn flex-shrink-0" id="btn-ir-modo-lote"
+                                        title="Ir al modo lote/especial">
+                                        <svg class="icon">
+                                            <use href="#icon-arrow-right" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <span class="input-error" id="error-fecha">Fecha inválida</span>
+                            </div>
+                            <div class="contenedor-horas">
+                                <div class="form-group">
+                                    <label>Entrada</label>
+                                    <div class="input-with-btn">
+                                        <input type="text" id="entrada" inputmode="numeric" maxlength="5" />
+                                        <button class="time-btn" id="btn-pegar-entrada"
+                                            title="Pegar hora actual o limpiar">
+                                            <svg class="icon">
+                                                <use href="#icon-clock" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <span class="input-error" id="error-entrada">Formato inválido (HH:MM)</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Salida</label>
+                                    <div class="input-with-btn">
+                                        <input type="text" id="salida" inputmode="numeric" maxlength="5" />
+                                        <button class="time-btn" id="btn-pegar-salida"
+                                            title="Pegar hora actual o limpiar">
+                                            <svg class="icon">
+                                                <use href="#icon-clock" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <span class="input-error" id="error-salida">Formato inválido (HH:MM)</span>
+                                </div>
+                            </div>
+                        </div>
 
-                    <div id="modo-normal">
-                        <div class="form-group form-group-pt">
-                            <label>Fecha</label>
-                            <div class="input-with-btn">
-                                <input type="date" id="fecha" />
-                                <button class="time-btn flex-shrink-0" id="btn-ir-modo-lote"
-                                    title="Ir al modo lote/especial">
-                                    <svg class="icon">
-                                        <use href="#icon-arrow-right" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <span class="input-error" id="error-fecha">Fecha inválida</span>
-                        </div>
-                        <div class="contenedor-horas">
-                            <div class="form-group">
-                                <label>Entrada</label>
+                        <div id="modo-lote" class="fade-out">
+                            <div class="form-group form-group-pt">
+                                <label>Tipo de registro</label>
                                 <div class="input-with-btn">
-                                    <input type="text" id="entrada" inputmode="numeric" maxlength="5" />
-                                    <button class="time-btn" id="btn-pegar-entrada" title="Pegar hora actual o limpiar">
+                                    <select id="lote-tipo">
+                                        <option value="normal">🕒 Jornadas (borrar)</option>
+                                    </select>
+                                    <button class="time-btn flex-shrink-0" id="btn-ir-modo-normal"
+                                        title="Ir al modo normal">
                                         <svg class="icon">
-                                            <use href="#icon-clock" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <span class="input-error" id="error-entrada">Formato inválido (HH:MM)</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Salida</label>
-                                <div class="input-with-btn">
-                                    <input type="text" id="salida" inputmode="numeric" maxlength="5" />
-                                    <button class="time-btn" id="btn-pegar-salida" title="Pegar hora actual o limpiar">
-                                        <svg class="icon">
-                                            <use href="#icon-clock" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <span class="input-error" id="error-salida">Formato inválido (HH:MM)</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="modo-lote" class="fade-out">
-                        <div class="form-group form-group-pt">
-                            <label>Tipo de registro</label>
-                            <div class="input-with-btn">
-                                <select id="lote-tipo">
-                                    <option value="normal">🕒 Jornadas (borrar)</option>
-                                </select>
-                                <button class="time-btn flex-shrink-0" id="btn-ir-modo-normal"
-                                    title="Ir al modo normal">
-                                    <svg class="icon">
-                                        <use href="#icon-arrow-left" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="contenedor-fechas">
-                            <div class="form-group">
-                                <label>Desde</label>
-                                <div class="input-with-btn">
-                                    <input type="date" id="lote-fecha-desde" />
-                                    <button class="time-btn" id="btn-lote-desde" title="Pegar hoy / Limpiar">
-                                        <svg class="icon">
-                                            <use href="#icon-calendar-simple" />
+                                            <use href="#icon-arrow-left" />
                                         </svg>
                                     </button>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label>Hasta</label>
-                                <div class="input-with-btn">
-                                    <input type="date" id="lote-fecha-hasta" />
-                                    <button class="time-btn" id="btn-lote-hasta" title="Pegar hoy / Limpiar">
-                                        <svg class="icon">
-                                            <use href="#icon-calendar-simple" />
-                                        </svg>
-                                    </button>
+                            <div class="contenedor-fechas">
+                                <div class="form-group">
+                                    <label>Desde</label>
+                                    <div class="input-with-btn">
+                                        <input type="date" id="lote-fecha-desde" />
+                                        <button class="time-btn" id="btn-lote-desde" title="Pegar hoy / Limpiar">
+                                            <svg class="icon">
+                                                <use href="#icon-calendar-simple" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Hasta</label>
+                                    <div class="input-with-btn">
+                                        <input type="date" id="lote-fecha-hasta" />
+                                        <button class="time-btn" id="btn-lote-hasta" title="Pegar hoy / Limpiar">
+                                            <svg class="icon">
+                                                <use href="#icon-calendar-simple" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div><!-- #modo-lote -->
+                        </div><!-- #modo-lote -->
 
                     </div><!-- #modo-contenedor -->
                 </div><!-- #form-registro -->
@@ -698,7 +698,7 @@
                                 </svg>
                                 <span>Saldo desde 1° día del mes</span>
                             </button>
-                        </div>                        
+                        </div>
                         <div class="config-actions">
                             <label>Datos</label>
                             <button class="btn-gist">

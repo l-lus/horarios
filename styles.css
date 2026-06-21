@@ -3,7 +3,7 @@
 :root {
     --bg-body: #f5f6fa;
     --bg-card: #ffffff;
-    --bg-card-transparent: rgba(255, 255, 255, 0.82);
+    --bg-card-transparent: rgba(255, 255, 255, 0.90);
     --bg-header: #ffffffee;
     --bg-toast: #1f2937;
     --text-main: #1f1f1f;
@@ -39,7 +39,7 @@ html.dark-mode body,
 body.dark-mode {
     --bg-body: #131314;
     --bg-card: #1e1f20;
-    --bg-card-transparent: rgba(30, 31, 32, 0.82);
+    --bg-card-transparent: rgba(30, 31, 32, 0.90);
     --bg-header: #131314f6;
     --bg-toast: #0d1117;
     --text-main: #e3e3e3;

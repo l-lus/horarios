@@ -26,8 +26,12 @@
     --shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
     --radius: 20px;
     --hover: brightness(0.9);
-    --transition-anim: opacity 0.3s ease, transform 0.3s ease;
-    --transition-collapse: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    --dur-anim: 300ms;
+    --dur-collapse: 300ms;
+    --dur-calendario: 320ms;
+    --ease-anim: ease;
+    --transition-anim: opacity var(--dur-anim) var(--ease-anim), transform var(--dur-anim) var(--ease-anim);
+    --transition-collapse: max-height var(--dur-collapse) ease-out, opacity var(--dur-collapse) ease-out;
     --transition-ui: 0.3s ease;
     --modal-overlay: rgba(0, 0, 0, 0.5);
     --touch-target: 48px;

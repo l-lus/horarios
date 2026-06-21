@@ -3432,6 +3432,22 @@
             }
         }
 
+        // ── Utilidades de animación ──────────────────────────────────────────
+        function _getCSSdur(varName) {
+            const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+            if (!raw) return 300;
+            return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
+        }
+        const DUR_ANIM       = () => _getCSSdur('--dur-anim');
+        const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
+
+        // Patrón genérico: fade-out → fn() → fade-in, sincronizado con --dur-anim
+        function _animarFadeSwap(el, fn) {
+            if (!el) { fn(); return; }
+            el.classList.add('fade-out');
+            setTimeout(() => { fn(); el.classList.remove('fade-out'); }, DUR_ANIM());
+        }
+
         function _animarCambioCard(renderFn) {
             const els = [
                 $('stats-semana'),
@@ -3452,7 +3468,7 @@
                     void el.offsetWidth;
                     el.classList.remove('ciclo-fade-in');
                 });
-            }, 350);
+            }, DUR_ANIM());
         }
 
         function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false) {
@@ -3538,17 +3554,14 @@
             const card = document.getElementById('stats-card');
             const content = document.getElementById('stats-card-content');
             if (card) card.classList.add('cambiando-vista');
-            if (content) content.classList.add('fade-out');
-
-            setTimeout(() => {
+            _animarFadeSwap(content, () => {
                 const vistaActual = D.vistaActual() === 'semana' ? 'diaria' : 'semana';
                 D.setVistaActual(vistaActual);
                 StorageHelper.setItem(STORAGE_KEYS.VISTA_ACTUAL, vistaActual);
                 _detenerCicloStats();
                 actualizarUI();
-                if (content) content.classList.remove('fade-out');
                 if (card) card.classList.remove('cambiando-vista');
-            }, 300);
+            });
         }
 
         function _setBtnActivo(id, activo) {
@@ -4028,10 +4041,7 @@
         }
 
         function _animarCambioStats(fn) {
-            const formStats = $('form-stats');
-            if (!formStats) return;
-            formStats.classList.add('fade-out');
-            setTimeout(() => { fn(); formStats.classList.remove('fade-out'); }, 300);
+            _animarFadeSwap($('form-stats'), fn);
         }
 
         function cambiarSemanaStats() {
@@ -4684,9 +4694,7 @@ Generado por Sistema Lushibosca
             const grid = document.getElementById('calendario-grid');
             const selector = document.getElementById('calendario-selector-meses');
             const navBotones = document.getElementById('calendario-nav-botones');
-            selector.classList.add('fade-out');
-            setTimeout(() => {
-                selector.classList.remove('fade-out');
+            _animarFadeSwap(selector, () => {
                 selector.style.display = 'none';
                 navBotones.style.display = 'flex';
                 grid.style.display = 'grid';
@@ -4694,7 +4702,7 @@ Generado por Sistema Lushibosca
                 grid.offsetHeight;
                 _renderizarCalendario(idResaltar);
                 grid.classList.remove('fade-out');
-            }, 300);
+            });
         }
 
         function abrirSelectorMesesCalendario() {
@@ -4768,9 +4776,7 @@ Generado por Sistema Lushibosca
             const alturaCalendario = grid.offsetHeight;
             selector.style.height = alturaCalendario + 'px';
 
-            grid.classList.add('fade-out');
-            setTimeout(() => {
-                grid.classList.remove('fade-out');
+            _animarFadeSwap(grid, () => {
                 grid.style.display = 'none';
                 navBotones.style.display = 'none';
                 titulo.innerHTML = '<svg class="icon"><use href="#icon-back" /></svg> Volver';
@@ -4778,7 +4784,7 @@ Generado por Sistema Lushibosca
                 selector.classList.add('fade-out');
                 selector.offsetHeight;
                 selector.classList.remove('fade-out');
-            }, 300);
+            });
         }
 
         function abrirSelectorPerfiles() {
@@ -5055,9 +5061,7 @@ Generado por Sistema Lushibosca
             modoLoteActivo = !modoLoteActivo;
 
             if (modoLoteActivo) {
-                modoNormal.classList.add('fade-out');
-
-                setTimeout(() => {
+                _animarFadeSwap(modoNormal, () => {
                     modoNormal.style.display = 'none';
                     modoLote.style.display = 'block';
                     modoLote.offsetHeight;
@@ -5077,12 +5081,10 @@ Generado por Sistema Lushibosca
                     btnTimer.style.opacity = '0.3';
 
                     actualizarBotonLote();
-                }, 300);
+                });
 
             } else {
-                modoLote.classList.add('fade-out');
-
-                setTimeout(() => {
+                _animarFadeSwap(modoLote, () => {
                     modoLote.style.display = 'none';
                     modoNormal.style.display = 'block';
                     modoNormal.offsetHeight;
@@ -5090,7 +5092,7 @@ Generado por Sistema Lushibosca
                     UILogic.resetearBoton(btn);
                     btnTimer.style.opacity = '1';
                     actualizarEstadoBotonTimerMain();
-                }, 300);
+                });
             }
         }
 
@@ -7057,10 +7059,8 @@ Generado por Sistema Lushibosca
             const btnFiltro = document.getElementById('btn-filtro');
             const saliente = _vistaHistoricoCalendario ? lista : cal;
             const entrante = _vistaHistoricoCalendario ? cal : lista;
-            if (saliente) saliente.classList.add('fade-out');
-
-            setTimeout(() => {
-                if (saliente) { saliente.classList.remove('fade-out'); saliente.classList.add('hidden'); }
+            _animarFadeSwap(saliente, () => {
+                if (saliente) { saliente.classList.add('hidden'); }
                 if (entrante) {
                     entrante.classList.remove('hidden');
                     entrante.classList.add('fade-out');
@@ -7074,7 +7074,7 @@ Generado por Sistema Lushibosca
                 } else {
                     if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
                 }
-            }, 300);
+            });
 
             const selector = document.getElementById('calendario-selector-meses');
             const grid = document.getElementById('calendario-grid');
@@ -7507,7 +7507,8 @@ Generado por Sistema Lushibosca
 
             wrapper.offsetHeight;
             const tx = (delta > 0 ? -anchoGrid : anchoGrid) + 'px';
-            const easing = 'transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)';
+            const durCal = DUR_CALENDARIO();
+            const easing = 'transform ' + durCal + 'ms cubic-bezier(0.4, 0, 0.2, 1)';
             snapViejo.style.transition = easing;
             snapNuevo.style.transition = easing;
             snapViejo.style.transform = 'translateX(' + tx + ')';
@@ -7519,7 +7520,7 @@ Generado por Sistema Lushibosca
                 wrapper.remove();
                 _calendarioAnimTimeout = null;
                 _calendarioWrapperActual = null;
-            }, 340);
+            }, durCal + 20);
         }
 
         function navegarCalendario(delta) {

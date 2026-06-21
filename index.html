@@ -29,6 +29,10 @@
 </head>
 
 <body>
+    <div class="page-bg" id="page-bg" aria-hidden="true">
+        <div class="page-bg__layer" data-layer="a"></div>
+        <div class="page-bg__layer" data-layer="b"></div>
+    </div>
     <svg class="svg-sprite">
         <symbol id="icon-moon" viewBox="0 0 24 24">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" class="icon-line" stroke-width="2"
@@ -165,6 +169,12 @@
             <polyline points="1,20 7,10 11,15" />
             <polyline points="9,20 14,9 19,20" />
             <line x1="1" y1="20" x2="23" y2="20" />
+        </symbol>
+        <symbol id="icon-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21,15 16,10 5,21" />
         </symbol>
         <symbol id="icon-stats" viewBox="0 0 24 24">
             <line x1="18" y1="20" x2="18" y2="10" class="icon-line" stroke="currentColor"></line>
@@ -630,6 +640,12 @@
                                     <use href="#icon-landscape" />
                                 </svg>
                                 <span id="hint-fondo-label">Golden Gate</span>
+                            </button>
+                            <button id="btn-toggle-fondo-pagina">
+                                <svg class="icon">
+                                    <use href="#icon-image" />
+                                </svg>
+                                <span id="hint-fondo-pagina-label">Sin fondo</span>
                             </button>
                             <button id="btn-toggle-hover-popup">
                                 <svg class="icon">
@@ -1322,6 +1338,9 @@
     2) Se agrega un popup a cada stat-item con la descripcion, y flag opcional en "saldo" y "tiempo fuera" por mes y año
     3) Se incrementa la cantidad maxima de perfiles de 7 a 9 y se utiliza la variable definida pero no usada
     4) fix boton crear perfil, luego de usar la variable
+
+    260621:
+    1) Se agrega fondos a la pagina y estructura de carpeta
 
     -->
 

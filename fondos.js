@@ -85,3 +85,25 @@ window.FONDOS_SVG = [
         </g></svg>`
     },
 ];
+
+// ─── FONDOS DE PÁGINA (imágenes) ───────────────────────────────────────────────
+// Apartado distinto al de arriba: aquello son fondos SVG para la tarjeta de
+// estadísticas. Estos son imágenes (png/jpg) que se usan como fondo general
+// de la página (detrás del contenedor principal), con su propio toggle.
+//
+// Estructura de cada objeto:
+//   id      → identificador único, se guarda en localStorage
+//   label   → texto que aparece en el botón toggle
+//   archivo → nombre del archivo dentro de la carpeta /fondos
+//
+// Para agregar un fondo nuevo: copiar la imagen a la carpeta /fondos,
+// agregar un objeto acá con su id, label y archivo. La app lo detecta sola.
+// ─────────────────────────────────────────────────────────────────────────────
+
+window.FONDOS_PAGINA = [
+    {
+        id: 'lago-bosque',
+        label: 'Lago y Bosque',
+        archivo: 'lago-bosque.jpg'
+    },
+];

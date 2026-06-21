@@ -3,6 +3,7 @@
 :root {
     --bg-body: #f5f6fa;
     --bg-card: #ffffff;
+    --bg-card-transparent: rgba(255, 255, 255, 0.82);
     --bg-header: #ffffffee;
     --bg-toast: #1f2937;
     --text-main: #1f1f1f;
@@ -38,6 +39,7 @@ html.dark-mode body,
 body.dark-mode {
     --bg-body: #131314;
     --bg-card: #1e1f20;
+    --bg-card-transparent: rgba(30, 31, 32, 0.82);
     --bg-header: #131314f6;
     --bg-toast: #0d1117;
     --text-main: #e3e3e3;
@@ -150,6 +152,14 @@ body.dark-mode .page-bg__layer {
     margin-bottom: 1rem;
     box-shadow: var(--shadow);
     color: var(--text-main);
+    transition: background var(--transition-ui);
+}
+
+body.fondo-pagina-activo .card,
+body.fondo-pagina-activo .modal-content {
+    background: var(--bg-card-transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 
 .card h2,
@@ -781,6 +791,14 @@ button:disabled {
     flex-shrink: 0;
     background: var(--bg-card);
     z-index: 2;
+    transition: background var(--transition-ui);
+}
+
+body.fondo-pagina-activo .modal-scrollable .modal-panel-header,
+body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
+    background: var(--bg-card-transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 
 .modal-scrollable .modal-panel-header {

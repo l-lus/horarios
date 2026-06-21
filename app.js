@@ -3002,11 +3002,14 @@
             if (_fondoPagina === 'ninguno') {
                 layerA.style.opacity = '0';
                 layerB.style.opacity = '0';
+                document.body.classList.remove('fondo-pagina-activo');
                 return;
             }
 
             const fondo = (window.FONDOS_PAGINA || []).find(f => f.id === _fondoPagina);
             if (!fondo) return;
+
+            document.body.classList.add('fondo-pagina-activo');
 
             const incoming = _bgPaginaActiveLayer === 'a' ? layerB : layerA;
             const outgoing = _bgPaginaActiveLayer === 'a' ? layerA : layerB;

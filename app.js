@@ -5063,6 +5063,7 @@ Generado por Sistema Lushibosca
             if (modoLoteActivo) {
                 _animarFadeSwap(modoNormal, () => {
                     modoNormal.style.display = 'none';
+                    modoLote.classList.add('fade-out');
                     modoLote.style.display = 'block';
                     modoLote.offsetHeight;
                     modoLote.classList.remove('fade-out');
@@ -5086,6 +5087,7 @@ Generado por Sistema Lushibosca
             } else {
                 _animarFadeSwap(modoLote, () => {
                     modoLote.style.display = 'none';
+                    modoNormal.classList.add('fade-out');
                     modoNormal.style.display = 'block';
                     modoNormal.offsetHeight;
                     modoNormal.classList.remove('fade-out');

@@ -106,4 +106,9 @@ window.FONDOS_PAGINA = [
         label: 'Lago y Bosque',
         archivo: 'lago-bosque.jpg'
     },
+    {
+        id: 'cielo',
+        label: 'Cielo',
+        archivo: 'cielo.png'
+    },
 ];

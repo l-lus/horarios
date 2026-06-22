@@ -7531,28 +7531,28 @@ Generado por Sistema Lushibosca
                 if (modoEstadisticas === 'anual') {
                     const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
                     const modoTexto = desdeEnero
-                        ? 'ACTUALMENTE EL SALDO SE CALCULA A PARTIR DEL PRIMER DÍA DEL AÑO.'
-                        : 'ACTUALMENTE EL SALDO SE CALCULA A PARTIR DEL PRIMER REGISTRO DEL AÑO.';
-                    info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                        ?  'Actualmente el saldo se calcula a partir del PRIMER DÍA del año.'
+                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.';
+                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
                 } else if (modoEstadisticas === 'mensual') {
                     const desdePrimero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
                     const modoTexto = desdePrimero
-                        ? 'ACTUALMENTE EL SALDO SE CALCULA A PARTIR DEL PRIMER DÍA DEL MES.'
-                        : 'ACTUALMENTE EL SALDO SE CALCULA A PARTIR DEL PRIMER REGISTRO DEL MES.';
-                    info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del mes.'
+                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.';
+                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
                 }
             }
-            if (statId === 'stat-tiempo-total' && info) {
+            if (statId === 'stat-tiempo-fuera-total' && info) {
                 const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
                 const modoTexto = ignorarTF
-                    ? 'ACTUALMENTE SE IGNORA EL TIEMPO FUERA (NO SE RESTA DEL CÁLCULO).'
-                    : 'ACTUALMENTE SE RESTA EL TIEMPO FUERA DEL CÁLCULO FINAL.';
-                info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                    ? 'Actualmente se NO RESTA el tiempo fuera del cálculo final.'
+                    : 'Actualmente se RESTA el tiempo fuera del cálculo final.';
+                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
             }
             if (statId === 'stat-promedio-diario' && info) {
                 const horasDiarias = D.horasDiarias();
-                const modoTexto = `ACTUALMENTE LAS HORAS DIARIAS OBJETIVO SON ${horasDiarias}h.`;
-                info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                const modoTexto = `Actualmente las horas diarias objetivo son ${horasDiarias}h.`;
+                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
             }
             if (!info) {
                 const valueEl = $(statId);

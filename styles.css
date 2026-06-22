@@ -1121,6 +1121,12 @@ button:disabled {
     line-height: 1.4;
 }
 
+.stat-popup-sep {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 10px 0;
+}
+
 /* ─── COLLAPSIBLE SECTIONS ───────────────────────────────────────────────────── */
 
 .form-collapsible.expanded {
@@ -1619,7 +1625,7 @@ button:disabled {
 }
 
 input.campo-flash {
-    animation: campo-flash 600ms ease-in-out 2;
+    animation: campo-flash 500ms ease-in-out 2;
 }
 
 /* ─── HOVER (pointer: fine) ──────────────────────────────────────────────────── */

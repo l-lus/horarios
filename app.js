@@ -7375,6 +7375,19 @@ Generado por Sistema Lushibosca
             });
         }
 
+        function _flashCampo(...ids) {
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.remove('campo-flash');
+                void el.offsetWidth;
+                el.classList.add('campo-flash');
+                el.addEventListener('animationend', () => el.classList.remove('campo-flash'), { once: true });
+            });
+        }
+
+        const _FLASH_SCROLL_DELAY = 380;
+
         function _irAFicharConFecha(fecha, esEspecial) {
             const tarjeta = document.getElementById('card-registrar');
             const formulario = document.getElementById('form-registro');
@@ -7395,12 +7408,14 @@ Generado por Sistema Lushibosca
                             const hasta = document.getElementById('lote-fecha-hasta');
                             if (desde) desde.value = fecha;
                             if (hasta) hasta.value = fecha;
+                            setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta'), _FLASH_SCROLL_DELAY);
                         }, DUR_ANIM() + 50);
                     } else {
                         const desde = document.getElementById('lote-fecha-desde');
                         const hasta = document.getElementById('lote-fecha-hasta');
                         if (desde) desde.value = fecha;
                         if (hasta) hasta.value = fecha;
+                        setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta'), _FLASH_SCROLL_DELAY);
                     }
                 } else {
                     if (modoLoteActivo) {
@@ -7408,10 +7423,12 @@ Generado por Sistema Lushibosca
                         setTimeout(() => {
                             const input = document.getElementById('fecha');
                             if (input) input.value = fecha;
+                            setTimeout(() => _flashCampo('fecha'), _FLASH_SCROLL_DELAY);
                         }, DUR_ANIM() + 50);
                     } else {
                         const input = document.getElementById('fecha');
                         if (input) input.value = fecha;
+                        setTimeout(() => _flashCampo('fecha'), _FLASH_SCROLL_DELAY);
                     }
                 }
             }, retraso);

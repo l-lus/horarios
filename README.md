@@ -4,6 +4,7 @@
 * **A:** en pc, mientras un popup sin registro esta abierto y querer ir al boton de agregar registro especial o regular, si pasa por un dia con registro, cierra el popup y abre el popup con registro, esto cuando esta habilitada la funcion popup hover calendario 
 
 ### 260622
+* **Nuevo:** Se agrega flash en los campos de fecha de la tarjeta fichar, cuando se selecciona una opcion de registro regular o especial
 * **Mejora:** Se agrega validacion de fecha futura en la importacion (local y nube) de registros
 * **Mejora:** Se unifica el tipo de cierre en popup con y sin registro al tocarlo nuevamente
 

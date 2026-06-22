@@ -5,6 +5,7 @@
 
 ### 260622
 * **Mejora:** Se agrega validacion de fecha futura en la importacion (local y nube) de registros
+* **Mejora:** Se unifica el tipo de cierre en popup con y sin registro al tocarlo nuevamente
 
 ### 260621
 * **Fix:** bug al abrir popup calendario sin registro con un popup con registro todavia abierto, cerraba el popup sin registro

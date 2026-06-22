@@ -7457,7 +7457,11 @@ Generado por Sistema Lushibosca
                 clearTimeout(_popupCalendarioHoverTimer);
                 DataManagement.editarRegistro(registroId);
             } else {
-                if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
+                if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) {
+                    _popupCalendarioEl.remove();
+                    _popupCalendarioEl = null;
+                    return;
+                }
                 _popupCalendario(event, registroId);
             }
         }

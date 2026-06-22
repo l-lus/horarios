@@ -7453,7 +7453,7 @@ Generado por Sistema Lushibosca
             const esHover = window.matchMedia('(hover: hover)').matches;
             if (stored === null ? !esHover : stored !== 'true') return;
             if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
-
+            if (_popupCalendarioEl && !_popupCalendarioEsHover) return;
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioHoverTimer = setTimeout(() => {
                 _popupCalendarioEsHover = true;

@@ -1,8 +1,9 @@
-## Historial de Cambios (Changelog)
+## (Changelog)
 
 ### 260621
 * **Fix:** Corrección en el *toggle* al modo lote (evita la transición abrupta en el primer uso).
 * **Nuevo:** Se agrega un *popup* a los días sin registro en el calendario, con opciones para agregar registros regulares o especiales.
+* **Mantenimiento:** Se mueve el chanelog del index al readme.md
 
 ### 260618
 * **Mejora:** Cambios menores en los colores de los botones de edición y configuración.

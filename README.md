@@ -3,6 +3,9 @@
 ### BUGS ACTUALES
 * **A:** en pc, mientras un popup sin registro esta abierto y querer ir al boton de agregar registro especial o regular, si pasa por un dia con registro, cierra el popup y abre el popup con registro, esto cuando esta habilitada la funcion popup hover calendario 
 
+### 260622
+* **Mejora:** Se agrega validacion de fecha futura en la importacion (local y nube) de registros
+
 ### 260621
 * **Fix:** bug al abrir popup calendario sin registro con un popup con registro todavia abierto, cerraba el popup sin registro
 * **Fix:** Corrección en el *toggle* al modo lote (evita la transición abrupta en el primer uso).

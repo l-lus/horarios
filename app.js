@@ -7305,32 +7305,30 @@ Generado por Sistema Lushibosca
             document.body.appendChild(popup);
             _popupCalendarioEl = popup;
 
-            popup.querySelector('#_cal-popup-btn-normal').addEventListener('click', () => {
+            const cerrarPopup = () => {
                 popup.remove();
-                _popupCalendarioEl = null;
-                _irAFicharConFecha(fecha, false);
-            });
-            popup.querySelector('#_cal-popup-btn-especial').addEventListener('click', () => {
-                popup.remove();
-                _popupCalendarioEl = null;
-                _irAFicharConFecha(fecha, true);
-            });
-
-            const cerrarPorScroll = () => {
-                if (!_popupCalendarioEl) return;
-                _popupCalendarioEl.remove();
                 _popupCalendarioEl = null;
                 document.removeEventListener('click', cerrar, true);
-                document.removeEventListener('scroll', cerrarPorScroll, true);
+                document.removeEventListener('scroll', cerrarPopup, true);
             };
             const cerrar = (e) => {
                 const diaClickeado = e.target.closest('.calendario-dia');
                 if (diaClickeado && diaClickeado.dataset.fecha === fecha) return;
-                if (!popup.contains(e.target)) cerrarPorScroll();
+                if (!popup.contains(e.target)) cerrarPopup();
             };
+
+            popup.querySelector('#_cal-popup-btn-normal').addEventListener('click', () => {
+                cerrarPopup();
+                _irAFicharConFecha(fecha, false);
+            });
+            popup.querySelector('#_cal-popup-btn-especial').addEventListener('click', () => {
+                cerrarPopup();
+                _irAFicharConFecha(fecha, true);
+            });
+
             setTimeout(() => {
                 document.addEventListener('click', cerrar, true);
-                document.addEventListener('scroll', cerrarPorScroll, true);
+                document.addEventListener('scroll', cerrarPopup, true);
             }, 10);
 
             const el = event.currentTarget || event.target;

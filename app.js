@@ -7283,6 +7283,9 @@ Generado por Sistema Lushibosca
         function _popupCalendarioDiaSinRegistro(event, fecha) {
             event.stopPropagation();
 
+            clearTimeout(_popupCalendarioHoverTimer);
+            _popupCalendarioEsHover = false;
+
             if (_popupCalendarioEl) {
                 const mismaFecha = _popupCalendarioEl.dataset.fecha === fecha;
                 _popupCalendarioEl.remove();

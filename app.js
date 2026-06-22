@@ -7626,7 +7626,11 @@ Generado por Sistema Lushibosca
             const item = event.currentTarget;
             const valueEl = item.querySelector('.stat-value');
             if (!valueEl || !valueEl.id) return;
-            if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) return;
+            if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) {
+                _popupStatEl.remove();
+                _popupStatEl = null;
+                return;
+            }
             item.dataset.statId = valueEl.id;
             _popupStat(event, valueEl.id);
         }

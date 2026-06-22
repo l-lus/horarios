@@ -7035,6 +7035,10 @@ Generado por Sistema Lushibosca
                     cell.addEventListener('click', (e) => UILogic._onclickCalendarioDia(e, reg.id));
                     cell.addEventListener('mouseenter', (e) => UILogic._popupCalendarioHover(e, reg.id));
                     cell.addEventListener('mouseleave', (e) => UILogic._cerrarPopupCalendarioHover(e));
+                } else if (clase === 'dia-sin-registro') {
+                    cell.classList.add('cursor-pointer');
+                    cell.dataset.fecha = fecha;
+                    cell.addEventListener('click', (e) => UILogic._popupCalendarioDiaSinRegistro(e, fecha));
                 }
 
                 frag.appendChild(cell);
@@ -7265,6 +7269,143 @@ Generado por Sistema Lushibosca
 
         let _popupCalendarioEsHover = false;
         let _popupCalendarioHoverTimer = null;
+
+        function _popupCalendarioDiaSinRegistro(event, fecha) {
+            event.stopPropagation();
+
+            if (_popupCalendarioEl) {
+                const mismaFecha = _popupCalendarioEl.dataset.fecha === fecha;
+                _popupCalendarioEl.remove();
+                _popupCalendarioEl = null;
+                if (mismaFecha) return;
+            }
+
+            const fechaObj = new Date(fecha + 'T12:00:00');
+            const opcFecha = { weekday: 'long', day: 'numeric', month: 'long' };
+            const fechaLabel = fechaObj.toLocaleDateString('es-AR', opcFecha);
+
+            const popup = document.createElement('div');
+            popup.className = 'cal-popup';
+            popup.id = '_cal-popup';
+            popup.dataset.fecha = fecha;
+            popup.innerHTML = `
+        <div class="cal-popup-fecha">${fechaLabel}</div>
+        <div class="cal-popup-sin-reg">Sin registros</div>
+        <button class="cal-popup-btn-accion cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
+            <svg class="icon"><use href="#icon-clock"/></svg>
+            Jornada regular
+        </button>
+        <button class="cal-popup-btn-accion cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
+            <svg class="icon"><use href="#icon-save"/></svg>
+            Jornada especial
+        </button>
+    `;
+
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupCalendarioEl = popup;
+
+            popup.querySelector('#_cal-popup-btn-normal').addEventListener('click', () => {
+                popup.remove();
+                _popupCalendarioEl = null;
+                _irAFicharConFecha(fecha, false);
+            });
+            popup.querySelector('#_cal-popup-btn-especial').addEventListener('click', () => {
+                popup.remove();
+                _popupCalendarioEl = null;
+                _irAFicharConFecha(fecha, true);
+            });
+
+            const cerrarPorScroll = () => {
+                if (!_popupCalendarioEl) return;
+                _popupCalendarioEl.remove();
+                _popupCalendarioEl = null;
+                document.removeEventListener('click', cerrar, true);
+                document.removeEventListener('scroll', cerrarPorScroll, true);
+            };
+            const cerrar = (e) => {
+                const diaClickeado = e.target.closest('.calendario-dia');
+                if (diaClickeado && diaClickeado.dataset.fecha === fecha) return;
+                if (!popup.contains(e.target)) cerrarPorScroll();
+            };
+            setTimeout(() => {
+                document.addEventListener('click', cerrar, true);
+                document.addEventListener('scroll', cerrarPorScroll, true);
+            }, 10);
+
+            const el = event.currentTarget || event.target;
+            const rect = el.getBoundingClientRect();
+            const margin = 8;
+
+            requestAnimationFrame(() => {
+                const pw = popup.offsetWidth;
+                const ph = popup.offsetHeight;
+                let top = rect.bottom + 12;
+                let left = rect.left + (rect.width / 2) - (pw / 2);
+                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
+                if (top < margin) top = margin;
+                popup.style.top = top + 'px';
+                popup.style.left = left + 'px';
+                popup.style.visibility = '';
+                setTimeout(() => popup.classList.add('listo'), 350);
+            });
+        }
+
+        function _irAFicharConFecha(fecha, esEspecial) {
+            const tarjeta = document.getElementById('card-registrar');
+            const formulario = document.getElementById('form-registro');
+            const estaExpandido = formulario && formulario.classList.contains('expanded');
+
+            if (!estaExpandido) toggleFormulario();
+
+            _scrollACardFichar(tarjeta);
+
+            const retraso = estaExpandido ? 0 : DUR_ANIM() + 80;
+
+            setTimeout(() => {
+                if (esEspecial) {
+                    if (!modoLoteActivo) {
+                        toggleModoLote();
+                        setTimeout(() => {
+                            const desde = document.getElementById('lote-fecha-desde');
+                            const hasta = document.getElementById('lote-fecha-hasta');
+                            if (desde) desde.value = fecha;
+                            if (hasta) hasta.value = fecha;
+                        }, DUR_ANIM() + 50);
+                    } else {
+                        const desde = document.getElementById('lote-fecha-desde');
+                        const hasta = document.getElementById('lote-fecha-hasta');
+                        if (desde) desde.value = fecha;
+                        if (hasta) hasta.value = fecha;
+                    }
+                } else {
+                    if (modoLoteActivo) {
+                        toggleModoLote();
+                        setTimeout(() => {
+                            const input = document.getElementById('fecha');
+                            if (input) input.value = fecha;
+                        }, DUR_ANIM() + 50);
+                    } else {
+                        const input = document.getElementById('fecha');
+                        if (input) input.value = fecha;
+                    }
+                }
+            }, retraso);
+        }
+
+        function _scrollACardFichar(el) {
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const headerEl = document.querySelector('.header');
+            const headerH = headerEl ? headerEl.offsetHeight : 0;
+            const margen = headerH + 8;
+            // Si la tarjeta ya es completamente visible, no scrollear
+            if (rect.top >= margen && rect.bottom <= window.innerHeight) return;
+            // Scroll manual para que el borde superior de la tarjeta quede justo bajo el header
+            window.scrollTo({ top: window.scrollY + rect.top - margen, behavior: 'smooth' });
+        }
 
         function _popupCalendarioHover(event, registroId) {
             if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
@@ -7775,6 +7916,7 @@ Generado por Sistema Lushibosca
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover, toggleHoverPopupCalendario,
+            _popupCalendarioDiaSinRegistro,
             _popupStat, _onclickStatItem, _bindStatItemPopups,
 
 

@@ -26,8 +26,12 @@
     --shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
     --radius: 20px;
     --hover: brightness(0.9);
-    --transition-anim: opacity 0.3s ease, transform 0.3s ease;
-    --transition-collapse: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    --dur-anim: 300ms;
+    --dur-collapse: 300ms;
+    --dur-calendario: 320ms;
+    --ease-anim: ease;
+    --transition-anim: opacity var(--dur-anim) var(--ease-anim), transform var(--dur-anim) var(--ease-anim);
+    --transition-collapse: max-height var(--dur-collapse) ease-out, opacity var(--dur-collapse) ease-out;
     --transition-ui: 0.3s ease;
     --modal-overlay: rgba(0, 0, 0, 0.5);
     --touch-target: 48px;
@@ -1043,6 +1047,38 @@ button:disabled {
 
 .cal-popup-info--gold {
     color: var(--c-gold);
+}
+
+.cal-popup-sin-reg {
+    font-size: var(--text-xs);
+    color: var(--text-disabled);
+    font-style: italic;
+}
+
+.cal-popup-btn-accion {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.1rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: var(--radius);
+    width: 100%;
+    text-align: left;
+    transition: opacity var(--dur-anim) var(--ease-anim);
+}
+
+.cal-popup-btn-accion--normal {
+    color: var(--text-main);
+}
+
+.cal-popup-btn-accion--especial {
+    color: var(--text-main);
+}
+
+.cal-popup-btn-accion:hover {
+    filter: var(--hover);
 }
 
 /* ─── STAT POPUP ─────────────────────────────────────────────────────────────── */

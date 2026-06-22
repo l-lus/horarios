@@ -1242,6 +1242,14 @@
             let e = S.sanitizeString($('entrada').value.trim(), 5);
             let s = S.sanitizeString($('salida').value.trim(), 5);
 
+            const _hoy = TimeUtils.obtenerFechaHoy();
+            if (f > _hoy && !TiposRegistro.esRegistroEspecial(e, s)) {
+                UILogic.resetearBoton(btn);
+                UILogic.mostrarError('fecha', 'error-fecha');
+                UILogic.mostrarToast('Fecha futura no permitida en registro regular', 'warning');
+                return;
+            }
+
             if (!e) {
                 const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(TimeUtils.obtenerFechaHoy(), registros);
                 const regHoy = registros.find(r => r.fecha === f);
@@ -1580,8 +1588,18 @@
 
         function normalizarRegistrosImportados(rawList, calcularHorasFn) {
             const validarHora = (h) => TimeUtils.validarHora(h) ? S.sanitizeString(h, 5) : null;
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const descartadosFuturos = rawList.filter(r =>
+                S.validarRegistroSeguro(r) && r.fecha > hoy && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
+            ).length;
+            if (descartadosFuturos > 0)
+                UILogic.mostrarToast(`${descartadosFuturos} registro${descartadosFuturos > 1 ? 's' : ''} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${descartadosFuturos > 1 ? 's' : ''}`, 'warning');
             const normalizados = rawList
                 .filter(r => S.validarRegistroSeguro(r))
+                .filter(r => {
+                    if (r.fecha <= hoy) return true;
+                    return TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
+                })
                 .map(r => ({
                     id: (r.id && S.REGEX_PATTERNS.ID.test(r.id)) ? r.id : S.generarIDSeguro(),
                     fecha: S.sanitizeString(r.fecha, 10),
@@ -3432,6 +3450,22 @@
             }
         }
 
+        // ── Utilidades de animación ──────────────────────────────────────────
+        function _getCSSdur(varName) {
+            const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+            if (!raw) return 300;
+            return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
+        }
+        const DUR_ANIM = () => _getCSSdur('--dur-anim');
+        const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
+
+        // Patrón genérico: fade-out → fn() → fade-in, sincronizado con --dur-anim
+        function _animarFadeSwap(el, fn) {
+            if (!el) { fn(); return; }
+            el.classList.add('fade-out');
+            setTimeout(() => { fn(); el.classList.remove('fade-out'); }, DUR_ANIM());
+        }
+
         function _animarCambioCard(renderFn) {
             const els = [
                 $('stats-semana'),
@@ -3452,7 +3486,7 @@
                     void el.offsetWidth;
                     el.classList.remove('ciclo-fade-in');
                 });
-            }, 350);
+            }, DUR_ANIM());
         }
 
         function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false) {
@@ -3538,17 +3572,14 @@
             const card = document.getElementById('stats-card');
             const content = document.getElementById('stats-card-content');
             if (card) card.classList.add('cambiando-vista');
-            if (content) content.classList.add('fade-out');
-
-            setTimeout(() => {
+            _animarFadeSwap(content, () => {
                 const vistaActual = D.vistaActual() === 'semana' ? 'diaria' : 'semana';
                 D.setVistaActual(vistaActual);
                 StorageHelper.setItem(STORAGE_KEYS.VISTA_ACTUAL, vistaActual);
                 _detenerCicloStats();
                 actualizarUI();
-                if (content) content.classList.remove('fade-out');
                 if (card) card.classList.remove('cambiando-vista');
-            }, 300);
+            });
         }
 
         function _setBtnActivo(id, activo) {
@@ -4028,10 +4059,7 @@
         }
 
         function _animarCambioStats(fn) {
-            const formStats = $('form-stats');
-            if (!formStats) return;
-            formStats.classList.add('fade-out');
-            setTimeout(() => { fn(); formStats.classList.remove('fade-out'); }, 300);
+            _animarFadeSwap($('form-stats'), fn);
         }
 
         function cambiarSemanaStats() {
@@ -4684,9 +4712,7 @@ Generado por Sistema Lushibosca
             const grid = document.getElementById('calendario-grid');
             const selector = document.getElementById('calendario-selector-meses');
             const navBotones = document.getElementById('calendario-nav-botones');
-            selector.classList.add('fade-out');
-            setTimeout(() => {
-                selector.classList.remove('fade-out');
+            _animarFadeSwap(selector, () => {
                 selector.style.display = 'none';
                 navBotones.style.display = 'flex';
                 grid.style.display = 'grid';
@@ -4694,7 +4720,7 @@ Generado por Sistema Lushibosca
                 grid.offsetHeight;
                 _renderizarCalendario(idResaltar);
                 grid.classList.remove('fade-out');
-            }, 300);
+            });
         }
 
         function abrirSelectorMesesCalendario() {
@@ -4768,9 +4794,7 @@ Generado por Sistema Lushibosca
             const alturaCalendario = grid.offsetHeight;
             selector.style.height = alturaCalendario + 'px';
 
-            grid.classList.add('fade-out');
-            setTimeout(() => {
-                grid.classList.remove('fade-out');
+            _animarFadeSwap(grid, () => {
                 grid.style.display = 'none';
                 navBotones.style.display = 'none';
                 titulo.innerHTML = '<svg class="icon"><use href="#icon-back" /></svg> Volver';
@@ -4778,7 +4802,7 @@ Generado por Sistema Lushibosca
                 selector.classList.add('fade-out');
                 selector.offsetHeight;
                 selector.classList.remove('fade-out');
-            }, 300);
+            });
         }
 
         function abrirSelectorPerfiles() {
@@ -5055,10 +5079,9 @@ Generado por Sistema Lushibosca
             modoLoteActivo = !modoLoteActivo;
 
             if (modoLoteActivo) {
-                modoNormal.classList.add('fade-out');
-
-                setTimeout(() => {
+                _animarFadeSwap(modoNormal, () => {
                     modoNormal.style.display = 'none';
+                    modoLote.classList.add('fade-out');
                     modoLote.style.display = 'block';
                     modoLote.offsetHeight;
                     modoLote.classList.remove('fade-out');
@@ -5077,20 +5100,19 @@ Generado por Sistema Lushibosca
                     btnTimer.style.opacity = '0.3';
 
                     actualizarBotonLote();
-                }, 300);
+                });
 
             } else {
-                modoLote.classList.add('fade-out');
-
-                setTimeout(() => {
+                _animarFadeSwap(modoLote, () => {
                     modoLote.style.display = 'none';
+                    modoNormal.classList.add('fade-out');
                     modoNormal.style.display = 'block';
                     modoNormal.offsetHeight;
                     modoNormal.classList.remove('fade-out');
                     UILogic.resetearBoton(btn);
                     btnTimer.style.opacity = '1';
                     actualizarEstadoBotonTimerMain();
-                }, 300);
+                });
             }
         }
 
@@ -6155,7 +6177,9 @@ Generado por Sistema Lushibosca
             ['entrada', 'salida'].forEach(id => {
                 const el = $(id);
                 if (el) el.addEventListener('input', formatearInput);
+                if (el) el.addEventListener('input', () => limpiarError(id, null));
             });
+            $('fecha')?.addEventListener('change', () => limpiarError('fecha', null));
 
             const verificarBloqueCreditoDebounced = debounce(verificarBloqueoCredito, 200);
 
@@ -7031,6 +7055,10 @@ Generado por Sistema Lushibosca
                     cell.addEventListener('click', (e) => UILogic._onclickCalendarioDia(e, reg.id));
                     cell.addEventListener('mouseenter', (e) => UILogic._popupCalendarioHover(e, reg.id));
                     cell.addEventListener('mouseleave', (e) => UILogic._cerrarPopupCalendarioHover(e));
+                } else if (clase === 'dia-sin-registro') {
+                    cell.classList.add('cursor-pointer');
+                    cell.dataset.fecha = fecha;
+                    cell.addEventListener('click', (e) => UILogic._popupCalendarioDiaSinRegistro(e, fecha));
                 }
 
                 frag.appendChild(cell);
@@ -7057,10 +7085,8 @@ Generado por Sistema Lushibosca
             const btnFiltro = document.getElementById('btn-filtro');
             const saliente = _vistaHistoricoCalendario ? lista : cal;
             const entrante = _vistaHistoricoCalendario ? cal : lista;
-            if (saliente) saliente.classList.add('fade-out');
-
-            setTimeout(() => {
-                if (saliente) { saliente.classList.remove('fade-out'); saliente.classList.add('hidden'); }
+            _animarFadeSwap(saliente, () => {
+                if (saliente) { saliente.classList.add('hidden'); }
                 if (entrante) {
                     entrante.classList.remove('hidden');
                     entrante.classList.add('fade-out');
@@ -7074,7 +7100,7 @@ Generado por Sistema Lushibosca
                 } else {
                     if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
                 }
-            }, 300);
+            });
 
             const selector = document.getElementById('calendario-selector-meses');
             const grid = document.getElementById('calendario-grid');
@@ -7263,6 +7289,145 @@ Generado por Sistema Lushibosca
 
         let _popupCalendarioEsHover = false;
         let _popupCalendarioHoverTimer = null;
+
+        function _popupCalendarioDiaSinRegistro(event, fecha) {
+            event.stopPropagation();
+
+            clearTimeout(_popupCalendarioHoverTimer);
+            _popupCalendarioEsHover = false;
+
+            if (_popupCalendarioEl) {
+                const mismaFecha = _popupCalendarioEl.dataset.fecha === fecha;
+                _popupCalendarioEl.remove();
+                _popupCalendarioEl = null;
+                if (mismaFecha) return;
+            }
+
+            const esFechaFutura = fecha > TimeUtils.obtenerFechaHoy();
+            const fechaObj = new Date(fecha + 'T12:00:00');
+            const opcFecha = { weekday: 'long', day: 'numeric', month: 'long' };
+            const fechaLabel = fechaObj.toLocaleDateString('es-AR', opcFecha);
+
+            const popup = document.createElement('div');
+            popup.className = 'cal-popup';
+            popup.id = '_cal-popup';
+            popup.dataset.fecha = fecha;
+            popup.innerHTML = `
+        <div class="cal-popup-fecha">${fechaLabel}</div>
+        <div class="cal-popup-sin-reg">Sin registros</div>
+        ${esFechaFutura ? '' : `<button class="cal-popup-btn-accion cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
+            <svg class="icon"><use href="#icon-clock"/></svg>
+            Jornada regular
+        </button>`}
+        <button class="cal-popup-btn-accion cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
+            <svg class="icon"><use href="#icon-calendar-simple"/></svg>
+            Jornada especial
+        </button>
+    `;
+
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupCalendarioEl = popup;
+
+            const cerrarPopup = () => {
+                popup.remove();
+                _popupCalendarioEl = null;
+                document.removeEventListener('click', cerrar, true);
+                document.removeEventListener('scroll', cerrarPopup, true);
+            };
+            const cerrar = (e) => {
+                const diaClickeado = e.target.closest('.calendario-dia');
+                if (diaClickeado && diaClickeado.dataset.fecha === fecha) return;
+                if (!popup.contains(e.target)) cerrarPopup();
+            };
+
+            popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => {
+                cerrarPopup();
+                _irAFicharConFecha(fecha, false);
+            });
+            popup.querySelector('#_cal-popup-btn-especial').addEventListener('click', () => {
+                cerrarPopup();
+                _irAFicharConFecha(fecha, true);
+            });
+
+            setTimeout(() => {
+                document.addEventListener('click', cerrar, true);
+                document.addEventListener('scroll', cerrarPopup, true);
+            }, 10);
+
+            const el = event.currentTarget || event.target;
+            const rect = el.getBoundingClientRect();
+            const margin = 8;
+
+            requestAnimationFrame(() => {
+                const pw = popup.offsetWidth;
+                const ph = popup.offsetHeight;
+                let top = rect.bottom + 12;
+                let left = rect.left + (rect.width / 2) - (pw / 2);
+                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
+                if (top < margin) top = margin;
+                popup.style.top = top + 'px';
+                popup.style.left = left + 'px';
+                popup.style.visibility = '';
+                setTimeout(() => popup.classList.add('listo'), 350);
+            });
+        }
+
+        function _irAFicharConFecha(fecha, esEspecial) {
+            const tarjeta = document.getElementById('card-registrar');
+            const formulario = document.getElementById('form-registro');
+            const estaExpandido = formulario && formulario.classList.contains('expanded');
+
+            if (!estaExpandido) toggleFormulario();
+
+            _scrollACardFichar(tarjeta);
+
+            const retraso = estaExpandido ? 0 : DUR_ANIM() + 80;
+
+            setTimeout(() => {
+                if (esEspecial) {
+                    if (!modoLoteActivo) {
+                        toggleModoLote();
+                        setTimeout(() => {
+                            const desde = document.getElementById('lote-fecha-desde');
+                            const hasta = document.getElementById('lote-fecha-hasta');
+                            if (desde) desde.value = fecha;
+                            if (hasta) hasta.value = fecha;
+                        }, DUR_ANIM() + 50);
+                    } else {
+                        const desde = document.getElementById('lote-fecha-desde');
+                        const hasta = document.getElementById('lote-fecha-hasta');
+                        if (desde) desde.value = fecha;
+                        if (hasta) hasta.value = fecha;
+                    }
+                } else {
+                    if (modoLoteActivo) {
+                        toggleModoLote();
+                        setTimeout(() => {
+                            const input = document.getElementById('fecha');
+                            if (input) input.value = fecha;
+                        }, DUR_ANIM() + 50);
+                    } else {
+                        const input = document.getElementById('fecha');
+                        if (input) input.value = fecha;
+                    }
+                }
+            }, retraso);
+        }
+
+        function _scrollACardFichar(el) {
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const headerEl = document.querySelector('.header');
+            const headerH = headerEl ? headerEl.offsetHeight : 0;
+            const margen = headerH + 8;
+            // Si la tarjeta ya es completamente visible, no scrollear
+            if (rect.top >= margen && rect.bottom <= window.innerHeight) return;
+            // Scroll manual para que el borde superior de la tarjeta quede justo bajo el header
+            window.scrollTo({ top: window.scrollY + rect.top - margen, behavior: 'smooth' });
+        }
 
         function _popupCalendarioHover(event, registroId) {
             if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
@@ -7507,7 +7672,8 @@ Generado por Sistema Lushibosca
 
             wrapper.offsetHeight;
             const tx = (delta > 0 ? -anchoGrid : anchoGrid) + 'px';
-            const easing = 'transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)';
+            const durCal = DUR_CALENDARIO();
+            const easing = 'transform ' + durCal + 'ms cubic-bezier(0.4, 0, 0.2, 1)';
             snapViejo.style.transition = easing;
             snapNuevo.style.transition = easing;
             snapViejo.style.transform = 'translateX(' + tx + ')';
@@ -7519,7 +7685,7 @@ Generado por Sistema Lushibosca
                 wrapper.remove();
                 _calendarioAnimTimeout = null;
                 _calendarioWrapperActual = null;
-            }, 340);
+            }, durCal + 20);
         }
 
         function navegarCalendario(delta) {
@@ -7772,6 +7938,7 @@ Generado por Sistema Lushibosca
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover, toggleHoverPopupCalendario,
+            _popupCalendarioDiaSinRegistro,
             _popupStat, _onclickStatItem, _bindStatItemPopups,
 
 
@@ -8128,8 +8295,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
-
-// lushibosca version 260616.0058
 
 // MODULOS:
 

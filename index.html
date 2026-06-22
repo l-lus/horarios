@@ -316,91 +316,90 @@
                     </svg>
                 </h2>
                 <div class="form-collapsible collapsible" id="form-registro">
-
                     <div id="modo-contenedor">
+                        <div id="modo-normal">
+                            <div class="form-group form-group-pt">
+                                <label>Fecha</label>
+                                <div class="input-with-btn">
+                                    <input type="date" id="fecha" />
+                                    <button class="time-btn flex-shrink-0" id="btn-ir-modo-lote"
+                                        title="Ir al modo lote/especial">
+                                        <svg class="icon">
+                                            <use href="#icon-arrow-right" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="contenedor-horas">
+                                <div class="form-group">
+                                    <label>Entrada</label>
+                                    <div class="input-with-btn">
+                                        <input type="text" id="entrada" inputmode="numeric" maxlength="5"
+                                            placeholder="hh:mm" />
+                                        <button class="time-btn" id="btn-pegar-entrada"
+                                            title="Pegar hora actual o limpiar">
+                                            <svg class="icon">
+                                                <use href="#icon-clock" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Salida</label>
+                                    <div class="input-with-btn">
+                                        <input type="text" id="salida" inputmode="numeric" maxlength="5"
+                                            placeholder="hh:mm" />
+                                        <button class="time-btn" id="btn-pegar-salida"
+                                            title="Pegar hora actual o limpiar">
+                                            <svg class="icon">
+                                                <use href="#icon-clock" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                    <div id="modo-normal">
-                        <div class="form-group form-group-pt">
-                            <label>Fecha</label>
-                            <div class="input-with-btn">
-                                <input type="date" id="fecha" />
-                                <button class="time-btn flex-shrink-0" id="btn-ir-modo-lote"
-                                    title="Ir al modo lote/especial">
-                                    <svg class="icon">
-                                        <use href="#icon-arrow-right" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <span class="input-error" id="error-fecha">Fecha inválida</span>
-                        </div>
-                        <div class="contenedor-horas">
-                            <div class="form-group">
-                                <label>Entrada</label>
+                        <div id="modo-lote" class="fade-out">
+                            <div class="form-group form-group-pt">
+                                <label>Tipo de registro</label>
                                 <div class="input-with-btn">
-                                    <input type="text" id="entrada" inputmode="numeric" maxlength="5" />
-                                    <button class="time-btn" id="btn-pegar-entrada" title="Pegar hora actual o limpiar">
+                                    <select id="lote-tipo">
+                                        <option value="normal">🕒 Jornadas (borrar)</option>
+                                    </select>
+                                    <button class="time-btn flex-shrink-0" id="btn-ir-modo-normal"
+                                        title="Ir al modo normal">
                                         <svg class="icon">
-                                            <use href="#icon-clock" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <span class="input-error" id="error-entrada">Formato inválido (HH:MM)</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Salida</label>
-                                <div class="input-with-btn">
-                                    <input type="text" id="salida" inputmode="numeric" maxlength="5" />
-                                    <button class="time-btn" id="btn-pegar-salida" title="Pegar hora actual o limpiar">
-                                        <svg class="icon">
-                                            <use href="#icon-clock" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <span class="input-error" id="error-salida">Formato inválido (HH:MM)</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="modo-lote">
-                        <div class="form-group form-group-pt">
-                            <label>Tipo de registro</label>
-                            <div class="input-with-btn">
-                                <select id="lote-tipo">
-                                    <option value="normal">🕒 Jornadas (borrar)</option>
-                                </select>
-                                <button class="time-btn flex-shrink-0" id="btn-ir-modo-normal"
-                                    title="Ir al modo normal">
-                                    <svg class="icon">
-                                        <use href="#icon-arrow-left" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="contenedor-fechas">
-                            <div class="form-group">
-                                <label>Desde</label>
-                                <div class="input-with-btn">
-                                    <input type="date" id="lote-fecha-desde" />
-                                    <button class="time-btn" id="btn-lote-desde" title="Pegar hoy / Limpiar">
-                                        <svg class="icon">
-                                            <use href="#icon-calendar-simple" />
+                                            <use href="#icon-arrow-left" />
                                         </svg>
                                     </button>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label>Hasta</label>
-                                <div class="input-with-btn">
-                                    <input type="date" id="lote-fecha-hasta" />
-                                    <button class="time-btn" id="btn-lote-hasta" title="Pegar hoy / Limpiar">
-                                        <svg class="icon">
-                                            <use href="#icon-calendar-simple" />
-                                        </svg>
-                                    </button>
+                            <div class="contenedor-fechas">
+                                <div class="form-group">
+                                    <label>Desde</label>
+                                    <div class="input-with-btn">
+                                        <input type="date" id="lote-fecha-desde" />
+                                        <button class="time-btn" id="btn-lote-desde" title="Pegar hoy / Limpiar">
+                                            <svg class="icon">
+                                                <use href="#icon-calendar-simple" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Hasta</label>
+                                    <div class="input-with-btn">
+                                        <input type="date" id="lote-fecha-hasta" />
+                                        <button class="time-btn" id="btn-lote-hasta" title="Pegar hoy / Limpiar">
+                                            <svg class="icon">
+                                                <use href="#icon-calendar-simple" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div><!-- #modo-lote -->
+                        </div><!-- #modo-lote -->
 
                     </div><!-- #modo-contenedor -->
                 </div><!-- #form-registro -->
@@ -575,7 +574,7 @@
                         </svg>
                         Ajustes
                     </span>
-                    <span class="version-text">LUSHIBOSCA-v260618</span>
+                    <span class="version-text">LUSHIBOSCA-v260621</span>
                 </h3>
             </div>
             <div class="modal-panel-body custom-scroll">
@@ -644,29 +643,6 @@
                                 <span>Recordar estado de tarjetas</span>
                             </button>
                         </div>
-                        <div class="config-actions form-group">
-                            <label>Estadísticas</label>
-                            <button id="btn-toggle-ignorar-tf">
-                                <svg class="icon">
-                                    <use href="#icon-exit" />
-                                </svg>
-                                <span>Ignorar calculo tiempo fuera</span>
-                            </button>
-                            <button id="btn-toggle-saldo-enero">
-                                <svg class="icon">
-                                    <use href="#icon-calendar-simple" />
-                                </svg>
-                                <span>Saldo desde 1° día del año</span>
-                            </button>
-                            <button id="btn-toggle-saldo-primero-mes">
-                                <svg class="icon">
-                                    <use href="#icon-calendar-simple" />
-                                </svg>
-                                <span>Saldo desde 1° día del mes</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div>
                         <div class="form-group">
                             <label>Tarjetas y posición</label>
                             <div id="lista-orden-cards">
@@ -698,6 +674,29 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="config-actions form-group">
+                            <label>Estadísticas</label>
+                            <button id="btn-toggle-ignorar-tf">
+                                <svg class="icon">
+                                    <use href="#icon-exit" />
+                                </svg>
+                                <span>Ignorar calculo tiempo fuera</span>
+                            </button>
+                            <button id="btn-toggle-saldo-enero">
+                                <svg class="icon">
+                                    <use href="#icon-calendar-simple" />
+                                </svg>
+                                <span>Saldo desde 1° día del año</span>
+                            </button>
+                            <button id="btn-toggle-saldo-primero-mes">
+                                <svg class="icon">
+                                    <use href="#icon-calendar-simple" />
+                                </svg>
+                                <span>Saldo desde 1° día del mes</span>
+                            </button>
                         </div>
                         <div class="config-actions">
                             <label>Datos</label>
@@ -1299,30 +1298,6 @@
 
 </body>
 
-<!-- lushibosca version 260618.0040
-
-    changelog: 
-    260611:
-    1) La funcion de restablecer, ahora persiste el gist id y resetea la configuracion
-    de automatizacion.
-    
-    260616:
-    1) Se agrega el modulo FERIADOS AR MODULE para deteccion de dias festivos y pregunta 
-    para agregar al registro, el mismo funciona de forma hardcodeada en el codigo. 
-    2) Fix al restablecer el perfil, no guardaba correctamente el estado en history manager.
-    
-    260617:
-    1) Se cambia la animacion del calendario al cambiar de mes.
-    2) Se agrega opcion para elegir calcular el saldo anual de estadisticas desde el primer registro del año o
-    desde el primer dia del año
-    3) fix en el cambio de mes con swipe (movil) para que funcione de forma fluida sin bloqueos por animacion
-    
-    260618:
-    1) cambios menores en colores de botones de edicion y configuración
-    2) Se agrega un popup a cada stat-item con la descripcion, y flag opcional en "saldo" y "tiempo fuera" por mes y año
-    3) Se incrementa la cantidad maxima de perfiles de 7 a 9 y se utiliza la variable definida pero no usada
-    4) fix boton crear perfil, luego de usar la variable
-
-    -->
+<!-- lushibosca-->
 
 </html>

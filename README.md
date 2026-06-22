@@ -5,6 +5,7 @@
 
 ### 260622
 * **Nuevo:** Se agrega flash en los campos de fecha de la tarjeta fichar, cuando se selecciona una opcion de registro regular o especial
+* **Mejora:** Se agrega horas diarias objetivo al popup-stat promedio diario
 * **Mejora:** Se agrega validacion de fecha futura en la importacion (local y nube) de registros
 * **Mejora:** Se unifica el tipo de cierre en popup con y sin registro al tocarlo nuevamente
 

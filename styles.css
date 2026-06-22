@@ -1627,7 +1627,7 @@ input.campo-flash {
 @media (hover: hover) and (pointer: fine) {
     :is([id^="btn-toggle-"],
         #btn-reporte,
-        .icon-btn, .time-btn, .btn-increment, .filter-btn,
+        .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist,
         .btn-delete, .btn-cancel, .btn-export, .btn-backup, .btn-edit,
         .calendario-nav button):hover:not(:disabled) {
         filter: var(--hover);

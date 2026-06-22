@@ -7505,8 +7505,8 @@ Generado por Sistema Lushibosca
             'stat-salida-promedio': { titulo: 'Salida Promedio', desc: 'Hora de salida promedio entre todas las jornadas del período.' },
             'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
-            'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (Salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
-            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tu configuración de horas diarias, días hábiles y el flag de calculo de saldo anual.' },
+            'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
+            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles y cálculos de saldo.' },
             'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
             'stat-compensaciones': { titulo: 'Salidas Temprano', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
         };
@@ -7531,22 +7531,27 @@ Generado por Sistema Lushibosca
                 if (modoEstadisticas === 'anual') {
                     const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
                     const modoTexto = desdeEnero
-                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del año.'
-                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.';
+                        ? 'ACTUALMENTE EL SALDO SE CALCULA A PARTIR DEL PRIMER DÍA DEL AÑO.'
+                        : 'ACTUALMENTE EL SALDO SE CALCULA A PARTIR DEL PRIMER REGISTRO DEL AÑO.';
                     info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
                 } else if (modoEstadisticas === 'mensual') {
                     const desdePrimero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
                     const modoTexto = desdePrimero
-                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del mes.'
-                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.';
+                        ? 'ACTUALMENTE EL SALDO SE CALCULA A PARTIR DEL PRIMER DÍA DEL MES.'
+                        : 'ACTUALMENTE EL SALDO SE CALCULA A PARTIR DEL PRIMER REGISTRO DEL MES.';
                     info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
                 }
             }
             if (statId === 'stat-tiempo-total' && info) {
                 const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
                 const modoTexto = ignorarTF
-                    ? 'Actualmente se IGNORA el tiempo fuera (no se resta del cálculo).'
-                    : 'Actualmente se RESTA el tiempo fuera del cálculo final.';
+                    ? 'ACTUALMENTE SE IGNORA EL TIEMPO FUERA (NO SE RESTA DEL CÁLCULO).'
+                    : 'ACTUALMENTE SE RESTA EL TIEMPO FUERA DEL CÁLCULO FINAL.';
+                info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+            }
+            if (statId === 'stat-promedio-diario' && info) {
+                const horasDiarias = D.horasDiarias();
+                const modoTexto = `ACTUALMENTE LAS HORAS DIARIAS OBJETIVO SON ${horasDiarias}h.`;
                 info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
             }
             if (!info) {

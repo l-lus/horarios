@@ -1588,8 +1588,18 @@
 
         function normalizarRegistrosImportados(rawList, calcularHorasFn) {
             const validarHora = (h) => TimeUtils.validarHora(h) ? S.sanitizeString(h, 5) : null;
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const descartadosFuturos = rawList.filter(r =>
+                S.validarRegistroSeguro(r) && r.fecha > hoy && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
+            ).length;
+            if (descartadosFuturos > 0)
+                UILogic.mostrarToast(`${descartadosFuturos} registro${descartadosFuturos > 1 ? 's' : ''} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${descartadosFuturos > 1 ? 's' : ''}`, 'warning');
             const normalizados = rawList
                 .filter(r => S.validarRegistroSeguro(r))
+                .filter(r => {
+                    if (r.fecha <= hoy) return true;
+                    return TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
+                })
                 .map(r => ({
                     id: (r.id && S.REGEX_PATTERNS.ID.test(r.id)) ? r.id : S.generarIDSeguro(),
                     fecha: S.sanitizeString(r.fecha, 10),

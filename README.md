@@ -2,8 +2,13 @@
 
 ### 260621
 * **Fix:** Corrección en el *toggle* al modo lote (evita la transición abrupta en el primer uso).
+* **Fix:** Se aplica de forma consistente la validacion de fecha futura para registro
+regular, se aplicaba en editar registro pero no en la tarjeta de fichar.
 * **Nuevo:** Se agrega un *popup* a los días sin registro en el calendario, con opciones para agregar registros regulares o especiales.
 * **Mantenimiento:** Se mueve el chanelog del index al readme.md
+* **Mejora:** Se agrega limpieza del estado error en campos de tarjeta fichar
+* **Mejora:** Se agrega validacion de fecha futura en el popup sin registro, para ocultar
+el boton de agregar registro regular.
 
 ### 260618
 * **Mejora:** Cambios menores en los colores de los botones de edición y configuración.

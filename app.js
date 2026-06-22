@@ -1242,6 +1242,14 @@
             let e = S.sanitizeString($('entrada').value.trim(), 5);
             let s = S.sanitizeString($('salida').value.trim(), 5);
 
+            const _hoy = TimeUtils.obtenerFechaHoy();
+            if (f > _hoy && !TiposRegistro.esRegistroEspecial(e, s)) {
+                UILogic.resetearBoton(btn);
+                UILogic.mostrarError('fecha', 'error-fecha');
+                UILogic.mostrarToast('Fecha futura no permitida en registro regular', 'warning');
+                return;
+            }
+
             if (!e) {
                 const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(TimeUtils.obtenerFechaHoy(), registros);
                 const regHoy = registros.find(r => r.fecha === f);
@@ -3438,7 +3446,7 @@
             if (!raw) return 300;
             return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
         }
-        const DUR_ANIM       = () => _getCSSdur('--dur-anim');
+        const DUR_ANIM = () => _getCSSdur('--dur-anim');
         const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
 
         // Patrón genérico: fade-out → fn() → fade-in, sincronizado con --dur-anim
@@ -6159,7 +6167,9 @@ Generado por Sistema Lushibosca
             ['entrada', 'salida'].forEach(id => {
                 const el = $(id);
                 if (el) el.addEventListener('input', formatearInput);
+                if (el) el.addEventListener('input', () => limpiarError(id, null));
             });
+            $('fecha')?.addEventListener('change', () => limpiarError('fecha', null));
 
             const verificarBloqueCreditoDebounced = debounce(verificarBloqueoCredito, 200);
 
@@ -7280,6 +7290,7 @@ Generado por Sistema Lushibosca
                 if (mismaFecha) return;
             }
 
+            const esFechaFutura = fecha > TimeUtils.obtenerFechaHoy();
             const fechaObj = new Date(fecha + 'T12:00:00');
             const opcFecha = { weekday: 'long', day: 'numeric', month: 'long' };
             const fechaLabel = fechaObj.toLocaleDateString('es-AR', opcFecha);
@@ -7291,10 +7302,10 @@ Generado por Sistema Lushibosca
             popup.innerHTML = `
         <div class="cal-popup-fecha">${fechaLabel}</div>
         <div class="cal-popup-sin-reg">Sin registros</div>
-        <button class="cal-popup-btn-accion cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
+        ${esFechaFutura ? '' : `<button class="cal-popup-btn-accion cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
             <svg class="icon"><use href="#icon-clock"/></svg>
             Jornada regular
-        </button>
+        </button>`}
         <button class="cal-popup-btn-accion cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
             <svg class="icon"><use href="#icon-calendar-simple"/></svg>
             Jornada especial
@@ -7317,7 +7328,7 @@ Generado por Sistema Lushibosca
                 if (!popup.contains(e.target)) cerrarPopup();
             };
 
-            popup.querySelector('#_cal-popup-btn-normal').addEventListener('click', () => {
+            popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => {
                 cerrarPopup();
                 _irAFicharConFecha(fecha, false);
             });

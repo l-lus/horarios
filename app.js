@@ -7296,7 +7296,7 @@ Generado por Sistema Lushibosca
             Jornada regular
         </button>
         <button class="cal-popup-btn-accion cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
-            <svg class="icon"><use href="#icon-save"/></svg>
+            <svg class="icon"><use href="#icon-calendar-simple"/></svg>
             Jornada especial
         </button>
     `;
@@ -8271,8 +8271,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 });
-
-// lushibosca version 260616.0058
 
 // MODULOS:
 

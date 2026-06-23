@@ -280,13 +280,6 @@ input.error {
     border-color: var(--c-red);
 }
 
-.input-error {
-    color: var(--c-red);
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-    display: none;
-}
-
 .input-with-btn,
 .input-number-group {
     display: flex;
@@ -667,7 +660,6 @@ button:disabled {
 }
 
 .registro-total.red-text,
-.registro-total.red-text-bg,
 .toast.error,
 .toast.warning,
 .calendario-dia.dia-incompleto,
@@ -700,7 +692,6 @@ button:disabled {
     background: var(--c-gold);
 }
 
-.registro-total.blue-text-bg,
 .calendario-dia.dia-especial-blue,
 .registro-total.blue-text,
 .calendario-dia.dia-en-curso,
@@ -985,7 +976,8 @@ button:disabled {
 
 /* ─── CAL POPUP ──────────────────────────────────────────────────────────────── */
 
-.cal-popup {
+.cal-popup,
+.stat-popup {
     position: fixed;
     z-index: 90;
     background: var(--bg-card);
@@ -993,18 +985,22 @@ button:disabled {
     border-radius: var(--radius);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
     padding: 0.75rem 1rem;
-    min-width: 160px;
-    max-width: 220px;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
     pointer-events: none;
     transform: translateY(24px) scale(0.96);
     opacity: 0;
     animation: calPopupIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.cal-popup.listo {
+.cal-popup {
+    min-width: 160px;
+    max-width: 220px;
+    gap: 0.4rem;
+}
+
+.cal-popup.listo,
+.stat-popup.listo {
     pointer-events: all;
 }
 
@@ -1069,10 +1065,7 @@ button:disabled {
     transition: opacity var(--dur-anim) var(--ease-anim);
 }
 
-.cal-popup-btn-accion--normal {
-    color: var(--text-main);
-}
-
+.cal-popup-btn-accion--normal,
 .cal-popup-btn-accion--especial {
     color: var(--text-main);
 }
@@ -1088,26 +1081,9 @@ button:disabled {
 }
 
 .stat-popup {
-    position: fixed;
-    z-index: 90;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
-    padding: 0.75rem 1rem;
     min-width: 160px;
     max-width: 240px;
-    display: flex;
-    flex-direction: column;
     gap: 0.3rem;
-    pointer-events: none;
-    transform: translateY(24px) scale(0.96);
-    opacity: 0;
-    animation: calPopupIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.stat-popup.listo {
-    pointer-events: all;
 }
 
 .stat-popup-titulo {
@@ -1119,6 +1095,12 @@ button:disabled {
     font-size: var(--text-xs);
     color: var(--text-muted);
     line-height: 1.4;
+}
+
+.stat-popup-sep {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 10px 0;
 }
 
 /* ─── COLLAPSIBLE SECTIONS ───────────────────────────────────────────────────── */
@@ -1147,19 +1129,15 @@ button:disabled {
 
 /* ─── ANIMACIONES ────────────────────────────────────────────────────────────── */
 
-.anim-fade-blur {
+.nuevo-registro-animacion,
+.input-agregado-animacion {
     animation: fade-blur 0.5s ease-out forwards;
 }
 
 .nuevo-registro-animacion {
-    animation: fade-blur 0.5s ease-out forwards;
     transform-origin: center;
     z-index: 10;
     position: relative;
-}
-
-.input-agregado-animacion {
-    animation: fade-blur 0.5s ease-out forwards;
 }
 
 .animated-card {
@@ -1542,21 +1520,6 @@ button:disabled {
     margin-left: 0.3em;
 }
 
-.card-bg-svg {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.card-bg-svg--left {
-    left: 0;
-}
-
-.card-bg-svg--right {
-    right: 0;
-}
-
 /* ─── KEYFRAMES ──────────────────────────────────────────────────────────────── */
 
 @keyframes slideDownFade {
@@ -1613,12 +1576,21 @@ button:disabled {
     100% { left: 130%; }
 }
 
+@keyframes campo-flash {
+    0%, 100% { border-color: inherit; box-shadow: none; }
+    30%, 70% { border-color: var(--input-focus); box-shadow: var(--shadow); }
+}
+
+input.campo-flash {
+    animation: campo-flash 500ms ease-in-out 2;
+}
+
 /* ─── HOVER (pointer: fine) ──────────────────────────────────────────────────── */
 
 @media (hover: hover) and (pointer: fine) {
     :is([id^="btn-toggle-"],
         #btn-reporte,
-        .icon-btn, .time-btn, .btn-increment, .filter-btn,
+        .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist,
         .btn-delete, .btn-cancel, .btn-export, .btn-backup, .btn-edit,
         .calendario-nav button):hover:not(:disabled) {
         filter: var(--hover);
@@ -1660,11 +1632,6 @@ button:disabled {
     .left-column {
         display: flex;
         flex-direction: column;
-    }
-
-    .right-column {
-        position: sticky;
-        top: 4.5rem;
     }
 
     #lista-registros {

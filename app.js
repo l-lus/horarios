@@ -1221,13 +1221,13 @@
             const entrada = S.sanitizeString($('entrada').value.trim(), 5);
             const salida = S.sanitizeString($('salida').value.trim(), 5);
 
-            UILogic.limpiarError('fecha', 'error-fecha');
-            UILogic.limpiarError('entrada', 'error-entrada');
-            UILogic.limpiarError('salida', 'error-salida');
+            UILogic.limpiarError('fecha', null);
+            UILogic.limpiarError('entrada', null);
+            UILogic.limpiarError('salida', null);
 
-            if (!fecha || !TimeUtils.validarFecha(fecha)) { UILogic.mostrarError('fecha', 'error-fecha'); valido = false; }
-            if (entrada && !TimeUtils.validarHora(entrada)) { UILogic.mostrarError('entrada', 'error-entrada'); valido = false; }
-            if (salida && !TimeUtils.validarHora(salida)) { UILogic.mostrarError('salida', 'error-salida'); valido = false; }
+            if (!fecha || !TimeUtils.validarFecha(fecha)) { UILogic.mostrarError('fecha', null); valido = false; }
+            if (entrada && !TimeUtils.validarHora(entrada)) { UILogic.mostrarError('entrada', null); valido = false; }
+            if (salida && !TimeUtils.validarHora(salida)) { UILogic.mostrarError('salida', null); valido = false; }
             return valido;
         }
 
@@ -1245,7 +1245,7 @@
             const _hoy = TimeUtils.obtenerFechaHoy();
             if (f > _hoy && !TiposRegistro.esRegistroEspecial(e, s)) {
                 UILogic.resetearBoton(btn);
-                UILogic.mostrarError('fecha', 'error-fecha');
+                UILogic.mostrarError('fecha', null);
                 UILogic.mostrarToast('Fecha futura no permitida en registro regular', 'warning');
                 return;
             }
@@ -3898,6 +3898,14 @@
             });
         }
 
+        function _crearOpcion(value, text, selected = false) {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = text;
+            if (selected) opt.selected = true;
+            return opt;
+        }
+
         function poblarSelectorAnios() {
             const selectAnio = $('select-anio-stats');
             if (!selectAnio) return;
@@ -3911,9 +3919,7 @@
             selectAnio.innerHTML = '';
 
             if (aniosOrdenados.length === 0) {
-                const opt = document.createElement('option');
-                opt.value = ''; opt.textContent = 'Sin registros';
-                selectAnio.appendChild(opt);
+                selectAnio.appendChild(_crearOpcion('', 'Sin registros'));
                 actualizarEstadisticasAnio(null);
                 return;
             }
@@ -3930,11 +3936,7 @@
             }
 
             aniosOrdenados.forEach(anio => {
-                const opt = document.createElement('option');
-                opt.value = anio;
-                opt.textContent = anio;
-                if (anio === anioASeleccionar) opt.selected = true;
-                selectAnio.appendChild(opt);
+                selectAnio.appendChild(_crearOpcion(anio, anio, anio === anioASeleccionar));
             });
 
             actualizarEstadisticasAnio(anioASeleccionar);
@@ -4006,9 +4008,7 @@
             const semanas = _obtenerSemanas();
             select.innerHTML = '';
             if (semanas.length === 0) {
-                const opt = document.createElement('option');
-                opt.value = ''; opt.textContent = 'Sin registros';
-                select.appendChild(opt);
+                select.appendChild(_crearOpcion('', 'Sin registros'));
                 actualizarEstadisticasSemana(null);
                 return;
             }
@@ -4031,11 +4031,7 @@
                 const grupo = document.createElement('optgroup');
                 grupo.label = anio;
                 keys.forEach(key => {
-                    const opt = document.createElement('option');
-                    opt.value = key;
-                    opt.textContent = _formatearSemana(key);
-                    if (key === seleccionar) opt.selected = true;
-                    grupo.appendChild(opt);
+                    grupo.appendChild(_crearOpcion(key, _formatearSemana(key), key === seleccionar));
                 });
                 select.appendChild(grupo);
             });
@@ -4117,10 +4113,7 @@
             const mesesOrdenados = Array.from(mesesUnicos).sort().reverse();
             selectMes.innerHTML = '';
             if (mesesOrdenados.length === 0) {
-                const option = document.createElement('option');
-                option.value = '';
-                option.textContent = 'Sin registros';
-                selectMes.appendChild(option);
+                selectMes.appendChild(_crearOpcion('', 'Sin registros'));
                 actualizarEstadisticas(null);
                 return;
             }
@@ -4146,19 +4139,10 @@
                 grupo.label = anio;
 
                 meses.forEach(mesAnio => {
-                    const option = document.createElement('option');
-                    option.value = mesAnio;
-
                     const [a, m] = mesAnio.split('-');
-                    const fecha = new Date(a, m - 1, 1);
-                    const nombreMes = fecha.toLocaleDateString('es-ES', { month: 'long' });
-                    option.textContent = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
-
-                    if (mesAnio === mesASeleccionar) {
-                        option.selected = true;
-                    }
-
-                    grupo.appendChild(option);
+                    const nombreMes = new Date(a, m - 1, 1).toLocaleDateString('es-ES', { month: 'long' });
+                    const label = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
+                    grupo.appendChild(_crearOpcion(mesAnio, label, mesAnio === mesASeleccionar));
                 });
 
                 selectMes.appendChild(grupo);
@@ -5261,42 +5245,19 @@ Generado por Sistema Lushibosca
         function poblarSelectoresTipos() {
             const tipos = TiposRegistro.obtenerTodosLosTipos();
 
-            const selectLote = $('lote-tipo');
-            if (selectLote) {
-                selectLote.innerHTML = '';
-                tipos.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.id;
-                    opt.textContent = `${t.emoji} ${t.label}`;
-                    selectLote.appendChild(opt);
-                });
-                const optNormal = document.createElement('option');
-                optNormal.value = 'normal';
-                optNormal.textContent = '🕒 Jornadas (borrar)';
-                selectLote.appendChild(optNormal);
-            }
+            const cfg = [
+                { id: 'lote-tipo', getLabel: t => `${t.emoji} ${t.label}`, extra: [{ value: 'normal', text: '🕒 Jornadas (borrar)' }] },
+                { id: 'filtro-tipo', getLabel: t => `${t.emoji} ${t.labelPlural}`, prefix: '<option value="">Todos</option><option value="normal">🕒 Jornadas</option>' },
+                { id: 'edit-grupo-tipo', getLabel: t => `${t.emoji} ${t.label}` },
+            ];
 
-            const selectFiltro = $('filtro-tipo');
-            if (selectFiltro) {
-                selectFiltro.innerHTML = '<option value="">Todos</option><option value="normal">🕒 Jornadas</option>';
-                tipos.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.id;
-                    opt.textContent = `${t.emoji} ${t.labelPlural}`;
-                    selectFiltro.appendChild(opt);
-                });
-            }
-
-            const selectGrupo = $('edit-grupo-tipo');
-            if (selectGrupo) {
-                selectGrupo.innerHTML = '';
-                tipos.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.id;
-                    opt.textContent = `${t.emoji} ${t.label}`;
-                    selectGrupo.appendChild(opt);
-                });
-            }
+            cfg.forEach(({ id, getLabel, prefix = '', extra = [] }) => {
+                const sel = $(id);
+                if (!sel) return;
+                sel.innerHTML = prefix;
+                tipos.forEach(t => sel.appendChild(_crearOpcion(t.id, getLabel(t))));
+                extra.forEach(e => sel.appendChild(_crearOpcion(e.value, e.text)));
+            });
         }
 
         function actualizarBotonLote() {
@@ -7306,7 +7267,7 @@ Generado por Sistema Lushibosca
             const esFechaFutura = fecha > TimeUtils.obtenerFechaHoy();
             const fechaObj = new Date(fecha + 'T12:00:00');
             const opcFecha = { weekday: 'long', day: 'numeric', month: 'long' };
-            const fechaLabel = fechaObj.toLocaleDateString('es-AR', opcFecha);
+            const fechaLabel = S.sanitizeString(fechaObj.toLocaleDateString('es-AR', opcFecha), 60);
 
             const popup = document.createElement('div');
             popup.className = 'cal-popup';
@@ -7315,11 +7276,11 @@ Generado por Sistema Lushibosca
             popup.innerHTML = `
         <div class="cal-popup-fecha">${fechaLabel}</div>
         <div class="cal-popup-sin-reg">Sin registros</div>
-        ${esFechaFutura ? '' : `<button class="cal-popup-btn-accion cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
+        ${esFechaFutura ? '' : `<button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
             <svg class="icon"><use href="#icon-clock"/></svg>
             Jornada regular
         </button>`}
-        <button class="cal-popup-btn-accion cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
+        <button class="cal-popup-btn-edit cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
             <svg class="icon"><use href="#icon-calendar-simple"/></svg>
             Jornada especial
         </button>
@@ -7375,6 +7336,19 @@ Generado por Sistema Lushibosca
             });
         }
 
+        function _flashCampo(...ids) {
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.remove('campo-flash');
+                void el.offsetWidth;
+                el.classList.add('campo-flash');
+                el.addEventListener('animationend', () => el.classList.remove('campo-flash'), { once: true });
+            });
+        }
+
+        const _FLASH_SCROLL_DELAY = 380;
+
         function _irAFicharConFecha(fecha, esEspecial) {
             const tarjeta = document.getElementById('card-registrar');
             const formulario = document.getElementById('form-registro');
@@ -7395,12 +7369,14 @@ Generado por Sistema Lushibosca
                             const hasta = document.getElementById('lote-fecha-hasta');
                             if (desde) desde.value = fecha;
                             if (hasta) hasta.value = fecha;
+                            setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta'), _FLASH_SCROLL_DELAY);
                         }, DUR_ANIM() + 50);
                     } else {
                         const desde = document.getElementById('lote-fecha-desde');
                         const hasta = document.getElementById('lote-fecha-hasta');
                         if (desde) desde.value = fecha;
                         if (hasta) hasta.value = fecha;
+                        setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta'), _FLASH_SCROLL_DELAY);
                     }
                 } else {
                     if (modoLoteActivo) {
@@ -7408,10 +7384,12 @@ Generado por Sistema Lushibosca
                         setTimeout(() => {
                             const input = document.getElementById('fecha');
                             if (input) input.value = fecha;
+                            setTimeout(() => _flashCampo('fecha'), _FLASH_SCROLL_DELAY);
                         }, DUR_ANIM() + 50);
                     } else {
                         const input = document.getElementById('fecha');
                         if (input) input.value = fecha;
+                        setTimeout(() => _flashCampo('fecha'), _FLASH_SCROLL_DELAY);
                     }
                 }
             }, retraso);
@@ -7436,7 +7414,7 @@ Generado por Sistema Lushibosca
             const esHover = window.matchMedia('(hover: hover)').matches;
             if (stored === null ? !esHover : stored !== 'true') return;
             if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
-
+            if (_popupCalendarioEl && !_popupCalendarioEsHover) return;
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioHoverTimer = setTimeout(() => {
                 _popupCalendarioEsHover = true;
@@ -7457,7 +7435,11 @@ Generado por Sistema Lushibosca
                 clearTimeout(_popupCalendarioHoverTimer);
                 DataManagement.editarRegistro(registroId);
             } else {
-                if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
+                if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) {
+                    _popupCalendarioEl.remove();
+                    _popupCalendarioEl = null;
+                    return;
+                }
                 _popupCalendario(event, registroId);
             }
         }
@@ -7484,8 +7466,8 @@ Generado por Sistema Lushibosca
             'stat-salida-promedio': { titulo: 'Salida Promedio', desc: 'Hora de salida promedio entre todas las jornadas del período.' },
             'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
-            'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (Salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
-            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tu configuración de horas diarias, días hábiles y el flag de calculo de saldo anual.' },
+            'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
+            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles y cálculos de saldo.' },
             'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
             'stat-compensaciones': { titulo: 'Salidas Temprano', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
         };
@@ -7512,21 +7494,26 @@ Generado por Sistema Lushibosca
                     const modoTexto = desdeEnero
                         ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del año.'
                         : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.';
-                    info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
                 } else if (modoEstadisticas === 'mensual') {
                     const desdePrimero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
                     const modoTexto = desdePrimero
                         ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del mes.'
                         : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.';
-                    info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
                 }
             }
-            if (statId === 'stat-tiempo-total' && info) {
+            if (statId === 'stat-tiempo-fuera-total' && info) {
                 const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
                 const modoTexto = ignorarTF
-                    ? 'Actualmente se IGNORA el tiempo fuera (no se resta del cálculo).'
-                    : 'Actualmente se RESTA el tiempo fuera del cálculo final.';
-                info = { titulo: info.titulo, desc: `${info.desc}<br><br><strong>${modoTexto}</strong>` };
+                    ? 'Actualmente NO SE RESTA el tiempo fuera del tiempo total.'
+                    : 'Actualmente se RESTA el tiempo fuera del tiempo total.';
+                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
+            }
+            if (statId === 'stat-promedio-diario' && info) {
+                const horasDiarias = D.horasDiarias();
+                const modoTexto = `Actualmente las horas diarias objetivo son ${horasDiarias}h.`;
+                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
             }
             if (!info) {
                 const valueEl = $(statId);
@@ -7605,7 +7592,11 @@ Generado por Sistema Lushibosca
             const item = event.currentTarget;
             const valueEl = item.querySelector('.stat-value');
             if (!valueEl || !valueEl.id) return;
-            if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) return;
+            if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) {
+                _popupStatEl.remove();
+                _popupStatEl = null;
+                return;
+            }
             item.dataset.statId = valueEl.id;
             _popupStat(event, valueEl.id);
         }

@@ -1,10 +1,17 @@
 ## (Changelog)
 
 ### BUGS ACTUALES
-* **A:** en pc, mientras un popup sin registro esta abierto y querer ir al boton de agregar registro especial o regular, si pasa por un dia con registro, cierra el popup y abre el popup con registro, esto cuando esta habilitada la funcion popup hover calendario 
+
+### 260623
+* **Mejora:** refactor y creacion de helper _crearOpcion, para los pobladores (semana, mes y anios)
 
 ### 260622
+* **Fix:** Se corrige bug al pasar por encima de un dia con registro con popup hover calendario activo, y un popup sin registro abierto.
+* **Nuevo:** Se agrega flash en los campos de fecha de la tarjeta fichar, cuando se selecciona una opcion de registro regular o especial
+* **Mejora:** Cambios menores en popup-stat para mejor legibilidad
+* **Mejora:** Se agrega horas diarias objetivo al popup-stat promedio diario
 * **Mejora:** Se agrega validacion de fecha futura en la importacion (local y nube) de registros
+* **Mejora:** Se unifica el tipo de cierre en popup con y sin registro al tocarlo nuevamente
 
 ### 260621
 * **Fix:** bug al abrir popup calendario sin registro con un popup con registro todavia abierto, cerraba el popup sin registro

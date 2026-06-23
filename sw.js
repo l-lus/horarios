@@ -8,6 +8,7 @@ const urlsToCache = [
   './styles.css',
   './fondos.js',
   './flash.js',
+  './fondos/lago-bosque.jpg',
 ];
 
 // Instalación

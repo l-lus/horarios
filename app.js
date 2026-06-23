@@ -22,6 +22,7 @@
         // ── Configuración por perfil (useProfile = true) ──────────────
         IGNORAR_TF: 'ignorarTiempoFuera',
         FONDO_CARD: 'fondoCard',
+        FONDO_PAGINA: 'fondoPagina',
         PERSISTIR_TARJETAS: 'persistirTarjetas',
         ORDEN_CARDS: 'ordenCards',
 
@@ -1164,7 +1165,8 @@
                 vistaActual: StorageHelper.getItem(STORAGE_KEYS.VISTA_ACTUAL, 'diaria'),
                 ignorarTiempoFuera: StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true),
                 modoEstadisticas: StorageHelper.getItem(STORAGE_KEYS.MODO_ESTADISTICAS, 'mensual'),
-                fondoCard: StorageHelper.getItem(STORAGE_KEYS.FONDO_CARD, 'golden-gate', true)
+                fondoCard: StorageHelper.getItem(STORAGE_KEYS.FONDO_CARD, 'golden-gate', true),
+                fondoPagina: StorageHelper.getItem(STORAGE_KEYS.FONDO_PAGINA, 'ninguno', true)
             };
         }
 
@@ -1572,7 +1574,7 @@
 
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS];
+            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.FONDO_PAGINA, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS];
             keys.forEach(k => StorageHelper.removeItem(k, true));
 
             if (window.PerfilManager) {
@@ -2980,6 +2982,72 @@
                 outgoing.innerHTML = '';
                 outgoing.style.opacity = '0';
                 _bgFadeTimer = null;
+            }, 650);
+        }
+
+        let _fondoPagina = 'ninguno';
+        let _bgPaginaFadeTimer = null;
+        let _bgPaginaActiveLayer = 'a';
+
+        function setFondoPagina(valor) {
+            _fondoPagina = valor;
+        }
+
+        function toggleFondoPagina() {
+            const ids = [...(window.FONDOS_PAGINA || []).map(f => f.id), 'ninguno'];
+            const idx = ids.indexOf(_fondoPagina);
+            _fondoPagina = ids[(idx + 1) % ids.length];
+            StorageHelper.setItem(STORAGE_KEYS.FONDO_PAGINA, _fondoPagina, true);
+            const btn = $('hint-fondo-pagina-label');
+            if (btn) btn.textContent = _getLabelFondoPagina(_fondoPagina);
+            actualizarFondoPagina();
+        }
+
+        function _getLabelFondoPagina(id) {
+            if (id === 'ninguno') return 'Sin fondo';
+            const fondo = (window.FONDOS_PAGINA || []).find(f => f.id === id);
+            return fondo ? fondo.label : id;
+        }
+
+        function actualizarFondoPagina() {
+            const bg = $('page-bg');
+            if (!bg) return;
+
+            const layerA = bg.querySelector('.page-bg__layer[data-layer="a"]');
+            const layerB = bg.querySelector('.page-bg__layer[data-layer="b"]');
+            if (!layerA || !layerB) return;
+
+            if (_fondoPagina === 'ninguno') {
+                layerA.style.opacity = '0';
+                layerB.style.opacity = '0';
+                document.body.classList.remove('fondo-pagina-activo');
+                return;
+            }
+
+            const fondo = (window.FONDOS_PAGINA || []).find(f => f.id === _fondoPagina);
+            if (!fondo) return;
+
+            document.body.classList.add('fondo-pagina-activo');
+
+            const incoming = _bgPaginaActiveLayer === 'a' ? layerB : layerA;
+            const outgoing = _bgPaginaActiveLayer === 'a' ? layerA : layerB;
+
+            incoming.style.zIndex = '2';
+            incoming.style.opacity = '0';
+            incoming.style.backgroundImage = `url('./fondos/${fondo.archivo}')`;
+
+            outgoing.style.zIndex = '1';
+            outgoing.style.opacity = '0';
+
+            if (_bgPaginaFadeTimer) { clearTimeout(_bgPaginaFadeTimer); _bgPaginaFadeTimer = null; }
+
+            incoming.offsetHeight;
+            incoming.style.opacity = '1';
+
+            _bgPaginaActiveLayer = _bgPaginaActiveLayer === 'a' ? 'b' : 'a';
+            _bgPaginaFadeTimer = setTimeout(() => {
+                outgoing.style.backgroundImage = '';
+                _bgPaginaFadeTimer = null;
             }, 650);
         }
 
@@ -4917,6 +4985,8 @@ Generado por Sistema Lushibosca
                 actualizarEstadoBotonIgnorarTF();
                 const lbl = $('hint-fondo-label');
                 if (lbl) lbl.textContent = _getLabelFondo(_fondoCard);
+                const lblPagina = $('hint-fondo-pagina-label');
+                if (lblPagina) lblPagina.textContent = _getLabelFondoPagina(_fondoPagina);
             });
         }
 
@@ -5035,7 +5105,7 @@ Generado por Sistema Lushibosca
             if (!confirmacion) return;
 
             const pid = perfilEnEdicion;
-            ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF,
+            ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.FONDO_PAGINA, STORAGE_KEYS.IGNORAR_TF,
                 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
 
@@ -6164,7 +6234,7 @@ Generado por Sistema Lushibosca
                 toggleCredito, init, toggleFormulario, setBloqueoEdicionGrupo, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo,
                 mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport, aplicarFeedbackCampos,
                 iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones, toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
-                togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, navegarCalendario, toggleGistMerge,
+                togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleFondoPagina, setFondoPagina, actualizarFondoPagina, navegarCalendario, toggleGistMerge,
                 actualizarEstadoBotonesGist, togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico,
                 abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistSubir, gistBajar,
                 gistMergeAplicar, gistMergeCancelar, actualizarBotonesHistorico, toggleGistBackup, toggleModoLote, toggleVisibilidadCard, aplicarVisibilidadCards,
@@ -6384,6 +6454,8 @@ Generado por Sistema Lushibosca
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
             UILogic.setFondoCard(config.fondoCard || 'golden-gate');
+            UILogic.setFondoPagina(config.fondoPagina || 'ninguno');
+            UILogic.actualizarFondoPagina();
             if (config.modoEstadisticas === 'anual') UILogic.togglePeriodoStats();
             else if (config.modoEstadisticas === 'semanal') { UILogic.togglePeriodoStats(); UILogic.togglePeriodoStats(); }
 
@@ -7965,7 +8037,7 @@ Generado por Sistema Lushibosca
             toggleCredito, setBloqueoEdicionGrupo, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo, poblarSelectoresTipos,
             mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport, aplicarFeedbackCampos,
             iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones, toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
-            togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
+            togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleFondoPagina, setFondoPagina, actualizarFondoPagina, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover, toggleHoverPopupCalendario,
             _popupCalendarioDiaSinRegistro,
@@ -8244,6 +8316,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
+    $('btn-toggle-fondo-pagina')?.addEventListener('click', () => UILogic.toggleFondoPagina());
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());

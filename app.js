@@ -2197,12 +2197,12 @@
             URL.revokeObjectURL(url);
         }
 
-        function mostrarToast(mensaje, tipo = 'info') {
+        function mostrarToast(mensaje, tipo = 'info', duracion = 3000) {
             const textoLimpio = S.sanitizeString(mensaje, 200);
             const ultimo = _toastQueue[_toastQueue.length - 1];
             const actual = _toastRunning ? $('toast')?.textContent : null;
             if ((ultimo && ultimo.mensaje === textoLimpio) || actual === textoLimpio) return;
-            _toastQueue.push({ mensaje: textoLimpio, tipo, duracionBase: 3000 });
+            _toastQueue.push({ mensaje: textoLimpio, tipo, duracionBase: duracion });
             if (!_toastRunning) _procesarToastQueue();
         }
 

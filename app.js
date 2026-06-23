@@ -7507,7 +7507,7 @@ Generado por Sistema Lushibosca
                 const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
                 const modoTexto = ignorarTF
                     ? 'Actualmente NO SE RESTA el tiempo fuera del tiempo total.'
-                    : 'Actualmente se RESTA el tiempo fuera del tiempo total.';
+                    : 'Actualmente SE RESTA el tiempo fuera del tiempo total.';
                 info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
             }
             if (statId === 'stat-promedio-diario' && info) {

@@ -1,6 +1,7 @@
-## (Changelog)
-
 ### BUGS ACTUALES
+--
+
+## (Changelog)
 
 ### 260623
 * **Mejora:** refactor y creacion de helper _crearOpcion, para los pobladores (semana, mes y anios)

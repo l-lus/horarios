@@ -5,6 +5,8 @@
 
 ### 260623
 * **Mejora:** refactor y creacion de helper _crearOpcion, para los pobladores (semana, mes y anios)
+* **Mejora:** Se quitan las funciones de gist del scope async function init, quedando en el modudo de uilogic
+* **Mejora:** Se elimina return duplicado de window.uilogic con funciones duplicadas, quedado el return de uilogic como unico return.
 
 ### 260622
 * **Fix:** Se corrige bug al pasar por encima de un dia con registro con popup hover calendario activo, y un popup sin registro abierto.

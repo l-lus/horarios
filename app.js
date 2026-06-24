@@ -6112,28 +6112,14 @@ Generado por Sistema Lushibosca
                 }
             }
 
-            window.UILogic = {
-                alternarTema, cerrarConfig, pegarHoraActual, alternarVista, poblarSelectoresTipos,
-                cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, toggleSaldoDesdeEnero, actualizarEstadoBotonSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
-                mostrarError, limpiarError, resetearBoton, restaurarBotonGuardarEdicion, abrirSelectorMesesCalendario,
-                limpiarCampo, obtenerFechaHoy, mostrarFiltros, poblarSelectorMeses, actualizarBotonLote,
-                cerrarFiltros, registrarLoteDesdeCard, cambiarMesStats, generarReporte, toggleHistorico, toggleStats,
-                sumarMinutosAHora, toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
-                actualizarFeedbackConfig, abrirSelectorPerfiles, cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil,
-                eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
-                iniciarCambioHoras, detenerCambio, mostrarconfig, alternarFechaActual, verificarBloqueoCredito,
-                toggleCredito, init, toggleFormulario, setBloqueoEdicionGrupo, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo,
-                mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport, aplicarFeedbackCampos,
-                iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones, toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
-                togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, navegarCalendario, toggleGistMerge,
-                actualizarEstadoBotonesGist, togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico,
-                abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistSubir, gistBajar,
-                gistMergeAplicar, gistMergeCancelar, actualizarBotonesHistorico, toggleGistBackup, toggleModoLote, toggleVisibilidadCard, aplicarVisibilidadCards,
-                _popupCalendario, _popupCalendarioHover, _cerrarPopupCalendarioHover, toggleHoverPopupCalendario, actualizarEstadoBotonHoverPopup,
-                cambiarLimiteSync, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards, _onclickCalendarioDia,
-                actualizarHintGrupo, irHoyCalendario, detenerCambioLimite, iniciarCambioLimite,
-                obtenerNombrePerfilSafe, descargarJSON,
-            };
+            window.UILogic = UILogic;
+            Object.assign(window.UILogic, {
+                actualizarEstadoBotonesGist, actualizarBotonesHistorico,
+                abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser,
+                gistSubir, gistBajar, gistMergeAplicar, gistMergeCancelar,
+                toggleGistBackup, toggleGistMerge,
+                cambiarLimiteSync, iniciarCambioLimite, detenerCambioLimite,
+            });
 
             ['entrada', 'salida'].forEach(id => {
                 const el = $(id);
@@ -7928,11 +7914,9 @@ Generado por Sistema Lushibosca
             iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones, toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
+            navegarCalendario, obtenerNombrePerfilSafe, descargarJSON,
             _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover, toggleHoverPopupCalendario,
-            _popupCalendarioDiaSinRegistro,
-            _popupStat, _onclickStatItem, _bindStatItemPopups,
-
-
+            _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync);

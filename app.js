@@ -576,7 +576,7 @@
         function _getAccionVolver(modalId) {
             const acciones = {
                 'modal-gist': () => window.UILogic?.cerrarModalGist(),
-                'modal-gist-merge': () => window.UILogic?.gistMergeCancelar(),
+                'modal-gist-merge': () => window.UILogic?.gistMergeCancelar(true),
                 'modal-config': () => window.UILogic && UILogic.cerrarConfig(),
                 'modal-selector-perfiles': () => window.UILogic && UILogic.cerrarSelectorPerfiles(),
                 'modal-editar': () => window.UILogic && UILogic.cerrarEdicion(),
@@ -5776,14 +5776,23 @@ Generado por Sistema Lushibosca
             if (btn) btn.disabled = false;
         }
 
-        function gistMergeCancelar() {
+        function gistMergeCancelar(desdePopstate = false) {
             _gistMergeData = null;
             ModalManager.cerrar('modal-gist-merge');
             const btn = document.getElementById('btn-gist-bajar');
             if (btn) btn.disabled = false;
             if (_gistMergeDesdeModal) {
                 _gistMergeDesdeModal = false;
-                ModalManager.abrir('modal-gist');
+                // Cuando viene de popstate, _navegandoHaciaAtras sigue siendo true durante ~50ms.
+                // Si abrimos modal-gist ahora, abrir() omite el pushState y el modal queda
+                // sin entrada en el historial, desincronizando todos los modales siguientes.
+                // Con setTimeout > 50ms se garantiza que _navegandoHaciaAtras ya fue reseteado
+                // y abrir() ejecutará el pushState correctamente.
+                if (desdePopstate) {
+                    setTimeout(() => ModalManager.abrir('modal-gist'), 60);
+                } else {
+                    ModalManager.abrir('modal-gist');
+                }
             }
         }
 
@@ -6049,7 +6058,7 @@ Generado por Sistema Lushibosca
                         footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros del Gist`));
                         resumenEl.appendChild(footer);
                     }
-                    ModalManager.cerrar('modal-gist');
+                    if (_gistMergeDesdeModal) ModalManager.cerrar('modal-gist');
                     ModalManager.abrir('modal-gist-merge');
                 }
             } catch (e) {

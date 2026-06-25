@@ -1,7 +1,12 @@
 ### BUGS ACTUALES
---
+--Bug al tocar el boton bajar de gist y cancelar el gist merge, e ir para atras hasta ajustes,
+la pagina llama a "ir para atras" en el navegador
 
 ## (Changelog)
+
+### 260625
+* **Fix:** ir para atras al quitar filtro, y gist merge desde registros
+* **Mantenimiento:** se mueve ConfirmarModal a modal manager module, quedando como funcion interna de este modulo y renombrada a Confirmar
 
 ### 260623
 * **Mejora:** refactor y creacion de helper _crearOpcion, para los pobladores (semana, mes y anios)

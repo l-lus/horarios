@@ -5680,13 +5680,17 @@ Generado por Sistema Lushibosca
             _gistAutoSyncTemp = null;
             _gistLimitesTemp = null;
             _gistLimitesOrig = null;
-            ModalManager.cerrar('modal-gist');
+
+            // Si hay un modal padre, alternamos. Si no, simplemente cerramos.
             if (_gistModalPadre) {
-                ModalManager.abrir(_gistModalPadre);
+                ModalManager.alternar('modal-gist', _gistModalPadre);
                 if (_gistModalPadre === 'modal-config') {
                     ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
                 }
+            } else {
+                ModalManager.cerrar('modal-gist');
             }
+
             _gistModalPadre = null;
             actualizarBotonesHistorico();
         }
@@ -6049,8 +6053,8 @@ Generado por Sistema Lushibosca
                         footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros del Gist`));
                         resumenEl.appendChild(footer);
                     }
-                    ModalManager.cerrar('modal-gist');
-                    ModalManager.abrir('modal-gist-merge');
+                    // Usamos alternar para evitar el history.back() accidental
+                    ModalManager.alternar('modal-gist', 'modal-gist-merge');
                 }
             } catch (e) {
                 console.error('Gist bajar error:', e);
@@ -7895,9 +7899,9 @@ Generado por Sistema Lushibosca
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             navegarCalendario, obtenerNombrePerfilSafe, descargarJSON, actualizarEstadoBotonesGist, actualizarBotonesHistorico,
-            abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,             
+            abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
             toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite, detenerCambioLimite,
-            _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover, 
+            _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
             _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
         };
 

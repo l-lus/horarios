@@ -5785,12 +5785,15 @@ Generado por Sistema Lushibosca
 
         function gistMergeCancelar() {
             _gistMergeData = null;
-            ModalManager.cerrar('modal-gist-merge');
             const btn = document.getElementById('btn-gist-bajar');
             if (btn) btn.disabled = false;
             if (_gistMergeDesdeModal) {
                 _gistMergeDesdeModal = false;
-                ModalManager.abrir('modal-gist');
+                // alternar detecta esHaciaAtras=true (padres[gist-merge]=gist) y hace history.back()
+                // sin pushState, tanto desde botón cancelar como desde popstate (mobile back)
+                ModalManager.alternar('modal-gist-merge', 'modal-gist');
+            } else {
+                ModalManager.cerrar('modal-gist-merge');
             }
         }
 
@@ -6056,8 +6059,7 @@ Generado por Sistema Lushibosca
                         footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros del Gist`));
                         resumenEl.appendChild(footer);
                     }
-                    ModalManager.cerrar('modal-gist');
-                    ModalManager.abrir('modal-gist-merge');
+                    ModalManager.alternar('modal-gist', 'modal-gist-merge');
                 }
             } catch (e) {
                 console.error('Gist bajar error:', e);

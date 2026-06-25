@@ -4156,7 +4156,6 @@
             if (v !== undefined) _animarCambioStats(() => actualizarEstadisticas(v));
         }
 
-        // ── Helpers privados de generarReporte ───────────────────────
         function _sumarHorasEfectivas(regs, horasDiarias) {
             return regs.reduce((sum, r) => {
                 const t = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
@@ -4274,7 +4273,6 @@
             });
             return semanas;
         }
-        // ─────────────────────────────────────────────────────────────
 
         function generarReporte() {
             const esAnual = modoEstadisticas === 'anual';
@@ -5783,11 +5781,6 @@ Generado por Sistema Lushibosca
             if (btn) btn.disabled = false;
             if (_gistMergeDesdeModal) {
                 _gistMergeDesdeModal = false;
-                // Cuando viene de popstate, _navegandoHaciaAtras sigue siendo true durante ~50ms.
-                // Si abrimos modal-gist ahora, abrir() omite el pushState y el modal queda
-                // sin entrada en el historial, desincronizando todos los modales siguientes.
-                // Con setTimeout > 50ms se garantiza que _navegandoHaciaAtras ya fue reseteado
-                // y abrir() ejecutará el pushState correctamente.
                 if (desdePopstate) {
                     setTimeout(() => ModalManager.abrir('modal-gist'), 60);
                 } else {
@@ -7376,9 +7369,7 @@ Generado por Sistema Lushibosca
             const headerEl = document.querySelector('.header');
             const headerH = headerEl ? headerEl.offsetHeight : 0;
             const margen = headerH + 8;
-            // Si la tarjeta ya es completamente visible, no scrollear
             if (rect.top >= margen && rect.bottom <= window.innerHeight) return;
-            // Scroll manual para que el borde superior de la tarjeta quede justo bajo el header
             window.scrollTo({ top: window.scrollY + rect.top - margen, behavior: 'smooth' });
         }
 

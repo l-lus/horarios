@@ -5680,8 +5680,6 @@ Generado por Sistema Lushibosca
             _gistAutoSyncTemp = null;
             _gistLimitesTemp = null;
             _gistLimitesOrig = null;
-
-            // Si hay un modal padre, alternamos. Si no, simplemente cerramos.
             if (_gistModalPadre) {
                 ModalManager.alternar('modal-gist', _gistModalPadre);
                 if (_gistModalPadre === 'modal-config') {

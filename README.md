@@ -4,6 +4,9 @@ la pagina llama a "ir para atras" en el navegador
 
 ## (Changelog)
 
+### 260626
+Refactor de async function init, se parte en varios helper y la funcion init como orquestador
+
 ### 260625
 * **Fix:** ir para atras al quitar filtro, gist merge desde registros, gist merge desde modal gist 
 * **Mantenimiento:** se mueve ConfirmarModal a modal manager module, quedando como funcion interna de este modulo y renombrada a Confirmar

@@ -6070,14 +6070,27 @@ Generado por Sistema Lushibosca
         }
 
 
-        async function init() {
-            if (typeof (Storage) === "undefined") {
-                alert("Tu navegador no soporta localStorage.");
-                return;
+        // ── Helpers privados de init ──────────────────────────────────
+
+        function _actualizarHintEdicion() {
+            const hint = document.getElementById('edit-hint-resumen');
+            if (!hint) return;
+            const e = document.getElementById('edit-entrada')?.value.trim();
+            const s = document.getElementById('edit-salida')?.value.trim();
+            const tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
+            if (!e && !s) { hint.textContent = ''; return; }
+            const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(e, s);
+            if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }
+            if (e?.length === 5 && s?.length === 5) {
+                const t = D.calcularHoras(e, s, tf || null, null, false);
+                hint.textContent = t ? `Total: ${t.horas}h ${t.minutos}m` : '';
+            } else {
+                hint.textContent = '';
             }
+        }
 
+        function _initGlobales() {
             PerfilManager.inicializar();
-
             window.DataManagement = {
                 agregarRegistro: D.agregarRegistro,
                 exportarJSON: D.exportarJSON,
@@ -6107,8 +6120,11 @@ Generado por Sistema Lushibosca
             window.HistoryManager = { undo: D.undoAction, redo: D.redoAction };
             window.PWAInstaller = { instalarApp: PWAInstaller.instalarApp };
             window.PerfilManager = PerfilManager;
-
             window.UILogic = UILogic;
+        }
+
+        function _initListenersFormulario() {
+            const verificarBloqueCreditoDebounced = debounce(verificarBloqueoCredito, 200);
 
             ['entrada', 'salida'].forEach(id => {
                 const el = $(id);
@@ -6117,31 +6133,19 @@ Generado por Sistema Lushibosca
             });
             $('fecha')?.addEventListener('change', () => limpiarError('fecha', null));
 
-            const verificarBloqueCreditoDebounced = debounce(verificarBloqueoCredito, 200);
-
             ['edit-entrada', 'edit-salida'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('input', (e) => {
-                        formatearInput(e);
-                        verificarBloqueCreditoDebounced();
-                    });
-
-                    el.addEventListener('change', verificarBloqueoCredito);
-                }
+                if (!el) return;
+                el.addEventListener('input', (e) => { formatearInput(e); verificarBloqueCreditoDebounced(); });
+                el.addEventListener('change', verificarBloqueoCredito);
             });
 
             $('calendario-selector-meses')?.addEventListener('click', (e) => {
-                if (e.target === e.currentTarget) {
-                    _cerrarSelectorMeses();
-                }
+                if (e.target === e.currentTarget) _cerrarSelectorMeses();
             });
 
             const tf = document.getElementById('edit-tiempo-fuera');
-            if (tf) tf.addEventListener('input', (e) => {
-                formatearInput(e);
-                verificarBloqueCreditoDebounced();
-            });
+            if (tf) tf.addEventListener('input', (e) => { formatearInput(e); verificarBloqueCreditoDebounced(); });
 
             const notasEl = document.getElementById('edit-notas');
             if (notasEl) notasEl.addEventListener('input', () => {
@@ -6159,133 +6163,33 @@ Generado por Sistema Lushibosca
                 if (el) el.addEventListener('input', formatearInput);
             });
 
-            function actualizarHintEdicion() {
-                const hint = document.getElementById('edit-hint-resumen');
-                if (!hint) return;
-                const e = document.getElementById('edit-entrada')?.value.trim();
-                const s = document.getElementById('edit-salida')?.value.trim();
-                const tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
-
-                if (!e && !s) { hint.textContent = ''; return; }
-
-                const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(e, s);
-                if (tipoEspecial) {
-                    hint.textContent = tipoEspecial.label;
-                    return;
-                }
-
-                if (e?.length === 5 && s?.length === 5) {
-                    const t = D.calcularHoras(e, s, tf || null, null, false);
-                    if (t) {
-                        hint.textContent = `Total: ${t.horas}h ${t.minutos}m`;
-                    } else {
-                        hint.textContent = '';
-                    }
-                } else {
-                    hint.textContent = '';
-                }
-            }
-
             ['edit-entrada', 'edit-salida', 'edit-tiempo-fuera'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.addEventListener('input', actualizarHintEdicion);
+                if (el) el.addEventListener('input', _actualizarHintEdicion);
             });
+        }
 
-            // ===================================
-            // LISTENERS PARA TECLA ENTER MODULE
-            // ===================================
-            const inputEntrada = document.getElementById('entrada');
-            if (inputEntrada) {
-                inputEntrada.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const inputSalida = document.getElementById('salida');
-                        if (inputSalida) inputSalida.focus();
-                    }
+        function _initListenersTeclado() {
+            const bindEnter = (id, handler) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    handler(el);
                 });
-            }
+            };
+            bindEnter('entrada',                    ()   => document.getElementById('salida')?.focus());
+            bindEnter('salida',                     (el) => { el.blur(); const b = document.getElementById('btn-agregar'); if (b && !b.disabled) b.click(); });
+            bindEnter('edit-entrada',               ()   => document.getElementById('edit-salida')?.focus());
+            bindEnter('edit-salida',                ()   => document.getElementById('edit-tiempo-fuera')?.focus());
+            bindEnter('edit-tiempo-fuera',          (el) => { el.blur(); const b = document.querySelector('#modal-editar .btn-edit'); if (b && !b.disabled) b.click(); });
+            bindEnter('nombre-nuevo-perfil-selector',(el) => { el.blur(); UILogic.crearPerfilDesdeSelector(); });
+            bindEnter('nombre-perfil-editar',       (el) => { el.blur(); const b = document.querySelector('#modal-editar-perfil .btn-edit'); if (b && !b.disabled) b.click(); });
+        }
 
-            const inputSalida = document.getElementById('salida');
-            if (inputSalida) {
-                inputSalida.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        inputSalida.blur();
-
-                        const btnAgregar = document.getElementById('btn-agregar');
-                        if (btnAgregar && !btnAgregar.disabled) {
-                            btnAgregar.click();
-                        }
-                    }
-                });
-            }
-
-            const editEntrada = document.getElementById('edit-entrada');
-            if (editEntrada) {
-                editEntrada.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const editSalida = document.getElementById('edit-salida');
-                        if (editSalida) editSalida.focus();
-                    }
-                });
-            }
-
-            const editSalida = document.getElementById('edit-salida');
-            if (editSalida) {
-                editSalida.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const editTiempoFuera = document.getElementById('edit-tiempo-fuera');
-                        if (editTiempoFuera) editTiempoFuera.focus();
-                    }
-                });
-            }
-
-            const editTiempoFuera = document.getElementById('edit-tiempo-fuera');
-            if (editTiempoFuera) {
-                editTiempoFuera.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        editTiempoFuera.blur();
-
-                        const btnGuardar = document.querySelector('#modal-editar .btn-edit');
-                        if (btnGuardar && !btnGuardar.disabled) {
-                            btnGuardar.click();
-                        }
-                    }
-                });
-            }
-
-            const inputNuevoPerfil = document.getElementById('nombre-nuevo-perfil-selector');
-            if (inputNuevoPerfil) {
-                inputNuevoPerfil.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        inputNuevoPerfil.blur();
-
-                        UILogic.crearPerfilDesdeSelector();
-                    }
-                });
-            }
-
-            const inputEditarPerfil = document.getElementById('nombre-perfil-editar');
-            if (inputEditarPerfil) {
-                inputEditarPerfil.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        inputEditarPerfil.blur();
-
-                        const btnGuardarPerfil = document.querySelector('#modal-editar-perfil .btn-edit');
-                        if (btnGuardarPerfil && !btnGuardarPerfil.disabled) {
-                            btnGuardarPerfil.click();
-                        }
-                    }
-                });
-            }
-
+        function _initSwipesYStats() {
             registrarSwipe(document.getElementById('stats-card'), () => alternarVista());
-
             registrarSwipe(document.getElementById('form-registro'), () => toggleModoLote(), { ignoreInputs: true });
 
             const anchor = document.getElementById('stat-items-tipos-anchor');
@@ -6293,22 +6197,18 @@ Generado por Sistema Lushibosca
                 TiposRegistro.obtenerTodosLosTipos().forEach(t => {
                     const item = document.createElement('div');
                     item.className = 'stat-item';
-                    const label = document.createElement('div');
-                    label.className = 'stat-label';
-                    label.textContent = t.labelPlural;
-                    const value = document.createElement('div');
-                    value.className = 'stat-value';
-                    value.id = `stat-${t.labelPlural.toLowerCase()}`;
-                    value.textContent = '0';
+                    const label = Object.assign(document.createElement('div'), { className: 'stat-label', textContent: t.labelPlural });
+                    const value = Object.assign(document.createElement('div'), { className: 'stat-value', id: `stat-${t.labelPlural.toLowerCase()}`, textContent: '0' });
                     item.appendChild(label);
                     item.appendChild(value);
                     anchor.parentNode.insertBefore(item, anchor);
                 });
             }
             _bindStatItemPopups(document.querySelector('.stats-grid'));
+        }
 
+        function _initDatosYConfig() {
             const config = D.cargarConfiguracion();
-            const temaOscuro = config.temaOscuro;
             D.setVistaActual(config.vistaActual);
             D.setIgnorarTiempoFuera(config.ignorarTiempoFuera || false);
             UILogic.actualizarEstadoBotonIgnorarTF();
@@ -6324,15 +6224,11 @@ Generado por Sistema Lushibosca
             else if (config.modoEstadisticas === 'semanal') { UILogic.togglePeriodoStats(); UILogic.togglePeriodoStats(); }
 
             const perfilActual = PerfilManager.obtenerDatosPerfil();
-            const diasArraySeguro = Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5];
-            D.setDiasHabiles(diasArraySeguro);
+            D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
             D.setHorasDiarias(perfilActual.horasDiarias !== undefined ? perfilActual.horasDiarias : 7);
-
-            const registrosCargados = perfilActual.registros || [];
-            D.registros().splice(0, D.registros().length, ...registrosCargados);
+            D.registros().splice(0, D.registros().length, ...(perfilActual.registros || []));
 
             const historialCargado = HistoryManager.loadFromLocalStorage();
-
             if (historialCargado) {
                 const estadoActual = HistoryManager.getCurrentState();
                 if (estadoActual !== null && estadoActual !== undefined) {
@@ -6348,22 +6244,17 @@ Generado por Sistema Lushibosca
                 HistoryManager.saveState(D.registros());
                 console.log('Nuevo historial inicializado');
             }
-
             HistoryManager.updateButtons();
+        }
 
-            if (temaOscuro) {
-                document.documentElement.classList.add('dark-mode');
-            }
-            const toggleBtnEl = $('theme-toggle');
-            if (toggleBtnEl) {
-                const tBtn = toggleBtnEl.querySelector('use');
-                if (tBtn) tBtn.setAttribute('href', temaOscuro ? '#icon-sun' : '#icon-moon');
-            }
-            const toggleBtnModal = $('theme-toggle-modal');
-            if (toggleBtnModal) {
-                const tBtnM = toggleBtnModal.querySelector('use');
-                if (tBtnM) tBtnM.setAttribute('href', temaOscuro ? '#icon-sun' : '#icon-moon');
-            }
+        function _restaurarEstadoVisual() {
+            const config = D.cargarConfiguracion();
+            const temaOscuro = config.temaOscuro;
+            if (temaOscuro) document.documentElement.classList.add('dark-mode');
+            [$('theme-toggle'), $('theme-toggle-modal')].forEach(btn => {
+                const use = btn?.querySelector('use');
+                if (use) use.setAttribute('href', temaOscuro ? '#icon-sun' : '#icon-moon');
+            });
 
             $('fecha').value = obtenerFechaHoy();
 
@@ -6377,10 +6268,9 @@ Generado por Sistema Lushibosca
                     const contenido = $('contenido-historico');
                     const icon = $('icon-indicator-historico');
                     if (contenido) contenido.classList.add('expanded');
-
                     if (estadoHistorico === 'meses') {
                         if (icon) { icon.style.transform = ''; icon.classList.add('rotated'); }
-                    } else if (estadoHistorico === 'completo') {
+                    } else {
                         const botones = $('botones-historico');
                         if (botones) { botones.classList.add('expanded'); tiempoExpansionBotones = Date.now(); }
                         if (icon) { icon.classList.remove('rotated'); icon.style.transform = 'rotate(-90deg)'; }
@@ -6399,9 +6289,197 @@ Generado por Sistema Lushibosca
             } catch (e) {
                 console.warn('Error restaurando estado visual:', e);
             }
+        }
+
+        function _initAutoSync() {
+            const _tieneCredenciales = GistSync.getToken() && GistSync.esGistIdValido(GistSync.getGistId());
+            if (!_tieneCredenciales) return;
+            const estado = GistSync.getAutoSync();
+            if (estado === 1 && GistSync.dentroDelRangoHorario() && !GistSync.superaLimite('bajar')) {
+                setTimeout(async () => { await gistBajar(true); GistSync.marcarSync('bajar'); }, 2000);
+            } else if (estado === 2 && GistSync.dentroDelRangoHorario() && !GistSync.superaLimite('subir')) {
+                setTimeout(async () => { await gistSubir(); GistSync.marcarSync('subir'); }, 2000);
+            }
+        }
+
+        function _initListenerEscape() {
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                const modal = document.querySelector('.modal.show');
+                if (!modal) return;
+                e.preventDefault();
+                ({
+                    'modal-gist':              () => cerrarModalGist(),
+                    'modal-gist-merge':        () => gistMergeCancelar(),
+                    'modal-config':            () => UILogic.cerrarConfig(),
+                    'modal-selector-perfiles': () => UILogic.cerrarSelectorPerfiles(),
+                    'modal-editar':            () => UILogic.cerrarEdicion(),
+                    'modal-importar':          () => UILogic.cerrarImportar(),
+                    'modal-exportar':          () => UILogic.cerrarExportar(),
+                    'modal-filtros':           () => UILogic.cerrarFiltros(),
+                    'modal-editar-perfil':     () => UILogic.cerrarEditorPerfil(),
+                    'modal-editar-grupo':      () => UILogic.cerrarEdicionGrupo(),
+                    'modal-confirmar':         () => document.getElementById('modal-confirmar-cancel')?.click(),
+                })[modal.id]?.();
+            });
+        }
+
+        function _initListenerAccionesLista(lista) {
+            lista.addEventListener('click', (e) => {
+                const target = e.target.closest('[data-accion]');
+                if (!target) return;
+                if (target.dataset.accion === 'editar-registro') {
+                    const id = target.dataset.registroId;
+                    if (id) D.editarRegistro(id);
+                } else if (target.dataset.accion === 'editar-grupo') {
+                    try {
+                        const grupoData = JSON.parse(target.dataset.grupoData);
+                        const registrosCompletos = D.registros().filter(r => grupoData.registros.includes(r.id));
+                        D.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
+                    } catch (err) { console.error('Error al abrir grupo:', err); }
+                }
+            });
+        }
+
+        function _initListenerToggleAnio(lista) {
+            lista.addEventListener('click', (e) => {
+                const headerAnio = e.target.closest('.registro-mes-header[data-accion="toggle-anio"]');
+                if (!headerAnio) return;
+                e.stopPropagation();
+                const contenedorAnio = headerAnio.closest('.registro-mes-container');
+                if (!contenedorAnio) return;
+                const detalleAnio = contenedorAnio.querySelector(':scope > .registro-mes-detalle');
+                const chevronAnio = headerAnio.querySelector('.chevron-mes');
+                const anioId = headerAnio.dataset.anioId;
+                const abierto = detalleAnio.classList.toggle('expanded');
+                if (chevronAnio) chevronAnio.style.transform = abierto ? 'rotate(180deg)' : 'rotate(0deg)';
+                try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(anioId), String(abierto)); } catch (e) { }
+            });
+        }
+
+        function _scrollAlExpandir(contenedor, detalle) {
+            setTimeout(() => {
+                const margenHeader = 80;
+                const alturaVentana = window.innerHeight;
+                const registros = detalle.querySelectorAll('.registro-item');
+                if (!registros.length) return;
+                const r0 = registros[0].getBoundingClientRect();
+                const r1 = registros.length > 1 ? registros[1].getBoundingClientRect() : null;
+                const cortado0 = r0.top < margenHeader || r0.bottom > alturaVentana;
+                const cortado1 = r1 && (r1.top < margenHeader || r1.bottom > alturaVentana);
+                if (cortado0 || cortado1) contenedor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 310);
+        }
+
+        function _initListenerToggleMes(lista) {
+            lista.addEventListener('click', (e) => {
+                const header = e.target.closest('.registro-mes-header');
+                if (!header || header.dataset.accion !== 'toggle-mes') return;
+                e.stopPropagation();
+                const contenedor = header.closest('.registro-mes-container');
+                if (!contenedor) return;
+                const detalle = contenedor.querySelector('.registro-mes-detalle');
+                const chevronIcon = header.querySelector('.chevron-mes');
+
+                if (detalle.classList.contains('expanded')) {
+                    detalle.classList.remove('expanded');
+                    chevronIcon.style.transform = 'rotate(0deg)';
+                    try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'false'); } catch (e) { }
+                    return;
+                }
+
+                const esContenedorAnio = (el) => {
+                    const h = el.closest('.registro-mes-container')?.querySelector('.registro-mes-header');
+                    return h && h.dataset.accion === 'toggle-anio';
+                };
+                const detalleAnioPadre = contenedor.parentElement?.closest('.registro-mes-detalle') || null;
+                const otrosMesesAbiertos = lista.querySelectorAll('.registro-mes-detalle.expanded');
+
+                otrosMesesAbiertos.forEach(otro => {
+                    if (!esContenedorAnio(otro) || otro === detalleAnioPadre) return;
+                    otro.classList.remove('expanded');
+                    const oc = otro.closest('.registro-mes-container');
+                    const och = oc?.querySelector('.chevron-mes');
+                    const oHeader = oc?.querySelector('.registro-mes-header');
+                    if (och) och.style.transform = 'rotate(0deg)';
+                    if (oHeader?.dataset.anioId) {
+                        try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(oHeader.dataset.anioId), 'false'); } catch (e) { }
+                    }
+                });
+
+                const _abrirDetalle = () => {
+                    detalle.classList.add('expanded');
+                    chevronIcon.style.transform = 'rotate(180deg)';
+                    try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'true'); } catch (e) { }
+                    _scrollAlExpandir(contenedor, detalle);
+                };
+
+                const hayOtrosAbiertos = Array.from(otrosMesesAbiertos).some(o => o !== detalle && !esContenedorAnio(o));
+                if (hayOtrosAbiertos) {
+                    otrosMesesAbiertos.forEach(otro => {
+                        if (otro === detalle || esContenedorAnio(otro)) return;
+                        otro.style.minHeight = `${otro.scrollHeight}px`;
+                        otro.classList.remove('expanded');
+                        const oc = otro.closest('.registro-mes-container');
+                        const och = oc?.querySelector('.chevron-mes');
+                        const oHeader = oc?.querySelector('.registro-mes-header');
+                        if (och) och.style.transform = 'rotate(0deg)';
+                        if (oHeader?.dataset.mesId) {
+                            try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(oHeader.dataset.mesId), 'false'); } catch (e) { }
+                        }
+                        setTimeout(() => { otro.style.minHeight = ''; }, 350);
+                    });
+                    setTimeout(_abrirDetalle, 300);
+                } else {
+                    _abrirDetalle();
+                }
+            });
+        }
+
+        function _initListenersOtros() {
+            const actualizarBotonLoteDebounced = debounce(actualizarBotonLote, 300);
+            const agregarListenersFecha = (el) => {
+                if (!el) return;
+                el.addEventListener('change', () => actualizarBotonLote());
+                el.addEventListener('input', () => actualizarBotonLoteDebounced());
+            };
+            agregarListenersFecha(document.getElementById('lote-fecha-desde'));
+            agregarListenersFecha(document.getElementById('lote-fecha-hasta'));
+
+            document.getElementById('tipo-exportacion')?.addEventListener('change', () => UILogic.toggleCamposRangoExport());
+
+            const fileInput = document.getElementById('file-import');
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    const nombreEl = document.getElementById('nombre-archivo-seleccionado');
+                    const btnCombinar = document.getElementById('btn-combinar');
+                    const btnReemplazar = document.getElementById('btn-reemplazar');
+                    const hayArchivo = e.target.files.length > 0;
+                    if (hayArchivo) {
+                        if (nombreEl) { nombreEl.textContent = `✓ ${e.target.files[0].name}`; nombreEl.style.display = 'block'; }
+                        if (btnCombinar) { btnCombinar.disabled = false; btnCombinar.style.opacity = '1'; }
+                        if (btnReemplazar) { btnReemplazar.disabled = false; btnReemplazar.style.opacity = '1'; }
+                    } else {
+                        if (nombreEl) { nombreEl.style.display = 'none'; nombreEl.textContent = ''; }
+                        if (btnCombinar) btnCombinar.disabled = true;
+                        if (btnReemplazar) btnReemplazar.disabled = true;
+                    }
+                });
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        async function init() {
+            if (typeof Storage === 'undefined') { alert('Tu navegador no soporta localStorage.'); return; }
+
+            _initGlobales();
+            _initListenersFormulario();
+            _initListenersTeclado();
+            _initSwipesYStats();
+            _initDatosYConfig();
+            _restaurarEstadoVisual();
 
             PWAInstaller.init();
-
             actualizarUI();
             _iniciarCicloStats();
             actualizarBotonesHistorico();
@@ -6410,295 +6488,22 @@ Generado por Sistema Lushibosca
                 _timerAutoVista = setTimeout(() => {
                     _timerAutoVista = null;
                     alternarVista();
-                    setTimeout(() => { _iniciarCicloStats(); }, 350);
+                    setTimeout(() => _iniciarCicloStats(), 350);
                 }, 2500);
             }
 
-            const _autoSyncEstado = GistSync.getAutoSync();
-            const _tieneCredenciales = GistSync.getToken() && GistSync.esGistIdValido(GistSync.getGistId());
-            if (_tieneCredenciales) {
-                if (_autoSyncEstado === 1) {
-                    if (GistSync.dentroDelRangoHorario() && !GistSync.superaLimite('bajar')) {
-                        setTimeout(async () => {
-                            await gistBajar(true);
-                            GistSync.marcarSync('bajar');
-                        }, 2000);
-                    }
-                } else if (_autoSyncEstado === 2) {
-                    if (GistSync.dentroDelRangoHorario() && !GistSync.superaLimite('subir')) {
-                        setTimeout(async () => {
-                            await gistSubir();
-                            GistSync.marcarSync('subir');
-                        }, 2000);
-                    }
-                }
-            }
-
+            _initAutoSync();
             setInterval(() => actualizarUI(null, true), 20000);
             console.log('Sistema iniciado correctamente');
 
-            document.addEventListener('keydown', (e) => {
-                if (e.key !== 'Escape') return;
-                const modal = document.querySelector('.modal.show');
-                if (!modal) return;
-                e.preventDefault();
-                const acciones = {
-                    'modal-gist': () => cerrarModalGist(),
-                    'modal-gist-merge': () => gistMergeCancelar(),
-                    'modal-config': () => UILogic.cerrarConfig(),
-                    'modal-selector-perfiles': () => UILogic.cerrarSelectorPerfiles(),
-                    'modal-editar': () => UILogic.cerrarEdicion(),
-                    'modal-importar': () => UILogic.cerrarImportar(),
-                    'modal-exportar': () => UILogic.cerrarExportar(),
-                    'modal-filtros': () => UILogic.cerrarFiltros(),
-                    'modal-editar-perfil': () => UILogic.cerrarEditorPerfil(),
-                    'modal-editar-grupo': () => UILogic.cerrarEdicionGrupo(),
-                    'modal-confirmar': () => document.getElementById('modal-confirmar-cancel')?.click(),
-                };
-                const accion = acciones[modal.id];
-                if (accion) accion();
-            });
-
+            _initListenerEscape();
             const lista = document.getElementById('lista-registros');
             if (lista) {
-                lista.addEventListener('click', (e) => {
-                    const target = e.target.closest('[data-accion]');
-                    if (!target) return;
-
-                    const accion = target.dataset.accion;
-
-                    if (accion === 'editar-registro') {
-                        const id = target.dataset.registroId;
-                        if (id) D.editarRegistro(id);
-                    }
-                    else if (accion === 'editar-grupo') {
-                        try {
-                            const grupoData = JSON.parse(target.dataset.grupoData);
-                            const registrosCompletos = D.registros().filter(r =>
-                                grupoData.registros.includes(r.id)
-                            );
-
-                            D.editarGrupo({
-                                registros: registrosCompletos,
-                                subtipo: grupoData.subtipo
-                            });
-                        } catch (err) {
-                            console.error('Error al abrir grupo:', err);
-                        }
-                    }
-                });
+                _initListenerAccionesLista(lista);
+                _initListenerToggleAnio(lista);
+                _initListenerToggleMes(lista);
             }
-
-            lista.addEventListener('click', (e) => {
-                const headerAnio = e.target.closest('.registro-mes-header[data-accion="toggle-anio"]');
-                if (!headerAnio) return;
-
-                e.stopPropagation();
-
-                const contenedorAnio = headerAnio.closest('.registro-mes-container');
-                if (!contenedorAnio) return;
-
-                const detalleAnio = contenedorAnio.querySelector(':scope > .registro-mes-detalle');
-                const chevronAnio = headerAnio.querySelector('.chevron-mes');
-                const anioId = headerAnio.dataset.anioId;
-                const estaExpandido = detalleAnio.classList.contains('expanded');
-
-                if (estaExpandido) {
-                    detalleAnio.classList.remove('expanded');
-                    if (chevronAnio) chevronAnio.style.transform = 'rotate(0deg)';
-                    try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(anioId), 'false'); } catch (e) { }
-                } else {
-                    detalleAnio.classList.add('expanded');
-                    if (chevronAnio) chevronAnio.style.transform = 'rotate(180deg)';
-                    try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(anioId), 'true'); } catch (e) { }
-                }
-            });
-
-            lista.addEventListener('click', (e) => {
-                const header = e.target.closest('.registro-mes-header');
-                if (!header || header.dataset.accion !== 'toggle-mes') return;
-
-                e.stopPropagation();
-
-                const contenedor = header.closest('.registro-mes-container');
-                if (!contenedor) return;
-
-                const detalle = contenedor.querySelector('.registro-mes-detalle');
-                const chevronIcon = header.querySelector('.chevron-mes');
-
-                const estaExpandido = detalle.classList.contains('expanded');
-
-                if (estaExpandido) {
-                    detalle.classList.remove('expanded');
-                    chevronIcon.style.transform = 'rotate(0deg)';
-
-                    try {
-                        StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'false');
-                    } catch (e) { }
-
-                } else {
-                    const otrosMesesAbiertos = lista.querySelectorAll('.registro-mes-detalle.expanded');
-                    const esContenedorAnio = (el) => {
-                        const h = el.closest('.registro-mes-container')?.querySelector('.registro-mes-header');
-                        return h && h.dataset.accion === 'toggle-anio';
-                    };
-                    const detalleAnioPadre = contenedor.parentElement?.closest('.registro-mes-detalle') || null;
-
-                    otrosMesesAbiertos.forEach(otroDetalle => {
-                        if (esContenedorAnio(otroDetalle) && otroDetalle !== detalleAnioPadre) {
-                            otroDetalle.classList.remove('expanded');
-                            const otroContenedor = otroDetalle.closest('.registro-mes-container');
-                            const otroChevron = otroContenedor?.querySelector('.chevron-mes');
-                            const otroHeader = otroContenedor?.querySelector('.registro-mes-header');
-                            if (otroChevron) otroChevron.style.transform = 'rotate(0deg)';
-                            if (otroHeader?.dataset.anioId) {
-                                try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(otroHeader.dataset.anioId), 'false'); } catch (e) { }
-                            }
-                        }
-                    });
-
-                    const hayOtrosAbiertos = Array.from(otrosMesesAbiertos).some(otro => otro !== detalle && !esContenedorAnio(otro));
-
-                    if (hayOtrosAbiertos) {
-                        otrosMesesAbiertos.forEach(otroDetalle => {
-                            if (otroDetalle !== detalle && !esContenedorAnio(otroDetalle)) {
-                                const alturaActual = otroDetalle.scrollHeight;
-
-                                otroDetalle.style.minHeight = `${alturaActual}px`;
-
-                                otroDetalle.classList.remove('expanded');
-                                const otroContainer = otroDetalle.closest('.registro-mes-container');
-                                const otroChevron = otroContainer?.querySelector('.chevron-mes');
-                                const otroHeader = otroContainer?.querySelector('.registro-mes-header');
-
-                                if (otroChevron) otroChevron.style.transform = 'rotate(0deg)';
-
-                                if (otroHeader && otroHeader.dataset.mesId) {
-                                    try {
-                                        StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(otroHeader.dataset.mesId), 'false');
-                                    } catch (e) { }
-                                }
-
-                                setTimeout(() => {
-                                    otroDetalle.style.minHeight = '';
-                                }, 350);
-                            }
-                        });
-
-                        setTimeout(() => {
-                            detalle.classList.add('expanded');
-                            chevronIcon.style.transform = 'rotate(180deg)';
-
-                            try {
-                                StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'true');
-                            } catch (e) { }
-
-                            setTimeout(() => {
-                                const margenHeader = 80;
-                                const alturaVentana = window.innerHeight;
-                                const registros = detalle.querySelectorAll('.registro-item');
-
-                                if (registros.length > 0) {
-                                    const primerRegistro = registros[0];
-                                    const rectPrimero = primerRegistro.getBoundingClientRect();
-                                    const segundoRegistro = registros.length > 1 ? registros[1] : null;
-                                    const rectSegundo = segundoRegistro ? segundoRegistro.getBoundingClientRect() : null;
-
-                                    const primeroCortado = rectPrimero.top < margenHeader || rectPrimero.bottom > alturaVentana;
-                                    const segundoCortado = rectSegundo && (rectSegundo.top < margenHeader || rectSegundo.bottom > alturaVentana);
-
-                                    if (primeroCortado || segundoCortado) {
-                                        contenedor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                    }
-                                }
-                            }, 310);
-                        }, 300);
-
-                    } else {
-                        detalle.classList.add('expanded');
-                        chevronIcon.style.transform = 'rotate(180deg)';
-
-                        try {
-                            StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'true');
-                        } catch (e) { }
-
-                        setTimeout(() => {
-                            const margenHeader = 80;
-                            const alturaVentana = window.innerHeight;
-                            const registros = detalle.querySelectorAll('.registro-item');
-
-                            if (registros.length > 0) {
-                                const primerRegistro = registros[0];
-                                const rectPrimero = primerRegistro.getBoundingClientRect();
-                                const segundoRegistro = registros.length > 1 ? registros[1] : null;
-                                const rectSegundo = segundoRegistro ? segundoRegistro.getBoundingClientRect() : null;
-
-                                const primeroCortado = rectPrimero.top < margenHeader || rectPrimero.bottom > alturaVentana;
-                                const segundoCortado = rectSegundo && (rectSegundo.top < margenHeader || rectSegundo.bottom > alturaVentana);
-
-                                if (primeroCortado || segundoCortado) {
-                                    contenedor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }
-                            }
-                        }, 310);
-                    }
-                }
-            });
-
-            const loteDesde = document.getElementById('lote-fecha-desde');
-            const loteHasta = document.getElementById('lote-fecha-hasta');
-            const actualizarBotonLoteDebounced = debounce(actualizarBotonLote, 300);
-
-            const agregarListenersFecha = (el) => {
-                if (!el) return;
-                el.addEventListener('change', () => actualizarBotonLote());
-                el.addEventListener('input', () => actualizarBotonLoteDebounced());
-            };
-            agregarListenersFecha(loteDesde);
-            agregarListenersFecha(loteHasta);
-
-            const tipoExportSelect = document.getElementById('tipo-exportacion');
-            if (tipoExportSelect) {
-                tipoExportSelect.addEventListener('change', () => {
-                    UILogic.toggleCamposRangoExport();
-                });
-            }
-            const fileInput = document.getElementById('file-import');
-            if (fileInput) {
-                fileInput.addEventListener('change', (e) => {
-                    const nombreEl = document.getElementById('nombre-archivo-seleccionado');
-                    const btnCombinar = document.getElementById('btn-combinar');
-                    const btnReemplazar = document.getElementById('btn-reemplazar');
-
-                    if (e.target.files.length > 0) {
-                        if (nombreEl) {
-                            const nombreArchivo = e.target.files[0].name;
-                            nombreEl.textContent = `✓ ${nombreArchivo}`;
-                            nombreEl.style.display = 'block';
-                        }
-
-                        if (btnCombinar) {
-                            btnCombinar.disabled = false;
-                            btnCombinar.style.opacity = '1';
-                        }
-                        if (btnReemplazar) {
-                            btnReemplazar.disabled = false;
-                            btnReemplazar.style.opacity = '1';
-                        }
-                    } else {
-                        if (nombreEl) {
-                            nombreEl.style.display = 'none';
-                            nombreEl.textContent = '';
-                        }
-                        if (btnCombinar) {
-                            btnCombinar.disabled = true;
-                        }
-                        if (btnReemplazar) {
-                            btnReemplazar.disabled = true;
-                        }
-                    }
-                });
-            }
+            _initListenersOtros();
         }
 
         function actualizarHintGrupo() {

@@ -6803,177 +6803,149 @@ Generado por Sistema Lushibosca
 
         let _popupCalendarioEl = null;
 
+        // ── Helpers compartidos de popups de calendario ───────────────
+        function _escHtml(s) {
+            return s == null ? '' : String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function _buildInfoHtmlRegistro(reg, horasDiarias) {
+            const esEspecial = TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
+            if (esEspecial) {
+                const tipoConfig = TiposRegistro.obtenerTipoPorCodigo(reg.entrada, reg.salida);
+                const emoji = _escHtml(tipoConfig?.emoji ?? '');
+                const label = tipoConfig ? _escHtml(tipoConfig.label) : _escHtml(reg.entrada);
+                const colorSafe = /^[a-z]+$/.test(tipoConfig?.color || '') ? tipoConfig.color : 'purple';
+                return `<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${emoji} ${label}</span>`;
+            }
+            if (reg.entrada && !reg.salida) {
+                const esHoy = reg.fecha === obtenerFechaHoy();
+                return `<div class="cal-popup-info cal-popup-info--${esHoy ? 'blue">En curso' : 'gold">Incompleto'}</div>
+                    <div class="cal-popup-3l">Entrada: ${_escHtml(reg.entrada)}</div>`;
+            }
+            const totalHoras = reg.total || 0;
+            const h = Math.floor(totalHoras);
+            const m = Math.round((totalHoras - h) * 60);
+            const totalStr = `${h}h${m > 0 ? ' ' + m + 'm' : ''}`;
+            let tfStr = '';
+            if (reg.tiempoFuera && reg.tiempoFuera !== '00:00') {
+                const [tfH, tfM] = reg.tiempoFuera.split(':').map(Number);
+                tfStr = tfH > 0 ? `${tfH}h${tfM > 0 ? ' ' + tfM + 'm' : ''} fuera` : `${tfM}m fuera`;
+            }
+            let totalConDiff = totalStr, diffColor = '';
+            if (horasDiarias > 0) {
+                const diffText = formatoDiferencia(totalHoras);
+                if (diffText) totalConDiff += ` (${diffText})`;
+                diffColor = totalHoras >= horasDiarias ? 'var(--c-green)' : 'var(--c-red)';
+            }
+            return `<div class="cal-popup-info${diffColor ? ' cal-popup-info--dynamic' : ''}"${diffColor ? ` data-color="${diffColor}"` : ''}>${totalConDiff}</div>
+                <div class="cal-popup-3l">${_escHtml(reg.entrada)} – ${_escHtml(reg.salida)}</div>
+                ${tfStr ? `<div class="cal-popup-3l">${_escHtml(tfStr)}</div>` : ''}`;
+        }
+
+        function _posicionarPopup(popup, event) {
+            const el = event.currentTarget || event.target;
+            const rect = el.getBoundingClientRect();
+            const margin = 8;
+            requestAnimationFrame(() => {
+                const pw = popup.offsetWidth, ph = popup.offsetHeight;
+                let top = rect.bottom + 12;
+                let left = rect.left + (rect.width / 2) - (pw / 2);
+                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
+                if (top < margin) top = margin;
+                popup.style.top = `${top}px`;
+                popup.style.left = `${left}px`;
+                popup.style.visibility = '';
+                setTimeout(() => popup.classList.add('listo'), 350);
+            });
+        }
+
+        function _registrarCierrePopup(popup, esMismoDia) {
+            const cerrar = () => {
+                popup.remove();
+                _popupCalendarioEl = null;
+                document.removeEventListener('click', onClick, true);
+                document.removeEventListener('scroll', cerrar, true);
+            };
+            const onClick = (e) => {
+                const dia = e.target.closest('.calendario-dia');
+                if (dia && esMismoDia(dia)) return;
+                if (!popup.contains(e.target)) cerrar();
+            };
+            setTimeout(() => {
+                document.addEventListener('click', onClick, true);
+                document.addEventListener('scroll', cerrar, true);
+            }, 10);
+            return cerrar;
+        }
+        // ─────────────────────────────────────────────────────────────
+
         function _popupCalendario(event, registroId) {
             event.stopPropagation();
 
-            if (_popupCalendarioEl) {
-                _popupCalendarioEl.remove();
-                _popupCalendarioEl = null;
-            }
+            if (_popupCalendarioEl) { _popupCalendarioEl.remove(); _popupCalendarioEl = null; }
 
             const reg = D.registros().find(r => r.id === registroId);
             if (!reg) return;
 
-            const _esc = s => s == null ? '' : String(s)
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-
             const claveMes = reg.fecha.substring(0, 7);
             const registrosDelMes = D.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
             const grupos = agruparRegistrosConsecutivos(registrosDelMes);
-            const grupoDelRegistro = grupos.find(g =>
-                g.tipo === 'grupo' && g.registros.some(r => r.id === registroId)
-            );
+            const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
 
-            const esEspecial = TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
-            const fechaObj = new Date(reg.fecha + 'T12:00:00');
-            const opcFecha = { weekday: 'long', day: 'numeric', month: 'long' };
-            const fechaLabel = _esc(fechaObj.toLocaleDateString('es-AR', opcFecha));
-
-            let infoHtml = '';
-            if (esEspecial) {
-                const tipoConfig = TiposRegistro.obtenerTipoPorCodigo(reg.entrada, reg.salida);
-                const emoji = _esc(tipoConfig ? tipoConfig.emoji : '');
-                const label = tipoConfig ? _esc(tipoConfig.label) : _esc(reg.entrada);
-                const colorSafe = /^[a-z]+$/.test(tipoConfig?.color || '') ? tipoConfig.color : 'purple';
-                infoHtml = `<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${emoji} ${label}</span>`;
-            } else if (reg.entrada && !reg.salida) {
-                const esHoy = reg.fecha === obtenerFechaHoy();
-                infoHtml = esHoy
-                    ? `<div class="cal-popup-info cal-popup-info--blue">En curso</div>
-                               <div class="cal-popup-3l">Entrada: ${_esc(reg.entrada)}</div>`
-                    : `<div class="cal-popup-info cal-popup-info--gold">Incompleto</div>
-                               <div class="cal-popup-3l">Entrada: ${_esc(reg.entrada)}</div>`;
-            } else {
-                const totalHoras = reg.total || 0;
-                const h = Math.floor(totalHoras);
-                const m = Math.round((totalHoras - h) * 60);
-                const totalStr = `${h}h${m > 0 ? ' ' + m + 'm' : ''}`;
-                let tfStr = '';
-                if (reg.tiempoFuera && reg.tiempoFuera !== '00:00') {
-                    const [tfH, tfM] = reg.tiempoFuera.split(':').map(Number);
-                    tfStr = tfH > 0 ? `${tfH}h${tfM > 0 ? ' ' + tfM + 'm' : ''} fuera` : `${tfM}m fuera`;
-                }
-                const horasDiarias = D.horasDiarias();
-                let totalConDiff = totalStr;
-                let diffColor = '';
-                if (horasDiarias > 0) {
-                    const diffText = formatoDiferencia(totalHoras);
-                    if (diffText) totalConDiff += ` (${diffText})`;
-                    diffColor = totalHoras >= horasDiarias ? 'var(--c-green)' : 'var(--c-red)';
-                }
-                infoHtml = `<div class="cal-popup-info${diffColor ? ' cal-popup-info--dynamic' : ''}" ${diffColor ? `data-color="${diffColor}"` : ''}>${totalConDiff}</div>
-                    <div class="cal-popup-3l">${_esc(reg.entrada)} – ${_esc(reg.salida)}</div>
-                    ${tfStr ? `<div class="cal-popup-3l">${_esc(tfStr)}</div>` : ''}`;
-            }
-
+            const fechaLabel = _escHtml(new Date(reg.fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+            const infoHtml = _buildInfoHtmlRegistro(reg, D.horasDiarias());
             const btnGrupoHtml = grupoDelRegistro ? `
-        <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
-            <svg class="icon"><use href="#icon-grid-group"/></svg>
-            Editar grupo
-        </button>` : '';
+                <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
+                    <svg class="icon"><use href="#icon-grid-group"/></svg>
+                    Editar grupo
+                </button>` : '';
 
-            if (grupoDelRegistro) {
-                window._calPopupGrupo = grupoDelRegistro;
-            }
+            if (grupoDelRegistro) window._calPopupGrupo = grupoDelRegistro;
 
             const popup = document.createElement('div');
             popup.className = 'cal-popup';
             popup.id = '_cal-popup';
             popup.dataset.registroId = reg.id;
             popup.innerHTML = `
-        <div class="cal-popup-fecha">${fechaLabel}</div>
-        ${infoHtml}
-        <button class="cal-popup-btn-edit" id="_cal-popup-btn-edit">
-            <svg class="icon"><use href="#icon-edit"/></svg>
-            Editar
-        </button>
-        ${btnGrupoHtml}
-    `;
+                <div class="cal-popup-fecha">${fechaLabel}</div>
+                ${infoHtml}
+                <button class="cal-popup-btn-edit" id="_cal-popup-btn-edit">
+                    <svg class="icon"><use href="#icon-edit"/></svg>
+                    Editar
+                </button>
+                ${btnGrupoHtml}`;
 
             _applyDataColors(popup);
             popup.style.visibility = 'hidden';
-
             document.body.appendChild(popup);
             _popupCalendarioEl = popup;
 
-            const btnEditPopup = popup.querySelector('#_cal-popup-btn-edit');
-            if (btnEditPopup) {
-                btnEditPopup.addEventListener('click', () => {
-                    DataManagement.editarRegistro(reg.id);
-                    document.getElementById('_cal-popup')?.remove();
-                });
-            }
-            const btnGrupoPopup = popup.querySelector('#_cal-popup-btn-grupo');
-            if (btnGrupoPopup) {
-                btnGrupoPopup.addEventListener('click', () => {
-                    DataManagement.editarGrupo(window._calPopupGrupo);
-                    document.getElementById('_cal-popup')?.remove();
-                });
-            }
-
-            popup.addEventListener('mouseenter', () => {
-                clearTimeout(_popupCalendarioHoverTimer);
+            popup.querySelector('#_cal-popup-btn-edit')?.addEventListener('click', () => {
+                DataManagement.editarRegistro(reg.id);
+                document.getElementById('_cal-popup')?.remove();
             });
+            popup.querySelector('#_cal-popup-btn-grupo')?.addEventListener('click', () => {
+                DataManagement.editarGrupo(window._calPopupGrupo);
+                document.getElementById('_cal-popup')?.remove();
+            });
+
+            popup.addEventListener('mouseenter', () => clearTimeout(_popupCalendarioHoverTimer));
             popup.addEventListener('mouseleave', () => {
                 if (_popupCalendarioEsHover) {
                     _popupCalendarioHoverTimer = setTimeout(() => {
-                        if (_popupCalendarioEl) {
-                            _popupCalendarioEl.remove();
-                            _popupCalendarioEl = null;
-                        }
+                        if (_popupCalendarioEl) { _popupCalendarioEl.remove(); _popupCalendarioEl = null; }
                         _popupCalendarioEsHover = false;
                     }, 500);
                 }
             });
 
-            const cerrarPorScroll = () => {
-                popup.remove();
-                _popupCalendarioEl = null;
-                document.removeEventListener('click', cerrar, true);
-                document.removeEventListener('scroll', cerrarPorScroll, true);
-            };
-            const cerrarPopup = () => {
-                popup.remove();
-                _popupCalendarioEl = null;
-                document.removeEventListener('click', cerrar, true);
-                document.removeEventListener('scroll', cerrarPorScroll, true);
-            };
-            const cerrar = (e) => {
-                const diaClickeado = e.target.closest('.calendario-dia');
-                if (diaClickeado && diaClickeado.dataset.regId === popup.dataset.registroId) return;
-                if (!popup.contains(e.target)) cerrarPopup();
-            };
-            setTimeout(() => {
-                document.addEventListener('click', cerrar, true);
-                document.addEventListener('scroll', cerrarPorScroll, true);
-            }, 10);
-
-            const el = event.currentTarget || event.target;
-            const rect = el.getBoundingClientRect();
-            const margin = 8;
-
-            requestAnimationFrame(() => {
-                const pw = popup.offsetWidth;
-                const ph = popup.offsetHeight;
-
-                let top = rect.bottom + 12;
-                let left = rect.left + (rect.width / 2) - (pw / 2);
-
-                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
-                if (left < margin) left = margin;
-                if (top + ph > window.innerHeight - margin) {
-                    top = rect.top - ph - 12;
-                }
-                if (top < margin) top = margin;
-
-                popup.style.top = top + 'px';
-                popup.style.left = left + 'px';
-                popup.style.visibility = '';
-
-                setTimeout(() => popup.classList.add('listo'), 350);
-            });
+            _registrarCierrePopup(popup, dia => dia.dataset.regId === reg.id);
+            _posicionarPopup(popup, event);
         }
 
         let _popupCalendarioEsHover = false;
@@ -6981,7 +6953,6 @@ Generado por Sistema Lushibosca
 
         function _popupCalendarioDiaSinRegistro(event, fecha) {
             event.stopPropagation();
-
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioEsHover = false;
 
@@ -6993,75 +6964,33 @@ Generado por Sistema Lushibosca
             }
 
             const esFechaFutura = fecha > TimeUtils.obtenerFechaHoy();
-            const fechaObj = new Date(fecha + 'T12:00:00');
-            const opcFecha = { weekday: 'long', day: 'numeric', month: 'long' };
-            const fechaLabel = S.sanitizeString(fechaObj.toLocaleDateString('es-AR', opcFecha), 60);
+            const fechaLabel = _escHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
 
             const popup = document.createElement('div');
             popup.className = 'cal-popup';
             popup.id = '_cal-popup';
             popup.dataset.fecha = fecha;
             popup.innerHTML = `
-        <div class="cal-popup-fecha">${fechaLabel}</div>
-        <div class="cal-popup-sin-reg">Sin registros</div>
-        ${esFechaFutura ? '' : `<button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
-            <svg class="icon"><use href="#icon-clock"/></svg>
-            Jornada regular
-        </button>`}
-        <button class="cal-popup-btn-edit cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
-            <svg class="icon"><use href="#icon-calendar-simple"/></svg>
-            Jornada especial
-        </button>
-    `;
+                <div class="cal-popup-fecha">${fechaLabel}</div>
+                <div class="cal-popup-sin-reg">Sin registros</div>
+                ${esFechaFutura ? '' : `<button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
+                    <svg class="icon"><use href="#icon-clock"/></svg>
+                    Jornada regular
+                </button>`}
+                <button class="cal-popup-btn-edit cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
+                    <svg class="icon"><use href="#icon-calendar-simple"/></svg>
+                    Jornada especial
+                </button>`;
 
             popup.style.visibility = 'hidden';
             document.body.appendChild(popup);
             _popupCalendarioEl = popup;
 
-            const cerrarPopup = () => {
-                popup.remove();
-                _popupCalendarioEl = null;
-                document.removeEventListener('click', cerrar, true);
-                document.removeEventListener('scroll', cerrarPopup, true);
-            };
-            const cerrar = (e) => {
-                const diaClickeado = e.target.closest('.calendario-dia');
-                if (diaClickeado && diaClickeado.dataset.fecha === fecha) return;
-                if (!popup.contains(e.target)) cerrarPopup();
-            };
+            const cerrarPopup = _registrarCierrePopup(popup, dia => dia.dataset.fecha === fecha);
+            popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => { cerrarPopup(); _irAFicharConFecha(fecha, false); });
+            popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrarPopup(); _irAFicharConFecha(fecha, true); });
 
-            popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => {
-                cerrarPopup();
-                _irAFicharConFecha(fecha, false);
-            });
-            popup.querySelector('#_cal-popup-btn-especial').addEventListener('click', () => {
-                cerrarPopup();
-                _irAFicharConFecha(fecha, true);
-            });
-
-            setTimeout(() => {
-                document.addEventListener('click', cerrar, true);
-                document.addEventListener('scroll', cerrarPopup, true);
-            }, 10);
-
-            const el = event.currentTarget || event.target;
-            const rect = el.getBoundingClientRect();
-            const margin = 8;
-
-            requestAnimationFrame(() => {
-                const pw = popup.offsetWidth;
-                const ph = popup.offsetHeight;
-                let top = rect.bottom + 12;
-                let left = rect.left + (rect.width / 2) - (pw / 2);
-                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
-                if (left < margin) left = margin;
-                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
-                if (top < margin) top = margin;
-                popup.style.top = top + 'px';
-                popup.style.left = left + 'px';
-                popup.style.visibility = '';
-                setTimeout(() => popup.classList.add('listo'), 350);
-            });
+            _posicionarPopup(popup, event);
         }
 
         function _flashCampo(...ids) {
@@ -7201,11 +7130,6 @@ Generado por Sistema Lushibosca
         };
 
         let _popupStatEl = null;
-
-        const _escHtml = s => s == null ? '' : String(s)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
 
         function _popupStat(event, statId) {
             event.stopPropagation();

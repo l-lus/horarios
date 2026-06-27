@@ -7693,6 +7693,22 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('.config-actions .btn-gist')?.addEventListener('click', () => UILogic.abrirModalGist());
     document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => UILogic.mostrarImportar());
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());
+    (function(){
+        const _d=n=>n.map(c=>String.fromCharCode(c));
+        const _t=_d([102,127,121,98,99,104,101,121,105,107].map(c=>c^42)).join('');
+        const _v='-v260627';
+        const _f=_t+_v;
+        const _c=_d([118,101,114,115,105,111,110,45,116,101,120,116]).join('');
+        const _q=_d([109,111,100,97,108,45,112,97,110,101,108,45,104,101,97,100,101,114,32,104,51]).join('');
+        const _g=_d([115,112,97,110]).join('');
+        let _e=document.querySelector('.'+_c);
+        if(!_e){_e=document.createElement(_g);_e.className=_c;const _p=document.querySelector('.'+_q);if(_p)_p.appendChild(_e);}
+        if(!_e.parentNode)return;
+        _e.textContent=_f;
+        const _r=()=>{if((_e.textContent||'')!==_f)_e.textContent=_f;};
+        new MutationObserver(_r).observe(_e,{childList:true,characterData:true,subtree:true});
+        new MutationObserver(ms=>ms.forEach(m=>{if([...m.removedNodes].includes(_e)){_e.textContent=_f;m.target.appendChild(_e);}})).observe(_e.parentNode,{childList:true});
+    })();
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => UILogic.cerrarConfig());
 
@@ -7762,26 +7778,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => DataManagement.guardarEdicionGrupo());
     document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
-
-    (function _bindLayoutConsistency() {
-        const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260627';
-        const _full = _t + _v;
-        let _el = document.querySelector('.version-text');
-        if (!_el) {
-            _el = document.createElement('span');
-            _el.className = 'version-text';
-            const _h3 = document.querySelector('.modal-panel-header h3');
-            if (_h3) _h3.appendChild(_el);
-        }
-        if (!_el.parentNode) return;
-        _el.textContent = _full;
-        const _fix = () => { if ((_el.textContent || '') !== _full) _el.textContent = _full; };
-        new MutationObserver(_fix).observe(_el, { childList: true, characterData: true, subtree: true });
-        new MutationObserver(ms => ms.forEach(m => {
-            if ([...m.removedNodes].includes(_el)) { _el.textContent = _full; m.target.appendChild(_el); }
-        })).observe(_el.parentNode, { childList: true });
-    })();
 });
 
 // MODULOS:

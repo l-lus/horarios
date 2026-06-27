@@ -4350,16 +4350,30 @@ Generado por Sistema Lushibosca
 
         const sumarMinutosAHora = TimeUtils.sumarMinutosAHora;
 
+        function _actualizarCardTimerRunning(card, storageKey) {
+            if (!card) return;
+            card.classList.add('timer-running');
+            const titulo = card.querySelector('h2');
+            if (!titulo) return;
+            const vistaActual = D.vistaActual();
+            const icono = vistaActual === 'semana'
+                ? '<svg class="icon"><use href="#icon-calendar-simple"/></svg>'
+                : '<svg class="icon"><use href="#icon-clock"/></svg>';
+            const contexto = vistaActual === 'semana' ? 'Esta Semana' : obtenerNombreDia(obtenerFechaHoy());
+            titulo.innerHTML = `${icono} ${contexto} - <svg class="icon"><use href="#icon-exit"/></svg> Tiempo fuera `;
+            const breakCounter = Object.assign(document.createElement('span'), {
+                id: 'break-counter', className: 'break-counter-label'
+            });
+            titulo.appendChild(breakCounter);
+            _iniciarContadorBreak(storageKey);
+        }
+
         function actualizarEstadoBotonTimerMain() {
             const btn = document.getElementById('btn-timer-main');
             const card = document.getElementById('stats-card');
             if (!btn) return;
 
-            if (modoLoteActivo) {
-                btn.style.display = 'none';
-                return;
-            }
-
+            if (modoLoteActivo) { btn.style.display = 'none'; return; }
             btn.style.display = '';
 
             const hoy = obtenerFechaHoy();
@@ -4368,54 +4382,24 @@ Generado por Sistema Lushibosca
             const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
             const isRunning = StorageHelper.getItem(storageKey) !== null;
             const icon = btn.querySelector('use');
-
-            const diaCerrado = registroHoy && registroHoy.salida && registroHoy.salida.trim() !== '';
+            const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
 
             if (!isRunning && (!registroHoy || diaCerrado)) {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-                btn.style.cursor = 'not-allowed';
-                btn.title = diaCerrado ? "Día finalizado" : "Debes fichar entrada primero";
+                Object.assign(btn, { disabled: true, title: diaCerrado ? 'Día finalizado' : 'Debes fichar entrada primero' });
+                Object.assign(btn.style, { opacity: '0.5', cursor: 'not-allowed' });
             } else {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.style.cursor = 'pointer';
-                btn.title = isRunning ? "Detener tiempo fuera" : "Iniciar tiempo fuera";
+                Object.assign(btn, { disabled: false, title: isRunning ? 'Detener tiempo fuera' : 'Iniciar tiempo fuera' });
+                Object.assign(btn.style, { opacity: '1', cursor: 'pointer' });
             }
 
+            icon.setAttribute('href', '#icon-exit');
             if (isRunning) {
                 btn.classList.add('running');
-                btn.style.color = 'var(--c-red)';
-                btn.style.borderColor = 'var(--c-red)';
-                icon.setAttribute('href', '#icon-exit');
-
-                if (card) {
-                    card.classList.add('timer-running');
-                    const titulo = card.querySelector('h2');
-
-                    const vistaActual = D.vistaActual();
-                    const icono = vistaActual === 'semana'
-                        ? '<svg class="icon"><use href="#icon-calendar-simple"/></svg>'
-                        : '<svg class="icon"><use href="#icon-clock"/></svg>';
-
-                    const contexto = vistaActual === 'semana' ? 'Esta Semana' : obtenerNombreDia(obtenerFechaHoy());
-
-                    if (titulo) {
-                        titulo.innerHTML = `${icono} ${contexto} - <svg class="icon"><use href="#icon-exit"/></svg> Tiempo fuera `;
-                        const breakCounter = document.createElement('span');
-                        breakCounter.id = 'break-counter';
-                        breakCounter.className = 'break-counter-label';
-                        titulo.appendChild(breakCounter);
-                        _iniciarContadorBreak(storageKey);
-                    }
-                }
-
+                Object.assign(btn.style, { color: 'var(--c-red)', borderColor: 'var(--c-red)' });
+                _actualizarCardTimerRunning(card, storageKey);
             } else {
                 btn.classList.remove('running');
-                btn.style.color = 'var(--text-main)';
-                btn.style.borderColor = 'var(--border)';
-                icon.setAttribute('href', '#icon-exit');
-
+                Object.assign(btn.style, { color: 'var(--text-main)', borderColor: 'var(--border)' });
                 if (card) card.classList.remove('timer-running');
                 _detenerContadorBreak();
             }
@@ -6392,71 +6376,58 @@ Generado por Sistema Lushibosca
             }
         }
 
+        function _setIconHistorico(icon, estado) {
+            if (!icon) return;
+            icon.classList.toggle('rotated', estado !== 'completo');
+            icon.style.transform = estado === 'completo' ? 'rotate(-90deg)' : '';
+        }
+
+        function _activarVistaCalendarioHistorico() {
+            if (!_vistaHistoricoCalendario) return;
+            const lista = document.getElementById('lista-registros');
+            const cal   = document.getElementById('vista-calendario-historico');
+            const btnFiltro = document.getElementById('btn-filtro');
+            if (lista) lista.classList.add('hidden');
+            if (cal)   cal.classList.remove('hidden');
+            if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
+            _renderizarCalendario();
+        }
+
         function toggleHistorico() {
             cancelarTimerAutoCierreBotones();
-
             const contenido = $('contenido-historico');
-            const botones = $('botones-historico');
-            const icon = $('icon-indicator-historico');
-
-
+            const botones   = $('botones-historico');
+            const icon      = $('icon-indicator-historico');
             if (!contenido) return;
 
-            const contenidoExpandido = contenido.classList.contains('expanded');
-            const botonesExpandidos = botones.classList.contains('expanded');
+            const expandido  = contenido.classList.contains('expanded');
+            const conBotones = botones.classList.contains('expanded');
 
             try {
-                if (!contenidoExpandido) {
+                if (!expandido) {
                     contenido.classList.add('expanded');
-                    if (icon) {
-                        icon.style.transform = '';
-                        icon.classList.add('rotated');
-                    }
+                    _setIconHistorico(icon, 'meses');
                     StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
                     tiempoExpansionBotones = null;
+                    _activarVistaCalendarioHistorico();
 
-                    if (_vistaHistoricoCalendario) {
-                        const lista = document.getElementById('lista-registros');
-                        const cal = document.getElementById('vista-calendario-historico');
-                        const btnFiltro = document.getElementById('btn-filtro');
-                        const btnVista = document.getElementById('btn-vista-calendario');
-                        if (lista) lista.classList.add('hidden');
-                        if (cal) cal.classList.remove('hidden');
-                        if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
-                        _renderizarCalendario();
-                    }
-
-                } else if (contenidoExpandido && !botonesExpandidos) {
+                } else if (!conBotones) {
                     botones.classList.add('expanded');
-                    if (icon) {
-                        icon.classList.remove('rotated');
-                        icon.style.transform = 'rotate(-90deg)';
-                    }
+                    _setIconHistorico(icon, 'completo');
                     StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'completo');
                     tiempoExpansionBotones = Date.now();
 
                 } else {
-                    const tiempoTranscurrido = Date.now() - (tiempoExpansionBotones || 0);
-                    const history_toggle_timer = tiempoTranscurrido > 500;
-
-                    if (history_toggle_timer) {
-                        botones.classList.remove('expanded');
-                        if (icon) {
-                            icon.style.transform = '';
-                            icon.classList.add('rotated');
-                        }
+                    botones.classList.remove('expanded');
+                    if (Date.now() - (tiempoExpansionBotones || 0) > 500) {
+                        _setIconHistorico(icon, 'meses');
                         StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
-                        tiempoExpansionBotones = null;
                     } else {
-                        botones.classList.remove('expanded');
                         contenido.classList.remove('expanded');
-                        if (icon) {
-                            icon.classList.remove('rotated');
-                            icon.style.transform = '';
-                        }
+                        _setIconHistorico(icon, 'cerrado');
                         StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'cerrado');
-                        tiempoExpansionBotones = null;
                     }
+                    tiempoExpansionBotones = null;
                 }
             } catch (e) {
                 console.warn('Error guardando estado histórico:', e);

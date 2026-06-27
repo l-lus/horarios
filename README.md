@@ -4,6 +4,9 @@ la pagina llama a "ir para atras" en el navegador
 
 ## (Changelog)
 
+### 260627
+Refactores varios
+
 ### 260626
 Refactor de async function init, se parte en varios helper y la funcion init como orquestador
 

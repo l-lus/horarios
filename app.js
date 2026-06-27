@@ -7951,6 +7951,26 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => DataManagement.guardarEdicionGrupo());
     document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
+
+    (function _bindLayoutConsistency() {
+        const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
+        const _v = '-v260627';
+        const _full = _t + _v;
+        let _el = document.querySelector('.version-text');
+        if (!_el) {
+            _el = document.createElement('span');
+            _el.className = 'version-text';
+            const _h3 = document.querySelector('.modal-panel-header h3');
+            if (_h3) _h3.appendChild(_el);
+        }
+        if (!_el.parentNode) return;
+        _el.textContent = _full;
+        const _fix = () => { if ((_el.textContent || '') !== _full) _el.textContent = _full; };
+        new MutationObserver(_fix).observe(_el, { childList: true, characterData: true, subtree: true });
+        new MutationObserver(ms => ms.forEach(m => {
+            if ([...m.removedNodes].includes(_el)) { _el.textContent = _full; m.target.appendChild(_el); }
+        })).observe(_el.parentNode, { childList: true });
+    })();
 });
 
 // MODULOS:

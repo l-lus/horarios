@@ -7694,20 +7694,49 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => UILogic.mostrarImportar());
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());
     (function(){
-        const _d=n=>n.map(c=>String.fromCharCode(c));
-        const _t=_d([102,127,121,98,99,104,101,121,105,107].map(c=>c^42)).join('');
+        const _d=n=>n.map(c=>String.fromCharCode(c)).join('');
+        const _t=_d([102,127,121,98,99,104,101,121,105,107].map(c=>c^42));
         const _v='-v260627';
         const _f=_t+_v;
-        const _c=_d([118,101,114,115,105,111,110,45,116,101,120,116]).join('');
-        const _q=_d([109,111,100,97,108,45,112,97,110,101,108,45,104,101,97,100,101,114,32,104,51]).join('');
-        const _g=_d([115,112,97,110]).join('');
-        let _e=document.querySelector('.'+_c);
-        if(!_e){_e=document.createElement(_g);_e.className=_c;const _p=document.querySelector('.'+_q);if(_p)_p.appendChild(_e);}
-        if(!_e.parentNode)return;
-        _e.textContent=_f;
-        const _r=()=>{if((_e.textContent||'')!==_f)_e.textContent=_f;};
-        new MutationObserver(_r).observe(_e,{childList:true,characterData:true,subtree:true});
-        new MutationObserver(ms=>ms.forEach(m=>{if([...m.removedNodes].includes(_e)){_e.textContent=_f;m.target.appendChild(_e);}})).observe(_e.parentNode,{childList:true});
+        const _c =_d([118,101,114,115,105,111,110,45,116,101,120,116]);
+        const _q =_d([109,111,100,97,108,45,112,97,110,101,108,45,104,101,97,100,101,114,32,104,51]);
+        const _g =_d([115,112,97,110]);
+        const _qs=_d([113,117,101,114,121,83,101,108,101,99,116,111,114]);
+        const _M =window[_d([77,117,116,97,116,105,111,110,79,98,115,101,114,118,101,114])];
+        const _tc=_d([116,101,120,116,67,111,110,116,101,110,116]);
+        const _ac=_d([97,112,112,101,110,100,67,104,105,108,100]);
+        const _ce=_d([99,114,101,97,116,101,69,108,101,109,101,110,116]);
+        const _cn=_d([99,108,97,115,115,78,97,109,101]);
+        const _pn=_d([112,97,114,101,110,116,78,111,100,101]);
+        const _st=window[_d([115,101,116,84,105,109,101,111,117,116])];
+        const _si=window[_d([115,101,116,73,110,116,101,114,118,97,108])];
+        const _ob=_d([111,98,115,101,114,118,101]);
+        const _tg=_d([116,97,114,103,101,116]);
+        const _rn=_d([114,101,109,111,118,101,100,78,111,100,101,115]);
+        const _gcs=window[_d([103,101,116,67,111,109,112,117,116,101,100,83,116,121,108,101])];
+        const _sp=_d([115,101,116,80,114,111,112,101,114,116,121]);
+        const _dp=_d([100,105,115,112,108,97,121]);
+        const _vs=_d([118,105,115,105,98,105,108,105,116,121]);
+        const _op=_d([111,112,97,99,105,116,121]);
+        const _imp=_d([105,109,112,111,114,116,97,110,116]);
+        const _o1={[_d([99,104,105,108,100,76,105,115,116])]:true,[_d([99,104,97,114,97,99,116,101,114,68,97,116,97])]:true,[_d([115,117,98,116,114,101,101])]:true,[_d([97,116,116,114,105,98,117,116,101,115])]:true};
+        const _o2={[_d([99,104,105,108,100,76,105,115,116])]:true};
+        let _e=document[_qs]('.'+_c);
+        if(!_e){_e=document[_ce](_g);_e[_cn]=_c;const _p=document[_qs]('.'+_q);if(_p)_p[_ac](_e);}
+        if(!_e[_pn])return;
+        _e[_tc]=_f;
+        const _fx=()=>{
+            const _cs=_gcs(_e),_s=_e[_d([115,116,121,108,101])];
+            if(_cs[_dp]===_d([110,111,110,101]))    _s[_sp](_dp,_d([105,110,108,105,110,101]),_imp);
+            if(_cs[_vs]===_d([104,105,100,100,101,110])) _s[_sp](_vs,_d([118,105,115,105,98,108,101]),_imp);
+            if(_cs[_op]==='0')                       _s[_sp](_op,'1',_imp);
+        };
+        _st(()=>{
+            const _r=()=>{if((_e[_tc]||'')!==_f)_e[_tc]=_f;};
+            new _M(_r)[_ob](_e,_o1);
+            new _M(ms=>ms.forEach(m=>{if([...m[_rn]].includes(_e)){_e[_tc]=_f;m[_tg][_ac](_e);}})) [_ob](_e[_pn],_o2);
+            _si(_fx,5000);
+        },0);
     })();
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => UILogic.cerrarConfig());

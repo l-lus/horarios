@@ -1224,6 +1224,12 @@ button:disabled {
     color: var(--text-muted);
 }
 
+.empty-state__btn-restaurar {
+    width: auto;
+    margin: 1rem auto 0;
+    font-size: 0.9rem;
+}
+
 .empty-state--calendario {
     grid-column: span 3;
     padding: 1rem;

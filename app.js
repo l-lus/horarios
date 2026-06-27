@@ -2494,7 +2494,21 @@
             const registrosAMostrar = D.obtenerRegistrosFiltrados();
 
             if (registrosAMostrar.length === 0) {
-                lista.innerHTML = '<div class="empty-state">No hay registros</div>';
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'empty-state';
+                if (D.registros().length === 0) {
+                    const btnRestaurar = document.createElement('button');
+                    btnRestaurar.className = 'btn-backup empty-state__btn-restaurar';
+                    btnRestaurar.innerHTML = '<svg class="icon"><use href="#icon-upload" /></svg> Restaurar desde archivo';
+                    btnRestaurar.addEventListener('click', () => mostrarImportar(true));
+                    const msg = document.createElement('p');
+                    msg.textContent = 'No hay registros';
+                    emptyDiv.appendChild(msg);
+                    emptyDiv.appendChild(btnRestaurar);
+                } else {
+                    emptyDiv.textContent = 'No hay registros para los filtros aplicados';
+                }
+                lista.appendChild(emptyDiv);
                 return;
             }
 

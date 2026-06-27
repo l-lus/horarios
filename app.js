@@ -5196,129 +5196,85 @@ Generado por Sistema Lushibosca
             });
         }
 
-        function actualizarBotonLote() {
-            const tipo = document.getElementById('lote-tipo').value;
-            const desde = document.getElementById('lote-fecha-desde').value;
-            const hasta = document.getElementById('lote-fecha-hasta').value;
-            const btn = document.getElementById('btn-agregar');
-            const btnTexto = document.getElementById('btn-registrar-texto');
 
+        // ── Helpers privados de actualizarBotonLote ──────────────────
+        function _setBtnError(btn, btnTexto, mensaje) {
+            btnTexto.textContent = mensaje;
+            btn.style.color = 'var(--c-red)';
+            setIconoBtn(btn, '#icon-save');
+        }
+
+        function _actualizarBtnNormal(btn, btnTexto, desde, hasta) {
+            const n = DataManagement.registros().filter(r =>
+                r.fecha >= desde && r.fecha <= hasta && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
+            ).length;
+            if (n > 0) {
+                btnTexto.textContent = `Borrar (${n})`;
+                btn.style.color = 'var(--c-red)';
+                setIconoBtn(btn, '#icon-trash');
+            } else {
+                btnTexto.textContent = 'Sin Registros';
+                btn.style.color = 'var(--text-muted)';
+                setIconoBtn(btn, '#icon-save');
+            }
+        }
+
+        function _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales) {
+            const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(tipo);
+            if (!codigosTipo) {
+                btnTexto.textContent = 'Fichar'; setIconoBtn(btn, '#icon-save'); return;
+            }
+            const yaRegistrados = DataManagement.registros().filter(r =>
+                r.fecha >= desde && r.fecha <= hasta &&
+                r.entrada === codigosTipo.entrada && r.salida === codigosTipo.salida
+            ).length;
+            const diasOcupados = DataManagement.registros().filter(r => r.fecha >= desde && r.fecha <= hasta).length;
+            const disponibles = diasTotales - diasOcupados;
+            const sobreescribirOtros = diasOcupados - yaRegistrados;
+
+            if (disponibles === 0 && yaRegistrados === diasTotales) {
+                btnTexto.textContent = `Fichado (${diasTotales})`;
+                btn.style.color = 'var(--text-muted)';
+            } else if (disponibles === diasTotales) {
+                btnTexto.textContent = `Fichar (${diasTotales})`;
+            } else if (sobreescribirOtros > 0) {
+                btnTexto.textContent = `Fichar (${disponibles} - ${sobreescribirOtros})`;
+            } else {
+                btnTexto.textContent = `Fichar (${disponibles})`;
+            }
+            setIconoBtn(btn, '#icon-save');
+        }
+        // ─────────────────────────────────────────────────────────────
+
+        function actualizarBotonLote() {
+            const tipo    = document.getElementById('lote-tipo').value;
+            const desde   = document.getElementById('lote-fecha-desde').value;
+            const hasta   = document.getElementById('lote-fecha-hasta').value;
+            const btn     = document.getElementById('btn-agregar');
+            const btnTexto = document.getElementById('btn-registrar-texto');
             btn.style.background = '';
             btn.style.color = '';
 
-            if (!desde && !hasta) {
-                btnTexto.textContent = 'Fichar';
-                setIconoBtn(btn, '#icon-save');
-                return;
-            }
+            if (!desde && !hasta) { btnTexto.textContent = 'Fichar'; setIconoBtn(btn, '#icon-save'); return; }
+            if (!desde && hasta)  { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
 
             if (desde && !hasta) {
-                if (tipo === 'normal') {
-                    btnTexto.textContent = 'Requiere Rango';
-                    btn.style.color = 'var(--c-red)';
-                    setIconoBtn(btn, '#icon-save');
-                    return;
-                }
-
-                const registroExiste = DataManagement.registros().find(r => r.fecha === desde);
-                if (registroExiste) {
-                    btnTexto.textContent = 'Fichado';
-                    btn.style.color = 'var(--text-muted)';
-                } else {
-                    btnTexto.textContent = 'Fichar';
-                }
+                if (tipo === 'normal') { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
+                const existe = DataManagement.registros().find(r => r.fecha === desde);
+                btnTexto.textContent = existe ? 'Fichado' : 'Fichar';
+                if (existe) btn.style.color = 'var(--text-muted)';
                 setIconoBtn(btn, '#icon-save');
                 return;
             }
 
-            if (!desde && hasta) {
-                btnTexto.textContent = 'Requiere Rango';
-                btn.style.color = 'var(--c-red)';
-                return;
-            }
+            if (!TimeUtils.validarFecha(desde)) { _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida'); return; }
+            if (!TimeUtils.validarFecha(hasta))  { _setBtnError(btn, btnTexto, 'Fecha Final Inválida'); return; }
+            if (desde > hasta)                   { _setBtnError(btn, btnTexto, 'Rango Inválido'); return; }
 
-            if (!TimeUtils.validarFecha(desde)) {
-                btnTexto.textContent = 'Fecha Inicial Inválida';
-                btn.style.color = 'var(--c-red)';
-                setIconoBtn(btn, '#icon-save');
-                return;
-            }
+            const diasTotales = Math.ceil(Math.abs(TimeUtils.parsearFechaLocal(hasta) - TimeUtils.parsearFechaLocal(desde)) / 864e5) + 1;
 
-            if (!TimeUtils.validarFecha(hasta)) {
-                btnTexto.textContent = 'Fecha Final Inválida';
-                btn.style.color = 'var(--c-red)';
-                setIconoBtn(btn, '#icon-save');
-                return;
-            }
-
-            if (desde > hasta) {
-                btnTexto.textContent = 'Rango Inválido';
-                btn.style.color = 'var(--c-red)';
-                setIconoBtn(btn, '#icon-save');
-                return;
-            }
-
-            const fechaInicio = TimeUtils.parsearFechaLocal(desde);
-            const fechaFin = TimeUtils.parsearFechaLocal(hasta);
-            const diffTime = Math.abs(fechaFin - fechaInicio);
-            const diasTotales = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-            let registrosDelTipoEnRango;
-
-            if (tipo === 'normal') {
-                registrosDelTipoEnRango = DataManagement.registros().filter(r => {
-                    const dentroDelRango = r.fecha >= desde && r.fecha <= hasta;
-                    const esEspecial = TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                    return dentroDelRango && !esEspecial;
-                });
-
-                const cantidadRegistros = registrosDelTipoEnRango.length;
-
-                if (cantidadRegistros > 0) {
-                    btnTexto.textContent = `Borrar (${cantidadRegistros})`;
-                    btn.style.color = 'var(--c-red)';
-                    setIconoBtn(btn, '#icon-trash');
-                } else {
-                    btnTexto.textContent = 'Sin Registros';
-                    btn.style.color = 'var(--text-muted)';
-                    setIconoBtn(btn, '#icon-save');
-                }
-            } else {
-                const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(tipo);
-
-                if (codigosTipo) {
-                    registrosDelTipoEnRango = DataManagement.registros().filter(r =>
-                        r.fecha >= desde &&
-                        r.fecha <= hasta &&
-                        r.entrada === codigosTipo.entrada &&
-                        r.salida === codigosTipo.salida
-                    );
-
-                    const diasOcupados = DataManagement.registros().filter(r =>
-                        r.fecha >= desde && r.fecha <= hasta
-                    );
-
-                    const yaRegistrados = registrosDelTipoEnRango.length;
-                    const disponibles = diasTotales - diasOcupados.length;
-                    const sobreescribirOtros = diasOcupados.length - yaRegistrados;
-
-                    if (disponibles === 0 && yaRegistrados === diasTotales) {
-                        btnTexto.textContent = `Fichado (${diasTotales})`;
-                        btn.style.color = 'var(--text-muted)';
-                    } else if (disponibles === diasTotales) {
-                        btnTexto.textContent = `Fichar (${diasTotales})`;
-                    } else if (sobreescribirOtros > 0) {
-                        btnTexto.textContent = `Fichar (${disponibles} - ${sobreescribirOtros})`;
-                    } else {
-                        btnTexto.textContent = `Fichar (${disponibles})`;
-                    }
-                    setIconoBtn(btn, '#icon-save');
-                } else {
-                    registrosDelTipoEnRango = [];
-                    btnTexto.textContent = 'Fichar';
-                    setIconoBtn(btn, '#icon-save');
-                }
-            }
+            if (tipo === 'normal') _actualizarBtnNormal(btn, btnTexto, desde, hasta);
+            else                   _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales);
         }
 
         function toggleCredito() {

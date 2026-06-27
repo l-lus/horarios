@@ -5893,6 +5893,100 @@ Generado por Sistema Lushibosca
 
         let _gistMergeData = null;
 
+        // ── Helpers privados de gistBajar ────────────────────────────
+        async function _validarDatosGist(data) {
+            if (!data.registros || !Array.isArray(data.registros)) throw new Error('Datos inválidos en el Gist');
+            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
+            if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) throw new Error('Estructura del Gist sospechosa');
+            if (data._hashNoCoincide) {
+                const continuar = await ModalManager.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
+                if (!continuar) return null;
+            }
+            if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
+                mostrarToast(`Gist de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
+            }
+            const registrosNormalizados = D.normalizarRegistrosImportados(data.registros, D.calcularHoras);
+            if (registrosNormalizados.length === 0) throw new Error('No se encontraron registros válidos');
+            if (registrosNormalizados.length > S.SECURITY_LIMITS.MAX_REGISTROS) throw new Error(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`);
+            return registrosNormalizados;
+        }
+
+        function _calcularDiffGist(registrosNormalizados) {
+            const fechasLocales = new Set(D.registros().map(r => r.fecha));
+            const soloEnGist = registrosNormalizados.filter(r => !fechasLocales.has(r.fecha));
+            const enAmbos = registrosNormalizados.filter(r => fechasLocales.has(r.fecha));
+            const soloLocal = D.registros().filter(r => !registrosNormalizados.some(g => g.fecha === r.fecha));
+            const complementarios = enAmbos.filter(imp => {
+                const local = D.registros().find(r => r.fecha === imp.fecha);
+                return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
+            });
+            return { soloEnGist, enAmbos, soloLocal, complementarios };
+        }
+
+        function _calcularConfigCambios(data) {
+            const cambios = [];
+            if (Array.isArray(data.diasHabiles)) {
+                const diasGist = [...data.diasHabiles].sort().join(',');
+                const diasLocal = [...D.diasHabiles()].sort().join(',');
+                if (diasGist !== diasLocal) cambios.push('días laborales');
+            }
+            if (data.horasDiarias != null && parseFloat(data.horasDiarias) !== D.horasDiarias()) {
+                cambios.push(`horas diarias (${D.horasDiarias()}h → ${parseFloat(data.horasDiarias)}h)`);
+            }
+            return cambios;
+        }
+
+        function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios) {
+            resumenEl.innerHTML = '';
+            const _mkSvg = (id) => {
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('class', 'icon');
+                const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                use.setAttribute('href', id);
+                svg.appendChild(use);
+                return svg;
+            };
+            const _mkStrong = (text, cls) => Object.assign(document.createElement('strong'), { className: cls || '', textContent: String(text) });
+            const _mkRow = (...nodes) => {
+                const d = document.createElement('div');
+                nodes.forEach(n => d.appendChild(typeof n === 'string' ? document.createTextNode(n) : n));
+                return d;
+            };
+
+            const plural = (n) => n !== 1 ? 's' : '';
+            const bloqueFilas = document.createElement('div');
+            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-cloud'), ` En Gist `, _mkStrong(soloEnGist.length, 'text-green'), ` registro${plural(soloEnGist.length)} nuevos`));
+            const filaAmbos = _mkRow(_mkSvg('#icon-combine'), ` En ambos `, _mkStrong(enAmbos.length), ` registro${plural(enAmbos.length)} (por fecha`);
+            if (complementarios.length > 0) {
+                filaAmbos.appendChild(document.createTextNode(', '));
+                filaAmbos.appendChild(_mkStrong(complementarios.length, 'text-blue'));
+                filaAmbos.appendChild(document.createTextNode(' para completar'));
+            }
+            filaAmbos.appendChild(document.createTextNode(')'));
+            bloqueFilas.appendChild(filaAmbos);
+            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-save'), ` Local `, _mkStrong(soloLocal.length), ` registro${plural(soloLocal.length)} no subidos`));
+            resumenEl.appendChild(bloqueFilas);
+
+            const configEl = Object.assign(document.createElement('div'), {
+                id: '_gist-config-cambios',
+                textContent: configCambios.length > 0 ? `⚙ Reemplazar cambiará: ${configCambios.join(', ')}` : '⚙ Sin cambios de configuración'
+            });
+            resumenEl.appendChild(configEl);
+
+            const footer = document.createElement('div');
+            footer.className = 'gist-resumen-footer';
+            let txtCombinar = `: agrega ${soloEnGist.length} nuevo(s)`;
+            if (complementarios.length > 0) txtCombinar += `, completa ${complementarios.length} registro(s)`;
+            txtCombinar += ', mantiene los locales';
+            footer.appendChild(_mkStrong('Combinar'));
+            footer.appendChild(document.createTextNode(txtCombinar));
+            footer.appendChild(document.createElement('br'));
+            footer.appendChild(_mkStrong('Reemplazar'));
+            footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros del Gist`));
+            resumenEl.appendChild(footer);
+        }
+        // ─────────────────────────────────────────────────────────────
+
         async function gistBajar(modoAutomatico = false) {
             _gistGuardarCredencialesSiModalAbierto();
             _gistMergeDesdeModal = document.getElementById('modal-gist')?.classList.contains('show') ?? false;
@@ -5902,125 +5996,19 @@ Generado por Sistema Lushibosca
 
             try {
                 const data = await GistSync.bajar();
+                const registrosNormalizados = await _validarDatosGist(data);
+                if (!registrosNormalizados) return;
 
-                if (!data.registros || !Array.isArray(data.registros)) {
-                    throw new Error('Datos inválidos en el Gist');
-                }
-
-                const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
-                const hasInvalidKeys = Object.keys(data).some(k => !allowedRootKeys.includes(k));
-                if (hasInvalidKeys) throw new Error('Estructura del Gist sospechosa');
-
-                if (data._hashNoCoincide) {
-                    const continuar = await ModalManager.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
-                    if (!continuar) {
-                        if (btn) btn.disabled = false;
-                        return;
-                    }
-                }
-
-                if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
-                    mostrarToast(`Gist de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
-                }
-
-                const registrosNormalizados = D.normalizarRegistrosImportados(data.registros, D.calcularHoras);
-
-                if (registrosNormalizados.length === 0) throw new Error('No se encontraron registros válidos');
-                if (registrosNormalizados.length > S.SECURITY_LIMITS.MAX_REGISTROS) throw new Error(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`);
-
-                const fechasLocales = new Set(D.registros().map(r => r.fecha));
-                const soloEnGist = registrosNormalizados.filter(r => !fechasLocales.has(r.fecha));
-                const enAmbos = registrosNormalizados.filter(r => fechasLocales.has(r.fecha));
-                const soloLocal = D.registros().filter(r => !registrosNormalizados.some(g => g.fecha === r.fecha));
-                const complementarios = enAmbos.filter(imp => {
-                    const local = D.registros().find(r => r.fecha === imp.fecha);
-                    if (!local) return false;
-                    return (!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera);
-                });
-
+                const diff = _calcularDiffGist(registrosNormalizados);
+                const { soloEnGist, complementarios } = diff;
                 _gistMergeData = { registrosNormalizados, soloEnGist, complementarios, data };
 
                 if (modoAutomatico) {
                     await gistMergeAplicar(GistSync.getMergeBehavior(), true);
                 } else {
-                    const configCambios = [];
-                    if (Array.isArray(data.diasHabiles)) {
-                        const diasGist = [...data.diasHabiles].sort().join(',');
-                        const diasLocal = [...D.diasHabiles()].sort().join(',');
-                        if (diasGist !== diasLocal) configCambios.push('días laborales');
-                    }
-                    if (data.horasDiarias != null && parseFloat(data.horasDiarias) !== D.horasDiarias()) {
-                        configCambios.push(`horas diarias (${D.horasDiarias()}h → ${parseFloat(data.horasDiarias)}h)`);
-                    }
-
+                    const configCambios = _calcularConfigCambios(data);
                     const resumenEl = document.getElementById('gist-merge-resumen');
-                    if (resumenEl) {
-                        resumenEl.innerHTML = '';
-
-                        const _mkSvg = (id) => {
-                            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                            svg.setAttribute('class', 'icon');
-                            const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-                            use.setAttribute('href', id);
-                            svg.appendChild(use);
-                            return svg;
-                        };
-                        const _mkStrong = (text, cls) => {
-                            const s = document.createElement('strong');
-                            if (cls) s.className = cls;
-                            s.textContent = String(text);
-                            return s;
-                        };
-                        const _mkRow = (...nodes) => {
-                            const d = document.createElement('div');
-                            nodes.forEach(n => d.appendChild(typeof n === 'string' ? document.createTextNode(n) : n));
-                            return d;
-                        };
-
-                        const bloqueFilas = document.createElement('div');
-                        bloqueFilas.appendChild(_mkRow(
-                            _mkSvg('#icon-cloud'), ` En Gist `,
-                            _mkStrong(soloEnGist.length, 'text-green'),
-                            ` registro${soloEnGist.length !== 1 ? 's' : ''} nuevos`
-                        ));
-                        const filaAmbos = _mkRow(
-                            _mkSvg('#icon-combine'), ` En ambos `,
-                            _mkStrong(enAmbos.length),
-                            ` registro${enAmbos.length !== 1 ? 's' : ''} (por fecha`
-                        );
-                        if (complementarios.length > 0) {
-                            filaAmbos.appendChild(document.createTextNode(', '));
-                            filaAmbos.appendChild(_mkStrong(complementarios.length, 'text-blue'));
-                            filaAmbos.appendChild(document.createTextNode(' para completar'));
-                        }
-                        filaAmbos.appendChild(document.createTextNode(')'));
-                        bloqueFilas.appendChild(filaAmbos);
-                        bloqueFilas.appendChild(_mkRow(
-                            _mkSvg('#icon-save'), ` Local `,
-                            _mkStrong(soloLocal.length),
-                            ` registro${soloLocal.length !== 1 ? 's' : ''} no subidos`
-                        ));
-                        resumenEl.appendChild(bloqueFilas);
-
-                        const configEl = document.createElement('div');
-                        configEl.id = '_gist-config-cambios';
-                        configEl.textContent = configCambios.length > 0
-                            ? `⚙ Reemplazar cambiará: ${configCambios.join(', ')}`
-                            : `⚙ Sin cambios de configuración`;
-                        resumenEl.appendChild(configEl);
-
-                        const footer = document.createElement('div');
-                        footer.className = 'gist-resumen-footer';
-                        footer.appendChild(_mkStrong('Combinar'));
-                        let txtCombinar = `: agrega ${soloEnGist.length} nuevo(s)`;
-                        if (complementarios.length > 0) txtCombinar += `, completa ${complementarios.length} registro(s)`;
-                        txtCombinar += ', mantiene los locales';
-                        footer.appendChild(document.createTextNode(txtCombinar));
-                        footer.appendChild(document.createElement('br'));
-                        footer.appendChild(_mkStrong('Reemplazar'));
-                        footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros del Gist`));
-                        resumenEl.appendChild(footer);
-                    }
+                    if (resumenEl) _buildResumenMerge(resumenEl, diff, registrosNormalizados, configCambios);
                     ModalManager.alternar('modal-gist', 'modal-gist-merge');
                 }
             } catch (e) {

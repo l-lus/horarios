@@ -3163,6 +3163,18 @@
             };
         }
 
+        function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, labelCero = '') {
+            if (objetivoDiario === 0) return labelCero;
+            if (cumplido) {
+                const extra = tiempoHoy - objetivoDiario;
+                if (bufferSemanal < 0 && Math.abs(bufferSemanal) > extra) return 'Te podes ir, pero debés tiempo';
+                return extra > 0 ? `Te podes ir (+${horasATexto(extra)})` : 'Te podes ir';
+            }
+            const faltante = objetivoDiario - tiempoHoy;
+            const faltanteTexto = `Faltan ${horasATexto(faltante)}`;
+            return bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
+        }
+
         function derivarVistaHoy(est) {
             const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanal, diasHabiles } = est;
             const objetivoDiario = horasDiarias;
@@ -3172,31 +3184,13 @@
                 if (est.ayerAbierto) {
                     const prog = objetivoDiario > 0 ? Math.min((tiempoHoy / objetivoDiario) * 100, 100) : 100;
                     const cumplido = objetivoDiario === 0 || tiempoHoy >= objetivoDiario;
-
-                    let colorBarra = cumplido ? 'green' : 'blue';
-                    let colorBorde = cumplido ? 'green' : 'blue';
-                    let mensaje = '';
-
-                    if (objetivoDiario === 0) {
-                        mensaje = 'En curso (cruce de medianoche)';
-                    } else if (cumplido) {
-                        const extra = tiempoHoy - objetivoDiario;
-                        if (bufferSemanal < 0 && Math.abs(bufferSemanal) > extra) {
-                            mensaje = 'Te podes ir, pero debés tiempo';
-                        } else {
-                            mensaje = extra > 0 ? `Te podes ir (+${horasATexto(extra)})` : 'Te podes ir';
-                        }
-                    } else {
-                        const faltante = objetivoDiario - tiempoHoy;
-                        const faltanteTexto = `Faltan ${horasATexto(faltante)}`;
-                        mensaje = bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
-                    }
+                    const colorBarra = cumplido ? 'green' : 'blue';
+                    const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, 'En curso (cruce de medianoche)');
 
                     const nombreDiaAyer = obtenerNombreDia(est.ayerStr);
                     let hint = 'Toca Fichar para registrar salida';
                     let hintEsHTML = false;
                     const regAyer = est.regAyer;
-
                     if (regAyer && regAyer.entrada && objetivoDiario > 0 && !TiposRegistro.esRegistroEspecial(regAyer.entrada, regAyer.salida)) {
                         ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regAyer, objetivoDiario, bufferSemanal, diasHabiles));
                     }
@@ -3204,12 +3198,10 @@
                     return {
                         titulo: `<svg class="icon"><use href="#icon-clock" /></svg>${nombreDiaAyer} (ayer)`,
                         stats: horasATexto(tiempoHoy),
-                        mensaje: mensaje,
-                        mostrarMensaje: true,
-                        colorBarra: colorBarra, anchoBarra: prog,
-                        colorBorde: colorBorde, estadoFondo: 'en_curso', estadoFondoColor: null,
-                        hint: hint,
-                        hintEsHTML: hintEsHTML,
+                        mensaje, mostrarMensaje: true,
+                        colorBarra, anchoBarra: prog,
+                        colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
+                        hint, hintEsHTML,
                     };
                 }
 
@@ -3257,23 +3249,12 @@
                 mensaje = dif >= 0 ? `${horasATexto(dif)} extras` : `Faltaron ${horasATexto(Math.abs(dif))}`;
                 mostrarMensaje = true;
             } else {
-                colorBarra = cumplido ? 'green' : 'blue';
-                colorBorde = cumplido ? 'green' : 'blue';
-                estadoFondo = 'en_curso';
-                mostrarMensaje = true;
-                if (cumplido) {
-                    const extra = tiempoHoy - objetivoDiario;
-                    if (bufferSemanal < 0 && Math.abs(bufferSemanal) > extra) {
-                        mensaje = 'Te podes ir, pero debés tiempo';
-                    } else {
-                        mensaje = extra > 0 ? `Te podes ir (+${horasATexto(extra)})` : 'Te podes ir';
-                    }
-                } else {
-                    const faltante = objetivoDiario - tiempoHoy;
-                    const faltanteTexto = `Faltan ${horasATexto(faltante)}`;
-                    mensaje = bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
+                    colorBarra = cumplido ? 'green' : 'blue';
+                    colorBorde = cumplido ? 'green' : 'blue';
+                    estadoFondo = 'en_curso';
+                    mostrarMensaje = true;
+                    mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal);
                 }
-            }
 
             let hint = 'Toca para ver la Semana';
             let hintEsHTML = false;
@@ -3720,22 +3701,15 @@
                 draggingEl = item;
                 const rect = item.getBoundingClientRect();
                 initialYOffset = clientY - rect.top;
-
                 dragClone = item.cloneNode(true);
-                dragClone.style.position = 'fixed';
-                dragClone.style.top = `${rect.top}px`;
-                dragClone.style.left = `${rect.left}px`;
-                dragClone.style.width = `${rect.width}px`;
-                dragClone.style.height = `${rect.height}px`;
-                dragClone.style.zIndex = '999999';
-                dragClone.style.pointerEvents = 'none';
-                dragClone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
-                dragClone.style.margin = '0';
-                dragClone.style.transform = 'scale(1.02)';
-                dragClone.style.opacity = '0.9';
+                Object.assign(dragClone.style, {
+                    position: 'fixed', top: `${rect.top}px`, left: `${rect.left}px`,
+                    width: `${rect.width}px`, height: `${rect.height}px`, zIndex: '999999',
+                    pointerEvents: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                    margin: '0', transform: 'scale(1.02)', opacity: '0.9'
+                });
                 document.body.appendChild(dragClone);
                 draggingEl.style.opacity = '0';
-
                 if (navigator.vibrate) navigator.vibrate(30);
             }
 
@@ -3786,51 +3760,25 @@
                 draggingEl = null;
             }
 
-            lista.addEventListener('touchstart', (e) => {
-                const handle = e.target.closest('.drag-handle');
-                if (!handle) return;
-                const item = handle.closest('.orden-card-item');
+            const bindStart = (eventType, getY, opts) => lista.addEventListener(eventType, (e) => {
+                const item = e.target.closest('.drag-handle')?.closest('.orden-card-item');
                 if (!item) return;
+                startY = getY(e);
+                dragTimer = setTimeout(() => initDrag(item, startY), DRAG_DELAY);
+            }, opts);
 
-                startY = e.touches[0].clientY;
-                dragTimer = setTimeout(() => {
-                    initDrag(item, startY);
-                }, DRAG_DELAY);
-            }, { passive: true });
-
-            lista.addEventListener('touchmove', (e) => {
-                if (!draggingEl) {
-                    if (Math.abs(e.touches[0].clientY - startY) > 10) clearTimeout(dragTimer);
-                    return;
-                }
+            const bindMove = (target, eventType, getY, opts) => target.addEventListener(eventType, (e) => {
+                if (!draggingEl) { if (Math.abs(getY(e) - startY) > 10) clearTimeout(dragTimer); return; }
                 e.preventDefault();
-                moveDrag(e.touches[0].clientY);
-            }, { passive: false });
+                moveDrag(getY(e));
+            }, opts);
 
+            bindStart('touchstart', e => e.touches[0].clientY, { passive: true });
+            bindStart('mousedown',  e => e.clientY);
+            bindMove(lista,    'touchmove', e => e.touches[0].clientY, { passive: false });
+            bindMove(document, 'mousemove', e => e.clientY);
             lista.addEventListener('touchend', endDrag);
             lista.addEventListener('touchcancel', endDrag);
-
-            lista.addEventListener('mousedown', (e) => {
-                const handle = e.target.closest('.drag-handle');
-                if (!handle) return;
-                const item = handle.closest('.orden-card-item');
-                if (!item) return;
-
-                startY = e.clientY;
-                dragTimer = setTimeout(() => {
-                    initDrag(item, startY);
-                }, DRAG_DELAY);
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!draggingEl) {
-                    if (Math.abs(e.clientY - startY) > 10) clearTimeout(dragTimer);
-                    return;
-                }
-                e.preventDefault();
-                moveDrag(e.clientY);
-            });
-
             document.addEventListener('mouseup', endDrag);
         }
 

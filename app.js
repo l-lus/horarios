@@ -6571,10 +6571,8 @@ Generado por Sistema Lushibosca
             const fechaStr = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const registrosFiltrados = D.obtenerRegistrosFiltrados();
             const todosLosRegistros = D.registros();
-            const regsPorFecha = {};
-            registrosFiltrados.forEach(r => { regsPorFecha[r.fecha] = r; });
-            const todosRegsPorFecha = {};
-            todosLosRegistros.forEach(r => { todosRegsPorFecha[r.fecha] = r; });
+            const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
+            const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
             const horasDiariasObj = D.horasDiarias();
             const filtroActivo = D.obtenerRegistrosFiltrados().length !== D.registros().length;
             const claseDelDia = (fecha) => {
@@ -6641,11 +6639,7 @@ Generado por Sistema Lushibosca
                 frag.appendChild(cell);
             }
 
-            if (filtroActivo) {
-                grid.classList.add('calendario-filtro-activo');
-            } else {
-                grid.classList.remove('calendario-filtro-activo');
-            }
+            grid.classList.toggle('calendario-filtro-activo', filtroActivo);
             grid.innerHTML = '';
             grid.appendChild(frag);
 
@@ -7019,13 +7013,27 @@ Generado por Sistema Lushibosca
 
         let _popupStatEl = null;
 
+        function _registrarCierreStatPopup(popup) {
+            const cerrar = () => {
+                popup.remove();
+                _popupStatEl = null;
+                document.removeEventListener('click', onClick, true);
+                document.removeEventListener('scroll', cerrar, true);
+            };
+            const onClick = (e) => {
+                const item = e.target.closest('.stat-item');
+                if (item && item.dataset.statId === popup.dataset.statId) return;
+                if (!popup.contains(e.target)) cerrar();
+            };
+            setTimeout(() => {
+                document.addEventListener('click', onClick, true);
+                document.addEventListener('scroll', cerrar, true);
+            }, 10);
+        }
+
         function _popupStat(event, statId) {
             event.stopPropagation();
-
-            if (_popupStatEl) {
-                _popupStatEl.remove();
-                _popupStatEl = null;
-            }
+            if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
 
             let info = DESCRIPCIONES_STATS[statId];
             if (statId === 'stat-saldo' && info) {
@@ -7051,9 +7059,7 @@ Generado por Sistema Lushibosca
                 info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
             }
             if (statId === 'stat-promedio-diario' && info) {
-                const horasDiarias = D.horasDiarias();
-                const modoTexto = `Actualmente las horas diarias objetivo son ${horasDiarias}h.`;
-                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
+                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Actualmente las horas diarias objetivo son ${D.horasDiarias()}h.</strong>` };
             }
             if (!info) {
                 const valueEl = $(statId);
@@ -7072,60 +7078,14 @@ Generado por Sistema Lushibosca
             popup.id = '_stat-popup';
             popup.dataset.statId = statId;
             popup.innerHTML = `
-        <div class="stat-popup-titulo">${_escHtml(info.titulo)}</div>
-        <div class="stat-popup-desc">${info.desc}</div>
-    `;
-
+                <div class="stat-popup-titulo">${_escHtml(info.titulo)}</div>
+                <div class="stat-popup-desc">${info.desc}</div>`;
             popup.style.visibility = 'hidden';
             document.body.appendChild(popup);
             _popupStatEl = popup;
 
-            const cerrarPorScroll = () => {
-                popup.remove();
-                _popupStatEl = null;
-                document.removeEventListener('click', cerrar, true);
-                document.removeEventListener('scroll', cerrarPorScroll, true);
-            };
-            const cerrarPopup = () => {
-                popup.remove();
-                _popupStatEl = null;
-                document.removeEventListener('click', cerrar, true);
-                document.removeEventListener('scroll', cerrarPorScroll, true);
-            };
-            const cerrar = (e) => {
-                const itemClickeado = e.target.closest('.stat-item');
-                if (itemClickeado && itemClickeado.dataset.statId === popup.dataset.statId) return;
-                if (!popup.contains(e.target)) cerrarPopup();
-            };
-            setTimeout(() => {
-                document.addEventListener('click', cerrar, true);
-                document.addEventListener('scroll', cerrarPorScroll, true);
-            }, 10);
-
-            const el = event.currentTarget || event.target;
-            const rect = el.getBoundingClientRect();
-            const margin = 8;
-
-            requestAnimationFrame(() => {
-                const pw = popup.offsetWidth;
-                const ph = popup.offsetHeight;
-
-                let top = rect.bottom + 12;
-                let left = rect.left + (rect.width / 2) - (pw / 2);
-
-                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
-                if (left < margin) left = margin;
-                if (top + ph > window.innerHeight - margin) {
-                    top = rect.top - ph - 12;
-                }
-                if (top < margin) top = margin;
-
-                popup.style.top = top + 'px';
-                popup.style.left = left + 'px';
-                popup.style.visibility = '';
-
-                setTimeout(() => popup.classList.add('listo'), 350);
-            });
+            _registrarCierreStatPopup(popup);
+            _posicionarPopup(popup, event);
         }
 
         function _onclickStatItem(event) {

@@ -1597,7 +1597,7 @@ input.campo-flash {
     :is([id^="btn-toggle-"],
         #btn-reporte,
         .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist,
-        .btn-delete, .btn-cancel, .btn-export, .btn-backup, .btn-edit,
+        .btn-delete, .btn-cancel, .btn-export, .btn-merge,  .btn-backup, .btn-edit,
         .calendario-nav button):hover:not(:disabled) {
         filter: var(--hover);
     }

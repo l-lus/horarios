@@ -2646,6 +2646,53 @@
             return Math.sqrt(varianza);
         }
 
+
+        function _calcularRegularidadRango(registrosValidos, regularidadPorMes) {
+            if (regularidadPorMes) {
+                const meses = [...new Set(registrosValidos.map(r => r.fecha.substring(0, 7)))];
+                const desE = [], desJ = [];
+                meses.forEach(mes => {
+                    const regs = registrosValidos.filter(r => r.fecha.startsWith(mes));
+                    if (regs.length < 2) return;
+                    const dE = desviacionEstandar(regs.map(r => TimeUtils.horaAMinutos(r.entrada)));
+                    const dJ = desviacionEstandar(regs.map(r => Math.round(r.total * 60)));
+                    if (dE !== null) desE.push(dE);
+                    if (dJ !== null) desJ.push(dJ);
+                });
+                const avg = arr => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+                return {
+                    regEntrada: calcularRegularidad(avg(desE)),
+                    regJornada: calcularRegularidad(avg(desJ))
+                };
+            }
+            return {
+                regEntrada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)))),
+                regJornada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => Math.round(r.total * 60))))
+            };
+        }
+
+        function _calcularBufferPeriodo(registrosRango, desde, hasta, horasDiariasObj) {
+            const diasHabilesConfig = D.diasHabiles();
+            const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
+            const hoy = obtenerFechaHoy();
+            const { ayerStr, ayerAbierto } = D.detectarAyerAbierto(hoy, regsPorFecha);
+
+            let objetivo = 0, hechas = 0;
+            for (const iso of TimeUtils.generarRangoFechas(desde, hasta)) {
+                if (iso > hoy) continue;
+                const esDiaHabil = diasHabilesConfig.includes(TimeUtils.parsearFechaLocal(iso).getDay());
+                const r = regsPorFecha.get(iso);
+                const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
+                const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+                const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
+
+                if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += horasDiariasObj;
+                if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
+                if (esRemoto) hechas += horasDiariasObj;
+            }
+            return hechas - objetivo;
+        }
+
         function _calcularEstadisticasRango(registrosRango, opciones = {}) {
             const { regularidadPorMes = false } = opciones;
 
@@ -2684,86 +2731,31 @@
 
             const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
             const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
-            const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
+            const promedioSalida  = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
 
-            const horasDiariasParaRemoto = D.horasDiarias();
             const remotos = conteosPorTipo['remotos'] || 0;
             const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
-            const totalHoras = totalHorasTrabajadas + (remotos * horasDiariasParaRemoto);
+            const totalHoras = totalHorasTrabajadas + (remotos * D.horasDiarias());
             const promDiario = totalHorasTrabajadas / registrosValidos.length;
-            let hPromedio = Math.floor(promDiario);
-            let mPromedio = Math.round((promDiario - hPromedio) * 60);
+            let hPromedio = Math.floor(promDiario), mPromedio = Math.round((promDiario - hPromedio) * 60);
             if (mPromedio === 60) { hPromedio++; mPromedio = 0; }
-            let hTotal = Math.floor(totalHoras);
-            let mTotal = Math.round((totalHoras - hTotal) * 60);
+            let hTotal = Math.floor(totalHoras), mTotal = Math.round((totalHoras - hTotal) * 60);
             if (mTotal === 60) { hTotal++; mTotal = 0; }
 
-            let regEntrada, regJornada;
-            if (regularidadPorMes) {
-                const meses = [...new Set(registrosValidos.map(r => r.fecha.substring(0, 7)))];
-                const desE = [], desJ = [];
-                meses.forEach(mes => {
-                    const regs = registrosValidos.filter(r => r.fecha.startsWith(mes));
-                    if (regs.length >= 2) {
-                        const dE = desviacionEstandar(regs.map(r => TimeUtils.horaAMinutos(r.entrada)));
-                        const dJ = desviacionEstandar(regs.map(r => Math.round(r.total * 60)));
-                        if (dE !== null) desE.push(dE);
-                        if (dJ !== null) desJ.push(dJ);
-                    }
-                });
-                regEntrada = calcularRegularidad(desE.length > 0 ? desE.reduce((a, b) => a + b, 0) / desE.length : null);
-                regJornada = calcularRegularidad(desJ.length > 0 ? desJ.reduce((a, b) => a + b, 0) / desJ.length : null);
-            } else {
-                regEntrada = calcularRegularidad(desviacionEstandar(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada))));
-                regJornada = calcularRegularidad(desviacionEstandar(registrosValidos.map(r => Math.round(r.total * 60))));
-            }
+            const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
 
             const horasDiariasObj = D.horasDiarias();
-            let bufferPeriodo = null;
-            if (horasDiariasObj > 0 && opciones.desde && opciones.hasta) {
-                const diasHabilesConfig = D.diasHabiles();
-                const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
-                const hoy = obtenerFechaHoy();
-
-                const { ayerStr, ayerAbierto } = D.detectarAyerAbierto(hoy, regsPorFecha);
-
-                let objetivo = 0;
-                let hechas = 0;
-                for (const iso of TimeUtils.generarRangoFechas(opciones.desde, opciones.hasta)) {
-                    if (iso > hoy) continue;
-                    const esDiaHabil = diasHabilesConfig.includes(TimeUtils.parsearFechaLocal(iso).getDay());
-                    const r = regsPorFecha.get(iso);
-                    const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                    const esHoy = iso === hoy;
-                    const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
-
-                    let diaTerminado = true;
-                    if (esHoy) {
-                        diaTerminado = (r && r.salida);
-                    } else if (ayerAbierto && iso === ayerStr) {
-                        diaTerminado = false;
-                    }
-
-                    if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) {
-                        objetivo += horasDiariasObj;
-                    }
-                    if (r && r.salida && !esEspecial && diaTerminado) {
-                        hechas += r.total;
-                    }
-                    if (esRemoto) {
-                        hechas += horasDiariasObj;
-                    }
-                }
-                bufferPeriodo = hechas - objetivo;
-            }
+            const bufferPeriodo = (horasDiariasObj > 0 && opciones.desde && opciones.hasta)
+                ? _calcularBufferPeriodo(registrosRango, opciones.desde, opciones.hasta, horasDiariasObj)
+                : null;
 
             return {
                 entradaPromedio: TimeUtils.minutosAHora(promedioEntrada),
-                salidaPromedio: TimeUtils.minutosAHora(promedioSalida),
-                diasTrabajados: registrosValidos.length,
-                promedioDiario: `${hPromedio}h ${mPromedio}m`,
+                salidaPromedio:  TimeUtils.minutosAHora(promedioSalida),
+                diasTrabajados:  registrosValidos.length,
+                promedioDiario:  `${hPromedio}h ${mPromedio}m`,
                 tiempoFueraTotal: hTiempoFuera > 0 ? `${hTiempoFuera}h ${mTiempoFuera}m` : `${mTiempoFuera}m`,
-                tiempoTotal: `${hTotal}h ${mTotal}m`,
+                tiempoTotal:     `${hTotal}h ${mTotal}m`,
                 ...conteosPorTipo, compensaciones,
                 regularidadEntrada: regEntrada,
                 regularidadJornada: regJornada,
@@ -5048,19 +5040,46 @@ Generado por Sistema Lushibosca
             }
         }
 
+        // ── Helpers privados de registrarLoteDesdeCard ───────────────
+        function _limpiarCamposLote() {
+            document.getElementById('lote-fecha-desde').value = '';
+            document.getElementById('lote-fecha-hasta').value = '';
+        }
+
+        async function _registrarEspecialHoy(tipo) {
+            const fechaHoy = UILogic.obtenerFechaHoy();
+            if (DataManagement.registros().find(r => r.fecha === fechaHoy)) {
+                mostrarToast('Ya existe un registro para hoy', 'warning'); return;
+            }
+            try {
+                await DataManagement.registrarDiaEspecial(fechaHoy, tipo);
+                _limpiarCamposLote();
+            } catch (e) { console.error('Error al registrar:', e); }
+        }
+
+        async function _registrarEspecialFecha(desde, tipo) {
+            if (DataManagement.registros().find(r => r.fecha === desde)) {
+                mostrarToast('Ya existe un registro para esa fecha', 'warning'); return;
+            }
+            try {
+                await DataManagement.registrarDiaEspecial(desde, tipo);
+                aplicarFeedbackCampos([
+                    { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
+                    { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
+                ]);
+                _limpiarCamposLote();
+            } catch (e) { console.error('Error al registrar:', e); }
+        }
+        // ─────────────────────────────────────────────────────────────
+
         async function registrarLoteDesdeCard() {
             const inputDesde = document.getElementById('lote-fecha-desde');
             const inputHasta = document.getElementById('lote-fecha-hasta');
             const tipo = document.getElementById('lote-tipo').value;
 
-            if (inputDesde.value === '' && inputDesde.validity && !inputDesde.validity.valid) {
-                mostrarToast('Fecha inicial inválida', 'error');
-                return;
-            }
-
-            if (inputHasta.value === '' && inputHasta.validity && !inputHasta.validity.valid) {
-                mostrarToast('Fecha final inválida', 'error');
-                return;
+            if ((inputDesde.value === '' && inputDesde.validity && !inputDesde.validity.valid) ||
+                (inputHasta.value === '' && inputHasta.validity && !inputHasta.validity.valid)) {
+                mostrarToast('Fecha inválida', 'error'); return;
             }
 
             const desde = inputDesde.value;
@@ -5068,109 +5087,33 @@ Generado por Sistema Lushibosca
 
             if (!desde && !hasta) {
                 if (!inputDesde.checkValidity() || !inputHasta.checkValidity()) {
-                    mostrarToast('Revisa las fechas ingresadas', 'error');
-                    return;
+                    mostrarToast('Revisa las fechas ingresadas', 'error'); return;
                 }
-
-                if (tipo === 'normal') {
-                    mostrarToast('Completa los campos Desde y Hasta.', 'info');
-                    return;
-                }
-
-
-                const fechaHoy = UILogic.obtenerFechaHoy();
-                const registroExistente = DataManagement.registros().find(r => r.fecha === fechaHoy);
-                if (registroExistente) {
-                    mostrarToast('Ya existe un registro para hoy', 'warning');
-                    return;
-                }
-
-                try {
-                    await DataManagement.registrarDiaEspecial(fechaHoy, tipo);
-                    document.getElementById('lote-fecha-desde').value = '';
-                    document.getElementById('lote-fecha-hasta').value = '';
-                } catch (error) {
-                    console.error('Error al registrar:', error);
-                }
-                return;
+                if (tipo === 'normal') { mostrarToast('Completa los campos Desde y Hasta.', 'info'); return; }
+                await _registrarEspecialHoy(tipo); return;
             }
 
             if (desde && !hasta) {
-                if (tipo === 'normal') {
-                    mostrarToast('Completa ambos campos', 'info');
-                    return;
-                }
-
-                const registroExistente = DataManagement.registros().find(r => r.fecha === desde);
-                if (registroExistente) {
-                    mostrarToast('Ya existe un registro para esa fecha', 'warning');
-                    return;
-                }
-
-                try {
-                    await DataManagement.registrarDiaEspecial(desde, tipo);
-                    aplicarFeedbackCampos([
-                        { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
-                        { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
-                    ]);
-                    document.getElementById('lote-fecha-desde').value = '';
-                    document.getElementById('lote-fecha-hasta').value = '';
-                } catch (error) {
-                    console.error('Error al registrar:', error);
-                }
-                return;
+                if (tipo === 'normal') { mostrarToast('Completa ambos campos', 'info'); return; }
+                await _registrarEspecialFecha(desde, tipo); return;
             }
 
-            if (!desde && hasta) {
-                mostrarToast('Completa ambos campos', 'info');
-                return;
-            }
+            if (!desde && hasta) { mostrarToast('Completa ambos campos', 'info'); return; }
+            if (desde > hasta)   { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); return; }
 
-            if (desde > hasta) {
-                mostrarToast('La fecha inicial debe ser inferior a la final', 'error');
-                return;
-            }
-
-            let registrosDelTipoEnRango;
-
-            if (tipo === 'normal') {
-                registrosDelTipoEnRango = DataManagement.registros().filter(r => {
-                    const dentroDelRango = r.fecha >= desde && r.fecha <= hasta;
-                    const esEspecial = TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                    return dentroDelRango && !esEspecial;
-                });
-            } else {
-                const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(tipo);
-
-                if (!codigosTipo) {
-                    mostrarToast('Tipo de registro inválido', 'error');
-                    return;
-                }
-
-                registrosDelTipoEnRango = DataManagement.registros().filter(r =>
-                    r.fecha >= desde &&
-                    r.fecha <= hasta &&
-                    r.entrada === codigosTipo.entrada &&
-                    r.salida === codigosTipo.salida
-                );
+            if (tipo !== 'normal' && !TiposRegistro.obtenerCodigosPorTipo(tipo)) {
+                mostrarToast('Tipo de registro inválido', 'error'); return;
             }
 
             try {
-                if (tipo === 'normal') {
-                    await DataManagement.borrarPeriodoDirecto(desde, hasta);
-                } else {
-                    await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
-                }
-
+                if (tipo === 'normal') await DataManagement.borrarPeriodoDirecto(desde, hasta);
+                else                   await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
                 aplicarFeedbackCampos([
                     { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
                 ]);
-                document.getElementById('lote-fecha-desde').value = '';
-                document.getElementById('lote-fecha-hasta').value = '';
-            } catch (error) {
-                console.error('Error en operación de lote:', error);
-            }
+                _limpiarCamposLote();
+            } catch (e) { console.error('Error en operación de lote:', e); }
         }
 
         function setIconoBtn(btn, icono) {

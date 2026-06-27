@@ -2963,6 +2963,37 @@
             }, 650);
         }
 
+
+        function _estadoDiasHabiles(diasHabiles) {
+            const diaSemana = new Date().getDay();
+            const hoyIndex = diaSemana === 0 ? 7 : diaSemana;
+            let esDiaHabil, quedanDiasFuturos;
+            if (Array.isArray(diasHabiles)) {
+                esDiaHabil = diasHabiles.includes(diaSemana);
+                quedanDiasFuturos = false;
+                for (let d = hoyIndex + 1; d <= 7; d++) {
+                    if (diasHabiles.includes(d === 7 ? 0 : d)) { quedanDiasFuturos = true; break; }
+                }
+            } else {
+                esDiaHabil = diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
+                quedanDiasFuturos = hoyIndex < diasHabiles;
+            }
+            return { esDiaHabil, quedanDiasFuturos };
+        }
+
+        function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
+            if (!Array.isArray(diasHabiles) || diasHabiles.length === 0 || horasDiarias <= 0) return false;
+            const fechasLaborables = TimeUtils.generarRangoFechas(ini, fn)
+                .filter(f => diasHabiles.includes(TimeUtils.parsearFechaLocal(f).getDay()));
+            if (fechasLaborables.length === 0) return false;
+            return fechasLaborables.every(fecha => {
+                const r = registros.find(x => x.fecha === fecha);
+                if (!r) return false;
+                const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                return tipo && tipo.id !== 'remoto';
+            });
+        }
+
         function calcularEstadoCard() {
             const hoy = obtenerFechaHoy();
             const { inicio: ini, fin: fn } = obtenerSemanaActual();
@@ -2972,73 +3003,33 @@
             const diasHabiles = D.diasHabiles();
             const { ayerStr: ayer, regAyer, ayerAbierto } = D.detectarAyerAbierto(hoy, registros);
 
-            const diaSemanaHoy = new Date().getDay();
-            let esDiaHabil = true;
-            if (Array.isArray(diasHabiles)) {
-                esDiaHabil = diasHabiles.includes(diaSemanaHoy);
-            } else {
-                esDiaHabil = diaSemanaHoy === 0 ? (diasHabiles === 7) : (diaSemanaHoy <= diasHabiles);
-            }
-
-            const mapDia = d => d === 0 ? 7 : d;
-            const hoyIndex = mapDia(diaSemanaHoy);
-            let quedanDiasFuturos = false;
-            if (Array.isArray(diasHabiles)) {
-                for (let d = hoyIndex + 1; d <= 7; d++) {
-                    if (diasHabiles.includes(d === 7 ? 0 : d)) { quedanDiasFuturos = true; break; }
-                }
-            } else {
-                quedanDiasFuturos = hoyIndex < diasHabiles;
-            }
+            const { esDiaHabil, quedanDiasFuturos } = _estadoDiasHabiles(diasHabiles);
             const regHoy = registros.find(r => r.fecha === hoy) ?? null;
             const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
-
             const bufferSemanal = D.calcularBufferSemanal(ini, hoy);
 
             const fechaLimite = hoy < fn ? hoy : fn;
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
-            let totalSemana = 0;
-            registrosSemana.forEach(r => {
+            const totalSemana = registrosSemana.reduce((sum, r) => {
                 const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                if (tipo && tipo.id === 'remoto') totalSemana += horasDiarias;
-                else if (!tipo) totalSemana += r.total;
-            });
+                return sum + (tipo?.id === 'remoto' ? horasDiarias : tipo ? 0 : r.total);
+            }, 0);
 
-            const horasDescontar = D.calcularHorasFeriadoEnRango(ini, fn);
-            const objetivoSemana = Math.max(0, horasSemanales - horasDescontar);
+            const objetivoSemana = Math.max(0, horasSemanales - D.calcularHorasFeriadoEnRango(ini, fn));
+            const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 
-            let todosEspeciales = false;
-            if (Array.isArray(diasHabiles) && diasHabiles.length > 0 && horasDiarias > 0) {
-                const fechasLaborables = TimeUtils.generarRangoFechas(ini, fn)
-                    .filter(f => diasHabiles.includes(TimeUtils.parsearFechaLocal(f).getDay()));
-                if (fechasLaborables.length > 0) {
-                    const especiales = fechasLaborables.filter(fecha => {
-                        const r = registros.find(x => x.fecha === fecha);
-                        if (!r) return false;
-                        const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                        return tipo && tipo.id !== 'remoto';
-                    });
-                    todosEspeciales = (especiales.length === fechasLaborables.length);
-                }
-            }
-
-            const tipoEspecialHoy = (regHoy && regHoy.salida && regHoy.entrada === regHoy.salida)
+            const tipoEspecialHoy = (regHoy?.salida && regHoy.entrada === regHoy.salida)
                 ? TiposRegistro.obtenerTipoPorCodigo(regHoy.entrada, regHoy.salida)
                 : null;
 
             let tiempoHoy = 0;
-            if (ayerAbierto && !regHoy) {
-                const horaActual = obtenerHoraActual();
-                const t = D.calcularHoras(regAyer.entrada, horaActual, regAyer.tiempoFuera || null, null, true);
+            const regActivo = (ayerAbierto && !regHoy) ? regAyer
+                : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
+            if (regActivo) {
+                const t = D.calcularHoras(regActivo.entrada, obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
                 tiempoHoy = t ? t.total : 0;
-            } else if (regHoy && regHoy.entrada && !tipoEspecialHoy) {
-                if (regHoy.salida) {
-                    tiempoHoy = regHoy.total;
-                } else {
-                    const horaActual = obtenerHoraActual();
-                    const t = D.calcularHoras(regHoy.entrada, horaActual, regHoy.tiempoFuera || null, null, true);
-                    tiempoHoy = t ? t.total : 0;
-                }
+            } else if (!tipoEspecialHoy && regHoy?.salida) {
+                tiempoHoy = regHoy.total;
             }
 
             return {

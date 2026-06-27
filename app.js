@@ -1232,123 +1232,110 @@
             return valido;
         }
 
+        // ── Helpers privados de agregarRegistro ──────────────────────
+        function _mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s) {
+            if (timerDetenido && usaHoraActual) {
+                return `Salida registrada con hora actual \nTiempo fuera: +${reg.tiempoFuera || '00:00'} \n(entrada: ${reg.entrada})`;
+            }
+            return usaHoraActual
+                ? `Salida registrada con hora actual \n(entrada: ${reg.entrada})`
+                : `Salida ${s} agregada \n(entrada: ${reg.entrada})`;
+        }
+
+        async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
+            const timerDetenido = detenerYRegistrarTimer(reg);
+            reg.salida = s;
+            const t = calcularHoras(reg.entrada, s, reg.tiempoFuera || null);
+            reg.horas = t?.horas || 0; reg.minutos = t?.minutos || 0; reg.total = t?.total || 0;
+            HistoryManager.saveState(registros);
+            const saved = await guardarYActualizar(reg.id);
+            if (!saved) return;
+            if (!usaHoraActual) {
+                UILogic.aplicarFeedbackCampos([
+                    { id: 'entrada', fallback: 'Entrada', mostrar: false },
+                    { id: 'salida', fallback: 'Salida', mostrar: true }
+                ]);
+            }
+            UILogic.mostrarToast(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
+            UILogic.resetearBoton(btn);
+            $('fecha').value = TimeUtils.obtenerFechaHoy();
+            $('salida').value = '';
+        }
+
+        async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
+            if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) {
+                UILogic.resetearBoton(btn); UILogic.mostrarToast('Límite alcanzado', 'error'); return;
+            }
+            const nuevoId = S.generarIDSeguro();
+            const t = calcularHoras(e || null, s || null, null);
+            registros.push({ id: nuevoId, fecha: f, entrada: e || null, salida: s || null, tiempoFuera: null,
+                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0 });
+            ordenarRegistros();
+            HistoryManager.saveState(registros);
+            const saved = await guardarYActualizar(nuevoId);
+            if (!saved) return;
+            const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
+            if (entradaManual || salidaManual) {
+                UILogic.aplicarFeedbackCampos([
+                    { id: 'entrada', fallback: 'Entrada', mostrar: entradaManual },
+                    { id: 'salida', fallback: 'Salida', mostrar: salidaManual }
+                ]);
+            }
+            UILogic.mostrarToast(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
+            UILogic.resetearBoton(btn);
+            $('fecha').value = TimeUtils.obtenerFechaHoy();
+            $('entrada').value = ''; $('salida').value = '';
+        }
+        // ─────────────────────────────────────────────────────────────
+
         async function agregarRegistro() {
             if (!validarFormulario()) { UILogic.mostrarToast('Verifica los campos', 'error'); return; }
 
             const btn = $('btn-agregar');
             btn.disabled = true;
             let usaHoraActual = false;
-
             let f = S.sanitizeString($('fecha').value, 10);
             let e = S.sanitizeString($('entrada').value.trim(), 5);
             let s = S.sanitizeString($('salida').value.trim(), 5);
 
-            const _hoy = TimeUtils.obtenerFechaHoy();
-            if (f > _hoy && !TiposRegistro.esRegistroEspecial(e, s)) {
-                UILogic.resetearBoton(btn);
-                UILogic.mostrarError('fecha', null);
-                UILogic.mostrarToast('Fecha futura no permitida en registro regular', 'warning');
-                return;
+            if (f > TimeUtils.obtenerFechaHoy() && !TiposRegistro.esRegistroEspecial(e, s)) {
+                UILogic.resetearBoton(btn); UILogic.mostrarError('fecha', null);
+                UILogic.mostrarToast('Fecha futura no permitida en registro regular', 'warning'); return;
             }
 
             if (!e) {
                 const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(TimeUtils.obtenerFechaHoy(), registros);
-                const regHoy = registros.find(r => r.fecha === f);
-                if (ayerAbierto && !regHoy) { f = ayer; $('fecha').value = f; }
+                if (ayerAbierto && !registros.find(r => r.fecha === f)) { f = ayer; $('fecha').value = f; }
             }
 
             let registroExistente = registros.find(r => r.fecha === f);
 
             if (!e && !s) {
                 const horaActual = TimeUtils.obtenerHoraActual();
-                if (registroExistente && registroExistente.entrada && !registroExistente.salida) {
-                    s = horaActual; $('salida').value = s; usaHoraActual = true;
+                if (registroExistente?.entrada && !registroExistente.salida) {
+                    s = horaActual; $('salida').value = s;
                 } else {
-                    e = horaActual; $('entrada').value = e; usaHoraActual = true;
+                    e = horaActual; $('entrada').value = e;
                 }
+                usaHoraActual = true;
             }
 
             if (!e && s) {
-                if (!registroExistente) { UILogic.resetearBoton(btn); UILogic.mostrarToast('Debes fichar una entrada primero', 'error'); return; }
-                if (registroExistente.salida) { UILogic.resetearBoton(btn); UILogic.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); return; }
-                if (!registroExistente.entrada) { UILogic.resetearBoton(btn); UILogic.mostrarToast('Debes fichar una entrada primero', 'error'); return; }
+                if (registroExistente?.salida) { UILogic.resetearBoton(btn); UILogic.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); return; }
+                if (!registroExistente?.entrada) { UILogic.resetearBoton(btn); UILogic.mostrarToast('Debes fichar una entrada primero', 'error'); return; }
             }
 
-            if (registroExistente && !e && s && registroExistente.entrada && !registroExistente.salida) {
-                const timerDetenido = detenerYRegistrarTimer(registroExistente);
-                registroExistente.salida = s;
-                let t = calcularHoras(registroExistente.entrada, s, registroExistente.tiempoFuera || null);
-                registroExistente.horas = t?.horas || 0;
-                registroExistente.minutos = t?.minutos || 0;
-                registroExistente.total = t?.total || 0;
-
-                HistoryManager.saveState(registros);
-                const saved = await guardarYActualizar(registroExistente.id);
-                if (saved) {
-                    const salidaManual = !usaHoraActual;
-                    if (salidaManual) {
-                        UILogic.aplicarFeedbackCampos([
-                            { id: 'entrada', fallback: 'Entrada', mostrar: false },
-                            { id: 'salida', fallback: 'Salida', mostrar: true }
-                        ]);
-                    }
-                    let mensaje;
-                    if (timerDetenido && usaHoraActual) {
-                        const tiempoFuera = registroExistente.tiempoFuera || '00:00';
-                        mensaje = `Salida registrada con hora actual \nTiempo fuera: +${tiempoFuera} \n(entrada: ${registroExistente.entrada})`;
-                    } else if (usaHoraActual) {
-                        mensaje = `Salida registrada con hora actual \n(entrada: ${registroExistente.entrada})`;
-                    } else {
-                        mensaje = `Salida ${s} agregada \n(entrada: ${registroExistente.entrada})`;
-                    }
-                    UILogic.mostrarToast(mensaje, 'success');
-                    UILogic.resetearBoton(btn);
-                    $('fecha').value = TimeUtils.obtenerFechaHoy();
-                    $('salida').value = '';
-                }
-                return;
+            if (registroExistente?.entrada && !registroExistente.salida && !e && s) {
+                await _completarSalidaRegistro(registroExistente, s, usaHoraActual, btn); return;
             }
 
             if (registroExistente) {
                 UILogic.resetearBoton(btn);
-                if (usaHoraActual) { $('entrada').value = ''; }
-                UILogic.mostrarToast('Ya existe un registro para esta fecha', 'error');
-                return;
+                if (usaHoraActual) $('entrada').value = '';
+                UILogic.mostrarToast('Ya existe un registro para esta fecha', 'error'); return;
             }
 
-            if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) {
-                UILogic.resetearBoton(btn);
-                UILogic.mostrarToast('Límite alcanzado', 'error');
-                return;
-            }
-
-            const nuevoId = S.generarIDSeguro();
-            const t = calcularHoras(e || null, s || null, null);
-            registros.push({
-                id: nuevoId, fecha: f, entrada: e || null, salida: s || null, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0
-            });
-
-            ordenarRegistros();
-            HistoryManager.saveState(registros);
-
-            const saved = await guardarYActualizar(nuevoId);
-            if (saved) {
-                const entradaManual = e && !usaHoraActual;
-                const salidaManual = s && !usaHoraActual;
-                if (entradaManual || salidaManual) {
-                    UILogic.aplicarFeedbackCampos([
-                        { id: 'entrada', fallback: 'Entrada', mostrar: entradaManual },
-                        { id: 'salida', fallback: 'Salida', mostrar: salidaManual }
-                    ]);
-                }
-                const mensaje = usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado';
-                UILogic.mostrarToast(mensaje, 'success');
-                UILogic.resetearBoton(btn);
-                $('fecha').value = TimeUtils.obtenerFechaHoy();
-                $('entrada').value = '';
-                $('salida').value = '';
-            }
+            await _crearNuevoRegistro(f, e, s, usaHoraActual, btn);
         }
 
         async function eliminarRegistroActual() {

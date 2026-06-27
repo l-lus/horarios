@@ -1453,41 +1453,50 @@
             return null;
         }
 
+        // ── Helpers privados de guardarEdicion ───────────────────────
+        function _calcularCredito(e, s, tf) {
+            const btn = document.getElementById('btn-toggle-credito');
+            if (!btn || btn.dataset.activo !== 'true') return null;
+            const calc = calcularHoras(e, s, tf, null);
+            if (!calc) return null;
+            const diferencia = horasDiarias - calc.total;
+            if (diferencia <= 0.01) return null;
+            let h = Math.floor(diferencia), m = Math.round((diferencia - h) * 60);
+            if (m === 60) { h++; m = 0; }
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {
+            const reg = registros.find(r => r.id === editandoId);
+            if (reg?.fecha === TimeUtils.obtenerFechaHoy()) {
+                const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+                StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
+                UILogic.actualizarEstadoBotonTimerMain();
+            }
+            registros = registros.filter(r => r.id !== editandoId);
+            HistoryManager.saveState(registros);
+            const saved = await guardarYActualizar();
+            UILogic.restaurarBotonGuardarEdicion(btnGuardar);
+            if (saved) { UILogic.mostrarToast('Registro eliminado (vacío)', 'info'); UILogic.cerrarEdicion(); }
+        }
+        // ─────────────────────────────────────────────────────────────
+
         async function guardarEdicion() {
             const r = registros.find(x => x.id === editandoId);
             if (!r) return;
-            const modal = $('modal-editar');
-            const btnGuardar = modal.querySelector('.btn-edit');
+            const btnGuardar = $('modal-editar').querySelector('.btn-edit');
             btnGuardar.disabled = true;
 
-            const f = S.sanitizeString($('edit-fecha').value, 10);
-            const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
-            const s = S.sanitizeString($('edit-salida').value.trim(), 5);
-
-            let tf = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5);
-            if (tf === '') tf = null;
-
+            const f  = S.sanitizeString($('edit-fecha').value, 10);
+            const e  = S.sanitizeString($('edit-entrada').value.trim(), 5);
+            const s  = S.sanitizeString($('edit-salida').value.trim(), 5);
+            let tf   = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5) || null;
             let notas = S.sanitizeString($('edit-notas').value.trim(), S.SECURITY_LIMITS.MAX_NOTAS_LENGTH);
             if (notas) notas = S.sanitizeNotas(notas, true) || null;
             if (notas === '') notas = null;
 
-            let cr = null;
-            const btnCredito = document.getElementById('btn-toggle-credito');
+            const cr = _calcularCredito(e, s, tf);
 
-            if (btnCredito && btnCredito.dataset.activo === "true") {
-                const calcTemp = calcularHoras(e, s, tf, null);
-                if (calcTemp) {
-                    const horasTrabajadas = calcTemp.total;
-                    const horasObjetivo = horasDiarias;
-                    const diferencia = horasObjetivo - horasTrabajadas;
-                    if (diferencia > 0.01) {
-                        let h = Math.floor(diferencia);
-                        let m = Math.round((diferencia - h) * 60);
-                        if (m === 60) { h++; m = 0; }
-                        cr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                    }
-                }
-            }
             if (r.fecha === f && (r.entrada || '') === (e || '') && (r.salida || '') === (s || '') &&
                 (r.tiempoFuera || '') === (tf || '') && (r.credito || '') === (cr || '') && (r.notas || '') === (notas || '')) {
                 UILogic.mostrarToast('Sin cambios', 'info');
@@ -1496,25 +1505,7 @@
                 return;
             }
 
-            if (!e && !s) {
-                const registroABorrar = registros.find(r => r.id === editandoId);
-                if (registroABorrar && registroABorrar.fecha === TimeUtils.obtenerFechaHoy()) {
-                    const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-                    StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-                    UILogic.actualizarEstadoBotonTimerMain();
-                }
-                registros = registros.filter(r => r.id !== editandoId);
-                HistoryManager.saveState(registros);
-                const saved = await guardarYActualizar();
-                if (saved) {
-                    UILogic.mostrarToast('Registro eliminado (vacío)', 'info');
-                    UILogic.restaurarBotonGuardarEdicion(btnGuardar);
-                    UILogic.cerrarEdicion();
-                } else {
-                    UILogic.restaurarBotonGuardarEdicion(btnGuardar);
-                }
-                return;
-            }
+            if (!e && !s) { await _eliminarRegistroVacioDesdeEdicion(btnGuardar); return; }
 
             const camposError = _validarCamposEdicion(f, e, s, tf);
             if (camposError) {
@@ -1528,7 +1519,6 @@
                 const timerDetenido = detenerYRegistrarTimer(r);
                 if (timerDetenido) tf = r.tiempoFuera;
             }
-
             r.salida = s || null; r.tiempoFuera = tf; r.credito = cr; r.notas = notas;
 
             const t = calcularHoras(r.entrada, r.salida, r.tiempoFuera, r.credito);
@@ -1537,14 +1527,10 @@
             ordenarRegistros();
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar(null, true);
-
+            UILogic.restaurarBotonGuardarEdicion(btnGuardar);
             if (saved) {
-                if (cr) UILogic.mostrarToast(`Guardado con Salida Temprano (+${cr})`, 'success');
-                else UILogic.mostrarToast('Registro actualizado', 'success');
-                UILogic.restaurarBotonGuardarEdicion(btnGuardar);
+                UILogic.mostrarToast(cr ? `Guardado con Salida Temprano (+${cr})` : 'Registro actualizado', 'success');
                 UILogic.cerrarEdicion();
-            } else {
-                UILogic.restaurarBotonGuardarEdicion(btnGuardar);
             }
         }
 

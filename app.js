@@ -2459,41 +2459,59 @@
             return contenedorMesActual;
         }
 
+
+        // ── Helpers privados de actualizarListaRegistros ─────────────
+        function _renderEmptyStateLista(lista) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'empty-state';
+            if (D.registros().length === 0) {
+                const msg = Object.assign(document.createElement('p'), { textContent: 'No hay registros' });
+                const btn = Object.assign(document.createElement('button'), {
+                    className: 'btn-backup empty-state__btn-restaurar',
+                    innerHTML: '<svg class="icon"><use href="#icon-upload" /></svg> Restaurar desde archivo'
+                });
+                btn.addEventListener('click', () => mostrarImportar(true));
+                emptyDiv.appendChild(msg);
+                emptyDiv.appendChild(btn);
+            } else {
+                emptyDiv.textContent = 'No hay registros para los filtros aplicados';
+            }
+            lista.appendChild(emptyDiv);
+        }
+
+        function _crearContenedorAnio(anio, mesesDelAnio, horasDiarias, idNuevo, mesHoy, hoy) {
+            const contenedor = document.createElement('div');
+            contenedor.className = 'registro-mes-container';
+
+            const header = Object.assign(document.createElement('h3'), { className: 'registro-mes-header' });
+            Object.assign(header.dataset, { anioId: anio, accion: 'toggle-anio' });
+            const chevron = _crearChevron();
+            header.appendChild(chevron);
+            header.appendChild(document.createTextNode(' ' + anio));
+
+            const detalle = Object.assign(document.createElement('div'), { className: 'registro-mes-detalle' });
+            let expandido = false;
+            try { expandido = StorageHelper.getItem(STORAGE_KEYS.ANIO_EXPANDIDO(anio)) === 'true'; } catch (e) { }
+            if (expandido) { detalle.classList.add('expanded'); chevron.style.transform = 'rotate(180deg)'; }
+
+            mesesDelAnio.forEach((registrosDelMes, claveMes) =>
+                detalle.appendChild(crearContenedorMes(claveMes, registrosDelMes, horasDiarias, idNuevo, mesHoy, hoy))
+            );
+
+            contenedor.appendChild(header);
+            contenedor.appendChild(detalle);
+            return contenedor;
+        }
+        // ─────────────────────────────────────────────────────────────
+
         function actualizarListaRegistros(registros, idNuevo = null) {
             const lista = $('lista-registros');
-
-            const mesesExpandidos = new Set();
-            lista.querySelectorAll('.registro-mes-container').forEach(container => {
-                const detalle = container.querySelector('.registro-mes-detalle');
-                if (detalle && detalle.classList.contains('expanded')) {
-                    const header = container.querySelector('.registro-mes-header');
-                    if (header && header.dataset.mesId) mesesExpandidos.add(header.dataset.mesId);
-                }
-            });
-
             lista.innerHTML = '';
-            const horasDiarias = D.horasDiarias();
+
             const registrosAMostrar = D.obtenerRegistrosFiltrados();
+            if (registrosAMostrar.length === 0) { _renderEmptyStateLista(lista); return; }
 
-            if (registrosAMostrar.length === 0) {
-                const emptyDiv = document.createElement('div');
-                emptyDiv.className = 'empty-state';
-                if (D.registros().length === 0) {
-                    const btnRestaurar = document.createElement('button');
-                    btnRestaurar.className = 'btn-backup empty-state__btn-restaurar';
-                    btnRestaurar.innerHTML = '<svg class="icon"><use href="#icon-upload" /></svg> Restaurar desde archivo';
-                    btnRestaurar.addEventListener('click', () => mostrarImportar(true));
-                    const msg = document.createElement('p');
-                    msg.textContent = 'No hay registros';
-                    emptyDiv.appendChild(msg);
-                    emptyDiv.appendChild(btnRestaurar);
-                } else {
-                    emptyDiv.textContent = 'No hay registros para los filtros aplicados';
-                }
-                lista.appendChild(emptyDiv);
-                return;
-            }
-
+            const horasDiarias = D.horasDiarias();
             const hoy = obtenerFechaHoy();
             const mesHoy = hoy.substring(0, 7);
             const anioHoy = hoy.substring(0, 4);
@@ -2502,7 +2520,6 @@
 
             const mesesAnioActual = new Map();
             const mesesPorAnio = new Map();
-
             gruposPorMes.forEach((regs, claveMes) => {
                 const anio = claveMes.substring(0, 4);
                 if (anio === anioHoy) {
@@ -2513,47 +2530,12 @@
                 }
             });
 
-            mesesAnioActual.forEach((registrosDelMes, claveMes) => {
-                fragmento.appendChild(crearContenedorMes(claveMes, registrosDelMes, horasDiarias, idNuevo, mesHoy, hoy));
-            });
-
-            const aniosOrdenados = Array.from(mesesPorAnio.keys()).sort().reverse();
-            aniosOrdenados.forEach(anio => {
-                const mesesDelAnio = mesesPorAnio.get(anio);
-
-                const contenedorAnio = document.createElement('div');
-                contenedorAnio.className = 'registro-mes-container';
-
-                const headerAnio = document.createElement('h3');
-                headerAnio.className = 'registro-mes-header';
-                headerAnio.dataset.anioId = anio;
-                headerAnio.dataset.accion = 'toggle-anio';
-
-                const chevronAnio = _crearChevron();
-                headerAnio.appendChild(chevronAnio);
-                headerAnio.appendChild(document.createTextNode(' ' + anio));
-
-                const detalleAnio = document.createElement('div');
-                detalleAnio.className = 'registro-mes-detalle';
-
-                let anioExpandido = false;
-                try {
-                    anioExpandido = StorageHelper.getItem(STORAGE_KEYS.ANIO_EXPANDIDO(anio)) === 'true';
-                } catch (e) { }
-
-                if (anioExpandido) {
-                    detalleAnio.classList.add('expanded');
-                    chevronAnio.style.transform = 'rotate(180deg)';
-                }
-
-                mesesDelAnio.forEach((registrosDelMes, claveMes) => {
-                    detalleAnio.appendChild(crearContenedorMes(claveMes, registrosDelMes, horasDiarias, idNuevo, mesHoy, hoy));
-                });
-
-                contenedorAnio.appendChild(headerAnio);
-                contenedorAnio.appendChild(detalleAnio);
-                fragmento.appendChild(contenedorAnio);
-            });
+            mesesAnioActual.forEach((regs, claveMes) =>
+                fragmento.appendChild(crearContenedorMes(claveMes, regs, horasDiarias, idNuevo, mesHoy, hoy))
+            );
+            [...mesesPorAnio.keys()].sort().reverse().forEach(anio =>
+                fragmento.appendChild(_crearContenedorAnio(anio, mesesPorAnio.get(anio), horasDiarias, idNuevo, mesHoy, hoy))
+            );
 
             lista.appendChild(fragmento);
         }

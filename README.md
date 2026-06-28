@@ -1,8 +1,9 @@
-### BUGS ACTUALES
---Bug al tocar el boton bajar de gist y cancelar el gist merge, e ir para atras hasta ajustes,
-la pagina llama a "ir para atras" en el navegador
-
 ## (Changelog)
+
+### BUGS ACTUALES:
+--
+
+### VERSION:
 
 ### 260627
 Refactores varios

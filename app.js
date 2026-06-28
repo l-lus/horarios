@@ -4414,67 +4414,44 @@ Generado por Sistema Lushibosca
             }
         }
 
+        async function _detenerTimerBreak(registroHoy, storageKey, storedStart) {
+            const totalSeg = Math.floor((Date.now() - parseInt(storedStart)) / 1000);
+
+            if (totalSeg < 30) {
+                StorageHelper.removeItem(storageKey);
+                mostrarToast('Tiempo muy corto, no se registró', 'info');
+                actualizarUI(); return;
+            }
+            if (!registroHoy) {
+                StorageHelper.removeItem(storageKey);
+                mostrarToast('No hay registro para hoy, tiempo fuera descartado', 'warning');
+                actualizarUI(); return;
+            }
+
+            const minutos = Math.floor(totalSeg / 60) + (totalSeg % 60 >= 30 ? 1 : 0);
+            registroHoy.tiempoFuera = sumarMinutosAHora(registroHoy.tiempoFuera || '00:00', minutos);
+            const t = D.calcularHoras(registroHoy.entrada, registroHoy.salida, registroHoy.tiempoFuera);
+            registroHoy.horas = t?.horas || 0; registroHoy.minutos = t?.minutos || 0; registroHoy.total = t?.total || 0;
+            HistoryManager.saveState(D.registros());
+            StorageHelper.removeItem(storageKey);
+            await D.guardarYActualizar(registroHoy.id);
+            mostrarToast(minutos === 1 ? 'Se descontó 1 minuto al registro de hoy' : `Se descontaron ${minutos} minutos al registro de hoy`, 'success');
+        }
+
         async function toggleTimerBreakMain() {
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
             const storedStart = StorageHelper.getItem(storageKey);
-            const hoy = obtenerFechaHoy();
-            const registroHoy = D.registros().find(r => r.fecha === hoy);
+            const registroHoy = D.registros().find(r => r.fecha === obtenerFechaHoy());
 
-            if (!storedStart && !registroHoy) {
-                mostrarToast('Debes crear un registro para hoy primero', 'warning');
-                return;
-            }
+            if (!storedStart && !registroHoy) { mostrarToast('Debes crear un registro para hoy primero', 'warning'); return; }
 
             if (!storedStart) {
                 StorageHelper.setItem(storageKey, Date.now());
                 mostrarToast('Tiempo fuera iniciado', 'info');
             } else {
-                const start = parseInt(storedStart);
-                const end = Date.now();
-                const diffMs = end - start;
-
-                const segundosTranscurridos = Math.floor(diffMs / 1000);
-                let minutosTranscurridos = Math.floor(segundosTranscurridos / 60);
-                const segundosRestantes = segundosTranscurridos % 60;
-
-                if (segundosRestantes >= 30) {
-                    minutosTranscurridos += 1;
-                }
-
-                if (segundosTranscurridos < 30) {
-                    StorageHelper.removeItem(storageKey);
-                    mostrarToast('Tiempo muy corto, no se registró', 'info');
-                    actualizarEstadoBotonTimerMain();
-                    actualizarUI();
-                    return;
-                }
-
-                if (!registroHoy) {
-                    StorageHelper.removeItem(storageKey);
-                    mostrarToast('No hay registro para hoy, tiempo fuera descartado', 'warning');
-                    actualizarEstadoBotonTimerMain();
-                    actualizarUI();
-                    return;
-                }
-                const tiempoActual = registroHoy.tiempoFuera || '00:00';
-                const nuevoTiempoFuera = sumarMinutosAHora(tiempoActual, minutosTranscurridos);
-                registroHoy.tiempoFuera = nuevoTiempoFuera;
-                const t = D.calcularHoras(registroHoy.entrada, registroHoy.salida, nuevoTiempoFuera);
-                registroHoy.horas = t?.horas || 0;
-                registroHoy.minutos = t?.minutos || 0;
-                registroHoy.total = t?.total || 0;
-                HistoryManager.saveState(D.registros());
-
-                StorageHelper.removeItem(storageKey);
-                await D.guardarYActualizar(registroHoy.id);
-
-                const mensaje = minutosTranscurridos === 1
-                    ? 'Se descontó 1 minuto al registro de hoy'
-                    : `Se descontaron ${minutosTranscurridos} minutos al registro de hoy`;
-                mostrarToast(mensaje, 'success');
+                await _detenerTimerBreak(registroHoy, storageKey, storedStart);
             }
-
             actualizarEstadoBotonTimerMain();
         }
 
@@ -4785,54 +4762,40 @@ Generado por Sistema Lushibosca
             cerrarEditorPerfil();
         }
 
-        async function eliminarPerfilDesdeEditor() {
-            if (!perfilEnEdicion || perfilEnEdicion === 'default') {
-                mostrarToast('No se puede eliminar el perfil Principal', 'error');
-                return;
-            }
-
-            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
-            const perfil = perfiles[perfilEnEdicion];
-
-            if (!perfil) {
-                mostrarToast('Perfil no encontrado', 'error');
-                return;
-            }
-
-            const confirmacion = await ModalManager.confirmar(`¿Estás seguro de que querés eliminar el perfil "${perfil.nombre}"? Esta acción no se puede deshacer.`, 'Eliminar');
-
-            if (!confirmacion) return;
-
-            const pid = perfilEnEdicion;
+        function _limpiarClavesPerfil(pid) {
             ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF,
                 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
+        }
 
+        async function eliminarPerfilDesdeEditor() {
+            if (!perfilEnEdicion || perfilEnEdicion === 'default') {
+                mostrarToast('No se puede eliminar el perfil Principal', 'error'); return;
+            }
+            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+            const perfil = perfiles[perfilEnEdicion];
+            if (!perfil) { mostrarToast('Perfil no encontrado', 'error'); return; }
+
+            if (!await ModalManager.confirmar(`¿Estás seguro de que querés eliminar el perfil "${perfil.nombre}"? Esta acción no se puede deshacer.`, 'Eliminar')) return;
+
+            _limpiarClavesPerfil(perfilEnEdicion);
             delete perfiles[perfilEnEdicion];
             try {
                 if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
             } catch (e) {
-                console.error('Error al eliminar perfil:', e);
-                mostrarToast('Error al guardar: almacenamiento lleno', 'error');
-                return;
+                console.error('Error al eliminar perfil:', e); mostrarToast('Error al guardar: almacenamiento lleno', 'error'); return;
             }
 
-            const perfilActual = window.PerfilManager.obtenerPerfilActual();
-            if (perfilEnEdicion === perfilActual) {
+            if (perfilEnEdicion === window.PerfilManager?.obtenerPerfilActual()) {
                 try {
                     if (!StorageHelper.setItem(STORAGE_KEYS.PERFIL_ACTIVO, 'default')) throw new Error('quota');
                 } catch (e) {
-                    console.error('Error al guardar perfil activo:', e);
-                    mostrarToast('Error al guardar: almacenamiento lleno', 'error');
-                    return;
+                    console.error('Error al guardar perfil activo:', e); mostrarToast('Error al guardar: almacenamiento lleno', 'error'); return;
                 }
                 mostrarToast('Perfil eliminado. Recargando...', 'success');
                 setTimeout(() => location.reload(), 1000);
             } else {
-                if (window.PerfilManager) {
-                    window.PerfilManager.inicializar();
-                }
-
+                window.PerfilManager?.inicializar();
                 mostrarToast('Perfil eliminado', 'success');
                 cerrarEditorPerfil();
             }

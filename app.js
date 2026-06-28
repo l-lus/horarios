@@ -1036,56 +1036,53 @@
             UILogic.setBloqueoEdicionGrupo(true);
         }
 
+        function _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta) {
+            if (!nuevaDesde || !nuevaHasta) return 'Verifica ambas fechas';
+            if (!TimeUtils.validarFecha(nuevaDesde)) return 'Fecha "Desde" inválida';
+            if (!TimeUtils.validarFecha(nuevaHasta)) return 'Fecha "Hasta" inválida';
+            if (nuevaDesde > nuevaHasta) return 'La fecha inicial debe ser inferior a la final';
+            const hoy = new Date();
+            const dosPasado = new Date(hoy); dosPasado.setFullYear(hoy.getFullYear() - 2);
+            const dosFuturo = new Date(hoy); dosFuturo.setFullYear(hoy.getFullYear() + 2);
+            const ini = TimeUtils.parsearFechaLocal(nuevaDesde), fin = TimeUtils.parsearFechaLocal(nuevaHasta);
+            if (ini < dosPasado || fin > dosFuturo) return 'El rango debe estar entre 2 años atrás y 2 años adelante';
+            if (!TiposRegistro.validarTipoPermitido(nuevoTipo)) return 'Tipo de registro inválido';
+            const dias = Math.ceil(Math.abs(fin - ini) / 864e5) + 1;
+            if (dias > 60) return `El rango contiene ${dias} días.\n Máximo: 60 días por operación.`;
+            return null;
+        }
+
         async function guardarEdicionGrupo() {
             if (!grupoEnEdicion) return;
-            const modal = $('modal-editar-grupo');
-            const btnGuardar = modal.querySelector('.btn-edit');
+            const btnGuardar = $('modal-editar-grupo').querySelector('.btn-edit');
             btnGuardar.disabled = true;
             try {
-                const nuevoTipo = S.sanitizeString($('edit-grupo-tipo').value.trim(), 20);
+                const nuevoTipo  = S.sanitizeString($('edit-grupo-tipo').value.trim(), 20);
                 const nuevaDesde = S.sanitizeString($('edit-grupo-desde').value.trim(), 10);
                 const nuevaHasta = S.sanitizeString($('edit-grupo-hasta').value.trim(), 10);
 
-                if (!nuevaDesde || !nuevaHasta) { UILogic.mostrarToast('Verifica ambas fechas', 'error'); return; }
-                if (!TimeUtils.validarFecha(nuevaDesde)) { UILogic.mostrarToast('Fecha "Desde" inválida', 'error'); return; }
-                if (!TimeUtils.validarFecha(nuevaHasta)) { UILogic.mostrarToast('Fecha "Hasta" inválida', 'error'); return; }
-                if (nuevaDesde > nuevaHasta) { UILogic.mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); return; }
+                const error = _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta);
+                if (error) { UILogic.mostrarToast(error, 'error'); return; }
 
-                const hoy = new Date();
-                const fechaInicioObj = TimeUtils.parsearFechaLocal(nuevaDesde);
-                const fechaFinObj = TimeUtils.parsearFechaLocal(nuevaHasta);
-                const dosPasado = new Date(hoy); dosPasado.setFullYear(hoy.getFullYear() - 2);
-                const dosFuturo = new Date(hoy); dosFuturo.setFullYear(hoy.getFullYear() + 2);
-
-                if (fechaInicioObj < dosPasado || fechaFinObj > dosFuturo) { UILogic.mostrarToast('El rango debe estar entre 2 años atrás y 2 años adelante', 'error'); return; }
-                if (!TiposRegistro.validarTipoPermitido(nuevoTipo)) { UILogic.mostrarToast('Tipo de registro inválido', 'error'); return; }
-
-                const diffDays = Math.ceil(Math.abs(fechaFinObj - fechaInicioObj) / (1000 * 60 * 60 * 24)) + 1;
-                if (diffDays > 60) { UILogic.mostrarToast(`El rango contiene ${diffDays} días.\n Máximo: 60 días por operación.`, 'error'); return; }
-
-                const huboCambios = nuevoTipo !== grupoEnEdicion.subtipo || nuevaDesde !== grupoEnEdicion.fechaDesde || nuevaHasta !== grupoEnEdicion.fechaHasta;
-                if (!huboCambios) { UILogic.mostrarToast('Sin cambios', 'info'); UILogic.cerrarEdicionGrupo(); return; }
+                if (nuevoTipo === grupoEnEdicion.subtipo && nuevaDesde === grupoEnEdicion.fechaDesde && nuevaHasta === grupoEnEdicion.fechaHasta) {
+                    UILogic.mostrarToast('Sin cambios', 'info'); UILogic.cerrarEdicionGrupo(); return;
+                }
 
                 const fechasNuevas = TimeUtils.generarRangoFechas(nuevaDesde, nuevaHasta);
-
-                const idsDelGrupo = new Set(grupoEnEdicion.registros.map(r => r.id));
-                const fechasSet = new Set(fechasNuevas);
-                const conflictos = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
+                const idsDelGrupo  = new Set(grupoEnEdicion.registros.map(r => r.id));
+                const fechasSet    = new Set(fechasNuevas);
+                const conflictos   = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
                 if (conflictos.length > 0) {
-                    const diasConflicto = conflictos.map(r => r.fecha.substring(8, 10)).sort((a, b) => a - b).join(', ');
-                    UILogic.mostrarToast(`Conflicto en día(s): ${diasConflicto}\n Ya existen registros en esas fechas.`, 'error');
-                    return;
+                    const dias = conflictos.map(r => r.fecha.substring(8, 10)).sort((a, b) => a - b).join(', ');
+                    UILogic.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
                 }
 
                 registros = registros.filter(r => !idsDelGrupo.has(r.id));
-                const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
-                const { entrada, salida } = codigosTipo;
-
+                const { entrada, salida } = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
                 const nuevosRegistros = fechasNuevas.map(fechaISO => {
                     const t = calcularHoras(entrada, salida, null);
                     return { id: S.generarIDSeguro(), fecha: fechaISO, entrada, salida, tiempoFuera: null, horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0 };
                 });
-
                 registros.push(...nuevosRegistros);
                 ordenarRegistros();
                 HistoryManager.saveState(registros);
@@ -4656,48 +4653,25 @@ Generado por Sistema Lushibosca
             });
         }
 
+        function _validarNombrePerfil(nombre, perfiles) {
+            if (!nombre) return 'Ingresa un nombre para el perfil';
+            if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/.test(nombre)) return 'El nombre contiene caracteres no válidos.\n Solo letras, números y espacios.';
+            if (Object.values(perfiles).some(p => p.nombre.toLowerCase().trim() === nombre.toLowerCase().trim())) return 'Ya existe un perfil con ese nombre';
+            if (Object.keys(perfiles).length >= PerfilManager.MAX_PERFILES) return `Máximo de perfiles alcanzado (${PerfilManager.MAX_PERFILES})`;
+            return null;
+        }
+
         function crearPerfilDesdeSelector() {
             const input = document.getElementById('nombre-nuevo-perfil-selector');
             if (!input) return;
-
             const nombre = S.sanitizeString(input.value.trim(), 30);
-
-            if (!nombre) {
-                mostrarToast('Ingresa un nombre para el perfil', 'error');
-                return;
-            }
-
-            const regexSeguro = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/;
-
-            if (!regexSeguro.test(nombre)) {
-                mostrarToast('El nombre contiene caracteres no válidos.\n Solo letras, números y espacios.', 'error');
-                return;
-            }
-
             const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
 
-            const nombreNormalizado = nombre.toLowerCase().trim();
-            const nombreExiste = Object.values(perfiles).some(perfil =>
-                perfil.nombre.toLowerCase().trim() === nombreNormalizado
-            );
-
-            if (nombreExiste) {
-                mostrarToast('Ya existe un perfil con ese nombre', 'error');
-                return;
-            }
-
-            if (Object.keys(perfiles).length >= PerfilManager.MAX_PERFILES) {
-                mostrarToast(`Máximo de perfiles alcanzado (${PerfilManager.MAX_PERFILES})`, 'error');
-                return;
-            }
+            const error = _validarNombrePerfil(nombre, perfiles);
+            if (error) { mostrarToast(error, 'error'); return; }
 
             const id = 'perfil_' + Date.now();
-            perfiles[id] = {
-                nombre: nombre,
-                registros: [],
-                diasHabiles: [1, 2, 3, 4, 5],
-                horasDiarias: 7
-            };
+            perfiles[id] = { nombre, registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 };
 
             try {
                 if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
@@ -4708,23 +4682,13 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            if (window.PerfilManager) {
-                window.PerfilManager.inicializar();
-            }
-
+            if (window.PerfilManager) window.PerfilManager.inicializar();
             mostrarToast(`Perfil "${nombre}" creado`, 'success');
-
             input.value = '';
-
             renderizarListaPerfiles();
-
             requestAnimationFrame(() => {
-                const lista = document.getElementById('lista-perfiles-botones');
-                const nuevoPerfilElement = lista?.lastElementChild;
-                if (nuevoPerfilElement) {
-                    nuevoPerfilElement.style.animation = 'zoomIn 0.3s ease-out';
-                    nuevoPerfilElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
+                const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
+                if (ultimo) { ultimo.style.animation = 'zoomIn 0.3s ease-out'; ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
             });
         }
 
@@ -7468,6 +7432,13 @@ Generado por Sistema Lushibosca
             return true;
         }
 
+        function _describirFechasGrupo(grupo) {
+            const nd = f => TimeUtils.obtenerNombreDia(f);
+            if (grupo.length === 1) return `${_etiquetaFecha(grupo[0].fecha)}, ${nd(grupo[0].fecha)} (${grupo[0].fecha})`;
+            if (_esRangoContinuo(grupo)) return `del ${nd(grupo[0].fecha)} (${grupo[0].fecha}) al ${nd(grupo[grupo.length-1].fecha)} (${grupo[grupo.length-1].fecha})`;
+            return grupo.map(f => `${nd(f.fecha)} (${f.fecha})`).join(', ');
+        }
+
         async function chequearYNotificar() {
             const candidatos = _getFeriadosCercanos();
             if (!candidatos.length) return;
@@ -7486,49 +7457,32 @@ Generado por Sistema Lushibosca
             if (!grupos.length) return;
             const _delay = ms => new Promise(r => setTimeout(r, ms));
 
-            for (let _i = 0; _i < grupos.length; _i++) {
-                const grupo = grupos[_i];
+            for (let i = 0; i < grupos.length; i++) {
+                const grupo = grupos[i];
                 const esGrupal = grupo.length > 1;
                 const nombres = [...new Set(grupo.map(f => f.nombre))].join(' / ');
-
-                let descripcionFechas;
-                if (!esGrupal) {
-                    descripcionFechas = `${_etiquetaFecha(grupo[0].fecha)}, ${TimeUtils.obtenerNombreDia(grupo[0].fecha)} (${grupo[0].fecha})`;
-                } else if (_esRangoContinuo(grupo)) {
-                    descripcionFechas = `del ${TimeUtils.obtenerNombreDia(grupo[0].fecha)} (${grupo[0].fecha}) al ${TimeUtils.obtenerNombreDia(grupo[grupo.length - 1].fecha)} (${grupo[grupo.length - 1].fecha})`;
-                } else {
-                    descripcionFechas = grupo.map(f => `${TimeUtils.obtenerNombreDia(f.fecha)} (${f.fecha})`).join(', ');
-                }
-
-                const texto = esGrupal
-                    ? `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar estos ${grupo.length} días como Feriado?`
-                    : `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar este día como Feriado?`;
+                const descripcionFechas = _describirFechasGrupo(grupo);
+                const texto = `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar ${esGrupal ? `estos ${grupo.length} días` : 'este día'} como Feriado?`;
 
                 const elTitulo = document.getElementById('modal-confirmar-titulo');
                 const btnCancel = document.getElementById('modal-confirmar-cancel');
-                const cancelTextNode = btnCancel
-                    ? [...btnCancel.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim())
-                    : null;
-                const labelCancelOriginal = cancelTextNode ? cancelTextNode.textContent : null;
+                const cancelTextNode = btnCancel ? [...btnCancel.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim()) : null;
+                const labelCancelOriginal = cancelTextNode?.textContent ?? null;
                 if (elTitulo) elTitulo.textContent = esGrupal ? 'Feriados Próximos' : 'Feriado Próximo';
                 if (cancelTextNode) cancelTextNode.textContent = ' No';
 
                 const confirmo = await ModalManager.confirmar(texto, 'Sí', '#icon-save');
-
                 grupo.forEach(f => _marcarProcesado(f.fecha));
 
                 if (confirmo) {
                     for (const feriado of grupo) {
-                        try {
-                            await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado');
-                        } catch (e) {
-                        }
+                        try { await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { }
                     }
                 }
 
                 if (elTitulo) elTitulo.textContent = 'Atención';
                 if (cancelTextNode && labelCancelOriginal !== null) cancelTextNode.textContent = labelCancelOriginal;
-                if (_i < grupos.length - 1) await _delay(100);
+                if (i < grupos.length - 1) await _delay(100);
             }
         }
 

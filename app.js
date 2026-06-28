@@ -4744,45 +4744,25 @@ Generado por Sistema Lushibosca
             });
         }
 
+        function _validarNombrePerfilEdicion(nuevoNombre, perfiles, excluirId) {
+            if (!nuevoNombre) return 'Ingresa un nombre válido';
+            if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/.test(nuevoNombre)) return 'Caracteres no permitidos en el nombre.';
+            if (!perfiles[excluirId]) return 'Perfil no encontrado';
+            const norm = nuevoNombre.toLowerCase().trim();
+            if (Object.entries(perfiles).some(([id, p]) => id !== excluirId && p.nombre.toLowerCase().trim() === norm)) return 'Ya existe otro perfil con ese nombre';
+            return null;
+        }
+
         function guardarEdicionPerfil() {
             if (!perfilEnEdicion) return;
-
             const nuevoNombre = S.sanitizeString(document.getElementById('nombre-perfil-editar').value.trim(), 30);
-
-            if (!nuevoNombre) {
-                mostrarToast('Ingresa un nombre válido', 'error');
-                return;
-            }
-
-            const regexSeguro = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/;
-
-            if (!regexSeguro.test(nuevoNombre)) {
-                mostrarToast('Caracteres no permitidos en el nombre.', 'error');
-                return;
-            }
-
             const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
 
-            if (!perfiles[perfilEnEdicion]) {
-                mostrarToast('Perfil no encontrado', 'error');
-                return;
-            }
+            const error = _validarNombrePerfilEdicion(nuevoNombre, perfiles, perfilEnEdicion);
+            if (error) { mostrarToast(error, 'error'); return; }
 
             if (perfiles[perfilEnEdicion].nombre === nuevoNombre) {
-                mostrarToast('Sin cambios', 'info');
-                cerrarEditorPerfil();
-                return;
-            }
-
-            const nombreNormalizado = nuevoNombre.toLowerCase().trim();
-            const nombreExiste = Object.entries(perfiles).some(([id, perfil]) =>
-                id !== perfilEnEdicion &&
-                perfil.nombre.toLowerCase().trim() === nombreNormalizado
-            );
-
-            if (nombreExiste) {
-                mostrarToast('Ya existe otro perfil con ese nombre', 'error');
-                return;
+                mostrarToast('Sin cambios', 'info'); cerrarEditorPerfil(); return;
             }
 
             const nombreAnterior = perfiles[perfilEnEdicion].nombre;
@@ -4796,16 +4776,11 @@ Generado por Sistema Lushibosca
                 return;
             }
 
-            const perfilActual = window.PerfilManager.obtenerPerfilActual();
-            if (perfilEnEdicion === perfilActual) {
+            if (perfilEnEdicion === window.PerfilManager?.obtenerPerfilActual()) {
                 const btnTexto = document.getElementById('nombre-perfil-header');
                 if (btnTexto) btnTexto.textContent = nuevoNombre;
             }
-
-            if (window.PerfilManager) {
-                window.PerfilManager.inicializar();
-            }
-
+            if (window.PerfilManager) window.PerfilManager.inicializar();
             mostrarToast('Perfil actualizado', 'success');
             cerrarEditorPerfil();
         }
@@ -5200,34 +5175,25 @@ Generado por Sistema Lushibosca
             }
         }
 
-        async function exportarRango(desde, hasta, esMes = false) {
-            let registrosFiltrados;
-
+        function _filtrarRegistrosRango(desde, hasta, esMes) {
             if (esMes) {
                 const [año, mes] = desde.split('-').map(Number);
-                registrosFiltrados = D.registros().filter(r => {
+                return D.registros().filter(r => {
                     const [aReg, mReg] = r.fecha.split('-').map(Number);
                     return aReg === año && mReg === mes;
                 });
-            } else {
-                registrosFiltrados = D.registros().filter(r =>
-                    r.fecha >= desde && r.fecha <= hasta
-                );
             }
+            return D.registros().filter(r => r.fecha >= desde && r.fecha <= hasta);
+        }
 
-            if (registrosFiltrados.length === 0) {
-                mostrarToast('No hay registros en ese rango', 'warning');
-                return;
-            }
+        async function exportarRango(desde, hasta, esMes = false) {
+            const registrosFiltrados = _filtrarRegistrosRango(desde, hasta, esMes);
+            if (registrosFiltrados.length === 0) { mostrarToast('No hay registros en ese rango', 'warning'); return; }
 
             const ahora = new Date();
-            const año = ahora.getFullYear();
-            const mes = String(ahora.getMonth() + 1).padStart(2, '0');
-            const dia = String(ahora.getDate()).padStart(2, '0');
-            const hora = String(ahora.getHours()).padStart(2, '0');
-            const minuto = String(ahora.getMinutes()).padStart(2, '0');
-            const segundo = String(ahora.getSeconds()).padStart(2, '0');
-            const fechaLocal = `${año}-${mes}-${dia} ${hora}:${minuto}:${segundo}`;
+            const pad = n => String(n).padStart(2, '0');
+            const fechaLocal = `${ahora.getFullYear()}-${pad(ahora.getMonth()+1)}-${pad(ahora.getDate())} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}:${pad(ahora.getSeconds())}`;
+            const fechaHoy   = fechaLocal.substring(0, 10);
 
             const data = {
                 registros: registrosFiltrados,
@@ -5237,25 +5203,14 @@ Generado por Sistema Lushibosca
                 version: S.SECURITY_LIMITS.SCHEMA_VERSION,
                 hash: await S.calcularHashSHA256(registrosFiltrados),
                 timestamp: Date.now(),
-                rangoExportado: esMes ? `Mes ${desde}` : `${desde} a ${hasta}`
+                rangoExportado: S.sanitizeString(esMes ? `Mes ${desde}` : `${desde} a ${hasta}`, 100)
             };
 
-            if (data.rangoExportado) {
-                data.rangoExportado = S.sanitizeString(data.rangoExportado, 100);
-            }
-
             try {
-                const nombreSafe = obtenerNombrePerfilSafe();
-                const fechaHoy = `${año}-${mes}-${dia}`;
                 const sufijo = esMes ? `_${desde}` : `_${desde}_${hasta}`;
-                descargarJSON(data, `Horarios_${nombreSafe}${sufijo}_${fechaHoy}.json`);
-
-                const mensaje = esMes
-                    ? `Exportados ${registrosFiltrados.length} registros del mes`
-                    : `Exportados ${registrosFiltrados.length} registros`;
-                mostrarToast(mensaje, 'success');
+                descargarJSON(data, `Horarios_${obtenerNombrePerfilSafe()}${sufijo}_${fechaHoy}.json`);
+                mostrarToast(`Exportados ${registrosFiltrados.length} registros${esMes ? ' del mes' : ''}`, 'success');
                 cerrarExportar();
-
             } catch (e) {
                 console.error(e);
                 mostrarToast('Error al exportar', 'error');

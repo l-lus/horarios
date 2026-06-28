@@ -4611,7 +4611,7 @@ Generado por Sistema Lushibosca
             const error = _validarNombrePerfil(nombre, perfiles);
             if (error) { mostrarToast(error, 'error'); return; }
 
-            const id = 'perfil_' + Date.now();
+            const id = 'perfil_' + S.generarIDSeguro();
             perfiles[id] = { nombre, registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 };
 
             try {
@@ -5933,7 +5933,9 @@ Generado por Sistema Lushibosca
                     if (id) D.editarRegistro(id);
                 } else if (target.dataset.accion === 'editar-grupo') {
                     try {
-                        const grupoData = JSON.parse(target.dataset.grupoData);
+                        const grupoData = JSON.parse(target.dataset.grupoData, (k, v) =>
+                            ['__proto__', 'constructor', 'prototype'].includes(k) ? undefined : v
+                        );
                         const registrosCompletos = D.registros().filter(r => grupoData.registros.includes(r.id));
                         D.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
                     } catch (err) { console.error('Error al abrir grupo:', err); }
@@ -7226,7 +7228,9 @@ Generado por Sistema Lushibosca
             const raw = StorageHelper.getItem(SK_PROCESADOS, null);
             try {
                 if (!raw) return new Set();
-                const parsed = JSON.parse(raw);
+                const parsed = JSON.parse(raw, (k, v) =>
+                    ['__proto__', 'constructor', 'prototype'].includes(k) ? undefined : v
+                );
                 if (!Array.isArray(parsed)) return new Set();
                 return new Set(parsed.filter(f => typeof f === 'string' && TimeUtils.validarFecha(f)));
             } catch { return new Set(); }

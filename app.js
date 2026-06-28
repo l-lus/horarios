@@ -2278,43 +2278,24 @@
                 const tipoActual = obtenerTipoRegistro(registroActual);
 
                 if (tipoActual === null) {
-                    resultado.push({
-                        tipo: 'individual',
-                        registros: [registroActual]
-                    });
-                    i++;
-                    continue;
+                    resultado.push({ tipo: 'individual', registros: [registroActual] });
+                    i++; continue;
                 }
 
                 const grupo = [registroActual];
                 let j = i + 1;
-
                 while (j < registros.length) {
-                    const registroSiguiente = registros[j];
-                    const tipoSiguiente = obtenerTipoRegistro(registroSiguiente);
-
-                    if (tipoSiguiente !== tipoActual) break;
-
-                    const ultimaFecha = grupo[grupo.length - 1].fecha;
-                    if (!esFechaConsecutiva(ultimaFecha, registroSiguiente.fecha)) break;
-
-                    grupo.push(registroSiguiente);
+                    const siguiente = registros[j];
+                    if (obtenerTipoRegistro(siguiente) !== tipoActual) break;
+                    if (!esFechaConsecutiva(grupo[grupo.length - 1].fecha, siguiente.fecha)) break;
+                    grupo.push(siguiente);
                     j++;
                 }
 
-                if (grupo.length > 1) {
-                    resultado.push({
-                        tipo: 'grupo',
-                        subtipo: tipoActual,
-                        registros: grupo
-                    });
-                } else {
-                    resultado.push({
-                        tipo: 'individual',
-                        registros: grupo
-                    });
-                }
-
+                resultado.push(grupo.length > 1
+                    ? { tipo: 'grupo', subtipo: tipoActual, registros: grupo }
+                    : { tipo: 'individual', registros: grupo }
+                );
                 i = j;
             }
 
@@ -4492,47 +4473,30 @@ Generado por Sistema Lushibosca
             if (!lista) return;
 
             lista.innerHTML = '';
-            const perfiles = window.PerfilManager.obtenerListaPerfiles();
+            window.PerfilManager.obtenerListaPerfiles().forEach(p => {
+                const container = Object.assign(document.createElement('div'), {
+                    className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
+                });
+                if (p.esActual) container.style.cursor = 'default';
 
-            perfiles.forEach(p => {
-                const container = document.createElement('div');
-                container.className = `btn-perfil-select ${p.esActual ? 'activo' : ''}`;
-
-                const infoSection = document.createElement('div');
-                infoSection.className = 'btn-perfil-info';
-
-                const nombreSpan = document.createElement('div');
-                nombreSpan.className = 'btn-perfil-nombre';
-                nombreSpan.textContent = p.nombre;
-
-                infoSection.appendChild(nombreSpan);
-
-                const badge = document.createElement('div');
-                badge.className = 'btn-perfil-badge';
-                badge.style.color = p.esActual ? 'var(--c-green)' : '';
                 const countText = `${p.totalRegistros} registro${p.totalRegistros !== 1 ? 's' : ''}`;
-                badge.textContent = p.esActual ? `${countText} · Activo` : countText;
+                const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
+                infoSection.appendChild(Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre', textContent: p.nombre }));
+                const badge = Object.assign(document.createElement('div'), {
+                    className: 'btn-perfil-badge',
+                    textContent: p.esActual ? `${countText} · Activo` : countText
+                });
+                if (p.esActual) badge.style.color = 'var(--c-green)';
                 infoSection.appendChild(badge);
 
-                const editBtn = document.createElement('button');
-                editBtn.className = 'btn-perfil-edit';
-                editBtn.innerHTML = '<svg class="icon"><use href="#icon-edit"/></svg>';
-                editBtn.title = 'Editar perfil';
-                editBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    UILogic.abrirEditorPerfil(p.id);
-                };
+                const editBtn = Object.assign(document.createElement('button'), {
+                    className: 'btn-perfil-edit',
+                    innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
+                    title: 'Editar perfil',
+                    onclick: (e) => { e.stopPropagation(); UILogic.abrirEditorPerfil(p.id); }
+                });
 
-                container.onclick = () => {
-                    if (!p.esActual) {
-                        window.PerfilManager.cambiarPerfil(p.id);
-                    }
-                };
-
-                if (p.esActual) {
-                    container.style.cursor = 'default';
-                }
-
+                container.onclick = () => { if (!p.esActual) window.PerfilManager.cambiarPerfil(p.id); };
                 container.appendChild(infoSection);
                 container.appendChild(editBtn);
                 lista.appendChild(container);

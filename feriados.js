@@ -1,7 +1,6 @@
 /**
  * FERIADOS ARGENTINA (Nacionales)
  * ============================================================
- * Fuente única de feriados usada por app.js (módulo FeriadosAR).
  *
  * Cómo agregar un año o un feriado nuevo:
  *   1. Si el año no existe, agregá una clave nueva: `2028: [ ... ],`

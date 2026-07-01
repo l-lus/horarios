@@ -6570,37 +6570,27 @@ Generado por Sistema Lushibosca
 
             const retraso = estaExpandido ? 0 : DUR_ANIM() + 80;
 
-            setTimeout(() => {
+            const aplicarFecha = () => {
                 if (esEspecial) {
-                    if (!modoLoteActivo) {
-                        toggleModoLote();
-                        setTimeout(() => {
-                            const desde = document.getElementById('lote-fecha-desde');
-                            const hasta = document.getElementById('lote-fecha-hasta');
-                            if (desde) desde.value = fecha;
-                            if (hasta) hasta.value = fecha;
-                            setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta'), _FLASH_SCROLL_DELAY);
-                        }, DUR_ANIM() + 50);
-                    } else {
-                        const desde = document.getElementById('lote-fecha-desde');
-                        const hasta = document.getElementById('lote-fecha-hasta');
-                        if (desde) desde.value = fecha;
-                        if (hasta) hasta.value = fecha;
-                        setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta'), _FLASH_SCROLL_DELAY);
-                    }
+                    const desde = document.getElementById('lote-fecha-desde');
+                    const hasta = document.getElementById('lote-fecha-hasta');
+                    if (desde) desde.value = fecha;
+                    if (hasta) hasta.value = fecha;
+                    setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta'), _FLASH_SCROLL_DELAY);
                 } else {
-                    if (modoLoteActivo) {
-                        toggleModoLote();
-                        setTimeout(() => {
-                            const input = document.getElementById('fecha');
-                            if (input) input.value = fecha;
-                            setTimeout(() => _flashCampo('fecha'), _FLASH_SCROLL_DELAY);
-                        }, DUR_ANIM() + 50);
-                    } else {
-                        const input = document.getElementById('fecha');
-                        if (input) input.value = fecha;
-                        setTimeout(() => _flashCampo('fecha'), _FLASH_SCROLL_DELAY);
-                    }
+                    const input = document.getElementById('fecha');
+                    if (input) input.value = fecha;
+                    setTimeout(() => _flashCampo('fecha'), _FLASH_SCROLL_DELAY);
+                }
+            };
+
+            setTimeout(() => {
+                const necesitaCambiarModo = esEspecial ? !modoLoteActivo : modoLoteActivo;
+                if (necesitaCambiarModo) {
+                    toggleModoLote();
+                    setTimeout(aplicarFecha, DUR_ANIM() + 50);
+                } else {
+                    aplicarFecha();
                 }
             }, retraso);
         }

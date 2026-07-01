@@ -7085,7 +7085,6 @@ Generado por Sistema Lushibosca
                 { fecha: '2026-12-07', nombre: 'Puente Turístico' },
                 { fecha: '2026-12-08', nombre: 'Inmaculada Concepción de María' },
                 { fecha: '2026-12-25', nombre: 'Navidad' },
-                { fecha: '2026-07-03', nombre: 'Navidad' },
             ],
             2027: [
                 { fecha: '2027-01-01', nombre: 'Año Nuevo' },

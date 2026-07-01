@@ -523,8 +523,6 @@
             return guardarPerfiles();
         }
 
-        function cargarDatosPerfilActual() { return perfiles[perfilActual]; }
-
         function actualizarSelector() {
             const btnTexto = document.getElementById('nombre-perfil-header');
             if (btnTexto && perfiles[perfilActual]) {
@@ -563,7 +561,7 @@
         }
 
         return {
-            inicializar, cambiarPerfil, guardarDatosPerfilActual, cargarDatosPerfilActual,
+            inicializar, cambiarPerfil, guardarDatosPerfilActual,
             obtenerPerfilActual, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
             guardarPerfiles, perfilKey, MAX_PERFILES
         };
@@ -1463,8 +1461,7 @@
             if (!calc) return null;
             const diferencia = horasDiarias - calc.total;
             if (diferencia <= 0.01) return null;
-            let h = Math.floor(diferencia), m = Math.round((diferencia - h) * 60);
-            if (m === 60) { h++; m = 0; }
+            const { horas: h, minutos: m } = TimeUtils.descomponerHorasDecimales(diferencia);
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
 
@@ -2785,7 +2782,7 @@
                 const [a, m] = r.fecha.split('-').map(Number);
                 return a === añoActual && m === mesActual + 1;
             });
-            const primerDiaMes = `${añoActual}-${String(mesActual + 1).padStart(2, '0')}-01`;
+            const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1));
             const ultimoDia = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
             let fechaDesde = primerDiaMes;
             const desdePrimeroDia = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
@@ -2992,9 +2989,7 @@
             const objetivoSemana = Math.max(0, horasSemanales - D.calcularHorasFeriadoEnRango(ini, fn));
             const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 
-            const tipoEspecialHoy = (regHoy?.salida && regHoy.entrada === regHoy.salida)
-                ? TiposRegistro.obtenerTipoPorCodigo(regHoy.entrada, regHoy.salida)
-                : null;
+            const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
 
             let tiempoHoy = 0;
             const regActivo = (ayerAbierto && !regHoy) ? regAyer
@@ -4147,9 +4142,8 @@ ${lineasTipos}
                 totalesPorSemana: () => {
                     if (esAnual || !mesSeleccionado) return '';
                     const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
-                    const pad = n => String(n).padStart(2, '0');
-                    const primerDiaMes = `${añoActual}-${pad(mesActual)}-01`;
-                    const ultimaDiaMes = `${añoActual}-${pad(mesActual)}-${pad(new Date(añoActual, mesActual, 0).getDate())}`;
+                    const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
+                    const ultimaDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
 
                     const semanas = _agruparRegistrosPorSemana(registrosPeriodo);
                     const semanasOrdenadas = [...semanas.entries()].sort((a, b) => new Date(a[0]) - new Date(b[0]));
@@ -5061,9 +5055,7 @@ Generado por Sistema Lushibosca
             const registrosFiltrados = _filtrarRegistrosRango(desde, hasta, esMes);
             if (registrosFiltrados.length === 0) { mostrarToast('No hay registros en ese rango', 'warning'); return; }
 
-            const ahora = new Date();
-            const pad = n => String(n).padStart(2, '0');
-            const fechaLocal = `${ahora.getFullYear()}-${pad(ahora.getMonth()+1)}-${pad(ahora.getDate())} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}:${pad(ahora.getSeconds())}`;
+            const fechaLocal = TimeUtils.fechaLocalISOFull();
             const fechaHoy   = fechaLocal.substring(0, 10);
 
             const data = {

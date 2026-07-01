@@ -385,6 +385,13 @@
             return trim ? r.trim() : r;
         }
 
+        function escapeHtml(s) {
+            return s == null ? '' : String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function generarIDSeguro() {
             if (window.crypto && window.crypto.getRandomValues) {
                 const array = new Uint32Array(4);
@@ -442,6 +449,7 @@
             REGEX_PATTERNS,
             sanitizeString,
             sanitizeNotas,
+            escapeHtml,
             generarIDSeguro,
             calcularHashSHA256,
             validarRegistroSeguro,
@@ -770,7 +778,11 @@
         function deepClone(obj) {
             if (obj === null || obj === undefined) return obj;
             try { return structuredClone(obj); }
-            catch (e) { return JSON.parse(JSON.stringify(obj)); }
+            catch (e) {
+                return JSON.parse(JSON.stringify(obj), (k, v) =>
+                    ['__proto__', 'constructor', 'prototype'].includes(k) ? undefined : v
+                );
+            }
         }
 
         function saveState(registros) {
@@ -832,10 +844,8 @@
                 if (tiempoTranscurrido < limiteEnMs) {
                     _stack = historyData.history || [];
                     currentIndex = historyData.currentIndex !== undefined ? historyData.currentIndex : -1;
-                    console.log(`✓ Historial restaurado: ${_stack.length} estados, índice actual: ${currentIndex}`);
                     return _stack.length > 0 && currentIndex >= 0;
                 } else {
-                    console.log('Historial expirado (más de 24hs), limpiando...');
                     StorageHelper.removeItem(STORAGE_KEYS.HISTORY, true);
                 }
             }
@@ -5772,7 +5782,6 @@ Generado por Sistema Lushibosca
                 const estadoActual = HistoryManager.getCurrentState();
                 if (estadoActual !== null && estadoActual !== undefined) {
                     D.registros().splice(0, D.registros().length, ...estadoActual);
-                    console.log('Registros restaurados desde historial');
                 } else {
                     console.warn('Historial corrupto, descartado. Usando registros del perfil.');
                     HistoryManager.clear();
@@ -5781,7 +5790,6 @@ Generado por Sistema Lushibosca
             D.recalcularTotalesEnMemoria();
             if (!historialCargado) {
                 HistoryManager.saveState(D.registros());
-                console.log('Nuevo historial inicializado');
             }
             HistoryManager.updateButtons();
         }
@@ -6035,7 +6043,6 @@ Generado por Sistema Lushibosca
 
             _initAutoSync();
             setInterval(() => actualizarUI(null, true), 20000);
-            console.log('Sistema iniciado correctamente');
 
             _initListenerEscape();
             const lista = document.getElementById('lista-registros');
@@ -6378,26 +6385,19 @@ Generado por Sistema Lushibosca
         let _popupCalendarioEl = null;
 
         // ── Helpers compartidos de popups de calendario ───────────────
-        function _escHtml(s) {
-            return s == null ? '' : String(s)
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
         function _buildInfoHtmlRegistro(reg, horasDiarias) {
             const esEspecial = TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
             if (esEspecial) {
                 const tipoConfig = TiposRegistro.obtenerTipoPorCodigo(reg.entrada, reg.salida);
-                const emoji = _escHtml(tipoConfig?.emoji ?? '');
-                const label = tipoConfig ? _escHtml(tipoConfig.label) : _escHtml(reg.entrada);
+                const emoji = S.escapeHtml(tipoConfig?.emoji ?? '');
+                const label = tipoConfig ? S.escapeHtml(tipoConfig.label) : S.escapeHtml(reg.entrada);
                 const colorSafe = /^[a-z]+$/.test(tipoConfig?.color || '') ? tipoConfig.color : 'purple';
                 return `<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${emoji} ${label}</span>`;
             }
             if (reg.entrada && !reg.salida) {
                 const esHoy = reg.fecha === obtenerFechaHoy();
                 return `<div class="cal-popup-info cal-popup-info--${esHoy ? 'blue">En curso' : 'gold">Incompleto'}</div>
-                    <div class="cal-popup-3l">Entrada: ${_escHtml(reg.entrada)}</div>`;
+                    <div class="cal-popup-3l">Entrada: ${S.escapeHtml(reg.entrada)}</div>`;
             }
             const totalHoras = reg.total || 0;
             const h = Math.floor(totalHoras);
@@ -6415,8 +6415,8 @@ Generado por Sistema Lushibosca
                 diffColor = totalHoras >= horasDiarias ? 'var(--c-green)' : 'var(--c-red)';
             }
             return `<div class="cal-popup-info${diffColor ? ' cal-popup-info--dynamic' : ''}"${diffColor ? ` data-color="${diffColor}"` : ''}>${totalConDiff}</div>
-                <div class="cal-popup-3l">${_escHtml(reg.entrada)} – ${_escHtml(reg.salida)}</div>
-                ${tfStr ? `<div class="cal-popup-3l">${_escHtml(tfStr)}</div>` : ''}`;
+                <div class="cal-popup-3l">${S.escapeHtml(reg.entrada)} – ${S.escapeHtml(reg.salida)}</div>
+                ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
         }
 
         function _posicionarPopup(popup, event) {
@@ -6471,7 +6471,7 @@ Generado por Sistema Lushibosca
             const grupos = agruparRegistrosConsecutivos(registrosDelMes);
             const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
 
-            const fechaLabel = _escHtml(new Date(reg.fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+            const fechaLabel = S.escapeHtml(new Date(reg.fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
             const infoHtml = _buildInfoHtmlRegistro(reg, D.horasDiarias());
             const btnGrupoHtml = grupoDelRegistro ? `
                 <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
@@ -6538,7 +6538,7 @@ Generado por Sistema Lushibosca
             }
 
             const esFechaFutura = fecha > TimeUtils.obtenerFechaHoy();
-            const fechaLabel = _escHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+            const fechaLabel = S.escapeHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
 
             const popup = document.createElement('div');
             popup.className = 'cal-popup';
@@ -6758,9 +6758,9 @@ Generado por Sistema Lushibosca
                 const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');
                 const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${t.labelPlural.toLowerCase()}`);
                 info = {
-                    titulo: _escHtml(label ? label.textContent : 'Estadística'),
+                    titulo: S.escapeHtml(label ? label.textContent : 'Estadística'),
                     desc: tipoMatch
-                        ? `Cantidad de jornadas registradas como "${_escHtml(tipoMatch.label)}" en el período.`
+                        ? `Cantidad de jornadas registradas como "${S.escapeHtml(tipoMatch.label)}" en el período.`
                         : 'Detalle de esta estadística.'
                 };
             }
@@ -6770,7 +6770,7 @@ Generado por Sistema Lushibosca
             popup.id = '_stat-popup';
             popup.dataset.statId = statId;
             popup.innerHTML = `
-                <div class="stat-popup-titulo">${_escHtml(info.titulo)}</div>
+                <div class="stat-popup-titulo">${S.escapeHtml(info.titulo)}</div>
                 <div class="stat-popup-desc">${info.desc}</div>`;
             popup.style.visibility = 'hidden';
             document.body.appendChild(popup);

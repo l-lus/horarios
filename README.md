@@ -5,6 +5,12 @@
 
 ### VERSION:
 
+### 260701
+* **Mejora:**Se centraliza como helper en modal manager el arreglo del modal confirmar de feriadosAR, ahora es una funcion helper de modal manager que puede utilizarse con distintos atributos
+
+### 260630
+* **Mantenimiento:** Fin refactor se pasa de ~8000 lineas a ~7500 en js
+
 ### 260627
 Refactores varios
 

@@ -707,10 +707,12 @@
             document.body.classList.remove('modal-open');
         }
 
-        function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash') {
+        function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones = {}) {
             return new Promise((resolve) => {
                 const elTexto = document.getElementById('modal-confirmar-texto');
                 const elLabel = document.getElementById('modal-confirmar-label-ok');
+                const elLabelCancel = document.getElementById('modal-confirmar-label-cancel');
+                const elTitulo = document.getElementById('modal-confirmar-titulo');
                 const elIcono = document.querySelector('#modal-confirmar-ok svg use');
                 const btnOk = document.getElementById('modal-confirmar-ok');
                 const btnCancel = document.getElementById('modal-confirmar-cancel');
@@ -718,6 +720,8 @@
 
                 elTexto.textContent = texto;
                 if (elLabel) elLabel.textContent = labelOk;
+                if (elLabelCancel) elLabelCancel.textContent = opciones.labelCancel || 'Cancelar';
+                if (elTitulo) elTitulo.textContent = opciones.titulo || 'Atención';
                 if (elIcono) elIcono.setAttribute('href', icono);
 
                 const modalPadre = document.querySelector('.modal.show');
@@ -7132,6 +7136,7 @@ Generado por Sistema Lushibosca
                 { fecha: '2026-12-07', nombre: 'Puente Turístico' },
                 { fecha: '2026-12-08', nombre: 'Inmaculada Concepción de María' },
                 { fecha: '2026-12-25', nombre: 'Navidad' },
+                { fecha: '2026-07-03', nombre: 'Navidad' },
             ],
             2027: [
                 { fecha: '2027-01-01', nombre: 'Año Nuevo' },
@@ -7264,14 +7269,10 @@ Generado por Sistema Lushibosca
                 const descripcionFechas = _describirFechasGrupo(grupo);
                 const texto = `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar ${esGrupal ? `estos ${grupo.length} días` : 'este día'} como Feriado?`;
 
-                const elTitulo = document.getElementById('modal-confirmar-titulo');
-                const btnCancel = document.getElementById('modal-confirmar-cancel');
-                const cancelTextNode = btnCancel ? [...btnCancel.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim()) : null;
-                const labelCancelOriginal = cancelTextNode?.textContent ?? null;
-                if (elTitulo) elTitulo.textContent = esGrupal ? 'Feriados Próximos' : 'Feriado Próximo';
-                if (cancelTextNode) cancelTextNode.textContent = ' No';
-
-                const confirmo = await ModalManager.confirmar(texto, 'Sí', '#icon-save');
+                const confirmo = await ModalManager.confirmar(texto, 'Sí', '#icon-check', {
+                    titulo: esGrupal ? 'Feriados Próximos' : 'Feriado Próximo',
+                    labelCancel: 'No'
+                });
                 grupo.forEach(f => _marcarProcesado(f.fecha));
 
                 if (confirmo) {
@@ -7280,8 +7281,6 @@ Generado por Sistema Lushibosca
                     }
                 }
 
-                if (elTitulo) elTitulo.textContent = 'Atención';
-                if (cancelTextNode && labelCancelOriginal !== null) cancelTextNode.textContent = labelCancelOriginal;
                 if (i < grupos.length - 1) await _delay(100);
             }
         }
@@ -7447,7 +7446,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260627';
+        const _v = '-v260701';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

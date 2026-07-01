@@ -6576,7 +6576,7 @@ Generado por Sistema Lushibosca
                     const hasta = document.getElementById('lote-fecha-hasta');
                     if (desde) desde.value = fecha;
                     if (hasta) hasta.value = fecha;
-                    setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta'), _FLASH_SCROLL_DELAY);
+                    setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta', 'lote-tipo'), _FLASH_SCROLL_DELAY);
                 } else {
                     const input = document.getElementById('fecha');
                     if (input) input.value = fecha;

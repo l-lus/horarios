@@ -1583,11 +1583,12 @@ button:disabled {
 }
 
 @keyframes campo-flash {
-    0%, 100% { border-color: inherit; box-shadow: none; }
+    0%, 100% { border-color: var(--text-main); box-shadow: none; }
     30%, 70% { border-color: var(--input-focus); box-shadow: var(--shadow); }
 }
 
-input.campo-flash {
+input.campo-flash,
+select.campo-flash {
     animation: campo-flash 500ms ease-in-out 2;
 }
 

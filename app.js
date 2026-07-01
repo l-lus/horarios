@@ -1236,7 +1236,6 @@
             return valido;
         }
 
-        // ── Helpers privados de agregarRegistro ──────────────────────
         function _mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s) {
             if (timerDetenido && usaHoraActual) {
                 return `Salida registrada con hora actual \nTiempo fuera: +${reg.tiempoFuera || '00:00'} \n(entrada: ${reg.entrada})`;
@@ -1290,7 +1289,6 @@
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('entrada').value = ''; $('salida').value = '';
         }
-        // ─────────────────────────────────────────────────────────────
 
         async function agregarRegistro() {
             if (!validarFormulario()) { UILogic.mostrarToast('Verifica los campos', 'error'); return; }
@@ -1457,7 +1455,6 @@
             return null;
         }
 
-        // ── Helpers privados de guardarEdicion ───────────────────────
         function _calcularCredito(e, s, tf) {
             const btn = document.getElementById('btn-toggle-credito');
             if (!btn || btn.dataset.activo !== 'true') return null;
@@ -1482,7 +1479,6 @@
             UILogic.restaurarBotonGuardarEdicion(btnGuardar);
             if (saved) { UILogic.mostrarToast('Registro eliminado (vacío)', 'info'); UILogic.cerrarEdicion(); }
         }
-        // ─────────────────────────────────────────────────────────────
 
         async function guardarEdicion() {
             const r = registros.find(x => x.id === editandoId);
@@ -1613,8 +1609,6 @@
             }
         }
 
-
-        // ── Helpers privados de importarDatos ────────────────────────
         async function _validarDatosImport(data) {
             if (!data || typeof data !== 'object' || Array.isArray(data)) { UILogic.mostrarToast('Estructura de archivo inválida', 'error'); return false; }
             if (!data.registros || !Array.isArray(data.registros)) { UILogic.mostrarToast('Archivo inválido o corrupto', 'error'); return false; }
@@ -1664,7 +1658,6 @@
             if (complementarios.length > 0) partes.push(p(complementarios.length, 'registro completado'));
             finalizarImportacionAndSave(`Combinado: ${partes.join(', ')}`);
         }
-        // ─────────────────────────────────────────────────────────────
 
         function importarDatos(modo = 'replace') {
             const fileInput = $('file-import');
@@ -2443,8 +2436,6 @@
             return contenedorMesActual;
         }
 
-
-        // ── Helpers privados de actualizarListaRegistros ─────────────
         function _renderEmptyStateLista(lista) {
             const emptyDiv = document.createElement('div');
             emptyDiv.className = 'empty-state';
@@ -2486,7 +2477,6 @@
             contenedor.appendChild(detalle);
             return contenedor;
         }
-        // ─────────────────────────────────────────────────────────────
 
         function actualizarListaRegistros(registros, idNuevo = null) {
             const lista = $('lista-registros');
@@ -3375,7 +3365,6 @@
             }
         }
 
-        // ── Utilidades de animación ──────────────────────────────────────────
         function _getCSSdur(varName) {
             const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
             if (!raw) return 300;
@@ -3384,7 +3373,6 @@
         const DUR_ANIM = () => _getCSSdur('--dur-anim');
         const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
 
-        // Patrón genérico: fade-out → fn() → fade-in, sincronizado con --dur-anim
         function _animarFadeSwap(el, fn) {
             if (!el) { fn(); return; }
             el.classList.add('fade-out');
@@ -3454,8 +3442,6 @@
             }
         }
 
-        // ─── TOGGLES DE UI Y STORAGE ───────────────────────────────────────
-
         /**
          * Factory para pares toggle/actualizarEstado de configuraciones booleanas.
          *
@@ -3512,7 +3498,6 @@
             if (btn) btn.classList.toggle('btn-activo', activo);
         }
 
-        // ── ignorarTiempoFuera ──────────────────────────────────────────────
         const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
             _crearToggleConfig({
                 getVal: () => D.getIgnorarTiempoFuera(),
@@ -3523,7 +3508,6 @@
                 onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
             });
 
-        // ── hoverPopupCalendario ────────────────────────────────────────────
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, true),
@@ -3533,7 +3517,6 @@
                 mensajeOff: 'Popup desactivado',
             });
 
-        // ── saldoDesdeEnero ──────────────────────────────────────────────────
         const { toggle: toggleSaldoDesdeEnero, actualizarEstado: actualizarEstadoBotonSaldoDesdeEnero } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false),
@@ -3544,7 +3527,6 @@
                 onAfterToggle: () => { actualizarUI(); }
             });
 
-        // ── saldoDesdePrimeroDiaMes ──────────────────────────────────────────
         const { toggle: toggleSaldoDesdePrimeroDiaMes, actualizarEstado: actualizarEstadoBotonSaldoDesdePrimeroDiaMes } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false),
@@ -3555,7 +3537,6 @@
                 onAfterToggle: () => { actualizarUI(); }
             });
 
-        // ── persistirTarjetas ───────────────────────────────────────────────
         const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
@@ -3980,7 +3961,6 @@
             if (v !== undefined) _animarCambioStats(() => actualizarEstadisticas(v));
         }
 
-        // ── Helpers privados de generarReporte ───────────────────────
         function _sumarHorasEfectivas(regs, horasDiarias) {
             return regs.reduce((sum, r) => {
                 const t = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
@@ -4098,7 +4078,6 @@
             });
             return semanas;
         }
-        // ─────────────────────────────────────────────────────────────
 
         function generarReporte() {
             const esAnual = modoEstadisticas === 'anual';
@@ -4766,7 +4745,6 @@ Generado por Sistema Lushibosca
             }
         }
 
-        // ── Helpers privados de registrarLoteDesdeCard ───────────────
         function _limpiarCamposLote() {
             document.getElementById('lote-fecha-desde').value = '';
             document.getElementById('lote-fecha-hasta').value = '';
@@ -4796,7 +4774,6 @@ Generado por Sistema Lushibosca
                 _limpiarCamposLote();
             } catch (e) { console.error('Error al registrar:', e); }
         }
-        // ─────────────────────────────────────────────────────────────
 
         async function registrarLoteDesdeCard() {
             const inputDesde = document.getElementById('lote-fecha-desde');
@@ -4865,8 +4842,6 @@ Generado por Sistema Lushibosca
             });
         }
 
-
-        // ── Helpers privados de actualizarBotonLote ──────────────────
         function _setBtnError(btn, btnTexto, mensaje) {
             btnTexto.textContent = mensaje;
             btn.style.color = 'var(--c-red)';
@@ -4913,7 +4888,6 @@ Generado por Sistema Lushibosca
             }
             setIconoBtn(btn, '#icon-save');
         }
-        // ─────────────────────────────────────────────────────────────
 
         function actualizarBotonLote() {
             const tipo    = document.getElementById('lote-tipo').value;
@@ -5237,8 +5211,6 @@ Generado por Sistema Lushibosca
             if (_gistModalPadre) {
                 const padre = _gistModalPadre;
                 _gistModalPadre = null;
-                // alternar detecta esHaciaAtras=true gracias al setPadre en abrirModalGist,
-                // por lo que hace history.back() sin pushState extra → evita entrada duplicada
                 ModalManager.alternar('modal-gist', padre);
                 if (padre === 'modal-config') {
                     ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
@@ -5341,8 +5313,6 @@ Generado por Sistema Lushibosca
             if (btn) btn.disabled = false;
             if (_gistMergeDesdeModal) {
                 _gistMergeDesdeModal = false;
-                // alternar detecta esHaciaAtras=true (padres[gist-merge]=gist) y hace history.back()
-                // sin pushState, tanto desde botón cancelar como desde popstate (mobile back)
                 ModalManager.alternar('modal-gist-merge', 'modal-gist');
             } else {
                 ModalManager.cerrar('modal-gist-merge');
@@ -5483,7 +5453,6 @@ Generado por Sistema Lushibosca
 
         let _gistMergeData = null;
 
-        // ── Helpers privados de gistBajar ────────────────────────────
         async function _validarDatosGist(data) {
             if (!data.registros || !Array.isArray(data.registros)) throw new Error('Datos inválidos en el Gist');
             const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
@@ -5575,7 +5544,6 @@ Generado por Sistema Lushibosca
             footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros del Gist`));
             resumenEl.appendChild(footer);
         }
-        // ─────────────────────────────────────────────────────────────
 
         async function gistBajar(modoAutomatico = false) {
             _gistGuardarCredencialesSiModalAbierto();
@@ -5608,9 +5576,6 @@ Generado por Sistema Lushibosca
                 if (btn) btn.disabled = false;
             }
         }
-
-
-        // ── Helpers privados de init ──────────────────────────────────
 
         function _actualizarHintEdicion() {
             const hint = document.getElementById('edit-hint-resumen');
@@ -5996,7 +5961,6 @@ Generado por Sistema Lushibosca
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
         async function init() {
             if (typeof Storage === 'undefined') { alert('Tu navegador no soporta localStorage.'); return; }
 
@@ -6363,7 +6327,6 @@ Generado por Sistema Lushibosca
 
         let _popupCalendarioEl = null;
 
-        // ── Helpers compartidos de popups de calendario ───────────────
         function _buildInfoHtmlRegistro(reg, horasDiarias) {
             const esEspecial = TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
             if (esEspecial) {
@@ -6435,7 +6398,6 @@ Generado por Sistema Lushibosca
             }, 10);
             return cerrar;
         }
-        // ─────────────────────────────────────────────────────────────
 
         function _popupCalendario(event, registroId) {
             event.stopPropagation();
@@ -6601,9 +6563,7 @@ Generado por Sistema Lushibosca
             const headerEl = document.querySelector('.header');
             const headerH = headerEl ? headerEl.offsetHeight : 0;
             const margen = headerH + 8;
-            // Si la tarjeta ya es completamente visible, no scrollear
             if (rect.top >= margen && rect.bottom <= window.innerHeight) return;
-            // Scroll manual para que el borde superior de la tarjeta quede justo bajo el header
             window.scrollTo({ top: window.scrollY + rect.top - margen, behavior: 'smooth' });
         }
 
@@ -6658,7 +6618,6 @@ Generado por Sistema Lushibosca
             }, 500);
         }
 
-        // ── Popup descriptivo de stat-item ─────────────────────────────────
         const DESCRIPCIONES_STATS = {
             'stat-tiempo-total': { titulo: 'Tiempo Total', desc: 'Suma de todas las horas trabajadas en el período seleccionado.' },
             'stat-promedio-diario': { titulo: 'Promedio Diario', desc: 'Promedio de horas trabajadas por jornada en el período.' },

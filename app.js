@@ -598,6 +598,12 @@
             return acciones[modalId] || null;
         }
 
+        function _ejecutarAccionCierre(modalId) {
+            const accionVolver = _getAccionVolver(modalId);
+            if (accionVolver) accionVolver();
+            else cerrar(modalId);
+        }
+
         window.addEventListener('popstate', (event) => {
             if (_ignorandoPopstate) {
                 _ignorandoPopstate = false;
@@ -609,13 +615,7 @@
             const modalesAbiertos = Array.from(document.querySelectorAll('.modal.show'));
             if (modalesAbiertos.length > 0) {
                 const topModal = modalesAbiertos[modalesAbiertos.length - 1];
-                const accionVolver = _getAccionVolver(topModal.id);
-
-                if (accionVolver) {
-                    accionVolver();
-                } else {
-                    cerrar(topModal.id);
-                }
+                _ejecutarAccionCierre(topModal.id);
             }
 
             setTimeout(() => { _navegandoHaciaAtras = false; }, 50);
@@ -634,12 +634,7 @@
                 if (modalId === 'modal-confirmar') {
                     return;
                 }
-                const accionVolver = _getAccionVolver(modalId);
-                if (accionVolver) {
-                    accionVolver();
-                } else {
-                    cerrar(modalId);
-                }
+                _ejecutarAccionCierre(modalId);
             }
         }
 
@@ -764,7 +759,7 @@
             });
         }
 
-        return { abrir, cerrar, alternar, cerrarTodos, confirmar, getPadre: (id) => _padres[id] || null, setPadre: (id, padreId) => { if (id && padreId) _padres[id] = padreId; } };
+        return { abrir, cerrar, alternar, cerrarTodos, confirmar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, setPadre: (id, padreId) => { if (id && padreId) _padres[id] = padreId; } };
     })();
 
     // ====================================================================
@@ -5855,19 +5850,7 @@ Generado por Sistema Lushibosca
                 const modal = document.querySelector('.modal.show');
                 if (!modal) return;
                 e.preventDefault();
-                ({
-                    'modal-gist':              () => cerrarModalGist(),
-                    'modal-gist-merge':        () => gistMergeCancelar(),
-                    'modal-config':            () => UILogic.cerrarConfig(),
-                    'modal-selector-perfiles': () => UILogic.cerrarSelectorPerfiles(),
-                    'modal-editar':            () => UILogic.cerrarEdicion(),
-                    'modal-importar':          () => UILogic.cerrarImportar(),
-                    'modal-exportar':          () => UILogic.cerrarExportar(),
-                    'modal-filtros':           () => UILogic.cerrarFiltros(),
-                    'modal-editar-perfil':     () => UILogic.cerrarEditorPerfil(),
-                    'modal-editar-grupo':      () => UILogic.cerrarEdicionGrupo(),
-                    'modal-confirmar':         () => document.getElementById('modal-confirmar-cancel')?.click(),
-                })[modal.id]?.();
+                ModalManager.ejecutarAccionCierre(modal.id);
             });
         }
 

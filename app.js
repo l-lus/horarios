@@ -6522,7 +6522,7 @@ Generado por Sistema Lushibosca
             });
         }
 
-        const _FLASH_SCROLL_DELAY = 380;
+        const _FLASH_SCROLL_DELAY = 500;
 
         function _irAFicharConFecha(fecha, esEspecial) {
             const tarjeta = document.getElementById('card-registrar');
@@ -6545,7 +6545,7 @@ Generado por Sistema Lushibosca
                 } else {
                     const input = document.getElementById('fecha');
                     if (input) input.value = fecha;
-                    setTimeout(() => _flashCampo('fecha'), _FLASH_SCROLL_DELAY);
+                    setTimeout(() => _flashCampo('fecha', 'entrada', 'salida'), _FLASH_SCROLL_DELAY);
                 }
             };
 

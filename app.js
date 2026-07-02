@@ -3779,33 +3779,30 @@
             return opt;
         }
 
-        function _poblarSelectAgrupado(selectId, items, getLabel, selDefault, actualizarFn) {
+        function _poblarSelect(selectId, items, getLabel, selDefault, actualizarFn, agruparFn = null) {
             const select = $(selectId);
             if (!select) return;
             const selActual = select.value;
             select.innerHTML = '';
             if (!items.length) { select.appendChild(_crearOpcion('', 'Sin registros')); actualizarFn(null); return; }
             const sel = (selActual && items.includes(selActual)) ? selActual : (items.includes(selDefault) ? selDefault : items[0]);
-            _agruparMesesPorAnio(items).forEach((claves, anio) => {
-                const grp = document.createElement('optgroup');
-                grp.label = anio;
-                claves.forEach(k => grp.appendChild(_crearOpcion(k, getLabel(k), k === sel)));
-                select.appendChild(grp);
-            });
+            if (agruparFn) {
+                agruparFn(items).forEach((claves, grupo) => {
+                    const grp = document.createElement('optgroup');
+                    grp.label = grupo;
+                    claves.forEach(k => grp.appendChild(_crearOpcion(k, getLabel(k), k === sel)));
+                    select.appendChild(grp);
+                });
+            } else {
+                items.forEach(k => select.appendChild(_crearOpcion(k, getLabel(k), k === sel)));
+            }
             actualizarFn(sel);
         }
 
         function poblarSelectorAnios() {
-            const select = $('select-anio-stats');
-            if (!select) return;
-            const selActual = select.value;
             const anios = [...new Set(D.registros().map(r => r.fecha.substring(0, 4)))].sort().reverse();
-            select.innerHTML = '';
-            if (!anios.length) { select.appendChild(_crearOpcion('', 'Sin registros')); actualizarEstadisticasAnio(null); return; }
             const anioActual = String(new Date().getFullYear());
-            const sel = (selActual && anios.includes(selActual)) ? selActual : (anios.includes(anioActual) ? anioActual : anios[0]);
-            anios.forEach(a => select.appendChild(_crearOpcion(a, a, a === sel)));
-            actualizarEstadisticasAnio(sel);
+            _poblarSelect('select-anio-stats', anios, a => a, anioActual, actualizarEstadisticasAnio);
         }
 
         function actualizarEstadisticasAnio(anio) {
@@ -3870,7 +3867,7 @@
         function poblarSelectorSemanas() {
             const semanas = _obtenerSemanas();
             const lunesISO = TimeUtils.formatearFechaLocal(_getLunes());
-            _poblarSelectAgrupado('select-semana-stats', semanas, _formatearSemana, lunesISO, actualizarEstadisticasSemana);
+            _poblarSelect('select-semana-stats', semanas, _formatearSemana, lunesISO, actualizarEstadisticasSemana, _agruparMesesPorAnio);
         }
 
         function calcularEstadisticasSemana(lunesISO) {
@@ -3953,7 +3950,7 @@
         function poblarSelectorMeses() {
             const meses = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
             const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
-            _poblarSelectAgrupado('select-mes-stats', meses, _nombreMesCapitalizado, mesActual, actualizarEstadisticas);
+            _poblarSelect('select-mes-stats', meses, _nombreMesCapitalizado, mesActual, actualizarEstadisticas, _agruparMesesPorAnio);
         }
 
         function cambiarMesStats() {

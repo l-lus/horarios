@@ -1134,6 +1134,7 @@ button:disabled {
 
 .tutorial-popup {
     z-index: 102;
+    border-color: var(--text-muted);
 }
 
 .tutorial-popup-paso {

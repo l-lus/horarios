@@ -771,7 +771,8 @@
     const TutorialManager = (function () {
         const S = SecurityAndUtils;
 
-        const PASOS = [
+        // ── Tutorial "Esenciales": repaso corto de las funciones principales ──
+        const PASOS_ESENCIALES = [
             {
                 selector: '.header-profile-btn',
                 titulo: 'Tu perfil',
@@ -809,6 +810,110 @@
             }
         ];
 
+        // ── Tutorial "Completo": recorrido detallado, tarjeta por tarjeta ──
+        // Cada paso puede pedir que el formulario esté abierto (requiereFormAbierto)
+        // y/o que la tarjeta esté en un modo puntual ('normal' o 'lote') antes de
+        // resaltarlo; _prepararEntorno se encarga de dejar la UI en ese estado.
+        const TARJETAS_COMPLETO = {
+            registrar: {
+                nombre: 'Fichar',
+                cardSelector: '#card-registrar',
+                pasos: [
+                    {
+                        selector: '#card-registrar', requiereFormAbierto: false,
+                        titulo: 'Tarjeta Fichar',
+                        desc: 'Es el corazón de la app: acá cargás tus jornadas, a mano día por día o en lote. Vamos a recorrer cada botón y campo, en modo Normal y en modo Lote.'
+                    },
+                    {
+                        selector: '#btn-agregar', requiereFormAbierto: false,
+                        titulo: 'Botón principal',
+                        desc: 'Guarda el registro con los datos cargados en el formulario. Su texto y color cambian según el modo y la situación: "Fichar", "Fichar Lote", "Borrar (3)", etc.'
+                    },
+                    {
+                        selector: '#btn-timer-main', requiereFormAbierto: false,
+                        titulo: 'Tiempo Fuera',
+                        desc: 'Cronómetro para pausas como el almuerzo. Tocalo para iniciar el conteo y volvé a tocarlo para detenerlo: el tiempo se resta de la jornada de hoy. Necesita que ya exista un registro de hoy con entrada y sin salida.'
+                    },
+                    {
+                        selector: '#icon-indicator-form', requiereFormAbierto: false,
+                        titulo: 'Desplegar formulario',
+                        desc: 'Esta flecha abre y cierra el formulario de carga. Lo vamos a abrir para ver cada campo en detalle.'
+                    },
+                    {
+                        selector: '#fecha', requiereFormAbierto: true, modo: 'normal',
+                        titulo: 'Fecha (modo Normal)',
+                        desc: 'La fecha del registro que vas a cargar a mano. Por defecto es hoy, pero podés elegir cualquier otro día para completar jornadas pasadas.'
+                    },
+                    {
+                        selector: '#btn-ir-modo-lote', requiereFormAbierto: true, modo: 'normal',
+                        titulo: 'Ir a modo Lote',
+                        desc: 'Cambia el formulario al modo Lote, pensado para feriados, vacaciones u otros días especiales, o para borrar varias jornadas normales de una fecha a otra.'
+                    },
+                    {
+                        selector: '#entrada', requiereFormAbierto: true, modo: 'normal',
+                        titulo: 'Entrada',
+                        desc: 'Hora de entrada en formato hh:mm (por ejemplo 08:30). Es obligatoria para poder guardar el registro.'
+                    },
+                    {
+                        selector: '#btn-pegar-entrada', requiereFormAbierto: true, modo: 'normal',
+                        titulo: 'Pegar hora actual',
+                        desc: 'Si el campo Entrada está vacío, lo completa con la hora actual. Si ya tiene un valor, lo vacía. Este mismo comportamiento se repite en los demás botones con ícono de reloj.'
+                    },
+                    {
+                        selector: '#salida', requiereFormAbierto: true, modo: 'normal',
+                        titulo: 'Salida',
+                        desc: 'Hora de salida en formato hh:mm. Es opcional: podés fichar solo la entrada y cargar la salida más tarde, editando el registro desde el Historial.'
+                    },
+                    {
+                        selector: '#btn-pegar-salida', requiereFormAbierto: true, modo: 'normal',
+                        titulo: 'Pegar hora actual',
+                        desc: 'Igual que en Entrada: pega la hora actual si el campo está vacío, o lo limpia si ya tiene un valor cargado.'
+                    },
+                    {
+                        selector: '#lote-tipo', requiereFormAbierto: true, modo: 'lote',
+                        titulo: 'Tipo de registro (modo Lote)',
+                        desc: 'Elegí qué vas a cargar: un tipo especial (feriado, vacaciones, etc., según los que tengas configurados) o "Jornadas (borrar)" para eliminar registros normales dentro de un rango de fechas.'
+                    },
+                    {
+                        selector: '#btn-ir-modo-normal', requiereFormAbierto: true, modo: 'lote',
+                        titulo: 'Volver a modo Normal',
+                        desc: 'Te lleva de nuevo al formulario simple de Entrada y Salida, para cargar un solo día a mano.'
+                    },
+                    {
+                        selector: '#lote-fecha-desde', requiereFormAbierto: true, modo: 'lote',
+                        titulo: 'Desde',
+                        desc: 'Fecha inicial. Si completás solo este campo con un tipo especial elegido, se registra ese día puntual. Con "Jornadas (borrar)" además necesitás completar "Hasta".'
+                    },
+                    {
+                        selector: '#btn-lote-desde', requiereFormAbierto: true, modo: 'lote',
+                        titulo: 'Pegar hoy / Limpiar',
+                        desc: 'Completa el campo Desde con la fecha de hoy, o lo limpia si ya tenía una fecha cargada.'
+                    },
+                    {
+                        selector: '#lote-fecha-hasta', requiereFormAbierto: true, modo: 'lote',
+                        titulo: 'Hasta',
+                        desc: 'Fecha final del rango. Con un tipo especial, registra ese tipo en todos los días del rango sin pisar los que ya tengan otro registro. Con "Jornadas (borrar)", elimina todas las jornadas normales dentro del rango.'
+                    },
+                    {
+                        selector: '#btn-lote-hasta', requiereFormAbierto: true, modo: 'lote',
+                        titulo: 'Pegar hoy / Limpiar',
+                        desc: 'Igual que el botón de Desde: completa Hasta con la fecha de hoy, o lo limpia si ya tenía un valor.'
+                    },
+                    {
+                        selector: '#btn-agregar', requiereFormAbierto: true, modo: 'lote',
+                        titulo: 'Fichar Lote',
+                        desc: 'El mismo botón principal, ahora en modo Lote. Su texto va anticipando la acción: por ejemplo "Fichar (5)" para cargar 5 días, o "Borrar (3)" si vas a eliminar 3 jornadas normales del rango elegido.'
+                    },
+                    {
+                        selector: '#card-registrar', requiereFormAbierto: true, modo: 'normal',
+                        titulo: '¡Eso es todo!',
+                        desc: 'Ya conocés todos los campos y botones de la tarjeta Fichar, en modo Normal y en modo Lote. Podés repetir cualquier tutorial cuando quieras desde Ajustes → Ayuda.'
+                    }
+                ]
+            }
+        };
+
+        let _pasosActivos = PASOS_ESENCIALES;
         let _pasoActual = 0;
         let _popupEl = null;
         let _elResaltado = null;
@@ -897,6 +1002,47 @@
             requestAnimationFrame(chequear);
         }
 
+        function _formEstaAbierto() {
+            return !!document.getElementById('form-registro')?.classList.contains('expanded');
+        }
+
+        function _modoLoteActivo() {
+            const lote = document.getElementById('modo-lote');
+            return !!lote && lote.style.display === 'block';
+        }
+
+        // Deja la UI en el estado que un paso necesita (tarjeta visible, formulario
+        // abierto, modo normal/lote correcto) antes de resaltar su elemento.
+        // Devuelve una promesa que resuelve false si el paso no se puede mostrar
+        // (por ejemplo, la tarjeta está oculta por el usuario en Ajustes).
+        function _prepararEntorno(paso) {
+            return new Promise(resolve => {
+                const tarjeta = paso.cardSelector && document.querySelector(paso.cardSelector);
+                if (tarjeta && getComputedStyle(tarjeta).display === 'none') {
+                    window.UILogic?.mostrarToast?.('Esa tarjeta está oculta. Activala desde Ajustes para ver este tutorial.', 'warning');
+                    resolve(false);
+                    return;
+                }
+
+                let espera = 0;
+                if (paso.requiereFormAbierto && !_formEstaAbierto()) {
+                    window.UILogic?.toggleFormulario?.();
+                    espera = 380;
+                }
+
+                setTimeout(() => {
+                    // Abrir el formulario reinicia el modo a "normal", por eso el
+                    // cambio de modo se resuelve después de esa espera.
+                    if (paso.modo && (paso.modo === 'lote') !== _modoLoteActivo()) {
+                        window.UILogic?.toggleModoLote?.();
+                        setTimeout(() => resolve(true), 380);
+                    } else {
+                        resolve(true);
+                    }
+                }, espera);
+            });
+        }
+
         function _posicionar(popup, target) {
             const margin = 10;
             const rect = target.getBoundingClientRect();
@@ -911,13 +1057,17 @@
             popup.style.left = `${left}px`;
         }
 
-        function _mostrarPaso(indice) {
+        async function _mostrarPaso(indice) {
             if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
             if (_popupEl) { _popupEl.remove(); _popupEl = null; }
             _limpiarResaltado();
 
-            const paso = PASOS[indice];
+            const paso = _pasosActivos[indice];
             if (!paso) { finalizar(); return; }
+
+            const puedeMostrarse = await _prepararEntorno(paso);
+            if (puedeMostrarse === false) { finalizar(); return; }
+            if (_pasoActual !== indice) return; // se saltó/cerró mientras preparábamos el entorno
 
             const target = document.querySelector(paso.selector);
             if (!target) { _pasoActual = indice + 1; _mostrarPaso(_pasoActual); return; }
@@ -925,14 +1075,14 @@
             target.classList.add('tutorial-highlight');
             _elResaltado = target;
 
-            const esUltimo = indice === PASOS.length - 1;
+            const esUltimo = indice === _pasosActivos.length - 1;
             const esPrimero = indice === 0;
 
             const popup = document.createElement('div');
             popup.className = 'stat-popup tutorial-popup';
             popup.id = '_tutorial-popup';
             popup.innerHTML = `
-                <div class="tutorial-popup-paso">Paso ${indice + 1} de ${PASOS.length}</div>
+                <div class="tutorial-popup-paso">Paso ${indice + 1} de ${_pasosActivos.length}</div>
                 <div class="stat-popup-titulo">${S.escapeHtml(paso.titulo)}</div>
                 <div class="stat-popup-desc">${S.escapeHtml(paso.desc)}</div>
                 <div class="tutorial-popup-nav">
@@ -978,7 +1128,7 @@
 
         function siguiente() {
             _pasoActual++;
-            if (_pasoActual >= PASOS.length) { finalizar(); return; }
+            if (_pasoActual >= _pasosActivos.length) { finalizar(); return; }
             _mostrarPaso(_pasoActual);
         }
 
@@ -993,11 +1143,37 @@
             StorageHelper.setItem(STORAGE_KEYS.TUTORIAL_COMPLETADO, true);
         }
 
-        function iniciar() {
+        function _iniciarConPasos(pasos) {
             if (document.querySelector('.modal.show')) ModalManager.cerrarTodos();
+            _pasosActivos = pasos;
             _bloquearScroll();
             _pasoActual = 0;
             _mostrarPaso(0);
+        }
+
+        function iniciar() {
+            _iniciarConPasos(PASOS_ESENCIALES);
+        }
+
+        function iniciarCompleto(cardKey = 'registrar') {
+            const tarjeta = TARJETAS_COMPLETO[cardKey];
+            if (!tarjeta || !tarjeta.pasos.length) {
+                window.UILogic?.mostrarToast?.('El tutorial completo de esa tarjeta todavía no está disponible.', 'info');
+                return;
+            }
+            const pasosConTarjeta = tarjeta.pasos.map(p => ({ cardSelector: tarjeta.cardSelector, ...p }));
+            _iniciarConPasos(pasosConTarjeta);
+        }
+
+        async function elegirYComenzar() {
+            const quiereCompleto = await ModalManager.confirmar(
+                'El modo "Esenciales" es un repaso corto de lo más importante. El modo "Completo" explica en detalle cada campo y botón, tarjeta por tarjeta (por ahora solo la tarjeta Fichar).',
+                'Completo (por tarjeta)',
+                '#icon-help',
+                { titulo: '¿Qué tipo de tutorial querés?', labelCancel: 'Esenciales' }
+            );
+            if (quiereCompleto) iniciarCompleto('registrar');
+            else iniciar();
         }
 
         function preguntarSiCorresponde() {
@@ -1013,11 +1189,11 @@
                     { titulo: '¡Bienvenido a Horarios!', labelCancel: 'No, gracias' }
                 );
                 StorageHelper.setItem(STORAGE_KEYS.TUTORIAL_COMPLETADO, true);
-                if (quiereHacerlo) iniciar();
+                if (quiereHacerlo) await elegirYComenzar();
             }, 900);
         }
 
-        return { preguntarSiCorresponde, iniciar };
+        return { preguntarSiCorresponde, iniciar, iniciarCompleto, elegirYComenzar };
     })();
 
     // ====================================================================
@@ -6261,7 +6437,7 @@ Generado por Sistema Lushibosca
 
         function iniciarTutorial() {
             cerrarConfig();
-            setTimeout(() => TutorialManager.iniciar(), 350);
+            setTimeout(() => TutorialManager.elegirYComenzar(), 350);
         }
 
         function actualizarHintGrupo() {

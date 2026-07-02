@@ -6384,16 +6384,16 @@ Generado por Sistema Lushibosca
             });
         }
 
-        function _registrarCierrePopup(popup, esMismoDia) {
+        function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar) {
             const cerrar = () => {
                 popup.remove();
-                _popupCalendarioEl = null;
+                if (alCerrar) alCerrar();
                 document.removeEventListener('click', onClick, true);
                 document.removeEventListener('scroll', cerrar, true);
             };
             const onClick = (e) => {
-                const dia = e.target.closest('.calendario-dia');
-                if (dia && esMismoDia(dia)) return;
+                const trigger = e.target.closest(selectorTrigger);
+                if (trigger && esMismoTrigger(trigger)) return;
                 if (!popup.contains(e.target)) cerrar();
             };
             setTimeout(() => {
@@ -6463,7 +6463,7 @@ Generado por Sistema Lushibosca
                 }
             });
 
-            _registrarCierrePopup(popup, dia => dia.dataset.regId === reg.id);
+            _registrarCierrePopup(popup, '.calendario-dia', dia => dia.dataset.regId === reg.id, () => { _popupCalendarioEl = null; });
             _posicionarPopup(popup, event);
         }
 
@@ -6505,7 +6505,7 @@ Generado por Sistema Lushibosca
             document.body.appendChild(popup);
             _popupCalendarioEl = popup;
 
-            const cerrarPopup = _registrarCierrePopup(popup, dia => dia.dataset.fecha === fecha);
+            const cerrarPopup = _registrarCierrePopup(popup, '.calendario-dia', dia => dia.dataset.fecha === fecha, () => { _popupCalendarioEl = null; });
             popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => { cerrarPopup(); _irAFicharConFecha(fecha, false); });
             popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrarPopup(); _irAFicharConFecha(fecha, true); });
 
@@ -6637,24 +6637,6 @@ Generado por Sistema Lushibosca
 
         let _popupStatEl = null;
 
-        function _registrarCierreStatPopup(popup) {
-            const cerrar = () => {
-                popup.remove();
-                _popupStatEl = null;
-                document.removeEventListener('click', onClick, true);
-                document.removeEventListener('scroll', cerrar, true);
-            };
-            const onClick = (e) => {
-                const item = e.target.closest('.stat-item');
-                if (item && item.dataset.statId === popup.dataset.statId) return;
-                if (!popup.contains(e.target)) cerrar();
-            };
-            setTimeout(() => {
-                document.addEventListener('click', onClick, true);
-                document.addEventListener('scroll', cerrar, true);
-            }, 10);
-        }
-
         function _popupStat(event, statId) {
             event.stopPropagation();
             if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
@@ -6708,7 +6690,7 @@ Generado por Sistema Lushibosca
             document.body.appendChild(popup);
             _popupStatEl = popup;
 
-            _registrarCierreStatPopup(popup);
+            _registrarCierrePopup(popup, '.stat-item', item => item.dataset.statId === popup.dataset.statId, () => { _popupStatEl = null; });
             _posicionarPopup(popup, event);
         }
 

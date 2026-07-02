@@ -638,14 +638,19 @@ button:disabled {
 }
 
 .registro-mes-detalle {
-    max-height: 0;
+    display: grid;
+    grid-template-rows: 0fr;
     opacity: 0;
+    transition: grid-template-rows var(--dur-collapse) ease-out, opacity var(--dur-collapse) ease-out;
+}
+
+.registro-mes-detalle > .detalle-inner {
     overflow: hidden;
-    transition: var(--transition-collapse);
+    min-height: 0;
 }
 
 .registro-mes-detalle.expanded {
-    max-height: 3500px;
+    grid-template-rows: 1fr;
     opacity: 1;
 }
 

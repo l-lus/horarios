@@ -2397,6 +2397,9 @@
 
             const detalleMesActual = document.createElement('div');
             detalleMesActual.className = 'registro-mes-detalle';
+            const innerMesActual = document.createElement('div');
+            innerMesActual.className = 'detalle-inner';
+            detalleMesActual.appendChild(innerMesActual);
 
             let debeEstarExpandido = false;
             try {
@@ -2420,10 +2423,10 @@
                 if (semanaAnterior && semanaActual !== semanaAnterior) {
                     const sep = document.createElement('div');
                     sep.className = 'separador-semana';
-                    detalleMesActual.appendChild(sep);
+                    innerMesActual.appendChild(sep);
                 }
 
-                detalleMesActual.appendChild(
+                innerMesActual.appendChild(
                     esGrupo
                         ? crearGrupoExpandible(grupo, horasDiarias, idNuevo)
                         : crearItemRegistroIndividual(r, horasDiarias, idNuevo, hoy)
@@ -2465,12 +2468,14 @@
             header.appendChild(document.createTextNode(' ' + anio));
 
             const detalle = Object.assign(document.createElement('div'), { className: 'registro-mes-detalle' });
+            const innerAnio = Object.assign(document.createElement('div'), { className: 'detalle-inner' });
+            detalle.appendChild(innerAnio);
             let expandido = false;
             try { expandido = StorageHelper.getItem(STORAGE_KEYS.ANIO_EXPANDIDO(anio)) === 'true'; } catch (e) { }
             if (expandido) { detalle.classList.add('expanded'); chevron.style.transform = 'rotate(180deg)'; }
 
             mesesDelAnio.forEach((registrosDelMes, claveMes) =>
-                detalle.appendChild(crearContenedorMes(claveMes, registrosDelMes, horasDiarias, idNuevo, mesHoy, hoy))
+                innerAnio.appendChild(crearContenedorMes(claveMes, registrosDelMes, horasDiarias, idNuevo, mesHoy, hoy))
             );
 
             contenedor.appendChild(header);
@@ -5892,16 +5897,21 @@ Generado por Sistema Lushibosca
                 const detalleAnioPadre = contenedor.parentElement?.closest('.registro-mes-detalle') || null;
                 const otrosMesesAbiertos = lista.querySelectorAll('.registro-mes-detalle.expanded');
 
-                otrosMesesAbiertos.forEach(otro => {
-                    if (!esContenedorAnio(otro) || otro === detalleAnioPadre) return;
+                const _colapsarContenedor = (otro, { datasetKey, storageKeyFn }) => {
                     otro.classList.remove('expanded');
                     const oc = otro.closest('.registro-mes-container');
                     const och = oc?.querySelector('.chevron-mes');
                     const oHeader = oc?.querySelector('.registro-mes-header');
                     if (och) och.style.transform = 'rotate(0deg)';
-                    if (oHeader?.dataset.anioId) {
-                        try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(oHeader.dataset.anioId), 'false'); } catch (e) { }
+                    const id = oHeader?.dataset[datasetKey];
+                    if (id) {
+                        try { StorageHelper.setItem(storageKeyFn(id), 'false'); } catch (e) { }
                     }
+                };
+
+                otrosMesesAbiertos.forEach(otro => {
+                    if (!esContenedorAnio(otro) || otro === detalleAnioPadre) return;
+                    _colapsarContenedor(otro, { datasetKey: 'anioId', storageKeyFn: STORAGE_KEYS.ANIO_EXPANDIDO });
                 });
 
                 const _abrirDetalle = () => {
@@ -5915,21 +5925,10 @@ Generado por Sistema Lushibosca
                 if (hayOtrosAbiertos) {
                     otrosMesesAbiertos.forEach(otro => {
                         if (otro === detalle || esContenedorAnio(otro)) return;
-                        otro.style.minHeight = `${otro.scrollHeight}px`;
-                        otro.classList.remove('expanded');
-                        const oc = otro.closest('.registro-mes-container');
-                        const och = oc?.querySelector('.chevron-mes');
-                        const oHeader = oc?.querySelector('.registro-mes-header');
-                        if (och) och.style.transform = 'rotate(0deg)';
-                        if (oHeader?.dataset.mesId) {
-                            try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(oHeader.dataset.mesId), 'false'); } catch (e) { }
-                        }
-                        setTimeout(() => { otro.style.minHeight = ''; }, 350);
+                        _colapsarContenedor(otro, { datasetKey: 'mesId', storageKeyFn: STORAGE_KEYS.MES_EXPANDIDO });
                     });
-                    setTimeout(_abrirDetalle, 300);
-                } else {
-                    _abrirDetalle();
                 }
+                _abrirDetalle();
             });
         }
 

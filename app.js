@@ -930,8 +930,6 @@
         const _TECLAS_SCROLL = [' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
 
         function _bloquearInteraccionScroll(e) {
-            // Deja pasar clicks/scrolls dentro del propio popup del tutorial
-            if (_popupEl && e.target && _popupEl.contains(e.target)) return;
             e.preventDefault();
         }
 
@@ -1082,14 +1080,16 @@
             popup.className = 'stat-popup tutorial-popup';
             popup.id = '_tutorial-popup';
             popup.innerHTML = `
-                <div class="tutorial-popup-paso">Paso ${indice + 1} de ${_pasosActivos.length}</div>
+                <div class="tutorial-popup-header">
+                    <div class="tutorial-popup-paso">Paso ${indice + 1} de ${_pasosActivos.length}</div>
+                    <button class="tutorial-popup-skip" id="_tutorial-btn-saltar" type="button">Saltar</button>
+                </div>
                 <div class="stat-popup-titulo">${S.escapeHtml(paso.titulo)}</div>
                 <div class="stat-popup-desc">${S.escapeHtml(paso.desc)}</div>
                 <div class="tutorial-popup-nav">
                     ${!esPrimero ? `<button class="cal-popup-btn-edit" id="_tutorial-btn-atras">Atrás</button>` : ''}
                     <button class="cal-popup-btn-edit" id="_tutorial-btn-siguiente">${esUltimo ? 'Finalizar' : 'Siguiente'}</button>
-                </div>
-                <button class="tutorial-popup-skip" id="_tutorial-btn-saltar" type="button">Saltar tutorial</button>`;
+                </div>`;
             popup.style.visibility = 'hidden';
             document.body.appendChild(popup);
             _popupEl = popup;

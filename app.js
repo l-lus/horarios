@@ -29,6 +29,7 @@
         FORMULARIO_EXPANDIDO: 'formularioExpandido',
         STATS_EXPANDIDO: 'statsExpandido',
         HISTORICO_EXPANDIDO: 'historicoExpandido',
+        TUTORIAL_COMPLETADO: 'tutorialCompletado',
 
         // ── Perfiles e historial ──────────────────────────────────────
         PERFIL_ACTIVO: 'perfilActivo',
@@ -762,6 +763,261 @@
         }
 
         return { abrir, cerrar, alternar, cerrarTodos, confirmar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, setPadre: (id, padreId) => { if (id && padreId) _padres[id] = padreId; } };
+    })();
+
+    // ====================================================================
+    // TUTORIAL MANAGER MODULE
+    // ====================================================================
+    const TutorialManager = (function () {
+        const S = SecurityAndUtils;
+
+        const PASOS = [
+            {
+                selector: '.header-profile-btn',
+                titulo: 'Tu perfil',
+                desc: 'Acá ves el perfil activo. Tocá este botón para cambiar de perfil, alternar el tema claro/oscuro o entrar a los Ajustes.'
+            },
+            {
+                selector: '#stats-card',
+                titulo: 'Resumen',
+                desc: 'Esta tarjeta muestra tu progreso actual. Tocala para alternar entre la vista de Hoy y la de Semana.'
+            },
+            {
+                selector: '#btn-agregar',
+                titulo: 'Fichar',
+                desc: 'Con este botón registrás tu entrada y tu salida. El reloj de al lado te permite marcar un Tiempo Fuera, como el almuerzo.'
+            },
+            {
+                selector: '#icon-indicator-form',
+                titulo: 'Registro manual',
+                desc: 'Desplegá esta flecha para cargar o corregir un registro a mano, o para cargar varios días de una vez en modo rango.'
+            },
+            {
+                selector: '#card-estadisticas .card-header-clickable',
+                titulo: 'Estadísticas',
+                desc: 'Consultá tus horas trabajadas, promedios y saldo por semana, mes o año. Tocá cada dato para ver el detalle.'
+            },
+            {
+                selector: '#card-historico .card-header-clickable',
+                titulo: 'Historial',
+                desc: 'Acá están todos tus registros. Podés filtrarlos, verlos en calendario, deshacer/rehacer cambios y tocar uno para editarlo.'
+            },
+            {
+                selector: '.header-profile-btn',
+                titulo: '¡Listo!',
+                desc: 'Eso es todo por ahora. Si querés volver a ver este recorrido, buscá el botón "Ver tutorial" dentro de Ajustes.'
+            }
+        ];
+
+        let _pasoActual = 0;
+        let _popupEl = null;
+        let _elResaltado = null;
+        let _scrollBloqueado = false;
+        let _reposicionarActivo = null;
+
+        function _limpiarResaltado() {
+            if (_elResaltado) {
+                _elResaltado.classList.remove('tutorial-highlight');
+                _elResaltado = null;
+            }
+        }
+
+        const _TECLAS_SCROLL = [' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
+
+        function _bloquearInteraccionScroll(e) {
+            // Deja pasar clicks/scrolls dentro del propio popup del tutorial
+            if (_popupEl && e.target && _popupEl.contains(e.target)) return;
+            e.preventDefault();
+        }
+
+        function _bloquearTeclasScroll(e) {
+            if (_TECLAS_SCROLL.includes(e.key) && !(_popupEl && e.target && _popupEl.contains(e.target))) {
+                e.preventDefault();
+            }
+        }
+
+        function _bloquearScroll() {
+            if (_scrollBloqueado) return;
+            _scrollBloqueado = true;
+            // No usamos overflow:hidden en el body: en varios navegadores eso
+            // también impide el scrollIntoView() programático que necesitamos
+            // para llevar cada elemento a la vista. Bloqueamos solo la
+            // interacción manual del usuario (rueda, touch, teclas de scroll).
+            document.addEventListener('wheel', _bloquearInteraccionScroll, { passive: false });
+            document.addEventListener('touchmove', _bloquearInteraccionScroll, { passive: false });
+            document.addEventListener('keydown', _bloquearTeclasScroll, { passive: false });
+        }
+
+        function _desbloquearScroll() {
+            if (!_scrollBloqueado) return;
+            _scrollBloqueado = false;
+            document.removeEventListener('wheel', _bloquearInteraccionScroll, { passive: false });
+            document.removeEventListener('touchmove', _bloquearInteraccionScroll, { passive: false });
+            document.removeEventListener('keydown', _bloquearTeclasScroll, { passive: false });
+        }
+
+        function _cerrarPopup() {
+            if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
+            if (_popupEl) { _popupEl.remove(); _popupEl = null; }
+            _limpiarResaltado();
+            document.removeEventListener('keydown', _onKeydown, true);
+        }
+
+        function _onKeydown(e) {
+            if (e.key === 'Escape') { e.preventDefault(); finalizar(); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); siguiente(); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); anterior(); }
+        }
+
+        // Espera a que el scroll (suave) hacia el elemento termine, comprobando
+        // que su posición se mantenga estable durante varios frames seguidos,
+        // en vez de asumir un tiempo fijo.
+        function _esperarFinDeScroll(el, callback) {
+            let ultimoTop = null;
+            let framesEstables = 0;
+            let intentos = 0;
+            const MAX_INTENTOS = 90; // ~1.5s de margen de seguridad como tope
+
+            function chequear() {
+                intentos++;
+                const top = el.getBoundingClientRect().top;
+                if (ultimoTop !== null && Math.abs(top - ultimoTop) < 0.5) {
+                    framesEstables++;
+                } else {
+                    framesEstables = 0;
+                }
+                ultimoTop = top;
+
+                if (framesEstables >= 4 || intentos >= MAX_INTENTOS) {
+                    callback();
+                } else {
+                    requestAnimationFrame(chequear);
+                }
+            }
+            requestAnimationFrame(chequear);
+        }
+
+        function _posicionar(popup, target) {
+            const margin = 10;
+            const rect = target.getBoundingClientRect();
+            const pw = popup.offsetWidth, ph = popup.offsetHeight;
+            let top = rect.bottom + 14;
+            let left = rect.left + (rect.width / 2) - (pw / 2);
+            if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+            if (left < margin) left = margin;
+            if (top + ph > window.innerHeight - margin) top = rect.top - ph - 14;
+            if (top < margin) top = Math.min(margin, window.innerHeight - ph - margin);
+            popup.style.top = `${top}px`;
+            popup.style.left = `${left}px`;
+        }
+
+        function _mostrarPaso(indice) {
+            if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
+            if (_popupEl) { _popupEl.remove(); _popupEl = null; }
+            _limpiarResaltado();
+
+            const paso = PASOS[indice];
+            if (!paso) { finalizar(); return; }
+
+            const target = document.querySelector(paso.selector);
+            if (!target) { _pasoActual = indice + 1; _mostrarPaso(_pasoActual); return; }
+
+            target.classList.add('tutorial-highlight');
+            _elResaltado = target;
+
+            const esUltimo = indice === PASOS.length - 1;
+            const esPrimero = indice === 0;
+
+            const popup = document.createElement('div');
+            popup.className = 'stat-popup tutorial-popup';
+            popup.id = '_tutorial-popup';
+            popup.innerHTML = `
+                <div class="tutorial-popup-paso">Paso ${indice + 1} de ${PASOS.length}</div>
+                <div class="stat-popup-titulo">${S.escapeHtml(paso.titulo)}</div>
+                <div class="stat-popup-desc">${S.escapeHtml(paso.desc)}</div>
+                <div class="tutorial-popup-nav">
+                    ${!esPrimero ? `<button class="cal-popup-btn-edit" id="_tutorial-btn-atras">Atrás</button>` : ''}
+                    <button class="cal-popup-btn-edit" id="_tutorial-btn-siguiente">${esUltimo ? 'Finalizar' : 'Siguiente'}</button>
+                </div>
+                <button class="tutorial-popup-skip" id="_tutorial-btn-saltar" type="button">Saltar tutorial</button>`;
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupEl = popup;
+
+            popup.querySelector('#_tutorial-btn-siguiente')?.addEventListener('click', () => esUltimo ? finalizar() : siguiente());
+            popup.querySelector('#_tutorial-btn-atras')?.addEventListener('click', anterior);
+            popup.querySelector('#_tutorial-btn-saltar')?.addEventListener('click', finalizar);
+
+            document.addEventListener('keydown', _onKeydown, true);
+
+            const yaVisible = (() => {
+                const r = target.getBoundingClientRect();
+                return r.top >= 0 && r.bottom <= window.innerHeight;
+            })();
+
+            const alListo = () => {
+                if (!_popupEl || _popupEl !== popup) return; // el paso cambió mientras tanto
+                _posicionar(popup, target);
+                popup.style.visibility = '';
+                requestAnimationFrame(() => _posicionar(popup, target));
+
+                const onResizeOrScroll = () => _posicionar(popup, target);
+                window.addEventListener('resize', onResizeOrScroll);
+                _reposicionarActivo = () => window.removeEventListener('resize', onResizeOrScroll);
+
+                setTimeout(() => popup.classList.add('listo'), 200);
+            };
+
+            if (yaVisible) {
+                alListo();
+            } else {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                _esperarFinDeScroll(target, alListo);
+            }
+        }
+
+        function siguiente() {
+            _pasoActual++;
+            if (_pasoActual >= PASOS.length) { finalizar(); return; }
+            _mostrarPaso(_pasoActual);
+        }
+
+        function anterior() {
+            _pasoActual = Math.max(0, _pasoActual - 1);
+            _mostrarPaso(_pasoActual);
+        }
+
+        function finalizar() {
+            _cerrarPopup();
+            _desbloquearScroll();
+            StorageHelper.setItem(STORAGE_KEYS.TUTORIAL_COMPLETADO, true);
+        }
+
+        function iniciar() {
+            if (document.querySelector('.modal.show')) ModalManager.cerrarTodos();
+            _bloquearScroll();
+            _pasoActual = 0;
+            _mostrarPaso(0);
+        }
+
+        function preguntarSiCorresponde() {
+            const yaCompletado = StorageHelper.getBoolean(STORAGE_KEYS.TUTORIAL_COMPLETADO, false);
+            if (yaCompletado) return;
+
+            setTimeout(async () => {
+                if (document.querySelector('.modal.show')) return;
+                const quiereHacerlo = await ModalManager.confirmar(
+                    '¿Querés hacer un recorrido rápido por las funciones principales de la app?',
+                    'Sí, comenzar',
+                    '#icon-help',
+                    { titulo: '¡Bienvenido a Horarios!', labelCancel: 'No, gracias' }
+                );
+                StorageHelper.setItem(STORAGE_KEYS.TUTORIAL_COMPLETADO, true);
+                if (quiereHacerlo) iniciar();
+            }, 900);
+        }
+
+        return { preguntarSiCorresponde, iniciar };
     })();
 
     // ====================================================================
@@ -1547,6 +1803,7 @@
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
             const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS];
             keys.forEach(k => StorageHelper.removeItem(k, true));
+            StorageHelper.removeItem(STORAGE_KEYS.TUTORIAL_COMPLETADO);
 
             if (window.PerfilManager) {
                 const perfil = PerfilManager.obtenerDatosPerfil();
@@ -5998,6 +6255,13 @@ Generado por Sistema Lushibosca
                 _initListenerToggleMes(lista);
             }
             _initListenersOtros();
+
+            TutorialManager.preguntarSiCorresponde();
+        }
+
+        function iniciarTutorial() {
+            cerrarConfig();
+            setTimeout(() => TutorialManager.iniciar(), 350);
         }
 
         function actualizarHintGrupo() {
@@ -7001,7 +7265,7 @@ Generado por Sistema Lushibosca
         }
 
         return {
-            init, obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
+            init, obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario, iniciarTutorial,
             cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError, actualizarEstadoBotonSaldoDesdeEnero,
             limpiarError, resetearBoton, restaurarBotonGuardarEdicion, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
@@ -7266,6 +7530,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => UILogic.mostrarImportar());
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
+    $('btn-tutorial-restart')?.addEventListener('click', () => UILogic.iniciarTutorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => UILogic.cerrarConfig());
 
     const inputHoras = $('config-horas-diarias');

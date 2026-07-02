@@ -4357,10 +4357,8 @@ Generado por Sistema Lushibosca
             actualizarEstadoBotonTimerMain();
         }
 
-        function setBloqueoEdicion(bloqueado) {
-            edicionBloqueada = bloqueado;
-
-            const btnLock = $('btn-lock-toggle');
+        function _setBloqueoEdicionGenerico(bloqueado, { btnLockId, inputIds, modalId, excluirBotones }) {
+            const btnLock = $(btnLockId);
             if (btnLock) {
                 const icon = btnLock.querySelector('use');
                 icon.setAttribute('href', bloqueado ? '#icon-lock' : '#icon-lock-open');
@@ -4369,19 +4367,28 @@ Generado por Sistema Lushibosca
                 btnLock.style.background = bloqueado ? 'var(--c-red)' : 'var(--c-green)';
             }
 
-            const inputs = ['edit-fecha', 'edit-entrada', 'edit-salida', 'edit-tiempo-fuera', 'edit-notas'];
-            inputs.forEach(id => {
+            inputIds.forEach(id => {
                 const el = $(id);
                 if (el) el.disabled = bloqueado;
             });
 
-            const modal = $('modal-editar');
+            const modal = $(modalId);
             if (modal) {
-                const botones = modal.querySelectorAll('button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)');
+                const botones = modal.querySelectorAll(excluirBotones);
                 botones.forEach(btn => {
                     btn.disabled = bloqueado;
                 });
             }
+        }
+
+        function setBloqueoEdicion(bloqueado) {
+            edicionBloqueada = bloqueado;
+            _setBloqueoEdicionGenerico(bloqueado, {
+                btnLockId: 'btn-lock-toggle',
+                inputIds: ['edit-fecha', 'edit-entrada', 'edit-salida', 'edit-tiempo-fuera', 'edit-notas'],
+                modalId: 'modal-editar',
+                excluirBotones: 'button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)'
+            });
             verificarBloqueoCredito();
         }
 
@@ -6897,29 +6904,12 @@ Generado por Sistema Lushibosca
 
         function setBloqueoEdicionGrupo(bloqueado) {
             edicionGrupoBloqueada = bloqueado;
-
-            const btnLock = $('btn-lock-grupo-toggle');
-            if (btnLock) {
-                const icon = btnLock.querySelector('use');
-                icon.setAttribute('href', bloqueado ? '#icon-lock' : '#icon-lock-open');
-                btnLock.title = bloqueado ? "Desbloquear edición" : "Bloquear edición";
-                btnLock.style.color = 'var(--text-main)';
-                btnLock.style.background = bloqueado ? 'var(--c-red)' : 'var(--c-green)';
-            }
-
-            const inputs = ['edit-grupo-tipo', 'edit-grupo-desde', 'edit-grupo-hasta'];
-            inputs.forEach(id => {
-                const el = $(id);
-                if (el) el.disabled = bloqueado;
+            _setBloqueoEdicionGenerico(bloqueado, {
+                btnLockId: 'btn-lock-grupo-toggle',
+                inputIds: ['edit-grupo-tipo', 'edit-grupo-desde', 'edit-grupo-hasta'],
+                modalId: 'modal-editar-grupo',
+                excluirBotones: 'button:not(#btn-lock-grupo-toggle):not(.btn-cancel)'
             });
-
-            const modal = $('modal-editar-grupo');
-            if (modal) {
-                const botones = modal.querySelectorAll('button:not(#btn-lock-grupo-toggle):not(.btn-cancel)');
-                botones.forEach(btn => {
-                    btn.disabled = bloqueado;
-                });
-            }
         }
 
         function toggleBloqueoEdicionGrupo() {

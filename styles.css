@@ -115,7 +115,16 @@ body {
     margin-left: 1rem;
 }
 
-.header-actions {
+/* ─── FLEX COMPARTIDO (display:flex + align-items:center + gap:0.5rem) ───────── */
+
+.header-actions,
+.input-with-btn,
+.input-number-group,
+#gist-rango-horario,
+.modal-title-block,
+#calendario-nav-botones,
+.card-section-title,
+.stats-periodo-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -280,13 +289,6 @@ input.error {
     border-color: var(--c-red);
 }
 
-.input-with-btn,
-.input-number-group {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
 .contenedor-fechas .form-group,
 .contenedor-horas .form-group {
     flex-grow: 1;
@@ -426,11 +428,6 @@ button:disabled {
     pointer-events: none;
 }
 
-#gist-rango-horario {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
 
 #gist-merge-resumen {
     font-size: 0.9rem;
@@ -494,18 +491,17 @@ button:disabled {
 
 .stats-card.border-blue      { border-left-color: var(--c-blue); }
 .stats-card.border-green     { border-left-color: var(--c-green); }
-.stats-card.border-red       { border-left-color: var(--c-red); }
+.stats-card.border-red,
+#stats-card.timer-running    { border-left-color: var(--c-red); }
 .stats-card.border-purple    { border-left-color: var(--c-purple); }
 .stats-card.border-gold      { border-left-color: var(--c-gold); }
 .stats-card.border-orange    { border-left-color: var(--c-orange); }
 .stats-card.border-transparent { border-left-color: transparent; }
 
-#stats-card.timer-running {
-    border-left-color: var(--c-red);
-}
-
 .stats-number,
-.card-anim {
+.card-anim,
+#modo-normal,
+#modo-lote {
     transition: var(--transition-anim);
 }
 
@@ -778,12 +774,6 @@ button:disabled {
     margin-top: 0.5rem;
 }
 
-.modal-title-block {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
 .modal-hr {
     border: 0;
     border-top: 1px solid var(--border);
@@ -968,12 +958,6 @@ button:disabled {
     transition: filter 0.3s;
 }
 
-#calendario-nav-botones {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
 .btn-hoy-calendario {
     width: auto;
     font-size: var(--text-xs);
@@ -1149,11 +1133,6 @@ button:disabled {
     animation: slideDownFade 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards;
 }
 
-#modo-normal,
-#modo-lote {
-    transition: var(--transition-anim);
-}
-
 #form-stats,
 #calendario-grid,
 #lista-registros,
@@ -1178,12 +1157,6 @@ button:disabled {
     width: 100%;
     position: relative;
     transition: transform 0.3s;
-}
-
-.card-section-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 .chevron {
@@ -1247,19 +1220,15 @@ button:disabled {
     margin-top: 1rem;
 }
 
-.stats-periodo-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
 .stats-periodo-row select,
 .flex-1,
 .registro-info {
     flex: 1;
 }
 
-.flex-row {
+
+.flex-row,
+.botones-historico-group {
     display: flex;
     gap: 0.5rem;
 }
@@ -1489,11 +1458,6 @@ button:disabled {
     gap: 0.5rem;
     padding: 0 0.5rem;
     margin-top: 0.5rem;
-}
-
-.botones-historico-group {
-    display: flex;
-    gap: 0.5rem;
 }
 
 #lista-orden-cards {

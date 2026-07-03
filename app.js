@@ -6396,8 +6396,8 @@ Generado por Sistema Lushibosca
                 if (!popup.contains(e.target)) cerrar();
             };
             setTimeout(() => {
-                document.addEventListener('click', onClick, true);
-                document.addEventListener('scroll', cerrar, true);
+                document.addEventListener('click', onClick, { capture: true, passive: true });
+                document.addEventListener('scroll', cerrar, { capture: true, passive: true });
             }, 10);
             return cerrar;
         }

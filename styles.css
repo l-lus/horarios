@@ -140,7 +140,16 @@ body.dark-mode .page-bg__layer {
     margin-left: 1rem;
 }
 
-.header-actions {
+/* ─── FLEX COMPARTIDO (display:flex + align-items:center + gap:0.5rem) ───────── */
+
+.header-actions,
+.input-with-btn,
+.input-number-group,
+#gist-rango-horario,
+.modal-title-block,
+#calendario-nav-botones,
+.card-section-title,
+.stats-periodo-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -313,20 +322,6 @@ input.error {
     border-color: var(--c-red);
 }
 
-.input-error {
-    color: var(--c-red);
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-    display: none;
-}
-
-.input-with-btn,
-.input-number-group {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
 .contenedor-fechas .form-group,
 .contenedor-horas .form-group {
     flex-grow: 1;
@@ -392,6 +387,7 @@ button:disabled {
 
 :where(#btn-toggle-ignorar-tf,
     #btn-toggle-fondo,
+    #btn-toggle-fondo-pagina,
     #btn-toggle-gist-backup,
     #btn-toggle-gist-merge) {
     justify-content: center;
@@ -466,11 +462,6 @@ button:disabled {
     pointer-events: none;
 }
 
-#gist-rango-horario {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
 
 #gist-merge-resumen {
     font-size: 0.9rem;
@@ -534,18 +525,17 @@ button:disabled {
 
 .stats-card.border-blue      { border-left-color: var(--c-blue); }
 .stats-card.border-green     { border-left-color: var(--c-green); }
-.stats-card.border-red       { border-left-color: var(--c-red); }
+.stats-card.border-red,
+#stats-card.timer-running    { border-left-color: var(--c-red); }
 .stats-card.border-purple    { border-left-color: var(--c-purple); }
 .stats-card.border-gold      { border-left-color: var(--c-gold); }
 .stats-card.border-orange    { border-left-color: var(--c-orange); }
 .stats-card.border-transparent { border-left-color: transparent; }
 
-#stats-card.timer-running {
-    border-left-color: var(--c-red);
-}
-
 .stats-number,
-.card-anim {
+.card-anim,
+#modo-normal,
+#modo-lote {
     transition: var(--transition-anim);
 }
 
@@ -678,14 +668,19 @@ button:disabled {
 }
 
 .registro-mes-detalle {
-    max-height: 0;
+    display: grid;
+    grid-template-rows: 0fr;
     opacity: 0;
+    transition: grid-template-rows var(--dur-collapse) ease-out, opacity var(--dur-collapse) ease-out;
+}
+
+.registro-mes-detalle > .detalle-inner {
     overflow: hidden;
-    transition: var(--transition-collapse);
+    min-height: 0;
 }
 
 .registro-mes-detalle.expanded {
-    max-height: 3500px;
+    grid-template-rows: 1fr;
     opacity: 1;
 }
 
@@ -700,7 +695,6 @@ button:disabled {
 }
 
 .registro-total.red-text,
-.registro-total.red-text-bg,
 .toast.error,
 .toast.warning,
 .calendario-dia.dia-incompleto,
@@ -733,7 +727,6 @@ button:disabled {
     background: var(--c-gold);
 }
 
-.registro-total.blue-text-bg,
 .calendario-dia.dia-especial-blue,
 .registro-total.blue-text,
 .calendario-dia.dia-en-curso,
@@ -781,6 +774,7 @@ button:disabled {
 .modal.show .modal-content {
     transform: translateY(0) scale(1);
     opacity: 1;
+    will-change: transform, opacity;
 }
 
 .modal-scrollable > .modal-content {
@@ -821,12 +815,6 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     border-top: 1px solid var(--border);
     padding-top: 0.5rem;
     margin-top: 0.5rem;
-}
-
-.modal-title-block {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 .modal-hr {
@@ -880,6 +868,7 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
     pointer-events: auto;
+    will-change: transform, opacity;
 }
 
 /* ─── CALENDARIO ─────────────────────────────────────────────────────────────── */
@@ -1013,12 +1002,6 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     transition: filter 0.3s;
 }
 
-#calendario-nav-botones {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
 .btn-hoy-calendario {
     width: auto;
     font-size: var(--text-xs);
@@ -1026,7 +1009,8 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
 
 /* ─── CAL POPUP ──────────────────────────────────────────────────────────────── */
 
-.cal-popup {
+.cal-popup,
+.stat-popup {
     position: fixed;
     z-index: 90;
     background: var(--bg-card);
@@ -1034,18 +1018,23 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     border-radius: var(--radius);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
     padding: 0.75rem 1rem;
-    min-width: 160px;
-    max-width: 220px;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
     pointer-events: none;
     transform: translateY(24px) scale(0.96);
     opacity: 0;
     animation: calPopupIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    will-change: transform, opacity;
 }
 
-.cal-popup.listo {
+.cal-popup {
+    min-width: 160px;
+    max-width: 220px;
+    gap: 0.4rem;
+}
+
+.cal-popup.listo,
+.stat-popup.listo {
     pointer-events: all;
 }
 
@@ -1110,10 +1099,7 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     transition: opacity var(--dur-anim) var(--ease-anim);
 }
 
-.cal-popup-btn-accion--normal {
-    color: var(--text-main);
-}
-
+.cal-popup-btn-accion--normal,
 .cal-popup-btn-accion--especial {
     color: var(--text-main);
 }
@@ -1129,26 +1115,9 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
 }
 
 .stat-popup {
-    position: fixed;
-    z-index: 90;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
-    padding: 0.75rem 1rem;
     min-width: 160px;
     max-width: 240px;
-    display: flex;
-    flex-direction: column;
     gap: 0.3rem;
-    pointer-events: none;
-    transform: translateY(24px) scale(0.96);
-    opacity: 0;
-    animation: calPopupIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.stat-popup.listo {
-    pointer-events: all;
 }
 
 .stat-popup-titulo {
@@ -1194,28 +1163,19 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
 
 /* ─── ANIMACIONES ────────────────────────────────────────────────────────────── */
 
-.anim-fade-blur {
+.nuevo-registro-animacion,
+.input-agregado-animacion {
     animation: fade-blur 0.5s ease-out forwards;
 }
 
 .nuevo-registro-animacion {
-    animation: fade-blur 0.5s ease-out forwards;
     transform-origin: center;
     z-index: 10;
     position: relative;
 }
 
-.input-agregado-animacion {
-    animation: fade-blur 0.5s ease-out forwards;
-}
-
 .animated-card {
     animation: slideDownFade 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards;
-}
-
-#modo-normal,
-#modo-lote {
-    transition: var(--transition-anim);
 }
 
 #form-stats,
@@ -1242,12 +1202,6 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     width: 100%;
     position: relative;
     transition: transform 0.3s;
-}
-
-.card-section-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 .chevron {
@@ -1293,6 +1247,12 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     color: var(--text-muted);
 }
 
+.empty-state__btn-restaurar {
+    width: auto;
+    margin: 1rem auto 0;
+    font-size: 0.9rem;
+}
+
 .empty-state--calendario {
     grid-column: span 3;
     padding: 1rem;
@@ -1305,19 +1265,15 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     margin-top: 1rem;
 }
 
-.stats-periodo-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
 .stats-periodo-row select,
 .flex-1,
 .registro-info {
     flex: 1;
 }
 
-.flex-row {
+
+.flex-row,
+.botones-historico-group {
     display: flex;
     gap: 0.5rem;
 }
@@ -1549,11 +1505,6 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     margin-top: 0.5rem;
 }
 
-.botones-historico-group {
-    display: flex;
-    gap: 0.5rem;
-}
-
 #lista-orden-cards {
     display: flex;
     flex-direction: column;
@@ -1587,21 +1538,6 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
     font-weight: 500;
     color: var(--c-red);
     margin-left: 0.3em;
-}
-
-.card-bg-svg {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.card-bg-svg--left {
-    left: 0;
-}
-
-.card-bg-svg--right {
-    right: 0;
 }
 
 /* ─── KEYFRAMES ──────────────────────────────────────────────────────────────── */
@@ -1661,11 +1597,12 @@ body.fondo-pagina-activo .modal-scrollable .modal-panel-footer {
 }
 
 @keyframes campo-flash {
-    0%, 100% { border-color: inherit; box-shadow: none; }
+    0%, 100% { border-color: var(--text-main); box-shadow: none; }
     30%, 70% { border-color: var(--input-focus); box-shadow: var(--shadow); }
 }
 
-input.campo-flash {
+input.campo-flash,
+select.campo-flash {
     animation: campo-flash 500ms ease-in-out 2;
 }
 
@@ -1675,7 +1612,7 @@ input.campo-flash {
     :is([id^="btn-toggle-"],
         #btn-reporte,
         .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist,
-        .btn-delete, .btn-cancel, .btn-export, .btn-backup, .btn-edit,
+        .btn-delete, .btn-cancel, .btn-export, .btn-merge,  .btn-backup, .btn-edit,
         .calendario-nav button):hover:not(:disabled) {
         filter: var(--hover);
     }
@@ -1716,11 +1653,6 @@ input.campo-flash {
     .left-column {
         display: flex;
         flex-direction: column;
-    }
-
-    .right-column {
-        position: sticky;
-        top: 4.5rem;
     }
 
     #lista-registros {

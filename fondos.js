@@ -86,29 +86,24 @@ window.FONDOS_SVG = [
     },
 ];
 
-// ─── FONDOS DE PÁGINA (imágenes) ───────────────────────────────────────────────
-// Apartado distinto al de arriba: aquello son fondos SVG para la tarjeta de
-// estadísticas. Estos son imágenes (png/jpg) que se usan como fondo general
-// de la página (detrás del contenedor principal), con su propio toggle.
+// ─── FONDOS DE PÁGINA ───────────────────────────────────────────────────────────
+// Distinto de FONDOS_SVG (que dibuja el fondo animado de la tarjeta de estado).
+// Este es el fondo de imagen de toda la página, seleccionable desde Config > Interfaz.
 //
 // Estructura de cada objeto:
 //   id      → identificador único, se guarda en localStorage
 //   label   → texto que aparece en el botón toggle
-//   archivo → nombre del archivo dentro de la carpeta /fondos
+//   archivo → nombre del archivo dentro de la carpeta ./fondos/ (junto a index.html)
 //
-// Para agregar un fondo nuevo: copiar la imagen a la carpeta /fondos,
-// agregar un objeto acá con su id, label y archivo. La app lo detecta sola.
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Para agregar un fondo nuevo:
+//   1. Poné la imagen (jpg/webp, recomendado <500KB) en la carpeta ./fondos/
+//   2. Agregá un objeto acá con su id, label y el nombre de archivo
+//   3. La app lo detecta sola en el próximo toggle
+//
+// Ejemplo:
+//   { id: 'atardecer', label: 'Atardecer', archivo: 'atardecer.webp' },
+//
 window.FONDOS_PAGINA = [
-    {
-        id: 'lago-bosque',
-        label: 'Lago y Bosque',
-        archivo: 'lago-bosque.jpg'
-    },
-    {
-        id: 'cielo',
-        label: 'Cielo',
-        archivo: 'cielo.png'
-    },
+    { id: 'Bosquelago', label: 'Bosque con lago', archivo: '6049392.jpg' },
 ];
+

@@ -1,11 +1,43 @@
 ## (Changelog)
 
-### BUGS ACTUALES
-* **A:** en pc, mientras un popup sin registro esta abierto y querer ir al boton de agregar registro especial o regular, si pasa por un dia con registro, cierra el popup y abre el popup con registro, esto cuando esta habilitada la funcion popup hover calendario 
+### BUGS ACTUALES:
+--
 
-### 2607
+### VERSION:
+
+### 260704
+* **Nuevo:** Se agrega efecto parallax al fondo de pagina
+
+### 260702
+* **Nuevo:** Se agrega el fondo de pantalla como opcion, merge de la rama rc-1 con rc-2
+
+### 260701
+* **Fix:** Se actualiza el estilo de animacion de colapso de meses / años en la vista de lista, para quitar el glitch al expandir meses con pocos registros
+* **Mejora:** varios refactores menores de funciones, eliminando logica duplicada y creando helpers reutilizables
+
+### 260701
+* **Mejora:** Se centraliza como helper en modal manager el arreglo del modal confirmar de feriadosAR, ahora es una funcion helper de modal manager que puede utilizarse con distintos atributos
+
+### 260630
+* **Mantenimiento:** Fin refactor se pasa de ~8000 lineas a ~7500 en js
+
+### 260627
+Refactores varios
+
+### 260626
+Refactor de async function init, se parte en varios helper y la funcion init como orquestador
+
+### 260625
+* **Fix:** ir para atras al quitar filtro, gist merge desde registros, gist merge desde modal gist 
+* **Mantenimiento:** se mueve ConfirmarModal a modal manager module, quedando como funcion interna de este modulo y renombrada a Confirmar
+
+### 260623
+* **Mejora:** refactor y creacion de helper _crearOpcion, para los pobladores (semana, mes y anios)
+* **Mejora:** Se quitan las funciones de gist del scope async function init, quedando en el modudo de uilogic
+* **Mejora:** Se elimina return duplicado de window.uilogic con funciones duplicadas, quedado el return de uilogic como unico return.
 
 ### 260622
+* **Fix:** Se corrige bug al pasar por encima de un dia con registro con popup hover calendario activo, y un popup sin registro abierto.
 * **Nuevo:** Se agrega flash en los campos de fecha de la tarjeta fichar, cuando se selecciona una opcion de registro regular o especial
 * **Mejora:** Cambios menores en popup-stat para mejor legibilidad
 * **Mejora:** Se agrega horas diarias objetivo al popup-stat promedio diario

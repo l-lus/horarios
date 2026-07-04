@@ -3004,8 +3004,8 @@
         // ─── PARALLAX DEL FONDO DE PÁGINA ───────────────────────────────────
         // Al hacer scroll, el fondo se desplaza más lento que el contenido,
         // dando sensación de profundidad (efecto usado en páginas modernas).
-        const PARALLAX_FACTOR = 0.18;   // qué tan lento se mueve el fondo (0 = fijo, 1 = igual que el scroll)
-        const PARALLAX_MAX_OFFSET = 140; // límite en px para no salirse del margen dado por el scale()
+        const PARALLAX_FACTOR = 0.1;   // qué tan lento se mueve el fondo (0 = fijo, 1 = igual que el scroll)
+        const PARALLAX_MAX_OFFSET = 200; // límite en px para no salirse del margen dado por el scale()
 
         let _parallaxTicking = false;
         let _parallaxHabilitado = false;
@@ -3022,7 +3022,7 @@
 
             const layerA = bg.querySelector('.page-bg__layer[data-layer="a"]');
             const layerB = bg.querySelector('.page-bg__layer[data-layer="b"]');
-            const transform = `scale(1.18) translateY(${offset}px)`;
+            const transform = `scale(1.5) translateY(${offset}px)`;
             if (layerA) layerA.style.transform = transform;
             if (layerB) layerB.style.transform = transform;
         }

@@ -106,6 +106,7 @@ window.FONDOS_SVG = [
 window.FONDOS_PAGINA = [
     { id: 'Bosquelago', label: 'lago 1', archivo: '6049392.jpg' },
     { id: 'Bosquelago2', label: 'lago 2', archivo: '6220925.jpg' },
+    { id: 'Bosquelago3', label: 'lago 3', archivo: '4287549.jpg' },
 ];
 
 

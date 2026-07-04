@@ -1,13 +1,6 @@
 /**
- * FERIADOS ARGENTINA (Nacionales)
+ * FERIADOS
  * ============================================================
- *
- * Cómo agregar un año o un feriado nuevo:
- *   1. Si el año no existe, agregá una clave nueva: `2028: [ ... ],`
- *   2. Cada feriado es un objeto: { fecha: 'YYYY-MM-DD', nombre: 'Texto a mostrar' }
- *   3. Los feriados dentro de cada año no necesitan estar ordenados,
- *      pero se recomienda mantenerlos en orden cronológico para
- *      que sea más fácil de leer y mantener.
  *
  * Ejemplo:
  *   2028: [

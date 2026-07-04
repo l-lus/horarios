@@ -3001,6 +3001,48 @@
             }, 650);
         }
 
+        // ─── PARALLAX DEL FONDO DE PÁGINA ───────────────────────────────────
+        // Al hacer scroll, el fondo se desplaza más lento que el contenido,
+        // dando sensación de profundidad (efecto usado en páginas modernas).
+        const PARALLAX_FACTOR = 0.18;   // qué tan lento se mueve el fondo (0 = fijo, 1 = igual que el scroll)
+        const PARALLAX_MAX_OFFSET = 140; // límite en px para no salirse del margen dado por el scale()
+
+        let _parallaxTicking = false;
+        let _parallaxHabilitado = false;
+
+        function _aplicarParallax() {
+            _parallaxTicking = false;
+            const bg = $('page-bg');
+            if (!bg) return;
+
+            const offset = Math.max(
+                -PARALLAX_MAX_OFFSET,
+                Math.min(PARALLAX_MAX_OFFSET, window.scrollY * PARALLAX_FACTOR)
+            );
+
+            const layerA = bg.querySelector('.page-bg__layer[data-layer="a"]');
+            const layerB = bg.querySelector('.page-bg__layer[data-layer="b"]');
+            const transform = `scale(1.18) translateY(${offset}px)`;
+            if (layerA) layerA.style.transform = transform;
+            if (layerB) layerB.style.transform = transform;
+        }
+
+        function _onScrollParallax() {
+            if (!_parallaxHabilitado || _parallaxTicking) return;
+            _parallaxTicking = true;
+            requestAnimationFrame(_aplicarParallax);
+        }
+
+        function initParallaxFondoPagina() {
+            if (_parallaxHabilitado) return;
+            const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduceMotion) return;
+
+            _parallaxHabilitado = true;
+            window.addEventListener('scroll', _onScrollParallax, { passive: true });
+            _aplicarParallax();
+        }
+
 
         function _estadoDiasHabiles(diasHabiles) {
             const diaSemana = new Date().getDay();
@@ -7086,7 +7128,7 @@ Generado por Sistema Lushibosca
             toggleCredito, setBloqueoEdicionGrupo, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo, poblarSelectoresTipos,
             mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport, aplicarFeedbackCampos,
             iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones, toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
-            togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleFondoPagina, setFondoPagina, actualizarFondoPagina, toggleVisibilidadCard, aplicarVisibilidadCards,
+            togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleFondoPagina, setFondoPagina, actualizarFondoPagina, initParallaxFondoPagina, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             navegarCalendario, obtenerNombrePerfilSafe, descargarJSON, actualizarEstadoBotonesGist, actualizarBotonesHistorico,
             abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,             
@@ -7327,6 +7369,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
     $('btn-toggle-fondo-pagina')?.addEventListener('click', () => UILogic.toggleFondoPagina());
+    UILogic.initParallaxFondoPagina();
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());

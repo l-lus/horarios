@@ -3,6 +3,8 @@
 ### BUGS ACTUALES
 * **A:** en pc, mientras un popup sin registro esta abierto y querer ir al boton de agregar registro especial o regular, si pasa por un dia con registro, cierra el popup y abre el popup con registro, esto cuando esta habilitada la funcion popup hover calendario 
 
+### 2607
+
 ### 260622
 * **Nuevo:** Se agrega flash en los campos de fecha de la tarjeta fichar, cuando se selecciona una opcion de registro regular o especial
 * **Mejora:** Cambios menores en popup-stat para mejor legibilidad

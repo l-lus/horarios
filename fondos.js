@@ -104,6 +104,8 @@ window.FONDOS_SVG = [
 //   { id: 'atardecer', label: 'Atardecer', archivo: 'atardecer.webp' },
 //
 window.FONDOS_PAGINA = [
-    { id: 'Bosquelago', label: 'Bosque con lago', archivo: '6049392.jpg' },
+    { id: 'Bosquelago', label: 'lago 1', archivo: '6049392.jpg' },
+    { id: 'Bosquelago2', label: 'lago 2', archivo: '6220925.jpg' },
 ];
+
 

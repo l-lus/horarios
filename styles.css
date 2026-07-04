@@ -101,6 +101,14 @@ body {
     background-position: center;
     opacity: 0;
     transition: opacity 0.6s ease;
+    transform: scale(1.18) translateY(0px);
+    will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-bg__layer {
+        transform: scale(1.18) translateY(0px) !important;
+    }
 }
 
 body.dark-mode .page-bg__layer {

@@ -31,7 +31,7 @@
     --dur-calendario: 320ms;
     --ease-anim: ease;
     --transition-anim: opacity var(--dur-anim) var(--ease-anim), transform var(--dur-anim) var(--ease-anim);
-    --transition-collapse: max-height var(--dur-collapse) ease-out, opacity var(--dur-collapse) ease-out;
+    --transition-collapse: grid-template-rows var(--dur-collapse) ease-out, opacity var(--dur-collapse) ease-out;
     --transition-ui: 0.3s ease;
     --modal-overlay: rgba(0, 0, 0, 0.5);
     --touch-target: 48px;
@@ -416,10 +416,30 @@ button:disabled {
 /* ─── COLLAPSIBLE ────────────────────────────────────────────────────────────── */
 
 .collapsible {
-    max-height: 0;
-    overflow: hidden;
+    display: grid;
+    grid-template-rows: 0fr;
     opacity: 0;
     transition: var(--transition-collapse);
+}
+
+/* Envoltorio interno obligatorio para que el truco de grid-rows funcione:
+   necesita un único hijo con overflow:hidden + min-height:0 que pueda
+   colapsar a alto 0. Mismo patrón que .registro-mes-detalle > .detalle-inner. */
+.form-collapsible > #modo-contenedor,
+.form-collapsible > .detalle-inner,
+#botones-historico > .botones-historico-inner {
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* .stats-inner tiene min-height:30rem propio (evita saltos al cambiar de
+   período). Solo lo anulamos mientras el panel está colapsado, para no
+   perder esa protección cuando está expandido. */
+.form-collapsible > .stats-inner {
+    overflow: hidden;
+}
+.form-collapsible:not(.expanded) > .stats-inner {
+    min-height: 0;
 }
 
 /* ─── GIST ───────────────────────────────────────────────────────────────────── */
@@ -536,6 +556,7 @@ button:disabled {
     min-height: 30rem;
     display: flex;
     flex-direction: column;
+    transition: min-height var(--dur-collapse) ease-out;
 }
 
 .stats-inner .btn-group {
@@ -1119,7 +1140,7 @@ button:disabled {
 /* ─── COLLAPSIBLE SECTIONS ───────────────────────────────────────────────────── */
 
 .form-collapsible.expanded {
-    max-height: 700px;
+    grid-template-rows: 1fr;
     opacity: 1;
 }
 
@@ -1130,14 +1151,10 @@ button:disabled {
 }
 
 #botones-historico.expanded {
-    max-height: 100px;
+    grid-template-rows: 1fr;
     opacity: 1;
     padding-top: 0.5rem;
     margin-bottom: 0.5rem;
-}
-
-#contenido-historico.expanded {
-    max-height: 5000px;
 }
 
 /* ─── ANIMACIONES ────────────────────────────────────────────────────────────── */

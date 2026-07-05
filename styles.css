@@ -115,7 +115,16 @@ body {
     margin-left: 1rem;
 }
 
-.header-actions {
+/* ─── FLEX COMPARTIDO (display:flex + align-items:center + gap:0.5rem) ───────── */
+
+.header-actions,
+.input-with-btn,
+.input-number-group,
+#gist-rango-horario,
+.modal-title-block,
+#calendario-nav-botones,
+.card-section-title,
+.stats-periodo-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -280,13 +289,6 @@ input.error {
     border-color: var(--c-red);
 }
 
-.input-with-btn,
-.input-number-group {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
 .contenedor-fechas .form-group,
 .contenedor-horas .form-group {
     flex-grow: 1;
@@ -294,6 +296,14 @@ input.error {
 
 .input-number-group input {
     text-align: center;
+}
+
+.input-number-display {
+    flex: 1;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-main);
 }
 
 /* ─── BUTTONS ────────────────────────────────────────────────────────────────── */
@@ -426,11 +436,6 @@ button:disabled {
     pointer-events: none;
 }
 
-#gist-rango-horario {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
 
 #gist-merge-resumen {
     font-size: 0.9rem;
@@ -463,9 +468,11 @@ button:disabled {
     border: 1px solid transparent;
     border-left: 4px solid transparent;
     transition: transform 0.15s ease-out, opacity 0.15s ease-out, box-shadow 0.3s, border-color 0.3s;
-    min-height: 14rem;
+    min-height: 15rem;
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .stats-card-bg {
@@ -490,22 +497,32 @@ button:disabled {
     position: relative;
     z-index: 1;
     transition: var(--transition-anim);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* El hint siempre queda pegado abajo de la tarjeta, sin importar si
+   #stats-mensaje / #stats-buffer están visibles u ocultos (día no hábil,
+   objetivo en 0, etc.). Antes, al ocultarse esos elementos, el flujo normal
+   del documento hacía que el hint "subiera" dentro de la tarjeta. */
+#toggle-hint {
+    margin-top: auto;
 }
 
 .stats-card.border-blue      { border-left-color: var(--c-blue); }
 .stats-card.border-green     { border-left-color: var(--c-green); }
-.stats-card.border-red       { border-left-color: var(--c-red); }
+.stats-card.border-red,
+#stats-card.timer-running    { border-left-color: var(--c-red); }
 .stats-card.border-purple    { border-left-color: var(--c-purple); }
 .stats-card.border-gold      { border-left-color: var(--c-gold); }
 .stats-card.border-orange    { border-left-color: var(--c-orange); }
 .stats-card.border-transparent { border-left-color: transparent; }
 
-#stats-card.timer-running {
-    border-left-color: var(--c-red);
-}
-
 .stats-number,
-.card-anim {
+.card-anim,
+#modo-normal,
+#modo-lote {
     transition: var(--transition-anim);
 }
 
@@ -638,14 +655,19 @@ button:disabled {
 }
 
 .registro-mes-detalle {
-    max-height: 0;
+    display: grid;
+    grid-template-rows: 0fr;
     opacity: 0;
+    transition: grid-template-rows var(--dur-collapse) ease-out, opacity var(--dur-collapse) ease-out;
+}
+
+.registro-mes-detalle > .detalle-inner {
     overflow: hidden;
-    transition: var(--transition-collapse);
+    min-height: 0;
 }
 
 .registro-mes-detalle.expanded {
-    max-height: 3500px;
+    grid-template-rows: 1fr;
     opacity: 1;
 }
 
@@ -739,6 +761,7 @@ button:disabled {
 .modal.show .modal-content {
     transform: translateY(0) scale(1);
     opacity: 1;
+    will-change: transform, opacity;
 }
 
 .modal-scrollable > .modal-content {
@@ -771,12 +794,6 @@ button:disabled {
     border-top: 1px solid var(--border);
     padding-top: 0.5rem;
     margin-top: 0.5rem;
-}
-
-.modal-title-block {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 .modal-hr {
@@ -830,6 +847,7 @@ button:disabled {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
     pointer-events: auto;
+    will-change: transform, opacity;
 }
 
 /* ─── CALENDARIO ─────────────────────────────────────────────────────────────── */
@@ -963,12 +981,6 @@ button:disabled {
     transition: filter 0.3s;
 }
 
-#calendario-nav-botones {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
 .btn-hoy-calendario {
     width: auto;
     font-size: var(--text-xs);
@@ -991,6 +1003,7 @@ button:disabled {
     transform: translateY(24px) scale(0.96);
     opacity: 0;
     animation: calPopupIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    will-change: transform, opacity;
 }
 
 .cal-popup {
@@ -1144,11 +1157,6 @@ button:disabled {
     animation: slideDownFade 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards;
 }
 
-#modo-normal,
-#modo-lote {
-    transition: var(--transition-anim);
-}
-
 #form-stats,
 #calendario-grid,
 #lista-registros,
@@ -1173,12 +1181,6 @@ button:disabled {
     width: 100%;
     position: relative;
     transition: transform 0.3s;
-}
-
-.card-section-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 .chevron {
@@ -1224,6 +1226,12 @@ button:disabled {
     color: var(--text-muted);
 }
 
+.empty-state__btn-restaurar {
+    width: auto;
+    margin: 1rem auto 0;
+    font-size: 0.9rem;
+}
+
 .empty-state--calendario {
     grid-column: span 3;
     padding: 1rem;
@@ -1236,19 +1244,15 @@ button:disabled {
     margin-top: 1rem;
 }
 
-.stats-periodo-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
 .stats-periodo-row select,
 .flex-1,
 .registro-info {
     flex: 1;
 }
 
-.flex-row {
+
+.flex-row,
+.botones-historico-group {
     display: flex;
     gap: 0.5rem;
 }
@@ -1480,11 +1484,6 @@ button:disabled {
     margin-top: 0.5rem;
 }
 
-.botones-historico-group {
-    display: flex;
-    gap: 0.5rem;
-}
-
 #lista-orden-cards {
     display: flex;
     flex-direction: column;
@@ -1577,12 +1576,23 @@ button:disabled {
 }
 
 @keyframes campo-flash {
-    0%, 100% { border-color: inherit; box-shadow: none; }
+    0%, 100% { border-color: var(--text-main); box-shadow: none; }
     30%, 70% { border-color: var(--input-focus); box-shadow: var(--shadow); }
 }
 
-input.campo-flash {
+input.campo-flash,
+select.campo-flash,
+button.campo-flash {
     animation: campo-flash 500ms ease-in-out 2;
+}
+
+@keyframes icono-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.icono-spin {
+    animation: icono-spin 900ms linear infinite;
 }
 
 /* ─── HOVER (pointer: fine) ──────────────────────────────────────────────────── */
@@ -1591,7 +1601,7 @@ input.campo-flash {
     :is([id^="btn-toggle-"],
         #btn-reporte,
         .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist,
-        .btn-delete, .btn-cancel, .btn-export, .btn-backup, .btn-edit,
+        .btn-delete, .btn-cancel, .btn-export, .btn-merge,  .btn-backup, .btn-edit,
         .calendario-nav button):hover:not(:disabled) {
         filter: var(--hover);
     }
@@ -1679,5 +1689,30 @@ input.campo-flash {
 
     #calendario-selector-meses {
         grid-template-columns: repeat(4, 1fr);
+    }
+
+    .registro-info {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: baseline;
+        column-gap: 0.75rem;
+    }
+
+    .registro-fecha {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .registro-horas {
+        grid-column: 2;
+        grid-row: 1;
+        text-align: right;
+    }
+
+    .registro-total {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        margin-top: 0.25rem;
+        justify-self: start;
     }
 }

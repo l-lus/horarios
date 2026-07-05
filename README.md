@@ -1,9 +1,43 @@
 ## (Changelog)
 
-### BUGS ACTUALES
+### BUGS ACTUALES:
+--
+
+### VERSION:
+
+### 260705
+* **Mejora:** Cambio de semantica en la tarjeta de estado, para representar el tiempo faltante en mas escenarios y contextos
+
+### 260704
+* **Cambios:** cambio de layout en la vista de lista de la tarjeta de registros en dispositivos pc
+* **Mejora:** Las horas diarias / semanales objetimo en el modal de ajustes, ahora se representa en "horario humano" antes usaba horario maquina para la presentacion visual
+* **Cambios:** Cambios en los campos de GistSync y horas diarias objetivo
+* **Cambios:** Se agrega spin y flash al icono de perfiles cuando gist sync esta cargando datos
+
+### 260701
+* **Fix:** Se actualiza el estilo de animacion de colapso de meses / años en la vista de lista, para quitar el glitch al expandir meses con pocos registros
+* **Mejora:** varios refactores menores de funciones, eliminando logica duplicada y creando helpers reutilizables
+
+### 260701
+* **Mejora:** Se centraliza como helper en modal manager el arreglo del modal confirmar de feriadosAR, ahora es una funcion helper de modal manager que puede utilizarse con distintos atributos
+
+### 260630
+* **Mantenimiento:** Fin refactor se pasa de ~8000 lineas a ~7500 en js
+
+### 260627
+Refactores varios
+
+### 260626
+Refactor de async function init, se parte en varios helper y la funcion init como orquestador
+
+### 260625
+* **Fix:** ir para atras al quitar filtro, gist merge desde registros, gist merge desde modal gist 
+* **Mantenimiento:** se mueve ConfirmarModal a modal manager module, quedando como funcion interna de este modulo y renombrada a Confirmar
 
 ### 260623
 * **Mejora:** refactor y creacion de helper _crearOpcion, para los pobladores (semana, mes y anios)
+* **Mejora:** Se quitan las funciones de gist del scope async function init, quedando en el modudo de uilogic
+* **Mejora:** Se elimina return duplicado de window.uilogic con funciones duplicadas, quedado el return de uilogic como unico return.
 
 ### 260622
 * **Fix:** Se corrige bug al pasar por encima de un dia con registro con popup hover calendario activo, y un popup sin registro abierto.

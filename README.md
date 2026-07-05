@@ -9,6 +9,7 @@
 * **Cambios:** cambio de layout en la vista de lista de la tarjeta de registros en dispositivos pc
 * **Mejora:** Las horas diarias / semanales objetimo en el modal de ajustes, ahora se representa en "horario humano" antes usaba horario maquina para la presentacion visual
 * **Cambios:** Cambios en los campos de GistSync y horas diarias objetivo
+* **Cambios:** Se agrega spin y flash al icono de perfiles cuando gist sync esta cargando datos
 
 ### 260701
 * **Fix:** Se actualiza el estilo de animacion de colapso de meses / años en la vista de lista, para quitar el glitch al expandir meses con pocos registros

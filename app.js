@@ -5442,8 +5442,9 @@ Generado por Sistema Lushibosca
             _gistGuardarCredencialesSiModalAbierto();
             const btn = document.getElementById('btn-gist-subir');
             if (btn) btn.disabled = true;
-            mostrarToast('Subiendo...', 'info');
-
+            const iconoPerfil = document.getElementById('header-profile-icon');
+            iconoPerfil?.classList.add('icono-spin');
+            _flashCampo('header-profile-btn');
 
             try {
                 const nuevoId = await GistSync.subir(
@@ -5461,6 +5462,7 @@ Generado por Sistema Lushibosca
                 mostrarToast('Error al subir', 'error');
             } finally {
                 if (btn) btn.disabled = false;
+                iconoPerfil?.classList.remove('icono-spin');
             }
         }
 
@@ -5563,7 +5565,9 @@ Generado por Sistema Lushibosca
             _gistMergeDesdeModal = document.getElementById('modal-gist')?.classList.contains('show') ?? false;
             const btn = document.getElementById('btn-gist-bajar');
             if (btn) btn.disabled = true;
-            mostrarToast('Bajando...', 'info');
+            const iconoPerfil = document.getElementById('header-profile-icon');
+            iconoPerfil?.classList.add('icono-spin');
+            _flashCampo('header-profile-btn');
 
             try {
                 const data = await GistSync.bajar();
@@ -5587,6 +5591,7 @@ Generado por Sistema Lushibosca
                 mostrarToast('Error al bajar', 'error');
             } finally {
                 if (btn) btn.disabled = false;
+                iconoPerfil?.classList.remove('icono-spin');
             }
         }
 
@@ -7343,7 +7348,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260704';
+        const _v = '-v260705';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

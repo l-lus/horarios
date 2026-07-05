@@ -1568,8 +1568,18 @@ button:disabled {
 }
 
 input.campo-flash,
-select.campo-flash {
+select.campo-flash,
+button.campo-flash {
     animation: campo-flash 500ms ease-in-out 2;
+}
+
+@keyframes icono-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.icono-spin {
+    animation: icono-spin 900ms linear infinite;
 }
 
 /* ─── HOVER (pointer: fine) ──────────────────────────────────────────────────── */

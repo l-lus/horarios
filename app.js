@@ -8,7 +8,6 @@
     // STORAGE KEYS — MODULE
     // ====================================================================
     const STORAGE_KEYS = Object.freeze({
-        // ── Configuración global ──────────────────────────────────────
         TEMA_OSCURO: 'temaOscuro',
         VISTA_ACTUAL: 'vistaActual',
         MODO_ESTADISTICAS: 'modoEstadisticas',
@@ -18,27 +17,18 @@
         VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
         SALDO_DESDE_ENERO: 'saldoAnualDesdeEnero',
         SALDO_DESDE_PRIMERO_MES: 'saldoMensualDesdePrimero',
-
-        // ── Configuración por perfil (useProfile = true) ──────────────
         IGNORAR_TF: 'ignorarTiempoFuera',
         FONDO_CARD: 'fondoCard',
         PERSISTIR_TARJETAS: 'persistirTarjetas',
         ORDEN_CARDS: 'ordenCards',
-
-        // ── Estado UI persistido ──────────────────────────────────────
         FORMULARIO_EXPANDIDO: 'formularioExpandido',
         STATS_EXPANDIDO: 'statsExpandido',
         HISTORICO_EXPANDIDO: 'historicoExpandido',
-
-        // ── Perfiles e historial ──────────────────────────────────────
         PERFIL_ACTIVO: 'perfilActivo',
         PERFILES: 'perfiles',
         HISTORY: 'history',
-
-        // ── Gist ──────────────────────────────────────────────────────
         GIST_TOKEN: 'gistToken',
 
-        // ── Plantillas (claves con parte dinámica) ────────────────────
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
         MES_EXPANDIDO: (clave) => `mes-${clave}-expandido`,
@@ -222,7 +212,6 @@
             return signo + partes.join(' ');
         }
 
-        // "1 hora", "1 hora 5 minutos" y "1 minuto" son singulares (con o sin signo negativo); todo lo demás es plural.
         function _esCantidadSingular(textoHoras) {
             const t = textoHoras.startsWith('-') ? textoHoras.slice(1) : textoHoras;
             return t.startsWith('1 hora') || t === '1 minuto';
@@ -1789,7 +1778,7 @@
                 }
                 buffer += (horasHechasDia - horasObjetivoDia);
             }
-            return buffer;
+            return Math.round(buffer * 1e6) / 1e6;
         }
 
         function limpiarFiltros() {
@@ -2653,7 +2642,7 @@
                 if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
                 if (esRemoto) hechas += horasDiariasObj;
             }
-            return hechas - objetivo;
+            return Math.round((hechas - objetivo) * 1e6) / 1e6;
         }
 
         function _calcularEstadisticasRango(registrosRango, opciones = {}) {
@@ -3020,12 +3009,10 @@
             };
         }
 
-        // % de barra de progreso, capado a 100. Sin objetivo (0), se considera lleno.
         function _calcularProgreso(valor, objetivo) {
             return objetivo > 0 ? Math.min((valor / objetivo) * 100, 100) : 100;
         }
 
-        // Sin objetivo (0) se considera siempre cumplido.
         function _estaCumplido(valor, objetivo) {
             return objetivo === 0 || valor >= objetivo;
         }
@@ -3034,7 +3021,6 @@
             return `<svg class="icon"><use href="#icon-clock" /></svg>${nombreDia}`;
         }
 
-        // Si hay aviso de "ayer sin cerrar", pisa el hint de la vista sin tocar el resto.
         function _conAvisoAyer(vista, avisoAyerHint) {
             return avisoAyerHint ? { ...vista, ...avisoAyerHint } : vista;
         }
@@ -3190,8 +3176,6 @@
                 };
             }
 
-            // A esta altura regHoy.entrada existe. Si ayer quedó abierto, no lo ocultamos:
-            // avisamos con el hint en vez de mostrar el hint normal (caso B del punto 2).
             const avisoAyerHint = est.ayerAbierto
                 ? { hint: `⚠️ Ayer (${obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false }
                 : null;
@@ -3210,38 +3194,34 @@
             }
 
             const dayClosed = !!regHoy.salida;
-            const prog = _calcularProgreso(tiempoHoy, objetivoDiario);
-            const cumplido = _estaCumplido(tiempoHoy, objetivoDiario);
-
-            // Agregamos estadoFondoColor a las variables
+            const objetivoDiarioAplica = esDiaHabil ? objetivoDiario : 0;
+            const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAplica);
+            const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAplica);
             let colorBarra, colorBorde, estadoFondo, estadoFondoColor = null, mensaje, mostrarMensaje;
 
-            if (objetivoDiario === 0) {
-                colorBarra = 'blue'; colorBorde = 'transparent';
+            if (objetivoDiarioAplica === 0) {
+                colorBarra = dayClosed ? 'green' : 'blue';
+                colorBorde = dayClosed ? 'green' : 'blue';
                 estadoFondo = dayClosed ? 'finalizado_ok' : 'en_curso';
                 mensaje = ''; mostrarMensaje = false;
             } else if (dayClosed) {
-                const dif = tiempoHoy - objetivoDiario;
+                const dif = tiempoHoy - objetivoDiarioAplica;
                 
                 if (dif >= 0) {
-                    // Cumplió o hizo extras
                     colorBarra = 'green'; colorBorde = 'green';
                     estadoFondo = 'finalizado_ok';
                     const difExtraText = horasATexto(dif);
                     mensaje = dif === 0 ? 'Perfecto' : `${difExtraText} ${_esCantidadSingular(difExtraText) ? 'extra' : 'extras'}`;
                 } else {
-                    // Se fue temprano (Faltó tiempo)
                     const difText = horasATexto(Math.abs(dif));
                     const prefijoFalto = _esCantidadSingular(difText) ? 'Faltó' : 'Faltaron';
                     
                     if (bufferSemanal >= 0) {
-                        // Magia: ¡El saldo general de la semana le alcanzó para cubrir su salida anticipada!
                         colorBarra = 'gold'; colorBorde = 'gold';
-                        estadoFondo = 'especial'; // Usamos el fondo especial
-                        estadoFondoColor = 'gold'; // Lo pintamos de dorado
+                        estadoFondo = 'especial';
+                        estadoFondoColor = 'gold';
                         mensaje = `${prefijoFalto} ${difText} (Cubierto con saldo)`;
                     } else {
-                        // Realmente debe horas
                         colorBarra = 'red'; colorBorde = 'red';
                         estadoFondo = 'finalizado_fail';
                         mensaje = `${prefijoFalto} ${difText}`;
@@ -3253,13 +3233,13 @@
                 colorBorde = cumplido ? 'green' : 'blue';
                 estadoFondo = 'en_curso';
                 mostrarMensaje = true;
-                mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal);
+                mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAplica, bufferSemanal);
             }
 
             let hint = 'Toca para ver la Semana';
             let hintEsHTML = false;
-            if (regHoy.entrada && !dayClosed && objetivoDiario > 0 && !TiposRegistro.esRegistroEspecial(regHoy.entrada, regHoy.salida)) {
-                ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regHoy, objetivoDiario, bufferSemanal, diasHabiles));
+            if (regHoy.entrada && !dayClosed && objetivoDiarioAplica > 0 && !TiposRegistro.esRegistroEspecial(regHoy.entrada, regHoy.salida)) {
+                ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regHoy, objetivoDiarioAplica, bufferSemanal, diasHabiles));
             }
 
             return _conAvisoAyer({
@@ -3267,7 +3247,7 @@
                 stats: horasATexto(tiempoHoy),
                 mensaje, mostrarMensaje,
                 colorBarra, anchoBarra: prog,
-                colorBorde, estadoFondo, estadoFondoColor, // Ahora pasamos el color dorado si aplica
+                colorBorde, estadoFondo, estadoFondoColor,
                 hint, hintEsHTML,
             }, avisoAyerHint);
         }

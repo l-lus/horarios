@@ -3220,7 +3220,7 @@
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
                         estadoFondoColor = 'gold';
-                        mensaje = `${prefijoFalto} ${difText} (Cubierto con saldo)`;
+                        mensaje = `${prefijoFalto} ${difText} (Cubierto)`;
                     } else {
                         colorBarra = 'red'; colorBorde = 'red';
                         estadoFondo = 'finalizado_fail';

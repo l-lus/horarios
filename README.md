@@ -7,6 +7,7 @@
 
 ### 260705
 * **Mejora:** Cambio de semantica en la tarjeta de estado, para representar el tiempo faltante en mas escenarios y contextos
+* **Cambios:** Cambios en la animacion de tarjetas
 
 ### 260704
 * **Cambios:** cambio de layout en la vista de lista de la tarjeta de registros en dispositivos pc

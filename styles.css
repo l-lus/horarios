@@ -488,7 +488,7 @@ button:disabled {
     border: 1px solid transparent;
     border-left: 4px solid transparent;
     transition: transform 0.15s ease-out, opacity 0.15s ease-out, box-shadow 0.3s, border-color 0.3s;
-    min-height: 15rem;
+    height: 15rem;
     position: relative;
     overflow: hidden;
     display: flex;

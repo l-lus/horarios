@@ -679,7 +679,6 @@ button:disabled {
 }
 
 .registro-mes-header {
-    margin: 1rem;
     color: var(--text-muted);
     font-size: 18px;
     transition: color 0.2s;
@@ -688,6 +687,7 @@ button:disabled {
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    padding: 1rem
 }
 
 .registro-mes-detalle {

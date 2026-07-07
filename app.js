@@ -2338,17 +2338,20 @@
                 totalText = `${r.horas}h ${r.minutos}m`;
                 if (horasDiarias > 0 && _esFechaHabil(r.fecha, D.diasHabiles())) {
                     const diffText = formatoDiferencia(r.total);
-                    totalEl.classList.add(r.total >= horasDiarias ? 'green-text' : 'red-text');
-                    if (diffText) totalText += ` (${diffText})`;
+                    if (r.total >= horasDiarias) {
+                        totalEl.classList.add('green-text');
+                        if (diffText) totalText += ` (${diffText})`;
+                    } else if (_cubiertoPorSaldo(r.fecha)) {
+                        totalEl.classList.add('gold-text');
+                        totalText += ` (${diffText}, Cubierto)`;
+                    } else {
+                        totalEl.classList.add('red-text');
+                        if (diffText) totalText += ` (${diffText})`;
+                    }
                 }
             } else if (r.entrada && !r.salida) {
-                if (r.fecha === hoy) {
-                    totalText = 'En curso . . .';
-                    totalEl.classList.add('blue-text');
-                } else {
-                    totalText = 'Incompleto';
-                    totalEl.classList.add('yellow-text');
-                }
+                totalText = r.fecha === hoy ? 'En curso . . .' : 'Incompleto';
+                totalEl.classList.add('blue-text');
             } else {
                 totalText = 'Sin datos';
             }
@@ -2942,6 +2945,14 @@
             const diaSemana = TimeUtils.parsearFechaLocal(fecha).getDay();
             if (Array.isArray(diasHabiles)) return diasHabiles.includes(diaSemana);
             return diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
+        }
+
+        // Un día con déficit de horas puede quedar "cubierto" por el saldo semanal acumulado
+        // hasta ese día inclusive (cronológico: nunca mira días posteriores, igual que la
+        // tarjeta en vivo). Sólo tiene sentido llamarlo cuando ya se sabe que hay déficit ese día.
+        function _cubiertoPorSaldo(fecha) {
+            const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
+            return D.calcularBufferSemanal(lunes, fecha) >= 0;
         }
 
         function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
@@ -5785,6 +5796,11 @@ Generado por Sistema Lushibosca
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
             UILogic.setFondoCard(config.fondoCard || 'golden-gate');
+            // Directo, sin togglePeriodoStats(): ese usa _animarCambioStats (fade + setTimeout),
+            // lo que retrasa ~300ms el layout final del período restaurado. Ese delay es lo que
+            // rompía la restauración de scroll del navegador al recargar en semanal/anual.
+            // _renderSelectorStats() (llamado más abajo desde actualizarUI) ya se encarga de
+            // pintar el selector correcto de forma síncrona en el primer render.
             modoEstadisticas = config.modoEstadisticas || 'mensual';
 
             const perfilActual = PerfilManager.obtenerDatosPerfil();
@@ -6279,12 +6295,9 @@ Generado por Sistema Lushibosca
                     const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                     return `dia-especial-${tipo ? tipo.color : 'purple'}`;
                 }
-                if (r.entrada && !r.salida) {
-                    const fechaHoy = TimeUtils.obtenerFechaHoy();
-                    return fecha === fechaHoy ? 'dia-en-curso' : 'dia-sin-salida';
-                }
+                if (r.entrada && !r.salida) return 'dia-en-curso'; // mismo estado sea hoy o un día viejo sin cerrar
                 if (!_esFechaHabil(fecha, diasHabilesObj) || r.total >= horasDiariasObj) return 'dia-normal';
-                return 'dia-incompleto';
+                return _cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
             };
 
             const diasNombre = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -6392,7 +6405,7 @@ Generado por Sistema Lushibosca
             }
             if (reg.entrada && !reg.salida) {
                 const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
-                return `<div class="cal-popup-info cal-popup-info--${esHoy ? 'blue">En curso' : 'gold">Incompleto'}</div>
+                return `<div class="cal-popup-info cal-popup-info--blue">${esHoy ? 'En curso' : 'Incompleto'}</div>
                     <div class="cal-popup-3l">Entrada: ${S.escapeHtml(reg.entrada)}</div>`;
             }
             const totalHoras = reg.total || 0;
@@ -6407,8 +6420,16 @@ Generado por Sistema Lushibosca
             let totalConDiff = totalStr, diffColor = '';
             if (horasDiarias > 0 && _esFechaHabil(reg.fecha, D.diasHabiles())) {
                 const diffText = formatoDiferencia(totalHoras);
-                if (diffText) totalConDiff += ` (${diffText})`;
-                diffColor = totalHoras >= horasDiarias ? 'var(--c-green)' : 'var(--c-red)';
+                if (totalHoras >= horasDiarias) {
+                    diffColor = 'var(--c-green)';
+                    if (diffText) totalConDiff += ` (${diffText})`;
+                } else if (_cubiertoPorSaldo(reg.fecha)) {
+                    diffColor = 'var(--c-gold)';
+                    totalConDiff += ` (${diffText}, Cubierto)`;
+                } else {
+                    diffColor = 'var(--c-red)';
+                    if (diffText) totalConDiff += ` (${diffText})`;
+                }
             }
             return `<div class="cal-popup-info${diffColor ? ' cal-popup-info--dynamic' : ''}"${diffColor ? ` data-color="${diffColor}"` : ''}>${totalConDiff}</div>
                 <div class="cal-popup-3l">${S.escapeHtml(reg.entrada)} – ${S.escapeHtml(reg.salida)}</div>
@@ -7390,7 +7411,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260705';
+        const _v = '-v260707';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

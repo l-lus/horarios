@@ -679,6 +679,7 @@ button:disabled {
 }
 
 .registro-mes-header {
+    margin: 1rem;
     color: var(--text-muted);
     font-size: 18px;
     transition: color 0.2s;
@@ -687,7 +688,6 @@ button:disabled {
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    padding: 1rem
 }
 
 .registro-mes-detalle {
@@ -741,7 +741,7 @@ button:disabled {
     background: var(--c-orange);
 }
 
-.calendario-dia.dia-sin-salida,
+.calendario-dia.dia-cubierto,
 .registro-total.gold-text,
 .calendario-dia.dia-especial-gold,
 .registro-total.yellow-text,
@@ -1088,10 +1088,6 @@ button:disabled {
 
 .cal-popup-info--blue {
     color: var(--c-blue);
-}
-
-.cal-popup-info--gold {
-    color: var(--c-gold);
 }
 
 .cal-popup-sin-reg {

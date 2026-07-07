@@ -2139,10 +2139,9 @@
             if (error) error.style.display = 'none';
         }
 
-        // ----------------------------------------------------------------
+        // ====================================================================
         // HELPERS COMPARTIDOS DE EXPORTACIÓN
-        // ----------------------------------------------------------------
-
+        // ====================================================================
         function obtenerNombrePerfilSafe() {
             let nombre = 'Backup';
             if (window.PerfilManager) nombre = window.PerfilManager.obtenerDatosPerfil().nombre;
@@ -2937,31 +2936,49 @@
             return { esDiaHabil, quedanDiasFuturos };
         }
 
-        // Igual que _estadoDiasHabiles pero para una fecha cualquiera (no sólo hoy).
-        // Se usa para no medir contra el objetivo diario los registros de días no hábiles
-        // (calendario, popup de calendario, lista de registros, y el objetivo de "ayer"
-        // en el cruce de medianoche).
         function _esFechaHabil(fecha, diasHabiles) {
             const diaSemana = TimeUtils.parsearFechaLocal(fecha).getDay();
             if (Array.isArray(diasHabiles)) return diasHabiles.includes(diaSemana);
             return diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
         }
 
-        // Un día con déficit de horas puede quedar "cubierto" por el saldo semanal acumulado
-        // hasta HOY inclusive (o hasta el domingo de esa semana si la semana ya cerró, lo que
-        // ocurra primero). Es cronológico respecto del presente real, no respecto de la fecha
-        // del registro: nunca mira días que todavía no pasaron, pero sí usa todo lo que ya se
-        // cargó después de ese registro dentro de la misma semana (igual que la tarjeta en vivo,
-        // que ya acumula el buffer semanal hasta hoy). Sólo tiene sentido llamarlo cuando ya se
-        // sabe que hay déficit ese día.
         function _cubiertoPorSaldo(fecha) {
             const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
             const lunesDate = TimeUtils.parsearFechaLocal(lunes);
             lunesDate.setDate(lunesDate.getDate() + 6);
             const domingo = TimeUtils.formatearFechaLocal(lunesDate);
             const hoy = TimeUtils.obtenerFechaHoy();
-            const limite = domingo < hoy ? domingo : hoy;
-            return D.calcularBufferSemanal(lunes, limite) >= 0;
+            const topeCalendario = domingo < hoy ? domingo : hoy;
+
+            let limite = fecha;
+            for (const r of D.registros()) {
+                if (r.fecha > limite && r.fecha >= lunes && r.fecha <= topeCalendario) {
+                    limite = r.fecha;
+                }
+            }
+
+            const EPS = 1e-6;
+            const pendientes = [];
+            let pool = 0;
+
+            for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
+                const delta = D.calcularBufferSemanal(isoDate, isoDate);
+                if (delta > EPS) {
+                    pool += delta;
+                } else if (delta < -EPS) {
+                    pendientes.push({ fecha: isoDate, restante: -delta });
+                }
+                for (const deuda of pendientes) {
+                    if (pool <= EPS) break;
+                    if (deuda.restante <= EPS) continue;
+                    const pago = Math.min(pool, deuda.restante);
+                    deuda.restante -= pago;
+                    pool -= pago;
+                }
+            }
+
+            const deuda = pendientes.find(d => d.fecha === fecha);
+            return deuda ? deuda.restante <= EPS : false;
         }
 
         function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
@@ -3157,8 +3174,6 @@
             if (!regHoy || !regHoy.entrada) {
 
                 if (est.ayerAbierto) {
-                    // El objetivo que aplica acá es el de AYER (el día que se está mostrando),
-                    // no el de hoy: si ayer no era hábil, no hay objetivo/buffer que cumplir.
                     const objetivoDiarioAyerAplica = _esFechaHabil(est.ayerStr, diasHabiles) ? objetivoDiario : 0;
                     const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
                     const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAyerAplica);
@@ -5805,11 +5820,6 @@ Generado por Sistema Lushibosca
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
             UILogic.setFondoCard(config.fondoCard || 'golden-gate');
-            // Directo, sin togglePeriodoStats(): ese usa _animarCambioStats (fade + setTimeout),
-            // lo que retrasa ~300ms el layout final del período restaurado. Ese delay es lo que
-            // rompía la restauración de scroll del navegador al recargar en semanal/anual.
-            // _renderSelectorStats() (llamado más abajo desde actualizarUI) ya se encarga de
-            // pintar el selector correcto de forma síncrona en el primer render.
             modoEstadisticas = config.modoEstadisticas || 'mensual';
 
             const perfilActual = PerfilManager.obtenerDatosPerfil();
@@ -6304,7 +6314,7 @@ Generado por Sistema Lushibosca
                     const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                     return `dia-especial-${tipo ? tipo.color : 'purple'}`;
                 }
-                if (r.entrada && !r.salida) return 'dia-en-curso'; // mismo estado sea hoy o un día viejo sin cerrar
+                if (r.entrada && !r.salida) return 'dia-en-curso';
                 if (!_esFechaHabil(fecha, diasHabilesObj) || r.total >= horasDiariasObj) return 'dia-normal';
                 return _cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
             };

@@ -6,7 +6,7 @@
 ### VERSION:
 
 ### 260707
-* **Mejora:** Se agrega el etado cubierto a la tarjeta de registros en ambas vistas con estado dinamico de saldo hasta el dia actual
+* **Mejora:** Se agrega el etado "cubierto" en base a la semantica agregado aen el cambio anterior, a la tarjeta de registros en ambas vistas con estado dinamico de saldo hasta el dia actual
 
 ### 260705
 * **Mejora:** Cambio de semantica en la tarjeta de estado, para representar el tiempo faltante en mas escenarios y contextos

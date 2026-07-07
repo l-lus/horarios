@@ -5,6 +5,9 @@
 
 ### VERSION:
 
+### 260707
+* **Mejora:** Se agrega el etado cubierto a la tarjeta de registros en ambas vistas con estado dinamico de saldo hasta el dia actual
+
 ### 260705
 * **Mejora:** Cambio de semantica en la tarjeta de estado, para representar el tiempo faltante en mas escenarios y contextos
 * **Cambios:** Cambios en la animacion de tarjetas

@@ -2948,11 +2948,20 @@
         }
 
         // Un día con déficit de horas puede quedar "cubierto" por el saldo semanal acumulado
-        // hasta ese día inclusive (cronológico: nunca mira días posteriores, igual que la
-        // tarjeta en vivo). Sólo tiene sentido llamarlo cuando ya se sabe que hay déficit ese día.
+        // hasta HOY inclusive (o hasta el domingo de esa semana si la semana ya cerró, lo que
+        // ocurra primero). Es cronológico respecto del presente real, no respecto de la fecha
+        // del registro: nunca mira días que todavía no pasaron, pero sí usa todo lo que ya se
+        // cargó después de ese registro dentro de la misma semana (igual que la tarjeta en vivo,
+        // que ya acumula el buffer semanal hasta hoy). Sólo tiene sentido llamarlo cuando ya se
+        // sabe que hay déficit ese día.
         function _cubiertoPorSaldo(fecha) {
             const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
-            return D.calcularBufferSemanal(lunes, fecha) >= 0;
+            const lunesDate = TimeUtils.parsearFechaLocal(lunes);
+            lunesDate.setDate(lunesDate.getDate() + 6);
+            const domingo = TimeUtils.formatearFechaLocal(lunesDate);
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const limite = domingo < hoy ? domingo : hoy;
+            return D.calcularBufferSemanal(lunes, limite) >= 0;
         }
 
         function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {

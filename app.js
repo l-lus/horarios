@@ -40,12 +40,6 @@
     // ====================================================================
     // PRECISIÓN NUMÉRICA — helper compartido
     // ====================================================================
-    // Los totales de horas se calculan como minutos/60, lo que puede generar
-    // errores de redondeo binario (ej. 470/60 = 7.833333333333333). Al sumar
-    // varios de estos valores (totales semanales/anuales), el resultado puede
-    // diferir en ~1e-13 del valor exacto esperado. EPS_HORAS evita que esa
-    // imprecisión se traduzca en un estado "no cumplido" aunque en minutos
-    // reales el objetivo sí se cumplió.
     const EPS_HORAS = 1e-6;
     const horasGte = (valor, objetivo) => (valor - objetivo) > -EPS_HORAS;
     const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;
@@ -979,7 +973,7 @@
             }
         };
 
-        const TIPOS_ARRAY = Object.values(TIPOS); // calculado una sola vez (TIPOS es estático)
+        const TIPOS_ARRAY = Object.values(TIPOS);
 
         function esRegistroEspecial(entrada, salida) {
             if (!entrada || !salida) return false;
@@ -1765,11 +1759,6 @@
             return { ayerStr, regAyer, ayerAbierto };
         }
 
-        // Calcula el saldo (horas hechas - horas objetivo) para cualquier rango [desde, hasta].
-        // Reemplaza lo que antes eran dos implementaciones casi idénticas (una para "la semana
-        // hasta hoy" y otra para "un período arbitrario"); esta única versión cubre ambos casos:
-        // si `hasta` cae en el futuro (ej. fin de mes/año todavía no transcurrido), los días
-        // posteriores a hoy simplemente se ignoran.
         function calcularBufferPeriodo(desde, hasta) {
             const hoy = TimeUtils.obtenerFechaHoy();
             const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);

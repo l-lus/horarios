@@ -4421,7 +4421,13 @@ Generado por Sistema Lushibosca
             HistoryManager.saveState(D.registros());
             StorageHelper.removeItem(storageKey);
             await D.guardarYActualizar(registroHoy.id);
-            mostrarToast(minutos === 1 ? 'Se descontó 1 minuto al registro de hoy' : `Se descontaron ${minutos} minutos al registro de hoy`, 'success');
+            const ignorarTF = D.getIgnorarTiempoFuera();
+            const mensajeToast = ignorarTF
+                ? (minutos === 1
+                    ? 'Se registró 1 minuto de tiempo fuera (cálculo ignorado)'
+                    : `Se registraron ${minutos} minutos de tiempo fuera (cálculo ignorado)`)
+                : (minutos === 1 ? 'Se descontó 1 minuto al registro de hoy' : `Se descontaron ${minutos} minutos al registro de hoy`);
+            mostrarToast(mensajeToast, ignorarTF ? 'info' : 'success');
         }
 
         async function toggleTimerBreakMain() {

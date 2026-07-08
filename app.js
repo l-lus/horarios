@@ -2139,9 +2139,6 @@
             if (error) error.style.display = 'none';
         }
 
-        // ====================================================================
-        // HELPERS COMPARTIDOS DE EXPORTACIÓN
-        // ====================================================================
         function obtenerNombrePerfilSafe() {
             let nombre = 'Backup';
             if (window.PerfilManager) nombre = window.PerfilManager.obtenerDatosPerfil().nombre;
@@ -2342,7 +2339,7 @@
                         if (diffText) totalText += ` (${diffText})`;
                     } else if (_cubiertoPorSaldo(r.fecha)) {
                         totalEl.classList.add('gold-text');
-                        totalText += ` (${diffText}, Cubierto)`;
+                        totalText += ` (${diffText}) Cubierto`;
                     } else {
                         totalEl.classList.add('red-text');
                         if (diffText) totalText += ` (${diffText})`;
@@ -2950,24 +2947,35 @@
             const hoy = TimeUtils.obtenerFechaHoy();
             const topeCalendario = domingo < hoy ? domingo : hoy;
 
+            const registrosSemana = D.registros().filter(r => r.fecha >= lunes && r.fecha <= topeCalendario);
             let limite = fecha;
-            for (const r of D.registros()) {
-                if (r.fecha > limite && r.fecha >= lunes && r.fecha <= topeCalendario) {
-                    limite = r.fecha;
-                }
+            for (const r of registrosSemana) {
+                if (r.fecha > limite) limite = r.fecha;
             }
+
+            const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
+            const diasHabilesObj = D.diasHabiles();
+            const horasDiariasObj = D.horasDiarias();
 
             const EPS = 1e-6;
             const pendientes = [];
             let pool = 0;
 
             for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
-                const delta = D.calcularBufferSemanal(isoDate, isoDate);
-                if (delta > EPS) {
-                    pool += delta;
-                } else if (delta < -EPS) {
-                    pendientes.push({ fecha: isoDate, restante: -delta });
+                const r = registrosMap.get(isoDate);
+                const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
+                const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+                let delta = 0;
+                if (esRemoto) {
+                    delta = 0;
+                } else if (r && !esEspecial && r.salida) {
+                    const objetivo = _esFechaHabil(isoDate, diasHabilesObj) ? horasDiariasObj : 0;
+                    delta = r.total - objetivo;
                 }
+
+                if (delta > EPS) pool += delta;
+                else if (delta < -EPS) pendientes.push({ fecha: isoDate, restante: -delta });
+
                 for (const deuda of pendientes) {
                     if (pool <= EPS) break;
                     if (deuda.restante <= EPS) continue;
@@ -6444,7 +6452,7 @@ Generado por Sistema Lushibosca
                     if (diffText) totalConDiff += ` (${diffText})`;
                 } else if (_cubiertoPorSaldo(reg.fecha)) {
                     diffColor = 'var(--c-gold)';
-                    totalConDiff += ` (${diffText}, Cubierto)`;
+                    totalConDiff += ` (${diffText}) Cubierto`;
                 } else {
                     diffColor = 'var(--c-red)';
                     if (diffText) totalConDiff += ` (${diffText})`;

@@ -1720,6 +1720,10 @@ button.campo-flash {
         padding: 1.5rem;
     }
 
+    .calendario-dia {
+        font-size: 1rem;
+    }
+
     .left-column {
         display: flex;
         flex-direction: column;

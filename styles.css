@@ -422,6 +422,16 @@ button:disabled {
     transition: var(--transition-collapse);
 }
 
+.collapsible.expanded {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.collapsible-inner {
+    overflow: hidden;
+    min-height: 0;
+}
+
 .form-collapsible>#modo-contenedor,
 .form-collapsible>.detalle-inner,
 #botones-historico>.botones-historico-inner {
@@ -1458,7 +1468,6 @@ button:disabled {
 }
 
 #modo-normal,
-#campos-rango-exportar,
 #gist-limite-sync,
 .contenedor-fechas,
 .contenedor-horas {

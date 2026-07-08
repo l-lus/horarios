@@ -5034,7 +5034,7 @@ Generado por Sistema Lushibosca
                 if (tipoSelect) tipoSelect.value = 'todo';
 
                 const camposRango = document.getElementById('campos-rango-exportar');
-                if (camposRango) { camposRango.style.maxHeight = '0'; camposRango.style.opacity = '0'; }
+                if (camposRango) camposRango.classList.remove('expanded');
 
                 document.getElementById('export-fecha-desde').value = '';
                 document.getElementById('export-fecha-hasta').value = '';
@@ -5059,13 +5059,7 @@ Generado por Sistema Lushibosca
             const tipo = document.getElementById('tipo-exportacion').value;
             const camposRango = document.getElementById('campos-rango-exportar');
 
-            if (tipo === 'rango') {
-                camposRango.style.maxHeight = '200px';
-                camposRango.style.opacity = '1';
-            } else {
-                camposRango.style.maxHeight = '0';
-                camposRango.style.opacity = '0';
-            }
+            camposRango.classList.toggle('expanded', tipo === 'rango');
         }
 
         async function ejecutarExportacion() {

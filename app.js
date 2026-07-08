@@ -37,6 +37,19 @@
     });
 
 
+    // ====================================================================
+    // PRECISIÓN NUMÉRICA — helper compartido
+    // ====================================================================
+    // Los totales de horas se calculan como minutos/60, lo que puede generar
+    // errores de redondeo binario (ej. 470/60 = 7.833333333333333). Al sumar
+    // varios de estos valores (totales semanales/anuales), el resultado puede
+    // diferir en ~1e-13 del valor exacto esperado. EPS_HORAS evita que esa
+    // imprecisión se traduzca en un estado "no cumplido" aunque en minutos
+    // reales el objetivo sí se cumplió.
+    const EPS_HORAS = 1e-6;
+    const horasGte = (valor, objetivo) => (valor - objetivo) > -EPS_HORAS;
+    const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;
+
     function _applyDataColors(root) {
         root.querySelectorAll('[data-color]').forEach(el => {
             el.style.color = el.dataset.color;
@@ -966,26 +979,28 @@
             }
         };
 
+        const TIPOS_ARRAY = Object.values(TIPOS); // calculado una sola vez (TIPOS es estático)
+
         function esRegistroEspecial(entrada, salida) {
             if (!entrada || !salida) return false;
-            return entrada === salida && Object.values(TIPOS).some(t => t.codigo === entrada);
+            return entrada === salida && TIPOS_ARRAY.some(t => t.codigo === entrada);
         }
 
         function obtenerTipoPorCodigo(entrada, salida) {
-            if (!esRegistroEspecial(entrada, salida)) return null;
-            return Object.values(TIPOS).find(t => t.codigo === entrada) || null;
+            if (!entrada || !salida || entrada !== salida) return null;
+            return TIPOS_ARRAY.find(t => t.codigo === entrada) || null;
         }
 
         function obtenerTipoPorId(id) {
-            return Object.values(TIPOS).find(t => t.id === id) || null;
+            return TIPOS_ARRAY.find(t => t.id === id) || null;
         }
 
         function validarTipoPermitido(id) {
-            return Object.values(TIPOS).some(t => t.id === id);
+            return TIPOS_ARRAY.some(t => t.id === id);
         }
 
         function obtenerTodosLosTipos() {
-            return Object.values(TIPOS);
+            return TIPOS_ARRAY;
         }
 
         function obtenerCodigosPorTipo(id) {
@@ -1750,35 +1765,31 @@
             return { ayerStr, regAyer, ayerAbierto };
         }
 
-        function calcularBufferSemanal(inicioSemana, fechaHoy) {
-            const horasDiariasLocal = horasDiarias;
-            let buffer = 0;
-            const registrosRango = registros.filter(r => r.fecha >= inicioSemana && r.fecha <= fechaHoy);
-            const registrosMap = new Map(registrosRango.map(r => [r.fecha, r]));
+        // Calcula el saldo (horas hechas - horas objetivo) para cualquier rango [desde, hasta].
+        // Reemplaza lo que antes eran dos implementaciones casi idénticas (una para "la semana
+        // hasta hoy" y otra para "un período arbitrario"); esta única versión cubre ambos casos:
+        // si `hasta` cae en el futuro (ej. fin de mes/año todavía no transcurrido), los días
+        // posteriores a hoy simplemente se ignoran.
+        function calcularBufferPeriodo(desde, hasta) {
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);
+            const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
+            const { ayerStr, ayerAbierto } = detectarAyerAbierto(hoy, regsPorFecha);
 
-            const { ayerStr, ayerAbierto } = detectarAyerAbierto(fechaHoy, registrosMap);
-
-            for (const isoDate of TimeUtils.generarRangoFechas(inicioSemana, fechaHoy)) {
-                const numDia = TimeUtils.parsearFechaLocal(isoDate).getDay();
-                const esDiaLaboralConfigurado = diasHabiles.includes(numDia);
-                const r = registrosMap.get(isoDate);
-                let horasObjetivoDia = 0, horasHechasDia = 0;
+            let objetivo = 0, hechas = 0;
+            for (const iso of TimeUtils.generarRangoFechas(desde, hasta)) {
+                if (iso > hoy) continue;
+                const esDiaHabil = diasHabiles.includes(TimeUtils.parsearFechaLocal(iso).getDay());
+                const r = regsPorFecha.get(iso);
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const tieneSalida = r && r.salida && !esEspecial;
                 const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+                const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
 
-                let diaTerminado = (isoDate === fechaHoy) ? tieneSalida : (ayerAbierto && isoDate === ayerStr ? false : true);
-
-                if (esRemoto) {
-                    if (esDiaLaboralConfigurado) horasObjetivoDia = horasDiariasLocal;
-                    horasHechasDia = horasDiariasLocal;
-                } else {
-                    if (esDiaLaboralConfigurado && !esEspecial && diaTerminado) horasObjetivoDia = horasDiariasLocal;
-                    if (r && !esEspecial && r.salida) horasHechasDia = r.total;
-                }
-                buffer += (horasHechasDia - horasObjetivoDia);
+                if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += horasDiarias;
+                if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
+                if (esRemoto) hechas += horasDiarias;
             }
-            return Math.round(buffer * 1e6) / 1e6;
+            return Math.round((hechas - objetivo) * 1e6) / 1e6;
         }
 
         function limpiarFiltros() {
@@ -1898,7 +1909,7 @@
             editandoId: () => editandoId, setEditandoId: (id) => editandoId = id, vistaActual: () => vistaActual, setVistaActual: (v) => vistaActual = v,
             cargarConfiguracion, calcularHoras, calcularHorasFeriadoEnRango, normalizarRegistrosImportados, guardarYActualizar,
             agregarRegistro, eliminarRegistroActual, editarRegistro, guardarEdicion, borrarTodoHistorial, exportarJSON, importarDatos,
-            calcularBufferSemanal, detectarAyerAbierto, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
+            calcularBufferPeriodo, detectarAyerAbierto, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
             registrarVacacionesDirecto, borrarPeriodoDirecto, registrarDiaEspecial, editarGrupo, guardarEdicionGrupo,
             eliminarGrupoActual, setGrupoEnEdicion: (val) => grupoEnEdicion = val,
             undoAction: function () { _aplicarEstadoHistorial(HistoryManager.undo(), 'Deshecho'); },
@@ -2334,7 +2345,7 @@
                 totalText = `${r.horas}h ${r.minutos}m`;
                 if (horasDiarias > 0 && _esFechaHabil(r.fecha, D.diasHabiles())) {
                     const diffText = formatoDiferencia(r.total);
-                    if (r.total >= horasDiarias) {
+                    if (horasGte(r.total, horasDiarias)) {
                         totalEl.classList.add('green-text');
                         if (diffText) totalText += ` (${diffText})`;
                     } else if (_cubiertoPorSaldo(r.fecha)) {
@@ -2609,36 +2620,17 @@
             };
         }
 
-        function _calcularBufferPeriodo(registrosRango, desde, hasta, horasDiariasObj) {
-            const diasHabilesConfig = D.diasHabiles();
-            const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
-            const hoy = TimeUtils.obtenerFechaHoy();
-            const { ayerStr, ayerAbierto } = D.detectarAyerAbierto(hoy, regsPorFecha);
-
-            let objetivo = 0, hechas = 0;
-            for (const iso of TimeUtils.generarRangoFechas(desde, hasta)) {
-                if (iso > hoy) continue;
-                const esDiaHabil = diasHabilesConfig.includes(TimeUtils.parsearFechaLocal(iso).getDay());
-                const r = regsPorFecha.get(iso);
-                const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
-                const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
-
-                if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += horasDiariasObj;
-                if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
-                if (esRemoto) hechas += horasDiariasObj;
-            }
-            return Math.round((hechas - objetivo) * 1e6) / 1e6;
-        }
-
         function _calcularEstadisticasRango(registrosRango, opciones = {}) {
             const { regularidadPorMes = false } = opciones;
 
             const conteosPorTipo = {};
-            TiposRegistro.obtenerTodosLosTipos().forEach(t => {
-                conteosPorTipo[t.labelPlural.toLowerCase()] = registrosRango.filter(
-                    r => r.entrada === t.codigo && r.salida === t.codigo
-                ).length;
+            const claveTipoPorCodigo = new Map(TiposRegistro.obtenerTodosLosTipos().map(t => [t.codigo, t.labelPlural.toLowerCase()]));
+            claveTipoPorCodigo.forEach(clave => { conteosPorTipo[clave] = 0; });
+            registrosRango.forEach(r => {
+                if (r.entrada && r.entrada === r.salida) {
+                    const clave = claveTipoPorCodigo.get(r.entrada);
+                    if (clave) conteosPorTipo[clave]++;
+                }
             });
 
             const compensaciones = registrosRango.filter(r => r.credito && r.credito !== '00:00').length;
@@ -2684,7 +2676,7 @@
 
             const horasDiariasObj = D.horasDiarias();
             const bufferPeriodo = (horasDiariasObj > 0 && opciones.desde && opciones.hasta)
-                ? _calcularBufferPeriodo(registrosRango, opciones.desde, opciones.hasta, horasDiariasObj)
+                ? D.calcularBufferPeriodo(opciones.desde, opciones.hasta)
                 : null;
 
             return {
@@ -3014,7 +3006,7 @@
             const { esDiaHabil, quedanDiasFuturos } = _estadoDiasHabiles(diasHabiles);
             const regHoy = registros.find(r => r.fecha === hoy) ?? null;
             const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
-            const bufferSemanal = D.calcularBufferSemanal(ini, hoy);
+            const bufferSemanal = D.calcularBufferPeriodo(ini, hoy);
 
             const fechaLimite = hoy < fn ? hoy : fn;
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
@@ -3056,7 +3048,7 @@
         }
 
         function _estaCumplido(valor, objetivo) {
-            return objetivo === 0 || valor >= objetivo;
+            return objetivo === 0 || horasGte(valor, objetivo);
         }
 
         function _tituloDia(nombreDia) {
@@ -3084,11 +3076,11 @@
                 estadoFondo = 'esperando';
                 mensaje = 'Semana sin días laborables';
                 mostrarMensaje = true;
-            } else if (tot >= objetivoSemana) {
+            } else if (horasGte(tot, objetivoSemana)) {
                 colorBarra = 'green'; colorBorde = 'green';
                 estadoFondo = 'finalizado_ok';
                 const dif = tot - objetivoSemana;
-                mensaje = dif === 0 ? 'Perfecto' : `Hiciste ${TimeUtils.horasATexto(dif)} de más`;
+                mensaje = horasEq(dif, 0) ? 'Perfecto' : `Hiciste ${TimeUtils.horasATexto(dif)} de más`;
                 mostrarMensaje = true;
             } else if (semanaAbierta) {
                 colorBarra = 'blue'; colorBorde = 'blue';
@@ -3250,16 +3242,16 @@
             } else if (dayClosed) {
                 const dif = tiempoHoy - objetivoDiarioAplica;
                 
-                if (dif >= 0) {
+                if (horasGte(dif, 0)) {
                     colorBarra = 'green'; colorBorde = 'green';
                     estadoFondo = 'finalizado_ok';
                     const difExtraText = TimeUtils.horasATexto(dif);
-                    mensaje = dif === 0 ? 'Perfecto' : `${difExtraText} ${TimeUtils._esCantidadSingular(difExtraText) ? 'extra' : 'extras'}`;
+                    mensaje = horasEq(dif, 0) ? 'Perfecto' : `${difExtraText} ${TimeUtils._esCantidadSingular(difExtraText) ? 'extra' : 'extras'}`;
                 } else {
                     const difText = TimeUtils.horasATexto(Math.abs(dif));
                     const prefijoFalto = TimeUtils._esCantidadSingular(difText) ? 'Faltó' : 'Faltaron';
                     
-                    if (bufferSemanal >= 0) {
+                    if (horasGte(bufferSemanal, 0)) {
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
                         estadoFondoColor = 'gold';
@@ -4137,7 +4129,7 @@
                     const total = r.salida ? TimeUtils.horasATexto(r.total, 'short') : 'Incompleto';
                     const tiempoFuera = r.tiempoFuera ? ` (${r.tiempoFuera} fuera)` : '';
                     const infoAsueto = (r.credito && r.credito !== '00:00') ? ' [SALIDA TEMPRANO]' : '';
-                    const indicador = r.salida ? (r.total >= horasDiariasObjetivo ? '✓ ' : '✗ ') : '  ';
+                    const indicador = r.salida ? (horasGte(r.total, horasDiariasObjetivo) ? '✓ ' : '✗ ') : '  ';
                     linea = `${fecha}  ${dia.padEnd(10)} ${entrada} → ${salida}  [${total}]${tiempoFuera}${infoAsueto} ${indicador}`;
                 }
                 seccion += linea + '\n';
@@ -5565,12 +5557,14 @@ Generado por Sistema Lushibosca
         }
 
         function _calcularDiffGist(registrosNormalizados) {
-            const fechasLocales = new Set(D.registros().map(r => r.fecha));
-            const soloEnGist = registrosNormalizados.filter(r => !fechasLocales.has(r.fecha));
-            const enAmbos = registrosNormalizados.filter(r => fechasLocales.has(r.fecha));
-            const soloLocal = D.registros().filter(r => !registrosNormalizados.some(g => g.fecha === r.fecha));
+            const localesPorFecha = new Map(D.registros().map(r => [r.fecha, r]));
+            const gistPorFecha = new Map(registrosNormalizados.map(r => [r.fecha, r]));
+
+            const soloEnGist = registrosNormalizados.filter(r => !localesPorFecha.has(r.fecha));
+            const enAmbos = registrosNormalizados.filter(r => localesPorFecha.has(r.fecha));
+            const soloLocal = D.registros().filter(r => !gistPorFecha.has(r.fecha));
             const complementarios = enAmbos.filter(imp => {
-                const local = D.registros().find(r => r.fecha === imp.fecha);
+                const local = localesPorFecha.get(imp.fecha);
                 return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
             });
             return { soloEnGist, enAmbos, soloLocal, complementarios };
@@ -6317,7 +6311,7 @@ Generado por Sistema Lushibosca
                     return `dia-especial-${tipo ? tipo.color : 'purple'}`;
                 }
                 if (r.entrada && !r.salida) return 'dia-en-curso';
-                if (!_esFechaHabil(fecha, diasHabilesObj) || r.total >= horasDiariasObj) return 'dia-normal';
+                if (!_esFechaHabil(fecha, diasHabilesObj) || horasGte(r.total, horasDiariasObj)) return 'dia-normal';
                 return _cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
             };
 
@@ -6441,7 +6435,7 @@ Generado por Sistema Lushibosca
             let totalConDiff = totalStr, diffColor = '';
             if (horasDiarias > 0 && _esFechaHabil(reg.fecha, D.diasHabiles())) {
                 const diffText = formatoDiferencia(totalHoras);
-                if (totalHoras >= horasDiarias) {
+                if (horasGte(totalHoras, horasDiarias)) {
                     diffColor = 'var(--c-green)';
                     if (diffText) totalConDiff += ` (${diffText})`;
                 } else if (_cubiertoPorSaldo(reg.fecha)) {
@@ -7432,7 +7426,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260708';
+        const _v = '-v260707';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

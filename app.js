@@ -3882,7 +3882,11 @@
             const selActual = select.value;
             select.innerHTML = '';
             if (!items.length) { select.appendChild(_crearOpcion('', 'Sin registros')); actualizarFn(null); return; }
-            const sel = (selActual && items.includes(selActual)) ? selActual : (items.includes(selDefault) ? selDefault : items[0]);
+            const sel = (selActual && items.includes(selActual))
+                ? selActual
+                : (items.includes(selDefault)
+                    ? selDefault
+                    : (items.find(k => k <= selDefault) || items[items.length - 1]));
             if (agruparFn) {
                 agruparFn(items).forEach((claves, grupo) => {
                     const grp = document.createElement('optgroup');
@@ -7453,7 +7457,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260707';
+        const _v = '-v260708';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

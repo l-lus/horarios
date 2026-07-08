@@ -2126,6 +2126,15 @@
             };
         }
 
+        function _actualizarOffsetsStickyMes() {
+            const header = document.querySelector('.header');
+            const mesHeader = document.querySelector('.registro-mes-header');
+            const root = document.documentElement.style;
+            if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
+            if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
+        }
+        const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
+
         function mostrarError(inputId, errorId) {
             const input = $(inputId);
             const error = $(errorId);
@@ -2500,6 +2509,7 @@
             );
 
             lista.appendChild(fragmento);
+            _actualizarOffsetsStickyMes();
         }
 
         function setProgressBarColor(progressEl, status) {
@@ -6091,6 +6101,9 @@ Generado por Sistema Lushibosca
                 _initListenerToggleMes(lista);
             }
             _initListenersOtros();
+
+            _actualizarOffsetsStickyMes();
+            window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
         }
 
         function actualizarHintGrupo() {

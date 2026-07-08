@@ -442,6 +442,14 @@ button:disabled {
     min-height: 0;
 }
 
+/* Al estar expandida la tarjeta, .detalle-inner ya no debe recortar: si conserva
+   overflow:hidden, el navegador lo sigue tomando como "scroll container" y los
+   headers de mes sticky de #lista-registros dejan de pegarse al scroll real de
+   la página. Mientras colapsa/anima sigue oculto por la regla de arriba. */
+.form-collapsible.expanded>.detalle-inner {
+    overflow: visible;
+}
+
 .form-collapsible>.stats-inner {
     overflow: hidden;
 }
@@ -724,6 +732,10 @@ button:disabled {
 .registro-mes-detalle>.detalle-inner {
     overflow: hidden;
     min-height: 0;
+}
+
+.registro-mes-detalle.expanded>.detalle-inner {
+    overflow: visible;
 }
 
 .registro-mes-detalle.expanded {
@@ -1221,6 +1233,15 @@ button:disabled {
 #form-stats.fade-out {
     opacity: 0;
     transform: translateY(-10px);
+}
+
+/* #lista-registros trae la clase .custom-scroll (overflow-y:auto) para el modo
+   desktop con altura máxima. Fuera de ese breakpoint no debe tener overflow propio:
+   si lo tiene, aunque no llegue a scrollear, el navegador lo toma como el "scroll
+   container" para position:sticky y los headers de mes dejan de pegarse al
+   scroll real de la página. Se reactiva en el media query de escritorio. */
+#lista-registros {
+    overflow: visible;
 }
 
 /* ─── MISC COMPONENTS ────────────────────────────────────────────────────────── */

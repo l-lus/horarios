@@ -18,6 +18,7 @@
         SALDO_DESDE_ENERO: 'saldoAnualDesdeEnero',
         SALDO_DESDE_PRIMERO_MES: 'saldoMensualDesdePrimero',
         IGNORAR_TF: 'ignorarTiempoFuera',
+        IGNORAR_LOGICA_CUBIERTO: 'ignorarLogicaCubierto',
         FONDO_CARD: 'fondoCard',
         PERSISTIR_TARJETAS: 'persistirTarjetas',
         ORDEN_CARDS: 'ordenCards',
@@ -2920,7 +2921,12 @@
             return diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
         }
 
+        function _logicaCubiertoActiva() {
+            return !StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false);
+        }
+
         function _cubiertoPorSaldo(fecha) {
+            if (!_logicaCubiertoActiva()) return false;
             const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
             const lunesDate = TimeUtils.parsearFechaLocal(lunes);
             lunesDate.setDate(lunesDate.getDate() + 6);
@@ -3240,7 +3246,7 @@
                     const difText = TimeUtils.horasATexto(Math.abs(dif));
                     const prefijoFalto = TimeUtils._esCantidadSingular(difText) ? 'Faltó' : 'Faltaron';
                     
-                    if (horasGte(bufferSemanal, 0)) {
+                    if (_logicaCubiertoActiva() && horasGte(bufferSemanal, 0)) {
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
                         estadoFondoColor = 'gold';
@@ -3605,6 +3611,16 @@
                 btnId: 'btn-toggle-saldo-primero-mes',
                 mensajeOn: 'Cálculo de saldo mensual desde el 1° del mes',
                 mensajeOff: 'Cálculo de saldo mensual desde el primer registro del mes',
+                onAfterToggle: () => { actualizarUI(); }
+            });
+
+        const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLogicaCubierto } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v),
+                btnId: 'btn-toggle-logica-cubierto',
+                mensajeOn: 'Lógica de "Cubierto" desactivada',
+                mensajeOff: 'Lógica de "Cubierto" activada',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -5801,6 +5817,7 @@ Generado por Sistema Lushibosca
             UILogic.actualizarEstadoBotonHoverPopup();
             UILogic.actualizarEstadoBotonSaldoDesdeEnero();
             UILogic.actualizarEstadoBotonSaldoDesdePrimeroDiaMes();
+            UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.aplicarVisibilidadCards();
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
@@ -7086,6 +7103,7 @@ Generado por Sistema Lushibosca
             cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
             actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes,
+            toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote, toggleHoverPopupCalendario,
             eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
             iniciarCambioHoras, detenerCambio, mostrarconfig, alternarFechaActual, verificarBloqueoCredito, gistSubir, gistBajar,
@@ -7336,6 +7354,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());
     $('btn-toggle-saldo-primero-mes')?.addEventListener('click', () => UILogic.toggleSaldoDesdePrimeroDiaMes());
+    $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));

@@ -2168,7 +2168,7 @@
         function mostrarToast(mensaje, tipo = 'info', duracion = 3000) {
             const textoLimpio = S.sanitizeString(mensaje, 200);
             const ultimo = _toastQueue[_toastQueue.length - 1];
-            const actual = _toastRunning ? $('toast')?.textContent : null;
+            const actual = _toastRunning ? $('toast-text')?.textContent : null;
             if ((ultimo && ultimo.mensaje === textoLimpio) || actual === textoLimpio) return;
             _toastQueue.push({ mensaje: textoLimpio, tipo, duracionBase: duracion });
             if (!_toastRunning) _procesarToastQueue();
@@ -2183,16 +2183,32 @@
             _toastRunning = true;
             const actual = _toastQueue.shift();
             const toast = $('toast');
+            const toastText = $('toast-text');
+            const timerRect = toast?.querySelector('.toast-timer-rect');
             toast.classList.remove('show');
-            toast.textContent = actual.mensaje;
+            if (toastText) toastText.textContent = actual.mensaje;
             toast.className = `toast ${actual.tipo}`;
             let duracionFinal = actual.duracionBase || 3000;
             if (_toastQueue.length >= 2) {
                 duracionFinal = Math.floor(duracionFinal / 2);
             }
 
+            if (timerRect) {
+                // Reinicio instantáneo del borde (sin animación) antes de volver a mostrar el toast
+                timerRect.classList.remove('animar');
+                timerRect.style.transitionDuration = '0s';
+                timerRect.style.strokeDashoffset = '100';
+            }
+
             setTimeout(() => {
                 toast.classList.add('show');
+                if (timerRect) {
+                    // Forzar reflow para que el reinicio se aplique antes de iniciar la animación
+                    void timerRect.getBoundingClientRect();
+                    timerRect.style.transitionDuration = `${duracionFinal}ms`;
+                    timerRect.classList.add('animar');
+                    timerRect.style.strokeDashoffset = '0';
+                }
                 toastTimeout = setTimeout(() => {
                     toast.classList.remove('show');
                     toastTimeout = null;
@@ -7456,7 +7472,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260709';
+        const _v = '-v260708';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

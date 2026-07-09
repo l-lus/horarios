@@ -747,20 +747,26 @@ button:disabled {
 
 .registro-total.green-text,
 .calendario-dia.dia-normal,
-.toast.success,
 .cal-popup-badge--green,
 .progress-fill.green {
     background: var(--c-green);
 }
 
+.toast.success {
+    --toast-accent: var(--c-green);
+}
+
 .registro-total.red-text,
-.toast.error,
-.toast.warning,
 .calendario-dia.dia-incompleto,
 .calendario-dia.dia-especial-red,
 .progress-fill.red,
 .cal-popup-badge--red {
     background: var(--c-red);
+}
+
+.toast.error,
+.toast.warning {
+    --toast-accent: var(--c-red);
 }
 
 .registro-total.purple-text,
@@ -789,10 +795,13 @@ button:disabled {
 .calendario-dia.dia-especial-blue,
 .registro-total.blue-text,
 .calendario-dia.dia-en-curso,
-.toast.info,
 .cal-popup-badge--blue,
 .progress-fill.blue {
     background: var(--c-blue);
+}
+
+.toast.info {
+    --toast-accent: var(--c-blue);
 }
 
 /* ─── MODAL ──────────────────────────────────────────────────────────────────── */
@@ -897,8 +906,8 @@ button:disabled {
     justify-content: center;
     transform: translateX(-50%) translateY(80px);
     transition: var(--transition-anim);
-    background: var(--bg-toast);
-    color: white;
+    background: var(--bg-card);
+    color: var(--text-main);
     padding: 1rem 1.5rem;
     border-radius: var(--radius);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
@@ -913,6 +922,32 @@ button:disabled {
     width: calc(100% - 4rem);
     max-width: 400px;
     text-align: center;
+    overflow: hidden;
+}
+
+.toast-timer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.toast-timer-rect {
+    fill: none;
+    stroke: var(--toast-accent, var(--c-blue));
+    stroke-width: 5px;
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: 100;
+}
+
+.toast-timer-rect.animar {
+    transition-property: stroke-dashoffset;
+    transition-timing-function: linear;
+}
+
+.toast-text {
+    position: relative;
 }
 
 .toast.show {

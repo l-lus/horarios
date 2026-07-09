@@ -29,6 +29,7 @@
         PERFILES: 'perfiles',
         HISTORY: 'history',
         GIST_TOKEN: 'gistToken',
+        BIENVENIDA_VISTA: 'bienvenidaVista',
 
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
@@ -717,6 +718,7 @@
                 const elLabelCancel = document.getElementById('modal-confirmar-label-cancel');
                 const elTitulo = document.getElementById('modal-confirmar-titulo');
                 const elIcono = document.querySelector('#modal-confirmar-ok svg use');
+                const elIconoCancel = document.querySelector('#modal-confirmar-cancel svg use');
                 const btnOk = document.getElementById('modal-confirmar-ok');
                 const btnCancel = document.getElementById('modal-confirmar-cancel');
                 if (!elTexto || !btnOk || !btnCancel) { resolve(false); return; }
@@ -726,6 +728,7 @@
                 if (elLabelCancel) elLabelCancel.textContent = opciones.labelCancel || 'Cancelar';
                 if (elTitulo) elTitulo.textContent = opciones.titulo || 'Atención';
                 if (elIcono) elIcono.setAttribute('href', icono);
+                if (elIconoCancel) elIconoCancel.setAttribute('href', opciones.iconoCancel || '#icon-cancelar');
 
                 const modalPadre = document.querySelector('.modal.show');
                 const modalPadreId = modalPadre ? modalPadre.id : null;
@@ -1550,7 +1553,7 @@
 
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS];
+            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA];
             keys.forEach(k => StorageHelper.removeItem(k, true));
 
             if (window.PerfilManager) {
@@ -7144,6 +7147,40 @@ Generado por Sistema Lushibosca
     })(SecurityAndUtils, DataManagement, GistSync);
 
     // ====================================================================
+    // BIENVENIDA MODULE — primera vez / después de un restablecimiento
+    // ====================================================================
+    const BienvenidaModal = (function () {
+        'use strict';
+
+        async function chequearYMostrar() {
+            const yaVista = StorageHelper.getBoolean(STORAGE_KEYS.BIENVENIDA_VISTA, false, true);
+            if (yaVista) return;
+            
+            if (DataManagement.registros().length > 0) {
+                StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
+                return;
+            }
+
+            await new Promise(r => setTimeout(r, 1000));
+
+            const importar = await ModalManager.confirmar(
+                'No se encontraron registros, si tenes un respaldo local de los datos podes restaurarlos desde aca.',
+                'Restaurar',
+                '#icon-upload',
+                { titulo: '¡Bienvenido a Horarios!', labelCancel: 'Continuar', iconoCancel: '#icon-arrow-right' }
+            );
+
+            StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
+
+            if (importar) {
+                window.UILogic?.mostrarImportar(true);
+            }
+        }
+
+        return { chequearYMostrar };
+    })();
+
+    // ====================================================================
     // FERIADOS MODULE
     // ====================================================================
     const FeriadosAR = (function () {
@@ -7299,7 +7336,10 @@ Generado por Sistema Lushibosca
 
     UILogic.init();
 
-    setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
+    (async () => {
+        await BienvenidaModal.chequearYMostrar();
+        setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
+    })();
 })();
 
 if ('serviceWorker' in navigator) {

@@ -23,6 +23,9 @@
     --c-orange: rgba(210, 120, 50, 0.8);
     --c-gray-btn: #f0f2f8;
     --c-white: #ffffff;
+    --toast-green: #2fe08a;
+    --toast-red: #ff5c52;
+    --toast-blue: #4da6ff;
     --shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
     --radius: 20px;
     --hover: brightness(0.9);
@@ -753,7 +756,7 @@ button:disabled {
 }
 
 .toast.success {
-    --toast-accent: var(--c-green);
+    --toast-accent: var(--toast-green);
 }
 
 .registro-total.red-text,
@@ -766,7 +769,7 @@ button:disabled {
 
 .toast.error,
 .toast.warning {
-    --toast-accent: var(--c-red);
+    --toast-accent: var(--toast-red);
 }
 
 .registro-total.purple-text,
@@ -801,7 +804,7 @@ button:disabled {
 }
 
 .toast.info {
-    --toast-accent: var(--c-blue);
+    --toast-accent: var(--toast-blue);
 }
 
 /* ─── MODAL ──────────────────────────────────────────────────────────────────── */
@@ -931,14 +934,16 @@ button:disabled {
     width: 100%;
     height: 100%;
     pointer-events: none;
+    overflow: visible;
 }
 
 .toast-timer-rect {
     fill: none;
-    stroke: var(--toast-accent, var(--c-blue));
+    stroke: var(--toast-accent, var(--toast-blue));
     stroke-width: 5px;
     stroke-dasharray: 100 100;
     stroke-dashoffset: 100;
+    filter: drop-shadow(0 0 3px var(--toast-accent)) drop-shadow(0 0 7px var(--toast-accent));
 }
 
 .toast-timer-rect.animar {

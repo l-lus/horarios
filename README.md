@@ -6,6 +6,10 @@
 ### VERSION:
 
 ### 260708
+* **Cambios:** Se cambia el diseño del toast
+* **Mejora:** Se agrega opcion para desactivar la logica de cubierto por saldo
+
+### 260708
 * **Mantenimiento:** Refactores varios
 
 ### 260707

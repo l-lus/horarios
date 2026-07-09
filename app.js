@@ -3600,8 +3600,8 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
                 btnId: 'btn-toggle-hover-popup',
-                mensajeOn: 'Popup activado',
-                mensajeOff: 'Popup desactivado',
+                mensajeOn: 'Se muestra popup automatico en calendario',
+                mensajeOff: 'No se muestra popup automatico en calendario',
             });
 
         const { toggle: toggleSaldoDesdeEnero, actualizarEstado: actualizarEstadoBotonSaldoDesdeEnero } =
@@ -3629,8 +3629,8 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v),
                 btnId: 'btn-toggle-logica-cubierto',
-                mensajeOn: 'Lógica de "Cubierto" desactivada',
-                mensajeOff: 'Lógica de "Cubierto" activada',
+                mensajeOn: 'Lógica de cubierto por saldo en los registros desactivada',
+                mensajeOff: 'Lógica de cubierto por saldo en los registros activada',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -3639,8 +3639,8 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
                 btnId: 'btn-toggle-persistir-tarjetas',
-                mensajeOn: 'Estado guardado',
-                mensajeOff: 'Tarjetas no se recuerdan al iniciar',
+                mensajeOn: 'Se recuerda el estado de las tarjetas',
+                mensajeOff: 'No se recuerda el estado de las tarjetas',
             });
 
         function toggleVisibilidadCard(cual) {

@@ -3590,14 +3590,14 @@
                 getVal: () => D.getIgnorarTiempoFuera(),
                 setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
                 btnId: 'btn-toggle-ignorar-tf',
-                mensajeOn: 'Tiempo fuera ignorado',
-                mensajeOff: 'Tiempo fuera incluido',
+                mensajeOn: 'No se descuenta el tiempo fuera en los registros',
+                mensajeOff: 'Se descuenta el tiempo fuera en los registros',
                 onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
             });
 
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
             _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, true),
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
                 btnId: 'btn-toggle-hover-popup',
                 mensajeOn: 'Popup activado',
@@ -6690,8 +6690,7 @@ Generado por Sistema Lushibosca
             if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
             if (!window.matchMedia('(hover: hover)').matches) return;
             const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
-            const esHover = window.matchMedia('(hover: hover)').matches;
-            if (stored === null ? !esHover : stored !== 'true') return;
+            if (stored !== 'true') return;
             if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
             if (_popupCalendarioEl && !_popupCalendarioEsHover) return;
             clearTimeout(_popupCalendarioHoverTimer);
@@ -6704,7 +6703,7 @@ Generado por Sistema Lushibosca
         function _onclickCalendarioDia(event, registroId) {
             const esDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
             const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
-            const hoverActivo = esDesktop && (stored === null ? true : stored === 'true');
+            const hoverActivo = esDesktop && stored === 'true';
 
             if (hoverActivo) {
                 if (_popupCalendarioEl) {
@@ -7457,7 +7456,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260708';
+        const _v = '-v260709';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

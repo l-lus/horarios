@@ -8,8 +8,13 @@
     --text-main: #1f1f1f;
     --text-muted: #444746;
     --text-disabled: #444746a2;
+    /* Escala tipográfica: 6 tamaños estándar para toda la app */
+    --text-xs: 0.75rem;
     --text-sm: 0.875rem;
-    --text-xs: 0.8rem;
+    --text-base: 1rem;
+    --text-md: 1.125rem;
+    --text-lg: 1.25rem;
+    --text-xl: 1.8rem;
     --border: #dde3ea;
     --input-bg: #f0f2f8;
     --input-focus: #dde3ea;
@@ -108,7 +113,7 @@ body {
 }
 
 .header h1 {
-    font-size: 1.25rem;
+    font-size: var(--text-lg);
     color: var(--text-main);
     display: flex;
     align-items: center;
@@ -147,7 +152,7 @@ body {
 
 .card h2,
 .modal h3 {
-    font-size: 1rem;
+    font-size: var(--text-base);
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
@@ -259,7 +264,7 @@ select {
     padding: 0.75rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    font-size: 1rem;
+    font-size: var(--text-base);
     background: var(--input-bg);
     color: var(--text-main);
     height: var(--input-height);
@@ -304,7 +309,7 @@ input.error {
 .input-number-display {
     flex: 1;
     text-align: center;
-    font-size: 1rem;
+    font-size: var(--text-base);
     font-weight: 600;
     color: var(--text-main);
 }
@@ -317,7 +322,7 @@ button {
     border: 1px solid transparent;
     border-radius: var(--radius);
     font-weight: 600;
-    font-size: 1rem;
+    font-size: var(--text-base);
     cursor: pointer;
     transition: transform 0.2s, background var(--transition-ui), color var(--transition-ui);
     display: flex;
@@ -470,7 +475,7 @@ button:disabled {
 
 
 #gist-merge-resumen {
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     color: var(--text-muted);
     line-height: 1.8;
 }
@@ -596,7 +601,7 @@ button:disabled {
 }
 
 .stats-number {
-    font-size: 1.8rem;
+    font-size: var(--text-xl);
     font-weight: bold;
     margin: 0.5rem 0;
 }
@@ -679,7 +684,7 @@ button:disabled {
     right: 8px;
     border: 2px solid var(--text-main);
     color: var(--text-main);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 700;
     padding: 0.1rem 1rem;
     border-radius: var(--radius);
@@ -698,7 +703,7 @@ button:disabled {
 }
 
 .registro-total {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     margin-top: 0.25rem;
     color: var(--c-white);
@@ -714,7 +719,7 @@ button:disabled {
 
 .registro-mes-header {
     color: var(--text-muted);
-    font-size: 18px;
+    font-size: var(--text-md);
     transition: color 0.2s;
     cursor: pointer;
     display: flex;
@@ -895,7 +900,7 @@ button:disabled {
 
 #modal-confirmar-texto {
     color: var(--text-muted);
-    font-size: 0.95rem;
+    font-size: var(--text-base);
     line-height: 1.6;
     margin: 0.5rem 0;
 }
@@ -958,7 +963,7 @@ button:disabled {
     cursor: pointer;
     transition: transform 0.2s, background 0.2s, border-color 0.2s;
     height: 50px;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
 }
 
 .btn-mes-calendario.activo {
@@ -969,7 +974,7 @@ button:disabled {
 
 .selector-meses-anio-header {
     grid-column: 1 / -1;
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 700;
     color: var(--text-muted);
     text-transform: uppercase;
@@ -992,7 +997,7 @@ button:disabled {
     font-weight: 600;
     color: var(--text-main);
     padding: 4px 0;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
 }
 
 .calendario-dia {
@@ -1001,7 +1006,7 @@ button:disabled {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     cursor: default;
     position: relative;
@@ -1029,7 +1034,7 @@ button:disabled {
 }
 
 .calendario-titulo {
-    font-size: 1rem;
+    font-size: var(--text-base);
     font-weight: 600;
     color: var(--text-main);
     text-transform: capitalize;
@@ -1057,7 +1062,7 @@ button:disabled {
     height: var(--touch-target);
     padding: 4px;
     padding-left: 1rem;
-    font-size: 1rem;
+    font-size: var(--text-base);
     font-weight: 600;
     color: var(--text-main);
     text-transform: capitalize;
@@ -1107,7 +1112,7 @@ button:disabled {
 }
 
 .cal-popup-info {
-    font-size: 1rem;
+    font-size: var(--text-base);
     font-weight: 700;
     color: var(--text-main);
 }
@@ -1119,7 +1124,7 @@ button:disabled {
 
 .cal-popup-badge {
     display: inline-block;
-    font-size: 0.78rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     color: var(--c-white);
     border-radius: var(--radius);
@@ -1131,7 +1136,7 @@ button:disabled {
     margin-top: 0.2rem;
     padding: 0.5rem 0.75rem;
     background: var(--c-gray-btn);
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
 }
 
 .cal-popup-info--blue {
@@ -1150,7 +1155,7 @@ button:disabled {
     gap: 0.45rem;
     margin-top: 0.1rem;
     padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     border-radius: var(--radius);
     width: 100%;
@@ -1293,7 +1298,7 @@ button:disabled {
 .toggle-hint,
 .config-hint-text,
 .version-text {
-    font-size: var(--text-xs);
+    font-size: var(--text-base);
     color: var(--text-muted);
     text-align: right;
     display: block;
@@ -1309,7 +1314,7 @@ button:disabled {
 .empty-state__btn-restaurar {
     width: auto;
     margin: 1rem auto 0;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
 }
 
 .empty-state--calendario {
@@ -1421,7 +1426,7 @@ button:disabled {
 }
 
 .btn-perfil-nombre {
-    font-size: 1rem;
+    font-size: var(--text-base);
     font-weight: 600;
 }
 
@@ -1449,7 +1454,7 @@ button:disabled {
 .btn-perfil-edit .icon {
     width: 1em;
     height: 1em;
-    font-size: 18px;
+    font-size: var(--text-md);
 }
 
 /* ─── WEEK SELECTOR ──────────────────────────────────────────────────────────── */
@@ -1485,7 +1490,7 @@ button:disabled {
     height: 38px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--text-muted);
     transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
@@ -1517,7 +1522,7 @@ button:disabled {
 }
 
 #stats-buffer {
-    font-size: 0.85rem;
+    font-size: var(--text-base);
     margin-top: 0.5rem;
     min-height: 1.2rem;
 }
@@ -1772,7 +1777,7 @@ button.campo-flash {
     }
 
     .calendario-dia {
-        font-size: 1rem;
+        font-size: var(--text-base);
     }
 
     .left-column {

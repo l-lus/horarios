@@ -5935,6 +5935,22 @@ Generado por Sistema Lushibosca
             });
         }
 
+        function _initListenerUndoRedo() {
+            document.addEventListener('keydown', (e) => {
+                if (!(e.ctrlKey || e.metaKey)) return;
+                const tag = e.target.tagName;
+                const esCampoEditable = tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable;
+                if (esCampoEditable) return;
+                if (e.key === 'z' || e.key === 'Z') {
+                    e.preventDefault();
+                    document.getElementById('btn-undo')?.click();
+                } else if (e.key === 'y' || e.key === 'Y') {
+                    e.preventDefault();
+                    document.getElementById('btn-redo')?.click();
+                }
+            });
+        }
+
         function _initListenerAccionesLista(lista) {
             lista.addEventListener('click', (e) => {
                 const target = e.target.closest('[data-accion]');
@@ -6102,6 +6118,7 @@ Generado por Sistema Lushibosca
             setInterval(() => actualizarUI(null, true), 20000);
 
             _initListenerEscape();
+            _initListenerUndoRedo();
             const lista = document.getElementById('lista-registros');
             if (lista) {
                 _initListenerAccionesLista(lista);

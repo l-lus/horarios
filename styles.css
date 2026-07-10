@@ -726,7 +726,6 @@ button:disabled {
     top: var(--sticky-mes-top);
     z-index: 5;
     background: var(--bg-card);
-    box-shadow: 0 2px 4px -2px rgba(0, 0, 0, 0.15);
 }
 
 /* Header de mes anidado dentro de un año colapsable: se apila debajo del header del año */

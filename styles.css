@@ -442,10 +442,6 @@ button:disabled {
     min-height: 0;
 }
 
-/* Al estar expandida la tarjeta, .detalle-inner ya no debe recortar: si conserva
-   overflow:hidden, el navegador lo sigue tomando como "scroll container" y los
-   headers de mes sticky de #lista-registros dejan de pegarse al scroll real de
-   la página. Mientras colapsa/anima sigue oculto por la regla de arriba. */
 .form-collapsible.expanded>.detalle-inner {
     overflow: visible;
 }
@@ -497,9 +493,6 @@ button:disabled {
     margin-bottom: -0.5rem;
 }
 
-/* Botones de ajustes: icono + texto pegados a la izquierda, con un indicador
-   (chevron para los que abren modal, dot para los toggles on/off) pegado a
-   la derecha. Excluye header/footer y horas objetivo / días laborales. */
 #modal-config .config-actions button,
 #modal-config #lista-orden-cards button {
     justify-content: flex-start;
@@ -562,10 +555,6 @@ button:disabled {
     flex: 1;
 }
 
-/* El hint siempre queda pegado abajo de la tarjeta, sin importar si
-   #stats-mensaje / #stats-buffer están visibles u ocultos (día no hábil,
-   objetivo en 0, etc.). Antes, al ocultarse esos elementos, el flujo normal
-   del documento hacía que el hint "subiera" dentro de la tarjeta. */
 #toggle-hint {
     margin-top: auto;
 }
@@ -1259,11 +1248,6 @@ button:disabled {
     transform: translateY(-10px);
 }
 
-/* #lista-registros trae la clase .custom-scroll (overflow-y:auto) para el modo
-   desktop con altura máxima. Fuera de ese breakpoint no debe tener overflow propio:
-   si lo tiene, aunque no llegue a scrollear, el navegador lo toma como el "scroll
-   container" para position:sticky y los headers de mes dejan de pegarse al
-   scroll real de la página. Se reactiva en el media query de escritorio. */
 #lista-registros {
     overflow: visible;
 }

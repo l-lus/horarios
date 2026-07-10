@@ -1072,7 +1072,7 @@
             const btnGuardar = $('modal-editar-grupo').querySelector('.btn-edit');
             btnGuardar.disabled = true;
             try {
-                const nuevoTipo  = S.sanitizeString($('edit-grupo-tipo').value.trim(), 20);
+                const nuevoTipo = S.sanitizeString($('edit-grupo-tipo').value.trim(), 20);
                 const nuevaDesde = S.sanitizeString($('edit-grupo-desde').value.trim(), 10);
                 const nuevaHasta = S.sanitizeString($('edit-grupo-hasta').value.trim(), 10);
 
@@ -1084,9 +1084,9 @@
                 }
 
                 const fechasNuevas = TimeUtils.generarRangoFechas(nuevaDesde, nuevaHasta);
-                const idsDelGrupo  = new Set(grupoEnEdicion.registros.map(r => r.id));
-                const fechasSet    = new Set(fechasNuevas);
-                const conflictos   = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
+                const idsDelGrupo = new Set(grupoEnEdicion.registros.map(r => r.id));
+                const fechasSet = new Set(fechasNuevas);
+                const conflictos = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
                 if (conflictos.length > 0) {
                     const dias = conflictos.map(r => r.fecha.substring(8, 10)).sort((a, b) => a - b).join(', ');
                     UILogic.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
@@ -1279,8 +1279,10 @@
             }
             const nuevoId = S.generarIDSeguro();
             const t = calcularHoras(e || null, s || null, null);
-            registros.push({ id: nuevoId, fecha: f, entrada: e || null, salida: s || null, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0 });
+            registros.push({
+                id: nuevoId, fecha: f, entrada: e || null, salida: s || null, tiempoFuera: null,
+                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0
+            });
             ordenarRegistros();
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar(nuevoId);
@@ -1494,10 +1496,10 @@
             const btnGuardar = $('modal-editar').querySelector('.btn-edit');
             btnGuardar.disabled = true;
 
-            const f  = S.sanitizeString($('edit-fecha').value, 10);
-            const e  = S.sanitizeString($('edit-entrada').value.trim(), 5);
-            const s  = S.sanitizeString($('edit-salida').value.trim(), 5);
-            let tf   = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5) || null;
+            const f = S.sanitizeString($('edit-fecha').value, 10);
+            const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
+            const s = S.sanitizeString($('edit-salida').value.trim(), 5);
+            let tf = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5) || null;
             let notas = S.sanitizeString($('edit-notas').value.trim(), S.SECURITY_LIMITS.MAX_NOTAS_LENGTH);
             if (notas) notas = S.sanitizeNotas(notas, true) || null;
             if (notas === '') notas = null;
@@ -2664,7 +2666,7 @@
 
             const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
             const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
-            const promedioSalida  = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
+            const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
 
             const remotos = conteosPorTipo['remotos'] || 0;
             const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
@@ -2684,11 +2686,11 @@
 
             return {
                 entradaPromedio: TimeUtils.minutosAHora(promedioEntrada),
-                salidaPromedio:  TimeUtils.minutosAHora(promedioSalida),
-                diasTrabajados:  registrosValidos.length,
-                promedioDiario:  `${hPromedio}h ${mPromedio}m`,
+                salidaPromedio: TimeUtils.minutosAHora(promedioSalida),
+                diasTrabajados: registrosValidos.length,
+                promedioDiario: `${hPromedio}h ${mPromedio}m`,
                 tiempoFueraTotal: hTiempoFuera > 0 ? `${hTiempoFuera}h ${mTiempoFuera}m` : `${mTiempoFuera}m`,
-                tiempoTotal:     `${hTotal}h ${mTotal}m`,
+                tiempoTotal: `${hTotal}h ${mTotal}m`,
                 ...conteosPorTipo, compensaciones,
                 regularidadEntrada: regEntrada,
                 regularidadJornada: regJornada,
@@ -3092,7 +3094,7 @@
                 mostrarMensaje = true;
             } else if (semanaAbierta) {
                 colorBarra = 'blue'; colorBorde = 'blue';
-                estadoFondo = 'en_curso';                
+                estadoFondo = 'en_curso';
                 const diffText = TimeUtils.horasATexto(objetivoSemana - tot);
                 const prefijoFalta = TimeUtils._esCantidadSingular(diffText) ? 'Falta' : 'Faltan';
                 mensaje = objetivoSemana === 0
@@ -3101,7 +3103,7 @@
                 mostrarMensaje = true;
             } else {
                 colorBarra = 'red'; colorBorde = 'red';
-                estadoFondo = 'finalizado_fail';                
+                estadoFondo = 'finalizado_fail';
                 const diffText = TimeUtils.horasATexto(objetivoSemana - tot);
                 const prefijoFalto = TimeUtils._esCantidadSingular(diffText) ? 'Faltó' : 'Faltaron';
                 mensaje = `${prefijoFalto} ${diffText}`;
@@ -3171,7 +3173,7 @@
             const textoHoras = TimeUtils.horasATexto(faltante);
             const prefijo = TimeUtils._esCantidadSingular(textoHoras) ? 'Falta' : 'Faltan';
             const faltanteTexto = `${prefijo} ${textoHoras}`;
-            
+
             return bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
         }
 
@@ -3249,7 +3251,7 @@
                 mensaje = ''; mostrarMensaje = false;
             } else if (dayClosed) {
                 const dif = tiempoHoy - objetivoDiarioAplica;
-                
+
                 if (horasGte(dif, 0)) {
                     colorBarra = 'green'; colorBorde = 'green';
                     estadoFondo = 'finalizado_ok';
@@ -3258,7 +3260,7 @@
                 } else {
                     const difText = TimeUtils.horasATexto(Math.abs(dif));
                     const prefijoFalto = TimeUtils._esCantidadSingular(difText) ? 'Faltó' : 'Faltaron';
-                    
+
                     if (_logicaCubiertoActiva() && horasGte(bufferSemanal, 0)) {
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
@@ -3797,8 +3799,8 @@
             }, opts);
 
             bindStart('touchstart', e => e.touches[0].clientY, { passive: true });
-            bindStart('mousedown',  e => e.clientY);
-            bindMove(lista,    'touchmove', e => e.touches[0].clientY, { passive: false });
+            bindStart('mousedown', e => e.clientY);
+            bindMove(lista, 'touchmove', e => e.touches[0].clientY, { passive: false });
             bindMove(document, 'mousemove', e => e.clientY);
             lista.addEventListener('touchend', endDrag);
             lista.addEventListener('touchcancel', endDrag);
@@ -4572,7 +4574,7 @@ Generado por Sistema Lushibosca
             } else {
                 const hoy = new Date();
                 const anioActual = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
-                const mesActual  = _calendarioMes ? _calendarioMes.mes  : hoy.getMonth();
+                const mesActual = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
 
                 _agruparMesesPorAnio(mesesOrdenados).forEach((meses, anioStr) => {
                     const separador = Object.assign(document.createElement('div'), {
@@ -4919,7 +4921,7 @@ Generado por Sistema Lushibosca
             }
 
             if (!desde && hasta) { mostrarToast('Completa ambos campos', 'info'); return; }
-            if (desde > hasta)   { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); return; }
+            if (desde > hasta) { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); return; }
 
             if (tipo !== 'normal' && !TiposRegistro.obtenerCodigosPorTipo(tipo)) {
                 mostrarToast('Tipo de registro inválido', 'error'); return;
@@ -4927,7 +4929,7 @@ Generado por Sistema Lushibosca
 
             try {
                 if (tipo === 'normal') await DataManagement.borrarPeriodoDirecto(desde, hasta);
-                else                   await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
+                else await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
                 aplicarFeedbackCampos([
                     { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
@@ -5007,16 +5009,16 @@ Generado por Sistema Lushibosca
         }
 
         function actualizarBotonLote() {
-            const tipo    = document.getElementById('lote-tipo').value;
-            const desde   = document.getElementById('lote-fecha-desde').value;
-            const hasta   = document.getElementById('lote-fecha-hasta').value;
-            const btn     = document.getElementById('btn-agregar');
+            const tipo = document.getElementById('lote-tipo').value;
+            const desde = document.getElementById('lote-fecha-desde').value;
+            const hasta = document.getElementById('lote-fecha-hasta').value;
+            const btn = document.getElementById('btn-agregar');
             const btnTexto = document.getElementById('btn-registrar-texto');
             btn.style.background = '';
             btn.style.color = '';
 
             if (!desde && !hasta) { btnTexto.textContent = 'Fichar'; setIconoBtn(btn, '#icon-save'); return; }
-            if (!desde && hasta)  { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
+            if (!desde && hasta) { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
 
             if (desde && !hasta) {
                 if (tipo === 'normal') { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
@@ -5028,13 +5030,13 @@ Generado por Sistema Lushibosca
             }
 
             if (!TimeUtils.validarFecha(desde)) { _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida'); return; }
-            if (!TimeUtils.validarFecha(hasta))  { _setBtnError(btn, btnTexto, 'Fecha Final Inválida'); return; }
-            if (desde > hasta)                   { _setBtnError(btn, btnTexto, 'Rango Inválido'); return; }
+            if (!TimeUtils.validarFecha(hasta)) { _setBtnError(btn, btnTexto, 'Fecha Final Inválida'); return; }
+            if (desde > hasta) { _setBtnError(btn, btnTexto, 'Rango Inválido'); return; }
 
             const diasTotales = Math.ceil(Math.abs(TimeUtils.parsearFechaLocal(hasta) - TimeUtils.parsearFechaLocal(desde)) / 864e5) + 1;
 
             if (tipo === 'normal') _actualizarBtnNormal(btn, btnTexto, desde, hasta);
-            else                   _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales);
+            else _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales);
         }
 
         function toggleCredito() {
@@ -5145,7 +5147,7 @@ Generado por Sistema Lushibosca
             if (registrosFiltrados.length === 0) { mostrarToast('No hay registros en ese rango', 'warning'); return; }
 
             const fechaLocal = TimeUtils.fechaLocalISOFull();
-            const fechaHoy   = fechaLocal.substring(0, 10);
+            const fechaHoy = fechaLocal.substring(0, 10);
 
             const data = {
                 registros: registrosFiltrados,
@@ -5802,13 +5804,13 @@ Generado por Sistema Lushibosca
                     handler(el);
                 });
             };
-            bindEnter('entrada',                    ()   => document.getElementById('salida')?.focus());
-            bindEnter('salida',                     (el) => { el.blur(); const b = document.getElementById('btn-agregar'); if (b && !b.disabled) b.click(); });
-            bindEnter('edit-entrada',               ()   => document.getElementById('edit-salida')?.focus());
-            bindEnter('edit-salida',                ()   => document.getElementById('edit-tiempo-fuera')?.focus());
-            bindEnter('edit-tiempo-fuera',          (el) => { el.blur(); const b = document.querySelector('#modal-editar .btn-edit'); if (b && !b.disabled) b.click(); });
-            bindEnter('nombre-nuevo-perfil-selector',(el) => { el.blur(); UILogic.crearPerfilDesdeSelector(); });
-            bindEnter('nombre-perfil-editar',       (el) => { el.blur(); const b = document.querySelector('#modal-editar-perfil .btn-edit'); if (b && !b.disabled) b.click(); });
+            bindEnter('entrada', () => document.getElementById('salida')?.focus());
+            bindEnter('salida', (el) => { el.blur(); const b = document.getElementById('btn-agregar'); if (b && !b.disabled) b.click(); });
+            bindEnter('edit-entrada', () => document.getElementById('edit-salida')?.focus());
+            bindEnter('edit-salida', () => document.getElementById('edit-tiempo-fuera')?.focus());
+            bindEnter('edit-tiempo-fuera', (el) => { el.blur(); const b = document.querySelector('#modal-editar .btn-edit'); if (b && !b.disabled) b.click(); });
+            bindEnter('nombre-nuevo-perfil-selector', (el) => { el.blur(); UILogic.crearPerfilDesdeSelector(); });
+            bindEnter('nombre-perfil-editar', (el) => { el.blur(); const b = document.querySelector('#modal-editar-perfil .btn-edit'); if (b && !b.disabled) b.click(); });
         }
 
         function _initSwipesYStats() {
@@ -6219,10 +6221,10 @@ Generado por Sistema Lushibosca
         function _activarVistaCalendarioHistorico() {
             if (!_vistaHistoricoCalendario) return;
             const lista = document.getElementById('lista-registros');
-            const cal   = document.getElementById('vista-calendario-historico');
+            const cal = document.getElementById('vista-calendario-historico');
             const btnFiltro = document.getElementById('btn-filtro');
             if (lista) lista.classList.add('hidden');
-            if (cal)   cal.classList.remove('hidden');
+            if (cal) cal.classList.remove('hidden');
             if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
             _renderizarCalendario();
         }
@@ -6230,11 +6232,11 @@ Generado por Sistema Lushibosca
         function toggleHistorico() {
             cancelarTimerAutoCierreBotones();
             const contenido = $('contenido-historico');
-            const botones   = $('botones-historico');
-            const icon      = $('icon-indicator-historico');
+            const botones = $('botones-historico');
+            const icon = $('icon-indicator-historico');
             if (!contenido) return;
 
-            const expandido  = contenido.classList.contains('expanded');
+            const expandido = contenido.classList.contains('expanded');
             const conBotones = botones.classList.contains('expanded');
 
             try {
@@ -7137,9 +7139,9 @@ Generado por Sistema Lushibosca
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             navegarCalendario, obtenerNombrePerfilSafe, descargarJSON, actualizarEstadoBotonesGist, actualizarBotonesHistorico,
-            abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,             
+            abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
             toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite, detenerCambioLimite,
-            _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover, 
+            _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
             _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
         };
 
@@ -7154,7 +7156,7 @@ Generado por Sistema Lushibosca
         async function chequearYMostrar() {
             const yaVista = StorageHelper.getBoolean(STORAGE_KEYS.BIENVENIDA_VISTA, false, true);
             if (yaVista) return;
-            
+
             if (DataManagement.registros().length > 0) {
                 StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
                 return;
@@ -7285,7 +7287,7 @@ Generado por Sistema Lushibosca
         function _describirFechasGrupo(grupo) {
             const nd = f => TimeUtils.obtenerNombreDia(f);
             if (grupo.length === 1) return `${_etiquetaFecha(grupo[0].fecha)}, ${nd(grupo[0].fecha)} (${grupo[0].fecha})`;
-            if (_esRangoContinuo(grupo)) return `del ${nd(grupo[0].fecha)} (${grupo[0].fecha}) al ${nd(grupo[grupo.length-1].fecha)} (${grupo[grupo.length-1].fecha})`;
+            if (_esRangoContinuo(grupo)) return `del ${nd(grupo[0].fecha)} (${grupo[0].fecha}) al ${nd(grupo[grupo.length - 1].fecha)} (${grupo[grupo.length - 1].fecha})`;
             return grupo.map(f => `${nd(f.fecha)} (${f.fecha})`).join(', ');
         }
 
@@ -7494,7 +7496,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 
     (function _bindLayoutConsistency() {
-        const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
+        const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
         const _v = '-v260709';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');

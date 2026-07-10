@@ -5,6 +5,9 @@
 
 ### VERSION:
 
+### 260709
+* **Nuevo:** Se agrega confirm de bienvenida para importacion de datos, en caso que la app se restablezca o no haya datos la primera vez que se abre
+
 ### 260708
 * **Mejora:** Se agrega opcion para desactivar la logica de cubierto por saldo
 * **Cambios:** Cambios de etiqueta e iconos en varios toast y opciones

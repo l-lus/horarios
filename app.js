@@ -3473,6 +3473,101 @@
             setTimeout(() => { fn(); el.classList.remove('fade-out'); }, DUR_ANIM());
         }
 
+        // ── Motor genérico de slide horizontal ──────────────────────────────────
+        // Reutilizado por la navegación del calendario y el selector de período de
+        // estadísticas: clona el estado viejo, deja que renderFn actualice el
+        // elemento real "fuera de escena", clona el estado nuevo, y desliza ambos
+        // clones dentro de un wrapper de altura fija (medida con
+        // getBoundingClientRect para no arrastrar el redondeo a entero de
+        // offsetWidth/offsetHeight), así ningún elemento de alrededor salta.
+        let _slideAnimTimeout = null;
+        let _slideAnimState = null;
+
+        function _easingSlide() {
+            return 'transform ' + DUR_CALENDARIO() + 'ms cubic-bezier(0.4, 0, 0.2, 1)';
+        }
+
+        function _finalizarSlideContenidoPendiente() {
+            if (_slideAnimTimeout) {
+                clearTimeout(_slideAnimTimeout);
+                _slideAnimTimeout = null;
+            }
+            if (_slideAnimState) {
+                const { wrapper, el } = _slideAnimState;
+                el.style.cssText = '';
+                wrapper.parentNode?.insertBefore(el, wrapper);
+                wrapper.remove();
+                _slideAnimState = null;
+            }
+        }
+
+        // Los <select>/<input>/<textarea> no siempre preservan al clonar el valor
+        // fijado por JS (a diferencia del atributo HTML), así que se sincroniza
+        // a mano para que el snapshot muestre exactamente lo que se ve en vivo.
+        function _sincronizarControlesClon(origen, clon) {
+            const tags = 'select, input, textarea';
+            const vivos = origen.querySelectorAll(tags);
+            const clonados = clon.querySelectorAll(tags);
+            vivos.forEach((vivo, i) => {
+                const c = clonados[i];
+                if (!c) return;
+                if (vivo.tagName === 'SELECT') c.selectedIndex = vivo.selectedIndex;
+                else if (vivo.type === 'checkbox' || vivo.type === 'radio') c.checked = vivo.checked;
+                else c.value = vivo.value;
+            });
+        }
+
+        function _animarSlideContenido(el, delta, renderFn) {
+            if (!el) { renderFn(); return; }
+
+            _finalizarSlideContenidoPendiente();
+
+            const rect = el.getBoundingClientRect();
+            const ancho = rect.width;
+            const alto = rect.height;
+            const margenTop = getComputedStyle(el).marginTop;
+
+            const snapViejo = el.cloneNode(true);
+            snapViejo.removeAttribute('id');
+            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + ancho + 'px;pointer-events:none;';
+            _sincronizarControlesClon(el, snapViejo);
+
+            el.style.position = 'absolute';
+            el.style.visibility = 'hidden';
+            renderFn();
+            const snapNuevo = el.cloneNode(true);
+            snapNuevo.removeAttribute('id');
+            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + ancho + 'px;pointer-events:none;left:' + (delta > 0 ? ancho : -ancho) + 'px;';
+            _sincronizarControlesClon(el, snapNuevo);
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + ancho + 'px;height:calc(' + alto + 'px + ' + margenTop + ');';
+            wrapper.appendChild(snapViejo);
+            wrapper.appendChild(snapNuevo);
+
+            el.parentNode.insertBefore(wrapper, el);
+            el.style.display = 'none';
+            el.style.position = '';
+            el.style.visibility = '';
+            _slideAnimState = { wrapper, el };
+
+            wrapper.offsetHeight;
+            const tx = (delta > 0 ? -ancho : ancho) + 'px';
+            const easing = _easingSlide();
+            snapViejo.style.transition = easing;
+            snapNuevo.style.transition = easing;
+            snapViejo.style.transform = 'translateX(' + tx + ')';
+            snapNuevo.style.transform = 'translateX(' + tx + ')';
+
+            _slideAnimTimeout = setTimeout(() => {
+                el.style.display = '';
+                wrapper.parentNode.insertBefore(el, wrapper);
+                wrapper.remove();
+                _slideAnimTimeout = null;
+                _slideAnimState = null;
+            }, DUR_CALENDARIO() + 20);
+        }
+
         function _animarCambioCard(renderFn) {
             const els = [
                 $('stats-semana'),
@@ -4010,13 +4105,14 @@
             const selectAnio = $('select-anio-stats');
             const label = $('label-periodo-toggle');
             const selectSemana = $('select-semana-stats');
+            const statsInner = document.querySelector('#form-stats .stats-inner');
 
             const orden = ['mensual', 'anual', 'semanal'];
             const idx = orden.indexOf(modoEstadisticas);
             modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
             try { StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas); } catch (e) { }
 
-            _animarCambioStats(() => {
+            _animarSlideContenido(statsInner, direccion, () => {
                 selectMes.classList.add('hidden');
                 selectAnio.classList.add('hidden');
                 if (selectSemana) selectSemana.classList.add('hidden');
@@ -4815,40 +4911,27 @@ Generado por Sistema Lushibosca
             modoLoteActivo = !modoLoteActivo;
 
             if (modoLoteActivo) {
-                _animarFadeSwap(modoNormal, () => {
-                    modoNormal.style.display = 'none';
-                    modoLote.classList.add('fade-out');
-                    modoLote.style.display = 'block';
-                    modoLote.offsetHeight;
-                    modoLote.classList.remove('fade-out');
+                document.getElementById('lote-tipo').value = 'feriado';
+                document.getElementById('lote-fecha-desde').value = '';
+                document.getElementById('lote-fecha-hasta').value = '';
 
-                    document.getElementById('lote-tipo').value = 'feriado';
-                    document.getElementById('lote-fecha-desde').value = '';
-                    document.getElementById('lote-fecha-hasta').value = '';
+                btnTexto.textContent = 'Fichar Lote';
+                btn.style.background = '';
+                btn.style.color = '';
 
-                    btnTexto.textContent = 'Fichar Lote';
-                    btn.style.background = '';
-                    btn.style.color = '';
+                setIconoBtn(btn, '#icon-save');
 
-                    setIconoBtn(btn, '#icon-save');
+                btnTimer.disabled = true;
+                btnTimer.style.opacity = '0.3';
 
-                    btnTimer.disabled = true;
-                    btnTimer.style.opacity = '0.3';
-
-                    actualizarBotonLote();
-                });
+                actualizarBotonLote();
+                _animarModoLote(modoNormal, modoLote, 1);
 
             } else {
-                _animarFadeSwap(modoLote, () => {
-                    modoLote.style.display = 'none';
-                    modoNormal.classList.add('fade-out');
-                    modoNormal.style.display = 'block';
-                    modoNormal.offsetHeight;
-                    modoNormal.classList.remove('fade-out');
-                    UILogic.resetearBoton(btn);
-                    btnTimer.style.opacity = '1';
-                    actualizarEstadoBotonTimerMain();
-                });
+                UILogic.resetearBoton(btn);
+                btnTimer.style.opacity = '1';
+                actualizarEstadoBotonTimerMain();
+                _animarModoLote(modoLote, modoNormal, -1);
             }
         }
 
@@ -6851,73 +6934,8 @@ Generado por Sistema Lushibosca
             });
         }
 
-        let _calendarioAnimTimeout = null;
-        let _calendarioWrapperActual = null;
-
-        function _finalizarAnimacionCalendarioPendiente() {
-            if (_calendarioAnimTimeout) {
-                clearTimeout(_calendarioAnimTimeout);
-                _calendarioAnimTimeout = null;
-            }
-            if (_calendarioWrapperActual) {
-                const grid = document.getElementById('calendario-grid');
-                if (grid) {
-                    grid.style.display = '';
-                    _calendarioWrapperActual.parentNode?.insertBefore(grid, _calendarioWrapperActual);
-                }
-                _calendarioWrapperActual.remove();
-                _calendarioWrapperActual = null;
-            }
-        }
-
         function _animarCalendario(delta, renderFn) {
-            const grid = document.getElementById('calendario-grid');
-            if (!grid) { renderFn(); return; }
-
-            _finalizarAnimacionCalendarioPendiente();
-
-            const anchoGrid = grid.offsetWidth;
-            const altoGrid = grid.offsetHeight;
-            const margenTopGrid = getComputedStyle(grid).marginTop;
-
-            const snapViejo = grid.cloneNode(true);
-            snapViejo.removeAttribute('id');
-            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoGrid + 'px;pointer-events:none;';
-
-            grid.style.position = 'absolute';
-            grid.style.visibility = 'hidden';
-            renderFn();
-            const snapNuevo = grid.cloneNode(true);
-            snapNuevo.removeAttribute('id');
-            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoGrid + 'px;pointer-events:none;left:' + (delta > 0 ? anchoGrid : -anchoGrid) + 'px;';
-
-            const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoGrid + 'px;height:calc(' + altoGrid + 'px + ' + margenTopGrid + ');';
-            wrapper.appendChild(snapViejo);
-            wrapper.appendChild(snapNuevo);
-
-            grid.parentNode.insertBefore(wrapper, grid);
-            grid.style.display = 'none';
-            grid.style.position = '';
-            grid.style.visibility = '';
-            _calendarioWrapperActual = wrapper;
-
-            wrapper.offsetHeight;
-            const tx = (delta > 0 ? -anchoGrid : anchoGrid) + 'px';
-            const durCal = DUR_CALENDARIO();
-            const easing = 'transform ' + durCal + 'ms cubic-bezier(0.4, 0, 0.2, 1)';
-            snapViejo.style.transition = easing;
-            snapNuevo.style.transition = easing;
-            snapViejo.style.transform = 'translateX(' + tx + ')';
-            snapNuevo.style.transform = 'translateX(' + tx + ')';
-
-            _calendarioAnimTimeout = setTimeout(() => {
-                grid.style.display = '';
-                wrapper.parentNode.insertBefore(grid, wrapper);
-                wrapper.remove();
-                _calendarioAnimTimeout = null;
-                _calendarioWrapperActual = null;
-            }, durCal + 20);
+            _animarSlideContenido(document.getElementById('calendario-grid'), delta, renderFn);
         }
 
         function navegarCalendario(delta) {
@@ -6946,6 +6964,76 @@ Generado por Sistema Lushibosca
             const delta = (base.anio * 12 + base.mes) > (hoy.getFullYear() * 12 + hoy.getMonth()) ? -1 : 1;
             _calendarioMes = null;
             _animarCalendario(delta, () => _renderizarCalendario());
+        }
+
+        let _modoLoteAnimTimeout = null;
+        let _modoLoteWrapperActual = null;
+
+        function _finalizarAnimacionModoLotePendiente() {
+            if (_modoLoteAnimTimeout) {
+                clearTimeout(_modoLoteAnimTimeout);
+                _modoLoteAnimTimeout = null;
+            }
+            if (_modoLoteWrapperActual) {
+                const { wrapper, saliente, entrante } = _modoLoteWrapperActual;
+                saliente.style.cssText = 'display:none;';
+                entrante.style.cssText = 'display:block;';
+                wrapper.parentNode?.insertBefore(saliente, wrapper);
+                wrapper.parentNode?.insertBefore(entrante, wrapper);
+                wrapper.remove();
+                _modoLoteWrapperActual = null;
+            }
+        }
+
+        // Desliza horizontalmente entre #modo-normal y #modo-lote, reutilizando la
+        // misma técnica (clon con altura fija durante la animación) que _animarCalendario,
+        // para que el cambio de mes y el cambio de modo se sientan igual.
+        function _animarModoLote(saliente, entrante, delta) {
+            const contenedor = document.getElementById('modo-contenedor');
+            if (!contenedor || !saliente || !entrante) {
+                if (saliente) saliente.style.display = 'none';
+                if (entrante) entrante.style.display = 'block';
+                return;
+            }
+
+            _finalizarAnimacionModoLotePendiente();
+
+            saliente.classList.remove('fade-out');
+            entrante.classList.remove('fade-out');
+
+            const rectContenedor = contenedor.getBoundingClientRect();
+            const ancho = rectContenedor.width;
+            const altoViejo = saliente.getBoundingClientRect().height;
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;overflow:hidden;width:' + ancho + 'px;height:' + altoViejo + 'px;';
+
+            saliente.style.cssText = 'position:absolute;top:0;left:0;width:' + ancho + 'px;display:block;';
+            entrante.style.cssText = 'position:absolute;top:0;width:' + ancho + 'px;display:block;left:' + (delta > 0 ? ancho : -ancho) + 'px;';
+
+            contenedor.insertBefore(wrapper, saliente);
+            wrapper.appendChild(saliente);
+            wrapper.appendChild(entrante);
+            _modoLoteWrapperActual = { wrapper, saliente, entrante };
+
+            wrapper.offsetHeight;
+            const tx = (delta > 0 ? -ancho : ancho) + 'px';
+            const durCal = DUR_CALENDARIO();
+            const easing = _easingSlide();
+            saliente.style.transition = easing;
+            entrante.style.transition = easing;
+            saliente.style.transform = 'translateX(' + tx + ')';
+            entrante.style.transform = 'translateX(' + tx + ')';
+
+            _modoLoteAnimTimeout = setTimeout(() => {
+                saliente.style.cssText = 'display:none;';
+                entrante.style.cssText = 'display:block;';
+                wrapper.parentNode.insertBefore(saliente, wrapper);
+                wrapper.parentNode.insertBefore(entrante, wrapper);
+                wrapper.remove();
+                _modoLoteAnimTimeout = null;
+                _modoLoteWrapperActual = null;
+            }, durCal + 20);
         }
 
         function toggleStats() {
@@ -7514,7 +7602,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260710';
+        const _v = '-v260712';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

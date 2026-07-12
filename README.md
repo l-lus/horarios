@@ -5,6 +5,8 @@
 
 ### VERSION:
 
+### 260712
+
 ### 260710
 * **Mejora:** Se estandariza el font-size con variables
 

@@ -4016,7 +4016,7 @@
             modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
             try { StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas); } catch (e) { }
 
-            _animarCambioStats(() => {
+            _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
                 selectMes.classList.add('hidden');
                 selectAnio.classList.add('hidden');
                 if (selectSemana) selectSemana.classList.add('hidden');
@@ -4806,6 +4806,7 @@ Generado por Sistema Lushibosca
         }
 
         function toggleModoLote() {
+            const modoContenedor = document.getElementById('modo-contenedor');
             const modoNormal = document.getElementById('modo-normal');
             const modoLote = document.getElementById('modo-lote');
             const btnTexto = document.getElementById('btn-registrar-texto');
@@ -4815,12 +4816,10 @@ Generado por Sistema Lushibosca
             modoLoteActivo = !modoLoteActivo;
 
             if (modoLoteActivo) {
-                _animarFadeSwap(modoNormal, () => {
+                _animarSlideElemento(modoContenedor, 1, () => {
                     modoNormal.style.display = 'none';
-                    modoLote.classList.add('fade-out');
-                    modoLote.style.display = 'block';
-                    modoLote.offsetHeight;
                     modoLote.classList.remove('fade-out');
+                    modoLote.style.display = 'block';
 
                     document.getElementById('lote-tipo').value = 'feriado';
                     document.getElementById('lote-fecha-desde').value = '';
@@ -4839,12 +4838,9 @@ Generado por Sistema Lushibosca
                 });
 
             } else {
-                _animarFadeSwap(modoLote, () => {
+                _animarSlideElemento(modoContenedor, -1, () => {
                     modoLote.style.display = 'none';
-                    modoNormal.classList.add('fade-out');
                     modoNormal.style.display = 'block';
-                    modoNormal.offsetHeight;
-                    modoNormal.classList.remove('fade-out');
                     UILogic.resetearBoton(btn);
                     btnTimer.style.opacity = '1';
                     actualizarEstadoBotonTimerMain();
@@ -6851,74 +6847,81 @@ Generado por Sistema Lushibosca
             });
         }
 
-        let _calendarioAnimTimeout = null;
-        let _calendarioWrapperActual = null;
+        const _slideAnimEstado = new WeakMap();
 
-        function _finalizarAnimacionCalendarioPendiente() {
-            if (_calendarioAnimTimeout) {
-                clearTimeout(_calendarioAnimTimeout);
-                _calendarioAnimTimeout = null;
-            }
-            if (_calendarioWrapperActual) {
-                const grid = document.getElementById('calendario-grid');
-                if (grid) {
-                    grid.style.display = '';
-                    _calendarioWrapperActual.parentNode?.insertBefore(grid, _calendarioWrapperActual);
-                }
-                _calendarioWrapperActual.remove();
-                _calendarioWrapperActual = null;
-            }
+        function _limpiarClonVisual(clon) {
+            clon.removeAttribute('id');
+            clon.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+            return clon;
         }
 
-        function _animarCalendario(delta, renderFn) {
-            const grid = document.getElementById('calendario-grid');
-            if (!grid) { renderFn(); return; }
+        function _finalizarSlidePendiente(el) {
+            const estado = _slideAnimEstado.get(el);
+            if (!estado) return;
+            clearTimeout(estado.timeout);
+            el.style.display = '';
+            estado.wrapper.parentNode?.insertBefore(el, estado.wrapper);
+            estado.wrapper.remove();
+            _slideAnimEstado.delete(el);
+        }
 
-            _finalizarAnimacionCalendarioPendiente();
+        function _animarSlideElemento(el, delta, mutarFn) {
+            if (!el) { mutarFn(); return; }
 
-            const rectGrid = grid.getBoundingClientRect();
-            const anchoGrid = rectGrid.width;
-            const altoGrid = rectGrid.height;
-            const margenTopGrid = getComputedStyle(grid).marginTop;
+            _finalizarSlidePendiente(el);
 
-            const snapViejo = grid.cloneNode(true);
-            snapViejo.removeAttribute('id');
-            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoGrid + 'px;pointer-events:none;';
+            const rectViejo = el.getBoundingClientRect();
+            const anchoViejo = rectViejo.width;
+            const altoViejo = rectViejo.height;
+            const margenTop = getComputedStyle(el).marginTop;
 
-            grid.style.position = 'absolute';
-            grid.style.visibility = 'hidden';
-            renderFn();
-            const snapNuevo = grid.cloneNode(true);
-            snapNuevo.removeAttribute('id');
-            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoGrid + 'px;pointer-events:none;left:' + (delta > 0 ? anchoGrid : -anchoGrid) + 'px;';
+            const snapViejo = _limpiarClonVisual(el.cloneNode(true));
+            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoViejo + 'px;pointer-events:none;';
+
+            el.style.visibility = 'hidden';
+            mutarFn();
+
+            const rectNuevo = el.getBoundingClientRect();
+            const anchoNuevo = rectNuevo.width;
+            const altoNuevo = rectNuevo.height;
+
+            const snapNuevo = _limpiarClonVisual(el.cloneNode(true));
+            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoNuevo + 'px;pointer-events:none;left:' + (delta > 0 ? anchoViejo : -anchoNuevo) + 'px;';
 
             const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoGrid + 'px;height:calc(' + altoGrid + 'px + ' + margenTopGrid + ');';
+            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoViejo + 'px;height:calc(' + altoViejo + 'px + ' + margenTop + ');';
             wrapper.appendChild(snapViejo);
             wrapper.appendChild(snapNuevo);
 
-            grid.parentNode.insertBefore(wrapper, grid);
-            grid.style.display = 'none';
-            grid.style.position = '';
-            grid.style.visibility = '';
-            _calendarioWrapperActual = wrapper;
+            el.parentNode.insertBefore(wrapper, el);
+            el.style.display = 'none';
+            el.style.visibility = '';
 
             wrapper.offsetHeight;
-            const tx = (delta > 0 ? -anchoGrid : anchoGrid) + 'px';
-            const durCal = DUR_CALENDARIO();
-            const easing = 'transform ' + durCal + 'ms cubic-bezier(0.4, 0, 0.2, 1)';
-            snapViejo.style.transition = easing;
-            snapNuevo.style.transition = easing;
+            const dur = DUR_CALENDARIO();
+            const easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
+            snapViejo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            snapNuevo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            if (Math.abs(altoNuevo - altoViejo) > 0.5) {
+                wrapper.style.transition = 'height ' + dur + 'ms ' + easing;
+                wrapper.style.height = 'calc(' + altoNuevo + 'px + ' + margenTop + ')';
+            }
+            const tx = (delta > 0 ? -anchoViejo : anchoViejo) + 'px';
             snapViejo.style.transform = 'translateX(' + tx + ')';
             snapNuevo.style.transform = 'translateX(' + tx + ')';
 
-            _calendarioAnimTimeout = setTimeout(() => {
-                grid.style.display = '';
-                wrapper.parentNode.insertBefore(grid, wrapper);
+            const timeout = setTimeout(() => {
+                el.style.display = '';
+                wrapper.parentNode.insertBefore(el, wrapper);
                 wrapper.remove();
-                _calendarioAnimTimeout = null;
-                _calendarioWrapperActual = null;
-            }, durCal + 20);
+                _slideAnimEstado.delete(el);
+            }, dur + 20);
+
+            _slideAnimEstado.set(el, { timeout, wrapper });
+        }
+
+        function _animarCalendario(delta, renderFn) {
+            _animarSlideElemento(document.getElementById('calendario-grid'), delta, renderFn);
         }
 
         function navegarCalendario(delta) {

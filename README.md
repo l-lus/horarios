@@ -5,6 +5,9 @@
 
 ### VERSION:
 
+### 260713
+* **Fix:** Se corrige el salto de 1px en las tarjetas debajo del calendario al pasar de mes o seleccionar un mes
+
 ### 260710
 * **Mejora:** Se estandariza el font-size con variables
 

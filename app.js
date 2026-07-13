@@ -4597,7 +4597,7 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            selector.style.height = grid.offsetHeight + 'px';
+            selector.style.height = grid.getBoundingClientRect().height + 'px';
             _animarFadeSwap(grid, () => {
                 grid.style.display = 'none';
                 navBotones.style.display = 'none';
@@ -6876,8 +6876,9 @@ Generado por Sistema Lushibosca
 
             _finalizarAnimacionCalendarioPendiente();
 
-            const anchoGrid = grid.offsetWidth;
-            const altoGrid = grid.offsetHeight;
+            const rectGrid = grid.getBoundingClientRect();
+            const anchoGrid = rectGrid.width;
+            const altoGrid = rectGrid.height;
             const margenTopGrid = getComputedStyle(grid).marginTop;
 
             const snapViejo = grid.cloneNode(true);

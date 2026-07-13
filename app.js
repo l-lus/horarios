@@ -4805,7 +4805,7 @@ Generado por Sistema Lushibosca
             }
         }
 
-        function toggleModoLote() {
+        function toggleModoLote(deltaSwipe) {
             const modoContenedor = document.getElementById('modo-contenedor');
             const modoNormal = document.getElementById('modo-normal');
             const modoLote = document.getElementById('modo-lote');
@@ -4814,9 +4814,10 @@ Generado por Sistema Lushibosca
             const btn = document.getElementById('btn-agregar');
 
             modoLoteActivo = !modoLoteActivo;
+            const delta = deltaSwipe !== undefined ? deltaSwipe : (modoLoteActivo ? 1 : -1);
 
             if (modoLoteActivo) {
-                _animarSlideElemento(modoContenedor, 1, () => {
+                _animarSlideElemento(modoContenedor, delta, () => {
                     modoNormal.style.display = 'none';
                     modoLote.classList.remove('fade-out');
                     modoLote.style.display = 'block';
@@ -4838,7 +4839,7 @@ Generado por Sistema Lushibosca
                 });
 
             } else {
-                _animarSlideElemento(modoContenedor, -1, () => {
+                _animarSlideElemento(modoContenedor, delta, () => {
                     modoLote.style.display = 'none';
                     modoNormal.style.display = 'block';
                     UILogic.resetearBoton(btn);
@@ -5811,7 +5812,7 @@ Generado por Sistema Lushibosca
 
         function _initSwipesYStats() {
             registrarSwipe(document.getElementById('stats-card'), () => alternarVista());
-            registrarSwipe(document.getElementById('form-registro'), () => toggleModoLote(), { ignoreInputs: true });
+            registrarSwipe(document.getElementById('form-registro'), dir => toggleModoLote(dir), { ignoreInputs: true });
 
             const anchor = document.getElementById('stat-items-tipos-anchor');
             if (anchor) {

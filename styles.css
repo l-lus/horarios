@@ -1554,7 +1554,7 @@ button:disabled {
     cursor: pointer;
 }
 
-#btn-toggle-periodo {
+.btn-toggle-periodo {
     width: 100px;
     height: var(--input-height);
     padding: var(--space-xs) 0;
@@ -1564,7 +1564,7 @@ button:disabled {
     justify-content: center;
 }
 
-#btn-toggle-periodo .icon {
+.btn-toggle-periodo .icon {
     width: 14px;
     height: 14px;
 }

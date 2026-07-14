@@ -4805,7 +4805,7 @@ Generado por Sistema Lushibosca
             }
         }
 
-        function toggleModoLote(deltaSwipe) {
+        function toggleModoLote(deltaSwipe, conAnimacion = true) {
             const modoContenedor = document.getElementById('modo-contenedor');
             const modoNormal = document.getElementById('modo-normal');
             const modoLote = document.getElementById('modo-lote');
@@ -4816,36 +4816,39 @@ Generado por Sistema Lushibosca
             modoLoteActivo = !modoLoteActivo;
             const delta = deltaSwipe !== undefined ? deltaSwipe : (modoLoteActivo ? 1 : -1);
 
-            if (modoLoteActivo) {
-                _animarSlideElemento(modoContenedor, delta, () => {
-                    modoNormal.style.display = 'none';
-                    modoLote.classList.remove('fade-out');
-                    modoLote.style.display = 'block';
+            const aplicarCambiosLote = () => {
+                modoNormal.style.display = 'none';
+                modoLote.classList.remove('fade-out');
+                modoLote.style.display = 'block';
 
-                    document.getElementById('lote-tipo').value = 'feriado';
-                    document.getElementById('lote-fecha-desde').value = '';
-                    document.getElementById('lote-fecha-hasta').value = '';
+                document.getElementById('lote-tipo').value = 'feriado';
+                document.getElementById('lote-fecha-desde').value = '';
+                document.getElementById('lote-fecha-hasta').value = '';
 
-                    btnTexto.textContent = 'Fichar Lote';
-                    btn.style.background = '';
-                    btn.style.color = '';
+                btnTexto.textContent = 'Fichar Lote';
+                btn.style.background = '';
+                btn.style.color = '';
 
-                    setIconoBtn(btn, '#icon-save');
+                setIconoBtn(btn, '#icon-save');
 
-                    btnTimer.disabled = true;
-                    btnTimer.style.opacity = '0.3';
+                btnTimer.disabled = true;
+                btnTimer.style.opacity = '0.3';
 
-                    actualizarBotonLote();
-                });
+                actualizarBotonLote();
+            };
 
+            const aplicarCambiosNormal = () => {
+                modoLote.style.display = 'none';
+                modoNormal.style.display = 'block';
+                UILogic.resetearBoton(btn);
+                btnTimer.style.opacity = '1';
+                actualizarEstadoBotonTimerMain();
+            };
+
+            if (conAnimacion) {
+                _animarSlideElemento(modoContenedor, delta, modoLoteActivo ? aplicarCambiosLote : aplicarCambiosNormal);
             } else {
-                _animarSlideElemento(modoContenedor, delta, () => {
-                    modoLote.style.display = 'none';
-                    modoNormal.style.display = 'block';
-                    UILogic.resetearBoton(btn);
-                    btnTimer.style.opacity = '1';
-                    actualizarEstadoBotonTimerMain();
-                });
+                modoLoteActivo ? aplicarCambiosLote() : aplicarCambiosNormal();
             }
         }
 
@@ -6205,7 +6208,6 @@ Generado por Sistema Lushibosca
             toggleSeccionGen('form-registro', 'icon-indicator-form', STORAGE_KEYS.FORMULARIO_EXPANDIDO);
 
             if (estabaExpandido) {
-
                 $('entrada').value = '';
                 $('salida').value = '';
                 $('fecha').value = TimeUtils.obtenerFechaHoy();
@@ -6219,7 +6221,11 @@ Generado por Sistema Lushibosca
                 if (loteTipo) loteTipo.value = 'feriado';
 
                 if (modoLoteActivo) {
-                    toggleModoLote();
+                    setTimeout(() => {
+                        if (modoLoteActivo) {
+                            toggleModoLote(undefined, false);
+                        }
+                    }, 350);
                 } else {
                     actualizarEstadoBotonTimerMain();
                 }

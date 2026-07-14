@@ -2082,8 +2082,6 @@
         let toastTimeout = null;
         let _toastQueue = [];
         let _toastRunning = false;
-        let intervaloPulsacion = null;
-        let timeoutInicial = null;
         let edicionBloqueada = true;
         let edicionGrupoBloqueada = true;
         let perfilEnEdicion = null;
@@ -2128,6 +2126,22 @@
                 };
                 clearTimeout(timeout);
                 timeout = setTimeout(later, wait);
+            };
+        }
+
+        function _crearPressHold(accionFn) {
+            let timeout = null, intervalo = null;
+            return {
+                iniciar(arg) {
+                    accionFn(arg);
+                    timeout = setTimeout(() => {
+                        intervalo = setInterval(() => accionFn(arg), 100);
+                    }, 500);
+                },
+                detener() {
+                    if (timeout) { clearTimeout(timeout); timeout = null; }
+                    if (intervalo) { clearInterval(intervalo); intervalo = null; }
+                }
             };
         }
 
@@ -3994,15 +4008,13 @@
             _animarFadeSwap($('form-stats'), fn);
         }
 
-        function cambiarSemanaStats() {
-            const v = $('select-semana-stats')?.value;
-            if (v !== undefined) _animarCambioStats(() => actualizarEstadisticasSemana(v));
+        function _cambiarPeriodoStats(selectId, actualizarFn) {
+            const v = $(selectId)?.value;
+            if (v !== undefined) _animarCambioStats(() => actualizarFn(v));
         }
-
-        function cambiarAnioStats() {
-            const v = $('select-anio-stats')?.value;
-            if (v !== undefined) _animarCambioStats(() => actualizarEstadisticasAnio(v));
-        }
+        function cambiarMesStats() { _cambiarPeriodoStats('select-mes-stats', actualizarEstadisticas); }
+        function cambiarSemanaStats() { _cambiarPeriodoStats('select-semana-stats', actualizarEstadisticasSemana); }
+        function cambiarAnioStats() { _cambiarPeriodoStats('select-anio-stats', actualizarEstadisticasAnio); }
 
         function togglePeriodoStats(direccion = 1) {
             if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
@@ -4056,11 +4068,6 @@
             const meses = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
             const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
             _poblarSelect('select-mes-stats', meses, _nombreMesCapitalizado, mesActual, actualizarEstadisticas, _agruparMesesPorAnio);
-        }
-
-        function cambiarMesStats() {
-            const v = $('select-mes-stats')?.value;
-            if (v !== undefined) _animarCambioStats(() => actualizarEstadisticas(v));
         }
 
         function _sumarHorasEfectivas(regs, horasDiarias) {
@@ -5517,20 +5524,9 @@ Generado por Sistema Lushibosca
             _actualizarCampoLimite();
         }
 
-        let _timeoutLimite = null;
-        let _intervaloLimite = null;
-
-        function iniciarCambioLimite(delta) {
-            cambiarLimiteSync(delta);
-            _timeoutLimite = setTimeout(() => {
-                _intervaloLimite = setInterval(() => cambiarLimiteSync(delta), 100);
-            }, 500);
-        }
-
-        function detenerCambioLimite() {
-            if (_timeoutLimite) { clearTimeout(_timeoutLimite); _timeoutLimite = null; }
-            if (_intervaloLimite) { clearInterval(_intervaloLimite); _intervaloLimite = null; }
-        }
+        const _pressHoldLimite = _crearPressHold(delta => cambiarLimiteSync(delta));
+        function iniciarCambioLimite(delta) { _pressHoldLimite.iniciar(delta); }
+        function detenerCambioLimite() { _pressHoldLimite.detener(); }
 
 
         async function gistSubir() {
@@ -7103,19 +7099,9 @@ Generado por Sistema Lushibosca
             }
         }
 
-        function iniciarCambioHoras(incremento) {
-            cambiarHorasDiarias(incremento);
-            timeoutInicial = setTimeout(() => {
-                intervaloPulsacion = setInterval(() => {
-                    cambiarHorasDiarias(incremento);
-                }, 100);
-            }, 500);
-        }
-
-        function detenerCambio() {
-            if (timeoutInicial) { clearTimeout(timeoutInicial); timeoutInicial = null; }
-            if (intervaloPulsacion) { clearInterval(intervaloPulsacion); intervaloPulsacion = null; }
-        }
+        const _pressHoldHoras = _crearPressHold(incremento => cambiarHorasDiarias(incremento));
+        function iniciarCambioHoras(incremento) { _pressHoldHoras.iniciar(incremento); }
+        function detenerCambio() { _pressHoldHoras.detener(); }
 
         function cambiarHorasDiarias(incremento) {
             let valorActual = parseFloat($('config-horas-diarias').dataset.valor);
@@ -7443,7 +7429,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260714';
+        const _v = '-v260710';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

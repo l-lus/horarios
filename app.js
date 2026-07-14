@@ -4832,7 +4832,6 @@ Generado por Sistema Lushibosca
                 setIconoBtn(btn, '#icon-save');
 
                 btnTimer.disabled = true;
-                btnTimer.style.opacity = '0.3';
 
                 actualizarBotonLote();
             };
@@ -4841,7 +4840,6 @@ Generado por Sistema Lushibosca
                 modoLote.style.display = 'none';
                 modoNormal.style.display = 'block';
                 UILogic.resetearBoton(btn);
-                btnTimer.style.opacity = '1';
                 actualizarEstadoBotonTimerMain();
             };
 

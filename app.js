@@ -7238,123 +7238,46 @@ Generado por Sistema Lushibosca
             StorageHelper.setItem(SK_PROCESADOS, JSON.stringify([...set]));
         }
 
-        function _getFeriadosCercanos() {
+        function _getFeriadosDelMes() {
             const hoy = new Date();
             const anioActual = hoy.getFullYear();
-            const fechas = [];
-            for (let offset = -1; offset <= 2; offset++) {
-                const d = new Date(hoy);
-                d.setDate(hoy.getDate() + offset);
-                fechas.push(TimeUtils.formatearFechaLocal(d));
-            }
-            const pool = [...(FERIADOS[anioActual] || []), ...(FERIADOS[anioActual + 1] || [])];
-            return pool.filter(f => fechas.includes(f.fecha));
-        }
-
-        function _etiquetaFecha(fechaISO) {
-            const hoy = new Date();
-            const labels = ['ayer', 'hoy', 'mañana', 'pasado mañana'];
-            for (let offset = -1; offset <= 2; offset++) {
-                const d = new Date(hoy);
-                d.setDate(hoy.getDate() + offset);
-                if (TimeUtils.formatearFechaLocal(d) === fechaISO) return labels[offset + 1];
-            }
-            return fechaISO;
-        }
-
-        function _buscarFeriado(fechaISO) {
-            const anio = parseInt(fechaISO.slice(0, 4), 10);
-            const pool = FERIADOS[anio] || [];
-            return pool.find(f => f.fecha === fechaISO) || null;
-        }
-
-        function _sumarDias(fechaISO, n) {
-            const d = TimeUtils.parsearFechaLocal(fechaISO);
-            d.setDate(d.getDate() + n);
-            return TimeUtils.formatearFechaLocal(d);
-        }
-
-        function _expandirGrupoConsecutivo(fechaISO) {
-            let desde = fechaISO;
-            while (_buscarFeriado(_sumarDias(desde, -1))) desde = _sumarDias(desde, -1);
-
-            let hasta = fechaISO;
-            while (_buscarFeriado(_sumarDias(hasta, 1))) hasta = _sumarDias(hasta, 1);
-
-            const dias = [];
-            let cursor = desde;
-            while (cursor <= hasta) {
-                dias.push(_buscarFeriado(cursor));
-                cursor = _sumarDias(cursor, 1);
-            }
-            return dias;
-        }
-
-        function _agruparConsecutivos(candidatos) {
-            const vistos = new Set();
-            const grupos = [];
-            for (const candidato of candidatos) {
-                const grupo = _expandirGrupoConsecutivo(candidato.fecha);
-                const clave = grupo[0].fecha;
-                if (vistos.has(clave)) continue;
-                vistos.add(clave);
-                grupos.push(grupo);
-            }
-            return grupos;
-        }
-
-        function _esRangoContinuo(grupo) {
-            for (let i = 1; i < grupo.length; i++) {
-                if (_sumarDias(grupo[i - 1].fecha, 1) !== grupo[i].fecha) return false;
-            }
-            return true;
-        }
-
-        function _describirFechasGrupo(grupo) {
-            const nd = f => TimeUtils.obtenerNombreDia(f);
-            if (grupo.length === 1) return `${_etiquetaFecha(grupo[0].fecha)}, ${nd(grupo[0].fecha)} (${grupo[0].fecha})`;
-            if (_esRangoContinuo(grupo)) return `del ${nd(grupo[0].fecha)} (${grupo[0].fecha}) al ${nd(grupo[grupo.length - 1].fecha)} (${grupo[grupo.length - 1].fecha})`;
-            return grupo.map(f => `${nd(f.fecha)} (${f.fecha})`).join(', ');
+            const mesActual = String(hoy.getMonth() + 1).padStart(2, '0');
+            const prefijoMes = `${anioActual}-${mesActual}`;
+            const pool = FERIADOS[anioActual] || [];
+            return { prefijoMes, feriados: pool.filter(f => f.fecha.startsWith(prefijoMes)) };
         }
 
         async function chequearYNotificar() {
-            const candidatos = _getFeriadosCercanos();
+            const { prefijoMes, feriados: candidatos } = _getFeriadosDelMes();
             if (!candidatos.length) return;
 
             const procesados = _cargarProcesados();
             const yaExisteRegistro = fecha => DataManagement.registros().some(r => r.fecha === fecha);
 
-            const grupos = _agruparConsecutivos(candidatos)
-                .map(grupo => grupo.filter(f => {
-                    if (procesados.has(f.fecha)) return false;
-                    if (yaExisteRegistro(f.fecha)) { _marcarProcesado(f.fecha); return false; }
-                    return true;
-                }))
-                .filter(grupo => grupo.length > 0);
+            const pendientes = candidatos.filter(f => {
+                if (procesados.has(f.fecha)) return false;
+                if (yaExisteRegistro(f.fecha)) { _marcarProcesado(f.fecha); return false; }
+                return true;
+            });
 
-            if (!grupos.length) return;
-            const _delay = ms => new Promise(r => setTimeout(r, ms));
+            if (!pendientes.length) return;
 
-            for (let i = 0; i < grupos.length; i++) {
-                const grupo = grupos[i];
-                const esGrupal = grupo.length > 1;
-                const nombres = [...new Set(grupo.map(f => f.nombre))].join(' / ');
-                const descripcionFechas = _describirFechasGrupo(grupo);
-                const texto = `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar ${esGrupal ? `estos ${grupo.length} días` : 'este día'} como Feriado?`;
+            const nombreMes = TimeUtils.formatoTituloMes(prefijoMes).split(' ')[0];
+            const lineas = pendientes.map(f => `🎉 ${f.nombre} — ${TimeUtils.obtenerNombreDia(f.fecha)} ${parseInt(f.fecha.slice(8), 10)}`);
+            const pregunta = pendientes.length > 1 ? `¿Querés agregar estos ${pendientes.length} días como Feriado?` : '¿Querés agregar este día como Feriado?';
+            const texto = `${lineas.join('\n')}\n\n${pregunta}`;
 
-                const confirmo = await ModalManager.confirmar(texto, 'Sí', '#icon-check', {
-                    titulo: esGrupal ? 'Feriados Próximos' : 'Feriado Próximo',
-                    labelCancel: 'No'
-                });
-                grupo.forEach(f => _marcarProcesado(f.fecha));
+            const confirmo = await ModalManager.confirmar(texto, 'Sí', '#icon-check', {
+                titulo: pendientes.length > 1 ? `Feriados de ${nombreMes}` : `Feriado de ${nombreMes}`,
+                labelCancel: 'No'
+            });
 
-                if (confirmo) {
-                    for (const feriado of grupo) {
-                        try { await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { }
-                    }
+            pendientes.forEach(f => _marcarProcesado(f.fecha));
+
+            if (confirmo) {
+                for (const feriado of pendientes) {
+                    try { await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { }
                 }
-
-                if (i < grupos.length - 1) await _delay(100);
             }
         }
 
@@ -7523,7 +7446,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260710';
+        const _v = '-v260713';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

@@ -911,6 +911,7 @@ button:disabled {
     font-size: var(--text-base);
     line-height: 1.6;
     margin: var(--space-sm) 0;
+    white-space: pre-line;
 }
 
 /* ─── TOAST ──────────────────────────────────────────────────────────────────── */

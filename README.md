@@ -5,6 +5,9 @@
 
 ### VERSION:
 
+### 260714
+* **Mantenimiento:** Refactor y extracion de modulo FONDOS DE TARJETA
+
 ### 260713
 * **Fix:** Se corrige el salto de 1px en las tarjetas debajo del calendario al pasar de mes o seleccionar un mes
 * **Fix:** Se corrigen varios bug al cambiar la animaciones de las tarjetas de fichar y estadisticas

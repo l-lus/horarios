@@ -9,6 +9,7 @@
 * **Fix:** Se corrige el salto de 1px en las tarjetas debajo del calendario al pasar de mes o seleccionar un mes
 * **Fix:** Se corrigen varios bug al cambiar la animaciones de las tarjetas de fichar y estadisticas
 * **Cambios:** Se simplifica la deteccion de feriados, ahora hace una deteccion mensual mostrando la lista de los mismos para el mes actual, asi se obtiene el panorama completo.
+* **Mejora:** Se agrega animacion al boton de tiempo fuera, al aparecer y desaparecer
 
 ### 260710
 * **Mejora:** Se estandariza el font-size con variables

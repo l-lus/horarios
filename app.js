@@ -4356,8 +4356,7 @@ Generado por Sistema Lushibosca
             const card = document.getElementById('stats-card');
             if (!btn) return;
 
-            if (modoLoteActivo) { btn.style.display = 'none'; return; }
-            btn.style.display = '';
+            if (modoLoteActivo) { btn.disabled = true; return; }
 
             const hoy = TimeUtils.obtenerFechaHoy();
             const registroHoy = D.registros().find(r => r.fecha === hoy);
@@ -4369,10 +4368,8 @@ Generado por Sistema Lushibosca
 
             if (!isRunning && (!registroHoy || diaCerrado)) {
                 Object.assign(btn, { disabled: true, title: diaCerrado ? 'Día finalizado' : 'Debes fichar entrada primero' });
-                Object.assign(btn.style, { opacity: '0.5', cursor: 'not-allowed' });
             } else {
                 Object.assign(btn, { disabled: false, title: isRunning ? 'Detener tiempo fuera' : 'Iniciar tiempo fuera' });
-                Object.assign(btn.style, { opacity: '1', cursor: 'pointer' });
             }
 
             icon.setAttribute('href', '#icon-exit');

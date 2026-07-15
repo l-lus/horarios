@@ -3,7 +3,6 @@
     'use strict';
 
     const $ = id => document.getElementById(id);
-    const _setBtnActivo = (id, activo) => { const btn = document.getElementById(id); if (btn) btn.classList.toggle('btn-activo', activo); };
 
     // ====================================================================
     // STORAGE KEYS — MODULE
@@ -2078,304 +2077,46 @@
         return { getToken, getGistId, getLastSync, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, getSyncCount, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, subir, bajar };
     })(SecurityAndUtils);
 
-    // ====================================================================
-    // FONDOS DE TARJETA (SVG de fondo animado en la card de estadísticas)
-    // ====================================================================
-    const CardFondos = (function () {
-        let _fondoCard = 'golden-gate';
-        let _bgFadeTimer = null;
-        let _bgActiveLayer = 'a';
+    const UILogic = (function (S, D, GistSync) {
 
-        function setFondoCard(valor) {
-            _fondoCard = valor;
+        let toastTimeout = null;
+        let _toastQueue = [];
+        let _toastRunning = false;
+        let edicionBloqueada = true;
+        let edicionGrupoBloqueada = true;
+        let perfilEnEdicion = null;
+        let modoLoteActivo = false;
+        let tiempoExpansionBotones = null;
+        let timerAutoCierreBotones = null;
+        let modoEstadisticas = 'mensual';
+        let _modalAbiertoDesdeLista = false;
+        let _timerAutoVista = null;
+
+        function formatoDiferencia(tiempoTotal) {
+            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
         }
 
-        function toggleFondoCard() {
-            const ids = [...(window.FONDOS_SVG || []).map(f => f.id), 'ninguno'];
-            const idx = ids.indexOf(_fondoCard);
-            _fondoCard = ids[(idx + 1) % ids.length];
-            StorageHelper.setItem(STORAGE_KEYS.FONDO_CARD, _fondoCard, true);
-            const btn = $('hint-fondo-label');
-            if (btn) btn.textContent = _getLabelFondo(_fondoCard);
-            const bg = $('stats-card-bg');
-            if (bg && bg.dataset.estado) actualizarFondoCard(bg.dataset.estado);
+        function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
+            if (!el || el.dataset.swipeInit) return;
+            el.dataset.swipeInit = '1';
+            let _x = null, _y = null;
+            el.addEventListener('touchstart', e => {
+                if (e.touches.length !== 1) return;
+                if (ignoreInputs && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+                _x = e.touches[0].clientX;
+                _y = e.touches[0].clientY;
+            }, { passive: true });
+            el.addEventListener('touchend', e => {
+                if (_x === null) return;
+                const dx = e.changedTouches[0].clientX - _x;
+                const dy = e.changedTouches[0].clientY - _y;
+                _x = null; _y = null;
+                if (Math.abs(dy) > maxY) return;
+                if (Math.abs(dx) < minX) return;
+                callback(dx < 0 ? 1 : -1);
+            }, { passive: true });
         }
 
-        function obtenerLabelActual() {
-            return _getLabelFondo(_fondoCard);
-        }
-
-        function _getLabelFondo(id) {
-            if (id === 'ninguno') return 'Sin fondo';
-            const fondo = (window.FONDOS_SVG || []).find(f => f.id === id);
-            return fondo ? fondo.label : id;
-        }
-
-        function _getSvgFondo(id, color) {
-            const fondo = (window.FONDOS_SVG || []).find(f => f.id === id);
-            if (!fondo) return '';
-            return _sanitizarSVG(fondo.svg(color));
-        }
-
-        function _sanitizarSVG(svgStr) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(svgStr, 'image/svg+xml');
-
-            const TAGS_BLOQUEADOS = ['script', 'foreignObject', 'use', 'iframe', 'object', 'embed', 'link'];
-            TAGS_BLOQUEADOS.forEach(tag => {
-                doc.querySelectorAll(tag).forEach(el => el.remove());
-            });
-
-            const ATTRS_BLOQUEADOS = /^on|^xlink:href$|^href$/i;
-            doc.querySelectorAll('*').forEach(el => {
-                [...el.attributes].forEach(attr => {
-                    if (ATTRS_BLOQUEADOS.test(attr.name)) el.removeAttribute(attr.name);
-                });
-            });
-
-            doc.querySelectorAll('[style]').forEach(el => {
-                const safe = el.getAttribute('style').replace(/@import|url\s*\(/gi, '');
-                el.setAttribute('style', safe);
-            });
-
-            const svgEl = doc.querySelector('svg');
-            return svgEl ? svgEl.outerHTML : '';
-        }
-
-        function actualizarFondoCard(estado, colorOverride = null) {
-            const bg = $('stats-card-bg');
-            if (!bg) return;
-            bg.dataset.estado = estado;
-
-            const coloresVar = {
-                blue: 'rgba(76,114,172,0.12)',
-                green: 'rgba(76,172,140,0.12)',
-                red: 'rgba(172,90,76,0.12)',
-                purple: 'rgba(140,80,200,0.12)',
-                gold: 'rgba(172,155,76,0.12)',
-                orange: 'rgba(210, 120, 50, 0.12)',
-            };
-
-            const colores = {
-                esperando: 'rgba(140,150,170,0.07)',
-                en_curso: coloresVar.blue,
-                finalizado_ok: coloresVar.green,
-                finalizado_fail: coloresVar.red,
-                especial: coloresVar.purple
-            };
-
-            const color = colorOverride
-                ? (coloresVar[colorOverride] || colores.especial)
-                : (colores[estado] || colores.esperando);
-
-            if (_fondoCard === 'ninguno') {
-                bg.innerHTML = '';
-                return;
-            }
-
-            let layerA = bg.querySelector('.stats-card-bg__layer[data-layer="a"]');
-            let layerB = bg.querySelector('.stats-card-bg__layer[data-layer="b"]');
-            if (!layerA) {
-                layerA = document.createElement('div');
-                layerA.className = 'stats-card-bg__layer';
-                layerA.dataset.layer = 'a';
-                bg.appendChild(layerA);
-            }
-            if (!layerB) {
-                layerB = document.createElement('div');
-                layerB.className = 'stats-card-bg__layer';
-                layerB.dataset.layer = 'b';
-                bg.appendChild(layerB);
-            }
-
-            const nuevoSVG = _getSvgFondo(_fondoCard, color);
-            const incoming = _bgActiveLayer === 'a' ? layerB : layerA;
-            const outgoing = _bgActiveLayer === 'a' ? layerA : layerB;
-
-            incoming.style.zIndex = '2';
-            incoming.style.opacity = '0';
-            incoming.innerHTML = nuevoSVG;
-
-            outgoing.style.zIndex = '1';
-            outgoing.style.opacity = '0';
-
-            if (_bgFadeTimer) { clearTimeout(_bgFadeTimer); _bgFadeTimer = null; }
-
-            incoming.offsetHeight;
-            incoming.style.opacity = '1';
-
-            _bgActiveLayer = _bgActiveLayer === 'a' ? 'b' : 'a';
-            _bgFadeTimer = setTimeout(() => {
-                outgoing.innerHTML = '';
-                outgoing.style.opacity = '0';
-                _bgFadeTimer = null;
-            }, 650);
-        }
-
-        return { setFondoCard, toggleFondoCard, actualizarFondoCard, obtenerLabelActual };
-    })();
-
-    // ====================================================================
-    // ORDEN Y VISIBILIDAD DE TARJETAS (drag & drop de reordenamiento)
-    // ====================================================================
-    const CardOrden = (function () {
-        function aplicarVisibilidadCard(cual, visible) {
-            const card = document.getElementById('card-' + cual);
-            if (card) card.style.display = visible ? '' : 'none';
-        }
-
-        function aplicarVisibilidadCards() {
-            ['registrar', 'estadisticas', 'historico'].forEach(cual => {
-                const visible = StorageHelper.getBoolean(STORAGE_KEYS.CARD_VISIBLE(cual), true, true);
-                aplicarVisibilidadCard(cual, visible);
-                _setBtnActivo('btn-toggle-card-' + cual, visible);
-            });
-        }
-
-        function obtenerOrdenCards() {
-            const guardado = StorageHelper.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true);
-            const validos = ['registrar', 'estadisticas', 'historico'];
-            if (Array.isArray(guardado) && guardado.length === 3 && validos.every(v => guardado.includes(v))) {
-                return guardado;
-            }
-            return validos;
-        }
-
-        function aplicarOrdenCards(orden) {
-            const statsCard = document.getElementById('stats-card');
-            const leftColumn = statsCard ? statsCard.parentElement : null;
-            const container = leftColumn ? leftColumn.parentElement : null;
-            if (!leftColumn || !container) return;
-
-            const delays = [0.10, 0.15, 0.25];
-            orden.forEach((cual, idx) => {
-                const card = document.getElementById('card-' + cual);
-                if (!card) return;
-                card.style.animationDelay = `${delays[idx] || 0.25}s`;
-                const esUltima = idx === orden.length - 1;
-                if (esUltima) {
-                    container.appendChild(card);
-                } else {
-                    leftColumn.appendChild(card);
-                }
-            });
-
-            const lista = document.getElementById('lista-orden-cards');
-            if (lista) {
-                orden.forEach(cual => {
-                    const item = document.getElementById('orden-item-' + cual);
-                    if (item) lista.appendChild(item);
-                });
-            }
-        }
-
-        function iniciarDragOrdenCards() {
-            const lista = document.getElementById('lista-orden-cards');
-            if (!lista) return;
-
-            let draggingEl = null;
-            let dragClone = null;
-            let startY = 0;
-            let initialYOffset = 0;
-            let dragTimer = null;
-            const DRAG_DELAY = 150;
-
-            function getCardFromItem(el) {
-                const handle = el?.classList?.contains('drag-handle') ? el : el?.querySelector('.drag-handle');
-                return handle?.dataset?.card;
-            }
-
-            function initDrag(item, clientY) {
-                draggingEl = item;
-                const rect = item.getBoundingClientRect();
-                initialYOffset = clientY - rect.top;
-                dragClone = item.cloneNode(true);
-                Object.assign(dragClone.style, {
-                    position: 'fixed', top: `${rect.top}px`, left: `${rect.left}px`,
-                    width: `${rect.width}px`, height: `${rect.height}px`, zIndex: '999999',
-                    pointerEvents: 'none', margin: '0', transform: 'scale(1.02)', opacity: '0.9'
-                });
-                document.body.appendChild(dragClone);
-                draggingEl.style.opacity = '0';
-                if (navigator.vibrate) navigator.vibrate(30);
-            }
-
-            function moveDrag(clientY) {
-                if (!dragClone || !draggingEl) return;
-
-                dragClone.style.top = `${clientY - initialYOffset}px`;
-
-                const target = [...lista.querySelectorAll('.orden-card-item')].find(item => {
-                    if (item === draggingEl) return false;
-                    const r = item.getBoundingClientRect();
-                    return clientY >= r.top && clientY <= r.bottom;
-                });
-
-                if (target) {
-                    const targetRect = target.getBoundingClientRect();
-                    const targetMiddle = targetRect.top + targetRect.height / 2;
-
-                    if (clientY < targetMiddle) {
-                        lista.insertBefore(draggingEl, target);
-                    } else {
-                        lista.insertBefore(draggingEl, target.nextSibling);
-                    }
-                }
-            }
-
-            function endDrag() {
-                clearTimeout(dragTimer);
-                if (!draggingEl) return;
-
-                if (dragClone) {
-                    dragClone.remove();
-                    dragClone = null;
-                }
-                draggingEl.style.opacity = '';
-
-                const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
-                const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
-
-                try {
-                    StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
-                } catch (e) { }
-
-                if (typeof aplicarOrdenCards === 'function') {
-                    aplicarOrdenCards(nuevoOrden);
-                }
-
-                draggingEl = null;
-            }
-
-            const bindStart = (eventType, getY, opts) => lista.addEventListener(eventType, (e) => {
-                const item = e.target.closest('.drag-handle')?.closest('.orden-card-item');
-                if (!item) return;
-                startY = getY(e);
-                dragTimer = setTimeout(() => initDrag(item, startY), DRAG_DELAY);
-            }, opts);
-
-            const bindMove = (target, eventType, getY, opts) => target.addEventListener(eventType, (e) => {
-                if (!draggingEl) { if (Math.abs(getY(e) - startY) > 10) clearTimeout(dragTimer); return; }
-                e.preventDefault();
-                moveDrag(getY(e));
-            }, opts);
-
-            bindStart('touchstart', e => e.touches[0].clientY, { passive: true });
-            bindStart('mousedown', e => e.clientY);
-            bindMove(lista, 'touchmove', e => e.touches[0].clientY, { passive: false });
-            bindMove(document, 'mousemove', e => e.clientY);
-            lista.addEventListener('touchend', endDrag);
-            lista.addEventListener('touchcancel', endDrag);
-            document.addEventListener('mouseup', endDrag);
-        }
-
-        return { aplicarVisibilidadCard, aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards };
-    })();
-
-    // ====================================================================
-    // UTILIDADES GENÉRICAS DE ANIMACIÓN, POPUPS Y GESTOS
-    // ====================================================================
-    const AnimUtils = (function () {
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -2404,162 +2145,14 @@
             };
         }
 
-        function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
-            if (!el || el.dataset.swipeInit) return;
-            el.dataset.swipeInit = '1';
-            let _x = null, _y = null;
-            el.addEventListener('touchstart', e => {
-                if (e.touches.length !== 1) return;
-                if (ignoreInputs && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
-                _x = e.touches[0].clientX;
-                _y = e.touches[0].clientY;
-            }, { passive: true });
-            el.addEventListener('touchend', e => {
-                if (_x === null) return;
-                const dx = e.changedTouches[0].clientX - _x;
-                const dy = e.changedTouches[0].clientY - _y;
-                _x = null; _y = null;
-                if (Math.abs(dy) > maxY) return;
-                if (Math.abs(dx) < minX) return;
-                callback(dx < 0 ? 1 : -1);
-            }, { passive: true });
+        function _actualizarOffsetsStickyMes() {
+            const header = document.querySelector('.header');
+            const mesHeader = document.querySelector('.registro-mes-header');
+            const root = document.documentElement.style;
+            if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
+            if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
         }
-
-        function _getCSSdur(varName) {
-            const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-            if (!raw) return 300;
-            return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
-        }
-        const DUR_ANIM = () => _getCSSdur('--dur-anim');
-        const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
-
-        function _animarFadeSwap(el, fn) {
-            if (!el) { fn(); return; }
-            el.classList.add('fade-out');
-            setTimeout(() => { fn(); el.classList.remove('fade-out'); }, DUR_ANIM());
-        }
-
-        function _posicionarPopup(popup, event) {
-            const el = event.currentTarget || event.target;
-            const rect = el.getBoundingClientRect();
-            const margin = 8;
-            requestAnimationFrame(() => {
-                const pw = popup.offsetWidth, ph = popup.offsetHeight;
-                let top = rect.bottom + 12;
-                let left = rect.left + (rect.width / 2) - (pw / 2);
-                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
-                if (left < margin) left = margin;
-                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
-                if (top < margin) top = margin;
-                popup.style.top = `${top}px`;
-                popup.style.left = `${left}px`;
-                popup.style.visibility = '';
-                setTimeout(() => popup.classList.add('listo'), 350);
-            });
-        }
-
-        function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar) {
-            const cerrar = () => {
-                popup.remove();
-                if (alCerrar) alCerrar();
-                document.removeEventListener('click', onClick, true);
-                document.removeEventListener('scroll', cerrar, true);
-            };
-            const onClick = (e) => {
-                const trigger = e.target.closest(selectorTrigger);
-                if (trigger && esMismoTrigger(trigger)) return;
-                if (!popup.contains(e.target)) cerrar();
-            };
-            setTimeout(() => {
-                document.addEventListener('click', onClick, { capture: true, passive: true });
-                document.addEventListener('scroll', cerrar, { capture: true, passive: true });
-            }, 10);
-            return cerrar;
-        }
-
-        const _slideAnimEstado = new WeakMap();
-
-        function _limpiarClonVisual(clon) {
-            clon.removeAttribute('id');
-            clon.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
-            return clon;
-        }
-
-        function _finalizarSlidePendiente(el) {
-            const estado = _slideAnimEstado.get(el);
-            if (!estado) return;
-            clearTimeout(estado.timeout);
-            el.style.display = '';
-            estado.wrapper.parentNode?.insertBefore(el, estado.wrapper);
-            estado.wrapper.remove();
-            _slideAnimEstado.delete(el);
-        }
-
-        function _animarSlideElemento(el, delta, mutarFn) {
-            if (!el) { mutarFn(); return; }
-
-            _finalizarSlidePendiente(el);
-
-            const rectViejo = el.getBoundingClientRect();
-            const anchoViejo = rectViejo.width;
-            const altoViejo = rectViejo.height;
-            const margenTop = getComputedStyle(el).marginTop;
-
-            const snapViejo = _limpiarClonVisual(el.cloneNode(true));
-            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoViejo + 'px;pointer-events:none;';
-
-            el.style.visibility = 'hidden';
-            mutarFn();
-
-            const rectNuevo = el.getBoundingClientRect();
-            const anchoNuevo = rectNuevo.width;
-            const altoNuevo = rectNuevo.height;
-
-            const snapNuevo = _limpiarClonVisual(el.cloneNode(true));
-            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoNuevo + 'px;pointer-events:none;left:' + (delta > 0 ? anchoViejo : -anchoNuevo) + 'px;';
-
-            const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoViejo + 'px;height:calc(' + altoViejo + 'px + ' + margenTop + ');';
-            wrapper.appendChild(snapViejo);
-            wrapper.appendChild(snapNuevo);
-
-            el.parentNode.insertBefore(wrapper, el);
-            el.style.display = 'none';
-            el.style.visibility = '';
-
-            wrapper.offsetHeight;
-            const dur = DUR_CALENDARIO();
-            const easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
-            snapViejo.style.transition = 'transform ' + dur + 'ms ' + easing;
-            snapNuevo.style.transition = 'transform ' + dur + 'ms ' + easing;
-            if (Math.abs(altoNuevo - altoViejo) > 0.5) {
-                wrapper.style.transition = 'height ' + dur + 'ms ' + easing;
-                wrapper.style.height = 'calc(' + altoNuevo + 'px + ' + margenTop + ')';
-            }
-            const tx = (delta > 0 ? -anchoViejo : anchoViejo) + 'px';
-            snapViejo.style.transform = 'translateX(' + tx + ')';
-            snapNuevo.style.transform = 'translateX(' + tx + ')';
-
-            const timeout = setTimeout(() => {
-                el.style.display = '';
-                wrapper.parentNode.insertBefore(el, wrapper);
-                wrapper.remove();
-                _slideAnimEstado.delete(el);
-            }, dur + 20);
-
-            _slideAnimEstado.set(el, { timeout, wrapper });
-        }
-
-        return { debounce, _crearPressHold, registrarSwipe, DUR_ANIM, DUR_CALENDARIO, _animarFadeSwap, _posicionarPopup, _registrarCierrePopup, _animarSlideElemento };
-    })();
-
-    // ====================================================================
-    // TOAST Y FEEDBACK DE BOTONES/INPUTS
-    // ====================================================================
-    const ToastUI = (function (S) {
-        let toastTimeout = null;
-        let _toastQueue = [];
-        let _toastRunning = false;
+        const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
 
         function mostrarError(inputId, errorId) {
             const input = $(inputId);
@@ -2573,6 +2166,22 @@
             const error = $(errorId);
             if (input) input.classList.remove('error');
             if (error) error.style.display = 'none';
+        }
+
+        function obtenerNombrePerfilSafe() {
+            let nombre = 'Backup';
+            if (window.PerfilManager) nombre = window.PerfilManager.obtenerDatosPerfil().nombre;
+            return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
+        }
+
+        function descargarJSON(data, nombreArchivo) {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function mostrarToast(mensaje, tipo = 'info', duracion = 3000) {
@@ -2624,52 +2233,7 @@
             btnGuardar.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> Guardar';
         }
 
-        return { mostrarError, limpiarError, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion };
-    })(SecurityAndUtils);
 
-    const UILogic = (function (S, D, GistSync) {
-
-        let edicionBloqueada = true;
-        let edicionGrupoBloqueada = true;
-        let perfilEnEdicion = null;
-        let modoLoteActivo = false;
-        let tiempoExpansionBotones = null;
-        let timerAutoCierreBotones = null;
-        let modoEstadisticas = 'mensual';
-        let _modalAbiertoDesdeLista = false;
-        let _timerAutoVista = null;
-
-        function formatoDiferencia(tiempoTotal) {
-            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
-        }
-
-        const { debounce, _crearPressHold, registrarSwipe, DUR_ANIM, DUR_CALENDARIO, _animarFadeSwap, _posicionarPopup, _registrarCierrePopup, _animarSlideElemento } = AnimUtils;
-        const { mostrarError, limpiarError, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion } = ToastUI;
-
-        function _actualizarOffsetsStickyMes() {
-            const header = document.querySelector('.header');
-            const mesHeader = document.querySelector('.registro-mes-header');
-            const root = document.documentElement.style;
-            if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
-            if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
-        }
-        const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
-
-        function obtenerNombrePerfilSafe() {
-            let nombre = 'Backup';
-            if (window.PerfilManager) nombre = window.PerfilManager.obtenerDatosPerfil().nombre;
-            return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
-        }
-
-        function descargarJSON(data, nombreArchivo) {
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
 
         function agruparRegistrosPorMes(registros) {
             if (!Array.isArray(registros)) {
@@ -3236,7 +2800,132 @@
             _renderizarStats(stats, { mostrarBtnReporte: true });
         }
 
-        const { setFondoCard, toggleFondoCard, actualizarFondoCard } = CardFondos;
+        let _fondoCard = 'golden-gate';
+        let _bgFadeTimer = null;
+        let _bgActiveLayer = 'a';
+
+        function setFondoCard(valor) {
+            _fondoCard = valor;
+        }
+
+        function toggleFondoCard() {
+            const ids = [...(window.FONDOS_SVG || []).map(f => f.id), 'ninguno'];
+            const idx = ids.indexOf(_fondoCard);
+            _fondoCard = ids[(idx + 1) % ids.length];
+            StorageHelper.setItem(STORAGE_KEYS.FONDO_CARD, _fondoCard, true);
+            const btn = $('hint-fondo-label');
+            if (btn) btn.textContent = _getLabelFondo(_fondoCard);
+            const bg = $('stats-card-bg');
+            if (bg && bg.dataset.estado) actualizarFondoCard(bg.dataset.estado);
+        }
+
+        function _getLabelFondo(id) {
+            if (id === 'ninguno') return 'Sin fondo';
+            const fondo = (window.FONDOS_SVG || []).find(f => f.id === id);
+            return fondo ? fondo.label : id;
+        }
+
+        function _getSvgFondo(id, color) {
+            const fondo = (window.FONDOS_SVG || []).find(f => f.id === id);
+            if (!fondo) return '';
+            return _sanitizarSVG(fondo.svg(color));
+        }
+
+        function _sanitizarSVG(svgStr) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgStr, 'image/svg+xml');
+
+            const TAGS_BLOQUEADOS = ['script', 'foreignObject', 'use', 'iframe', 'object', 'embed', 'link'];
+            TAGS_BLOQUEADOS.forEach(tag => {
+                doc.querySelectorAll(tag).forEach(el => el.remove());
+            });
+
+            const ATTRS_BLOQUEADOS = /^on|^xlink:href$|^href$/i;
+            doc.querySelectorAll('*').forEach(el => {
+                [...el.attributes].forEach(attr => {
+                    if (ATTRS_BLOQUEADOS.test(attr.name)) el.removeAttribute(attr.name);
+                });
+            });
+
+            doc.querySelectorAll('[style]').forEach(el => {
+                const safe = el.getAttribute('style').replace(/@import|url\s*\(/gi, '');
+                el.setAttribute('style', safe);
+            });
+
+            const svgEl = doc.querySelector('svg');
+            return svgEl ? svgEl.outerHTML : '';
+        }
+
+        function actualizarFondoCard(estado, colorOverride = null) {
+            const bg = $('stats-card-bg');
+            if (!bg) return;
+            bg.dataset.estado = estado;
+
+            const coloresVar = {
+                blue: 'rgba(76,114,172,0.12)',
+                green: 'rgba(76,172,140,0.12)',
+                red: 'rgba(172,90,76,0.12)',
+                purple: 'rgba(140,80,200,0.12)',
+                gold: 'rgba(172,155,76,0.12)',
+                orange: 'rgba(210, 120, 50, 0.12)',
+            };
+
+            const colores = {
+                esperando: 'rgba(140,150,170,0.07)',
+                en_curso: coloresVar.blue,
+                finalizado_ok: coloresVar.green,
+                finalizado_fail: coloresVar.red,
+                especial: coloresVar.purple
+            };
+
+            const color = colorOverride
+                ? (coloresVar[colorOverride] || colores.especial)
+                : (colores[estado] || colores.esperando);
+
+            if (_fondoCard === 'ninguno') {
+                bg.innerHTML = '';
+                return;
+            }
+
+            let layerA = bg.querySelector('.stats-card-bg__layer[data-layer="a"]');
+            let layerB = bg.querySelector('.stats-card-bg__layer[data-layer="b"]');
+            if (!layerA) {
+                layerA = document.createElement('div');
+                layerA.className = 'stats-card-bg__layer';
+                layerA.dataset.layer = 'a';
+                bg.appendChild(layerA);
+            }
+            if (!layerB) {
+                layerB = document.createElement('div');
+                layerB.className = 'stats-card-bg__layer';
+                layerB.dataset.layer = 'b';
+                bg.appendChild(layerB);
+            }
+
+            const nuevoSVG = _getSvgFondo(_fondoCard, color);
+            const incoming = _bgActiveLayer === 'a' ? layerB : layerA;
+            const outgoing = _bgActiveLayer === 'a' ? layerA : layerB;
+
+            incoming.style.zIndex = '2';
+            incoming.style.opacity = '0';
+            incoming.innerHTML = nuevoSVG;
+
+            outgoing.style.zIndex = '1';
+            outgoing.style.opacity = '0';
+
+            if (_bgFadeTimer) { clearTimeout(_bgFadeTimer); _bgFadeTimer = null; }
+
+            incoming.offsetHeight;
+            incoming.style.opacity = '1';
+
+            _bgActiveLayer = _bgActiveLayer === 'a' ? 'b' : 'a';
+            _bgFadeTimer = setTimeout(() => {
+                outgoing.innerHTML = '';
+                outgoing.style.opacity = '0';
+                _bgFadeTimer = null;
+            }, 650);
+        }
+
 
         function _estadoDiasHabiles(diasHabiles) {
             const hoy = TimeUtils.obtenerFechaHoy();
@@ -3784,6 +3473,20 @@
             }
         }
 
+        function _getCSSdur(varName) {
+            const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+            if (!raw) return 300;
+            return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
+        }
+        const DUR_ANIM = () => _getCSSdur('--dur-anim');
+        const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
+
+        function _animarFadeSwap(el, fn) {
+            if (!el) { fn(); return; }
+            el.classList.add('fade-out');
+            setTimeout(() => { fn(); el.classList.remove('fade-out'); }, DUR_ANIM());
+        }
+
         function _animarCambioCard(renderFn) {
             const els = [
                 $('stats-semana'),
@@ -3896,6 +3599,11 @@
             });
         }
 
+        function _setBtnActivo(id, activo) {
+            const btn = document.getElementById(id);
+            if (btn) btn.classList.toggle('btn-activo', activo);
+        }
+
         const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
             _crearToggleConfig({
                 getVal: () => D.getIgnorarTiempoFuera(),
@@ -3954,8 +3662,6 @@
                 mensajeOff: 'No se recuerda el estado de las tarjetas',
             });
 
-        const { aplicarVisibilidadCard, aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards } = CardOrden;
-
         function toggleVisibilidadCard(cual) {
             const key = STORAGE_KEYS.CARD_VISIBLE(cual);
             const nuevo = !StorageHelper.getBoolean(key, true, true);
@@ -3963,6 +3669,156 @@
             aplicarVisibilidadCard(cual, nuevo);
             _setBtnActivo('btn-toggle-card-' + cual, nuevo);
             mostrarToast('Tarjeta ' + cual + (nuevo ? ' visible' : ' oculta'), 'info');
+        }
+
+        function aplicarVisibilidadCard(cual, visible) {
+            const card = document.getElementById('card-' + cual);
+            if (card) card.style.display = visible ? '' : 'none';
+        }
+
+        function aplicarVisibilidadCards() {
+            ['registrar', 'estadisticas', 'historico'].forEach(cual => {
+                const visible = StorageHelper.getBoolean(STORAGE_KEYS.CARD_VISIBLE(cual), true, true);
+                aplicarVisibilidadCard(cual, visible);
+                _setBtnActivo('btn-toggle-card-' + cual, visible);
+            });
+        }
+
+        function obtenerOrdenCards() {
+            const guardado = StorageHelper.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true);
+            const validos = ['registrar', 'estadisticas', 'historico'];
+            if (Array.isArray(guardado) && guardado.length === 3 && validos.every(v => guardado.includes(v))) {
+                return guardado;
+            }
+            return validos;
+        }
+
+        function aplicarOrdenCards(orden) {
+            const statsCard = document.getElementById('stats-card');
+            const leftColumn = statsCard ? statsCard.parentElement : null;
+            const container = leftColumn ? leftColumn.parentElement : null;
+            if (!leftColumn || !container) return;
+
+            const delays = [0.10, 0.15, 0.25];
+            orden.forEach((cual, idx) => {
+                const card = document.getElementById('card-' + cual);
+                if (!card) return;
+                card.style.animationDelay = `${delays[idx] || 0.25}s`;
+                const esUltima = idx === orden.length - 1;
+                if (esUltima) {
+                    container.appendChild(card);
+                } else {
+                    leftColumn.appendChild(card);
+                }
+            });
+
+            const lista = document.getElementById('lista-orden-cards');
+            if (lista) {
+                orden.forEach(cual => {
+                    const item = document.getElementById('orden-item-' + cual);
+                    if (item) lista.appendChild(item);
+                });
+            }
+        }
+
+        function iniciarDragOrdenCards() {
+            const lista = document.getElementById('lista-orden-cards');
+            if (!lista) return;
+
+            let draggingEl = null;
+            let dragClone = null;
+            let startY = 0;
+            let initialYOffset = 0;
+            let dragTimer = null;
+            const DRAG_DELAY = 150;
+
+            function getCardFromItem(el) {
+                const handle = el?.classList?.contains('drag-handle') ? el : el?.querySelector('.drag-handle');
+                return handle?.dataset?.card;
+            }
+
+            function initDrag(item, clientY) {
+                draggingEl = item;
+                const rect = item.getBoundingClientRect();
+                initialYOffset = clientY - rect.top;
+                dragClone = item.cloneNode(true);
+                Object.assign(dragClone.style, {
+                    position: 'fixed', top: `${rect.top}px`, left: `${rect.left}px`,
+                    width: `${rect.width}px`, height: `${rect.height}px`, zIndex: '999999',
+                    pointerEvents: 'none', margin: '0', transform: 'scale(1.02)', opacity: '0.9'
+                });
+                document.body.appendChild(dragClone);
+                draggingEl.style.opacity = '0';
+                if (navigator.vibrate) navigator.vibrate(30);
+            }
+
+            function moveDrag(clientY) {
+                if (!dragClone || !draggingEl) return;
+
+                dragClone.style.top = `${clientY - initialYOffset}px`;
+
+                const target = [...lista.querySelectorAll('.orden-card-item')].find(item => {
+                    if (item === draggingEl) return false;
+                    const r = item.getBoundingClientRect();
+                    return clientY >= r.top && clientY <= r.bottom;
+                });
+
+                if (target) {
+                    const targetRect = target.getBoundingClientRect();
+                    const targetMiddle = targetRect.top + targetRect.height / 2;
+
+                    if (clientY < targetMiddle) {
+                        lista.insertBefore(draggingEl, target);
+                    } else {
+                        lista.insertBefore(draggingEl, target.nextSibling);
+                    }
+                }
+            }
+
+            function endDrag() {
+                clearTimeout(dragTimer);
+                if (!draggingEl) return;
+
+                if (dragClone) {
+                    dragClone.remove();
+                    dragClone = null;
+                }
+                draggingEl.style.opacity = '';
+
+                const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
+                const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
+
+                try {
+                    StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
+                } catch (e) { }
+
+                if (typeof aplicarOrdenCards === 'function') {
+                    aplicarOrdenCards(nuevoOrden);
+                }
+
+                draggingEl = null;
+            }
+
+            const bindStart = (eventType, getY, opts) => lista.addEventListener(eventType, (e) => {
+                const item = e.target.closest('.drag-handle')?.closest('.orden-card-item');
+                if (!item) return;
+                startY = getY(e);
+                dragTimer = setTimeout(() => initDrag(item, startY), DRAG_DELAY);
+            }, opts);
+
+            const bindMove = (target, eventType, getY, opts) => target.addEventListener(eventType, (e) => {
+                if (!draggingEl) { if (Math.abs(getY(e) - startY) > 10) clearTimeout(dragTimer); return; }
+                e.preventDefault();
+                moveDrag(getY(e));
+            }, opts);
+
+            bindStart('touchstart', e => e.touches[0].clientY, { passive: true });
+            bindStart('mousedown', e => e.clientY);
+            bindMove(lista, 'touchmove', e => e.touches[0].clientY, { passive: false });
+            bindMove(document, 'mousemove', e => e.clientY);
+            lista.addEventListener('touchend', endDrag);
+            lista.addEventListener('touchcancel', endDrag);
+            document.addEventListener('mouseup', endDrag);
         }
 
         function cerrarEdicion() {
@@ -4839,7 +4695,7 @@ Generado por Sistema Lushibosca
                 UILogic.actualizarFeedbackConfig();
                 actualizarEstadoBotonIgnorarTF();
                 const lbl = $('hint-fondo-label');
-                if (lbl) lbl.textContent = CardFondos.obtenerLabelActual();
+                if (lbl) lbl.textContent = _getLabelFondo(_fondoCard);
             });
         }
 
@@ -6639,6 +6495,44 @@ Generado por Sistema Lushibosca
                 ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
         }
 
+        function _posicionarPopup(popup, event) {
+            const el = event.currentTarget || event.target;
+            const rect = el.getBoundingClientRect();
+            const margin = 8;
+            requestAnimationFrame(() => {
+                const pw = popup.offsetWidth, ph = popup.offsetHeight;
+                let top = rect.bottom + 12;
+                let left = rect.left + (rect.width / 2) - (pw / 2);
+                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
+                if (top < margin) top = margin;
+                popup.style.top = `${top}px`;
+                popup.style.left = `${left}px`;
+                popup.style.visibility = '';
+                setTimeout(() => popup.classList.add('listo'), 350);
+            });
+        }
+
+        function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar) {
+            const cerrar = () => {
+                popup.remove();
+                if (alCerrar) alCerrar();
+                document.removeEventListener('click', onClick, true);
+                document.removeEventListener('scroll', cerrar, true);
+            };
+            const onClick = (e) => {
+                const trigger = e.target.closest(selectorTrigger);
+                if (trigger && esMismoTrigger(trigger)) return;
+                if (!popup.contains(e.target)) cerrar();
+            };
+            setTimeout(() => {
+                document.addEventListener('click', onClick, { capture: true, passive: true });
+                document.addEventListener('scroll', cerrar, { capture: true, passive: true });
+            }, 10);
+            return cerrar;
+        }
+
         function _popupCalendario(event, registroId) {
             event.stopPropagation();
 
@@ -6949,6 +6843,79 @@ Generado por Sistema Lushibosca
                 item._statPopupBound = true;
                 item.addEventListener('click', _onclickStatItem);
             });
+        }
+
+        const _slideAnimEstado = new WeakMap();
+
+        function _limpiarClonVisual(clon) {
+            clon.removeAttribute('id');
+            clon.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+            return clon;
+        }
+
+        function _finalizarSlidePendiente(el) {
+            const estado = _slideAnimEstado.get(el);
+            if (!estado) return;
+            clearTimeout(estado.timeout);
+            el.style.display = '';
+            estado.wrapper.parentNode?.insertBefore(el, estado.wrapper);
+            estado.wrapper.remove();
+            _slideAnimEstado.delete(el);
+        }
+
+        function _animarSlideElemento(el, delta, mutarFn) {
+            if (!el) { mutarFn(); return; }
+
+            _finalizarSlidePendiente(el);
+
+            const rectViejo = el.getBoundingClientRect();
+            const anchoViejo = rectViejo.width;
+            const altoViejo = rectViejo.height;
+            const margenTop = getComputedStyle(el).marginTop;
+
+            const snapViejo = _limpiarClonVisual(el.cloneNode(true));
+            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoViejo + 'px;pointer-events:none;';
+
+            el.style.visibility = 'hidden';
+            mutarFn();
+
+            const rectNuevo = el.getBoundingClientRect();
+            const anchoNuevo = rectNuevo.width;
+            const altoNuevo = rectNuevo.height;
+
+            const snapNuevo = _limpiarClonVisual(el.cloneNode(true));
+            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoNuevo + 'px;pointer-events:none;left:' + (delta > 0 ? anchoViejo : -anchoNuevo) + 'px;';
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoViejo + 'px;height:calc(' + altoViejo + 'px + ' + margenTop + ');';
+            wrapper.appendChild(snapViejo);
+            wrapper.appendChild(snapNuevo);
+
+            el.parentNode.insertBefore(wrapper, el);
+            el.style.display = 'none';
+            el.style.visibility = '';
+
+            wrapper.offsetHeight;
+            const dur = DUR_CALENDARIO();
+            const easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
+            snapViejo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            snapNuevo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            if (Math.abs(altoNuevo - altoViejo) > 0.5) {
+                wrapper.style.transition = 'height ' + dur + 'ms ' + easing;
+                wrapper.style.height = 'calc(' + altoNuevo + 'px + ' + margenTop + ')';
+            }
+            const tx = (delta > 0 ? -anchoViejo : anchoViejo) + 'px';
+            snapViejo.style.transform = 'translateX(' + tx + ')';
+            snapNuevo.style.transform = 'translateX(' + tx + ')';
+
+            const timeout = setTimeout(() => {
+                el.style.display = '';
+                wrapper.parentNode.insertBefore(el, wrapper);
+                wrapper.remove();
+                _slideAnimEstado.delete(el);
+            }, dur + 20);
+
+            _slideAnimEstado.set(el, { timeout, wrapper });
         }
 
         function _animarCalendario(delta, renderFn) {
@@ -7462,7 +7429,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260710';
+        const _v = '-v260713';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

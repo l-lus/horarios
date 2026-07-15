@@ -2372,46 +2372,10 @@
         return { aplicarVisibilidadCard, aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards };
     })();
 
-    const UILogic = (function (S, D, GistSync) {
-
-        let toastTimeout = null;
-        let _toastQueue = [];
-        let _toastRunning = false;
-        let edicionBloqueada = true;
-        let edicionGrupoBloqueada = true;
-        let perfilEnEdicion = null;
-        let modoLoteActivo = false;
-        let tiempoExpansionBotones = null;
-        let timerAutoCierreBotones = null;
-        let modoEstadisticas = 'mensual';
-        let _modalAbiertoDesdeLista = false;
-        let _timerAutoVista = null;
-
-        function formatoDiferencia(tiempoTotal) {
-            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
-        }
-
-        function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
-            if (!el || el.dataset.swipeInit) return;
-            el.dataset.swipeInit = '1';
-            let _x = null, _y = null;
-            el.addEventListener('touchstart', e => {
-                if (e.touches.length !== 1) return;
-                if (ignoreInputs && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
-                _x = e.touches[0].clientX;
-                _y = e.touches[0].clientY;
-            }, { passive: true });
-            el.addEventListener('touchend', e => {
-                if (_x === null) return;
-                const dx = e.changedTouches[0].clientX - _x;
-                const dy = e.changedTouches[0].clientY - _y;
-                _x = null; _y = null;
-                if (Math.abs(dy) > maxY) return;
-                if (Math.abs(dx) < minX) return;
-                callback(dx < 0 ? 1 : -1);
-            }, { passive: true });
-        }
-
+    // ====================================================================
+    // UTILIDADES GENÉRICAS DE ANIMACIÓN, POPUPS Y GESTOS
+    // ====================================================================
+    const AnimUtils = (function () {
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -2439,6 +2403,176 @@
                 }
             };
         }
+
+        function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
+            if (!el || el.dataset.swipeInit) return;
+            el.dataset.swipeInit = '1';
+            let _x = null, _y = null;
+            el.addEventListener('touchstart', e => {
+                if (e.touches.length !== 1) return;
+                if (ignoreInputs && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+                _x = e.touches[0].clientX;
+                _y = e.touches[0].clientY;
+            }, { passive: true });
+            el.addEventListener('touchend', e => {
+                if (_x === null) return;
+                const dx = e.changedTouches[0].clientX - _x;
+                const dy = e.changedTouches[0].clientY - _y;
+                _x = null; _y = null;
+                if (Math.abs(dy) > maxY) return;
+                if (Math.abs(dx) < minX) return;
+                callback(dx < 0 ? 1 : -1);
+            }, { passive: true });
+        }
+
+        function _getCSSdur(varName) {
+            const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+            if (!raw) return 300;
+            return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
+        }
+        const DUR_ANIM = () => _getCSSdur('--dur-anim');
+        const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
+
+        function _animarFadeSwap(el, fn) {
+            if (!el) { fn(); return; }
+            el.classList.add('fade-out');
+            setTimeout(() => { fn(); el.classList.remove('fade-out'); }, DUR_ANIM());
+        }
+
+        function _posicionarPopup(popup, event) {
+            const el = event.currentTarget || event.target;
+            const rect = el.getBoundingClientRect();
+            const margin = 8;
+            requestAnimationFrame(() => {
+                const pw = popup.offsetWidth, ph = popup.offsetHeight;
+                let top = rect.bottom + 12;
+                let left = rect.left + (rect.width / 2) - (pw / 2);
+                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
+                if (top < margin) top = margin;
+                popup.style.top = `${top}px`;
+                popup.style.left = `${left}px`;
+                popup.style.visibility = '';
+                setTimeout(() => popup.classList.add('listo'), 350);
+            });
+        }
+
+        function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar) {
+            const cerrar = () => {
+                popup.remove();
+                if (alCerrar) alCerrar();
+                document.removeEventListener('click', onClick, true);
+                document.removeEventListener('scroll', cerrar, true);
+            };
+            const onClick = (e) => {
+                const trigger = e.target.closest(selectorTrigger);
+                if (trigger && esMismoTrigger(trigger)) return;
+                if (!popup.contains(e.target)) cerrar();
+            };
+            setTimeout(() => {
+                document.addEventListener('click', onClick, { capture: true, passive: true });
+                document.addEventListener('scroll', cerrar, { capture: true, passive: true });
+            }, 10);
+            return cerrar;
+        }
+
+        const _slideAnimEstado = new WeakMap();
+
+        function _limpiarClonVisual(clon) {
+            clon.removeAttribute('id');
+            clon.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+            return clon;
+        }
+
+        function _finalizarSlidePendiente(el) {
+            const estado = _slideAnimEstado.get(el);
+            if (!estado) return;
+            clearTimeout(estado.timeout);
+            el.style.display = '';
+            estado.wrapper.parentNode?.insertBefore(el, estado.wrapper);
+            estado.wrapper.remove();
+            _slideAnimEstado.delete(el);
+        }
+
+        function _animarSlideElemento(el, delta, mutarFn) {
+            if (!el) { mutarFn(); return; }
+
+            _finalizarSlidePendiente(el);
+
+            const rectViejo = el.getBoundingClientRect();
+            const anchoViejo = rectViejo.width;
+            const altoViejo = rectViejo.height;
+            const margenTop = getComputedStyle(el).marginTop;
+
+            const snapViejo = _limpiarClonVisual(el.cloneNode(true));
+            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoViejo + 'px;pointer-events:none;';
+
+            el.style.visibility = 'hidden';
+            mutarFn();
+
+            const rectNuevo = el.getBoundingClientRect();
+            const anchoNuevo = rectNuevo.width;
+            const altoNuevo = rectNuevo.height;
+
+            const snapNuevo = _limpiarClonVisual(el.cloneNode(true));
+            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoNuevo + 'px;pointer-events:none;left:' + (delta > 0 ? anchoViejo : -anchoNuevo) + 'px;';
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoViejo + 'px;height:calc(' + altoViejo + 'px + ' + margenTop + ');';
+            wrapper.appendChild(snapViejo);
+            wrapper.appendChild(snapNuevo);
+
+            el.parentNode.insertBefore(wrapper, el);
+            el.style.display = 'none';
+            el.style.visibility = '';
+
+            wrapper.offsetHeight;
+            const dur = DUR_CALENDARIO();
+            const easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
+            snapViejo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            snapNuevo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            if (Math.abs(altoNuevo - altoViejo) > 0.5) {
+                wrapper.style.transition = 'height ' + dur + 'ms ' + easing;
+                wrapper.style.height = 'calc(' + altoNuevo + 'px + ' + margenTop + ')';
+            }
+            const tx = (delta > 0 ? -anchoViejo : anchoViejo) + 'px';
+            snapViejo.style.transform = 'translateX(' + tx + ')';
+            snapNuevo.style.transform = 'translateX(' + tx + ')';
+
+            const timeout = setTimeout(() => {
+                el.style.display = '';
+                wrapper.parentNode.insertBefore(el, wrapper);
+                wrapper.remove();
+                _slideAnimEstado.delete(el);
+            }, dur + 20);
+
+            _slideAnimEstado.set(el, { timeout, wrapper });
+        }
+
+        return { debounce, _crearPressHold, registrarSwipe, DUR_ANIM, DUR_CALENDARIO, _animarFadeSwap, _posicionarPopup, _registrarCierrePopup, _animarSlideElemento };
+    })();
+
+    const UILogic = (function (S, D, GistSync) {
+
+        let toastTimeout = null;
+        let _toastQueue = [];
+        let _toastRunning = false;
+        let edicionBloqueada = true;
+        let edicionGrupoBloqueada = true;
+        let perfilEnEdicion = null;
+        let modoLoteActivo = false;
+        let tiempoExpansionBotones = null;
+        let timerAutoCierreBotones = null;
+        let modoEstadisticas = 'mensual';
+        let _modalAbiertoDesdeLista = false;
+        let _timerAutoVista = null;
+
+        function formatoDiferencia(tiempoTotal) {
+            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
+        }
+
+        const { debounce, _crearPressHold, registrarSwipe, DUR_ANIM, DUR_CALENDARIO, _animarFadeSwap, _posicionarPopup, _registrarCierrePopup, _animarSlideElemento } = AnimUtils;
 
         function _actualizarOffsetsStickyMes() {
             const header = document.querySelector('.header');
@@ -3641,20 +3775,6 @@
                 if (labelEl) labelEl.textContent = 'Mensual';
                 poblarSelectorMeses();
             }
-        }
-
-        function _getCSSdur(varName) {
-            const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-            if (!raw) return 300;
-            return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
-        }
-        const DUR_ANIM = () => _getCSSdur('--dur-anim');
-        const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
-
-        function _animarFadeSwap(el, fn) {
-            if (!el) { fn(); return; }
-            el.classList.add('fade-out');
-            setTimeout(() => { fn(); el.classList.remove('fade-out'); }, DUR_ANIM());
         }
 
         function _animarCambioCard(renderFn) {
@@ -6512,44 +6632,6 @@ Generado por Sistema Lushibosca
                 ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
         }
 
-        function _posicionarPopup(popup, event) {
-            const el = event.currentTarget || event.target;
-            const rect = el.getBoundingClientRect();
-            const margin = 8;
-            requestAnimationFrame(() => {
-                const pw = popup.offsetWidth, ph = popup.offsetHeight;
-                let top = rect.bottom + 12;
-                let left = rect.left + (rect.width / 2) - (pw / 2);
-                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
-                if (left < margin) left = margin;
-                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
-                if (top < margin) top = margin;
-                popup.style.top = `${top}px`;
-                popup.style.left = `${left}px`;
-                popup.style.visibility = '';
-                setTimeout(() => popup.classList.add('listo'), 350);
-            });
-        }
-
-        function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar) {
-            const cerrar = () => {
-                popup.remove();
-                if (alCerrar) alCerrar();
-                document.removeEventListener('click', onClick, true);
-                document.removeEventListener('scroll', cerrar, true);
-            };
-            const onClick = (e) => {
-                const trigger = e.target.closest(selectorTrigger);
-                if (trigger && esMismoTrigger(trigger)) return;
-                if (!popup.contains(e.target)) cerrar();
-            };
-            setTimeout(() => {
-                document.addEventListener('click', onClick, { capture: true, passive: true });
-                document.addEventListener('scroll', cerrar, { capture: true, passive: true });
-            }, 10);
-            return cerrar;
-        }
-
         function _popupCalendario(event, registroId) {
             event.stopPropagation();
 
@@ -6860,79 +6942,6 @@ Generado por Sistema Lushibosca
                 item._statPopupBound = true;
                 item.addEventListener('click', _onclickStatItem);
             });
-        }
-
-        const _slideAnimEstado = new WeakMap();
-
-        function _limpiarClonVisual(clon) {
-            clon.removeAttribute('id');
-            clon.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
-            return clon;
-        }
-
-        function _finalizarSlidePendiente(el) {
-            const estado = _slideAnimEstado.get(el);
-            if (!estado) return;
-            clearTimeout(estado.timeout);
-            el.style.display = '';
-            estado.wrapper.parentNode?.insertBefore(el, estado.wrapper);
-            estado.wrapper.remove();
-            _slideAnimEstado.delete(el);
-        }
-
-        function _animarSlideElemento(el, delta, mutarFn) {
-            if (!el) { mutarFn(); return; }
-
-            _finalizarSlidePendiente(el);
-
-            const rectViejo = el.getBoundingClientRect();
-            const anchoViejo = rectViejo.width;
-            const altoViejo = rectViejo.height;
-            const margenTop = getComputedStyle(el).marginTop;
-
-            const snapViejo = _limpiarClonVisual(el.cloneNode(true));
-            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoViejo + 'px;pointer-events:none;';
-
-            el.style.visibility = 'hidden';
-            mutarFn();
-
-            const rectNuevo = el.getBoundingClientRect();
-            const anchoNuevo = rectNuevo.width;
-            const altoNuevo = rectNuevo.height;
-
-            const snapNuevo = _limpiarClonVisual(el.cloneNode(true));
-            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoNuevo + 'px;pointer-events:none;left:' + (delta > 0 ? anchoViejo : -anchoNuevo) + 'px;';
-
-            const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoViejo + 'px;height:calc(' + altoViejo + 'px + ' + margenTop + ');';
-            wrapper.appendChild(snapViejo);
-            wrapper.appendChild(snapNuevo);
-
-            el.parentNode.insertBefore(wrapper, el);
-            el.style.display = 'none';
-            el.style.visibility = '';
-
-            wrapper.offsetHeight;
-            const dur = DUR_CALENDARIO();
-            const easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
-            snapViejo.style.transition = 'transform ' + dur + 'ms ' + easing;
-            snapNuevo.style.transition = 'transform ' + dur + 'ms ' + easing;
-            if (Math.abs(altoNuevo - altoViejo) > 0.5) {
-                wrapper.style.transition = 'height ' + dur + 'ms ' + easing;
-                wrapper.style.height = 'calc(' + altoNuevo + 'px + ' + margenTop + ')';
-            }
-            const tx = (delta > 0 ? -anchoViejo : anchoViejo) + 'px';
-            snapViejo.style.transform = 'translateX(' + tx + ')';
-            snapNuevo.style.transform = 'translateX(' + tx + ')';
-
-            const timeout = setTimeout(() => {
-                el.style.display = '';
-                wrapper.parentNode.insertBefore(el, wrapper);
-                wrapper.remove();
-                _slideAnimEstado.delete(el);
-            }, dur + 20);
-
-            _slideAnimEstado.set(el, { timeout, wrapper });
         }
 
         function _animarCalendario(delta, renderFn) {

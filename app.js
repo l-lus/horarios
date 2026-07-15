@@ -3,6 +3,7 @@
     'use strict';
 
     const $ = id => document.getElementById(id);
+    const _setBtnActivo = (id, activo) => { const btn = document.getElementById(id); if (btn) btn.classList.toggle('btn-activo', activo); };
 
     // ====================================================================
     // STORAGE KEYS — MODULE
@@ -2214,6 +2215,163 @@
         return { setFondoCard, toggleFondoCard, actualizarFondoCard, obtenerLabelActual };
     })();
 
+    // ====================================================================
+    // ORDEN Y VISIBILIDAD DE TARJETAS (drag & drop de reordenamiento)
+    // ====================================================================
+    const CardOrden = (function () {
+        function aplicarVisibilidadCard(cual, visible) {
+            const card = document.getElementById('card-' + cual);
+            if (card) card.style.display = visible ? '' : 'none';
+        }
+
+        function aplicarVisibilidadCards() {
+            ['registrar', 'estadisticas', 'historico'].forEach(cual => {
+                const visible = StorageHelper.getBoolean(STORAGE_KEYS.CARD_VISIBLE(cual), true, true);
+                aplicarVisibilidadCard(cual, visible);
+                _setBtnActivo('btn-toggle-card-' + cual, visible);
+            });
+        }
+
+        function obtenerOrdenCards() {
+            const guardado = StorageHelper.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true);
+            const validos = ['registrar', 'estadisticas', 'historico'];
+            if (Array.isArray(guardado) && guardado.length === 3 && validos.every(v => guardado.includes(v))) {
+                return guardado;
+            }
+            return validos;
+        }
+
+        function aplicarOrdenCards(orden) {
+            const statsCard = document.getElementById('stats-card');
+            const leftColumn = statsCard ? statsCard.parentElement : null;
+            const container = leftColumn ? leftColumn.parentElement : null;
+            if (!leftColumn || !container) return;
+
+            const delays = [0.10, 0.15, 0.25];
+            orden.forEach((cual, idx) => {
+                const card = document.getElementById('card-' + cual);
+                if (!card) return;
+                card.style.animationDelay = `${delays[idx] || 0.25}s`;
+                const esUltima = idx === orden.length - 1;
+                if (esUltima) {
+                    container.appendChild(card);
+                } else {
+                    leftColumn.appendChild(card);
+                }
+            });
+
+            const lista = document.getElementById('lista-orden-cards');
+            if (lista) {
+                orden.forEach(cual => {
+                    const item = document.getElementById('orden-item-' + cual);
+                    if (item) lista.appendChild(item);
+                });
+            }
+        }
+
+        function iniciarDragOrdenCards() {
+            const lista = document.getElementById('lista-orden-cards');
+            if (!lista) return;
+
+            let draggingEl = null;
+            let dragClone = null;
+            let startY = 0;
+            let initialYOffset = 0;
+            let dragTimer = null;
+            const DRAG_DELAY = 150;
+
+            function getCardFromItem(el) {
+                const handle = el?.classList?.contains('drag-handle') ? el : el?.querySelector('.drag-handle');
+                return handle?.dataset?.card;
+            }
+
+            function initDrag(item, clientY) {
+                draggingEl = item;
+                const rect = item.getBoundingClientRect();
+                initialYOffset = clientY - rect.top;
+                dragClone = item.cloneNode(true);
+                Object.assign(dragClone.style, {
+                    position: 'fixed', top: `${rect.top}px`, left: `${rect.left}px`,
+                    width: `${rect.width}px`, height: `${rect.height}px`, zIndex: '999999',
+                    pointerEvents: 'none', margin: '0', transform: 'scale(1.02)', opacity: '0.9'
+                });
+                document.body.appendChild(dragClone);
+                draggingEl.style.opacity = '0';
+                if (navigator.vibrate) navigator.vibrate(30);
+            }
+
+            function moveDrag(clientY) {
+                if (!dragClone || !draggingEl) return;
+
+                dragClone.style.top = `${clientY - initialYOffset}px`;
+
+                const target = [...lista.querySelectorAll('.orden-card-item')].find(item => {
+                    if (item === draggingEl) return false;
+                    const r = item.getBoundingClientRect();
+                    return clientY >= r.top && clientY <= r.bottom;
+                });
+
+                if (target) {
+                    const targetRect = target.getBoundingClientRect();
+                    const targetMiddle = targetRect.top + targetRect.height / 2;
+
+                    if (clientY < targetMiddle) {
+                        lista.insertBefore(draggingEl, target);
+                    } else {
+                        lista.insertBefore(draggingEl, target.nextSibling);
+                    }
+                }
+            }
+
+            function endDrag() {
+                clearTimeout(dragTimer);
+                if (!draggingEl) return;
+
+                if (dragClone) {
+                    dragClone.remove();
+                    dragClone = null;
+                }
+                draggingEl.style.opacity = '';
+
+                const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
+                const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
+
+                try {
+                    StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
+                } catch (e) { }
+
+                if (typeof aplicarOrdenCards === 'function') {
+                    aplicarOrdenCards(nuevoOrden);
+                }
+
+                draggingEl = null;
+            }
+
+            const bindStart = (eventType, getY, opts) => lista.addEventListener(eventType, (e) => {
+                const item = e.target.closest('.drag-handle')?.closest('.orden-card-item');
+                if (!item) return;
+                startY = getY(e);
+                dragTimer = setTimeout(() => initDrag(item, startY), DRAG_DELAY);
+            }, opts);
+
+            const bindMove = (target, eventType, getY, opts) => target.addEventListener(eventType, (e) => {
+                if (!draggingEl) { if (Math.abs(getY(e) - startY) > 10) clearTimeout(dragTimer); return; }
+                e.preventDefault();
+                moveDrag(getY(e));
+            }, opts);
+
+            bindStart('touchstart', e => e.touches[0].clientY, { passive: true });
+            bindStart('mousedown', e => e.clientY);
+            bindMove(lista, 'touchmove', e => e.touches[0].clientY, { passive: false });
+            bindMove(document, 'mousemove', e => e.clientY);
+            lista.addEventListener('touchend', endDrag);
+            lista.addEventListener('touchcancel', endDrag);
+            document.addEventListener('mouseup', endDrag);
+        }
+
+        return { aplicarVisibilidadCard, aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards };
+    })();
+
     const UILogic = (function (S, D, GistSync) {
 
         let toastTimeout = null;
@@ -3611,11 +3769,6 @@
             });
         }
 
-        function _setBtnActivo(id, activo) {
-            const btn = document.getElementById(id);
-            if (btn) btn.classList.toggle('btn-activo', activo);
-        }
-
         const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
             _crearToggleConfig({
                 getVal: () => D.getIgnorarTiempoFuera(),
@@ -3674,6 +3827,8 @@
                 mensajeOff: 'No se recuerda el estado de las tarjetas',
             });
 
+        const { aplicarVisibilidadCard, aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards } = CardOrden;
+
         function toggleVisibilidadCard(cual) {
             const key = STORAGE_KEYS.CARD_VISIBLE(cual);
             const nuevo = !StorageHelper.getBoolean(key, true, true);
@@ -3681,156 +3836,6 @@
             aplicarVisibilidadCard(cual, nuevo);
             _setBtnActivo('btn-toggle-card-' + cual, nuevo);
             mostrarToast('Tarjeta ' + cual + (nuevo ? ' visible' : ' oculta'), 'info');
-        }
-
-        function aplicarVisibilidadCard(cual, visible) {
-            const card = document.getElementById('card-' + cual);
-            if (card) card.style.display = visible ? '' : 'none';
-        }
-
-        function aplicarVisibilidadCards() {
-            ['registrar', 'estadisticas', 'historico'].forEach(cual => {
-                const visible = StorageHelper.getBoolean(STORAGE_KEYS.CARD_VISIBLE(cual), true, true);
-                aplicarVisibilidadCard(cual, visible);
-                _setBtnActivo('btn-toggle-card-' + cual, visible);
-            });
-        }
-
-        function obtenerOrdenCards() {
-            const guardado = StorageHelper.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true);
-            const validos = ['registrar', 'estadisticas', 'historico'];
-            if (Array.isArray(guardado) && guardado.length === 3 && validos.every(v => guardado.includes(v))) {
-                return guardado;
-            }
-            return validos;
-        }
-
-        function aplicarOrdenCards(orden) {
-            const statsCard = document.getElementById('stats-card');
-            const leftColumn = statsCard ? statsCard.parentElement : null;
-            const container = leftColumn ? leftColumn.parentElement : null;
-            if (!leftColumn || !container) return;
-
-            const delays = [0.10, 0.15, 0.25];
-            orden.forEach((cual, idx) => {
-                const card = document.getElementById('card-' + cual);
-                if (!card) return;
-                card.style.animationDelay = `${delays[idx] || 0.25}s`;
-                const esUltima = idx === orden.length - 1;
-                if (esUltima) {
-                    container.appendChild(card);
-                } else {
-                    leftColumn.appendChild(card);
-                }
-            });
-
-            const lista = document.getElementById('lista-orden-cards');
-            if (lista) {
-                orden.forEach(cual => {
-                    const item = document.getElementById('orden-item-' + cual);
-                    if (item) lista.appendChild(item);
-                });
-            }
-        }
-
-        function iniciarDragOrdenCards() {
-            const lista = document.getElementById('lista-orden-cards');
-            if (!lista) return;
-
-            let draggingEl = null;
-            let dragClone = null;
-            let startY = 0;
-            let initialYOffset = 0;
-            let dragTimer = null;
-            const DRAG_DELAY = 150;
-
-            function getCardFromItem(el) {
-                const handle = el?.classList?.contains('drag-handle') ? el : el?.querySelector('.drag-handle');
-                return handle?.dataset?.card;
-            }
-
-            function initDrag(item, clientY) {
-                draggingEl = item;
-                const rect = item.getBoundingClientRect();
-                initialYOffset = clientY - rect.top;
-                dragClone = item.cloneNode(true);
-                Object.assign(dragClone.style, {
-                    position: 'fixed', top: `${rect.top}px`, left: `${rect.left}px`,
-                    width: `${rect.width}px`, height: `${rect.height}px`, zIndex: '999999',
-                    pointerEvents: 'none', margin: '0', transform: 'scale(1.02)', opacity: '0.9'
-                });
-                document.body.appendChild(dragClone);
-                draggingEl.style.opacity = '0';
-                if (navigator.vibrate) navigator.vibrate(30);
-            }
-
-            function moveDrag(clientY) {
-                if (!dragClone || !draggingEl) return;
-
-                dragClone.style.top = `${clientY - initialYOffset}px`;
-
-                const target = [...lista.querySelectorAll('.orden-card-item')].find(item => {
-                    if (item === draggingEl) return false;
-                    const r = item.getBoundingClientRect();
-                    return clientY >= r.top && clientY <= r.bottom;
-                });
-
-                if (target) {
-                    const targetRect = target.getBoundingClientRect();
-                    const targetMiddle = targetRect.top + targetRect.height / 2;
-
-                    if (clientY < targetMiddle) {
-                        lista.insertBefore(draggingEl, target);
-                    } else {
-                        lista.insertBefore(draggingEl, target.nextSibling);
-                    }
-                }
-            }
-
-            function endDrag() {
-                clearTimeout(dragTimer);
-                if (!draggingEl) return;
-
-                if (dragClone) {
-                    dragClone.remove();
-                    dragClone = null;
-                }
-                draggingEl.style.opacity = '';
-
-                const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
-                const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
-
-                try {
-                    StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
-                } catch (e) { }
-
-                if (typeof aplicarOrdenCards === 'function') {
-                    aplicarOrdenCards(nuevoOrden);
-                }
-
-                draggingEl = null;
-            }
-
-            const bindStart = (eventType, getY, opts) => lista.addEventListener(eventType, (e) => {
-                const item = e.target.closest('.drag-handle')?.closest('.orden-card-item');
-                if (!item) return;
-                startY = getY(e);
-                dragTimer = setTimeout(() => initDrag(item, startY), DRAG_DELAY);
-            }, opts);
-
-            const bindMove = (target, eventType, getY, opts) => target.addEventListener(eventType, (e) => {
-                if (!draggingEl) { if (Math.abs(getY(e) - startY) > 10) clearTimeout(dragTimer); return; }
-                e.preventDefault();
-                moveDrag(getY(e));
-            }, opts);
-
-            bindStart('touchstart', e => e.touches[0].clientY, { passive: true });
-            bindStart('mousedown', e => e.clientY);
-            bindMove(lista, 'touchmove', e => e.touches[0].clientY, { passive: false });
-            bindMove(document, 'mousemove', e => e.clientY);
-            lista.addEventListener('touchend', endDrag);
-            lista.addEventListener('touchcancel', endDrag);
-            document.addEventListener('mouseup', endDrag);
         }
 
         function cerrarEdicion() {
@@ -7441,7 +7446,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260710';
+        const _v = '-v260714';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

@@ -2553,35 +2553,13 @@
         return { debounce, _crearPressHold, registrarSwipe, DUR_ANIM, DUR_CALENDARIO, _animarFadeSwap, _posicionarPopup, _registrarCierrePopup, _animarSlideElemento };
     })();
 
-    const UILogic = (function (S, D, GistSync) {
-
+    // ====================================================================
+    // TOAST Y FEEDBACK DE BOTONES/INPUTS
+    // ====================================================================
+    const ToastUI = (function (S) {
         let toastTimeout = null;
         let _toastQueue = [];
         let _toastRunning = false;
-        let edicionBloqueada = true;
-        let edicionGrupoBloqueada = true;
-        let perfilEnEdicion = null;
-        let modoLoteActivo = false;
-        let tiempoExpansionBotones = null;
-        let timerAutoCierreBotones = null;
-        let modoEstadisticas = 'mensual';
-        let _modalAbiertoDesdeLista = false;
-        let _timerAutoVista = null;
-
-        function formatoDiferencia(tiempoTotal) {
-            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
-        }
-
-        const { debounce, _crearPressHold, registrarSwipe, DUR_ANIM, DUR_CALENDARIO, _animarFadeSwap, _posicionarPopup, _registrarCierrePopup, _animarSlideElemento } = AnimUtils;
-
-        function _actualizarOffsetsStickyMes() {
-            const header = document.querySelector('.header');
-            const mesHeader = document.querySelector('.registro-mes-header');
-            const root = document.documentElement.style;
-            if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
-            if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
-        }
-        const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
 
         function mostrarError(inputId, errorId) {
             const input = $(inputId);
@@ -2595,22 +2573,6 @@
             const error = $(errorId);
             if (input) input.classList.remove('error');
             if (error) error.style.display = 'none';
-        }
-
-        function obtenerNombrePerfilSafe() {
-            let nombre = 'Backup';
-            if (window.PerfilManager) nombre = window.PerfilManager.obtenerDatosPerfil().nombre;
-            return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
-        }
-
-        function descargarJSON(data, nombreArchivo) {
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
         }
 
         function mostrarToast(mensaje, tipo = 'info', duracion = 3000) {
@@ -2662,7 +2624,52 @@
             btnGuardar.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> Guardar';
         }
 
+        return { mostrarError, limpiarError, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion };
+    })(SecurityAndUtils);
 
+    const UILogic = (function (S, D, GistSync) {
+
+        let edicionBloqueada = true;
+        let edicionGrupoBloqueada = true;
+        let perfilEnEdicion = null;
+        let modoLoteActivo = false;
+        let tiempoExpansionBotones = null;
+        let timerAutoCierreBotones = null;
+        let modoEstadisticas = 'mensual';
+        let _modalAbiertoDesdeLista = false;
+        let _timerAutoVista = null;
+
+        function formatoDiferencia(tiempoTotal) {
+            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
+        }
+
+        const { debounce, _crearPressHold, registrarSwipe, DUR_ANIM, DUR_CALENDARIO, _animarFadeSwap, _posicionarPopup, _registrarCierrePopup, _animarSlideElemento } = AnimUtils;
+        const { mostrarError, limpiarError, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion } = ToastUI;
+
+        function _actualizarOffsetsStickyMes() {
+            const header = document.querySelector('.header');
+            const mesHeader = document.querySelector('.registro-mes-header');
+            const root = document.documentElement.style;
+            if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
+            if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
+        }
+        const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
+
+        function obtenerNombrePerfilSafe() {
+            let nombre = 'Backup';
+            if (window.PerfilManager) nombre = window.PerfilManager.obtenerDatosPerfil().nombre;
+            return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
+        }
+
+        function descargarJSON(data, nombreArchivo) {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
 
         function agruparRegistrosPorMes(registros) {
             if (!Array.isArray(registros)) {
@@ -7455,7 +7462,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260714';
+        const _v = '-v260710';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

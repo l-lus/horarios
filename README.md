@@ -9,6 +9,7 @@
 * **Mantenimiento:** Refactor y extracion de modulo FONDOS DE TARJETA
 * **Mantenimiento:** Refactor y extracion de modulo ORDEN Y VISIBILIDAD DE TARJETAS 
 * **Mantenimiento:** Refactor y extracion de modulo UTILIDADES GENÉRICAS DE ANIMACIÓN
+* **Mantenimiento:** Refactor y extracion de modulo TOAST Y FEEDBACK
 
 ### 260713
 * **Fix:** Se corrige el salto de 1px en las tarjetas debajo del calendario al pasar de mes o seleccionar un mes

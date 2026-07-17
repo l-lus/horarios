@@ -5681,6 +5681,7 @@ Generado por Sistema Lushibosca
             _bloquearBotonesDrive(true);
             const iconoPerfil = document.getElementById('header-profile-icon');
             iconoPerfil?.classList.add('icono-spin');
+            _flashCampo('header-profile-btn');
             try {
                 await DriveSync.subir(D.registros(), D.diasHabiles(), D.horasDiarias());
                 if (!silencioso) mostrarToast('Backup subido a Drive', 'success');
@@ -5709,6 +5710,7 @@ Generado por Sistema Lushibosca
             _bloquearBotonesDrive(true);
             const iconoPerfil = document.getElementById('header-profile-icon');
             iconoPerfil?.classList.add('icono-spin');
+            _flashCampo('header-profile-btn');
 
             try {
                 const data = await DriveSync.bajar();
@@ -7296,7 +7298,7 @@ Generado por Sistema Lushibosca
                 <div class="cal-popup-fecha">${titulo}</div>
                 <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_hist-accion-local" type="button">
                     <svg class="icon"><use href="#${esSubir ? 'icon-download' : 'icon-upload'}"/></svg>
-                    Respaldo local
+                    ${esSubir ? 'Respaldo local' : 'Restaurar local'}
                 </button>
                 <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_hist-accion-gist" type="button">
                     <svg class="icon"><use href="#icon-gist"/></svg>

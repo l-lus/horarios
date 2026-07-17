@@ -7252,6 +7252,73 @@ Generado por Sistema Lushibosca
             });
         }
 
+        // ─── MENÚ DE ACCIONES (subir/bajar historico) — local / gist / drive ───
+        // Se abre con long-press o click derecho sobre los botones "Respaldar"/"Restaurar"
+        // de la tarjeta de Registros. Reutiliza el mismo popup (.cal-popup) que el calendario.
+        let _popupAccionHistoricoEl = null;
+
+        function _cerrarPopupAccionHistorico() {
+            if (_popupAccionHistoricoEl) { _popupAccionHistoricoEl.remove(); _popupAccionHistoricoEl = null; }
+        }
+
+        async function _histAccionLocal(tipo) {
+            if (tipo === 'subir') mostrarExportar(true);
+            else mostrarImportar(true);
+        }
+
+        async function _histAccionGist(tipo) {
+            const configurado = !!(GistSync.getToken() && GistSync.esGistIdValido(GistSync.getGistId()));
+            if (!configurado) { abrirModalGist(); return; }
+            if (tipo === 'subir') await gistSubir();
+            else await gistBajar();
+        }
+
+        async function _histAccionDrive(tipo) {
+            if (!DriveSync.estaConectado()) {
+                await driveIniciarSesion();
+                if (!DriveSync.estaConectado()) return;
+            }
+            if (tipo === 'subir') await driveSubir();
+            else await driveBajar();
+        }
+
+        function abrirMenuAccionesHistorico(tipo, btnEl) {
+            if (!btnEl || btnEl.disabled) return;
+            _cerrarPopupAccionHistorico();
+
+            const esSubir = tipo === 'subir';
+            const titulo = esSubir ? 'Respaldar registros' : 'Restaurar registros';
+
+            const popup = document.createElement('div');
+            popup.className = 'cal-popup';
+            popup.id = '_hist-accion-popup';
+            popup.innerHTML = `
+                <div class="cal-popup-fecha">${titulo}</div>
+                <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_hist-accion-local" type="button">
+                    <svg class="icon"><use href="#${esSubir ? 'icon-download' : 'icon-upload'}"/></svg>
+                    Respaldo local
+                </button>
+                <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_hist-accion-gist" type="button">
+                    <svg class="icon"><use href="#icon-gist"/></svg>
+                    ${esSubir ? 'Subir a Gist' : 'Bajar de Gist'}
+                </button>
+                <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_hist-accion-drive" type="button">
+                    <svg class="icon"><use href="#${esSubir ? 'icon-cloud-upload' : 'icon-cloud-download'}"/></svg>
+                    ${esSubir ? 'Subir a Drive' : 'Bajar de Drive'}
+                </button>`;
+
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupAccionHistoricoEl = popup;
+
+            const cerrarPopup = _registrarCierrePopup(popup, '#btn-hist-respaldar, #btn-hist-restaurar', () => false, () => { _popupAccionHistoricoEl = null; });
+            popup.querySelector('#_hist-accion-local').addEventListener('click', () => { cerrarPopup(); _histAccionLocal(tipo); });
+            popup.querySelector('#_hist-accion-gist').addEventListener('click', () => { cerrarPopup(); _histAccionGist(tipo); });
+            popup.querySelector('#_hist-accion-drive').addEventListener('click', () => { cerrarPopup(); _histAccionDrive(tipo); });
+
+            _posicionarPopup(popup, { currentTarget: btnEl });
+        }
+
         const _slideAnimEstado = new WeakMap();
 
         function _limpiarClonVisual(clon) {
@@ -7560,6 +7627,7 @@ Generado por Sistema Lushibosca
             toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite, detenerCambioLimite,
             _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
             _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
+            abrirMenuAccionesHistorico,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, DriveSync);
@@ -7711,6 +7779,56 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(); }, { passive: false });
         btn.addEventListener('touchend', (e) => { e.preventDefault(); onStop(); }, { passive: false });
     };
+
+    // Long-press (o click derecho en PC) sobre "Respaldar"/"Restaurar" de la tarjeta de Registros
+    // → abre el menú con las 3 opciones (local / gist / drive). Se delega en document porque
+    // esos botones se reemplazan (cloneNode) cada vez que cambia la config de Gist.
+    (function _initMenuAccionesHistorico() {
+        const SELECTOR_BTNS = '#btn-hist-respaldar, #btn-hist-restaurar';
+        const DURACION_LONG_PRESS = 500;
+        let timer = null;
+        let btnDisparado = null;
+
+        const tipoDe = (btn) => (btn.id === 'btn-hist-respaldar' ? 'subir' : 'bajar');
+        const cancelar = () => { clearTimeout(timer); timer = null; };
+
+        const iniciar = (e) => {
+            if (e.type === 'mousedown' && e.button !== 0) return;
+            const btn = e.target.closest(SELECTOR_BTNS);
+            if (!btn || btn.disabled) return;
+            cancelar();
+            timer = setTimeout(() => {
+                timer = null;
+                btnDisparado = btn;
+                if (navigator.vibrate) navigator.vibrate(15);
+                UILogic.abrirMenuAccionesHistorico(tipoDe(btn), btn);
+            }, DURACION_LONG_PRESS);
+        };
+
+        document.addEventListener('mousedown', iniciar);
+        document.addEventListener('touchstart', iniciar, { passive: true });
+        document.addEventListener('mouseup', cancelar);
+        document.addEventListener('touchend', cancelar);
+        document.addEventListener('touchmove', cancelar);
+
+        // Si el long-press ya disparó el menú, se descarta el click normal que sigue al soltar
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest(SELECTOR_BTNS);
+            if (btn && btnDisparado === btn) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+            }
+            btnDisparado = null;
+        }, true);
+
+        document.addEventListener('contextmenu', (e) => {
+            const btn = e.target.closest(SELECTOR_BTNS);
+            if (!btn || btn.disabled) return;
+            e.preventDefault();
+            cancelar();
+            UILogic.abrirMenuAccionesHistorico(tipoDe(btn), btn);
+        });
+    })();
 
     $('btn-install')?.addEventListener('click', () => PWAInstaller.instalarApp());
     document.querySelector('.header-profile-btn')?.addEventListener('click', () => UILogic.abrirSelectorPerfiles());

@@ -522,7 +522,9 @@
                 ...(actual.gistSyncCount_subir != null && { gistSyncCount_subir: actual.gistSyncCount_subir }),
                 ...(actual.gistSyncFecha_bajar && { gistSyncFecha_bajar: actual.gistSyncFecha_bajar }),
                 ...(actual.gistSyncCount_bajar != null && { gistSyncCount_bajar: actual.gistSyncCount_bajar }),
-                ...(actual.gistMergeBehavior && { gistMergeBehavior: actual.gistMergeBehavior })
+                ...(actual.gistMergeBehavior && { gistMergeBehavior: actual.gistMergeBehavior }),
+                ...(actual.driveFileId && { driveFileId: actual.driveFileId }),
+                ...(actual.driveLastSync && { driveLastSync: actual.driveLastSync })
             };
             return guardarPerfiles();
         }
@@ -586,6 +588,7 @@
         function _getAccionVolver(modalId) {
             const acciones = {
                 'modal-gist': () => window.UILogic?.cerrarModalGist(),
+                'modal-drive': () => window.UILogic?.cerrarModalDrive(),
                 'modal-gist-merge': () => window.UILogic?.gistMergeCancelar(),
                 'modal-config': () => window.UILogic && UILogic.cerrarConfig(),
                 'modal-selector-perfiles': () => window.UILogic && UILogic.cerrarSelectorPerfiles(),
@@ -1561,7 +1564,7 @@
             if (window.PerfilManager) {
                 const perfil = PerfilManager.obtenerDatosPerfil();
                 if (perfil) {
-                    ['gistLastSync', 'gistAutoSync', 'gistRangoDesde', 'gistRangoHasta', 'gistSyncFecha_subir', 'gistSyncCount_subir', 'gistSyncFecha_bajar', 'gistSyncCount_bajar', 'gistMergeBehavior'].forEach(k => delete perfil[k]);
+                    ['gistLastSync', 'gistAutoSync', 'gistRangoDesde', 'gistRangoHasta', 'gistSyncFecha_subir', 'gistSyncCount_subir', 'gistSyncFecha_bajar', 'gistSyncCount_bajar', 'gistMergeBehavior', 'driveLastSync'].forEach(k => delete perfil[k]);
                 }
             }
 
@@ -2077,7 +2080,191 @@
         return { getToken, getGistId, getLastSync, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, getSyncCount, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, subir, bajar };
     })(SecurityAndUtils);
 
-    const UILogic = (function (S, D, GistSync) {
+    // ====================================================================
+    // DRIVE SYNC — backup semanal en Google Drive (scope drive.file:
+    // la app solo ve/edita el archivo que ella misma crea, nada más del Drive del usuario)
+    // ====================================================================
+    const DriveSync = (function (S) {
+        // TODO: reemplazar por el Client ID real creado en Google Cloud Console (OAuth 2.0 / Web application)
+        const DRIVE_CLIENT_ID = '525280361650-5qe4bte4p3bkc3e85ldkj0gt599e5mkb.apps.googleusercontent.com';
+        const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+        const DRIVE_FILENAME = 'horarios_backup.json';
+        const DRIVE_MIME = 'application/json';
+        const SIETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
+
+        let _accessToken = null;
+        let _tokenExpiry = 0;
+
+        function _conPerfil(fn) {
+            if (!window.PerfilManager) return;
+            const perfil = PerfilManager.obtenerDatosPerfil();
+            if (perfil) { fn(perfil); PerfilManager.guardarPerfiles(); }
+        }
+
+        function getFileId() { return window.PerfilManager?.obtenerDatosPerfil()?.driveFileId || ''; }
+        function setFileId(id) { _conPerfil(perfil => { perfil.driveFileId = id; }); }
+        function getLastSync() { return window.PerfilManager?.obtenerDatosPerfil()?.driveLastSync || null; }
+
+        function saveLastSync(fileId) {
+            const ahoraISO = new Date().toISOString();
+            _conPerfil(perfil => {
+                perfil.driveLastSync = ahoraISO;
+                if (fileId) perfil.driveFileId = fileId;
+            });
+        }
+
+        function formatLastSync(isoOrLegacy) {
+            if (!isoOrLegacy) return null;
+            try {
+                const d = new Date(isoOrLegacy);
+                if (!isNaN(d.getTime())) return d.toLocaleString('es-AR');
+            } catch (e) { }
+            return isoOrLegacy;
+        }
+
+        function puedeSincronizar() {
+            const last = getLastSync();
+            if (!last) return true;
+            const t = new Date(last).getTime();
+            if (isNaN(t)) return true;
+            return (Date.now() - t) >= SIETE_DIAS_MS;
+        }
+
+        function proximaFechaDisponible() {
+            const last = getLastSync();
+            if (!last) return null;
+            const t = new Date(last).getTime();
+            if (isNaN(t)) return null;
+            return new Date(t + SIETE_DIAS_MS);
+        }
+
+        function estaConectado() { return !!(_accessToken && Date.now() < _tokenExpiry); }
+
+        function _cargarScriptGIS() {
+            return new Promise((resolve, reject) => {
+                if (window.google?.accounts?.oauth2) { resolve(); return; }
+                const existente = document.getElementById('gis-script');
+                if (existente) {
+                    existente.addEventListener('load', () => resolve());
+                    existente.addEventListener('error', () => reject(new Error('No se pudo cargar Google Identity Services')));
+                    return;
+                }
+                const script = document.createElement('script');
+                script.id = 'gis-script';
+                script.src = 'https://accounts.google.com/gsi/client';
+                script.async = true;
+                script.defer = true;
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error('No se pudo cargar Google Identity Services'));
+                document.head.appendChild(script);
+            });
+        }
+
+        async function _obtenerToken(interactivo) {
+            if (estaConectado()) return _accessToken;
+            await _cargarScriptGIS();
+            if (!window.google?.accounts?.oauth2) throw new Error('Google Identity Services no disponible');
+
+            return new Promise((resolve, reject) => {
+                const client = window.google.accounts.oauth2.initTokenClient({
+                    client_id: DRIVE_CLIENT_ID,
+                    scope: DRIVE_SCOPE,
+                    callback: (resp) => {
+                        if (resp.error) { reject(new Error(resp.error)); return; }
+                        _accessToken = resp.access_token;
+                        _tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+                        resolve(_accessToken);
+                    },
+                    error_callback: (err) => reject(new Error(err?.type || 'Error de autenticación con Google')),
+                });
+                client.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
+            });
+        }
+
+        async function iniciarSesion() { return _obtenerToken(true); }
+        async function intentarSesionSilenciosa() { return _obtenerToken(false); }
+
+        function cerrarSesion() {
+            if (_accessToken && window.google?.accounts?.oauth2?.revoke) {
+                window.google.accounts.oauth2.revoke(_accessToken, () => { });
+            }
+            _accessToken = null;
+            _tokenExpiry = 0;
+        }
+
+        async function _fetchDrive(url, opciones = {}, _reintentado = false) {
+            const token = await _obtenerToken(false);
+            const resp = await fetch(url, { ...opciones, headers: { ...(opciones.headers || {}), Authorization: `Bearer ${token}` } });
+            if (resp.status === 401 && !_reintentado) {
+                _accessToken = null;
+                return _fetchDrive(url, opciones, true);
+            }
+            return resp;
+        }
+
+        async function buscarBackupExistente() {
+            const q = encodeURIComponent(`name='${DRIVE_FILENAME}' and trashed=false`);
+            const resp = await _fetchDrive(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,modifiedTime)&spaces=drive`);
+            if (!resp.ok) throw new Error(`Error ${resp.status} al buscar backups en Drive`);
+            const { files } = await resp.json();
+            return (files && files.length > 0) ? files[0] : null;
+        }
+
+        async function subir(registros, diasHabiles, horasDiarias) {
+            const hash = await S.calcularHashSHA256(registros);
+            const data = { registros, diasHabiles, horasDiarias, fecha: S.fechaLocalISO(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
+            const contenido = JSON.stringify(data, null, 2);
+
+            let fileId = getFileId();
+            if (!fileId) {
+                const existente = await buscarBackupExistente();
+                if (existente) fileId = existente.id;
+            }
+
+            const boundary = 'horarios_boundary_' + Date.now();
+            const metadata = fileId ? {} : { name: DRIVE_FILENAME, mimeType: DRIVE_MIME };
+            const body =
+                `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+                `--${boundary}\r\nContent-Type: ${DRIVE_MIME}\r\n\r\n${contenido}\r\n--${boundary}--`;
+
+            const url = fileId
+                ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+                : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+
+            const resp = await _fetchDrive(url, {
+                method: fileId ? 'PATCH' : 'POST',
+                headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+                body
+            });
+
+            if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error?.message || `Error ${resp.status}`);
+            const result = await resp.json();
+            saveLastSync(result.id);
+            return result.id;
+        }
+
+        async function bajar(fileIdParam) {
+            const fileId = fileIdParam || getFileId();
+            if (!fileId) throw new Error('No hay ningún backup identificado en Drive todavía');
+
+            const resp = await _fetchDrive(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+            if (!resp.ok) throw new Error(`Error ${resp.status} al bajar el backup de Drive`);
+            const texto = await resp.text();
+            const data = JSON.parse(texto, (key, value) => ['__proto__', 'constructor', 'prototype'].includes(key) ? undefined : value);
+
+            if (data.hash && await S.calcularHashSHA256(data.registros) !== data.hash) data._hashNoCoincide = true;
+
+            saveLastSync(fileId);
+            return data;
+        }
+
+        return {
+            getFileId, setFileId, getLastSync, formatLastSync, puedeSincronizar, proximaFechaDisponible,
+            estaConectado, iniciarSesion, intentarSesionSilenciosa, cerrarSesion, buscarBackupExistente, subir, bajar
+        };
+    })(SecurityAndUtils);
+
+    const UILogic = (function (S, D, GistSync, DriveSync) {
 
         let toastTimeout = null;
         let _toastQueue = [];
@@ -5178,6 +5365,8 @@ Generado por Sistema Lushibosca
         let _gistLimitesTemp = null;
         let _gistLimitesOrig = null;
         let _gistMergeDesdeModal = false;
+        let _mergeOrigen = 'gist'; // 'gist' | 'drive' — qué origen alimentó el modal de combinar/reemplazar compartido
+        let _driveModalPadre = null;
 
         function actualizarEstadoBotonesGist() {
             const token = document.getElementById('gist-token')?.value.trim() || '';
@@ -5337,6 +5526,170 @@ Generado por Sistema Lushibosca
             actualizarBotonesHistorico();
         }
 
+        function actualizarBotonDriveSesion() {
+            const conectado = DriveSync.estaConectado();
+            const label = document.getElementById('label-drive-sesion');
+            const hint = document.getElementById('hint-drive-sesion');
+            const btn = document.getElementById('btn-drive-sesion');
+            if (label) label.textContent = conectado ? 'Cerrar sesión' : 'Iniciar sesión con Google';
+            if (hint) hint.textContent = conectado ? 'Conectado' : 'No conectado';
+            if (btn) _setBtnActivo(btn.id, conectado);
+        }
+
+        function _actualizarTextoProximoBackupDrive() {
+            const el = document.getElementById('drive-proximo-backup');
+            if (!el) return;
+            if (!DriveSync.getLastSync()) { el.textContent = ''; return; }
+            if (DriveSync.puedeSincronizar()) {
+                el.textContent = 'Podés hacer un backup ahora';
+            } else {
+                const proxima = DriveSync.proximaFechaDisponible();
+                el.textContent = proxima ? `Próximo backup disponible: ${proxima.toLocaleDateString('es-AR')}` : '';
+            }
+        }
+
+        function actualizarEstadoBotonesDrive() {
+            const conectado = DriveSync.estaConectado();
+            _setBtnDisabled('btn-drive-subir', !conectado);
+            _setBtnDisabled('btn-drive-bajar', !(conectado && !!DriveSync.getFileId()));
+            actualizarBotonDriveSesion();
+        }
+
+        function abrirModalDrive() {
+            const modalAbierto = document.querySelector('.modal.show');
+            _driveModalPadre = modalAbierto ? modalAbierto.id : null;
+
+            ModalManager.cerrarTodos();
+            ModalManager.abrir('modal-drive');
+            if (_driveModalPadre) ModalManager.setPadre('modal-drive', _driveModalPadre);
+
+            const lastSyncEl = document.getElementById('drive-ultima-sync');
+            if (lastSyncEl) {
+                const last = DriveSync.getLastSync();
+                lastSyncEl.textContent = last ? `Sincronizado: ${DriveSync.formatLastSync(last)}` : 'No sincronizado';
+            }
+
+            actualizarEstadoBotonesDrive();
+            _actualizarTextoProximoBackupDrive();
+        }
+
+        function cerrarModalDrive() {
+            if (_driveModalPadre) {
+                const padre = _driveModalPadre;
+                _driveModalPadre = null;
+                ModalManager.alternar('modal-drive', padre);
+                if (padre === 'modal-config') {
+                    ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
+                }
+            } else {
+                ModalManager.cerrar('modal-drive');
+                _driveModalPadre = null;
+            }
+        }
+
+        async function toggleDriveSesion() {
+            if (DriveSync.estaConectado()) await driveCerrarSesion();
+            else await driveIniciarSesion();
+        }
+
+        async function driveIniciarSesion() {
+            const btn = document.getElementById('btn-drive-sesion');
+            if (btn) btn.disabled = true;
+            try {
+                const esPrimeraVez = !DriveSync.getFileId();
+                await DriveSync.iniciarSesion();
+                mostrarToast('Sesión de Google iniciada', 'success');
+
+                if (esPrimeraVez) {
+                    const existente = await DriveSync.buscarBackupExistente();
+                    if (existente) {
+                        DriveSync.setFileId(existente.id);
+                        mostrarToast('Se encontró un backup en Drive', 'info');
+                        await driveBajar();
+                    } else {
+                        mostrarToast('No hay backups previos en Drive. Se creará uno con tu próxima subida.', 'info');
+                    }
+                }
+            } catch (e) {
+                console.error('Drive login error:', e);
+                mostrarToast('No se pudo iniciar sesión con Google', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                actualizarEstadoBotonesDrive();
+                _actualizarTextoProximoBackupDrive();
+            }
+        }
+
+        async function driveCerrarSesion() {
+            DriveSync.cerrarSesion();
+            mostrarToast('Sesión de Google cerrada', 'info');
+            actualizarEstadoBotonesDrive();
+        }
+
+        async function driveSubir(silencioso = false) {
+            const btn = document.getElementById('btn-drive-subir');
+            if (btn) btn.disabled = true;
+            const iconoPerfil = document.getElementById('header-profile-icon');
+            iconoPerfil?.classList.add('icono-spin');
+            try {
+                await DriveSync.subir(D.registros(), D.diasHabiles(), D.horasDiarias());
+                if (!silencioso) mostrarToast('Backup subido a Drive', 'success');
+                const lastSyncEl = document.getElementById('drive-ultima-sync');
+                if (lastSyncEl) lastSyncEl.textContent = `Sincronizado: ${DriveSync.formatLastSync(DriveSync.getLastSync())}`;
+                _actualizarTextoProximoBackupDrive();
+            } catch (e) {
+                console.error('Drive subir error:', e);
+                if (!silencioso) mostrarToast(e.message || 'Error al subir a Drive', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                iconoPerfil?.classList.remove('icono-spin');
+                actualizarEstadoBotonesDrive();
+            }
+        }
+
+        async function driveBajar() {
+            _gistMergeDesdeModal = document.getElementById('modal-drive')?.classList.contains('show') ?? false;
+            _mergeOrigen = 'drive';
+            const btn = document.getElementById('btn-drive-bajar');
+            if (btn) btn.disabled = true;
+            const iconoPerfil = document.getElementById('header-profile-icon');
+            iconoPerfil?.classList.add('icono-spin');
+
+            try {
+                const data = await DriveSync.bajar();
+                const registrosNormalizados = await _validarDatosGist(data);
+                if (!registrosNormalizados) return;
+
+                const diff = _calcularDiffGist(registrosNormalizados);
+                const { soloEnGist, complementarios } = diff;
+                _gistMergeData = { registrosNormalizados, soloEnGist, complementarios, data };
+
+                const configCambios = _calcularConfigCambios(data);
+                const resumenEl = document.getElementById('gist-merge-resumen');
+                if (resumenEl) _buildResumenMerge(resumenEl, diff, registrosNormalizados, configCambios, 'Drive');
+                ModalManager.alternar('modal-drive', 'modal-gist-merge');
+            } catch (e) {
+                console.error('Drive bajar error:', e);
+                mostrarToast(e.message || 'Error al bajar de Drive', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                iconoPerfil?.classList.remove('icono-spin');
+            }
+        }
+
+        function _initAutoSyncDrive() {
+            if (!DriveSync.getFileId()) return; // este perfil nunca vinculó un backup de Drive
+            if (!DriveSync.puedeSincronizar()) return; // no pasaron 7 días desde el último backup
+            setTimeout(async () => {
+                try {
+                    await DriveSync.intentarSesionSilenciosa();
+                    await driveSubir(true);
+                } catch (e) {
+                    console.warn('Backup automático de Drive no disponible (requiere iniciar sesión manualmente):', e);
+                }
+            }, 3000);
+        }
+
         function _calcularRegistrosMerge(modo, mergeData) {
             const { registrosNormalizados, soloEnGist, complementarios = [], data } = mergeData;
 
@@ -5379,7 +5732,7 @@ Generado por Sistema Lushibosca
                 }
                 return {
                     registrosFinales: registrosNormalizados,
-                    mensajeExito: `${registrosNormalizados.length} registros restaurados desde Gist`
+                    mensajeExito: `${registrosNormalizados.length} registros restaurados desde ${_mergeOrigen === 'drive' ? 'Drive' : 'Gist'}`
                 };
             }
         }
@@ -5414,24 +5767,34 @@ Generado por Sistema Lushibosca
             actualizarUI();
 
             if (!modoAutomatico) ModalManager.cerrar('modal-gist-merge');
-            const lastSyncEl = document.getElementById('gist-ultima-sync');
-            if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${GistSync.formatLastSync(GistSync.getLastSync())}`;
-            mostrarToast(mensajeExito, 'success');
 
-            const btn = document.getElementById('btn-gist-bajar');
-            if (btn) btn.disabled = false;
+            if (_mergeOrigen === 'drive') {
+                const lastSyncEl = document.getElementById('drive-ultima-sync');
+                if (lastSyncEl) lastSyncEl.textContent = `Sincronizado: ${DriveSync.formatLastSync(DriveSync.getLastSync())}`;
+                const btn = document.getElementById('btn-drive-bajar');
+                if (btn) btn.disabled = false;
+            } else {
+                const lastSyncEl = document.getElementById('gist-ultima-sync');
+                if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${GistSync.formatLastSync(GistSync.getLastSync())}`;
+                const btn = document.getElementById('btn-gist-bajar');
+                if (btn) btn.disabled = false;
+            }
+            mostrarToast(mensajeExito, 'success');
         }
 
         function gistMergeCancelar() {
             _gistMergeData = null;
-            const btn = document.getElementById('btn-gist-bajar');
+            const idBtn = _mergeOrigen === 'drive' ? 'btn-drive-bajar' : 'btn-gist-bajar';
+            const btn = document.getElementById(idBtn);
             if (btn) btn.disabled = false;
             if (_gistMergeDesdeModal) {
                 _gistMergeDesdeModal = false;
-                ModalManager.alternar('modal-gist-merge', 'modal-gist');
+                const modalOrigen = _mergeOrigen === 'drive' ? 'modal-drive' : 'modal-gist';
+                ModalManager.alternar('modal-gist-merge', modalOrigen);
             } else {
                 ModalManager.cerrar('modal-gist-merge');
             }
+            _mergeOrigen = 'gist';
         }
 
         function toggleGistMerge() {
@@ -5603,7 +5966,7 @@ Generado por Sistema Lushibosca
             return cambios;
         }
 
-        function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios) {
+        function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios, origenLabel = 'Gist') {
             resumenEl.innerHTML = '';
             const _mkSvg = (id) => {
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -5622,7 +5985,7 @@ Generado por Sistema Lushibosca
 
             const plural = (n) => n !== 1 ? 's' : '';
             const bloqueFilas = document.createElement('div');
-            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-cloud'), ` En Gist `, _mkStrong(soloEnGist.length, 'text-green'), ` registro${plural(soloEnGist.length)} nuevos`));
+            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-cloud'), ` En ${origenLabel} `, _mkStrong(soloEnGist.length, 'text-green'), ` registro${plural(soloEnGist.length)} nuevos`));
             const filaAmbos = _mkRow(_mkSvg('#icon-combine'), ` En ambos `, _mkStrong(enAmbos.length), ` registro${plural(enAmbos.length)} (por fecha`);
             if (complementarios.length > 0) {
                 filaAmbos.appendChild(document.createTextNode(', '));
@@ -5649,12 +6012,13 @@ Generado por Sistema Lushibosca
             footer.appendChild(document.createTextNode(txtCombinar));
             footer.appendChild(document.createElement('br'));
             footer.appendChild(_mkStrong('Reemplazar'));
-            footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros del Gist`));
+            footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros de ${origenLabel}`));
             resumenEl.appendChild(footer);
         }
 
         async function gistBajar(modoAutomatico = false) {
             _gistGuardarCredencialesSiModalAbierto();
+            _mergeOrigen = 'gist';
             _gistMergeDesdeModal = document.getElementById('modal-gist')?.classList.contains('show') ?? false;
             const btn = document.getElementById('btn-gist-bajar');
             if (btn) btn.disabled = true;
@@ -6106,6 +6470,7 @@ Generado por Sistema Lushibosca
             }
 
             _initAutoSync();
+            _initAutoSyncDrive();
             setInterval(() => actualizarUI(null, true), 20000);
 
             _initListenerEscape();
@@ -7149,12 +7514,13 @@ Generado por Sistema Lushibosca
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             navegarCalendario, obtenerNombrePerfilSafe, descargarJSON, actualizarEstadoBotonesGist, actualizarBotonesHistorico,
             abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
+            abrirModalDrive, cerrarModalDrive, toggleDriveSesion, driveSubir, driveBajar,
             toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite, detenerCambioLimite,
             _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
             _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
         };
 
-    })(SecurityAndUtils, DataManagement, GistSync);
+    })(SecurityAndUtils, DataManagement, GistSync, DriveSync);
 
     // ====================================================================
     // BIENVENIDA MODULE — primera vez / después de un restablecimiento
@@ -7355,6 +7721,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));
     $('btn-toggle-card-historico')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('historico'));
     document.querySelector('.config-actions .btn-gist')?.addEventListener('click', () => UILogic.abrirModalGist());
+    document.querySelector('.config-actions .btn-drive')?.addEventListener('click', () => UILogic.abrirModalDrive());
     document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => UILogic.mostrarImportar());
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
@@ -7386,6 +7753,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $('btn-gist-guardar')?.addEventListener('click', () => UILogic.guardarConfigGist());
     $('btn-gist-volver')?.addEventListener('click', () => UILogic.cerrarModalGist());
+
+    $('btn-drive-sesion')?.addEventListener('click', () => UILogic.toggleDriveSesion());
+    $('btn-drive-subir')?.addEventListener('click', () => UILogic.driveSubir());
+    $('btn-drive-bajar')?.addEventListener('click', () => UILogic.driveBajar());
+    $('btn-drive-volver')?.addEventListener('click', () => UILogic.cerrarModalDrive());
 
     $('btn-gist-merge-combinar')?.addEventListener('click', () => UILogic.gistMergeAplicar('merge'));
     $('btn-gist-merge-reemplazar')?.addEventListener('click', () => UILogic.gistMergeAplicar('replace'));

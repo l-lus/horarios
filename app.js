@@ -30,6 +30,7 @@
         HISTORY: 'history',
         GIST_TOKEN: 'gistToken',
         BIENVENIDA_VISTA: 'bienvenidaVista',
+        DRIVE_RATE_LIMIT: 'driveRateLimit',
 
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
@@ -2148,6 +2149,38 @@
             return isoOrLegacy;
         }
 
+        // Límite de uso: máximo N acciones (subidas/bajadas, contadas por separado) cada X minutos.
+        // Es global a la app (no por perfil), porque la sesión de Google (_accessToken) también lo es:
+        // así no se puede esquivar el límite simplemente cambiando de perfil.
+        const RATE_LIMIT_MAX = 5;
+        const RATE_LIMIT_VENTANA_MS = 10 * 60 * 1000;
+
+        function _cargarHistorialLimite() {
+            return StorageHelper.getObject(STORAGE_KEYS.DRIVE_RATE_LIMIT, null) || { subidas: [], bajadas: [] };
+        }
+
+        function _historialVigente(tipo) {
+            const ahora = Date.now();
+            const lista = _cargarHistorialLimite()[tipo] || [];
+            return lista.filter(t => ahora - t <= RATE_LIMIT_VENTANA_MS);
+        }
+
+        function puedeEjecutar(tipo) {
+            return _historialVigente(tipo).length < RATE_LIMIT_MAX;
+        }
+
+        function registrarIntento(tipo) {
+            const historial = _cargarHistorialLimite();
+            historial[tipo] = [..._historialVigente(tipo), Date.now()];
+            StorageHelper.setItem(STORAGE_KEYS.DRIVE_RATE_LIMIT, historial);
+        }
+
+        function segundosHastaProximoIntento(tipo) {
+            const lista = _historialVigente(tipo);
+            if (!lista.length) return 0;
+            return Math.max(0, Math.ceil((RATE_LIMIT_VENTANA_MS - (Date.now() - lista[0])) / 1000));
+        }
+
         function estaConectado() { return !!(_accessToken && Date.now() < _tokenExpiry); }
 
         function _cargarScriptGIS() {
@@ -2272,7 +2305,8 @@
 
         return {
             getFileId, setFileId, getLastSync, formatLastSync,
-            estaConectado, iniciarSesion, cerrarSesion, buscarBackupExistente, subir, bajar
+            estaConectado, iniciarSesion, cerrarSesion, buscarBackupExistente, subir, bajar,
+            puedeEjecutar, registrarIntento, segundosHastaProximoIntento
         };
     })(SecurityAndUtils);
 
@@ -5638,6 +5672,12 @@ Generado por Sistema Lushibosca
 
         async function driveSubir(silencioso = false) {
             if (_driveOperacionEnCurso) return;
+            if (!DriveSync.puedeEjecutar('subidas')) {
+                const espera = DriveSync.segundosHastaProximoIntento('subidas');
+                if (!silencioso) mostrarToast(`Demasiadas subidas seguidas. Probá de nuevo en ${Math.ceil(espera / 60)} min`, 'error');
+                return;
+            }
+            DriveSync.registrarIntento('subidas');
             _bloquearBotonesDrive(true);
             const iconoPerfil = document.getElementById('header-profile-icon');
             iconoPerfil?.classList.add('icono-spin');
@@ -5658,6 +5698,12 @@ Generado por Sistema Lushibosca
 
         async function driveBajar() {
             if (_driveOperacionEnCurso) return;
+            if (!DriveSync.puedeEjecutar('bajadas')) {
+                const espera = DriveSync.segundosHastaProximoIntento('bajadas');
+                mostrarToast(`Demasiadas bajadas seguidas. Probá de nuevo en ${Math.ceil(espera / 60)} min`, 'error');
+                return;
+            }
+            DriveSync.registrarIntento('bajadas');
             _gistMergeDesdeModal = document.getElementById('modal-drive')?.classList.contains('show') ?? false;
             _mergeOrigen = 'drive';
             _bloquearBotonesDrive(true);

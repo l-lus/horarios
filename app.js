@@ -6930,6 +6930,40 @@ Generado por Sistema Lushibosca
             return cerrar;
         }
 
+        // Popup genérico de tipo "menú": encabezado libre (fecha, título, etc.) + lista de
+        // botones de acción (icono + label). Usado por cualquier popup .cal-popup que solo
+        // necesite mostrar opciones para elegir (ver _popupCalendarioDiaSinRegistro, abrirMenuAccionesHistorico).
+        // acciones: [{ icono, label, variante ('normal'|'especial'), onClick }]
+        // selectorCierre: { selector, esMismoTrigger? } — igual que los params de _registrarCierrePopup
+        function _mostrarPopupMenu({ id, claseExtra = '', encabezadoHtml = '', acciones, selectorCierre, dataset = {}, alCerrar }) {
+            const popup = document.createElement('div');
+            popup.className = claseExtra ? `cal-popup ${claseExtra}` : 'cal-popup';
+            popup.id = id;
+            Object.entries(dataset).forEach(([k, v]) => { popup.dataset[k] = v; });
+
+            const botonesHtml = acciones.map((a, i) => `
+                <button class="cal-popup-btn-edit cal-popup-btn-accion--${a.variante || 'normal'}" id="${id}-accion-${i}" type="button">
+                    <svg class="icon"><use href="#${a.icono}"/></svg>
+                    ${a.label}
+                </button>`).join('');
+
+            popup.innerHTML = `${encabezadoHtml}${botonesHtml}`;
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+
+            const cerrarPopup = _registrarCierrePopup(
+                popup,
+                selectorCierre.selector,
+                selectorCierre.esMismoTrigger || (() => false),
+                alCerrar
+            );
+            acciones.forEach((a, i) => {
+                popup.querySelector(`#${id}-accion-${i}`)?.addEventListener('click', () => { cerrarPopup(); a.onClick(); });
+            });
+
+            return { popup, cerrarPopup };
+        }
+
         function _popupCalendario(event, registroId) {
             event.stopPropagation();
 
@@ -7012,30 +7046,22 @@ Generado por Sistema Lushibosca
             const esFechaFutura = fecha > TimeUtils.obtenerFechaHoy();
             const fechaLabel = S.escapeHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
 
-            const popup = document.createElement('div');
-            popup.className = 'cal-popup';
-            popup.id = '_cal-popup';
-            popup.dataset.fecha = fecha;
-            popup.innerHTML = `
-                <div class="cal-popup-fecha">${fechaLabel}</div>
-                <div class="cal-popup-sin-reg">Sin registros</div>
-                ${esFechaFutura ? '' : `<button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
-                    <svg class="icon"><use href="#icon-clock"/></svg>
-                    Jornada regular
-                </button>`}
-                <button class="cal-popup-btn-edit cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
-                    <svg class="icon"><use href="#icon-calendar-simple"/></svg>
-                    Jornada especial
-                </button>`;
+            const acciones = [];
+            if (!esFechaFutura) {
+                acciones.push({ icono: 'icon-clock', label: 'Jornada regular', variante: 'normal', onClick: () => _irAFicharConFecha(fecha, false) });
+            }
+            acciones.push({ icono: 'icon-calendar-simple', label: 'Jornada especial', variante: 'especial', onClick: () => _irAFicharConFecha(fecha, true) });
 
-            popup.style.visibility = 'hidden';
-            document.body.appendChild(popup);
+            const { popup } = _mostrarPopupMenu({
+                id: '_cal-popup',
+                encabezadoHtml: `<div class="cal-popup-fecha">${fechaLabel}</div><div class="cal-popup-sin-reg">Sin registros</div>`,
+                acciones,
+                selectorCierre: { selector: '.calendario-dia', esMismoTrigger: dia => dia.dataset.fecha === fecha },
+                dataset: { fecha },
+                alCerrar: () => { _popupCalendarioEl = null; },
+            });
+
             _popupCalendarioEl = popup;
-
-            const cerrarPopup = _registrarCierrePopup(popup, '.calendario-dia', dia => dia.dataset.fecha === fecha, () => { _popupCalendarioEl = null; });
-            popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => { cerrarPopup(); _irAFicharConFecha(fecha, false); });
-            popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrarPopup(); _irAFicharConFecha(fecha, true); });
-
             _posicionarPopup(popup, event);
         }
 
@@ -7279,33 +7305,19 @@ Generado por Sistema Lushibosca
             const esSubir = tipo === 'subir';
             const titulo = esSubir ? 'Respaldar registros' : 'Restaurar registros';
 
-            const popup = document.createElement('div');
-            popup.className = 'cal-popup';
-            popup.id = '_hist-accion-popup';
-            popup.innerHTML = `
-                <div class="cal-popup-fecha">${titulo}</div>
-                <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_hist-accion-local" type="button">
-                    <svg class="icon"><use href="#${esSubir ? 'icon-download' : 'icon-upload'}"/></svg>
-                    ${esSubir ? 'Respaldo local' : 'Restaurar local'}
-                </button>
-                <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_hist-accion-gist" type="button">
-                    <svg class="icon"><use href="#icon-gist"/></svg>
-                    ${esSubir ? 'Subir a Gist' : 'Bajar de Gist'}
-                </button>
-                <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_hist-accion-drive" type="button">
-                    <svg class="icon"><use href="#${esSubir ? 'icon-cloud-upload' : 'icon-cloud-download'}"/></svg>
-                    ${esSubir ? 'Subir a Drive' : 'Bajar de Drive'}
-                </button>`;
+            const { popup } = _mostrarPopupMenu({
+                id: '_hist-accion-popup',
+                encabezadoHtml: `<div class="cal-popup-fecha">${titulo}</div>`,
+                acciones: [
+                    { icono: esSubir ? 'icon-download' : 'icon-upload', label: esSubir ? 'Respaldo local' : 'Restaurar local', onClick: () => _histAccionLocal(tipo) },
+                    { icono: 'icon-gist', label: esSubir ? 'Subir a Gist' : 'Bajar de Gist', onClick: () => _histAccionGist(tipo) },
+                    { icono: esSubir ? 'icon-cloud-upload' : 'icon-cloud-download', label: esSubir ? 'Subir a Drive' : 'Bajar de Drive', onClick: () => _histAccionDrive(tipo) },
+                ],
+                selectorCierre: { selector: '#btn-hist-respaldar, #btn-hist-restaurar' },
+                alCerrar: () => { _popupAccionHistoricoEl = null; },
+            });
 
-            popup.style.visibility = 'hidden';
-            document.body.appendChild(popup);
             _popupAccionHistoricoEl = popup;
-
-            const cerrarPopup = _registrarCierrePopup(popup, '#btn-hist-respaldar, #btn-hist-restaurar', () => false, () => { _popupAccionHistoricoEl = null; });
-            popup.querySelector('#_hist-accion-local').addEventListener('click', () => { cerrarPopup(); _histAccionLocal(tipo); });
-            popup.querySelector('#_hist-accion-gist').addEventListener('click', () => { cerrarPopup(); _histAccionGist(tipo); });
-            popup.querySelector('#_hist-accion-drive').addEventListener('click', () => { cerrarPopup(); _histAccionDrive(tipo); });
-
             _posicionarPopup(popup, { currentTarget: btnEl });
         }
 

@@ -5592,8 +5592,8 @@ Generado por Sistema Lushibosca
         }
 
         async function driveIniciarSesion() {
-            const btn = document.getElementById('btn-drive-sesion');
-            if (btn) btn.disabled = true;
+            if (_driveOperacionEnCurso) return;
+            _bloquearBotonesDrive(true);
             try {
                 const esPrimeraVez = !DriveSync.getFileId();
                 await DriveSync.iniciarSesion();
@@ -5612,20 +5612,33 @@ Generado por Sistema Lushibosca
                 console.error('Drive login error:', e);
                 mostrarToast('No se pudo iniciar sesión con Google', 'error');
             } finally {
-                if (btn) btn.disabled = false;
+                _bloquearBotonesDrive(false);
                 actualizarEstadoBotonesDrive();
             }
         }
 
+        let _driveOperacionEnCurso = false;
+
+        function _bloquearBotonesDrive(bloquear) {
+            _driveOperacionEnCurso = bloquear;
+            ['btn-drive-sesion', 'btn-drive-subir', 'btn-drive-bajar'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = bloquear;
+            });
+        }
+
         async function driveCerrarSesion() {
+            if (_driveOperacionEnCurso) return;
+            _bloquearBotonesDrive(true);
             DriveSync.cerrarSesion();
             mostrarToast('Sesión de Google cerrada', 'info');
+            _bloquearBotonesDrive(false);
             actualizarEstadoBotonesDrive();
         }
 
         async function driveSubir(silencioso = false) {
-            const btn = document.getElementById('btn-drive-subir');
-            if (btn) btn.disabled = true;
+            if (_driveOperacionEnCurso) return;
+            _bloquearBotonesDrive(true);
             const iconoPerfil = document.getElementById('header-profile-icon');
             iconoPerfil?.classList.add('icono-spin');
             try {
@@ -5637,17 +5650,17 @@ Generado por Sistema Lushibosca
                 console.error('Drive subir error:', e);
                 if (!silencioso) mostrarToast(e.message || 'Error al subir a Drive', 'error');
             } finally {
-                if (btn) btn.disabled = false;
+                _bloquearBotonesDrive(false);
                 iconoPerfil?.classList.remove('icono-spin');
                 actualizarEstadoBotonesDrive();
             }
         }
 
         async function driveBajar() {
+            if (_driveOperacionEnCurso) return;
             _gistMergeDesdeModal = document.getElementById('modal-drive')?.classList.contains('show') ?? false;
             _mergeOrigen = 'drive';
-            const btn = document.getElementById('btn-drive-bajar');
-            if (btn) btn.disabled = true;
+            _bloquearBotonesDrive(true);
             const iconoPerfil = document.getElementById('header-profile-icon');
             iconoPerfil?.classList.add('icono-spin');
 
@@ -5668,8 +5681,9 @@ Generado por Sistema Lushibosca
                 console.error('Drive bajar error:', e);
                 mostrarToast(e.message || 'Error al bajar de Drive', 'error');
             } finally {
-                if (btn) btn.disabled = false;
+                _bloquearBotonesDrive(false);
                 iconoPerfil?.classList.remove('icono-spin');
+                actualizarEstadoBotonesDrive();
             }
         }
 

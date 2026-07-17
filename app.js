@@ -271,86 +271,6 @@
     })();
 
     // ====================================================================
-    // STORAGE HELPER MODULE
-    // ====================================================================
-    const StorageHelper = (function () {
-        'use strict';
-
-        function _getKey(key, useProfile) {
-            if (useProfile && window.PerfilManager) {
-                return window.PerfilManager.perfilKey(key);
-            }
-            if (useProfile) return key + '_default';
-            return key;
-        }
-
-        function setItem(key, value, useProfile = false) {
-            try {
-                const finalKey = _getKey(key, useProfile);
-                const valueToStore = typeof value === 'object' ? JSON.stringify(value) : String(value);
-                localStorage.setItem(finalKey, valueToStore);
-                return true;
-            } catch (e) {
-                console.error(`Error guardando en Storage (${key}):`, e);
-                if (e.name === 'QuotaExceededError' || e.code === 22) {
-                    if (window.UILogic) UILogic.mostrarToast('Almacenamiento lleno, no se pudo guardar', 'error');
-                }
-                return false;
-            }
-        }
-
-        function getItem(key, defaultValue = null, useProfile = false) {
-            try {
-                const value = localStorage.getItem(_getKey(key, useProfile));
-                return value !== null ? value : defaultValue;
-            } catch (e) {
-                return defaultValue;
-            }
-        }
-
-        function getBoolean(key, defaultValue = false, useProfile = false) {
-            const val = getItem(key, null, useProfile);
-            if (val === null) return defaultValue;
-            return val === 'true';
-        }
-
-        function getNumber(key, defaultValue = 0, useProfile = false) {
-            const val = getItem(key, null, useProfile);
-            if (val === null) return defaultValue;
-            const parsed = parseFloat(val);
-            return isNaN(parsed) ? defaultValue : parsed;
-        }
-
-        function getObject(key, defaultValue = null, useProfile = false) {
-            const val = getItem(key, null, useProfile);
-            if (!val) return defaultValue;
-            try {
-                return JSON.parse(val, (k, v) => {
-                    if (['__proto__', 'constructor', 'prototype'].includes(k)) return undefined;
-                    return v;
-                });
-            } catch (e) {
-                return defaultValue;
-            }
-        }
-
-        function removeItem(key, useProfile = false) {
-            try {
-                localStorage.removeItem(_getKey(key, useProfile));
-            } catch (e) { }
-        }
-
-        return {
-            setItem,
-            getItem,
-            getBoolean,
-            getNumber,
-            getObject,
-            removeItem
-        };
-    })();
-
-    // ====================================================================
     // SECURITY AND UTILS MODULE
     // ====================================================================
     const SecurityAndUtils = (function () {
@@ -394,6 +314,12 @@
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
+        }
+
+        const CLAVES_PROTO_PELIGROSAS = ['__proto__', 'constructor', 'prototype'];
+
+        function reviverJSONSeguro(key, value) {
+            return CLAVES_PROTO_PELIGROSAS.includes(key) ? undefined : value;
         }
 
         function generarIDSeguro() {
@@ -457,7 +383,84 @@
             generarIDSeguro,
             calcularHashSHA256,
             validarRegistroSeguro,
+            reviverJSONSeguro,
             fechaLocalISO: TimeUtils.fechaLocalISOFull
+        };
+    })();
+    // ====================================================================
+    // STORAGE HELPER MODULE
+    // ====================================================================
+    const StorageHelper = (function () {
+        'use strict';
+
+        function _getKey(key, useProfile) {
+            if (useProfile && window.PerfilManager) {
+                return window.PerfilManager.perfilKey(key);
+            }
+            if (useProfile) return key + '_default';
+            return key;
+        }
+
+        function setItem(key, value, useProfile = false) {
+            try {
+                const finalKey = _getKey(key, useProfile);
+                const valueToStore = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                localStorage.setItem(finalKey, valueToStore);
+                return true;
+            } catch (e) {
+                console.error(`Error guardando en Storage (${key}):`, e);
+                if (e.name === 'QuotaExceededError' || e.code === 22) {
+                    if (window.UILogic) UILogic.mostrarToast('Almacenamiento lleno, no se pudo guardar', 'error');
+                }
+                return false;
+            }
+        }
+
+        function getItem(key, defaultValue = null, useProfile = false) {
+            try {
+                const value = localStorage.getItem(_getKey(key, useProfile));
+                return value !== null ? value : defaultValue;
+            } catch (e) {
+                return defaultValue;
+            }
+        }
+
+        function getBoolean(key, defaultValue = false, useProfile = false) {
+            const val = getItem(key, null, useProfile);
+            if (val === null) return defaultValue;
+            return val === 'true';
+        }
+
+        function getNumber(key, defaultValue = 0, useProfile = false) {
+            const val = getItem(key, null, useProfile);
+            if (val === null) return defaultValue;
+            const parsed = parseFloat(val);
+            return isNaN(parsed) ? defaultValue : parsed;
+        }
+
+        function getObject(key, defaultValue = null, useProfile = false) {
+            const val = getItem(key, null, useProfile);
+            if (!val) return defaultValue;
+            try {
+                return JSON.parse(val, SecurityAndUtils.reviverJSONSeguro);
+            } catch (e) {
+                return defaultValue;
+            }
+        }
+
+        function removeItem(key, useProfile = false) {
+            try {
+                localStorage.removeItem(_getKey(key, useProfile));
+            } catch (e) { }
+        }
+
+        return {
+            setItem,
+            getItem,
+            getBoolean,
+            getNumber,
+            getObject,
+            removeItem
         };
     })();
 
@@ -782,9 +785,7 @@
             if (obj === null || obj === undefined) return obj;
             try { return structuredClone(obj); }
             catch (e) {
-                return JSON.parse(JSON.stringify(obj), (k, v) =>
-                    ['__proto__', 'constructor', 'prototype'].includes(k) ? undefined : v
-                );
+                return JSON.parse(JSON.stringify(obj), SecurityAndUtils.reviverJSONSeguro);
             }
         }
 
@@ -1683,9 +1684,7 @@
                     if (!contenido || contenido.trim().length === 0) { UILogic.mostrarToast('Archivo vacío', 'error'); return; }
                     if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) { UILogic.mostrarToast('Contenido del archivo demasiado grande', 'error'); return; }
 
-                    const data = JSON.parse(contenido, (key, value) =>
-                        ['__proto__', 'constructor', 'prototype'].includes(key) ? undefined : value
-                    );
+                    const data = JSON.parse(contenido, S.reviverJSONSeguro);
                     if (!await _validarDatosImport(data)) return;
 
                     const registrosImportados = normalizarRegistrosImportados(data.registros, calcularHoras);
@@ -2067,7 +2066,7 @@
             const file = (await response.json()).files[GIST_FILENAME];
             if (!file) throw new Error(`Archivo ${GIST_FILENAME} no encontrado en el Gist`);
 
-            const data = JSON.parse(file.content, (key, value) => ['__proto__', 'constructor', 'prototype'].includes(key) ? undefined : value);
+            const data = JSON.parse(file.content, S.reviverJSONSeguro);
             if (data.hash && await S.calcularHashSHA256(data.registros) !== data.hash) data._hashNoCoincide = true;
 
             saveLastSync(gistId);
@@ -5246,30 +5245,18 @@ Generado por Sistema Lushibosca
             const btnRestaurar = document.getElementById('btn-hist-restaurar');
             if (!btnRespaldar || !btnRestaurar) return;
 
-            const tieneGist = GistSync.esGistIdValido(GistSync.getGistId());
-
             const newRespaldar = btnRespaldar.cloneNode(true);
             const newRestaurar = btnRestaurar.cloneNode(true);
             btnRespaldar.parentNode.replaceChild(newRespaldar, btnRespaldar);
             btnRestaurar.parentNode.replaceChild(newRestaurar, btnRestaurar);
 
-            if (tieneGist) {
-                newRespaldar.title = 'Subir a Gist';
-                newRespaldar.addEventListener('click', () => gistSubir());
-                newRespaldar.querySelector('use').setAttribute('href', '#icon-cloud-upload');
+            newRespaldar.title = 'Respaldar';
+            newRespaldar.addEventListener('click', (e) => _popupAccionHistorico(e, 'respaldar'));
+            newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
 
-                newRestaurar.title = 'Bajar de Gist';
-                newRestaurar.addEventListener('click', () => gistBajar());
-                newRestaurar.querySelector('use').setAttribute('href', '#icon-cloud-download');
-            } else {
-                newRespaldar.title = 'Respaldar';
-                newRespaldar.addEventListener('click', () => mostrarExportar(true));
-                newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
-
-                newRestaurar.title = 'Restaurar';
-                newRestaurar.addEventListener('click', () => mostrarImportar(true));
-                newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
-            }
+            newRestaurar.title = 'Restaurar';
+            newRestaurar.addEventListener('click', (e) => _popupAccionHistorico(e, 'restaurar'));
+            newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
         }
 
         function guardarConfigGist() {
@@ -5951,9 +5938,7 @@ Generado por Sistema Lushibosca
                     if (id) D.editarRegistro(id);
                 } else if (target.dataset.accion === 'editar-grupo') {
                     try {
-                        const grupoData = JSON.parse(target.dataset.grupoData, (k, v) =>
-                            ['__proto__', 'constructor', 'prototype'].includes(k) ? undefined : v
-                        );
+                        const grupoData = JSON.parse(target.dataset.grupoData, S.reviverJSONSeguro);
                         const registrosCompletos = D.registros().filter(r => grupoData.registros.includes(r.id));
                         D.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
                     } catch (err) { console.error('Error al abrir grupo:', err); }
@@ -6642,6 +6627,56 @@ Generado por Sistema Lushibosca
             _posicionarPopup(popup, event);
         }
 
+        let _popupAccionHistoricoEl = null;
+
+        function _popupAccionHistorico(event, tipo) {
+            event.stopPropagation();
+
+            if (_popupAccionHistoricoEl) {
+                const mismoTipo = _popupAccionHistoricoEl.dataset.tipo === tipo;
+                _popupAccionHistoricoEl.remove();
+                _popupAccionHistoricoEl = null;
+                if (mismoTipo) return;
+            }
+
+            const esRespaldar = tipo === 'respaldar';
+            const titulo = esRespaldar ? 'Respaldar registros' : 'Restaurar registros';
+
+            const popup = document.createElement('div');
+            popup.className = 'cal-popup';
+            popup.id = '_popup-accion-historico';
+            popup.dataset.tipo = tipo;
+            popup.innerHTML = `
+                <div class="cal-popup-fecha">${titulo}</div>
+                <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_popup-accion-gist">
+                    <svg class="icon"><use href="#icon-gist"/></svg>
+                    GitHub Gist
+                </button>
+                <button class="cal-popup-btn-edit cal-popup-btn-accion--especial" id="_popup-accion-local">
+                    <svg class="icon"><use href="#icon-${esRespaldar ? 'download' : 'upload'}"/></svg>
+                    Archivo local
+                </button>`;
+
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupAccionHistoricoEl = popup;
+
+            const cerrarPopup = _registrarCierrePopup(popup, `#btn-hist-${tipo}`, () => true, () => { _popupAccionHistoricoEl = null; });
+
+            popup.querySelector('#_popup-accion-gist')?.addEventListener('click', () => {
+                cerrarPopup();
+                const gistListo = GistSync.getToken() && (esRespaldar || GistSync.esGistIdValido(GistSync.getGistId()));
+                if (!gistListo) { abrirModalGist(); return; }
+                esRespaldar ? gistSubir() : gistBajar();
+            });
+            popup.querySelector('#_popup-accion-local')?.addEventListener('click', () => {
+                cerrarPopup();
+                esRespaldar ? mostrarExportar(true) : mostrarImportar(true);
+            });
+
+            _posicionarPopup(popup, event);
+        }
+
         function _flashCampo(...ids) {
             ids.forEach(id => {
                 const el = document.getElementById(id);
@@ -7203,9 +7238,7 @@ Generado por Sistema Lushibosca
             const raw = StorageHelper.getItem(SK_PROCESADOS, null);
             try {
                 if (!raw) return new Set();
-                const parsed = JSON.parse(raw, (k, v) =>
-                    ['__proto__', 'constructor', 'prototype'].includes(k) ? undefined : v
-                );
+                const parsed = JSON.parse(raw, SecurityAndUtils.reviverJSONSeguro);
                 if (!Array.isArray(parsed)) return new Set();
                 return new Set(parsed.filter(f => typeof f === 'string' && TimeUtils.validarFecha(f)));
             } catch { return new Set(); }
@@ -7429,7 +7462,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260713';
+        const _v = '-v260717';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {
@@ -7462,3 +7495,4 @@ document.addEventListener('DOMContentLoaded', function () {
 // DATA MANAGEMENT MODULE
 // LISTENERS PARA TECLA ENTER MODULE
 // FERIADOS MODULE
+// BIENVENIDA MODULE

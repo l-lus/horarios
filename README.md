@@ -5,6 +5,10 @@
 
 ### VERSION:
 
+### 260717
+* **Cambios:**  Se agregar opciones con un popup en los botones rapidos de backup de la tarjeta de registros
+* **Mejora:** Se crea el helper reviverJSONSeguro en el modulo de seguridad
+
 ### 260713
 * **Fix:** Se corrige el salto de 1px en las tarjetas debajo del calendario al pasar de mes o seleccionar un mes
 * **Fix:** Se corrigen varios bug al cambiar la animaciones de las tarjetas de fichar y estadisticas

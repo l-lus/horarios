@@ -2092,8 +2092,35 @@
         const DRIVE_MIME = 'application/json';
         const SIETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 
+        const TOKEN_STORAGE_KEY = 'driveSync_token';
+
         let _accessToken = null;
         let _tokenExpiry = 0;
+
+        // Restaurar token persistido (sobrevive a recargas de página, se pierde al cerrar la pestaña)
+        (function _restaurarTokenPersistido() {
+            try {
+                const raw = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+                if (!raw) return;
+                const { token, expiry } = JSON.parse(raw);
+                if (token && expiry && Date.now() < expiry) {
+                    _accessToken = token;
+                    _tokenExpiry = expiry;
+                } else {
+                    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+                }
+            } catch (e) { sessionStorage.removeItem(TOKEN_STORAGE_KEY); }
+        })();
+
+        function _persistirToken() {
+            try {
+                if (_accessToken && _tokenExpiry) {
+                    sessionStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify({ token: _accessToken, expiry: _tokenExpiry }));
+                } else {
+                    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+                }
+            } catch (e) { /* sessionStorage no disponible (modo privado, etc.) — la sesión simplemente no persistirá */ }
+        }
 
         function _conPerfil(fn) {
             if (!window.PerfilManager) return;
@@ -2173,6 +2200,7 @@
                         if (resp.error) { reject(new Error(resp.error)); return; }
                         _accessToken = resp.access_token;
                         _tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+                        _persistirToken();
                         resolve(_accessToken);
                     },
                     error_callback: (err) => reject(new Error(err?.type || 'Error de autenticación con Google')),
@@ -2190,6 +2218,7 @@
             }
             _accessToken = null;
             _tokenExpiry = 0;
+            _persistirToken();
         }
 
         async function _fetchDrive(url, opciones = {}, _reintentado = false) {
@@ -2197,6 +2226,7 @@
             const resp = await fetch(url, { ...opciones, headers: { ...(opciones.headers || {}), Authorization: `Bearer ${token}` } });
             if (resp.status === 401 && !_reintentado) {
                 _accessToken = null;
+                _persistirToken();
                 return _fetchDrive(url, opciones, true);
             }
             return resp;

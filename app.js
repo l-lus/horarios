@@ -5481,30 +5481,18 @@ Generado por Sistema Lushibosca
             const btnRestaurar = document.getElementById('btn-hist-restaurar');
             if (!btnRespaldar || !btnRestaurar) return;
 
-            const tieneGist = GistSync.esGistIdValido(GistSync.getGistId());
-
             const newRespaldar = btnRespaldar.cloneNode(true);
             const newRestaurar = btnRestaurar.cloneNode(true);
             btnRespaldar.parentNode.replaceChild(newRespaldar, btnRespaldar);
             btnRestaurar.parentNode.replaceChild(newRestaurar, btnRestaurar);
 
-            if (tieneGist) {
-                newRespaldar.title = 'Subir a Gist';
-                newRespaldar.addEventListener('click', () => gistSubir());
-                newRespaldar.querySelector('use').setAttribute('href', '#icon-cloud-upload');
+            newRespaldar.title = 'Respaldar';
+            newRespaldar.addEventListener('click', (e) => abrirMenuAccionesHistorico('subir', e.currentTarget));
+            newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
 
-                newRestaurar.title = 'Bajar de Gist';
-                newRestaurar.addEventListener('click', () => gistBajar());
-                newRestaurar.querySelector('use').setAttribute('href', '#icon-cloud-download');
-            } else {
-                newRespaldar.title = 'Respaldar';
-                newRespaldar.addEventListener('click', () => mostrarExportar(true));
-                newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
-
-                newRestaurar.title = 'Restaurar';
-                newRestaurar.addEventListener('click', () => mostrarImportar(true));
-                newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
-            }
+            newRestaurar.title = 'Restaurar';
+            newRestaurar.addEventListener('click', (e) => abrirMenuAccionesHistorico('bajar', e.currentTarget));
+            newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
         }
 
         function guardarConfigGist() {
@@ -7781,56 +7769,6 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(); }, { passive: false });
         btn.addEventListener('touchend', (e) => { e.preventDefault(); onStop(); }, { passive: false });
     };
-
-    // Long-press (o click derecho en PC) sobre "Respaldar"/"Restaurar" de la tarjeta de Registros
-    // → abre el menú con las 3 opciones (local / gist / drive). Se delega en document porque
-    // esos botones se reemplazan (cloneNode) cada vez que cambia la config de Gist.
-    (function _initMenuAccionesHistorico() {
-        const SELECTOR_BTNS = '#btn-hist-respaldar, #btn-hist-restaurar';
-        const DURACION_LONG_PRESS = 500;
-        let timer = null;
-        let btnDisparado = null;
-
-        const tipoDe = (btn) => (btn.id === 'btn-hist-respaldar' ? 'subir' : 'bajar');
-        const cancelar = () => { clearTimeout(timer); timer = null; };
-
-        const iniciar = (e) => {
-            if (e.type === 'mousedown' && e.button !== 0) return;
-            const btn = e.target.closest(SELECTOR_BTNS);
-            if (!btn || btn.disabled) return;
-            cancelar();
-            timer = setTimeout(() => {
-                timer = null;
-                btnDisparado = btn;
-                if (navigator.vibrate) navigator.vibrate(15);
-                UILogic.abrirMenuAccionesHistorico(tipoDe(btn), btn);
-            }, DURACION_LONG_PRESS);
-        };
-
-        document.addEventListener('mousedown', iniciar);
-        document.addEventListener('touchstart', iniciar, { passive: true });
-        document.addEventListener('mouseup', cancelar);
-        document.addEventListener('touchend', cancelar);
-        document.addEventListener('touchmove', cancelar);
-
-        // Si el long-press ya disparó el menú, se descarta el click normal que sigue al soltar
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest(SELECTOR_BTNS);
-            if (btn && btnDisparado === btn) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-            }
-            btnDisparado = null;
-        }, true);
-
-        document.addEventListener('contextmenu', (e) => {
-            const btn = e.target.closest(SELECTOR_BTNS);
-            if (!btn || btn.disabled) return;
-            e.preventDefault();
-            cancelar();
-            UILogic.abrirMenuAccionesHistorico(tipoDe(btn), btn);
-        });
-    })();
 
     $('btn-install')?.addEventListener('click', () => PWAInstaller.instalarApp());
     document.querySelector('.header-profile-btn')?.addEventListener('click', () => UILogic.abrirSelectorPerfiles());

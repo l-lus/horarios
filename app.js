@@ -2090,7 +2090,6 @@
         const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
         const DRIVE_FILENAME = 'horarios_backup.json';
         const DRIVE_MIME = 'application/json';
-        const SIETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 
         const TOKEN_STORAGE_KEY = 'driveSync_token';
 
@@ -2149,22 +2148,6 @@
             return isoOrLegacy;
         }
 
-        function puedeSincronizar() {
-            const last = getLastSync();
-            if (!last) return true;
-            const t = new Date(last).getTime();
-            if (isNaN(t)) return true;
-            return (Date.now() - t) >= SIETE_DIAS_MS;
-        }
-
-        function proximaFechaDisponible() {
-            const last = getLastSync();
-            if (!last) return null;
-            const t = new Date(last).getTime();
-            if (isNaN(t)) return null;
-            return new Date(t + SIETE_DIAS_MS);
-        }
-
         function estaConectado() { return !!(_accessToken && Date.now() < _tokenExpiry); }
 
         function _cargarScriptGIS() {
@@ -2210,7 +2193,6 @@
         }
 
         async function iniciarSesion() { return _obtenerToken(true); }
-        async function intentarSesionSilenciosa() { return _obtenerToken(false); }
 
         function cerrarSesion() {
             if (_accessToken && window.google?.accounts?.oauth2?.revoke) {
@@ -2289,8 +2271,8 @@
         }
 
         return {
-            getFileId, setFileId, getLastSync, formatLastSync, puedeSincronizar, proximaFechaDisponible,
-            estaConectado, iniciarSesion, intentarSesionSilenciosa, cerrarSesion, buscarBackupExistente, subir, bajar
+            getFileId, setFileId, getLastSync, formatLastSync,
+            estaConectado, iniciarSesion, cerrarSesion, buscarBackupExistente, subir, bajar
         };
     })(SecurityAndUtils);
 
@@ -5566,18 +5548,6 @@ Generado por Sistema Lushibosca
             if (btn) _setBtnActivo(btn.id, conectado);
         }
 
-        function _actualizarTextoProximoBackupDrive() {
-            const el = document.getElementById('drive-proximo-backup');
-            if (!el) return;
-            if (!DriveSync.getLastSync()) { el.textContent = ''; return; }
-            if (DriveSync.puedeSincronizar()) {
-                el.textContent = 'Podés hacer un backup ahora';
-            } else {
-                const proxima = DriveSync.proximaFechaDisponible();
-                el.textContent = proxima ? `Próximo backup disponible: ${proxima.toLocaleDateString('es-AR')}` : '';
-            }
-        }
-
         function actualizarEstadoBotonesDrive() {
             const conectado = DriveSync.estaConectado();
             _setBtnDisabled('btn-drive-subir', !conectado);
@@ -5600,7 +5570,6 @@ Generado por Sistema Lushibosca
             }
 
             actualizarEstadoBotonesDrive();
-            _actualizarTextoProximoBackupDrive();
         }
 
         function cerrarModalDrive() {
@@ -5634,10 +5603,9 @@ Generado por Sistema Lushibosca
                     const existente = await DriveSync.buscarBackupExistente();
                     if (existente) {
                         DriveSync.setFileId(existente.id);
-                        mostrarToast('Se encontró un backup en Drive', 'info');
-                        await driveBajar();
+                        mostrarToast('Se encontró un backup en Drive. Tocá "Bajar" para restaurarlo.', 'info');
                     } else {
-                        mostrarToast('No hay backups previos en Drive. Se creará uno con tu próxima subida.', 'info');
+                        mostrarToast('No hay backups previos en Drive. Se creará uno con "Subir".', 'info');
                     }
                 }
             } catch (e) {
@@ -5646,7 +5614,6 @@ Generado por Sistema Lushibosca
             } finally {
                 if (btn) btn.disabled = false;
                 actualizarEstadoBotonesDrive();
-                _actualizarTextoProximoBackupDrive();
             }
         }
 
@@ -5666,7 +5633,6 @@ Generado por Sistema Lushibosca
                 if (!silencioso) mostrarToast('Backup subido a Drive', 'success');
                 const lastSyncEl = document.getElementById('drive-ultima-sync');
                 if (lastSyncEl) lastSyncEl.textContent = `Sincronizado: ${DriveSync.formatLastSync(DriveSync.getLastSync())}`;
-                _actualizarTextoProximoBackupDrive();
             } catch (e) {
                 console.error('Drive subir error:', e);
                 if (!silencioso) mostrarToast(e.message || 'Error al subir a Drive', 'error');
@@ -5705,19 +5671,6 @@ Generado por Sistema Lushibosca
                 if (btn) btn.disabled = false;
                 iconoPerfil?.classList.remove('icono-spin');
             }
-        }
-
-        function _initAutoSyncDrive() {
-            if (!DriveSync.getFileId()) return; // este perfil nunca vinculó un backup de Drive
-            if (!DriveSync.puedeSincronizar()) return; // no pasaron 7 días desde el último backup
-            setTimeout(async () => {
-                try {
-                    await DriveSync.intentarSesionSilenciosa();
-                    await driveSubir(true);
-                } catch (e) {
-                    console.warn('Backup automático de Drive no disponible (requiere iniciar sesión manualmente):', e);
-                }
-            }, 3000);
         }
 
         function _calcularRegistrosMerge(modo, mergeData) {
@@ -6500,7 +6453,6 @@ Generado por Sistema Lushibosca
             }
 
             _initAutoSync();
-            _initAutoSyncDrive();
             setInterval(() => actualizarUI(null, true), 20000);
 
             _initListenerEscape();

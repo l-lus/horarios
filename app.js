@@ -2203,7 +2203,7 @@
             });
         }
 
-        async function _obtenerToken(interactivo) {
+        async function _obtenerToken() {
             if (estaConectado()) return _accessToken;
             await _cargarScriptGIS();
             if (!window.google?.accounts?.oauth2) throw new Error('Google Identity Services no disponible');
@@ -2221,11 +2221,11 @@
                     },
                     error_callback: (err) => reject(new Error(err?.type || 'Error de autenticación con Google')),
                 });
-                client.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
+                client.requestAccessToken({ prompt: '' });
             });
         }
 
-        async function iniciarSesion() { return _obtenerToken(true); }
+        async function iniciarSesion() { return _obtenerToken(); }
 
         function cerrarSesion() {
             if (_accessToken && window.google?.accounts?.oauth2?.revoke) {
@@ -2237,7 +2237,7 @@
         }
 
         async function _fetchDrive(url, opciones = {}, _reintentado = false) {
-            const token = await _obtenerToken(false);
+            const token = await _obtenerToken();
             const resp = await fetch(url, { ...opciones, headers: { ...(opciones.headers || {}), Authorization: `Bearer ${token}` } });
             if (resp.status === 401 && !_reintentado) {
                 _accessToken = null;

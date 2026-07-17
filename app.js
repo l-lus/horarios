@@ -6681,10 +6681,16 @@ Generado por Sistema Lushibosca
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
+                clearTimeout(el._flashTimeout);
                 el.classList.remove('campo-flash');
                 void el.offsetWidth;
                 el.classList.add('campo-flash');
-                el.addEventListener('animationend', () => el.classList.remove('campo-flash'), { once: true });
+                
+                const cs = getComputedStyle(el);
+                const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
+                const iteraciones = parseFloat(cs.animationIterationCount) || 1;
+                const totalMs = duracionMs * iteraciones;
+                el._flashTimeout = setTimeout(() => el.classList.remove('campo-flash'), totalMs);
             });
         }
 

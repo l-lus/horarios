@@ -1912,6 +1912,398 @@
     })(SecurityAndUtils);
 
     // ====================================================================
+    //                     MÓDULO UI CORE (utilidades genéricas de UI)
+    // ====================================================================
+    // Utilidades sin estado de negocio propio: toasts, animaciones genéricas
+    // (slide, fade, flash), popups posicionables, helpers de <select>/botones,
+    // debounce/press-hold/swipe. Lo usan el resto de los módulos de UI.
+    const UICore = (function (S, D) {
+
+        let toastTimeout = null;
+        let _toastQueue = [];
+        let _toastRunning = false;
+
+        function formatoDiferencia(tiempoTotal) {
+            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
+        }
+
+        function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
+            if (!el || el.dataset.swipeInit) return;
+            el.dataset.swipeInit = '1';
+            let _x = null, _y = null;
+            el.addEventListener('touchstart', e => {
+                if (e.touches.length !== 1) return;
+                if (ignoreInputs && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+                _x = e.touches[0].clientX;
+                _y = e.touches[0].clientY;
+            }, { passive: true });
+            el.addEventListener('touchend', e => {
+                if (_x === null) return;
+                const dx = e.changedTouches[0].clientX - _x;
+                const dy = e.changedTouches[0].clientY - _y;
+                _x = null; _y = null;
+                if (Math.abs(dy) > maxY) return;
+                if (Math.abs(dx) < minX) return;
+                callback(dx < 0 ? 1 : -1);
+            }, { passive: true });
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function _crearPressHold(accionFn) {
+            let timeout = null, intervalo = null;
+            return {
+                iniciar(arg) {
+                    accionFn(arg);
+                    timeout = setTimeout(() => {
+                        intervalo = setInterval(() => accionFn(arg), 100);
+                    }, 500);
+                },
+                detener() {
+                    if (timeout) { clearTimeout(timeout); timeout = null; }
+                    if (intervalo) { clearInterval(intervalo); intervalo = null; }
+                }
+            };
+        }
+
+        function _actualizarOffsetsStickyMes() {
+            const header = document.querySelector('.header');
+            const mesHeader = document.querySelector('.registro-mes-header');
+            const root = document.documentElement.style;
+            if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
+            if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
+        }
+        const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
+
+        function mostrarError(inputId, errorId) {
+            const input = $(inputId);
+            const error = $(errorId);
+            if (input) input.classList.add('error');
+            if (error) error.style.display = 'block';
+        }
+
+        function limpiarError(inputId, errorId) {
+            const input = $(inputId);
+            const error = $(errorId);
+            if (input) input.classList.remove('error');
+            if (error) error.style.display = 'none';
+        }
+
+        function obtenerNombrePerfilSafe() {
+            let nombre = 'Backup';
+            if (window.PerfilManager) nombre = window.PerfilManager.obtenerDatosPerfil().nombre;
+            return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
+        }
+
+        function descargarJSON(data, nombreArchivo) {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function mostrarToast(mensaje, tipo = 'info', duracion = 3000) {
+            const textoLimpio = S.sanitizeString(mensaje, 200);
+            const ultimo = _toastQueue[_toastQueue.length - 1];
+            const actual = _toastRunning ? $('toast')?.textContent : null;
+            if ((ultimo && ultimo.mensaje === textoLimpio) || actual === textoLimpio) return;
+            _toastQueue.push({ mensaje: textoLimpio, tipo, duracionBase: duracion });
+            if (!_toastRunning) _procesarToastQueue();
+        }
+
+        function _procesarToastQueue() {
+            if (_toastQueue.length === 0) {
+                _toastRunning = false;
+                return;
+            }
+
+            _toastRunning = true;
+            const actual = _toastQueue.shift();
+            const toast = $('toast');
+            toast.classList.remove('show');
+            toast.textContent = actual.mensaje;
+            toast.className = `toast ${actual.tipo}`;
+            let duracionFinal = actual.duracionBase || 3000;
+            if (_toastQueue.length >= 2) {
+                duracionFinal = Math.floor(duracionFinal / 2);
+            }
+
+            setTimeout(() => {
+                toast.classList.add('show');
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                    toastTimeout = null;
+                    setTimeout(() => _procesarToastQueue(), 350);
+                }, duracionFinal);
+            }, 10);
+        }
+
+        function resetearBoton(btn) {
+            btn.disabled = false;
+            btn.style.background = '';
+            btn.style.color = '';
+            btn.style.borderColor = '';
+            btn.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> <span id="btn-registrar-texto">Fichar</span>';
+        }
+
+        function restaurarBotonGuardarEdicion(btnGuardar) {
+            btnGuardar.disabled = false;
+            btnGuardar.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> Guardar';
+        }
+
+        function _getCSSdur(varName) {
+            const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+            if (!raw) return 300;
+            return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
+        }
+        const DUR_ANIM = () => _getCSSdur('--dur-anim');
+        const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
+
+        function _crearToggleConfig({ getVal, setVal, btnId, mensajeOn, mensajeOff, onAfterToggle }) {
+            function actualizarEstado() {
+                _setBtnActivo(btnId, getVal());
+            }
+            function toggle() {
+                const nuevo = !getVal();
+                setVal(nuevo);
+                actualizarEstado();
+                mostrarToast(nuevo ? mensajeOn : mensajeOff, 'info');
+                onAfterToggle?.(nuevo);
+            }
+            return { toggle, actualizarEstado };
+        }
+
+        function _setBtnActivo(id, activo) {
+            const btn = document.getElementById(id);
+            if (btn) btn.classList.toggle('btn-activo', activo);
+        }
+
+        function _crearOpcion(value, text, selected = false) {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = text;
+            if (selected) { opt.selected = true; opt.setAttribute('selected', ''); }
+            return opt;
+        }
+
+        function _poblarSelect(selectId, items, getLabel, selDefault, actualizarFn, agruparFn = null) {
+            const select = $(selectId);
+            if (!select) return;
+            const selActual = select.value;
+            select.innerHTML = '';
+            if (!items.length) { select.appendChild(_crearOpcion('', 'Sin registros')); actualizarFn(null); return; }
+            const sel = (selActual && items.includes(selActual))
+                ? selActual
+                : (items.includes(selDefault)
+                    ? selDefault
+                    : (items.find(k => k <= selDefault) || items[items.length - 1]));
+            if (agruparFn) {
+                agruparFn(items).forEach((claves, grupo) => {
+                    const grp = document.createElement('optgroup');
+                    grp.label = grupo;
+                    claves.forEach(k => grp.appendChild(_crearOpcion(k, getLabel(k), k === sel)));
+                    select.appendChild(grp);
+                });
+            } else {
+                items.forEach(k => select.appendChild(_crearOpcion(k, getLabel(k), k === sel)));
+            }
+            actualizarFn(sel);
+        }
+
+        function setIconoBtn(btn, icono) {
+            const use = btn.querySelector('svg use');
+            if (use) use.setAttribute('href', icono);
+        }
+
+        function _setBtnDisabled(id, disabled) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.disabled = disabled;
+        }
+
+        function _posicionarPopup(popup, event) {
+            const el = event.currentTarget || event.target;
+            const rect = el.getBoundingClientRect();
+            const margin = 8;
+            requestAnimationFrame(() => {
+                const pw = popup.offsetWidth, ph = popup.offsetHeight;
+                let top = rect.bottom + 12;
+                let left = rect.left + (rect.width / 2) - (pw / 2);
+                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+                if (left < margin) left = margin;
+                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
+                if (top < margin) top = margin;
+                popup.style.top = `${top}px`;
+                popup.style.left = `${left}px`;
+                popup.style.visibility = '';
+                setTimeout(() => popup.classList.add('listo'), 350);
+            });
+        }
+
+        function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar) {
+            const cerrar = () => {
+                popup.remove();
+                if (alCerrar) alCerrar();
+                document.removeEventListener('click', onClick, true);
+                document.removeEventListener('scroll', cerrar, true);
+            };
+            const onClick = (e) => {
+                const trigger = e.target.closest(selectorTrigger);
+                if (trigger && esMismoTrigger(trigger)) return;
+                if (!popup.contains(e.target)) cerrar();
+            };
+            setTimeout(() => {
+                document.addEventListener('click', onClick, { capture: true, passive: true });
+                document.addEventListener('scroll', cerrar, { capture: true, passive: true });
+            }, 10);
+            return cerrar;
+        }
+
+        function _flashCampo(...ids) {
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                clearTimeout(el._flashTimeout);
+                el.classList.remove('campo-flash');
+                void el.offsetWidth;
+                el.classList.add('campo-flash');
+
+                // Se lee la duración real desde el CSS computado (en vez de hardcodearla)
+                // para que quede sincronizada automáticamente con @keyframes campo-flash.
+                const cs = getComputedStyle(el);
+                const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
+                const iteraciones = parseFloat(cs.animationIterationCount) || 1;
+                const totalMs = duracionMs * iteraciones;
+
+                // Se usa un timeout de reloj real (en vez de depender solo de 'animationend')
+                // porque si el campo queda oculto (display:none) mientras parpadea —p.ej. al
+                // cambiar de modo lote/normal— el navegador cancela la animación sin disparar
+                // el evento, y al volver a mostrarse la reinicia desde cero. El timeout garantiza
+                // que la clase se saque en el momento correcto sin importar si hubo interrupciones.
+                el._flashTimeout = setTimeout(() => el.classList.remove('campo-flash'), totalMs);
+            });
+        }
+
+        const _slideAnimEstado = new WeakMap();
+
+        function _limpiarClonVisual(clon) {
+            clon.removeAttribute('id');
+            clon.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+            return clon;
+        }
+
+        function _finalizarSlidePendiente(el) {
+            const estado = _slideAnimEstado.get(el);
+            if (!estado) return;
+            clearTimeout(estado.timeout);
+            el.style.display = '';
+            estado.wrapper.parentNode?.insertBefore(el, estado.wrapper);
+            estado.wrapper.remove();
+            _slideAnimEstado.delete(el);
+        }
+
+        function _animarSlideElemento(el, delta, mutarFn) {
+            if (!el) { mutarFn(); return; }
+
+            _finalizarSlidePendiente(el);
+
+            const rectViejo = el.getBoundingClientRect();
+            const anchoViejo = rectViejo.width;
+            const altoViejo = rectViejo.height;
+            const margenTop = getComputedStyle(el).marginTop;
+
+            const snapViejo = _limpiarClonVisual(el.cloneNode(true));
+            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoViejo + 'px;pointer-events:none;';
+
+            el.style.visibility = 'hidden';
+            mutarFn();
+
+            const rectNuevo = el.getBoundingClientRect();
+            const anchoNuevo = rectNuevo.width;
+            const altoNuevo = rectNuevo.height;
+
+            const snapNuevo = _limpiarClonVisual(el.cloneNode(true));
+            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoNuevo + 'px;pointer-events:none;left:' + (delta > 0 ? anchoViejo : -anchoNuevo) + 'px;';
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoViejo + 'px;height:calc(' + altoViejo + 'px + ' + margenTop + ');';
+            wrapper.appendChild(snapViejo);
+            wrapper.appendChild(snapNuevo);
+
+            el.parentNode.insertBefore(wrapper, el);
+            el.style.display = 'none';
+            el.style.visibility = '';
+
+            wrapper.offsetHeight;
+            const dur = DUR_CALENDARIO();
+            const easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
+            snapViejo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            snapNuevo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            if (Math.abs(altoNuevo - altoViejo) > 0.5) {
+                wrapper.style.transition = 'height ' + dur + 'ms ' + easing;
+                wrapper.style.height = 'calc(' + altoNuevo + 'px + ' + margenTop + ')';
+            }
+            const tx = (delta > 0 ? -anchoViejo : anchoViejo) + 'px';
+            snapViejo.style.transform = 'translateX(' + tx + ')';
+            snapNuevo.style.transform = 'translateX(' + tx + ')';
+
+            const timeout = setTimeout(() => {
+                el.style.display = '';
+                wrapper.parentNode.insertBefore(el, wrapper);
+                wrapper.remove();
+                _slideAnimEstado.delete(el);
+            }, dur + 20);
+
+            _slideAnimEstado.set(el, { timeout, wrapper });
+        }
+
+        return {
+            formatoDiferencia,
+            registrarSwipe,
+            debounce,
+            _crearPressHold,
+            _actualizarOffsetsStickyMes,
+            actualizarOffsetsStickyMesDebounced,
+            mostrarError,
+            limpiarError,
+            obtenerNombrePerfilSafe,
+            descargarJSON,
+            mostrarToast,
+            resetearBoton,
+            restaurarBotonGuardarEdicion,
+            _getCSSdur,
+            DUR_ANIM,
+            DUR_CALENDARIO,
+            _crearToggleConfig,
+            _setBtnActivo,
+            _crearOpcion,
+            _poblarSelect,
+            setIconoBtn,
+            _setBtnDisabled,
+            _posicionarPopup,
+            _registrarCierrePopup,
+            _flashCampo,
+            _limpiarClonVisual,
+            _finalizarSlidePendiente,
+            _animarSlideElemento
+        };
+    })(SecurityAndUtils, DataManagement);
+
+
+    // ====================================================================
     //                     MÓDULO GIST SYNC
     // ====================================================================
     const GistSync = (function (S) {
@@ -2076,11 +2468,19 @@
         return { getToken, getGistId, getLastSync, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, getSyncCount, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, subir, bajar };
     })(SecurityAndUtils);
 
-    const UILogic = (function (S, D, GistSync) {
+    const UILogic = (function (S, D, GistSync, UICore) {
 
-        let toastTimeout = null;
-        let _toastQueue = [];
-        let _toastRunning = false;
+        const {
+            formatoDiferencia, registrarSwipe, debounce, _crearPressHold,
+            _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
+            mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON,
+            mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
+            _getCSSdur, DUR_ANIM, DUR_CALENDARIO, _crearToggleConfig, _setBtnActivo,
+            _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
+            _posicionarPopup, _registrarCierrePopup, _flashCampo,
+            _limpiarClonVisual, _finalizarSlidePendiente, _animarSlideElemento
+        } = UICore;
+
         let edicionBloqueada = true;
         let edicionGrupoBloqueada = true;
         let perfilEnEdicion = null;
@@ -2090,149 +2490,6 @@
         let modoEstadisticas = 'mensual';
         let _modalAbiertoDesdeLista = false;
         let _timerAutoVista = null;
-
-        function formatoDiferencia(tiempoTotal) {
-            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
-        }
-
-        function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
-            if (!el || el.dataset.swipeInit) return;
-            el.dataset.swipeInit = '1';
-            let _x = null, _y = null;
-            el.addEventListener('touchstart', e => {
-                if (e.touches.length !== 1) return;
-                if (ignoreInputs && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
-                _x = e.touches[0].clientX;
-                _y = e.touches[0].clientY;
-            }, { passive: true });
-            el.addEventListener('touchend', e => {
-                if (_x === null) return;
-                const dx = e.changedTouches[0].clientX - _x;
-                const dy = e.changedTouches[0].clientY - _y;
-                _x = null; _y = null;
-                if (Math.abs(dy) > maxY) return;
-                if (Math.abs(dx) < minX) return;
-                callback(dx < 0 ? 1 : -1);
-            }, { passive: true });
-        }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        function _crearPressHold(accionFn) {
-            let timeout = null, intervalo = null;
-            return {
-                iniciar(arg) {
-                    accionFn(arg);
-                    timeout = setTimeout(() => {
-                        intervalo = setInterval(() => accionFn(arg), 100);
-                    }, 500);
-                },
-                detener() {
-                    if (timeout) { clearTimeout(timeout); timeout = null; }
-                    if (intervalo) { clearInterval(intervalo); intervalo = null; }
-                }
-            };
-        }
-
-        function _actualizarOffsetsStickyMes() {
-            const header = document.querySelector('.header');
-            const mesHeader = document.querySelector('.registro-mes-header');
-            const root = document.documentElement.style;
-            if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
-            if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
-        }
-        const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
-
-        function mostrarError(inputId, errorId) {
-            const input = $(inputId);
-            const error = $(errorId);
-            if (input) input.classList.add('error');
-            if (error) error.style.display = 'block';
-        }
-
-        function limpiarError(inputId, errorId) {
-            const input = $(inputId);
-            const error = $(errorId);
-            if (input) input.classList.remove('error');
-            if (error) error.style.display = 'none';
-        }
-
-        function obtenerNombrePerfilSafe() {
-            let nombre = 'Backup';
-            if (window.PerfilManager) nombre = window.PerfilManager.obtenerDatosPerfil().nombre;
-            return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
-        }
-
-        function descargarJSON(data, nombreArchivo) {
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function mostrarToast(mensaje, tipo = 'info', duracion = 3000) {
-            const textoLimpio = S.sanitizeString(mensaje, 200);
-            const ultimo = _toastQueue[_toastQueue.length - 1];
-            const actual = _toastRunning ? $('toast')?.textContent : null;
-            if ((ultimo && ultimo.mensaje === textoLimpio) || actual === textoLimpio) return;
-            _toastQueue.push({ mensaje: textoLimpio, tipo, duracionBase: duracion });
-            if (!_toastRunning) _procesarToastQueue();
-        }
-
-        function _procesarToastQueue() {
-            if (_toastQueue.length === 0) {
-                _toastRunning = false;
-                return;
-            }
-
-            _toastRunning = true;
-            const actual = _toastQueue.shift();
-            const toast = $('toast');
-            toast.classList.remove('show');
-            toast.textContent = actual.mensaje;
-            toast.className = `toast ${actual.tipo}`;
-            let duracionFinal = actual.duracionBase || 3000;
-            if (_toastQueue.length >= 2) {
-                duracionFinal = Math.floor(duracionFinal / 2);
-            }
-
-            setTimeout(() => {
-                toast.classList.add('show');
-                toastTimeout = setTimeout(() => {
-                    toast.classList.remove('show');
-                    toastTimeout = null;
-                    setTimeout(() => _procesarToastQueue(), 350);
-                }, duracionFinal);
-            }, 10);
-        }
-
-        function resetearBoton(btn) {
-            btn.disabled = false;
-            btn.style.background = '';
-            btn.style.color = '';
-            btn.style.borderColor = '';
-            btn.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> <span id="btn-registrar-texto">Fichar</span>';
-        }
-
-        function restaurarBotonGuardarEdicion(btnGuardar) {
-            btnGuardar.disabled = false;
-            btnGuardar.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> Guardar';
-        }
-
-
 
         function agruparRegistrosPorMes(registros) {
             if (!Array.isArray(registros)) {
@@ -3472,13 +3729,6 @@
             }
         }
 
-        function _getCSSdur(varName) {
-            const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-            if (!raw) return 300;
-            return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
-        }
-        const DUR_ANIM = () => _getCSSdur('--dur-anim');
-        const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
 
         function _animarFadeSwap(el, fn) {
             if (!el) { fn(); return; }
@@ -3559,19 +3809,6 @@
          * @param {function(boolean): void} [cfg.onAfterToggle] - Efecto secundario opcional.
          * @returns {{ toggle: function, actualizarEstado: function }}
          */
-        function _crearToggleConfig({ getVal, setVal, btnId, mensajeOn, mensajeOff, onAfterToggle }) {
-            function actualizarEstado() {
-                _setBtnActivo(btnId, getVal());
-            }
-            function toggle() {
-                const nuevo = !getVal();
-                setVal(nuevo);
-                actualizarEstado();
-                mostrarToast(nuevo ? mensajeOn : mensajeOff, 'info');
-                onAfterToggle?.(nuevo);
-            }
-            return { toggle, actualizarEstado };
-        }
 
         function alternarTema() {
             const temaOscuro = !StorageHelper.getBoolean(STORAGE_KEYS.TEMA_OSCURO, true);
@@ -3598,10 +3835,6 @@
             });
         }
 
-        function _setBtnActivo(id, activo) {
-            const btn = document.getElementById(id);
-            if (btn) btn.classList.toggle('btn-activo', activo);
-        }
 
         const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
             _crearToggleConfig({
@@ -3885,37 +4118,6 @@
             });
         }
 
-        function _crearOpcion(value, text, selected = false) {
-            const opt = document.createElement('option');
-            opt.value = value;
-            opt.textContent = text;
-            if (selected) { opt.selected = true; opt.setAttribute('selected', ''); }
-            return opt;
-        }
-
-        function _poblarSelect(selectId, items, getLabel, selDefault, actualizarFn, agruparFn = null) {
-            const select = $(selectId);
-            if (!select) return;
-            const selActual = select.value;
-            select.innerHTML = '';
-            if (!items.length) { select.appendChild(_crearOpcion('', 'Sin registros')); actualizarFn(null); return; }
-            const sel = (selActual && items.includes(selActual))
-                ? selActual
-                : (items.includes(selDefault)
-                    ? selDefault
-                    : (items.find(k => k <= selDefault) || items[items.length - 1]));
-            if (agruparFn) {
-                agruparFn(items).forEach((claves, grupo) => {
-                    const grp = document.createElement('optgroup');
-                    grp.label = grupo;
-                    claves.forEach(k => grp.appendChild(_crearOpcion(k, getLabel(k), k === sel)));
-                    select.appendChild(grp);
-                });
-            } else {
-                items.forEach(k => select.appendChild(_crearOpcion(k, getLabel(k), k === sel)));
-            }
-            actualizarFn(sel);
-        }
 
         function poblarSelectorAnios() {
             const anios = [...new Set(D.registros().map(r => r.fecha.substring(0, 4)))].sort().reverse();
@@ -4939,10 +5141,6 @@ Generado por Sistema Lushibosca
             } catch (e) { console.error('Error en operación de lote:', e); }
         }
 
-        function setIconoBtn(btn, icono) {
-            const use = btn.querySelector('svg use');
-            if (use) use.setAttribute('href', icono);
-        }
 
         function poblarSelectoresTipos() {
             const tipos = TiposRegistro.obtenerTodosLosTipos();
@@ -5234,11 +5432,6 @@ Generado por Sistema Lushibosca
             }
         }
 
-        function _setBtnDisabled(id, disabled) {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-            btn.disabled = disabled;
-        }
 
         function actualizarBotonesHistorico() {
             const btnRespaldar = document.getElementById('btn-hist-respaldar');
@@ -6480,43 +6673,6 @@ Generado por Sistema Lushibosca
                 ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
         }
 
-        function _posicionarPopup(popup, event) {
-            const el = event.currentTarget || event.target;
-            const rect = el.getBoundingClientRect();
-            const margin = 8;
-            requestAnimationFrame(() => {
-                const pw = popup.offsetWidth, ph = popup.offsetHeight;
-                let top = rect.bottom + 12;
-                let left = rect.left + (rect.width / 2) - (pw / 2);
-                if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
-                if (left < margin) left = margin;
-                if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
-                if (top < margin) top = margin;
-                popup.style.top = `${top}px`;
-                popup.style.left = `${left}px`;
-                popup.style.visibility = '';
-                setTimeout(() => popup.classList.add('listo'), 350);
-            });
-        }
-
-        function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar) {
-            const cerrar = () => {
-                popup.remove();
-                if (alCerrar) alCerrar();
-                document.removeEventListener('click', onClick, true);
-                document.removeEventListener('scroll', cerrar, true);
-            };
-            const onClick = (e) => {
-                const trigger = e.target.closest(selectorTrigger);
-                if (trigger && esMismoTrigger(trigger)) return;
-                if (!popup.contains(e.target)) cerrar();
-            };
-            setTimeout(() => {
-                document.addEventListener('click', onClick, { capture: true, passive: true });
-                document.addEventListener('scroll', cerrar, { capture: true, passive: true });
-            }, 10);
-            return cerrar;
-        }
 
         function _popupCalendario(event, registroId) {
             event.stopPropagation();
@@ -6677,22 +6833,6 @@ Generado por Sistema Lushibosca
             _posicionarPopup(popup, event);
         }
 
-        function _flashCampo(...ids) {
-            ids.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                clearTimeout(el._flashTimeout);
-                el.classList.remove('campo-flash');
-                void el.offsetWidth;
-                el.classList.add('campo-flash');
-                
-                const cs = getComputedStyle(el);
-                const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
-                const iteraciones = parseFloat(cs.animationIterationCount) || 1;
-                const totalMs = duracionMs * iteraciones;
-                el._flashTimeout = setTimeout(() => el.classList.remove('campo-flash'), totalMs);
-            });
-        }
 
         const _FLASH_SCROLL_DELAY = 500;
 
@@ -6886,78 +7026,6 @@ Generado por Sistema Lushibosca
             });
         }
 
-        const _slideAnimEstado = new WeakMap();
-
-        function _limpiarClonVisual(clon) {
-            clon.removeAttribute('id');
-            clon.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
-            return clon;
-        }
-
-        function _finalizarSlidePendiente(el) {
-            const estado = _slideAnimEstado.get(el);
-            if (!estado) return;
-            clearTimeout(estado.timeout);
-            el.style.display = '';
-            estado.wrapper.parentNode?.insertBefore(el, estado.wrapper);
-            estado.wrapper.remove();
-            _slideAnimEstado.delete(el);
-        }
-
-        function _animarSlideElemento(el, delta, mutarFn) {
-            if (!el) { mutarFn(); return; }
-
-            _finalizarSlidePendiente(el);
-
-            const rectViejo = el.getBoundingClientRect();
-            const anchoViejo = rectViejo.width;
-            const altoViejo = rectViejo.height;
-            const margenTop = getComputedStyle(el).marginTop;
-
-            const snapViejo = _limpiarClonVisual(el.cloneNode(true));
-            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoViejo + 'px;pointer-events:none;';
-
-            el.style.visibility = 'hidden';
-            mutarFn();
-
-            const rectNuevo = el.getBoundingClientRect();
-            const anchoNuevo = rectNuevo.width;
-            const altoNuevo = rectNuevo.height;
-
-            const snapNuevo = _limpiarClonVisual(el.cloneNode(true));
-            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoNuevo + 'px;pointer-events:none;left:' + (delta > 0 ? anchoViejo : -anchoNuevo) + 'px;';
-
-            const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoViejo + 'px;height:calc(' + altoViejo + 'px + ' + margenTop + ');';
-            wrapper.appendChild(snapViejo);
-            wrapper.appendChild(snapNuevo);
-
-            el.parentNode.insertBefore(wrapper, el);
-            el.style.display = 'none';
-            el.style.visibility = '';
-
-            wrapper.offsetHeight;
-            const dur = DUR_CALENDARIO();
-            const easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
-            snapViejo.style.transition = 'transform ' + dur + 'ms ' + easing;
-            snapNuevo.style.transition = 'transform ' + dur + 'ms ' + easing;
-            if (Math.abs(altoNuevo - altoViejo) > 0.5) {
-                wrapper.style.transition = 'height ' + dur + 'ms ' + easing;
-                wrapper.style.height = 'calc(' + altoNuevo + 'px + ' + margenTop + ')';
-            }
-            const tx = (delta > 0 ? -anchoViejo : anchoViejo) + 'px';
-            snapViejo.style.transform = 'translateX(' + tx + ')';
-            snapNuevo.style.transform = 'translateX(' + tx + ')';
-
-            const timeout = setTimeout(() => {
-                el.style.display = '';
-                wrapper.parentNode.insertBefore(el, wrapper);
-                wrapper.remove();
-                _slideAnimEstado.delete(el);
-            }, dur + 20);
-
-            _slideAnimEstado.set(el, { timeout, wrapper });
-        }
 
         function _animarCalendario(delta, renderFn) {
             _animarSlideElemento(document.getElementById('calendario-grid'), delta, renderFn);
@@ -7195,7 +7263,7 @@ Generado por Sistema Lushibosca
             _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
         };
 
-    })(SecurityAndUtils, DataManagement, GistSync);
+    })(SecurityAndUtils, DataManagement, GistSync, UICore);
 
     // ====================================================================
     // BIENVENIDA MODULE — primera vez / después de un restablecimiento

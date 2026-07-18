@@ -18,6 +18,7 @@
         SALDO_DESDE_ENERO: 'saldoAnualDesdeEnero',
         SALDO_DESDE_PRIMERO_MES: 'saldoMensualDesdePrimero',
         IGNORAR_TF: 'ignorarTiempoFuera',
+        IGNORAR_LOGICA_CUBIERTO: 'ignorarLogicaCubierto',
         FONDO_CARD: 'fondoCard',
         PERSISTIR_TARJETAS: 'persistirTarjetas',
         ORDEN_CARDS: 'ordenCards',
@@ -28,6 +29,7 @@
         PERFILES: 'perfiles',
         HISTORY: 'history',
         GIST_TOKEN: 'gistToken',
+        BIENVENIDA_VISTA: 'bienvenidaVista',
 
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
@@ -36,6 +38,13 @@
         CARD_VISIBLE: (cual) => `cardVisible_${cual}`,
     });
 
+
+    // ====================================================================
+    // PRECISIÓN NUMÉRICA — helper compartido
+    // ====================================================================
+    const EPS_HORAS = 1e-6;
+    const horasGte = (valor, objetivo) => (valor - objetivo) > -EPS_HORAS;
+    const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;
 
     function _applyDataColors(root) {
         root.querySelectorAll('[data-color]').forEach(el => {
@@ -262,86 +271,6 @@
     })();
 
     // ====================================================================
-    // STORAGE HELPER MODULE
-    // ====================================================================
-    const StorageHelper = (function () {
-        'use strict';
-
-        function _getKey(key, useProfile) {
-            if (useProfile && window.PerfilManager) {
-                return window.PerfilManager.perfilKey(key);
-            }
-            if (useProfile) return key + '_default';
-            return key;
-        }
-
-        function setItem(key, value, useProfile = false) {
-            try {
-                const finalKey = _getKey(key, useProfile);
-                const valueToStore = typeof value === 'object' ? JSON.stringify(value) : String(value);
-                localStorage.setItem(finalKey, valueToStore);
-                return true;
-            } catch (e) {
-                console.error(`Error guardando en Storage (${key}):`, e);
-                if (e.name === 'QuotaExceededError' || e.code === 22) {
-                    if (window.UILogic) UILogic.mostrarToast('Almacenamiento lleno, no se pudo guardar', 'error');
-                }
-                return false;
-            }
-        }
-
-        function getItem(key, defaultValue = null, useProfile = false) {
-            try {
-                const value = localStorage.getItem(_getKey(key, useProfile));
-                return value !== null ? value : defaultValue;
-            } catch (e) {
-                return defaultValue;
-            }
-        }
-
-        function getBoolean(key, defaultValue = false, useProfile = false) {
-            const val = getItem(key, null, useProfile);
-            if (val === null) return defaultValue;
-            return val === 'true';
-        }
-
-        function getNumber(key, defaultValue = 0, useProfile = false) {
-            const val = getItem(key, null, useProfile);
-            if (val === null) return defaultValue;
-            const parsed = parseFloat(val);
-            return isNaN(parsed) ? defaultValue : parsed;
-        }
-
-        function getObject(key, defaultValue = null, useProfile = false) {
-            const val = getItem(key, null, useProfile);
-            if (!val) return defaultValue;
-            try {
-                return JSON.parse(val, (k, v) => {
-                    if (['__proto__', 'constructor', 'prototype'].includes(k)) return undefined;
-                    return v;
-                });
-            } catch (e) {
-                return defaultValue;
-            }
-        }
-
-        function removeItem(key, useProfile = false) {
-            try {
-                localStorage.removeItem(_getKey(key, useProfile));
-            } catch (e) { }
-        }
-
-        return {
-            setItem,
-            getItem,
-            getBoolean,
-            getNumber,
-            getObject,
-            removeItem
-        };
-    })();
-
-    // ====================================================================
     // SECURITY AND UTILS MODULE
     // ====================================================================
     const SecurityAndUtils = (function () {
@@ -385,6 +314,12 @@
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
+        }
+
+        const CLAVES_PROTO_PELIGROSAS = ['__proto__', 'constructor', 'prototype'];
+
+        function reviverJSONSeguro(key, value) {
+            return CLAVES_PROTO_PELIGROSAS.includes(key) ? undefined : value;
         }
 
         function generarIDSeguro() {
@@ -448,7 +383,84 @@
             generarIDSeguro,
             calcularHashSHA256,
             validarRegistroSeguro,
+            reviverJSONSeguro,
             fechaLocalISO: TimeUtils.fechaLocalISOFull
+        };
+    })();
+    // ====================================================================
+    // STORAGE HELPER MODULE
+    // ====================================================================
+    const StorageHelper = (function () {
+        'use strict';
+
+        function _getKey(key, useProfile) {
+            if (useProfile && window.PerfilManager) {
+                return window.PerfilManager.perfilKey(key);
+            }
+            if (useProfile) return key + '_default';
+            return key;
+        }
+
+        function setItem(key, value, useProfile = false) {
+            try {
+                const finalKey = _getKey(key, useProfile);
+                const valueToStore = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                localStorage.setItem(finalKey, valueToStore);
+                return true;
+            } catch (e) {
+                console.error(`Error guardando en Storage (${key}):`, e);
+                if (e.name === 'QuotaExceededError' || e.code === 22) {
+                    if (window.UILogic) UILogic.mostrarToast('Almacenamiento lleno, no se pudo guardar', 'error');
+                }
+                return false;
+            }
+        }
+
+        function getItem(key, defaultValue = null, useProfile = false) {
+            try {
+                const value = localStorage.getItem(_getKey(key, useProfile));
+                return value !== null ? value : defaultValue;
+            } catch (e) {
+                return defaultValue;
+            }
+        }
+
+        function getBoolean(key, defaultValue = false, useProfile = false) {
+            const val = getItem(key, null, useProfile);
+            if (val === null) return defaultValue;
+            return val === 'true';
+        }
+
+        function getNumber(key, defaultValue = 0, useProfile = false) {
+            const val = getItem(key, null, useProfile);
+            if (val === null) return defaultValue;
+            const parsed = parseFloat(val);
+            return isNaN(parsed) ? defaultValue : parsed;
+        }
+
+        function getObject(key, defaultValue = null, useProfile = false) {
+            const val = getItem(key, null, useProfile);
+            if (!val) return defaultValue;
+            try {
+                return JSON.parse(val, SecurityAndUtils.reviverJSONSeguro);
+            } catch (e) {
+                return defaultValue;
+            }
+        }
+
+        function removeItem(key, useProfile = false) {
+            try {
+                localStorage.removeItem(_getKey(key, useProfile));
+            } catch (e) { }
+        }
+
+        return {
+            setItem,
+            getItem,
+            getBoolean,
+            getNumber,
+            getObject,
+            removeItem
         };
     })();
 
@@ -709,6 +721,7 @@
                 const elLabelCancel = document.getElementById('modal-confirmar-label-cancel');
                 const elTitulo = document.getElementById('modal-confirmar-titulo');
                 const elIcono = document.querySelector('#modal-confirmar-ok svg use');
+                const elIconoCancel = document.querySelector('#modal-confirmar-cancel svg use');
                 const btnOk = document.getElementById('modal-confirmar-ok');
                 const btnCancel = document.getElementById('modal-confirmar-cancel');
                 if (!elTexto || !btnOk || !btnCancel) { resolve(false); return; }
@@ -718,6 +731,7 @@
                 if (elLabelCancel) elLabelCancel.textContent = opciones.labelCancel || 'Cancelar';
                 if (elTitulo) elTitulo.textContent = opciones.titulo || 'Atención';
                 if (elIcono) elIcono.setAttribute('href', icono);
+                if (elIconoCancel) elIconoCancel.setAttribute('href', opciones.iconoCancel || '#icon-cancelar');
 
                 const modalPadre = document.querySelector('.modal.show');
                 const modalPadreId = modalPadre ? modalPadre.id : null;
@@ -771,9 +785,7 @@
             if (obj === null || obj === undefined) return obj;
             try { return structuredClone(obj); }
             catch (e) {
-                return JSON.parse(JSON.stringify(obj), (k, v) =>
-                    ['__proto__', 'constructor', 'prototype'].includes(k) ? undefined : v
-                );
+                return JSON.parse(JSON.stringify(obj), SecurityAndUtils.reviverJSONSeguro);
             }
         }
 
@@ -966,26 +978,28 @@
             }
         };
 
+        const TIPOS_ARRAY = Object.values(TIPOS);
+
         function esRegistroEspecial(entrada, salida) {
             if (!entrada || !salida) return false;
-            return entrada === salida && Object.values(TIPOS).some(t => t.codigo === entrada);
+            return entrada === salida && TIPOS_ARRAY.some(t => t.codigo === entrada);
         }
 
         function obtenerTipoPorCodigo(entrada, salida) {
-            if (!esRegistroEspecial(entrada, salida)) return null;
-            return Object.values(TIPOS).find(t => t.codigo === entrada) || null;
+            if (!entrada || !salida || entrada !== salida) return null;
+            return TIPOS_ARRAY.find(t => t.codigo === entrada) || null;
         }
 
         function obtenerTipoPorId(id) {
-            return Object.values(TIPOS).find(t => t.id === id) || null;
+            return TIPOS_ARRAY.find(t => t.id === id) || null;
         }
 
         function validarTipoPermitido(id) {
-            return Object.values(TIPOS).some(t => t.id === id);
+            return TIPOS_ARRAY.some(t => t.id === id);
         }
 
         function obtenerTodosLosTipos() {
-            return Object.values(TIPOS);
+            return TIPOS_ARRAY;
         }
 
         function obtenerCodigosPorTipo(id) {
@@ -1059,7 +1073,7 @@
             const btnGuardar = $('modal-editar-grupo').querySelector('.btn-edit');
             btnGuardar.disabled = true;
             try {
-                const nuevoTipo  = S.sanitizeString($('edit-grupo-tipo').value.trim(), 20);
+                const nuevoTipo = S.sanitizeString($('edit-grupo-tipo').value.trim(), 20);
                 const nuevaDesde = S.sanitizeString($('edit-grupo-desde').value.trim(), 10);
                 const nuevaHasta = S.sanitizeString($('edit-grupo-hasta').value.trim(), 10);
 
@@ -1071,9 +1085,9 @@
                 }
 
                 const fechasNuevas = TimeUtils.generarRangoFechas(nuevaDesde, nuevaHasta);
-                const idsDelGrupo  = new Set(grupoEnEdicion.registros.map(r => r.id));
-                const fechasSet    = new Set(fechasNuevas);
-                const conflictos   = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
+                const idsDelGrupo = new Set(grupoEnEdicion.registros.map(r => r.id));
+                const fechasSet = new Set(fechasNuevas);
+                const conflictos = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
                 if (conflictos.length > 0) {
                     const dias = conflictos.map(r => r.fecha.substring(8, 10)).sort((a, b) => a - b).join(', ');
                     UILogic.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
@@ -1266,8 +1280,10 @@
             }
             const nuevoId = S.generarIDSeguro();
             const t = calcularHoras(e || null, s || null, null);
-            registros.push({ id: nuevoId, fecha: f, entrada: e || null, salida: s || null, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0 });
+            registros.push({
+                id: nuevoId, fecha: f, entrada: e || null, salida: s || null, tiempoFuera: null,
+                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0
+            });
             ordenarRegistros();
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar(nuevoId);
@@ -1481,10 +1497,10 @@
             const btnGuardar = $('modal-editar').querySelector('.btn-edit');
             btnGuardar.disabled = true;
 
-            const f  = S.sanitizeString($('edit-fecha').value, 10);
-            const e  = S.sanitizeString($('edit-entrada').value.trim(), 5);
-            const s  = S.sanitizeString($('edit-salida').value.trim(), 5);
-            let tf   = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5) || null;
+            const f = S.sanitizeString($('edit-fecha').value, 10);
+            const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
+            const s = S.sanitizeString($('edit-salida').value.trim(), 5);
+            let tf = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5) || null;
             let notas = S.sanitizeString($('edit-notas').value.trim(), S.SECURITY_LIMITS.MAX_NOTAS_LENGTH);
             if (notas) notas = S.sanitizeNotas(notas, true) || null;
             if (notas === '') notas = null;
@@ -1540,7 +1556,7 @@
 
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS];
+            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA];
             keys.forEach(k => StorageHelper.removeItem(k, true));
 
             if (window.PerfilManager) {
@@ -1668,9 +1684,7 @@
                     if (!contenido || contenido.trim().length === 0) { UILogic.mostrarToast('Archivo vacío', 'error'); return; }
                     if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) { UILogic.mostrarToast('Contenido del archivo demasiado grande', 'error'); return; }
 
-                    const data = JSON.parse(contenido, (key, value) =>
-                        ['__proto__', 'constructor', 'prototype'].includes(key) ? undefined : value
-                    );
+                    const data = JSON.parse(contenido, S.reviverJSONSeguro);
                     if (!await _validarDatosImport(data)) return;
 
                     const registrosImportados = normalizarRegistrosImportados(data.registros, calcularHoras);
@@ -1750,35 +1764,26 @@
             return { ayerStr, regAyer, ayerAbierto };
         }
 
-        function calcularBufferSemanal(inicioSemana, fechaHoy) {
-            const horasDiariasLocal = horasDiarias;
-            let buffer = 0;
-            const registrosRango = registros.filter(r => r.fecha >= inicioSemana && r.fecha <= fechaHoy);
-            const registrosMap = new Map(registrosRango.map(r => [r.fecha, r]));
+        function calcularBufferPeriodo(desde, hasta) {
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);
+            const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
+            const { ayerStr, ayerAbierto } = detectarAyerAbierto(hoy, regsPorFecha);
 
-            const { ayerStr, ayerAbierto } = detectarAyerAbierto(fechaHoy, registrosMap);
-
-            for (const isoDate of TimeUtils.generarRangoFechas(inicioSemana, fechaHoy)) {
-                const numDia = TimeUtils.parsearFechaLocal(isoDate).getDay();
-                const esDiaLaboralConfigurado = diasHabiles.includes(numDia);
-                const r = registrosMap.get(isoDate);
-                let horasObjetivoDia = 0, horasHechasDia = 0;
+            let objetivo = 0, hechas = 0;
+            for (const iso of TimeUtils.generarRangoFechas(desde, hasta)) {
+                if (iso > hoy) continue;
+                const esDiaHabil = diasHabiles.includes(TimeUtils.parsearFechaLocal(iso).getDay());
+                const r = regsPorFecha.get(iso);
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const tieneSalida = r && r.salida && !esEspecial;
                 const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+                const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
 
-                let diaTerminado = (isoDate === fechaHoy) ? tieneSalida : (ayerAbierto && isoDate === ayerStr ? false : true);
-
-                if (esRemoto) {
-                    if (esDiaLaboralConfigurado) horasObjetivoDia = horasDiariasLocal;
-                    horasHechasDia = horasDiariasLocal;
-                } else {
-                    if (esDiaLaboralConfigurado && !esEspecial && diaTerminado) horasObjetivoDia = horasDiariasLocal;
-                    if (r && !esEspecial && r.salida) horasHechasDia = r.total;
-                }
-                buffer += (horasHechasDia - horasObjetivoDia);
+                if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += horasDiarias;
+                if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
+                if (esRemoto) hechas += horasDiarias;
             }
-            return Math.round(buffer * 1e6) / 1e6;
+            return Math.round((hechas - objetivo) * 1e6) / 1e6;
         }
 
         function limpiarFiltros() {
@@ -1898,7 +1903,7 @@
             editandoId: () => editandoId, setEditandoId: (id) => editandoId = id, vistaActual: () => vistaActual, setVistaActual: (v) => vistaActual = v,
             cargarConfiguracion, calcularHoras, calcularHorasFeriadoEnRango, normalizarRegistrosImportados, guardarYActualizar,
             agregarRegistro, eliminarRegistroActual, editarRegistro, guardarEdicion, borrarTodoHistorial, exportarJSON, importarDatos,
-            calcularBufferSemanal, detectarAyerAbierto, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
+            calcularBufferPeriodo, detectarAyerAbierto, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
             registrarVacacionesDirecto, borrarPeriodoDirecto, registrarDiaEspecial, editarGrupo, guardarEdicionGrupo,
             eliminarGrupoActual, setGrupoEnEdicion: (val) => grupoEnEdicion = val,
             undoAction: function () { _aplicarEstadoHistorial(HistoryManager.undo(), 'Deshecho'); },
@@ -2061,7 +2066,7 @@
             const file = (await response.json()).files[GIST_FILENAME];
             if (!file) throw new Error(`Archivo ${GIST_FILENAME} no encontrado en el Gist`);
 
-            const data = JSON.parse(file.content, (key, value) => ['__proto__', 'constructor', 'prototype'].includes(key) ? undefined : value);
+            const data = JSON.parse(file.content, S.reviverJSONSeguro);
             if (data.hash && await S.calcularHashSHA256(data.registros) !== data.hash) data._hashNoCoincide = true;
 
             saveLastSync(gistId);
@@ -2076,8 +2081,6 @@
         let toastTimeout = null;
         let _toastQueue = [];
         let _toastRunning = false;
-        let intervaloPulsacion = null;
-        let timeoutInicial = null;
         let edicionBloqueada = true;
         let edicionGrupoBloqueada = true;
         let perfilEnEdicion = null;
@@ -2087,19 +2090,6 @@
         let modoEstadisticas = 'mensual';
         let _modalAbiertoDesdeLista = false;
         let _timerAutoVista = null;
-
-        // ─── PROXIES A TIMEUTILS ───────────────────────────────────────────
-        const obtenerFechaHoy = TimeUtils.obtenerFechaHoy;
-        const obtenerHoraActual = TimeUtils.obtenerHoraActual;
-        const minutosAHora = TimeUtils.minutosAHora;
-        const obtenerNombreDia = TimeUtils.obtenerNombreDia;
-        const horasATexto = TimeUtils.horasATexto;
-        const _esCantidadSingular = TimeUtils._esCantidadSingular;
-        const horasATextoCorto = (t) => TimeUtils.horasATexto(t, 'short');
-        const formatoTituloMes = TimeUtils.formatoTituloMes;
-        const obtenerLunesSemana = TimeUtils.obtenerLunesSemanaISO;
-        const _getLunes = TimeUtils.obtenerLunes;
-        const obtenerSemanaActual = TimeUtils.obtenerSemanaRangoActual;
 
         function formatoDiferencia(tiempoTotal) {
             return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
@@ -2138,6 +2128,31 @@
             };
         }
 
+        function _crearPressHold(accionFn) {
+            let timeout = null, intervalo = null;
+            return {
+                iniciar(arg) {
+                    accionFn(arg);
+                    timeout = setTimeout(() => {
+                        intervalo = setInterval(() => accionFn(arg), 100);
+                    }, 500);
+                },
+                detener() {
+                    if (timeout) { clearTimeout(timeout); timeout = null; }
+                    if (intervalo) { clearInterval(intervalo); intervalo = null; }
+                }
+            };
+        }
+
+        function _actualizarOffsetsStickyMes() {
+            const header = document.querySelector('.header');
+            const mesHeader = document.querySelector('.registro-mes-header');
+            const root = document.documentElement.style;
+            if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
+            if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
+        }
+        const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
+
         function mostrarError(inputId, errorId) {
             const input = $(inputId);
             const error = $(errorId);
@@ -2151,10 +2166,6 @@
             if (input) input.classList.remove('error');
             if (error) error.style.display = 'none';
         }
-
-        // ----------------------------------------------------------------
-        // HELPERS COMPARTIDOS DE EXPORTACIÓN
-        // ----------------------------------------------------------------
 
         function obtenerNombrePerfilSafe() {
             let nombre = 'Backup';
@@ -2307,7 +2318,7 @@
             return svg;
         }
 
-        function crearItemRegistroIndividual(r, horasDiarias, idResaltar = null, hoy = obtenerFechaHoy()) {
+        function crearItemRegistroIndividual(r, horasDiarias, idResaltar = null, hoy = TimeUtils.obtenerFechaHoy()) {
             const item = document.createElement('div');
 
             let className = r.fecha === hoy ? 'registro-item hoy' : 'registro-item';
@@ -2324,7 +2335,7 @@
             const fechaEl = document.createElement('div');
             fechaEl.className = 'registro-fecha';
             const etiqueta = tipoEspecial ? ` ${tipoEspecial.emoji} (${tipoEspecial.label})` : '';
-            fechaEl.textContent = `${obtenerNombreDia(r.fecha)} ${r.fecha.substring(8)}${etiqueta}`;
+            fechaEl.textContent = `${TimeUtils.obtenerNombreDia(r.fecha)} ${r.fecha.substring(8)}${etiqueta}`;
 
             const tfText = (() => {
                 if (!r.tiempoFuera || r.tiempoFuera === '' || r.tiempoFuera === '00:00') return '';
@@ -2349,19 +2360,22 @@
                 totalEl.classList.add(`${tipoEspecial.color}-text`);
             } else if (r.entrada && r.salida) {
                 totalText = `${r.horas}h ${r.minutos}m`;
-                if (horasDiarias > 0) {
+                if (horasDiarias > 0 && _esFechaHabil(r.fecha, D.diasHabiles())) {
                     const diffText = formatoDiferencia(r.total);
-                    totalEl.classList.add(r.total >= horasDiarias ? 'green-text' : 'red-text');
-                    if (diffText) totalText += ` (${diffText})`;
+                    if (horasGte(r.total, horasDiarias)) {
+                        totalEl.classList.add('green-text');
+                        if (diffText) totalText += ` (${diffText})`;
+                    } else if (_cubiertoPorSaldo(r.fecha)) {
+                        totalEl.classList.add('gold-text');
+                        totalText += ` (${diffText}) Cubierto`;
+                    } else {
+                        totalEl.classList.add('red-text');
+                        if (diffText) totalText += ` (${diffText})`;
+                    }
                 }
             } else if (r.entrada && !r.salida) {
-                if (r.fecha === hoy) {
-                    totalText = 'En curso . . .';
-                    totalEl.classList.add('blue-text');
-                } else {
-                    totalText = 'Incompleto';
-                    totalEl.classList.add('yellow-text');
-                }
+                totalText = r.fecha === hoy ? 'En curso . . .' : 'Incompleto';
+                totalEl.classList.add('blue-text');
             } else {
                 totalText = 'Sin datos';
             }
@@ -2389,7 +2403,7 @@
 
             const chevron = _crearChevron();
             headerMes.appendChild(chevron);
-            headerMes.appendChild(document.createTextNode(' ' + formatoTituloMes(claveMes)));
+            headerMes.appendChild(document.createTextNode(' ' + TimeUtils.formatoTituloMes(claveMes)));
 
             const detalleMesActual = document.createElement('div');
             detalleMesActual.className = 'registro-mes-detalle';
@@ -2414,7 +2428,7 @@
             grupos.forEach(grupo => {
                 const esGrupo = grupo.tipo === 'grupo';
                 const r = esGrupo ? grupo.registros[grupo.registros.length - 1] : grupo.registros[0];
-                const semanaActual = obtenerLunesSemana(r.fecha);
+                const semanaActual = TimeUtils.obtenerLunesSemanaISO(r.fecha);
 
                 if (semanaAnterior && semanaActual !== semanaAnterior) {
                     const sep = document.createElement('div');
@@ -2487,7 +2501,7 @@
             if (registrosAMostrar.length === 0) { _renderEmptyStateLista(lista); return; }
 
             const horasDiarias = D.horasDiarias();
-            const hoy = obtenerFechaHoy();
+            const hoy = TimeUtils.obtenerFechaHoy();
             const mesHoy = hoy.substring(0, 7);
             const anioHoy = hoy.substring(0, 4);
             const gruposPorMes = agruparRegistrosPorMes(registrosAMostrar);
@@ -2513,6 +2527,7 @@
             );
 
             lista.appendChild(fragmento);
+            _actualizarOffsetsStickyMes();
         }
 
         function setProgressBarColor(progressEl, status) {
@@ -2623,36 +2638,17 @@
             };
         }
 
-        function _calcularBufferPeriodo(registrosRango, desde, hasta, horasDiariasObj) {
-            const diasHabilesConfig = D.diasHabiles();
-            const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
-            const hoy = obtenerFechaHoy();
-            const { ayerStr, ayerAbierto } = D.detectarAyerAbierto(hoy, regsPorFecha);
-
-            let objetivo = 0, hechas = 0;
-            for (const iso of TimeUtils.generarRangoFechas(desde, hasta)) {
-                if (iso > hoy) continue;
-                const esDiaHabil = diasHabilesConfig.includes(TimeUtils.parsearFechaLocal(iso).getDay());
-                const r = regsPorFecha.get(iso);
-                const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
-                const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
-
-                if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += horasDiariasObj;
-                if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
-                if (esRemoto) hechas += horasDiariasObj;
-            }
-            return Math.round((hechas - objetivo) * 1e6) / 1e6;
-        }
-
         function _calcularEstadisticasRango(registrosRango, opciones = {}) {
             const { regularidadPorMes = false } = opciones;
 
             const conteosPorTipo = {};
-            TiposRegistro.obtenerTodosLosTipos().forEach(t => {
-                conteosPorTipo[t.labelPlural.toLowerCase()] = registrosRango.filter(
-                    r => r.entrada === t.codigo && r.salida === t.codigo
-                ).length;
+            const claveTipoPorCodigo = new Map(TiposRegistro.obtenerTodosLosTipos().map(t => [t.codigo, t.labelPlural.toLowerCase()]));
+            claveTipoPorCodigo.forEach(clave => { conteosPorTipo[clave] = 0; });
+            registrosRango.forEach(r => {
+                if (r.entrada && r.entrada === r.salida) {
+                    const clave = claveTipoPorCodigo.get(r.entrada);
+                    if (clave) conteosPorTipo[clave]++;
+                }
             });
 
             const compensaciones = registrosRango.filter(r => r.credito && r.credito !== '00:00').length;
@@ -2683,7 +2679,7 @@
 
             const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
             const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
-            const promedioSalida  = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
+            const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
 
             const remotos = conteosPorTipo['remotos'] || 0;
             const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
@@ -2698,16 +2694,16 @@
 
             const horasDiariasObj = D.horasDiarias();
             const bufferPeriodo = (horasDiariasObj > 0 && opciones.desde && opciones.hasta)
-                ? _calcularBufferPeriodo(registrosRango, opciones.desde, opciones.hasta, horasDiariasObj)
+                ? D.calcularBufferPeriodo(opciones.desde, opciones.hasta)
                 : null;
 
             return {
                 entradaPromedio: TimeUtils.minutosAHora(promedioEntrada),
-                salidaPromedio:  TimeUtils.minutosAHora(promedioSalida),
-                diasTrabajados:  registrosValidos.length,
-                promedioDiario:  `${hPromedio}h ${mPromedio}m`,
+                salidaPromedio: TimeUtils.minutosAHora(promedioSalida),
+                diasTrabajados: registrosValidos.length,
+                promedioDiario: `${hPromedio}h ${mPromedio}m`,
                 tiempoFueraTotal: hTiempoFuera > 0 ? `${hTiempoFuera}h ${mTiempoFuera}m` : `${mTiempoFuera}m`,
-                tiempoTotal:     `${hTotal}h ${mTotal}m`,
+                tiempoTotal: `${hTotal}h ${mTotal}m`,
                 ...conteosPorTipo, compensaciones,
                 regularidadEntrada: regEntrada,
                 regularidadJornada: regJornada,
@@ -2758,7 +2754,7 @@
                 } else {
                     itemSaldo.style.display = '';
                     const b = stats.bufferPeriodo;
-                    elSaldo.textContent = b === 0 ? '0h' : horasATextoCorto(b);
+                    elSaldo.textContent = b === 0 ? '0h' : TimeUtils.horasATexto(b, 'short');
                     elSaldo.style.color = b > 0 ? 'var(--c-green)' : b < 0 ? 'var(--c-red)' : 'var(--text-main)';
                 }
             }
@@ -2931,20 +2927,81 @@
 
 
         function _estadoDiasHabiles(diasHabiles) {
+            const hoy = TimeUtils.obtenerFechaHoy();
             const diaSemana = new Date().getDay();
             const hoyIndex = diaSemana === 0 ? 7 : diaSemana;
-            let esDiaHabil, quedanDiasFuturos;
+            const esDiaHabil = _esFechaHabil(hoy, diasHabiles);
+            let quedanDiasFuturos;
             if (Array.isArray(diasHabiles)) {
-                esDiaHabil = diasHabiles.includes(diaSemana);
                 quedanDiasFuturos = false;
                 for (let d = hoyIndex + 1; d <= 7; d++) {
                     if (diasHabiles.includes(d === 7 ? 0 : d)) { quedanDiasFuturos = true; break; }
                 }
             } else {
-                esDiaHabil = diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
                 quedanDiasFuturos = hoyIndex < diasHabiles;
             }
             return { esDiaHabil, quedanDiasFuturos };
+        }
+
+        function _esFechaHabil(fecha, diasHabiles) {
+            const diaSemana = TimeUtils.parsearFechaLocal(fecha).getDay();
+            if (Array.isArray(diasHabiles)) return diasHabiles.includes(diaSemana);
+            return diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
+        }
+
+        function _logicaCubiertoActiva() {
+            return !StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
+        }
+
+        function _cubiertoPorSaldo(fecha) {
+            if (!_logicaCubiertoActiva()) return false;
+            const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
+            const lunesDate = TimeUtils.parsearFechaLocal(lunes);
+            lunesDate.setDate(lunesDate.getDate() + 6);
+            const domingo = TimeUtils.formatearFechaLocal(lunesDate);
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const topeCalendario = domingo < hoy ? domingo : hoy;
+
+            const registrosSemana = D.registros().filter(r => r.fecha >= lunes && r.fecha <= topeCalendario);
+            let limite = fecha;
+            for (const r of registrosSemana) {
+                if (r.fecha > limite) limite = r.fecha;
+            }
+
+            const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
+            const diasHabilesObj = D.diasHabiles();
+            const horasDiariasObj = D.horasDiarias();
+
+            const EPS = 1e-6;
+            const pendientes = [];
+            let pool = 0;
+
+            for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
+                const r = registrosMap.get(isoDate);
+                const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
+                const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+                let delta = 0;
+                if (esRemoto) {
+                    delta = 0;
+                } else if (r && !esEspecial && r.salida) {
+                    const objetivo = _esFechaHabil(isoDate, diasHabilesObj) ? horasDiariasObj : 0;
+                    delta = r.total - objetivo;
+                }
+
+                if (delta > EPS) pool += delta;
+                else if (delta < -EPS) pendientes.push({ fecha: isoDate, restante: -delta });
+
+                for (const deuda of pendientes) {
+                    if (pool <= EPS) break;
+                    if (deuda.restante <= EPS) continue;
+                    const pago = Math.min(pool, deuda.restante);
+                    deuda.restante -= pago;
+                    pool -= pago;
+                }
+            }
+
+            const deuda = pendientes.find(d => d.fecha === fecha);
+            return deuda ? deuda.restante <= EPS : false;
         }
 
         function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
@@ -2961,8 +3018,8 @@
         }
 
         function calcularEstadoCard() {
-            const hoy = obtenerFechaHoy();
-            const { inicio: ini, fin: fn } = obtenerSemanaActual();
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const { inicio: ini, fin: fn } = TimeUtils.obtenerSemanaRangoActual();
             const registros = D.registros();
             const horasDiarias = D.horasDiarias();
             const horasSemanales = D.horasSemanales();
@@ -2972,7 +3029,7 @@
             const { esDiaHabil, quedanDiasFuturos } = _estadoDiasHabiles(diasHabiles);
             const regHoy = registros.find(r => r.fecha === hoy) ?? null;
             const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
-            const bufferSemanal = D.calcularBufferSemanal(ini, hoy);
+            const bufferSemanal = D.calcularBufferPeriodo(ini, hoy);
 
             const fechaLimite = hoy < fn ? hoy : fn;
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
@@ -2990,7 +3047,7 @@
             const regActivo = (ayerAbierto && !regHoy?.entrada) ? regAyer
                 : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
             if (regActivo) {
-                const t = D.calcularHoras(regActivo.entrada, obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
+                const t = D.calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
                 tiempoHoy = t ? t.total : 0;
             } else if (!tipoEspecialHoy && regHoy?.salida) {
                 tiempoHoy = regHoy.total;
@@ -3014,7 +3071,7 @@
         }
 
         function _estaCumplido(valor, objetivo) {
-            return objetivo === 0 || valor >= objetivo;
+            return objetivo === 0 || horasGte(valor, objetivo);
         }
 
         function _tituloDia(nombreDia) {
@@ -3035,40 +3092,40 @@
             if (horasDiarias === 0) {
                 colorBarra = 'blue'; colorBorde = 'transparent';
                 estadoFondo = 'esperando';
-                mensaje = `Total fichado: ${horasATexto(tot)}`;
+                mensaje = `Total fichado: ${TimeUtils.horasATexto(tot)}`;
                 mostrarMensaje = false;
             } else if (todosEspeciales) {
                 colorBarra = 'blue'; colorBorde = 'transparent';
                 estadoFondo = 'esperando';
                 mensaje = 'Semana sin días laborables';
                 mostrarMensaje = true;
-            } else if (tot >= objetivoSemana) {
+            } else if (horasGte(tot, objetivoSemana)) {
                 colorBarra = 'green'; colorBorde = 'green';
                 estadoFondo = 'finalizado_ok';
                 const dif = tot - objetivoSemana;
-                mensaje = dif === 0 ? 'Perfecto' : `Hiciste ${horasATexto(dif)} de más`;
+                mensaje = horasEq(dif, 0) ? 'Perfecto' : `Hiciste ${TimeUtils.horasATexto(dif)} de más`;
                 mostrarMensaje = true;
             } else if (semanaAbierta) {
                 colorBarra = 'blue'; colorBorde = 'blue';
-                estadoFondo = 'en_curso';                
-                const diffText = horasATexto(objetivoSemana - tot);
-                const prefijoFalta = _esCantidadSingular(diffText) ? 'Falta' : 'Faltan';
+                estadoFondo = 'en_curso';
+                const diffText = TimeUtils.horasATexto(objetivoSemana - tot);
+                const prefijoFalta = TimeUtils._esCantidadSingular(diffText) ? 'Falta' : 'Faltan';
                 mensaje = objetivoSemana === 0
-                    ? `${horasATexto(tot)} (Sin objetivo)`
+                    ? `${TimeUtils.horasATexto(tot)} (Sin objetivo)`
                     : `${prefijoFalta} ${diffText}`;
                 mostrarMensaje = true;
             } else {
                 colorBarra = 'red'; colorBorde = 'red';
-                estadoFondo = 'finalizado_fail';                
-                const diffText = horasATexto(objetivoSemana - tot);
-                const prefijoFalto = _esCantidadSingular(diffText) ? 'Faltó' : 'Faltaron';
+                estadoFondo = 'finalizado_fail';
+                const diffText = TimeUtils.horasATexto(objetivoSemana - tot);
+                const prefijoFalto = TimeUtils._esCantidadSingular(diffText) ? 'Faltó' : 'Faltaron';
                 mensaje = `${prefijoFalto} ${diffText}`;
                 mostrarMensaje = true;
             }
 
             return {
                 titulo: `<svg class="icon"><use href="#icon-calendar-simple" /></svg> Esta Semana`,
-                stats: todosEspeciales ? '🌞' : horasATexto(tot),
+                stats: todosEspeciales ? '🌞' : TimeUtils.horasATexto(tot),
                 mensaje, mostrarMensaje,
                 colorBarra, anchoBarra: prog,
                 colorBorde, estadoFondo,
@@ -3097,7 +3154,7 @@
             const mS = Math.floor(minutosTotal % 60);
             const horaSalida = `${String(hS).padStart(2, '0')}:${String(mS).padStart(2, '0')}`;
 
-            const esLaborable = Array.isArray(diasHabiles) && diasHabiles.includes(new Date().getDay());
+            const esLaborable = _esFechaHabil(reg.fecha, diasHabiles);
             const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
 
             if (mostrarBuffer) {
@@ -3123,13 +3180,13 @@
             if (cumplido) {
                 const extra = tiempoHoy - objetivoDiario;
                 if (bufferSemanal < 0 && Math.abs(bufferSemanal) > extra) return 'Te podes ir, pero debés tiempo';
-                return extra > 0 ? `Te podes ir (+${horasATexto(extra)})` : 'Te podes ir';
+                return extra > 0 ? `Te podes ir (+${TimeUtils.horasATexto(extra)})` : 'Te podes ir';
             }
             const faltante = objetivoDiario - tiempoHoy;
-            const textoHoras = horasATexto(faltante);
-            const prefijo = _esCantidadSingular(textoHoras) ? 'Falta' : 'Faltan';
+            const textoHoras = TimeUtils.horasATexto(faltante);
+            const prefijo = TimeUtils._esCantidadSingular(textoHoras) ? 'Falta' : 'Faltan';
             const faltanteTexto = `${prefijo} ${textoHoras}`;
-            
+
             return bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
         }
 
@@ -3140,22 +3197,23 @@
             if (!regHoy || !regHoy.entrada) {
 
                 if (est.ayerAbierto) {
-                    const prog = _calcularProgreso(tiempoHoy, objetivoDiario);
-                    const cumplido = _estaCumplido(tiempoHoy, objetivoDiario);
-                    const colorBarra = cumplido ? 'green' : 'blue';
-                    const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, 'En curso (cruce de medianoche)');
+                    const objetivoDiarioAyerAplica = _esFechaHabil(est.ayerStr, diasHabiles) ? objetivoDiario : 0;
+                    const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
+                    const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAyerAplica);
+                    const colorBarra = objetivoDiarioAyerAplica === 0 ? 'blue' : (cumplido ? 'green' : 'blue');
+                    const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanal, 'En curso (cruce de medianoche)');
 
-                    const nombreDiaAyer = obtenerNombreDia(est.ayerStr);
+                    const nombreDiaAyer = TimeUtils.obtenerNombreDia(est.ayerStr);
                     let hint = 'Toca Fichar para registrar salida';
                     let hintEsHTML = false;
                     const regAyer = est.regAyer;
-                    if (regAyer && regAyer.entrada && objetivoDiario > 0 && !TiposRegistro.esRegistroEspecial(regAyer.entrada, regAyer.salida)) {
-                        ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regAyer, objetivoDiario, bufferSemanal, diasHabiles));
+                    if (regAyer && regAyer.entrada && objetivoDiarioAyerAplica > 0 && !TiposRegistro.esRegistroEspecial(regAyer.entrada, regAyer.salida)) {
+                        ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regAyer, objetivoDiarioAyerAplica, bufferSemanal, diasHabiles));
                     }
 
                     return {
                         titulo: `${_tituloDia(nombreDiaAyer)} (ayer)`,
-                        stats: horasATexto(tiempoHoy),
+                        stats: TimeUtils.horasATexto(tiempoHoy),
                         mensaje, mostrarMensaje: true,
                         colorBarra, anchoBarra: prog,
                         colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
@@ -3164,7 +3222,7 @@
                 }
 
                 return {
-                    titulo: _tituloDia(obtenerNombreDia(obtenerFechaHoy())),
+                    titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
                     stats: esDiaHabil ? '🎒' : '🌞',
                     mensaje: esDiaHabil
                         ? (horasDiarias === 0 ? '' : 'Esperando registro...')
@@ -3177,12 +3235,12 @@
             }
 
             const avisoAyerHint = est.ayerAbierto
-                ? { hint: `⚠️ Ayer (${obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false }
+                ? { hint: `⚠️ Ayer (${TimeUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false }
                 : null;
 
             if (tipoEspecialHoy) {
                 return _conAvisoAyer({
-                    titulo: _tituloDia(obtenerNombreDia(obtenerFechaHoy())),
+                    titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
                     stats: `${tipoEspecialHoy.emoji} ${tipoEspecialHoy.label}`,
                     mensaje: `¡${tipoEspecialHoy.descripcion}!`,
                     mostrarMensaje: true,
@@ -3206,17 +3264,17 @@
                 mensaje = ''; mostrarMensaje = false;
             } else if (dayClosed) {
                 const dif = tiempoHoy - objetivoDiarioAplica;
-                
-                if (dif >= 0) {
+
+                if (horasGte(dif, 0)) {
                     colorBarra = 'green'; colorBorde = 'green';
                     estadoFondo = 'finalizado_ok';
-                    const difExtraText = horasATexto(dif);
-                    mensaje = dif === 0 ? 'Perfecto' : `${difExtraText} ${_esCantidadSingular(difExtraText) ? 'extra' : 'extras'}`;
+                    const difExtraText = TimeUtils.horasATexto(dif);
+                    mensaje = horasEq(dif, 0) ? 'Perfecto' : `${difExtraText} ${TimeUtils._esCantidadSingular(difExtraText) ? 'extra' : 'extras'}`;
                 } else {
-                    const difText = horasATexto(Math.abs(dif));
-                    const prefijoFalto = _esCantidadSingular(difText) ? 'Faltó' : 'Faltaron';
-                    
-                    if (bufferSemanal >= 0) {
+                    const difText = TimeUtils.horasATexto(Math.abs(dif));
+                    const prefijoFalto = TimeUtils._esCantidadSingular(difText) ? 'Faltó' : 'Faltaron';
+
+                    if (_logicaCubiertoActiva() && horasGte(bufferSemanal, 0)) {
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
                         estadoFondoColor = 'gold';
@@ -3243,8 +3301,8 @@
             }
 
             return _conAvisoAyer({
-                titulo: _tituloDia(obtenerNombreDia(obtenerFechaHoy())),
-                stats: horasATexto(tiempoHoy),
+                titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
+                stats: TimeUtils.horasATexto(tiempoHoy),
                 mensaje, mostrarMensaje,
                 colorBarra, anchoBarra: prog,
                 colorBorde, estadoFondo, estadoFondoColor,
@@ -3316,14 +3374,13 @@
             _cicloStatsInterval = setTimeout(_cicloTick, _CICLO_DURACION_MS);
         }
 
-        function _renderStats(vista) {
+        function _renderStats(vista, est) {
             const el = $('stats-semana');
             if (!el) return;
 
             const esDiaria = D.vistaActual() !== 'semana';
-            const hoy = obtenerFechaHoy();
-            const regHoy = D.registros().find(r => r.fecha === hoy) ?? null;
-            const esEspecial = regHoy && TiposRegistro.esRegistroEspecial(regHoy.entrada, regHoy.salida);
+            const regHoy = est.regHoy;
+            const esEspecial = !!est.tipoEspecialHoy;
             const entradaHoy = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
             const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';
 
@@ -3379,8 +3436,8 @@
                 const span = document.createElement('span');
                 span.style.color = color;
                 span.style.fontWeight = '500';
-                const textoBuffer = horasATexto(Math.abs(bufferSemanal));
-                const singular = _esCantidadSingular(textoBuffer);
+                const textoBuffer = TimeUtils.horasATexto(Math.abs(bufferSemanal));
+                const singular = TimeUtils._esCantidadSingular(textoBuffer);
                 const adjetivo = esPositivo ? (singular ? 'extra' : 'extras') : (singular ? 'faltante' : 'faltantes');
                 span.textContent = `${textoBuffer} ${adjetivo} esta semana`;
                 span.insertBefore(punto, span.firstChild);
@@ -3477,18 +3534,16 @@
             }
 
             const debeAnimar = animarCard || (idNuevo !== null && !soloReloj);
-            if (debeAnimar) {
-                _animarCambioCard(() => {
-                    _renderStats(vista);
-                    _renderMensaje(vista);
-                    _renderHint(vista);
-                    _renderBuffer(est);
-                });
-            } else {
-                _renderStats(vista);
+            const renderResto = () => {
+                _renderStats(vista, est);
                 _renderMensaje(vista);
                 _renderHint(vista);
                 _renderBuffer(est);
+            };
+            if (debeAnimar) {
+                _animarCambioCard(renderResto);
+            } else {
+                renderResto();
             }
         }
 
@@ -3553,18 +3608,18 @@
                 getVal: () => D.getIgnorarTiempoFuera(),
                 setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
                 btnId: 'btn-toggle-ignorar-tf',
-                mensajeOn: 'Tiempo fuera ignorado',
-                mensajeOff: 'Tiempo fuera incluido',
+                mensajeOn: 'No se descuenta el tiempo fuera en los registros',
+                mensajeOff: 'Se descuenta el tiempo fuera en los registros',
                 onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
             });
 
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
             _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, true),
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
                 btnId: 'btn-toggle-hover-popup',
-                mensajeOn: 'Popup activado',
-                mensajeOff: 'Popup desactivado',
+                mensajeOn: 'Se muestra popup automatico en calendario',
+                mensajeOff: 'No se muestra popup automatico en calendario',
             });
 
         const { toggle: toggleSaldoDesdeEnero, actualizarEstado: actualizarEstadoBotonSaldoDesdeEnero } =
@@ -3587,13 +3642,23 @@
                 onAfterToggle: () => { actualizarUI(); }
             });
 
+        const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLogicaCubierto } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
+                btnId: 'btn-toggle-logica-cubierto',
+                mensajeOn: 'Lógica de cubierto por saldo en los registros desactivada',
+                mensajeOff: 'Lógica de cubierto por saldo en los registros activada',
+                onAfterToggle: () => { actualizarUI(); }
+            });
+
         const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
                 btnId: 'btn-toggle-persistir-tarjetas',
-                mensajeOn: 'Estado guardado',
-                mensajeOff: 'Tarjetas no se recuerdan al iniciar',
+                mensajeOn: 'Se recuerda el estado de las tarjetas',
+                mensajeOff: 'No se recuerda el estado de las tarjetas',
             });
 
         function toggleVisibilidadCard(cual) {
@@ -3679,8 +3744,7 @@
                 Object.assign(dragClone.style, {
                     position: 'fixed', top: `${rect.top}px`, left: `${rect.left}px`,
                     width: `${rect.width}px`, height: `${rect.height}px`, zIndex: '999999',
-                    pointerEvents: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                    margin: '0', transform: 'scale(1.02)', opacity: '0.9'
+                    pointerEvents: 'none', margin: '0', transform: 'scale(1.02)', opacity: '0.9'
                 });
                 document.body.appendChild(dragClone);
                 draggingEl.style.opacity = '0';
@@ -3748,8 +3812,8 @@
             }, opts);
 
             bindStart('touchstart', e => e.touches[0].clientY, { passive: true });
-            bindStart('mousedown',  e => e.clientY);
-            bindMove(lista,    'touchmove', e => e.touches[0].clientY, { passive: false });
+            bindStart('mousedown', e => e.clientY);
+            bindMove(lista, 'touchmove', e => e.touches[0].clientY, { passive: false });
             bindMove(document, 'mousemove', e => e.clientY);
             lista.addEventListener('touchend', endDrag);
             lista.addEventListener('touchcancel', endDrag);
@@ -3825,7 +3889,7 @@
             const opt = document.createElement('option');
             opt.value = value;
             opt.textContent = text;
-            if (selected) opt.selected = true;
+            if (selected) { opt.selected = true; opt.setAttribute('selected', ''); }
             return opt;
         }
 
@@ -3835,7 +3899,11 @@
             const selActual = select.value;
             select.innerHTML = '';
             if (!items.length) { select.appendChild(_crearOpcion('', 'Sin registros')); actualizarFn(null); return; }
-            const sel = (selActual && items.includes(selActual)) ? selActual : (items.includes(selDefault) ? selDefault : items[0]);
+            const sel = (selActual && items.includes(selActual))
+                ? selActual
+                : (items.includes(selDefault)
+                    ? selDefault
+                    : (items.find(k => k <= selDefault) || items[items.length - 1]));
             if (agruparFn) {
                 agruparFn(items).forEach((claves, grupo) => {
                     const grp = document.createElement('optgroup');
@@ -3866,7 +3934,7 @@
             if (input.value.trim() !== '') {
                 input.value = '';
             } else {
-                input.value = obtenerHoraActual();
+                input.value = TimeUtils.obtenerHoraActual();
             }
             input.dispatchEvent(new Event('input'));
         }
@@ -3892,7 +3960,7 @@
             const semanas = new Map();
             D.registros().forEach(r => {
                 const d = new Date(r.fecha + 'T00:00:00');
-                const lunes = _getLunes(d);
+                const lunes = TimeUtils.obtenerLunes(d);
                 const key = TimeUtils.formatearFechaLocal(lunes);
                 if (!semanas.has(key)) semanas.set(key, lunes);
             });
@@ -3916,7 +3984,7 @@
 
         function poblarSelectorSemanas() {
             const semanas = _obtenerSemanas();
-            const lunesISO = TimeUtils.formatearFechaLocal(_getLunes());
+            const lunesISO = TimeUtils.formatearFechaLocal(TimeUtils.obtenerLunes());
             _poblarSelect('select-semana-stats', semanas, _formatearSemana, lunesISO, actualizarEstadisticasSemana, _agruparMesesPorAnio);
         }
 
@@ -3939,15 +4007,13 @@
             _animarFadeSwap($('form-stats'), fn);
         }
 
-        function cambiarSemanaStats() {
-            const v = $('select-semana-stats')?.value;
-            if (v !== undefined) _animarCambioStats(() => actualizarEstadisticasSemana(v));
+        function _cambiarPeriodoStats(selectId, actualizarFn) {
+            const v = $(selectId)?.value;
+            if (v !== undefined) _animarCambioStats(() => actualizarFn(v));
         }
-
-        function cambiarAnioStats() {
-            const v = $('select-anio-stats')?.value;
-            if (v !== undefined) _animarCambioStats(() => actualizarEstadisticasAnio(v));
-        }
+        function cambiarMesStats() { _cambiarPeriodoStats('select-mes-stats', actualizarEstadisticas); }
+        function cambiarSemanaStats() { _cambiarPeriodoStats('select-semana-stats', actualizarEstadisticasSemana); }
+        function cambiarAnioStats() { _cambiarPeriodoStats('select-anio-stats', actualizarEstadisticasAnio); }
 
         function togglePeriodoStats(direccion = 1) {
             if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
@@ -3961,7 +4027,7 @@
             modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
             try { StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas); } catch (e) { }
 
-            _animarCambioStats(() => {
+            _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
                 selectMes.classList.add('hidden');
                 selectAnio.classList.add('hidden');
                 if (selectSemana) selectSemana.classList.add('hidden');
@@ -4001,11 +4067,6 @@
             const meses = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
             const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
             _poblarSelect('select-mes-stats', meses, _nombreMesCapitalizado, mesActual, actualizarEstadisticas, _agruparMesesPorAnio);
-        }
-
-        function cambiarMesStats() {
-            const v = $('select-mes-stats')?.value;
-            if (v !== undefined) _animarCambioStats(() => actualizarEstadisticas(v));
         }
 
         function _sumarHorasEfectivas(regs, horasDiarias) {
@@ -4066,8 +4127,8 @@
                         return n ? `${n} ${t.labelPlural.toLowerCase()}` : null;
                     })
                     .filter(Boolean);
-                const nombreMes = formatoTituloMes(claveMes).split(' ')[0];
-                seccion += `   ${nombreMes.padEnd(12)} ${horasATextoCorto(_sumarHorasEfectivas(regsM, horasDiariasObjetivo)).padEnd(10)}  (${normales.length} jornadas)`;
+                const nombreMes = TimeUtils.formatoTituloMes(claveMes).split(' ')[0];
+                seccion += `   ${nombreMes.padEnd(12)} ${TimeUtils.horasATexto(_sumarHorasEfectivas(regsM, horasDiariasObjetivo), 'short').padEnd(10)}  (${normales.length} jornadas)`;
                 if (notas.length) seccion += `  [${notas.join(', ')}]`;
                 seccion += '\n';
             });
@@ -4087,17 +4148,17 @@
             ordenados.forEach(r => {
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                 const fecha = r.fecha.split('-').reverse().join('/');
-                const dia = obtenerNombreDia(r.fecha);
+                const dia = TimeUtils.obtenerNombreDia(r.fecha);
                 let linea;
                 if (tipoEspecial) {
                     linea = `${fecha}  ${dia.padEnd(10)} ${tipoEspecial.label.toUpperCase()}`;
                 } else {
                     const entrada = r.entrada || '--:--';
                     const salida = r.salida || '--:--';
-                    const total = r.salida ? horasATextoCorto(r.total) : 'Incompleto';
+                    const total = r.salida ? TimeUtils.horasATexto(r.total, 'short') : 'Incompleto';
                     const tiempoFuera = r.tiempoFuera ? ` (${r.tiempoFuera} fuera)` : '';
                     const infoAsueto = (r.credito && r.credito !== '00:00') ? ' [SALIDA TEMPRANO]' : '';
-                    const indicador = r.salida ? (r.total >= horasDiariasObjetivo ? '✓ ' : '✗ ') : '  ';
+                    const indicador = r.salida ? (horasGte(r.total, horasDiariasObjetivo) ? '✓ ' : '✗ ') : '  ';
                     linea = `${fecha}  ${dia.padEnd(10)} ${entrada} → ${salida}  [${total}]${tiempoFuera}${infoAsueto} ${indicador}`;
                 }
                 seccion += linea + '\n';
@@ -4108,7 +4169,7 @@
         function _agruparRegistrosPorSemana(registros) {
             const semanas = new Map();
             registros.forEach(r => {
-                const lunes = obtenerLunesSemana(r.fecha);
+                const lunes = TimeUtils.obtenerLunesSemanaISO(r.fecha);
                 if (!semanas.has(lunes)) {
                     const base = { trabajados: [] };
                     TiposRegistro.obtenerTodosLosTipos().forEach(t => { base[t.labelPlural.toLowerCase()] = []; });
@@ -4161,8 +4222,8 @@ ${lineasTipos}
    • Salida promedio:        ${stats.salidaPromedio}
    • Promedio diario:        ${stats.promedioDiario}
    
-   • Total horas trabajadas: ${horasATextoCorto(_sumarHorasEfectivas(registrosPeriodo, horasDiariasObjetivo))}
-   • Saldo:                  ${stats.bufferPeriodo !== null ? horasATextoCorto(stats.bufferPeriodo) : 'N/A'}`;
+   • Total horas trabajadas: ${TimeUtils.horasATexto(_sumarHorasEfectivas(registrosPeriodo, horasDiariasObjetivo), 'short')}
+   • Saldo:                  ${stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A'}`;
                 },
 
                 detallePeriodo: () => esAnual
@@ -4216,7 +4277,7 @@ ${lineasTipos}
                         }
 
                         seccion += `   Semana ${index + 1} (${lunes.split('-').reverse().join('/')} - ${fechaFin.split('-').reverse().join('/')})${esIncompleta ? '*' : ''}:\n`;
-                        seccion += `      └─ ${horasATextoCorto(totalSemanal)}`;
+                        seccion += `      └─ ${TimeUtils.horasATexto(totalSemanal, 'short')}`;
 
                         const notasExtras = TiposRegistro.obtenerTodosLosTipos()
                             .map(t => {
@@ -4287,7 +4348,7 @@ Generado por Sistema Lushibosca
             const icono = vistaActual === 'semana'
                 ? '<svg class="icon"><use href="#icon-calendar-simple"/></svg>'
                 : '<svg class="icon"><use href="#icon-clock"/></svg>';
-            const contexto = vistaActual === 'semana' ? 'Esta Semana' : obtenerNombreDia(obtenerFechaHoy());
+            const contexto = vistaActual === 'semana' ? 'Esta Semana' : TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy());
             titulo.innerHTML = `${icono} ${contexto} - <svg class="icon"><use href="#icon-exit"/></svg> Tiempo fuera `;
             const breakCounter = Object.assign(document.createElement('span'), {
                 id: 'break-counter', className: 'break-counter-label'
@@ -4301,10 +4362,9 @@ Generado por Sistema Lushibosca
             const card = document.getElementById('stats-card');
             if (!btn) return;
 
-            if (modoLoteActivo) { btn.style.display = 'none'; return; }
-            btn.style.display = '';
+            if (modoLoteActivo) { btn.disabled = true; return; }
 
-            const hoy = obtenerFechaHoy();
+            const hoy = TimeUtils.obtenerFechaHoy();
             const registroHoy = D.registros().find(r => r.fecha === hoy);
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
@@ -4314,10 +4374,8 @@ Generado por Sistema Lushibosca
 
             if (!isRunning && (!registroHoy || diaCerrado)) {
                 Object.assign(btn, { disabled: true, title: diaCerrado ? 'Día finalizado' : 'Debes fichar entrada primero' });
-                Object.assign(btn.style, { opacity: '0.5', cursor: 'not-allowed' });
             } else {
                 Object.assign(btn, { disabled: false, title: isRunning ? 'Detener tiempo fuera' : 'Iniciar tiempo fuera' });
-                Object.assign(btn.style, { opacity: '1', cursor: 'pointer' });
             }
 
             icon.setAttribute('href', '#icon-exit');
@@ -4384,14 +4442,20 @@ Generado por Sistema Lushibosca
             HistoryManager.saveState(D.registros());
             StorageHelper.removeItem(storageKey);
             await D.guardarYActualizar(registroHoy.id);
-            mostrarToast(minutos === 1 ? 'Se descontó 1 minuto al registro de hoy' : `Se descontaron ${minutos} minutos al registro de hoy`, 'success');
+            const ignorarTF = D.getIgnorarTiempoFuera();
+            const mensajeToast = ignorarTF
+                ? (minutos === 1
+                    ? 'Se registró 1 minuto de tiempo fuera (cálculo ignorado)'
+                    : `Se registraron ${minutos} minutos de tiempo fuera (cálculo ignorado)`)
+                : (minutos === 1 ? 'Se descontó 1 minuto al registro de hoy' : `Se descontaron ${minutos} minutos al registro de hoy`);
+            mostrarToast(mensajeToast, ignorarTF ? 'info' : 'success');
         }
 
         async function toggleTimerBreakMain() {
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
             const storedStart = StorageHelper.getItem(storageKey);
-            const registroHoy = D.registros().find(r => r.fecha === obtenerFechaHoy());
+            const registroHoy = D.registros().find(r => r.fecha === TimeUtils.obtenerFechaHoy());
 
             if (!storedStart && !registroHoy) { mostrarToast('Debes crear un registro para hoy primero', 'warning'); return; }
 
@@ -4513,7 +4577,7 @@ Generado por Sistema Lushibosca
             } else {
                 const hoy = new Date();
                 const anioActual = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
-                const mesActual  = _calendarioMes ? _calendarioMes.mes  : hoy.getMonth();
+                const mesActual = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
 
                 _agruparMesesPorAnio(mesesOrdenados).forEach((meses, anioStr) => {
                     const separador = Object.assign(document.createElement('div'), {
@@ -4536,7 +4600,7 @@ Generado por Sistema Lushibosca
                 });
             }
 
-            selector.style.height = grid.offsetHeight + 'px';
+            selector.style.height = grid.getBoundingClientRect().height + 'px';
             _animarFadeSwap(grid, () => {
                 grid.style.display = 'none';
                 navBotones.style.display = 'none';
@@ -4706,7 +4770,7 @@ Generado por Sistema Lushibosca
         }
 
         function _limpiarClavesPerfil(pid) {
-            ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF,
+            ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
                 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
         }
@@ -4744,7 +4808,8 @@ Generado por Sistema Lushibosca
             }
         }
 
-        function toggleModoLote() {
+        function toggleModoLote(deltaSwipe, conAnimacion = true) {
+            const modoContenedor = document.getElementById('modo-contenedor');
             const modoNormal = document.getElementById('modo-normal');
             const modoLote = document.getElementById('modo-lote');
             const btnTexto = document.getElementById('btn-registrar-texto');
@@ -4752,42 +4817,39 @@ Generado por Sistema Lushibosca
             const btn = document.getElementById('btn-agregar');
 
             modoLoteActivo = !modoLoteActivo;
+            const delta = deltaSwipe !== undefined ? deltaSwipe : (modoLoteActivo ? 1 : -1);
 
-            if (modoLoteActivo) {
-                _animarFadeSwap(modoNormal, () => {
-                    modoNormal.style.display = 'none';
-                    modoLote.classList.add('fade-out');
-                    modoLote.style.display = 'block';
-                    modoLote.offsetHeight;
-                    modoLote.classList.remove('fade-out');
+            const aplicarCambiosLote = () => {
+                modoNormal.style.display = 'none';
+                modoLote.classList.remove('fade-out');
+                modoLote.style.display = 'block';
 
-                    document.getElementById('lote-tipo').value = 'feriado';
-                    document.getElementById('lote-fecha-desde').value = '';
-                    document.getElementById('lote-fecha-hasta').value = '';
+                document.getElementById('lote-tipo').value = 'feriado';
+                document.getElementById('lote-fecha-desde').value = '';
+                document.getElementById('lote-fecha-hasta').value = '';
 
-                    btnTexto.textContent = 'Fichar Lote';
-                    btn.style.background = '';
-                    btn.style.color = '';
+                btnTexto.textContent = 'Fichar Lote';
+                btn.style.background = '';
+                btn.style.color = '';
 
-                    setIconoBtn(btn, '#icon-save');
+                setIconoBtn(btn, '#icon-save');
 
-                    btnTimer.disabled = true;
-                    btnTimer.style.opacity = '0.3';
+                btnTimer.disabled = true;
 
-                    actualizarBotonLote();
-                });
+                actualizarBotonLote();
+            };
 
+            const aplicarCambiosNormal = () => {
+                modoLote.style.display = 'none';
+                modoNormal.style.display = 'block';
+                UILogic.resetearBoton(btn);
+                actualizarEstadoBotonTimerMain();
+            };
+
+            if (conAnimacion) {
+                _animarSlideElemento(modoContenedor, delta, modoLoteActivo ? aplicarCambiosLote : aplicarCambiosNormal);
             } else {
-                _animarFadeSwap(modoLote, () => {
-                    modoLote.style.display = 'none';
-                    modoNormal.classList.add('fade-out');
-                    modoNormal.style.display = 'block';
-                    modoNormal.offsetHeight;
-                    modoNormal.classList.remove('fade-out');
-                    UILogic.resetearBoton(btn);
-                    btnTimer.style.opacity = '1';
-                    actualizarEstadoBotonTimerMain();
-                });
+                modoLoteActivo ? aplicarCambiosLote() : aplicarCambiosNormal();
             }
         }
 
@@ -4860,7 +4922,7 @@ Generado por Sistema Lushibosca
             }
 
             if (!desde && hasta) { mostrarToast('Completa ambos campos', 'info'); return; }
-            if (desde > hasta)   { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); return; }
+            if (desde > hasta) { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); return; }
 
             if (tipo !== 'normal' && !TiposRegistro.obtenerCodigosPorTipo(tipo)) {
                 mostrarToast('Tipo de registro inválido', 'error'); return;
@@ -4868,7 +4930,7 @@ Generado por Sistema Lushibosca
 
             try {
                 if (tipo === 'normal') await DataManagement.borrarPeriodoDirecto(desde, hasta);
-                else                   await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
+                else await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
                 aplicarFeedbackCampos([
                     { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
@@ -4948,16 +5010,16 @@ Generado por Sistema Lushibosca
         }
 
         function actualizarBotonLote() {
-            const tipo    = document.getElementById('lote-tipo').value;
-            const desde   = document.getElementById('lote-fecha-desde').value;
-            const hasta   = document.getElementById('lote-fecha-hasta').value;
-            const btn     = document.getElementById('btn-agregar');
+            const tipo = document.getElementById('lote-tipo').value;
+            const desde = document.getElementById('lote-fecha-desde').value;
+            const hasta = document.getElementById('lote-fecha-hasta').value;
+            const btn = document.getElementById('btn-agregar');
             const btnTexto = document.getElementById('btn-registrar-texto');
             btn.style.background = '';
             btn.style.color = '';
 
             if (!desde && !hasta) { btnTexto.textContent = 'Fichar'; setIconoBtn(btn, '#icon-save'); return; }
-            if (!desde && hasta)  { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
+            if (!desde && hasta) { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
 
             if (desde && !hasta) {
                 if (tipo === 'normal') { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
@@ -4969,13 +5031,13 @@ Generado por Sistema Lushibosca
             }
 
             if (!TimeUtils.validarFecha(desde)) { _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida'); return; }
-            if (!TimeUtils.validarFecha(hasta))  { _setBtnError(btn, btnTexto, 'Fecha Final Inválida'); return; }
-            if (desde > hasta)                   { _setBtnError(btn, btnTexto, 'Rango Inválido'); return; }
+            if (!TimeUtils.validarFecha(hasta)) { _setBtnError(btn, btnTexto, 'Fecha Final Inválida'); return; }
+            if (desde > hasta) { _setBtnError(btn, btnTexto, 'Rango Inválido'); return; }
 
             const diasTotales = Math.ceil(Math.abs(TimeUtils.parsearFechaLocal(hasta) - TimeUtils.parsearFechaLocal(desde)) / 864e5) + 1;
 
             if (tipo === 'normal') _actualizarBtnNormal(btn, btnTexto, desde, hasta);
-            else                   _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales);
+            else _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales);
         }
 
         function toggleCredito() {
@@ -4994,7 +5056,7 @@ Generado por Sistema Lushibosca
                 if (tipoSelect) tipoSelect.value = 'todo';
 
                 const camposRango = document.getElementById('campos-rango-exportar');
-                if (camposRango) { camposRango.style.maxHeight = '0'; camposRango.style.opacity = '0'; }
+                if (camposRango) camposRango.classList.remove('expanded');
 
                 document.getElementById('export-fecha-desde').value = '';
                 document.getElementById('export-fecha-hasta').value = '';
@@ -5019,13 +5081,7 @@ Generado por Sistema Lushibosca
             const tipo = document.getElementById('tipo-exportacion').value;
             const camposRango = document.getElementById('campos-rango-exportar');
 
-            if (tipo === 'rango') {
-                camposRango.style.maxHeight = '200px';
-                camposRango.style.opacity = '1';
-            } else {
-                camposRango.style.maxHeight = '0';
-                camposRango.style.opacity = '0';
-            }
+            camposRango.classList.toggle('expanded', tipo === 'rango');
         }
 
         async function ejecutarExportacion() {
@@ -5092,7 +5148,7 @@ Generado por Sistema Lushibosca
             if (registrosFiltrados.length === 0) { mostrarToast('No hay registros en ese rango', 'warning'); return; }
 
             const fechaLocal = TimeUtils.fechaLocalISOFull();
-            const fechaHoy   = fechaLocal.substring(0, 10);
+            const fechaHoy = fechaLocal.substring(0, 10);
 
             const data = {
                 registros: registrosFiltrados,
@@ -5189,30 +5245,18 @@ Generado por Sistema Lushibosca
             const btnRestaurar = document.getElementById('btn-hist-restaurar');
             if (!btnRespaldar || !btnRestaurar) return;
 
-            const tieneGist = GistSync.esGistIdValido(GistSync.getGistId());
-
             const newRespaldar = btnRespaldar.cloneNode(true);
             const newRestaurar = btnRestaurar.cloneNode(true);
             btnRespaldar.parentNode.replaceChild(newRespaldar, btnRespaldar);
             btnRestaurar.parentNode.replaceChild(newRestaurar, btnRestaurar);
 
-            if (tieneGist) {
-                newRespaldar.title = 'Subir a Gist';
-                newRespaldar.addEventListener('click', () => gistSubir());
-                newRespaldar.querySelector('use').setAttribute('href', '#icon-cloud-upload');
+            newRespaldar.title = 'Respaldar';
+            newRespaldar.addEventListener('click', (e) => _popupAccionHistorico(e, 'respaldar'));
+            newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
 
-                newRestaurar.title = 'Bajar de Gist';
-                newRestaurar.addEventListener('click', () => gistBajar());
-                newRestaurar.querySelector('use').setAttribute('href', '#icon-cloud-download');
-            } else {
-                newRespaldar.title = 'Respaldar';
-                newRespaldar.addEventListener('click', () => mostrarExportar(true));
-                newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
-
-                newRestaurar.title = 'Restaurar';
-                newRestaurar.addEventListener('click', () => mostrarImportar(true));
-                newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
-            }
+            newRestaurar.title = 'Restaurar';
+            newRestaurar.addEventListener('click', (e) => _popupAccionHistorico(e, 'restaurar'));
+            newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
         }
 
         function guardarConfigGist() {
@@ -5467,20 +5511,9 @@ Generado por Sistema Lushibosca
             _actualizarCampoLimite();
         }
 
-        let _timeoutLimite = null;
-        let _intervaloLimite = null;
-
-        function iniciarCambioLimite(delta) {
-            cambiarLimiteSync(delta);
-            _timeoutLimite = setTimeout(() => {
-                _intervaloLimite = setInterval(() => cambiarLimiteSync(delta), 100);
-            }, 500);
-        }
-
-        function detenerCambioLimite() {
-            if (_timeoutLimite) { clearTimeout(_timeoutLimite); _timeoutLimite = null; }
-            if (_intervaloLimite) { clearInterval(_intervaloLimite); _intervaloLimite = null; }
-        }
+        const _pressHoldLimite = _crearPressHold(delta => cambiarLimiteSync(delta));
+        function iniciarCambioLimite(delta) { _pressHoldLimite.iniciar(delta); }
+        function detenerCambioLimite() { _pressHoldLimite.detener(); }
 
 
         async function gistSubir() {
@@ -5531,12 +5564,14 @@ Generado por Sistema Lushibosca
         }
 
         function _calcularDiffGist(registrosNormalizados) {
-            const fechasLocales = new Set(D.registros().map(r => r.fecha));
-            const soloEnGist = registrosNormalizados.filter(r => !fechasLocales.has(r.fecha));
-            const enAmbos = registrosNormalizados.filter(r => fechasLocales.has(r.fecha));
-            const soloLocal = D.registros().filter(r => !registrosNormalizados.some(g => g.fecha === r.fecha));
+            const localesPorFecha = new Map(D.registros().map(r => [r.fecha, r]));
+            const gistPorFecha = new Map(registrosNormalizados.map(r => [r.fecha, r]));
+
+            const soloEnGist = registrosNormalizados.filter(r => !localesPorFecha.has(r.fecha));
+            const enAmbos = registrosNormalizados.filter(r => localesPorFecha.has(r.fecha));
+            const soloLocal = D.registros().filter(r => !gistPorFecha.has(r.fecha));
             const complementarios = enAmbos.filter(imp => {
-                const local = D.registros().find(r => r.fecha === imp.fecha);
+                const local = localesPorFecha.get(imp.fecha);
                 return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
             });
             return { soloEnGist, enAmbos, soloLocal, complementarios };
@@ -5747,18 +5782,18 @@ Generado por Sistema Lushibosca
                     handler(el);
                 });
             };
-            bindEnter('entrada',                    ()   => document.getElementById('salida')?.focus());
-            bindEnter('salida',                     (el) => { el.blur(); const b = document.getElementById('btn-agregar'); if (b && !b.disabled) b.click(); });
-            bindEnter('edit-entrada',               ()   => document.getElementById('edit-salida')?.focus());
-            bindEnter('edit-salida',                ()   => document.getElementById('edit-tiempo-fuera')?.focus());
-            bindEnter('edit-tiempo-fuera',          (el) => { el.blur(); const b = document.querySelector('#modal-editar .btn-edit'); if (b && !b.disabled) b.click(); });
-            bindEnter('nombre-nuevo-perfil-selector',(el) => { el.blur(); UILogic.crearPerfilDesdeSelector(); });
-            bindEnter('nombre-perfil-editar',       (el) => { el.blur(); const b = document.querySelector('#modal-editar-perfil .btn-edit'); if (b && !b.disabled) b.click(); });
+            bindEnter('entrada', () => document.getElementById('salida')?.focus());
+            bindEnter('salida', (el) => { el.blur(); const b = document.getElementById('btn-agregar'); if (b && !b.disabled) b.click(); });
+            bindEnter('edit-entrada', () => document.getElementById('edit-salida')?.focus());
+            bindEnter('edit-salida', () => document.getElementById('edit-tiempo-fuera')?.focus());
+            bindEnter('edit-tiempo-fuera', (el) => { el.blur(); const b = document.querySelector('#modal-editar .btn-edit'); if (b && !b.disabled) b.click(); });
+            bindEnter('nombre-nuevo-perfil-selector', (el) => { el.blur(); UILogic.crearPerfilDesdeSelector(); });
+            bindEnter('nombre-perfil-editar', (el) => { el.blur(); const b = document.querySelector('#modal-editar-perfil .btn-edit'); if (b && !b.disabled) b.click(); });
         }
 
         function _initSwipesYStats() {
             registrarSwipe(document.getElementById('stats-card'), () => alternarVista());
-            registrarSwipe(document.getElementById('form-registro'), () => toggleModoLote(), { ignoreInputs: true });
+            registrarSwipe(document.getElementById('form-registro'), dir => toggleModoLote(dir), { ignoreInputs: true });
 
             const anchor = document.getElementById('stat-items-tipos-anchor');
             if (anchor) {
@@ -5784,12 +5819,12 @@ Generado por Sistema Lushibosca
             UILogic.actualizarEstadoBotonHoverPopup();
             UILogic.actualizarEstadoBotonSaldoDesdeEnero();
             UILogic.actualizarEstadoBotonSaldoDesdePrimeroDiaMes();
+            UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.aplicarVisibilidadCards();
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
             UILogic.setFondoCard(config.fondoCard || 'golden-gate');
-            if (config.modoEstadisticas === 'anual') UILogic.togglePeriodoStats();
-            else if (config.modoEstadisticas === 'semanal') { UILogic.togglePeriodoStats(); UILogic.togglePeriodoStats(); }
+            modoEstadisticas = config.modoEstadisticas || 'mensual';
 
             const perfilActual = PerfilManager.obtenerDatosPerfil();
             D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
@@ -5822,7 +5857,7 @@ Generado por Sistema Lushibosca
                 if (use) use.setAttribute('href', temaOscuro ? '#icon-sun' : '#icon-moon');
             });
 
-            $('fecha').value = obtenerFechaHoy();
+            $('fecha').value = TimeUtils.obtenerFechaHoy();
 
             try {
                 const persistir = StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true);
@@ -5878,6 +5913,22 @@ Generado por Sistema Lushibosca
             });
         }
 
+        function _initListenerUndoRedo() {
+            document.addEventListener('keydown', (e) => {
+                if (!(e.ctrlKey || e.metaKey)) return;
+                const tag = e.target.tagName;
+                const esCampoEditable = tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable;
+                if (esCampoEditable) return;
+                if (e.key === 'z' || e.key === 'Z') {
+                    e.preventDefault();
+                    document.getElementById('btn-undo')?.click();
+                } else if (e.key === 'y' || e.key === 'Y') {
+                    e.preventDefault();
+                    document.getElementById('btn-redo')?.click();
+                }
+            });
+        }
+
         function _initListenerAccionesLista(lista) {
             lista.addEventListener('click', (e) => {
                 const target = e.target.closest('[data-accion]');
@@ -5887,9 +5938,7 @@ Generado por Sistema Lushibosca
                     if (id) D.editarRegistro(id);
                 } else if (target.dataset.accion === 'editar-grupo') {
                     try {
-                        const grupoData = JSON.parse(target.dataset.grupoData, (k, v) =>
-                            ['__proto__', 'constructor', 'prototype'].includes(k) ? undefined : v
-                        );
+                        const grupoData = JSON.parse(target.dataset.grupoData, S.reviverJSONSeguro);
                         const registrosCompletos = D.registros().filter(r => grupoData.registros.includes(r.id));
                         D.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
                     } catch (err) { console.error('Error al abrir grupo:', err); }
@@ -6045,6 +6094,7 @@ Generado por Sistema Lushibosca
             setInterval(() => actualizarUI(null, true), 20000);
 
             _initListenerEscape();
+            _initListenerUndoRedo();
             const lista = document.getElementById('lista-registros');
             if (lista) {
                 _initListenerAccionesLista(lista);
@@ -6052,6 +6102,9 @@ Generado por Sistema Lushibosca
                 _initListenerToggleMes(lista);
             }
             _initListenersOtros();
+
+            _actualizarOffsetsStickyMes();
+            window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
         }
 
         function actualizarHintGrupo() {
@@ -6131,10 +6184,9 @@ Generado por Sistema Lushibosca
             toggleSeccionGen('form-registro', 'icon-indicator-form', STORAGE_KEYS.FORMULARIO_EXPANDIDO);
 
             if (estabaExpandido) {
-
                 $('entrada').value = '';
                 $('salida').value = '';
-                $('fecha').value = obtenerFechaHoy();
+                $('fecha').value = TimeUtils.obtenerFechaHoy();
 
                 const loteDesde = $('lote-fecha-desde');
                 const loteHasta = $('lote-fecha-hasta');
@@ -6145,7 +6197,11 @@ Generado por Sistema Lushibosca
                 if (loteTipo) loteTipo.value = 'feriado';
 
                 if (modoLoteActivo) {
-                    toggleModoLote();
+                    setTimeout(() => {
+                        if (modoLoteActivo) {
+                            toggleModoLote(undefined, false);
+                        }
+                    }, 350);
                 } else {
                     actualizarEstadoBotonTimerMain();
                 }
@@ -6161,10 +6217,10 @@ Generado por Sistema Lushibosca
         function _activarVistaCalendarioHistorico() {
             if (!_vistaHistoricoCalendario) return;
             const lista = document.getElementById('lista-registros');
-            const cal   = document.getElementById('vista-calendario-historico');
+            const cal = document.getElementById('vista-calendario-historico');
             const btnFiltro = document.getElementById('btn-filtro');
             if (lista) lista.classList.add('hidden');
-            if (cal)   cal.classList.remove('hidden');
+            if (cal) cal.classList.remove('hidden');
             if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
             _renderizarCalendario();
         }
@@ -6172,11 +6228,11 @@ Generado por Sistema Lushibosca
         function toggleHistorico() {
             cancelarTimerAutoCierreBotones();
             const contenido = $('contenido-historico');
-            const botones   = $('botones-historico');
-            const icon      = $('icon-indicator-historico');
+            const botones = $('botones-historico');
+            const icon = $('icon-indicator-historico');
             if (!contenido) return;
 
-            const expandido  = contenido.classList.contains('expanded');
+            const expandido = contenido.classList.contains('expanded');
             const conBotones = botones.classList.contains('expanded');
 
             try {
@@ -6273,6 +6329,7 @@ Generado por Sistema Lushibosca
             const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
             const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
             const horasDiariasObj = D.horasDiarias();
+            const diasHabilesObj = D.diasHabiles();
             const filtroActivo = D.obtenerRegistrosFiltrados().length !== D.registros().length;
             const claseDelDia = (fecha) => {
                 const r = regsPorFecha[fecha];
@@ -6282,12 +6339,9 @@ Generado por Sistema Lushibosca
                     const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                     return `dia-especial-${tipo ? tipo.color : 'purple'}`;
                 }
-                if (r.entrada && !r.salida) {
-                    const fechaHoy = obtenerFechaHoy();
-                    return fecha === fechaHoy ? 'dia-en-curso' : 'dia-sin-salida';
-                }
-                if (r.total >= horasDiariasObj) return 'dia-normal';
-                return 'dia-incompleto';
+                if (r.entrada && !r.salida) return 'dia-en-curso';
+                if (!_esFechaHabil(fecha, diasHabilesObj) || horasGte(r.total, horasDiariasObj)) return 'dia-normal';
+                return _cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
             };
 
             const diasNombre = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -6394,8 +6448,8 @@ Generado por Sistema Lushibosca
                 return `<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${emoji} ${label}</span>`;
             }
             if (reg.entrada && !reg.salida) {
-                const esHoy = reg.fecha === obtenerFechaHoy();
-                return `<div class="cal-popup-info cal-popup-info--${esHoy ? 'blue">En curso' : 'gold">Incompleto'}</div>
+                const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
+                return `<div class="cal-popup-info cal-popup-info--blue">${esHoy ? 'En curso' : 'Incompleto'}</div>
                     <div class="cal-popup-3l">Entrada: ${S.escapeHtml(reg.entrada)}</div>`;
             }
             const totalHoras = reg.total || 0;
@@ -6408,10 +6462,18 @@ Generado por Sistema Lushibosca
                 tfStr = tfH > 0 ? `${tfH}h${tfM > 0 ? ' ' + tfM + 'm' : ''} fuera` : `${tfM}m fuera`;
             }
             let totalConDiff = totalStr, diffColor = '';
-            if (horasDiarias > 0) {
+            if (horasDiarias > 0 && _esFechaHabil(reg.fecha, D.diasHabiles())) {
                 const diffText = formatoDiferencia(totalHoras);
-                if (diffText) totalConDiff += ` (${diffText})`;
-                diffColor = totalHoras >= horasDiarias ? 'var(--c-green)' : 'var(--c-red)';
+                if (horasGte(totalHoras, horasDiarias)) {
+                    diffColor = 'var(--c-green)';
+                    if (diffText) totalConDiff += ` (${diffText})`;
+                } else if (_cubiertoPorSaldo(reg.fecha)) {
+                    diffColor = 'var(--c-gold)';
+                    totalConDiff += ` (${diffText}) Cubierto`;
+                } else {
+                    diffColor = 'var(--c-red)';
+                    if (diffText) totalConDiff += ` (${diffText})`;
+                }
             }
             return `<div class="cal-popup-info${diffColor ? ' cal-popup-info--dynamic' : ''}"${diffColor ? ` data-color="${diffColor}"` : ''}>${totalConDiff}</div>
                 <div class="cal-popup-3l">${S.escapeHtml(reg.entrada)} – ${S.escapeHtml(reg.salida)}</div>
@@ -6565,14 +6627,70 @@ Generado por Sistema Lushibosca
             _posicionarPopup(popup, event);
         }
 
+        let _popupAccionHistoricoEl = null;
+
+        function _popupAccionHistorico(event, tipo) {
+            event.stopPropagation();
+
+            if (_popupAccionHistoricoEl) {
+                const mismoTipo = _popupAccionHistoricoEl.dataset.tipo === tipo;
+                _popupAccionHistoricoEl.remove();
+                _popupAccionHistoricoEl = null;
+                if (mismoTipo) return;
+            }
+
+            const esRespaldar = tipo === 'respaldar';
+            const titulo = esRespaldar ? 'Respaldar registros' : 'Restaurar registros';
+
+            const popup = document.createElement('div');
+            popup.className = 'cal-popup';
+            popup.id = '_popup-accion-historico';
+            popup.dataset.tipo = tipo;
+            popup.innerHTML = `
+                <div class="cal-popup-fecha">${titulo}</div>
+                <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_popup-accion-gist">
+                    <svg class="icon"><use href="#icon-gist"/></svg>
+                    GitHub Gist
+                </button>
+                <button class="cal-popup-btn-edit cal-popup-btn-accion--especial" id="_popup-accion-local">
+                    <svg class="icon"><use href="#icon-${esRespaldar ? 'download' : 'upload'}"/></svg>
+                    Archivo local
+                </button>`;
+
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupAccionHistoricoEl = popup;
+
+            const cerrarPopup = _registrarCierrePopup(popup, `#btn-hist-${tipo}`, () => true, () => { _popupAccionHistoricoEl = null; });
+
+            popup.querySelector('#_popup-accion-gist')?.addEventListener('click', () => {
+                cerrarPopup();
+                const gistListo = GistSync.getToken() && (esRespaldar || GistSync.esGistIdValido(GistSync.getGistId()));
+                if (!gistListo) { abrirModalGist(); return; }
+                esRespaldar ? gistSubir() : gistBajar();
+            });
+            popup.querySelector('#_popup-accion-local')?.addEventListener('click', () => {
+                cerrarPopup();
+                esRespaldar ? mostrarExportar(true) : mostrarImportar(true);
+            });
+
+            _posicionarPopup(popup, event);
+        }
+
         function _flashCampo(...ids) {
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
+                clearTimeout(el._flashTimeout);
                 el.classList.remove('campo-flash');
                 void el.offsetWidth;
                 el.classList.add('campo-flash');
-                el.addEventListener('animationend', () => el.classList.remove('campo-flash'), { once: true });
+                
+                const cs = getComputedStyle(el);
+                const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
+                const iteraciones = parseFloat(cs.animationIterationCount) || 1;
+                const totalMs = duracionMs * iteraciones;
+                el._flashTimeout = setTimeout(() => el.classList.remove('campo-flash'), totalMs);
             });
         }
 
@@ -6628,8 +6746,7 @@ Generado por Sistema Lushibosca
             if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
             if (!window.matchMedia('(hover: hover)').matches) return;
             const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
-            const esHover = window.matchMedia('(hover: hover)').matches;
-            if (stored === null ? !esHover : stored !== 'true') return;
+            if (stored !== 'true') return;
             if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
             if (_popupCalendarioEl && !_popupCalendarioEsHover) return;
             clearTimeout(_popupCalendarioHoverTimer);
@@ -6642,7 +6759,7 @@ Generado por Sistema Lushibosca
         function _onclickCalendarioDia(event, registroId) {
             const esDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
             const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
-            const hoverActivo = esDesktop && (stored === null ? true : stored === 'true');
+            const hoverActivo = esDesktop && stored === 'true';
 
             if (hoverActivo) {
                 if (_popupCalendarioEl) {
@@ -6769,73 +6886,81 @@ Generado por Sistema Lushibosca
             });
         }
 
-        let _calendarioAnimTimeout = null;
-        let _calendarioWrapperActual = null;
+        const _slideAnimEstado = new WeakMap();
 
-        function _finalizarAnimacionCalendarioPendiente() {
-            if (_calendarioAnimTimeout) {
-                clearTimeout(_calendarioAnimTimeout);
-                _calendarioAnimTimeout = null;
-            }
-            if (_calendarioWrapperActual) {
-                const grid = document.getElementById('calendario-grid');
-                if (grid) {
-                    grid.style.display = '';
-                    _calendarioWrapperActual.parentNode?.insertBefore(grid, _calendarioWrapperActual);
-                }
-                _calendarioWrapperActual.remove();
-                _calendarioWrapperActual = null;
-            }
+        function _limpiarClonVisual(clon) {
+            clon.removeAttribute('id');
+            clon.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+            return clon;
         }
 
-        function _animarCalendario(delta, renderFn) {
-            const grid = document.getElementById('calendario-grid');
-            if (!grid) { renderFn(); return; }
+        function _finalizarSlidePendiente(el) {
+            const estado = _slideAnimEstado.get(el);
+            if (!estado) return;
+            clearTimeout(estado.timeout);
+            el.style.display = '';
+            estado.wrapper.parentNode?.insertBefore(el, estado.wrapper);
+            estado.wrapper.remove();
+            _slideAnimEstado.delete(el);
+        }
 
-            _finalizarAnimacionCalendarioPendiente();
+        function _animarSlideElemento(el, delta, mutarFn) {
+            if (!el) { mutarFn(); return; }
 
-            const anchoGrid = grid.offsetWidth;
-            const altoGrid = grid.offsetHeight;
-            const margenTopGrid = getComputedStyle(grid).marginTop;
+            _finalizarSlidePendiente(el);
 
-            const snapViejo = grid.cloneNode(true);
-            snapViejo.removeAttribute('id');
-            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoGrid + 'px;pointer-events:none;';
+            const rectViejo = el.getBoundingClientRect();
+            const anchoViejo = rectViejo.width;
+            const altoViejo = rectViejo.height;
+            const margenTop = getComputedStyle(el).marginTop;
 
-            grid.style.position = 'absolute';
-            grid.style.visibility = 'hidden';
-            renderFn();
-            const snapNuevo = grid.cloneNode(true);
-            snapNuevo.removeAttribute('id');
-            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoGrid + 'px;pointer-events:none;left:' + (delta > 0 ? anchoGrid : -anchoGrid) + 'px;';
+            const snapViejo = _limpiarClonVisual(el.cloneNode(true));
+            snapViejo.style.cssText = 'position:absolute;top:0;left:0;width:' + anchoViejo + 'px;pointer-events:none;';
+
+            el.style.visibility = 'hidden';
+            mutarFn();
+
+            const rectNuevo = el.getBoundingClientRect();
+            const anchoNuevo = rectNuevo.width;
+            const altoNuevo = rectNuevo.height;
+
+            const snapNuevo = _limpiarClonVisual(el.cloneNode(true));
+            snapNuevo.style.cssText = 'position:absolute;top:0;width:' + anchoNuevo + 'px;pointer-events:none;left:' + (delta > 0 ? anchoViejo : -anchoNuevo) + 'px;';
 
             const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoGrid + 'px;height:calc(' + altoGrid + 'px + ' + margenTopGrid + ');';
+            wrapper.style.cssText = 'position:relative;overflow:hidden;pointer-events:none;width:' + anchoViejo + 'px;height:calc(' + altoViejo + 'px + ' + margenTop + ');';
             wrapper.appendChild(snapViejo);
             wrapper.appendChild(snapNuevo);
 
-            grid.parentNode.insertBefore(wrapper, grid);
-            grid.style.display = 'none';
-            grid.style.position = '';
-            grid.style.visibility = '';
-            _calendarioWrapperActual = wrapper;
+            el.parentNode.insertBefore(wrapper, el);
+            el.style.display = 'none';
+            el.style.visibility = '';
 
             wrapper.offsetHeight;
-            const tx = (delta > 0 ? -anchoGrid : anchoGrid) + 'px';
-            const durCal = DUR_CALENDARIO();
-            const easing = 'transform ' + durCal + 'ms cubic-bezier(0.4, 0, 0.2, 1)';
-            snapViejo.style.transition = easing;
-            snapNuevo.style.transition = easing;
+            const dur = DUR_CALENDARIO();
+            const easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
+            snapViejo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            snapNuevo.style.transition = 'transform ' + dur + 'ms ' + easing;
+            if (Math.abs(altoNuevo - altoViejo) > 0.5) {
+                wrapper.style.transition = 'height ' + dur + 'ms ' + easing;
+                wrapper.style.height = 'calc(' + altoNuevo + 'px + ' + margenTop + ')';
+            }
+            const tx = (delta > 0 ? -anchoViejo : anchoViejo) + 'px';
             snapViejo.style.transform = 'translateX(' + tx + ')';
             snapNuevo.style.transform = 'translateX(' + tx + ')';
 
-            _calendarioAnimTimeout = setTimeout(() => {
-                grid.style.display = '';
-                wrapper.parentNode.insertBefore(grid, wrapper);
+            const timeout = setTimeout(() => {
+                el.style.display = '';
+                wrapper.parentNode.insertBefore(el, wrapper);
                 wrapper.remove();
-                _calendarioAnimTimeout = null;
-                _calendarioWrapperActual = null;
-            }, durCal + 20);
+                _slideAnimEstado.delete(el);
+            }, dur + 20);
+
+            _slideAnimEstado.set(el, { timeout, wrapper });
+        }
+
+        function _animarCalendario(delta, renderFn) {
+            _animarSlideElemento(document.getElementById('calendario-grid'), delta, renderFn);
         }
 
         function navegarCalendario(delta) {
@@ -6892,7 +7017,7 @@ Generado por Sistema Lushibosca
             if (c.value.trim() !== '') {
                 c.value = '';
             } else {
-                c.value = obtenerFechaHoy();
+                c.value = TimeUtils.obtenerFechaHoy();
             }
 
             actualizarBotonLote();
@@ -7015,19 +7140,9 @@ Generado por Sistema Lushibosca
             }
         }
 
-        function iniciarCambioHoras(incremento) {
-            cambiarHorasDiarias(incremento);
-            timeoutInicial = setTimeout(() => {
-                intervaloPulsacion = setInterval(() => {
-                    cambiarHorasDiarias(incremento);
-                }, 100);
-            }, 500);
-        }
-
-        function detenerCambio() {
-            if (timeoutInicial) { clearTimeout(timeoutInicial); timeoutInicial = null; }
-            if (intervaloPulsacion) { clearInterval(intervaloPulsacion); intervaloPulsacion = null; }
-        }
+        const _pressHoldHoras = _crearPressHold(incremento => cambiarHorasDiarias(incremento));
+        function iniciarCambioHoras(incremento) { _pressHoldHoras.iniciar(incremento); }
+        function detenerCambio() { _pressHoldHoras.detener(); }
 
         function cambiarHorasDiarias(incremento) {
             let valorActual = parseFloat($('config-horas-diarias').dataset.valor);
@@ -7057,13 +7172,14 @@ Generado por Sistema Lushibosca
         }
 
         return {
-            init, obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
+            init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
             cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError, actualizarEstadoBotonSaldoDesdeEnero,
             limpiarError, resetearBoton, restaurarBotonGuardarEdicion, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
             cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
             actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes,
+            toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote, toggleHoverPopupCalendario,
             eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
             iniciarCambioHoras, detenerCambio, mostrarconfig, alternarFechaActual, verificarBloqueoCredito, gistSubir, gistBajar,
@@ -7073,13 +7189,47 @@ Generado por Sistema Lushibosca
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
             togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
             navegarCalendario, obtenerNombrePerfilSafe, descargarJSON, actualizarEstadoBotonesGist, actualizarBotonesHistorico,
-            abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,             
+            abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
             toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite, detenerCambioLimite,
-            _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover, 
+            _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
             _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync);
+
+    // ====================================================================
+    // BIENVENIDA MODULE — primera vez / después de un restablecimiento
+    // ====================================================================
+    const BienvenidaModal = (function () {
+        'use strict';
+
+        async function chequearYMostrar() {
+            const yaVista = StorageHelper.getBoolean(STORAGE_KEYS.BIENVENIDA_VISTA, false, true);
+            if (yaVista) return;
+
+            if (DataManagement.registros().length > 0) {
+                StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
+                return;
+            }
+
+            await new Promise(r => setTimeout(r, 1000));
+
+            const importar = await ModalManager.confirmar(
+                'No se encontraron registros, si tenes un respaldo local de los datos podes restaurarlos desde aca.',
+                'Restaurar',
+                '#icon-upload',
+                { titulo: '¡Bienvenido a Horarios!', labelCancel: 'Continuar', iconoCancel: '#icon-arrow-right' }
+            );
+
+            StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
+
+            if (importar) {
+                window.UILogic?.mostrarImportar(true);
+            }
+        }
+
+        return { chequearYMostrar };
+    })();
 
     // ====================================================================
     // FERIADOS MODULE
@@ -7094,9 +7244,7 @@ Generado por Sistema Lushibosca
             const raw = StorageHelper.getItem(SK_PROCESADOS, null);
             try {
                 if (!raw) return new Set();
-                const parsed = JSON.parse(raw, (k, v) =>
-                    ['__proto__', 'constructor', 'prototype'].includes(k) ? undefined : v
-                );
+                const parsed = JSON.parse(raw, SecurityAndUtils.reviverJSONSeguro);
                 if (!Array.isArray(parsed)) return new Set();
                 return new Set(parsed.filter(f => typeof f === 'string' && TimeUtils.validarFecha(f)));
             } catch { return new Set(); }
@@ -7112,123 +7260,46 @@ Generado por Sistema Lushibosca
             StorageHelper.setItem(SK_PROCESADOS, JSON.stringify([...set]));
         }
 
-        function _getFeriadosCercanos() {
+        function _getFeriadosDelMes() {
             const hoy = new Date();
             const anioActual = hoy.getFullYear();
-            const fechas = [];
-            for (let offset = -1; offset <= 2; offset++) {
-                const d = new Date(hoy);
-                d.setDate(hoy.getDate() + offset);
-                fechas.push(TimeUtils.formatearFechaLocal(d));
-            }
-            const pool = [...(FERIADOS[anioActual] || []), ...(FERIADOS[anioActual + 1] || [])];
-            return pool.filter(f => fechas.includes(f.fecha));
-        }
-
-        function _etiquetaFecha(fechaISO) {
-            const hoy = new Date();
-            const labels = ['ayer', 'hoy', 'mañana', 'pasado mañana'];
-            for (let offset = -1; offset <= 2; offset++) {
-                const d = new Date(hoy);
-                d.setDate(hoy.getDate() + offset);
-                if (TimeUtils.formatearFechaLocal(d) === fechaISO) return labels[offset + 1];
-            }
-            return fechaISO;
-        }
-
-        function _buscarFeriado(fechaISO) {
-            const anio = parseInt(fechaISO.slice(0, 4), 10);
-            const pool = FERIADOS[anio] || [];
-            return pool.find(f => f.fecha === fechaISO) || null;
-        }
-
-        function _sumarDias(fechaISO, n) {
-            const d = TimeUtils.parsearFechaLocal(fechaISO);
-            d.setDate(d.getDate() + n);
-            return TimeUtils.formatearFechaLocal(d);
-        }
-
-        function _expandirGrupoConsecutivo(fechaISO) {
-            let desde = fechaISO;
-            while (_buscarFeriado(_sumarDias(desde, -1))) desde = _sumarDias(desde, -1);
-
-            let hasta = fechaISO;
-            while (_buscarFeriado(_sumarDias(hasta, 1))) hasta = _sumarDias(hasta, 1);
-
-            const dias = [];
-            let cursor = desde;
-            while (cursor <= hasta) {
-                dias.push(_buscarFeriado(cursor));
-                cursor = _sumarDias(cursor, 1);
-            }
-            return dias;
-        }
-
-        function _agruparConsecutivos(candidatos) {
-            const vistos = new Set();
-            const grupos = [];
-            for (const candidato of candidatos) {
-                const grupo = _expandirGrupoConsecutivo(candidato.fecha);
-                const clave = grupo[0].fecha;
-                if (vistos.has(clave)) continue;
-                vistos.add(clave);
-                grupos.push(grupo);
-            }
-            return grupos;
-        }
-
-        function _esRangoContinuo(grupo) {
-            for (let i = 1; i < grupo.length; i++) {
-                if (_sumarDias(grupo[i - 1].fecha, 1) !== grupo[i].fecha) return false;
-            }
-            return true;
-        }
-
-        function _describirFechasGrupo(grupo) {
-            const nd = f => TimeUtils.obtenerNombreDia(f);
-            if (grupo.length === 1) return `${_etiquetaFecha(grupo[0].fecha)}, ${nd(grupo[0].fecha)} (${grupo[0].fecha})`;
-            if (_esRangoContinuo(grupo)) return `del ${nd(grupo[0].fecha)} (${grupo[0].fecha}) al ${nd(grupo[grupo.length-1].fecha)} (${grupo[grupo.length-1].fecha})`;
-            return grupo.map(f => `${nd(f.fecha)} (${f.fecha})`).join(', ');
+            const mesActual = String(hoy.getMonth() + 1).padStart(2, '0');
+            const prefijoMes = `${anioActual}-${mesActual}`;
+            const pool = FERIADOS[anioActual] || [];
+            return { prefijoMes, feriados: pool.filter(f => f.fecha.startsWith(prefijoMes)) };
         }
 
         async function chequearYNotificar() {
-            const candidatos = _getFeriadosCercanos();
+            const { prefijoMes, feriados: candidatos } = _getFeriadosDelMes();
             if (!candidatos.length) return;
 
             const procesados = _cargarProcesados();
             const yaExisteRegistro = fecha => DataManagement.registros().some(r => r.fecha === fecha);
 
-            const grupos = _agruparConsecutivos(candidatos)
-                .map(grupo => grupo.filter(f => {
-                    if (procesados.has(f.fecha)) return false;
-                    if (yaExisteRegistro(f.fecha)) { _marcarProcesado(f.fecha); return false; }
-                    return true;
-                }))
-                .filter(grupo => grupo.length > 0);
+            const pendientes = candidatos.filter(f => {
+                if (procesados.has(f.fecha)) return false;
+                if (yaExisteRegistro(f.fecha)) { _marcarProcesado(f.fecha); return false; }
+                return true;
+            });
 
-            if (!grupos.length) return;
-            const _delay = ms => new Promise(r => setTimeout(r, ms));
+            if (!pendientes.length) return;
 
-            for (let i = 0; i < grupos.length; i++) {
-                const grupo = grupos[i];
-                const esGrupal = grupo.length > 1;
-                const nombres = [...new Set(grupo.map(f => f.nombre))].join(' / ');
-                const descripcionFechas = _describirFechasGrupo(grupo);
-                const texto = `🎉 ${nombres} — ${descripcionFechas}\n¿Querés agregar ${esGrupal ? `estos ${grupo.length} días` : 'este día'} como Feriado?`;
+            const nombreMes = TimeUtils.formatoTituloMes(prefijoMes).split(' ')[0];
+            const lineas = pendientes.map(f => `🎉 ${f.nombre} — ${TimeUtils.obtenerNombreDia(f.fecha)} ${parseInt(f.fecha.slice(8), 10)}`);
+            const pregunta = pendientes.length > 1 ? `¿Querés agregar estos ${pendientes.length} días como Feriado?` : '¿Querés agregar este día como Feriado?';
+            const texto = `${lineas.join('\n')}\n\n${pregunta}`;
 
-                const confirmo = await ModalManager.confirmar(texto, 'Sí', '#icon-check', {
-                    titulo: esGrupal ? 'Feriados Próximos' : 'Feriado Próximo',
-                    labelCancel: 'No'
-                });
-                grupo.forEach(f => _marcarProcesado(f.fecha));
+            const confirmo = await ModalManager.confirmar(texto, 'Sí', '#icon-check', {
+                titulo: pendientes.length > 1 ? `Feriados de ${nombreMes}` : `Feriado de ${nombreMes}`,
+                labelCancel: 'No'
+            });
 
-                if (confirmo) {
-                    for (const feriado of grupo) {
-                        try { await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { }
-                    }
+            pendientes.forEach(f => _marcarProcesado(f.fecha));
+
+            if (confirmo) {
+                for (const feriado of pendientes) {
+                    try { await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { }
                 }
-
-                if (i < grupos.length - 1) await _delay(100);
             }
         }
 
@@ -7237,7 +7308,10 @@ Generado por Sistema Lushibosca
 
     UILogic.init();
 
-    setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
+    (async () => {
+        await BienvenidaModal.chequearYMostrar();
+        setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
+    })();
 })();
 
 if ('serviceWorker' in navigator) {
@@ -7314,6 +7388,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());
     $('btn-toggle-saldo-primero-mes')?.addEventListener('click', () => UILogic.toggleSaldoDesdePrimeroDiaMes());
+    $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));
@@ -7392,8 +7467,8 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
 
     (function _bindLayoutConsistency() {
-        const _t = [76,85,83,72,73,66,79,83,67,65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260705';
+        const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
+        const _v = '-v260717';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {
@@ -7426,3 +7501,4 @@ document.addEventListener('DOMContentLoaded', function () {
 // DATA MANAGEMENT MODULE
 // LISTENERS PARA TECLA ENTER MODULE
 // FERIADOS MODULE
+// BIENVENIDA MODULE

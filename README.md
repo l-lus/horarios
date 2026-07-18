@@ -5,8 +5,37 @@
 
 ### VERSION:
 
+### 260717
+* **Cambios:**  Se agregar opciones con un popup en los botones rapidos de backup de la tarjeta de registros
+* **Mejora:** Se crea el helper reviverJSONSeguro en el modulo de seguridad
+
+### 260713
+* **Fix:** Se corrige el salto de 1px en las tarjetas debajo del calendario al pasar de mes o seleccionar un mes
+* **Fix:** Se corrigen varios bug al cambiar la animaciones de las tarjetas de fichar y estadisticas
+* **Cambios:** Se simplifica la deteccion de feriados, ahora hace una deteccion mensual mostrando la lista de los mismos para el mes actual, asi se obtiene el panorama completo.
+* **Mejora:** Se agrega animacion al boton de tiempo fuera, al aparecer y desaparecer
+
+### 260710
+* **Mejora:** Se estandariza el font-size con variables
+
+### 260709
+* **Nuevo:** Se agrega confirm de bienvenida para importacion de datos, en caso que la app se restablezca o no haya datos la primera vez que se abre
+* **Mejora:** la opcion "desactivar logica de cubierto" ahora aplica solo por perfil, antes aplicaba globalmente
+* **Cambios:** Se alinean los texto de los botones de ajustes a la izquierda
+
+### 260708
+* **Mejora:** Se agrega opcion para desactivar la logica de cubierto por saldo
+* **Cambios:** Cambios de etiqueta e iconos en varios toast y opciones
+
+### 260708
+* **Mantenimiento:** Refactores varios
+
+### 260707
+* **Mejora:** Se agrega el estado "cubierto" en base a la semantica agregado aen el cambio anterior, a la tarjeta de registros en ambas vistas con estado dinamico de saldo hasta el dia actual
+
 ### 260705
 * **Mejora:** Cambio de semantica en la tarjeta de estado, para representar el tiempo faltante en mas escenarios y contextos
+* **Cambios:** Cambios en la animacion de tarjetas
 
 ### 260704
 * **Cambios:** cambio de layout en la vista de lista de la tarjeta de registros en dispositivos pc

@@ -1919,6 +1919,25 @@
     // debounce/press-hold/swipe. Lo usan el resto de los módulos de UI.
     const UICore = (function (S, D) {
 
+        function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
+            const el = $(elementId);
+            const icon = $(iconId);
+            if (!el) return;
+
+            el.classList.toggle('expanded');
+            const isExpanded = el.classList.contains('expanded');
+            if (icon) {
+                if (isExpanded) icon.classList.add('rotated');
+                else icon.classList.remove('rotated');
+            }
+
+            if (StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true)) {
+                StorageHelper.setItem(storageKey, isExpanded);
+            }
+            if (isExpanded && callback) callback();
+        }
+
+
         let toastTimeout = null;
         let _toastQueue = [];
         let _toastRunning = false;
@@ -2298,7 +2317,8 @@
             _flashCampo,
             _limpiarClonVisual,
             _finalizarSlidePendiente,
-            _animarSlideElemento
+            _animarSlideElemento,
+            toggleSeccionGen
         };
     })(SecurityAndUtils, DataManagement);
 
@@ -3936,51 +3956,23 @@
         };
     })(SecurityAndUtils, DataManagement, GistSync, UICore);
 
-
-    const UILogic = (function (S, D, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo) {
-
+    // ====================================================================
+    //                     MÓDULO UI HISTORICO
+    // ====================================================================
+    // Lista de registros: agrupación por mes/año, grupos expandibles, filtros,
+    // edición y bloqueo de edición de registro/grupo individual, tarjeta histórico.
+    const UIHistorico = (function (S, D, UICore) {
         const {
-            formatoDiferencia, registrarSwipe, debounce, _crearPressHold,
-            _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
-            mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON,
-            mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
-            _getCSSdur, DUR_ANIM, DUR_CALENDARIO, _crearToggleConfig, _setBtnActivo,
-            _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
-            _posicionarPopup, _registrarCierrePopup, _flashCampo,
-            _limpiarClonVisual, _finalizarSlidePendiente, _animarSlideElemento
+            formatoDiferencia, mostrarToast, _setBtnActivo, debounce,
+            _actualizarOffsetsStickyMes
         } = UICore;
 
-        const {
-            renderizarListaPerfiles, abrirSelectorPerfiles, crearPerfilDesdeSelector,
-            cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil,
-            guardarEdicionPerfil, eliminarPerfilDesdeEditor
-        } = UIPerfiles;
-
-        const {
-            abrirSelectorMesesCalendario, _cerrarSelectorMeses, _activarVistaCalendarioHistorico, _renderizarCalendario,
-            toggleVistaHistorico, _popupCalendario, _popupCalendarioDiaSinRegistro,
-            _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
-            navegarCalendario, irHoyCalendario, _agruparMesesPorAnio, _nombreMesCapitalizado,
-            getVistaHistoricoCalendario, setVistaHistoricoCalendario
-        } = UICalendario;
-
-        const {
-            mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar,
-            ejecutarExportacion, toggleCamposRangoExport, actualizarEstadoBotonesGist,
-            actualizarBotonesHistorico, abrirModalGist, cerrarModalGist, guardarConfigGist,
-            toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
-            toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite,
-            detenerCambioLimite, gistSubir, gistBajar
-        } = UIGistYRespaldo;
-
         let edicionBloqueada = true;
+
         let edicionGrupoBloqueada = true;
-        let modoLoteActivo = false;
+
         let tiempoExpansionBotones = null;
         let timerAutoCierreBotones = null;
-        let modoEstadisticas = 'mensual';
-        let _timerAutoVista = null;
-
 
         function agruparRegistrosPorMes(registros) {
             if (!Array.isArray(registros)) {
@@ -4108,12 +4100,12 @@
                 totalEl.classList.add(`${tipoEspecial.color}-text`);
             } else if (r.entrada && r.salida) {
                 totalText = `${r.horas}h ${r.minutos}m`;
-                if (horasDiarias > 0 && _esFechaHabil(r.fecha, D.diasHabiles())) {
+                if (horasDiarias > 0 && UILogic._esFechaHabil(r.fecha, D.diasHabiles())) {
                     const diffText = formatoDiferencia(r.total);
                     if (horasGte(r.total, horasDiarias)) {
                         totalEl.classList.add('green-text');
                         if (diffText) totalText += ` (${diffText})`;
-                    } else if (_cubiertoPorSaldo(r.fecha)) {
+                    } else if (UILogic._cubiertoPorSaldo(r.fecha)) {
                         totalEl.classList.add('gold-text');
                         totalText += ` (${diffText}) Cubierto`;
                     } else {
@@ -4206,7 +4198,7 @@
                     className: 'btn-backup empty-state__btn-restaurar',
                     innerHTML: '<svg class="icon"><use href="#icon-upload" /></svg> Restaurar desde archivo'
                 });
-                btn.addEventListener('click', () => mostrarImportar(true));
+                btn.addEventListener('click', () => UILogic.mostrarImportar(true));
                 emptyDiv.appendChild(msg);
                 emptyDiv.appendChild(btn);
             } else {
@@ -4278,13 +4270,6 @@
             _actualizarOffsetsStickyMes();
         }
 
-        function setProgressBarColor(progressEl, status) {
-            if (!progressEl) return;
-            progressEl.className = 'progress-fill';
-            progressEl.classList.add(status);
-            if (status === 'blue') progressEl.classList.add('shimmer');
-        }
-
         function crearGrupoExpandible(grupo, horasDiarias, idResaltar = null) {
             const primerReg = grupo.registros[0];
             const ultimoReg = grupo.registros[grupo.registros.length - 1];
@@ -4346,6 +4331,416 @@
             container.appendChild(header);
             return container;
         }
+
+        function cerrarEdicion() {
+            ModalManager.cerrar('modal-editar', () => {
+                D.setEditandoId(null);
+                document.dispatchEvent(new Event('scroll'));
+            });
+        }
+
+        function _setBloqueoEdicionGenerico(bloqueado, { btnLockId, inputIds, modalId, excluirBotones }) {
+            const btnLock = $(btnLockId);
+            if (btnLock) {
+                const icon = btnLock.querySelector('use');
+                icon.setAttribute('href', bloqueado ? '#icon-lock' : '#icon-lock-open');
+                btnLock.title = bloqueado ? "Desbloquear edición" : "Bloquear edición";
+                btnLock.style.color = 'var(--text-main)';
+                btnLock.style.background = bloqueado ? 'var(--c-red)' : 'var(--c-green)';
+            }
+
+            inputIds.forEach(id => {
+                const el = $(id);
+                if (el) el.disabled = bloqueado;
+            });
+
+            const modal = $(modalId);
+            if (modal) {
+                const botones = modal.querySelectorAll(excluirBotones);
+                botones.forEach(btn => {
+                    btn.disabled = bloqueado;
+                });
+            }
+        }
+
+        function setBloqueoEdicion(bloqueado) {
+            edicionBloqueada = bloqueado;
+            _setBloqueoEdicionGenerico(bloqueado, {
+                btnLockId: 'btn-lock-toggle',
+                inputIds: ['edit-fecha', 'edit-entrada', 'edit-salida', 'edit-tiempo-fuera', 'edit-notas'],
+                modalId: 'modal-editar',
+                excluirBotones: 'button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)'
+            });
+            verificarBloqueoCredito();
+        }
+
+        function toggleBloqueoEdicion() {
+            setBloqueoEdicion(!edicionBloqueada);
+        }
+
+        function toggleCredito() {
+            const btn = document.getElementById('btn-toggle-credito');
+            const estaActivo = btn.dataset.activo === "true";
+
+            btn.dataset.activo = estaActivo ? "false" : "true";
+            _setBtnActivo('btn-toggle-credito', !estaActivo);
+            mostrarToast(!estaActivo ? 'Asueto | Salida temprano activado' : 'Asueto | Salida temprano desactivado', 'info');
+        }
+
+        function _actualizarHintEdicion() {
+            const hint = document.getElementById('edit-hint-resumen');
+            if (!hint) return;
+            const e = document.getElementById('edit-entrada')?.value.trim();
+            const s = document.getElementById('edit-salida')?.value.trim();
+            const tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
+            if (!e && !s) { hint.textContent = ''; return; }
+            const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(e, s);
+            if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }
+            if (e?.length === 5 && s?.length === 5) {
+                const t = D.calcularHoras(e, s, tf || null, null, false);
+                hint.textContent = t ? `Total: ${t.horas}h ${t.minutos}m` : '';
+            } else {
+                hint.textContent = '';
+            }
+        }
+
+        function _initListenerAccionesLista(lista) {
+            lista.addEventListener('click', (e) => {
+                const target = e.target.closest('[data-accion]');
+                if (!target) return;
+                if (target.dataset.accion === 'editar-registro') {
+                    const id = target.dataset.registroId;
+                    if (id) D.editarRegistro(id);
+                } else if (target.dataset.accion === 'editar-grupo') {
+                    try {
+                        const grupoData = JSON.parse(target.dataset.grupoData, S.reviverJSONSeguro);
+                        const registrosCompletos = D.registros().filter(r => grupoData.registros.includes(r.id));
+                        D.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
+                    } catch (err) { console.error('Error al abrir grupo:', err); }
+                }
+            });
+        }
+
+        function _initListenerToggleAnio(lista) {
+            lista.addEventListener('click', (e) => {
+                const headerAnio = e.target.closest('.registro-mes-header[data-accion="toggle-anio"]');
+                if (!headerAnio) return;
+                e.stopPropagation();
+                const contenedorAnio = headerAnio.closest('.registro-mes-container');
+                if (!contenedorAnio) return;
+                const detalleAnio = contenedorAnio.querySelector(':scope > .registro-mes-detalle');
+                const chevronAnio = headerAnio.querySelector('.chevron-mes');
+                const anioId = headerAnio.dataset.anioId;
+                const abierto = detalleAnio.classList.toggle('expanded');
+                if (chevronAnio) chevronAnio.style.transform = abierto ? 'rotate(180deg)' : 'rotate(0deg)';
+                try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(anioId), String(abierto)); } catch (e) { }
+            });
+        }
+
+        function _scrollAlExpandir(contenedor, detalle) {
+            setTimeout(() => {
+                const margenHeader = 80;
+                const alturaVentana = window.innerHeight;
+                const registros = detalle.querySelectorAll('.registro-item');
+                if (!registros.length) return;
+                const r0 = registros[0].getBoundingClientRect();
+                const r1 = registros.length > 1 ? registros[1].getBoundingClientRect() : null;
+                const cortado0 = r0.top < margenHeader || r0.bottom > alturaVentana;
+                const cortado1 = r1 && (r1.top < margenHeader || r1.bottom > alturaVentana);
+                if (cortado0 || cortado1) contenedor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 310);
+        }
+
+        function _initListenerToggleMes(lista) {
+            lista.addEventListener('click', (e) => {
+                const header = e.target.closest('.registro-mes-header');
+                if (!header || header.dataset.accion !== 'toggle-mes') return;
+                e.stopPropagation();
+                const contenedor = header.closest('.registro-mes-container');
+                if (!contenedor) return;
+                const detalle = contenedor.querySelector('.registro-mes-detalle');
+                const chevronIcon = header.querySelector('.chevron-mes');
+
+                if (detalle.classList.contains('expanded')) {
+                    detalle.classList.remove('expanded');
+                    chevronIcon.style.transform = 'rotate(0deg)';
+                    try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'false'); } catch (e) { }
+                    return;
+                }
+
+                const esContenedorAnio = (el) => {
+                    const h = el.closest('.registro-mes-container')?.querySelector('.registro-mes-header');
+                    return h && h.dataset.accion === 'toggle-anio';
+                };
+                const detalleAnioPadre = contenedor.parentElement?.closest('.registro-mes-detalle') || null;
+                const otrosMesesAbiertos = lista.querySelectorAll('.registro-mes-detalle.expanded');
+
+                const _colapsarContenedor = (otro, { datasetKey, storageKeyFn }) => {
+                    otro.classList.remove('expanded');
+                    const oc = otro.closest('.registro-mes-container');
+                    const och = oc?.querySelector('.chevron-mes');
+                    const oHeader = oc?.querySelector('.registro-mes-header');
+                    if (och) och.style.transform = 'rotate(0deg)';
+                    const id = oHeader?.dataset[datasetKey];
+                    if (id) {
+                        try { StorageHelper.setItem(storageKeyFn(id), 'false'); } catch (e) { }
+                    }
+                };
+
+                otrosMesesAbiertos.forEach(otro => {
+                    if (!esContenedorAnio(otro) || otro === detalleAnioPadre) return;
+                    _colapsarContenedor(otro, { datasetKey: 'anioId', storageKeyFn: STORAGE_KEYS.ANIO_EXPANDIDO });
+                });
+
+                const _abrirDetalle = () => {
+                    detalle.classList.add('expanded');
+                    chevronIcon.style.transform = 'rotate(180deg)';
+                    try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'true'); } catch (e) { }
+                    _scrollAlExpandir(contenedor, detalle);
+                };
+
+                const hayOtrosAbiertos = Array.from(otrosMesesAbiertos).some(o => o !== detalle && !esContenedorAnio(o));
+                if (hayOtrosAbiertos) {
+                    otrosMesesAbiertos.forEach(otro => {
+                        if (otro === detalle || esContenedorAnio(otro)) return;
+                        _colapsarContenedor(otro, { datasetKey: 'mesId', storageKeyFn: STORAGE_KEYS.MES_EXPANDIDO });
+                    });
+                }
+                _abrirDetalle();
+            });
+        }
+
+        function actualizarHintGrupo() {
+            const hint = document.getElementById('edit-grupo-hint');
+            if (!hint) return;
+            const desde = document.getElementById('edit-grupo-desde')?.value;
+            const hasta = document.getElementById('edit-grupo-hasta')?.value;
+            if (!desde && !hasta) { hint.textContent = ''; return; }
+            if (desde && !hasta) {
+                hint.textContent = `1 día`;
+                return;
+            }
+            if (!TimeUtils.validarFecha(desde) || !TimeUtils.validarFecha(hasta) || desde > hasta) {
+                hint.textContent = 'Rango inválido';
+                return;
+            }
+            const fechaInicio = TimeUtils.parsearFechaLocal(desde);
+            const fechaFin = TimeUtils.parsearFechaLocal(hasta);
+            const diasTotales = Math.ceil(Math.abs(fechaFin - fechaInicio) / (1000 * 60 * 60 * 24)) + 1;
+            hint.textContent = `${diasTotales} día${diasTotales !== 1 ? 's' : ''}`;
+        }
+        ['edit-grupo-desde', 'edit-grupo-hasta'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', actualizarHintGrupo);
+        });
+
+        function mostrarFiltros() {
+            if (D.obtenerRegistrosFiltrados().length !== D.registros().length) {
+                D.limpiarFiltros();
+                return;
+            }
+
+            ModalManager.abrir('modal-filtros');
+
+            const aplicarInmediato = () => {
+                const desde = $('filtro-fecha-desde').value;
+                const hasta = $('filtro-fecha-hasta').value;
+                const tipo = $('filtro-tipo').value;
+                D.aplicarFiltrosInmediato(desde, hasta, tipo);
+            };
+
+            ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => {
+                const el = $(id);
+                if (el) {
+                    el.removeEventListener('change', aplicarInmediato);
+                    el.addEventListener('change', aplicarInmediato);
+                }
+            });
+        }
+
+        function cerrarFiltros() {
+            ModalManager.cerrar('modal-filtros');
+        }
+
+        function _setIconHistorico(icon, estado) {
+            if (!icon) return;
+            icon.classList.toggle('rotated', estado === 'meses');
+            icon.style.transform = estado === 'completo' ? 'rotate(-90deg)' : '';
+        }
+
+        function toggleHistorico() {
+            cancelarTimerAutoCierreBotones();
+            const contenido = $('contenido-historico');
+            const botones = $('botones-historico');
+            const icon = $('icon-indicator-historico');
+            if (!contenido) return;
+
+            const expandido = contenido.classList.contains('expanded');
+            const conBotones = botones.classList.contains('expanded');
+
+            try {
+                if (!expandido) {
+                    contenido.classList.add('expanded');
+                    _setIconHistorico(icon, 'meses');
+                    StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
+                    tiempoExpansionBotones = null;
+                    UILogic._activarVistaCalendarioHistorico();
+
+                } else if (!conBotones) {
+                    botones.classList.add('expanded');
+                    _setIconHistorico(icon, 'completo');
+                    StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'completo');
+                    tiempoExpansionBotones = Date.now();
+
+                } else {
+                    botones.classList.remove('expanded');
+                    if (Date.now() - (tiempoExpansionBotones || 0) > 500) {
+                        _setIconHistorico(icon, 'meses');
+                        StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
+                    } else {
+                        contenido.classList.remove('expanded');
+                        _setIconHistorico(icon, 'cerrado');
+                        StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'cerrado');
+                    }
+                    tiempoExpansionBotones = null;
+                }
+            } catch (e) {
+                console.warn('Error guardando estado histórico:', e);
+            }
+        }
+
+        function iniciarTimerAutoCierreBotones() {
+            if (timerAutoCierreBotones) {
+                clearTimeout(timerAutoCierreBotones);
+                timerAutoCierreBotones = null;
+            }
+
+            timerAutoCierreBotones = setTimeout(() => {
+                const botones = $('botones-historico');
+                const contenido = $('contenido-historico');
+                const icon = $('icon-indicator-historico');
+
+                if (botones && botones.classList.contains('expanded')) {
+                    botones.classList.remove('expanded');
+
+                    if (icon) {
+                        icon.style.transform = '';
+                        icon.classList.add('rotated');
+                    }
+
+                    try {
+                        StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
+                    } catch (e) {
+                        console.warn('Error guardando estado histórico:', e);
+                    }
+
+                    tiempoExpansionBotones = null;
+                }
+
+                timerAutoCierreBotones = null;
+            }, 3000);
+        }
+
+        function cancelarTimerAutoCierreBotones() {
+            if (timerAutoCierreBotones) {
+                clearTimeout(timerAutoCierreBotones);
+                timerAutoCierreBotones = null;
+            }
+        }
+
+        function verificarBloqueoCredito() {
+            const btnCredito = document.getElementById('btn-toggle-credito');
+            if (!btnCredito) return;
+
+            const _bloquear = () => {
+                btnCredito.disabled = true;
+                btnCredito.style.cursor = 'not-allowed';
+            };
+            const _habilitar = () => {
+                btnCredito.disabled = false;
+                btnCredito.style.cursor = 'pointer';
+            };
+
+            if (document.getElementById('edit-fecha').disabled) return _bloquear();
+
+            const e = document.getElementById('edit-entrada').value.trim();
+            const s = document.getElementById('edit-salida').value.trim();
+            const tf = document.getElementById('edit-tiempo-fuera').value.trim() || null;
+
+            const horarioCompleto = e.length === 5 && s.length === 5;
+            if (!horarioCompleto) {
+                if (btnCredito.dataset.activo === "true") toggleCredito();
+                return _bloquear();
+            }
+
+            if (TiposRegistro.esRegistroEspecial(e, s)) return _bloquear();
+
+            const calcTemp = D.calcularHoras(e, s, tf, null);
+            if (!calcTemp || calcTemp.total >= D.horasDiarias()) return _bloquear();
+
+            _habilitar();
+        }
+
+        function setBloqueoEdicionGrupo(bloqueado) {
+            edicionGrupoBloqueada = bloqueado;
+            _setBloqueoEdicionGenerico(bloqueado, {
+                btnLockId: 'btn-lock-grupo-toggle',
+                inputIds: ['edit-grupo-tipo', 'edit-grupo-desde', 'edit-grupo-hasta'],
+                modalId: 'modal-editar-grupo',
+                excluirBotones: 'button:not(#btn-lock-grupo-toggle):not(.btn-cancel)'
+            });
+        }
+
+        function toggleBloqueoEdicionGrupo() {
+            setBloqueoEdicionGrupo(!edicionGrupoBloqueada);
+        }
+
+        function cerrarEdicionGrupo() {
+            ModalManager.cerrar('modal-editar-grupo', () => {
+                D.setGrupoEnEdicion(null);
+                document.dispatchEvent(new Event('scroll'));
+            });
+        }
+
+        return {
+            agruparRegistrosConsecutivos,
+            actualizarListaRegistros,
+            cerrarEdicion,
+            setBloqueoEdicion,
+            toggleBloqueoEdicion,
+            toggleCredito,
+            _actualizarHintEdicion,
+            _initListenerAccionesLista,
+            _initListenerToggleAnio,
+            _initListenerToggleMes,
+            actualizarHintGrupo,
+            mostrarFiltros,
+            cerrarFiltros,
+            toggleHistorico,
+            iniciarTimerAutoCierreBotones,
+            cancelarTimerAutoCierreBotones,
+            verificarBloqueoCredito,
+            setBloqueoEdicionGrupo,
+            toggleBloqueoEdicionGrupo,
+            cerrarEdicionGrupo,
+            setTiempoExpansionBotones: (v) => { tiempoExpansionBotones = v; }
+        };
+    })(SecurityAndUtils, DataManagement, UICore);
+
+    // ====================================================================
+    //                     MÓDULO UI ESTADISTICAS
+    // ====================================================================
+    // Cálculo y render de estadísticas (regularidad, promedios, buffer),
+    // selector de período (mes/semana/año), reporte descargable, y los
+    // popups explicativos de cada stat.
+    const UIEstadisticas = (function (S, D, UICore) {
+        const {
+            formatoDiferencia, mostrarToast, _setBtnActivo, _poblarSelect,
+            _animarSlideElemento, _posicionarPopup, _registrarCierrePopup,
+            toggleSeccionGen, registrarSwipe
+        } = UICore;
+
+        let modoEstadisticas = 'mensual';
 
         function calcularRegularidad(desviacionMinutos) {
             if (desviacionMinutos === null) return '--:--';
@@ -4545,6 +4940,637 @@
             }
             const stats = calcularEstadisticasMes(mesAnio);
             _renderizarStats(stats, { mostrarBtnReporte: true });
+        }
+
+        function _renderSelectorStats() {
+            const anioEl = $('select-anio-stats');
+            const mesEl = $('select-mes-stats');
+            const semEl = $('select-semana-stats');
+            const labelEl = $('label-periodo-toggle');
+            if (modoEstadisticas === 'anual') {
+                if (anioEl) anioEl.classList.remove('hidden');
+                if (mesEl) mesEl.classList.add('hidden');
+                if (semEl) semEl.classList.add('hidden');
+                if (labelEl) labelEl.textContent = 'Anual';
+                poblarSelectorAnios();
+            } else if (modoEstadisticas === 'semanal') {
+                if (anioEl) anioEl.classList.add('hidden');
+                if (mesEl) mesEl.classList.add('hidden');
+                if (semEl) semEl.classList.remove('hidden');
+                if (labelEl) labelEl.textContent = 'Semanal';
+                poblarSelectorSemanas();
+                actualizarEstadisticasSemana(semEl?.value);
+            } else {
+                if (anioEl) anioEl.classList.add('hidden');
+                if (mesEl) mesEl.classList.remove('hidden');
+                if (semEl) semEl.classList.add('hidden');
+                if (labelEl) labelEl.textContent = 'Mensual';
+                poblarSelectorMeses();
+            }
+        }
+
+        function calcularEstadisticasAnio(anio) {
+            const anioNum = parseInt(anio);
+            const registros = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
+            let fechaDesde = `${anioNum}-01-01`;
+
+            const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
+            if (!desdeEnero && registros.length > 0) {
+                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
+                if (primerRegistro > fechaDesde) {
+                    fechaDesde = primerRegistro;
+                }
+            }
+
+            return _calcularEstadisticasRango(registros, {
+                regularidadPorMes: true,
+                desde: fechaDesde,
+                hasta: `${anioNum}-12-31`
+            });
+        }
+
+
+        function poblarSelectorAnios() {
+            const anios = [...new Set(D.registros().map(r => r.fecha.substring(0, 4)))].sort().reverse();
+            const anioActual = String(new Date().getFullYear());
+            _poblarSelect('select-anio-stats', anios, a => a, anioActual, actualizarEstadisticasAnio);
+        }
+
+        function actualizarEstadisticasAnio(anio) {
+            const stats = calcularEstadisticasAnio(anio);
+            _renderizarStats(stats, { mostrarBtnReporte: true });
+        }
+
+        function _obtenerSemanas() {
+            const semanas = new Map();
+            D.registros().forEach(r => {
+                const d = new Date(r.fecha + 'T00:00:00');
+                const lunes = TimeUtils.obtenerLunes(d);
+                const key = TimeUtils.formatearFechaLocal(lunes);
+                if (!semanas.has(key)) semanas.set(key, lunes);
+            });
+            return Array.from(semanas.keys()).sort().reverse();
+        }
+
+        function _formatearSemana(lunesISO) {
+            const lunes = new Date(lunesISO + 'T00:00:00');
+            const domingo = new Date(lunes);
+            domingo.setDate(lunes.getDate() + 6);
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            const dL = lunes.getDate();
+            const dD = domingo.getDate();
+            const mL = meses[lunes.getMonth()];
+            const mD = meses[domingo.getMonth()];
+            if (lunes.getMonth() === domingo.getMonth()) {
+                return `${dL} al ${dD} de ${mD}`;
+            }
+            return `${dL} ${mL} al ${dD} ${mD}`;
+        }
+
+        function poblarSelectorSemanas() {
+            const semanas = _obtenerSemanas();
+            const lunesISO = TimeUtils.formatearFechaLocal(TimeUtils.obtenerLunes());
+            _poblarSelect('select-semana-stats', semanas, _formatearSemana, lunesISO, actualizarEstadisticasSemana, UILogic._agruparMesesPorAnio);
+        }
+
+        function calcularEstadisticasSemana(lunesISO) {
+            if (!lunesISO) return _calcularEstadisticasRango([], { regularidadPorMes: false });
+            const lunes = new Date(lunesISO + 'T00:00:00');
+            const domingo = new Date(lunes);
+            domingo.setDate(lunes.getDate() + 6);
+            const hasta = TimeUtils.formatearFechaLocal(domingo);
+            const registros = D.registros().filter(r => r.fecha >= lunesISO && r.fecha <= hasta);
+            return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: lunesISO, hasta });
+        }
+
+        function actualizarEstadisticasSemana(lunesISO) {
+            const stats = calcularEstadisticasSemana(lunesISO);
+            _renderizarStats(stats, { mostrarBtnReporte: false });
+        }
+
+        function _animarCambioStats(fn) {
+            _animarFadeSwap($('form-stats'), fn);
+        }
+
+        function _cambiarPeriodoStats(selectId, actualizarFn) {
+            const v = $(selectId)?.value;
+            if (v !== undefined) _animarCambioStats(() => actualizarFn(v));
+        }
+        function cambiarMesStats() { _cambiarPeriodoStats('select-mes-stats', actualizarEstadisticas); }
+        function cambiarSemanaStats() { _cambiarPeriodoStats('select-semana-stats', actualizarEstadisticasSemana); }
+        function cambiarAnioStats() { _cambiarPeriodoStats('select-anio-stats', actualizarEstadisticasAnio); }
+
+        function togglePeriodoStats(direccion = 1) {
+            if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
+            const selectMes = $('select-mes-stats');
+            const selectAnio = $('select-anio-stats');
+            const label = $('label-periodo-toggle');
+            const selectSemana = $('select-semana-stats');
+
+            const orden = ['mensual', 'anual', 'semanal'];
+            const idx = orden.indexOf(modoEstadisticas);
+            modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
+            try { StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas); } catch (e) { }
+
+            _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
+                selectMes.classList.add('hidden');
+                selectAnio.classList.add('hidden');
+                if (selectSemana) selectSemana.classList.add('hidden');
+                if (modoEstadisticas === 'anual') {
+                    selectAnio.classList.remove('hidden');
+                    if (label) label.textContent = 'Anual';
+                    poblarSelectorAnios();
+                } else if (modoEstadisticas === 'semanal') {
+                    if (selectSemana) selectSemana.classList.remove('hidden');
+                    if (label) label.textContent = 'Semanal';
+                    poblarSelectorSemanas();
+                } else {
+                    selectMes.classList.remove('hidden');
+                    if (label) label.textContent = 'Mensual';
+                    poblarSelectorMeses();
+                }
+            });
+        }
+
+        function poblarSelectorMeses() {
+            const meses = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
+            const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
+            _poblarSelect('select-mes-stats', meses, UILogic._nombreMesCapitalizado, mesActual, actualizarEstadisticas, UILogic._agruparMesesPorAnio);
+        }
+
+        function _sumarHorasEfectivas(regs, horasDiarias) {
+            return regs.reduce((sum, r) => {
+                const t = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                if (t && t.id === 'remoto') return sum + horasDiarias;
+                if (!t) return sum + r.total;
+                return sum;
+            }, 0);
+        }
+
+        function _resolverPeriodoDatos(esAnual) {
+            if (esAnual) {
+                const anio = $('select-anio-stats')?.value;
+                if (!anio) { mostrarToast('No hay año seleccionado', 'error'); return null; }
+                const anioNum = parseInt(anio);
+                return {
+                    periodoLabel: anio,
+                    nombreArchivo: `reporte_${anio}.txt`,
+                    registrosPeriodo: D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum),
+                    stats: calcularEstadisticasAnio(anio),
+                    mesSeleccionado: null
+                };
+            }
+            const selectMes = $('select-mes-stats');
+            const mes = selectMes?.value;
+            if (!mes) { mostrarToast('No hay mes seleccionado', 'error'); return null; }
+            const [año, mesNum] = mes.split('-').map(Number);
+            return {
+                periodoLabel: selectMes.options[selectMes.selectedIndex].text,
+                nombreArchivo: `reporte_${mes}.txt`,
+                registrosPeriodo: D.registros().filter(r => {
+                    const [aReg, mReg] = r.fecha.split('-').map(Number);
+                    return aReg === año && mReg === mesNum;
+                }),
+                stats: calcularEstadisticasMes(mes),
+                mesSeleccionado: mes
+            };
+        }
+
+        function _seccionDetalleAnual(registrosPeriodo, horasDiariasObjetivo) {
+            const mesesOrdenados = [...new Set(registrosPeriodo.map(r => r.fecha.substring(0, 7)))].sort();
+            let seccion = `
+
+────────────────────────────────────────────────────────────────
+
+📅 TOTALES POR MES
+────────────────────────────────────────────────────────────────
+
+`;
+            mesesOrdenados.forEach(claveMes => {
+                const regsM = registrosPeriodo.filter(r => r.fecha.startsWith(claveMes));
+                const normales = regsM.filter(r => !TiposRegistro.esRegistroEspecial(r.entrada, r.salida) && r.entrada && r.salida);
+                const especiales = regsM.filter(r => TiposRegistro.esRegistroEspecial(r.entrada, r.salida));
+                const notas = TiposRegistro.obtenerTodosLosTipos()
+                    .map(t => {
+                        const n = especiales.filter(r => TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === t.id).length;
+                        return n ? `${n} ${t.labelPlural.toLowerCase()}` : null;
+                    })
+                    .filter(Boolean);
+                const nombreMes = TimeUtils.formatoTituloMes(claveMes).split(' ')[0];
+                seccion += `   ${nombreMes.padEnd(12)} ${TimeUtils.horasATexto(_sumarHorasEfectivas(regsM, horasDiariasObjetivo), 'short').padEnd(10)}  (${normales.length} jornadas)`;
+                if (notas.length) seccion += `  [${notas.join(', ')}]`;
+                seccion += '\n';
+            });
+            return seccion;
+        }
+
+        function _seccionDetalleMensual(registrosPeriodo, horasDiariasObjetivo) {
+            let seccion = `
+
+──────────────────────────────────────────────────────────────────
+
+📋 DETALLE DIARIO
+──────────────────────────────────────────────────────────────────
+
+`;
+            const ordenados = [...registrosPeriodo].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            ordenados.forEach(r => {
+                const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                const fecha = r.fecha.split('-').reverse().join('/');
+                const dia = TimeUtils.obtenerNombreDia(r.fecha);
+                let linea;
+                if (tipoEspecial) {
+                    linea = `${fecha}  ${dia.padEnd(10)} ${tipoEspecial.label.toUpperCase()}`;
+                } else {
+                    const entrada = r.entrada || '--:--';
+                    const salida = r.salida || '--:--';
+                    const total = r.salida ? TimeUtils.horasATexto(r.total, 'short') : 'Incompleto';
+                    const tiempoFuera = r.tiempoFuera ? ` (${r.tiempoFuera} fuera)` : '';
+                    const infoAsueto = (r.credito && r.credito !== '00:00') ? ' [SALIDA TEMPRANO]' : '';
+                    const indicador = r.salida ? (horasGte(r.total, horasDiariasObjetivo) ? '✓ ' : '✗ ') : '  ';
+                    linea = `${fecha}  ${dia.padEnd(10)} ${entrada} → ${salida}  [${total}]${tiempoFuera}${infoAsueto} ${indicador}`;
+                }
+                seccion += linea + '\n';
+            });
+            return seccion;
+        }
+
+        function _agruparRegistrosPorSemana(registros) {
+            const semanas = new Map();
+            registros.forEach(r => {
+                const lunes = TimeUtils.obtenerLunesSemanaISO(r.fecha);
+                if (!semanas.has(lunes)) {
+                    const base = { trabajados: [] };
+                    TiposRegistro.obtenerTodosLosTipos().forEach(t => { base[t.labelPlural.toLowerCase()] = []; });
+                    semanas.set(lunes, base);
+                }
+                const semana = semanas.get(lunes);
+                const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                if (tipoEspecial) {
+                    const cat = tipoEspecial.labelPlural.toLowerCase();
+                    if (semana[cat]) semana[cat].push(r);
+                } else {
+                    semana.trabajados.push(r);
+                }
+            });
+            return semanas;
+        }
+
+        function generarReporte() {
+            const esAnual = modoEstadisticas === 'anual';
+            const periodo = _resolverPeriodoDatos(esAnual);
+            if (!periodo) return;
+            const { periodoLabel, registrosPeriodo, stats, nombreArchivo, mesSeleccionado } = periodo;
+            const horasDiariasObjetivo = D.horasDiarias();
+
+            const reporte = {
+
+                header: () => `
+================================================================
+REPORTE DE HORAS TRABAJADAS                   
+================================================================
+
+📅 Período: ${periodoLabel}
+📊 Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}
+
+────────────────────────────────────────────────────────────────`,
+
+                resumenGeneral: () => {
+                    const lineasTipos = TiposRegistro.obtenerTodosLosTipos()
+                        .map(t => `   • ${(t.label + ':').padEnd(24)}${stats[t.labelPlural.toLowerCase()] || 0}`)
+                        .join('\n');
+                    return `
+
+📈 RESUMEN GENERAL
+────────────────────────────────────────────────────────────────
+
+   • Jornadas:               ${stats.diasTrabajados}
+${lineasTipos}
+   • Salidas Temprano:       ${stats.compensaciones}
+   • Entrada promedio:       ${stats.entradaPromedio}
+   • Salida promedio:        ${stats.salidaPromedio}
+   • Promedio diario:        ${stats.promedioDiario}
+   
+   • Total horas trabajadas: ${TimeUtils.horasATexto(_sumarHorasEfectivas(registrosPeriodo, horasDiariasObjetivo), 'short')}
+   • Saldo:                  ${stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A'}`;
+                },
+
+                detallePeriodo: () => esAnual
+                    ? _seccionDetalleAnual(registrosPeriodo, horasDiariasObjetivo)
+                    : _seccionDetalleMensual(registrosPeriodo, horasDiariasObjetivo),
+
+                totalesPorSemana: () => {
+                    if (esAnual || !mesSeleccionado) return '';
+                    const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
+                    const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
+                    const ultimaDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
+
+                    const semanas = _agruparRegistrosPorSemana(registrosPeriodo);
+                    const semanasOrdenadas = [...semanas.entries()].sort((a, b) => new Date(a[0]) - new Date(b[0]));
+                    if (!semanasOrdenadas.length) return '';
+
+                    let seccion = `
+
+────────────────────────────────────────────────────────────────
+
+📅 TOTALES POR SEMANA
+────────────────────────────────────────────────────────────────
+
+`;
+                    const semanasIncompletas = [];
+
+                    semanasOrdenadas.forEach(([lunesOriginal, datos], index) => {
+                        let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
+                        if (datos.remotos?.length) totalSemanal += datos.remotos.length * horasDiariasObjetivo;
+
+                        const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
+                        const fechaDomingo = new Date(fechaLunes);
+                        fechaDomingo.setDate(fechaLunes.getDate() + 6);
+                        const domingo = TimeUtils.formatearFechaLocal(fechaDomingo);
+
+                        let lunes = lunesOriginal, fechaFin = domingo, esIncompleta = false, continuaEn = '';
+
+                        if (domingo > ultimaDiaMes) {
+                            fechaFin = ultimaDiaMes;
+                            esIncompleta = true;
+                            const mesSig = mesActual === 12 ? 1 : mesActual + 1;
+                            const añoSig = mesActual === 12 ? añoActual + 1 : añoActual;
+                            continuaEn = `continúa en ${new Date(añoSig, mesSig - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
+                        }
+                        if (lunes < primerDiaMes) {
+                            lunes = primerDiaMes;
+                            esIncompleta = true;
+                            const mesAnt = mesActual === 1 ? 12 : mesActual - 1;
+                            const añoAnt = mesActual === 1 ? añoActual - 1 : añoActual;
+                            continuaEn = `viene de ${new Date(añoAnt, mesAnt - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
+                        }
+
+                        seccion += `   Semana ${index + 1} (${lunes.split('-').reverse().join('/')} - ${fechaFin.split('-').reverse().join('/')})${esIncompleta ? '*' : ''}:\n`;
+                        seccion += `      └─ ${TimeUtils.horasATexto(totalSemanal, 'short')}`;
+
+                        const notasExtras = TiposRegistro.obtenerTodosLosTipos()
+                            .map(t => {
+                                const clave = t.labelPlural.toLowerCase();
+                                return datos[clave]?.length ? `${datos[clave].length} ${clave}` : null;
+                            })
+                            .filter(Boolean);
+                        if (notasExtras.length) seccion += ` [${notasExtras.join(', ')}]`;
+                        seccion += '\n\n';
+
+                        if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
+                    });
+
+                    if (semanasIncompletas.length) seccion += semanasIncompletas.join('\n') + '\n';
+                    return seccion;
+                },
+
+                configuracion: () => `
+
+────────────────────────────────────────────────────────────────
+
+⚙️ Ajustes
+────────────────────────────────────────────────────────────────
+
+   • Horas diarias:          ${D.horasDiarias()}
+   • Días hábiles/semana:    ${D.diasHabiles().map(d => ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][d]).join(', ')}
+   • Horas semanales:        ${D.horasSemanales()}`,
+
+                footer: () => `
+
+────────────────────────────────────────────────────────────────
+
+Generado por Sistema Lushibosca
+`
+            };
+
+            const contenido =
+                reporte.header() +
+                reporte.resumenGeneral() +
+                reporte.detallePeriodo() +
+                reporte.totalesPorSemana() +
+                reporte.configuracion() +
+                reporte.footer();
+
+            try {
+                const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                mostrarToast(esAnual ? 'Reporte anual generado' : 'Reporte generado', 'success');
+            } catch (e) {
+                console.error('Error generando reporte:', e);
+                mostrarToast('Error al generar reporte', 'error');
+            }
+        }
+
+        const DESCRIPCIONES_STATS = {
+            'stat-tiempo-total': { titulo: 'Tiempo Total', desc: 'Suma de todas las horas trabajadas en el período seleccionado.' },
+            'stat-promedio-diario': { titulo: 'Promedio Diario', desc: 'Promedio de horas trabajadas por jornada en el período.' },
+            'stat-entrada-promedio': { titulo: 'Entrada Promedio', desc: 'Hora de entrada promedio entre todas las jornadas del período.' },
+            'stat-salida-promedio': { titulo: 'Salida Promedio', desc: 'Hora de salida promedio entre todas las jornadas del período.' },
+            'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
+            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles y cálculos de saldo.' },
+            'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
+            'stat-compensaciones': { titulo: 'Salidas Temprano', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
+        };
+
+        let _popupStatEl = null;
+
+        function _popupStat(event, statId) {
+            event.stopPropagation();
+            if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
+
+            let info = DESCRIPCIONES_STATS[statId];
+            if (statId === 'stat-saldo' && info) {
+                if (modoEstadisticas === 'anual') {
+                    const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
+                    const modoTexto = desdeEnero
+                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del año.'
+                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.';
+                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
+                } else if (modoEstadisticas === 'mensual') {
+                    const desdePrimero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
+                    const modoTexto = desdePrimero
+                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del mes.'
+                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.';
+                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
+                }
+            }
+            if (statId === 'stat-tiempo-fuera-total' && info) {
+                const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+                const modoTexto = ignorarTF
+                    ? 'Actualmente NO SE RESTA el tiempo fuera del tiempo total.'
+                    : 'Actualmente SE RESTA el tiempo fuera del tiempo total.';
+                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
+            }
+            if (statId === 'stat-promedio-diario' && info) {
+                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Actualmente las horas diarias objetivo son ${D.horasDiarias()}h.</strong>` };
+            }
+            if (!info) {
+                const valueEl = $(statId);
+                const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');
+                const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${t.labelPlural.toLowerCase()}`);
+                info = {
+                    titulo: S.escapeHtml(label ? label.textContent : 'Estadística'),
+                    desc: tipoMatch
+                        ? `Cantidad de jornadas registradas como "${S.escapeHtml(tipoMatch.label)}" en el período.`
+                        : 'Detalle de esta estadística.'
+                };
+            }
+
+            const popup = document.createElement('div');
+            popup.className = 'stat-popup';
+            popup.id = '_stat-popup';
+            popup.dataset.statId = statId;
+            popup.innerHTML = `
+                <div class="stat-popup-titulo">${S.escapeHtml(info.titulo)}</div>
+                <div class="stat-popup-desc">${info.desc}</div>`;
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupStatEl = popup;
+
+            _registrarCierrePopup(popup, '.stat-item', item => item.dataset.statId === popup.dataset.statId, () => { _popupStatEl = null; });
+            _posicionarPopup(popup, event);
+        }
+
+        function _onclickStatItem(event) {
+            const item = event.currentTarget;
+            const valueEl = item.querySelector('.stat-value');
+            if (!valueEl || !valueEl.id) return;
+            if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) {
+                _popupStatEl.remove();
+                _popupStatEl = null;
+                return;
+            }
+            item.dataset.statId = valueEl.id;
+            _popupStat(event, valueEl.id);
+        }
+
+        function _bindStatItemPopups(container) {
+            const root = container || document;
+            root.querySelectorAll('.stat-item').forEach(item => {
+                if (item._statPopupBound) return;
+                item._statPopupBound = true;
+                item.addEventListener('click', _onclickStatItem);
+            });
+        }
+
+        function toggleStats() {
+            toggleSeccionGen('form-stats', 'icon-indicator-stats', STORAGE_KEYS.STATS_EXPANDIDO, () => {
+                registrarSwipe($('form-stats'), dir => togglePeriodoStats(dir));
+                if (modoEstadisticas === 'anual') {
+                    poblarSelectorAnios();
+                } else if (modoEstadisticas === 'semanal') {
+                    poblarSelectorSemanas();
+                    actualizarEstadisticasSemana($('select-semana-stats')?.value);
+                } else {
+                    poblarSelectorMeses();
+                    const selectMes = $('select-mes-stats');
+                    if (selectMes && selectMes.value) {
+                        actualizarEstadisticas(selectMes.value);
+                    } else {
+                        actualizarEstadisticas();
+                    }
+                }
+            });
+        }
+
+        return {
+            _calcularEstadisticasRango,
+            _renderizarStats,
+            calcularEstadisticasMes,
+            actualizarEstadisticas,
+            _renderSelectorStats,
+            calcularEstadisticasAnio,
+            poblarSelectorAnios,
+            actualizarEstadisticasAnio,
+            poblarSelectorSemanas,
+            calcularEstadisticasSemana,
+            actualizarEstadisticasSemana,
+            cambiarMesStats,
+            cambiarSemanaStats,
+            cambiarAnioStats,
+            togglePeriodoStats,
+            poblarSelectorMeses,
+            generarReporte,
+            _popupStat,
+            _onclickStatItem,
+            _bindStatItemPopups,
+            toggleStats,
+            setModoEstadisticas: (v) => { modoEstadisticas = v; }
+        };
+    })(SecurityAndUtils, DataManagement, UICore);
+
+
+    const UILogic = (function (S, D, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas) {
+
+        const {
+            formatoDiferencia, registrarSwipe, debounce, _crearPressHold,
+            _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
+            mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON,
+            mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
+            _getCSSdur, DUR_ANIM, DUR_CALENDARIO, _crearToggleConfig, _setBtnActivo,
+            _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
+            _posicionarPopup, _registrarCierrePopup, _flashCampo,
+            _limpiarClonVisual, _finalizarSlidePendiente, _animarSlideElemento, toggleSeccionGen
+        } = UICore;
+
+        const {
+            renderizarListaPerfiles, abrirSelectorPerfiles, crearPerfilDesdeSelector,
+            cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil,
+            guardarEdicionPerfil, eliminarPerfilDesdeEditor
+        } = UIPerfiles;
+
+        const {
+            abrirSelectorMesesCalendario, _cerrarSelectorMeses, _activarVistaCalendarioHistorico, _renderizarCalendario,
+            toggleVistaHistorico, _popupCalendario, _popupCalendarioDiaSinRegistro,
+            _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
+            navegarCalendario, irHoyCalendario, _agruparMesesPorAnio, _nombreMesCapitalizado,
+            getVistaHistoricoCalendario, setVistaHistoricoCalendario
+        } = UICalendario;
+
+        const {
+            mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar,
+            ejecutarExportacion, toggleCamposRangoExport, actualizarEstadoBotonesGist,
+            actualizarBotonesHistorico, abrirModalGist, cerrarModalGist, guardarConfigGist,
+            toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
+            toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite,
+            detenerCambioLimite, gistSubir, gistBajar
+        } = UIGistYRespaldo;
+
+        const {
+            agruparRegistrosConsecutivos, actualizarListaRegistros, cerrarEdicion,
+            setBloqueoEdicion, toggleBloqueoEdicion, toggleCredito, _actualizarHintEdicion,
+            _initListenerAccionesLista, _initListenerToggleAnio, _initListenerToggleMes,
+            actualizarHintGrupo, mostrarFiltros, cerrarFiltros, toggleHistorico,
+            iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones,
+            verificarBloqueoCredito, setBloqueoEdicionGrupo, toggleBloqueoEdicionGrupo,
+            cerrarEdicionGrupo, setTiempoExpansionBotones
+        } = UIHistorico;
+
+        const {
+            _calcularEstadisticasRango, _renderizarStats, calcularEstadisticasMes,
+            actualizarEstadisticas, _renderSelectorStats, calcularEstadisticasAnio,
+            poblarSelectorAnios, actualizarEstadisticasAnio, poblarSelectorSemanas,
+            calcularEstadisticasSemana, actualizarEstadisticasSemana, cambiarMesStats,
+            cambiarSemanaStats, cambiarAnioStats, togglePeriodoStats, poblarSelectorMeses,
+            generarReporte, _popupStat, _onclickStatItem, _bindStatItemPopups, toggleStats,
+            setModoEstadisticas
+        } = UIEstadisticas;
+
+        let modoLoteActivo = false;
+        let _timerAutoVista = null;
+
+        function setProgressBarColor(progressEl, status) {
+            if (!progressEl) return;
+            progressEl.className = 'progress-fill';
+            progressEl.classList.add(status);
+            if (status === 'blue') progressEl.classList.add('shimmer');
         }
 
         let _fondoCard = 'golden-gate';
@@ -5193,34 +6219,6 @@
             }
         }
 
-        function _renderSelectorStats() {
-            const anioEl = $('select-anio-stats');
-            const mesEl = $('select-mes-stats');
-            const semEl = $('select-semana-stats');
-            const labelEl = $('label-periodo-toggle');
-            if (modoEstadisticas === 'anual') {
-                if (anioEl) anioEl.classList.remove('hidden');
-                if (mesEl) mesEl.classList.add('hidden');
-                if (semEl) semEl.classList.add('hidden');
-                if (labelEl) labelEl.textContent = 'Anual';
-                poblarSelectorAnios();
-            } else if (modoEstadisticas === 'semanal') {
-                if (anioEl) anioEl.classList.add('hidden');
-                if (mesEl) mesEl.classList.add('hidden');
-                if (semEl) semEl.classList.remove('hidden');
-                if (labelEl) labelEl.textContent = 'Semanal';
-                poblarSelectorSemanas();
-                actualizarEstadisticasSemana(semEl?.value);
-            } else {
-                if (anioEl) anioEl.classList.add('hidden');
-                if (mesEl) mesEl.classList.remove('hidden');
-                if (semEl) semEl.classList.add('hidden');
-                if (labelEl) labelEl.textContent = 'Mensual';
-                poblarSelectorMeses();
-            }
-        }
-
-
         function _animarFadeSwap(el, fn) {
             if (!el) { fn(); return; }
             el.classList.add('fade-out');
@@ -5263,7 +6261,7 @@
             _renderTitulo(vista);
             _renderCard(vista);
             _renderBarra(vista);
-            _renderSelectorStats();
+            UILogic._renderSelectorStats();
             actualizarEstadoBotonTimerMain();
             if (getVistaHistoricoCalendario()) {
                 const selector = document.getElementById('calendario-selector-meses');
@@ -5544,45 +6542,6 @@
             document.addEventListener('mouseup', endDrag);
         }
 
-        function cerrarEdicion() {
-            ModalManager.cerrar('modal-editar', () => {
-                D.setEditandoId(null);
-                document.dispatchEvent(new Event('scroll'));
-            });
-        }
-
-        function calcularEstadisticasAnio(anio) {
-            const anioNum = parseInt(anio);
-            const registros = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
-            let fechaDesde = `${anioNum}-01-01`;
-
-            const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
-            if (!desdeEnero && registros.length > 0) {
-                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
-                if (primerRegistro > fechaDesde) {
-                    fechaDesde = primerRegistro;
-                }
-            }
-
-            return _calcularEstadisticasRango(registros, {
-                regularidadPorMes: true,
-                desde: fechaDesde,
-                hasta: `${anioNum}-12-31`
-            });
-        }
-
-
-        function poblarSelectorAnios() {
-            const anios = [...new Set(D.registros().map(r => r.fecha.substring(0, 4)))].sort().reverse();
-            const anioActual = String(new Date().getFullYear());
-            _poblarSelect('select-anio-stats', anios, a => a, anioActual, actualizarEstadisticasAnio);
-        }
-
-        function actualizarEstadisticasAnio(anio) {
-            const stats = calcularEstadisticasAnio(anio);
-            _renderizarStats(stats, { mostrarBtnReporte: true });
-        }
-
         function pegarHoraActual(id) {
             const input = document.getElementById(id);
             if (!input) return;
@@ -5611,370 +6570,6 @@
             }
         }
 
-        function _obtenerSemanas() {
-            const semanas = new Map();
-            D.registros().forEach(r => {
-                const d = new Date(r.fecha + 'T00:00:00');
-                const lunes = TimeUtils.obtenerLunes(d);
-                const key = TimeUtils.formatearFechaLocal(lunes);
-                if (!semanas.has(key)) semanas.set(key, lunes);
-            });
-            return Array.from(semanas.keys()).sort().reverse();
-        }
-
-        function _formatearSemana(lunesISO) {
-            const lunes = new Date(lunesISO + 'T00:00:00');
-            const domingo = new Date(lunes);
-            domingo.setDate(lunes.getDate() + 6);
-            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-            const dL = lunes.getDate();
-            const dD = domingo.getDate();
-            const mL = meses[lunes.getMonth()];
-            const mD = meses[domingo.getMonth()];
-            if (lunes.getMonth() === domingo.getMonth()) {
-                return `${dL} al ${dD} de ${mD}`;
-            }
-            return `${dL} ${mL} al ${dD} ${mD}`;
-        }
-
-        function poblarSelectorSemanas() {
-            const semanas = _obtenerSemanas();
-            const lunesISO = TimeUtils.formatearFechaLocal(TimeUtils.obtenerLunes());
-            _poblarSelect('select-semana-stats', semanas, _formatearSemana, lunesISO, actualizarEstadisticasSemana, _agruparMesesPorAnio);
-        }
-
-        function calcularEstadisticasSemana(lunesISO) {
-            if (!lunesISO) return _calcularEstadisticasRango([], { regularidadPorMes: false });
-            const lunes = new Date(lunesISO + 'T00:00:00');
-            const domingo = new Date(lunes);
-            domingo.setDate(lunes.getDate() + 6);
-            const hasta = TimeUtils.formatearFechaLocal(domingo);
-            const registros = D.registros().filter(r => r.fecha >= lunesISO && r.fecha <= hasta);
-            return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: lunesISO, hasta });
-        }
-
-        function actualizarEstadisticasSemana(lunesISO) {
-            const stats = calcularEstadisticasSemana(lunesISO);
-            _renderizarStats(stats, { mostrarBtnReporte: false });
-        }
-
-        function _animarCambioStats(fn) {
-            _animarFadeSwap($('form-stats'), fn);
-        }
-
-        function _cambiarPeriodoStats(selectId, actualizarFn) {
-            const v = $(selectId)?.value;
-            if (v !== undefined) _animarCambioStats(() => actualizarFn(v));
-        }
-        function cambiarMesStats() { _cambiarPeriodoStats('select-mes-stats', actualizarEstadisticas); }
-        function cambiarSemanaStats() { _cambiarPeriodoStats('select-semana-stats', actualizarEstadisticasSemana); }
-        function cambiarAnioStats() { _cambiarPeriodoStats('select-anio-stats', actualizarEstadisticasAnio); }
-
-        function togglePeriodoStats(direccion = 1) {
-            if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
-            const selectMes = $('select-mes-stats');
-            const selectAnio = $('select-anio-stats');
-            const label = $('label-periodo-toggle');
-            const selectSemana = $('select-semana-stats');
-
-            const orden = ['mensual', 'anual', 'semanal'];
-            const idx = orden.indexOf(modoEstadisticas);
-            modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
-            try { StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas); } catch (e) { }
-
-            _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
-                selectMes.classList.add('hidden');
-                selectAnio.classList.add('hidden');
-                if (selectSemana) selectSemana.classList.add('hidden');
-                if (modoEstadisticas === 'anual') {
-                    selectAnio.classList.remove('hidden');
-                    if (label) label.textContent = 'Anual';
-                    poblarSelectorAnios();
-                } else if (modoEstadisticas === 'semanal') {
-                    if (selectSemana) selectSemana.classList.remove('hidden');
-                    if (label) label.textContent = 'Semanal';
-                    poblarSelectorSemanas();
-                } else {
-                    selectMes.classList.remove('hidden');
-                    if (label) label.textContent = 'Mensual';
-                    poblarSelectorMeses();
-                }
-            });
-        }
-
-        function poblarSelectorMeses() {
-            const meses = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
-            const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
-            _poblarSelect('select-mes-stats', meses, _nombreMesCapitalizado, mesActual, actualizarEstadisticas, _agruparMesesPorAnio);
-        }
-
-        function _sumarHorasEfectivas(regs, horasDiarias) {
-            return regs.reduce((sum, r) => {
-                const t = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                if (t && t.id === 'remoto') return sum + horasDiarias;
-                if (!t) return sum + r.total;
-                return sum;
-            }, 0);
-        }
-
-        function _resolverPeriodoDatos(esAnual) {
-            if (esAnual) {
-                const anio = $('select-anio-stats')?.value;
-                if (!anio) { mostrarToast('No hay año seleccionado', 'error'); return null; }
-                const anioNum = parseInt(anio);
-                return {
-                    periodoLabel: anio,
-                    nombreArchivo: `reporte_${anio}.txt`,
-                    registrosPeriodo: D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum),
-                    stats: calcularEstadisticasAnio(anio),
-                    mesSeleccionado: null
-                };
-            }
-            const selectMes = $('select-mes-stats');
-            const mes = selectMes?.value;
-            if (!mes) { mostrarToast('No hay mes seleccionado', 'error'); return null; }
-            const [año, mesNum] = mes.split('-').map(Number);
-            return {
-                periodoLabel: selectMes.options[selectMes.selectedIndex].text,
-                nombreArchivo: `reporte_${mes}.txt`,
-                registrosPeriodo: D.registros().filter(r => {
-                    const [aReg, mReg] = r.fecha.split('-').map(Number);
-                    return aReg === año && mReg === mesNum;
-                }),
-                stats: calcularEstadisticasMes(mes),
-                mesSeleccionado: mes
-            };
-        }
-
-        function _seccionDetalleAnual(registrosPeriodo, horasDiariasObjetivo) {
-            const mesesOrdenados = [...new Set(registrosPeriodo.map(r => r.fecha.substring(0, 7)))].sort();
-            let seccion = `
-
-────────────────────────────────────────────────────────────────
-
-📅 TOTALES POR MES
-────────────────────────────────────────────────────────────────
-
-`;
-            mesesOrdenados.forEach(claveMes => {
-                const regsM = registrosPeriodo.filter(r => r.fecha.startsWith(claveMes));
-                const normales = regsM.filter(r => !TiposRegistro.esRegistroEspecial(r.entrada, r.salida) && r.entrada && r.salida);
-                const especiales = regsM.filter(r => TiposRegistro.esRegistroEspecial(r.entrada, r.salida));
-                const notas = TiposRegistro.obtenerTodosLosTipos()
-                    .map(t => {
-                        const n = especiales.filter(r => TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === t.id).length;
-                        return n ? `${n} ${t.labelPlural.toLowerCase()}` : null;
-                    })
-                    .filter(Boolean);
-                const nombreMes = TimeUtils.formatoTituloMes(claveMes).split(' ')[0];
-                seccion += `   ${nombreMes.padEnd(12)} ${TimeUtils.horasATexto(_sumarHorasEfectivas(regsM, horasDiariasObjetivo), 'short').padEnd(10)}  (${normales.length} jornadas)`;
-                if (notas.length) seccion += `  [${notas.join(', ')}]`;
-                seccion += '\n';
-            });
-            return seccion;
-        }
-
-        function _seccionDetalleMensual(registrosPeriodo, horasDiariasObjetivo) {
-            let seccion = `
-
-──────────────────────────────────────────────────────────────────
-
-📋 DETALLE DIARIO
-──────────────────────────────────────────────────────────────────
-
-`;
-            const ordenados = [...registrosPeriodo].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-            ordenados.forEach(r => {
-                const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                const fecha = r.fecha.split('-').reverse().join('/');
-                const dia = TimeUtils.obtenerNombreDia(r.fecha);
-                let linea;
-                if (tipoEspecial) {
-                    linea = `${fecha}  ${dia.padEnd(10)} ${tipoEspecial.label.toUpperCase()}`;
-                } else {
-                    const entrada = r.entrada || '--:--';
-                    const salida = r.salida || '--:--';
-                    const total = r.salida ? TimeUtils.horasATexto(r.total, 'short') : 'Incompleto';
-                    const tiempoFuera = r.tiempoFuera ? ` (${r.tiempoFuera} fuera)` : '';
-                    const infoAsueto = (r.credito && r.credito !== '00:00') ? ' [SALIDA TEMPRANO]' : '';
-                    const indicador = r.salida ? (horasGte(r.total, horasDiariasObjetivo) ? '✓ ' : '✗ ') : '  ';
-                    linea = `${fecha}  ${dia.padEnd(10)} ${entrada} → ${salida}  [${total}]${tiempoFuera}${infoAsueto} ${indicador}`;
-                }
-                seccion += linea + '\n';
-            });
-            return seccion;
-        }
-
-        function _agruparRegistrosPorSemana(registros) {
-            const semanas = new Map();
-            registros.forEach(r => {
-                const lunes = TimeUtils.obtenerLunesSemanaISO(r.fecha);
-                if (!semanas.has(lunes)) {
-                    const base = { trabajados: [] };
-                    TiposRegistro.obtenerTodosLosTipos().forEach(t => { base[t.labelPlural.toLowerCase()] = []; });
-                    semanas.set(lunes, base);
-                }
-                const semana = semanas.get(lunes);
-                const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                if (tipoEspecial) {
-                    const cat = tipoEspecial.labelPlural.toLowerCase();
-                    if (semana[cat]) semana[cat].push(r);
-                } else {
-                    semana.trabajados.push(r);
-                }
-            });
-            return semanas;
-        }
-
-        function generarReporte() {
-            const esAnual = modoEstadisticas === 'anual';
-            const periodo = _resolverPeriodoDatos(esAnual);
-            if (!periodo) return;
-            const { periodoLabel, registrosPeriodo, stats, nombreArchivo, mesSeleccionado } = periodo;
-            const horasDiariasObjetivo = D.horasDiarias();
-
-            const reporte = {
-
-                header: () => `
-================================================================
-REPORTE DE HORAS TRABAJADAS                   
-================================================================
-
-📅 Período: ${periodoLabel}
-📊 Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}
-
-────────────────────────────────────────────────────────────────`,
-
-                resumenGeneral: () => {
-                    const lineasTipos = TiposRegistro.obtenerTodosLosTipos()
-                        .map(t => `   • ${(t.label + ':').padEnd(24)}${stats[t.labelPlural.toLowerCase()] || 0}`)
-                        .join('\n');
-                    return `
-
-📈 RESUMEN GENERAL
-────────────────────────────────────────────────────────────────
-
-   • Jornadas:               ${stats.diasTrabajados}
-${lineasTipos}
-   • Salidas Temprano:       ${stats.compensaciones}
-   • Entrada promedio:       ${stats.entradaPromedio}
-   • Salida promedio:        ${stats.salidaPromedio}
-   • Promedio diario:        ${stats.promedioDiario}
-   
-   • Total horas trabajadas: ${TimeUtils.horasATexto(_sumarHorasEfectivas(registrosPeriodo, horasDiariasObjetivo), 'short')}
-   • Saldo:                  ${stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A'}`;
-                },
-
-                detallePeriodo: () => esAnual
-                    ? _seccionDetalleAnual(registrosPeriodo, horasDiariasObjetivo)
-                    : _seccionDetalleMensual(registrosPeriodo, horasDiariasObjetivo),
-
-                totalesPorSemana: () => {
-                    if (esAnual || !mesSeleccionado) return '';
-                    const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
-                    const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
-                    const ultimaDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
-
-                    const semanas = _agruparRegistrosPorSemana(registrosPeriodo);
-                    const semanasOrdenadas = [...semanas.entries()].sort((a, b) => new Date(a[0]) - new Date(b[0]));
-                    if (!semanasOrdenadas.length) return '';
-
-                    let seccion = `
-
-────────────────────────────────────────────────────────────────
-
-📅 TOTALES POR SEMANA
-────────────────────────────────────────────────────────────────
-
-`;
-                    const semanasIncompletas = [];
-
-                    semanasOrdenadas.forEach(([lunesOriginal, datos], index) => {
-                        let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
-                        if (datos.remotos?.length) totalSemanal += datos.remotos.length * horasDiariasObjetivo;
-
-                        const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
-                        const fechaDomingo = new Date(fechaLunes);
-                        fechaDomingo.setDate(fechaLunes.getDate() + 6);
-                        const domingo = TimeUtils.formatearFechaLocal(fechaDomingo);
-
-                        let lunes = lunesOriginal, fechaFin = domingo, esIncompleta = false, continuaEn = '';
-
-                        if (domingo > ultimaDiaMes) {
-                            fechaFin = ultimaDiaMes;
-                            esIncompleta = true;
-                            const mesSig = mesActual === 12 ? 1 : mesActual + 1;
-                            const añoSig = mesActual === 12 ? añoActual + 1 : añoActual;
-                            continuaEn = `continúa en ${new Date(añoSig, mesSig - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
-                        }
-                        if (lunes < primerDiaMes) {
-                            lunes = primerDiaMes;
-                            esIncompleta = true;
-                            const mesAnt = mesActual === 1 ? 12 : mesActual - 1;
-                            const añoAnt = mesActual === 1 ? añoActual - 1 : añoActual;
-                            continuaEn = `viene de ${new Date(añoAnt, mesAnt - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
-                        }
-
-                        seccion += `   Semana ${index + 1} (${lunes.split('-').reverse().join('/')} - ${fechaFin.split('-').reverse().join('/')})${esIncompleta ? '*' : ''}:\n`;
-                        seccion += `      └─ ${TimeUtils.horasATexto(totalSemanal, 'short')}`;
-
-                        const notasExtras = TiposRegistro.obtenerTodosLosTipos()
-                            .map(t => {
-                                const clave = t.labelPlural.toLowerCase();
-                                return datos[clave]?.length ? `${datos[clave].length} ${clave}` : null;
-                            })
-                            .filter(Boolean);
-                        if (notasExtras.length) seccion += ` [${notasExtras.join(', ')}]`;
-                        seccion += '\n\n';
-
-                        if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
-                    });
-
-                    if (semanasIncompletas.length) seccion += semanasIncompletas.join('\n') + '\n';
-                    return seccion;
-                },
-
-                configuracion: () => `
-
-────────────────────────────────────────────────────────────────
-
-⚙️ Ajustes
-────────────────────────────────────────────────────────────────
-
-   • Horas diarias:          ${D.horasDiarias()}
-   • Días hábiles/semana:    ${D.diasHabiles().map(d => ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][d]).join(', ')}
-   • Horas semanales:        ${D.horasSemanales()}`,
-
-                footer: () => `
-
-────────────────────────────────────────────────────────────────
-
-Generado por Sistema Lushibosca
-`
-            };
-
-            const contenido =
-                reporte.header() +
-                reporte.resumenGeneral() +
-                reporte.detallePeriodo() +
-                reporte.totalesPorSemana() +
-                reporte.configuracion() +
-                reporte.footer();
-
-            try {
-                const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                mostrarToast(esAnual ? 'Reporte anual generado' : 'Reporte generado', 'success');
-            } catch (e) {
-                console.error('Error generando reporte:', e);
-                mostrarToast('Error al generar reporte', 'error');
-            }
-        }
 
         const sumarMinutosAHora = TimeUtils.sumarMinutosAHora;
 
@@ -6105,45 +6700,6 @@ Generado por Sistema Lushibosca
                 await _detenerTimerBreak(registroHoy, storageKey, storedStart);
             }
             actualizarEstadoBotonTimerMain();
-        }
-
-        function _setBloqueoEdicionGenerico(bloqueado, { btnLockId, inputIds, modalId, excluirBotones }) {
-            const btnLock = $(btnLockId);
-            if (btnLock) {
-                const icon = btnLock.querySelector('use');
-                icon.setAttribute('href', bloqueado ? '#icon-lock' : '#icon-lock-open');
-                btnLock.title = bloqueado ? "Desbloquear edición" : "Bloquear edición";
-                btnLock.style.color = 'var(--text-main)';
-                btnLock.style.background = bloqueado ? 'var(--c-red)' : 'var(--c-green)';
-            }
-
-            inputIds.forEach(id => {
-                const el = $(id);
-                if (el) el.disabled = bloqueado;
-            });
-
-            const modal = $(modalId);
-            if (modal) {
-                const botones = modal.querySelectorAll(excluirBotones);
-                botones.forEach(btn => {
-                    btn.disabled = bloqueado;
-                });
-            }
-        }
-
-        function setBloqueoEdicion(bloqueado) {
-            edicionBloqueada = bloqueado;
-            _setBloqueoEdicionGenerico(bloqueado, {
-                btnLockId: 'btn-lock-toggle',
-                inputIds: ['edit-fecha', 'edit-entrada', 'edit-salida', 'edit-tiempo-fuera', 'edit-notas'],
-                modalId: 'modal-editar',
-                excluirBotones: 'button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)'
-            });
-            verificarBloqueoCredito();
-        }
-
-        function toggleBloqueoEdicion() {
-            setBloqueoEdicion(!edicionBloqueada);
         }
 
         function mostrarconfig() {
@@ -6396,32 +6952,6 @@ Generado por Sistema Lushibosca
             else _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales);
         }
 
-        function toggleCredito() {
-            const btn = document.getElementById('btn-toggle-credito');
-            const estaActivo = btn.dataset.activo === "true";
-
-            btn.dataset.activo = estaActivo ? "false" : "true";
-            _setBtnActivo('btn-toggle-credito', !estaActivo);
-            mostrarToast(!estaActivo ? 'Asueto | Salida temprano activado' : 'Asueto | Salida temprano desactivado', 'info');
-        }
-
-        function _actualizarHintEdicion() {
-            const hint = document.getElementById('edit-hint-resumen');
-            if (!hint) return;
-            const e = document.getElementById('edit-entrada')?.value.trim();
-            const s = document.getElementById('edit-salida')?.value.trim();
-            const tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
-            if (!e && !s) { hint.textContent = ''; return; }
-            const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(e, s);
-            if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }
-            if (e?.length === 5 && s?.length === 5) {
-                const t = D.calcularHoras(e, s, tf || null, null, false);
-                hint.textContent = t ? `Total: ${t.horas}h ${t.minutos}m` : '';
-            } else {
-                hint.textContent = '';
-            }
-        }
-
         function _initGlobales() {
             PerfilManager.inicializar();
             window.DataManagement = {
@@ -6554,7 +7084,7 @@ Generado por Sistema Lushibosca
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
             UILogic.setFondoCard(config.fondoCard || 'golden-gate');
-            modoEstadisticas = config.modoEstadisticas || 'mensual';
+            UILogic.setModoEstadisticas(config.modoEstadisticas || 'mensual');
 
             const perfilActual = PerfilManager.obtenerDatosPerfil();
             D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
@@ -6603,7 +7133,7 @@ Generado por Sistema Lushibosca
                         if (icon) { icon.style.transform = ''; icon.classList.add('rotated'); }
                     } else {
                         const botones = $('botones-historico');
-                        if (botones) { botones.classList.add('expanded'); tiempoExpansionBotones = Date.now(); }
+                        if (botones) { botones.classList.add('expanded'); UILogic.setTiempoExpansionBotones(Date.now()); }
                         if (icon) { icon.classList.remove('rotated'); icon.style.transform = 'rotate(-90deg)'; }
                     }
                 }
@@ -6656,112 +7186,6 @@ Generado por Sistema Lushibosca
                     e.preventDefault();
                     document.getElementById('btn-redo')?.click();
                 }
-            });
-        }
-
-        function _initListenerAccionesLista(lista) {
-            lista.addEventListener('click', (e) => {
-                const target = e.target.closest('[data-accion]');
-                if (!target) return;
-                if (target.dataset.accion === 'editar-registro') {
-                    const id = target.dataset.registroId;
-                    if (id) D.editarRegistro(id);
-                } else if (target.dataset.accion === 'editar-grupo') {
-                    try {
-                        const grupoData = JSON.parse(target.dataset.grupoData, S.reviverJSONSeguro);
-                        const registrosCompletos = D.registros().filter(r => grupoData.registros.includes(r.id));
-                        D.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
-                    } catch (err) { console.error('Error al abrir grupo:', err); }
-                }
-            });
-        }
-
-        function _initListenerToggleAnio(lista) {
-            lista.addEventListener('click', (e) => {
-                const headerAnio = e.target.closest('.registro-mes-header[data-accion="toggle-anio"]');
-                if (!headerAnio) return;
-                e.stopPropagation();
-                const contenedorAnio = headerAnio.closest('.registro-mes-container');
-                if (!contenedorAnio) return;
-                const detalleAnio = contenedorAnio.querySelector(':scope > .registro-mes-detalle');
-                const chevronAnio = headerAnio.querySelector('.chevron-mes');
-                const anioId = headerAnio.dataset.anioId;
-                const abierto = detalleAnio.classList.toggle('expanded');
-                if (chevronAnio) chevronAnio.style.transform = abierto ? 'rotate(180deg)' : 'rotate(0deg)';
-                try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(anioId), String(abierto)); } catch (e) { }
-            });
-        }
-
-        function _scrollAlExpandir(contenedor, detalle) {
-            setTimeout(() => {
-                const margenHeader = 80;
-                const alturaVentana = window.innerHeight;
-                const registros = detalle.querySelectorAll('.registro-item');
-                if (!registros.length) return;
-                const r0 = registros[0].getBoundingClientRect();
-                const r1 = registros.length > 1 ? registros[1].getBoundingClientRect() : null;
-                const cortado0 = r0.top < margenHeader || r0.bottom > alturaVentana;
-                const cortado1 = r1 && (r1.top < margenHeader || r1.bottom > alturaVentana);
-                if (cortado0 || cortado1) contenedor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 310);
-        }
-
-        function _initListenerToggleMes(lista) {
-            lista.addEventListener('click', (e) => {
-                const header = e.target.closest('.registro-mes-header');
-                if (!header || header.dataset.accion !== 'toggle-mes') return;
-                e.stopPropagation();
-                const contenedor = header.closest('.registro-mes-container');
-                if (!contenedor) return;
-                const detalle = contenedor.querySelector('.registro-mes-detalle');
-                const chevronIcon = header.querySelector('.chevron-mes');
-
-                if (detalle.classList.contains('expanded')) {
-                    detalle.classList.remove('expanded');
-                    chevronIcon.style.transform = 'rotate(0deg)';
-                    try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'false'); } catch (e) { }
-                    return;
-                }
-
-                const esContenedorAnio = (el) => {
-                    const h = el.closest('.registro-mes-container')?.querySelector('.registro-mes-header');
-                    return h && h.dataset.accion === 'toggle-anio';
-                };
-                const detalleAnioPadre = contenedor.parentElement?.closest('.registro-mes-detalle') || null;
-                const otrosMesesAbiertos = lista.querySelectorAll('.registro-mes-detalle.expanded');
-
-                const _colapsarContenedor = (otro, { datasetKey, storageKeyFn }) => {
-                    otro.classList.remove('expanded');
-                    const oc = otro.closest('.registro-mes-container');
-                    const och = oc?.querySelector('.chevron-mes');
-                    const oHeader = oc?.querySelector('.registro-mes-header');
-                    if (och) och.style.transform = 'rotate(0deg)';
-                    const id = oHeader?.dataset[datasetKey];
-                    if (id) {
-                        try { StorageHelper.setItem(storageKeyFn(id), 'false'); } catch (e) { }
-                    }
-                };
-
-                otrosMesesAbiertos.forEach(otro => {
-                    if (!esContenedorAnio(otro) || otro === detalleAnioPadre) return;
-                    _colapsarContenedor(otro, { datasetKey: 'anioId', storageKeyFn: STORAGE_KEYS.ANIO_EXPANDIDO });
-                });
-
-                const _abrirDetalle = () => {
-                    detalle.classList.add('expanded');
-                    chevronIcon.style.transform = 'rotate(180deg)';
-                    try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'true'); } catch (e) { }
-                    _scrollAlExpandir(contenedor, detalle);
-                };
-
-                const hayOtrosAbiertos = Array.from(otrosMesesAbiertos).some(o => o !== detalle && !esContenedorAnio(o));
-                if (hayOtrosAbiertos) {
-                    otrosMesesAbiertos.forEach(otro => {
-                        if (otro === detalle || esContenedorAnio(otro)) return;
-                        _colapsarContenedor(otro, { datasetKey: 'mesId', storageKeyFn: STORAGE_KEYS.MES_EXPANDIDO });
-                    });
-                }
-                _abrirDetalle();
             });
         }
 
@@ -6837,76 +7261,6 @@ Generado por Sistema Lushibosca
             window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
         }
 
-        function actualizarHintGrupo() {
-            const hint = document.getElementById('edit-grupo-hint');
-            if (!hint) return;
-            const desde = document.getElementById('edit-grupo-desde')?.value;
-            const hasta = document.getElementById('edit-grupo-hasta')?.value;
-            if (!desde && !hasta) { hint.textContent = ''; return; }
-            if (desde && !hasta) {
-                hint.textContent = `1 día`;
-                return;
-            }
-            if (!TimeUtils.validarFecha(desde) || !TimeUtils.validarFecha(hasta) || desde > hasta) {
-                hint.textContent = 'Rango inválido';
-                return;
-            }
-            const fechaInicio = TimeUtils.parsearFechaLocal(desde);
-            const fechaFin = TimeUtils.parsearFechaLocal(hasta);
-            const diasTotales = Math.ceil(Math.abs(fechaFin - fechaInicio) / (1000 * 60 * 60 * 24)) + 1;
-            hint.textContent = `${diasTotales} día${diasTotales !== 1 ? 's' : ''}`;
-        }
-        ['edit-grupo-desde', 'edit-grupo-hasta'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('change', actualizarHintGrupo);
-        });
-
-        function mostrarFiltros() {
-            if (D.obtenerRegistrosFiltrados().length !== D.registros().length) {
-                D.limpiarFiltros();
-                return;
-            }
-
-            ModalManager.abrir('modal-filtros');
-
-            const aplicarInmediato = () => {
-                const desde = $('filtro-fecha-desde').value;
-                const hasta = $('filtro-fecha-hasta').value;
-                const tipo = $('filtro-tipo').value;
-                D.aplicarFiltrosInmediato(desde, hasta, tipo);
-            };
-
-            ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => {
-                const el = $(id);
-                if (el) {
-                    el.removeEventListener('change', aplicarInmediato);
-                    el.addEventListener('change', aplicarInmediato);
-                }
-            });
-        }
-
-        function cerrarFiltros() {
-            ModalManager.cerrar('modal-filtros');
-        }
-
-        function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
-            const el = $(elementId);
-            const icon = $(iconId);
-            if (!el) return;
-
-            el.classList.toggle('expanded');
-            const isExpanded = el.classList.contains('expanded');
-            if (icon) {
-                if (isExpanded) icon.classList.add('rotated');
-                else icon.classList.remove('rotated');
-            }
-
-            if (StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true)) {
-                StorageHelper.setItem(storageKey, isExpanded);
-            }
-            if (isExpanded && callback) callback();
-        }
-
         function toggleFormulario() {
             const el = $('form-registro');
             const estabaExpandido = el.classList.contains('expanded');
@@ -6935,93 +7289,6 @@ Generado por Sistema Lushibosca
                 } else {
                     actualizarEstadoBotonTimerMain();
                 }
-            }
-        }
-
-        function _setIconHistorico(icon, estado) {
-            if (!icon) return;
-            icon.classList.toggle('rotated', estado === 'meses');
-            icon.style.transform = estado === 'completo' ? 'rotate(-90deg)' : '';
-        }
-
-
-        function toggleHistorico() {
-            cancelarTimerAutoCierreBotones();
-            const contenido = $('contenido-historico');
-            const botones = $('botones-historico');
-            const icon = $('icon-indicator-historico');
-            if (!contenido) return;
-
-            const expandido = contenido.classList.contains('expanded');
-            const conBotones = botones.classList.contains('expanded');
-
-            try {
-                if (!expandido) {
-                    contenido.classList.add('expanded');
-                    _setIconHistorico(icon, 'meses');
-                    StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
-                    tiempoExpansionBotones = null;
-                    _activarVistaCalendarioHistorico();
-
-                } else if (!conBotones) {
-                    botones.classList.add('expanded');
-                    _setIconHistorico(icon, 'completo');
-                    StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'completo');
-                    tiempoExpansionBotones = Date.now();
-
-                } else {
-                    botones.classList.remove('expanded');
-                    if (Date.now() - (tiempoExpansionBotones || 0) > 500) {
-                        _setIconHistorico(icon, 'meses');
-                        StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
-                    } else {
-                        contenido.classList.remove('expanded');
-                        _setIconHistorico(icon, 'cerrado');
-                        StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'cerrado');
-                    }
-                    tiempoExpansionBotones = null;
-                }
-            } catch (e) {
-                console.warn('Error guardando estado histórico:', e);
-            }
-        }
-
-        function iniciarTimerAutoCierreBotones() {
-            if (timerAutoCierreBotones) {
-                clearTimeout(timerAutoCierreBotones);
-                timerAutoCierreBotones = null;
-            }
-
-            timerAutoCierreBotones = setTimeout(() => {
-                const botones = $('botones-historico');
-                const contenido = $('contenido-historico');
-                const icon = $('icon-indicator-historico');
-
-                if (botones && botones.classList.contains('expanded')) {
-                    botones.classList.remove('expanded');
-
-                    if (icon) {
-                        icon.style.transform = '';
-                        icon.classList.add('rotated');
-                    }
-
-                    try {
-                        StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
-                    } catch (e) {
-                        console.warn('Error guardando estado histórico:', e);
-                    }
-
-                    tiempoExpansionBotones = null;
-                }
-
-                timerAutoCierreBotones = null;
-            }, 3000);
-        }
-
-        function cancelarTimerAutoCierreBotones() {
-            if (timerAutoCierreBotones) {
-                clearTimeout(timerAutoCierreBotones);
-                timerAutoCierreBotones = null;
             }
         }
 
@@ -7073,120 +7340,6 @@ Generado por Sistema Lushibosca
             window.scrollTo({ top: window.scrollY + rect.top - margen, behavior: 'smooth' });
         }
 
-        const DESCRIPCIONES_STATS = {
-            'stat-tiempo-total': { titulo: 'Tiempo Total', desc: 'Suma de todas las horas trabajadas en el período seleccionado.' },
-            'stat-promedio-diario': { titulo: 'Promedio Diario', desc: 'Promedio de horas trabajadas por jornada en el período.' },
-            'stat-entrada-promedio': { titulo: 'Entrada Promedio', desc: 'Hora de entrada promedio entre todas las jornadas del período.' },
-            'stat-salida-promedio': { titulo: 'Salida Promedio', desc: 'Hora de salida promedio entre todas las jornadas del período.' },
-            'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
-            'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
-            'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
-            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles y cálculos de saldo.' },
-            'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
-            'stat-compensaciones': { titulo: 'Salidas Temprano', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
-        };
-
-        let _popupStatEl = null;
-
-        function _popupStat(event, statId) {
-            event.stopPropagation();
-            if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
-
-            let info = DESCRIPCIONES_STATS[statId];
-            if (statId === 'stat-saldo' && info) {
-                if (modoEstadisticas === 'anual') {
-                    const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
-                    const modoTexto = desdeEnero
-                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del año.'
-                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.';
-                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
-                } else if (modoEstadisticas === 'mensual') {
-                    const desdePrimero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
-                    const modoTexto = desdePrimero
-                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del mes.'
-                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.';
-                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
-                }
-            }
-            if (statId === 'stat-tiempo-fuera-total' && info) {
-                const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
-                const modoTexto = ignorarTF
-                    ? 'Actualmente NO SE RESTA el tiempo fuera del tiempo total.'
-                    : 'Actualmente SE RESTA el tiempo fuera del tiempo total.';
-                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
-            }
-            if (statId === 'stat-promedio-diario' && info) {
-                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Actualmente las horas diarias objetivo son ${D.horasDiarias()}h.</strong>` };
-            }
-            if (!info) {
-                const valueEl = $(statId);
-                const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');
-                const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${t.labelPlural.toLowerCase()}`);
-                info = {
-                    titulo: S.escapeHtml(label ? label.textContent : 'Estadística'),
-                    desc: tipoMatch
-                        ? `Cantidad de jornadas registradas como "${S.escapeHtml(tipoMatch.label)}" en el período.`
-                        : 'Detalle de esta estadística.'
-                };
-            }
-
-            const popup = document.createElement('div');
-            popup.className = 'stat-popup';
-            popup.id = '_stat-popup';
-            popup.dataset.statId = statId;
-            popup.innerHTML = `
-                <div class="stat-popup-titulo">${S.escapeHtml(info.titulo)}</div>
-                <div class="stat-popup-desc">${info.desc}</div>`;
-            popup.style.visibility = 'hidden';
-            document.body.appendChild(popup);
-            _popupStatEl = popup;
-
-            _registrarCierrePopup(popup, '.stat-item', item => item.dataset.statId === popup.dataset.statId, () => { _popupStatEl = null; });
-            _posicionarPopup(popup, event);
-        }
-
-        function _onclickStatItem(event) {
-            const item = event.currentTarget;
-            const valueEl = item.querySelector('.stat-value');
-            if (!valueEl || !valueEl.id) return;
-            if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) {
-                _popupStatEl.remove();
-                _popupStatEl = null;
-                return;
-            }
-            item.dataset.statId = valueEl.id;
-            _popupStat(event, valueEl.id);
-        }
-
-        function _bindStatItemPopups(container) {
-            const root = container || document;
-            root.querySelectorAll('.stat-item').forEach(item => {
-                if (item._statPopupBound) return;
-                item._statPopupBound = true;
-                item.addEventListener('click', _onclickStatItem);
-            });
-        }
-
-        function toggleStats() {
-            toggleSeccionGen('form-stats', 'icon-indicator-stats', STORAGE_KEYS.STATS_EXPANDIDO, () => {
-                registrarSwipe($('form-stats'), dir => togglePeriodoStats(dir));
-                if (modoEstadisticas === 'anual') {
-                    poblarSelectorAnios();
-                } else if (modoEstadisticas === 'semanal') {
-                    poblarSelectorSemanas();
-                    actualizarEstadisticasSemana($('select-semana-stats')?.value);
-                } else {
-                    poblarSelectorMeses();
-                    const selectMes = $('select-mes-stats');
-                    if (selectMes && selectMes.value) {
-                        actualizarEstadisticas(selectMes.value);
-                    } else {
-                        actualizarEstadisticas();
-                    }
-                }
-            });
-        }
-
         function alternarFechaActual(id) {
             const c = document.getElementById(id);
             if (!c) return;
@@ -7200,60 +7353,6 @@ Generado por Sistema Lushibosca
             if (id === 'edit-grupo-desde' || id === 'edit-grupo-hasta') {
                 c.dispatchEvent(new Event('change'));
             }
-        }
-
-        function verificarBloqueoCredito() {
-            const btnCredito = document.getElementById('btn-toggle-credito');
-            if (!btnCredito) return;
-
-            const _bloquear = () => {
-                btnCredito.disabled = true;
-                btnCredito.style.cursor = 'not-allowed';
-            };
-            const _habilitar = () => {
-                btnCredito.disabled = false;
-                btnCredito.style.cursor = 'pointer';
-            };
-
-            if (document.getElementById('edit-fecha').disabled) return _bloquear();
-
-            const e = document.getElementById('edit-entrada').value.trim();
-            const s = document.getElementById('edit-salida').value.trim();
-            const tf = document.getElementById('edit-tiempo-fuera').value.trim() || null;
-
-            const horarioCompleto = e.length === 5 && s.length === 5;
-            if (!horarioCompleto) {
-                if (btnCredito.dataset.activo === "true") toggleCredito();
-                return _bloquear();
-            }
-
-            if (TiposRegistro.esRegistroEspecial(e, s)) return _bloquear();
-
-            const calcTemp = D.calcularHoras(e, s, tf, null);
-            if (!calcTemp || calcTemp.total >= D.horasDiarias()) return _bloquear();
-
-            _habilitar();
-        }
-
-        function setBloqueoEdicionGrupo(bloqueado) {
-            edicionGrupoBloqueada = bloqueado;
-            _setBloqueoEdicionGenerico(bloqueado, {
-                btnLockId: 'btn-lock-grupo-toggle',
-                inputIds: ['edit-grupo-tipo', 'edit-grupo-desde', 'edit-grupo-hasta'],
-                modalId: 'modal-editar-grupo',
-                excluirBotones: 'button:not(#btn-lock-grupo-toggle):not(.btn-cancel)'
-            });
-        }
-
-        function toggleBloqueoEdicionGrupo() {
-            setBloqueoEdicionGrupo(!edicionGrupoBloqueada);
-        }
-
-        function cerrarEdicionGrupo() {
-            ModalManager.cerrar('modal-editar-grupo', () => {
-                D.setGrupoEnEdicion(null);
-                document.dispatchEvent(new Event('scroll'));
-            });
         }
 
         function aplicarFeedbackCampos(campos) {
@@ -7370,9 +7469,11 @@ Generado por Sistema Lushibosca
             _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
             _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
             _esFechaHabil, _cubiertoPorSaldo, agruparRegistrosConsecutivos, _irAFicharConFecha,
+            _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _nombreMesCapitalizado, _renderSelectorStats,
+            setModoEstadisticas, setTiempoExpansionBotones,
         };
 
-    })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo);
+    })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas);
 
     // ====================================================================
     // BIENVENIDA MODULE — primera vez / después de un restablecimiento

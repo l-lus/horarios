@@ -5245,18 +5245,30 @@ Generado por Sistema Lushibosca
             const btnRestaurar = document.getElementById('btn-hist-restaurar');
             if (!btnRespaldar || !btnRestaurar) return;
 
+            const tieneGist = GistSync.esGistIdValido(GistSync.getGistId());
+
             const newRespaldar = btnRespaldar.cloneNode(true);
             const newRestaurar = btnRestaurar.cloneNode(true);
             btnRespaldar.parentNode.replaceChild(newRespaldar, btnRespaldar);
             btnRestaurar.parentNode.replaceChild(newRestaurar, btnRestaurar);
 
-            newRespaldar.title = 'Respaldar';
-            newRespaldar.addEventListener('click', (e) => _popupAccionHistorico(e, 'respaldar'));
-            newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
+            if (tieneGist) {
+                newRespaldar.title = 'Subir a Gist';
+                newRespaldar.addEventListener('click', () => gistSubir());
+                newRespaldar.querySelector('use').setAttribute('href', '#icon-cloud-upload');
 
-            newRestaurar.title = 'Restaurar';
-            newRestaurar.addEventListener('click', (e) => _popupAccionHistorico(e, 'restaurar'));
-            newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
+                newRestaurar.title = 'Bajar de Gist';
+                newRestaurar.addEventListener('click', () => gistBajar());
+                newRestaurar.querySelector('use').setAttribute('href', '#icon-cloud-download');
+            } else {
+                newRespaldar.title = 'Respaldar';
+                newRespaldar.addEventListener('click', () => mostrarExportar(true));
+                newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
+
+                newRestaurar.title = 'Restaurar';
+                newRestaurar.addEventListener('click', () => mostrarImportar(true));
+                newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
+            }
         }
 
         function guardarConfigGist() {
@@ -6627,56 +6639,6 @@ Generado por Sistema Lushibosca
             _posicionarPopup(popup, event);
         }
 
-        let _popupAccionHistoricoEl = null;
-
-        function _popupAccionHistorico(event, tipo) {
-            event.stopPropagation();
-
-            if (_popupAccionHistoricoEl) {
-                const mismoTipo = _popupAccionHistoricoEl.dataset.tipo === tipo;
-                _popupAccionHistoricoEl.remove();
-                _popupAccionHistoricoEl = null;
-                if (mismoTipo) return;
-            }
-
-            const esRespaldar = tipo === 'respaldar';
-            const titulo = esRespaldar ? 'Respaldar registros' : 'Restaurar registros';
-
-            const popup = document.createElement('div');
-            popup.className = 'cal-popup';
-            popup.id = '_popup-accion-historico';
-            popup.dataset.tipo = tipo;
-            popup.innerHTML = `
-                <div class="cal-popup-fecha">${titulo}</div>
-                <button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_popup-accion-gist">
-                    <svg class="icon"><use href="#icon-gist"/></svg>
-                    GitHub Gist
-                </button>
-                <button class="cal-popup-btn-edit cal-popup-btn-accion--especial" id="_popup-accion-local">
-                    <svg class="icon"><use href="#icon-${esRespaldar ? 'download' : 'upload'}"/></svg>
-                    Archivo local
-                </button>`;
-
-            popup.style.visibility = 'hidden';
-            document.body.appendChild(popup);
-            _popupAccionHistoricoEl = popup;
-
-            const cerrarPopup = _registrarCierrePopup(popup, `#btn-hist-${tipo}`, () => true, () => { _popupAccionHistoricoEl = null; });
-
-            popup.querySelector('#_popup-accion-gist')?.addEventListener('click', () => {
-                cerrarPopup();
-                const gistListo = GistSync.getToken() && (esRespaldar || GistSync.esGistIdValido(GistSync.getGistId()));
-                if (!gistListo) { abrirModalGist(); return; }
-                esRespaldar ? gistSubir() : gistBajar();
-            });
-            popup.querySelector('#_popup-accion-local')?.addEventListener('click', () => {
-                cerrarPopup();
-                esRespaldar ? mostrarExportar(true) : mostrarImportar(true);
-            });
-
-            _posicionarPopup(popup, event);
-        }
-
         function _flashCampo(...ids) {
             ids.forEach(id => {
                 const el = document.getElementById(id);
@@ -7468,7 +7430,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260717';
+        const _v = '-v260718';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

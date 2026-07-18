@@ -2302,6 +2302,236 @@
         };
     })(SecurityAndUtils, DataManagement);
 
+    // ====================================================================
+    //                     MÓDULO UI PERFILES
+    // ====================================================================
+    // Selector y editor de perfiles: crear, renombrar, eliminar, listar.
+    const UIPerfiles = (function (S, UICore) {
+        const { mostrarToast } = UICore;
+
+        let perfilEnEdicion = null;
+
+        function renderizarListaPerfiles() {
+            const lista = document.getElementById('lista-perfiles-botones');
+            if (!lista) return;
+
+            lista.innerHTML = '';
+            window.PerfilManager.obtenerListaPerfiles().forEach(p => {
+                const container = Object.assign(document.createElement('div'), {
+                    className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
+                });
+                if (p.esActual) container.style.cursor = 'default';
+
+                const countText = `${p.totalRegistros} registro${p.totalRegistros !== 1 ? 's' : ''}`;
+                const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
+                infoSection.appendChild(Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre', textContent: p.nombre }));
+                const badge = Object.assign(document.createElement('div'), {
+                    className: 'btn-perfil-badge',
+                    textContent: p.esActual ? `${countText} · Activo` : countText
+                });
+                if (p.esActual) badge.style.color = 'var(--c-green)';
+                infoSection.appendChild(badge);
+
+                const editBtn = Object.assign(document.createElement('button'), {
+                    className: 'btn-perfil-edit',
+                    innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
+                    title: 'Editar perfil',
+                    onclick: (e) => { e.stopPropagation(); UILogic.abrirEditorPerfil(p.id); }
+                });
+
+                container.onclick = () => { if (!p.esActual) window.PerfilManager.cambiarPerfil(p.id); };
+                container.appendChild(infoSection);
+                container.appendChild(editBtn);
+                lista.appendChild(container);
+            });
+        }
+
+        function abrirSelectorPerfiles() {
+            ModalManager.abrir('modal-selector-perfiles', () => {
+                const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
+                if (inputNuevo) inputNuevo.value = '';
+
+                renderizarListaPerfiles();
+
+                const temaOscuro = document.documentElement.classList.contains('dark-mode');
+                const toggleBtnModal = document.getElementById('theme-toggle-modal');
+
+                if (toggleBtnModal) {
+                    const icon = toggleBtnModal.querySelector('use');
+                    if (temaOscuro) {
+                        icon.setAttribute('href', '#icon-sun');
+                    } else {
+                        icon.setAttribute('href', '#icon-moon');
+                    }
+                }
+            });
+        }
+
+        function _validarNombrePerfil(nombre, perfiles) {
+            if (!nombre) return 'Ingresa un nombre para el perfil';
+            if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/.test(nombre)) return 'El nombre contiene caracteres no válidos.\n Solo letras, números y espacios.';
+            if (Object.values(perfiles).some(p => p.nombre.toLowerCase().trim() === nombre.toLowerCase().trim())) return 'Ya existe un perfil con ese nombre';
+            if (Object.keys(perfiles).length >= PerfilManager.MAX_PERFILES) return `Máximo de perfiles alcanzado (${PerfilManager.MAX_PERFILES})`;
+            return null;
+        }
+
+        function crearPerfilDesdeSelector() {
+            const input = document.getElementById('nombre-nuevo-perfil-selector');
+            if (!input) return;
+            const nombre = S.sanitizeString(input.value.trim(), 30);
+            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+
+            const error = _validarNombrePerfil(nombre, perfiles);
+            if (error) { mostrarToast(error, 'error'); return; }
+
+            const id = 'perfil_' + S.generarIDSeguro();
+            perfiles[id] = { nombre, registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 };
+
+            try {
+                if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
+            } catch (e) {
+                console.error('Error al guardar perfil:', e);
+                delete perfiles[id];
+                mostrarToast('Error al guardar: almacenamiento lleno', 'error');
+                return;
+            }
+
+            if (window.PerfilManager) window.PerfilManager.inicializar();
+            mostrarToast(`Perfil "${nombre}" creado`, 'success');
+            input.value = '';
+            renderizarListaPerfiles();
+            requestAnimationFrame(() => {
+                const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
+                if (ultimo) { ultimo.style.animation = 'zoomIn 0.3s ease-out'; ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+            });
+        }
+
+        function cerrarSelectorPerfiles() {
+            ModalManager.cerrar('modal-selector-perfiles');
+        }
+
+        function abrirEditorPerfil(perfilId) {
+            perfilEnEdicion = perfilId;
+            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+            const perfil = perfiles[perfilId];
+
+            if (!perfil) {
+                mostrarToast('Perfil no encontrado', 'error');
+                return;
+            }
+
+            document.getElementById('nombre-perfil-editar').value = perfil.nombre;
+            document.getElementById('id-perfil-editar').value = perfilId;
+
+            const btnEliminar = document.getElementById('btn-eliminar-perfil-editor');
+            if (btnEliminar) {
+                btnEliminar.disabled = (perfilId === 'default');
+            }
+
+            ModalManager.alternar('modal-selector-perfiles', 'modal-editar-perfil');
+        }
+
+        function cerrarEditorPerfil() {
+            perfilEnEdicion = null;
+            ModalManager.alternar('modal-editar-perfil', 'modal-selector-perfiles', null, () => {
+                const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
+                if (inputNuevo) inputNuevo.value = '';
+                renderizarListaPerfiles();
+            });
+        }
+
+        function _validarNombrePerfilEdicion(nuevoNombre, perfiles, excluirId) {
+            if (!nuevoNombre) return 'Ingresa un nombre válido';
+            if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/.test(nuevoNombre)) return 'Caracteres no permitidos en el nombre.';
+            if (!perfiles[excluirId]) return 'Perfil no encontrado';
+            const norm = nuevoNombre.toLowerCase().trim();
+            if (Object.entries(perfiles).some(([id, p]) => id !== excluirId && p.nombre.toLowerCase().trim() === norm)) return 'Ya existe otro perfil con ese nombre';
+            return null;
+        }
+
+        function guardarEdicionPerfil() {
+            if (!perfilEnEdicion) return;
+            const nuevoNombre = S.sanitizeString(document.getElementById('nombre-perfil-editar').value.trim(), 30);
+            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+
+            const error = _validarNombrePerfilEdicion(nuevoNombre, perfiles, perfilEnEdicion);
+            if (error) { mostrarToast(error, 'error'); return; }
+
+            if (perfiles[perfilEnEdicion].nombre === nuevoNombre) {
+                mostrarToast('Sin cambios', 'info'); cerrarEditorPerfil(); return;
+            }
+
+            const nombreAnterior = perfiles[perfilEnEdicion].nombre;
+            perfiles[perfilEnEdicion].nombre = nuevoNombre;
+            try {
+                if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
+            } catch (e) {
+                console.error('Error al guardar perfil:', e);
+                perfiles[perfilEnEdicion].nombre = nombreAnterior;
+                mostrarToast('Error al guardar: almacenamiento lleno', 'error');
+                return;
+            }
+
+            if (perfilEnEdicion === window.PerfilManager?.obtenerPerfilActual()) {
+                const btnTexto = document.getElementById('nombre-perfil-header');
+                if (btnTexto) btnTexto.textContent = nuevoNombre;
+            }
+            if (window.PerfilManager) window.PerfilManager.inicializar();
+            mostrarToast('Perfil actualizado', 'success');
+            cerrarEditorPerfil();
+        }
+
+        function _limpiarClavesPerfil(pid) {
+            ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
+                'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
+            ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
+        }
+
+        async function eliminarPerfilDesdeEditor() {
+            if (!perfilEnEdicion || perfilEnEdicion === 'default') {
+                mostrarToast('No se puede eliminar el perfil Principal', 'error'); return;
+            }
+            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+            const perfil = perfiles[perfilEnEdicion];
+            if (!perfil) { mostrarToast('Perfil no encontrado', 'error'); return; }
+
+            if (!await ModalManager.confirmar(`¿Estás seguro de que querés eliminar el perfil "${perfil.nombre}"? Esta acción no se puede deshacer.`, 'Eliminar')) return;
+
+            _limpiarClavesPerfil(perfilEnEdicion);
+            delete perfiles[perfilEnEdicion];
+            try {
+                if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
+            } catch (e) {
+                console.error('Error al eliminar perfil:', e); mostrarToast('Error al guardar: almacenamiento lleno', 'error'); return;
+            }
+
+            if (perfilEnEdicion === window.PerfilManager?.obtenerPerfilActual()) {
+                try {
+                    if (!StorageHelper.setItem(STORAGE_KEYS.PERFIL_ACTIVO, 'default')) throw new Error('quota');
+                } catch (e) {
+                    console.error('Error al guardar perfil activo:', e); mostrarToast('Error al guardar: almacenamiento lleno', 'error'); return;
+                }
+                mostrarToast('Perfil eliminado. Recargando...', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                window.PerfilManager?.inicializar();
+                mostrarToast('Perfil eliminado', 'success');
+                cerrarEditorPerfil();
+            }
+        }
+
+        return {
+            renderizarListaPerfiles,
+            abrirSelectorPerfiles,
+            crearPerfilDesdeSelector,
+            cerrarSelectorPerfiles,
+            abrirEditorPerfil,
+            cerrarEditorPerfil,
+            guardarEdicionPerfil,
+            eliminarPerfilDesdeEditor,
+            _limpiarClavesPerfil
+        };
+    })(SecurityAndUtils, UICore);
 
     // ====================================================================
     //                     MÓDULO GIST SYNC
@@ -2468,7 +2698,7 @@
         return { getToken, getGistId, getLastSync, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, getSyncCount, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, subir, bajar };
     })(SecurityAndUtils);
 
-    const UILogic = (function (S, D, GistSync, UICore) {
+    const UILogic = (function (S, D, GistSync, UICore, UIPerfiles) {
 
         const {
             formatoDiferencia, registrarSwipe, debounce, _crearPressHold,
@@ -2481,9 +2711,14 @@
             _limpiarClonVisual, _finalizarSlidePendiente, _animarSlideElemento
         } = UICore;
 
+        const {
+            renderizarListaPerfiles, abrirSelectorPerfiles, crearPerfilDesdeSelector,
+            cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil,
+            guardarEdicionPerfil, eliminarPerfilDesdeEditor
+        } = UIPerfiles;
+
         let edicionBloqueada = true;
         let edicionGrupoBloqueada = true;
-        let perfilEnEdicion = null;
         let modoLoteActivo = false;
         let tiempoExpansionBotones = null;
         let timerAutoCierreBotones = null;
@@ -4709,40 +4944,6 @@ Generado por Sistema Lushibosca
             setBloqueoEdicion(!edicionBloqueada);
         }
 
-        function renderizarListaPerfiles() {
-            const lista = document.getElementById('lista-perfiles-botones');
-            if (!lista) return;
-
-            lista.innerHTML = '';
-            window.PerfilManager.obtenerListaPerfiles().forEach(p => {
-                const container = Object.assign(document.createElement('div'), {
-                    className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
-                });
-                if (p.esActual) container.style.cursor = 'default';
-
-                const countText = `${p.totalRegistros} registro${p.totalRegistros !== 1 ? 's' : ''}`;
-                const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
-                infoSection.appendChild(Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre', textContent: p.nombre }));
-                const badge = Object.assign(document.createElement('div'), {
-                    className: 'btn-perfil-badge',
-                    textContent: p.esActual ? `${countText} · Activo` : countText
-                });
-                if (p.esActual) badge.style.color = 'var(--c-green)';
-                infoSection.appendChild(badge);
-
-                const editBtn = Object.assign(document.createElement('button'), {
-                    className: 'btn-perfil-edit',
-                    innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
-                    title: 'Editar perfil',
-                    onclick: (e) => { e.stopPropagation(); UILogic.abrirEditorPerfil(p.id); }
-                });
-
-                container.onclick = () => { if (!p.esActual) window.PerfilManager.cambiarPerfil(p.id); };
-                container.appendChild(infoSection);
-                container.appendChild(editBtn);
-                lista.appendChild(container);
-            });
-        }
 
         function _cerrarSelectorMeses(idResaltar = null) {
             const grid = document.getElementById('calendario-grid');
@@ -4814,70 +5015,6 @@ Generado por Sistema Lushibosca
             });
         }
 
-        function abrirSelectorPerfiles() {
-            ModalManager.abrir('modal-selector-perfiles', () => {
-                const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
-                if (inputNuevo) inputNuevo.value = '';
-
-                renderizarListaPerfiles();
-
-                const temaOscuro = document.documentElement.classList.contains('dark-mode');
-                const toggleBtnModal = document.getElementById('theme-toggle-modal');
-
-                if (toggleBtnModal) {
-                    const icon = toggleBtnModal.querySelector('use');
-                    if (temaOscuro) {
-                        icon.setAttribute('href', '#icon-sun');
-                    } else {
-                        icon.setAttribute('href', '#icon-moon');
-                    }
-                }
-            });
-        }
-
-        function _validarNombrePerfil(nombre, perfiles) {
-            if (!nombre) return 'Ingresa un nombre para el perfil';
-            if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/.test(nombre)) return 'El nombre contiene caracteres no válidos.\n Solo letras, números y espacios.';
-            if (Object.values(perfiles).some(p => p.nombre.toLowerCase().trim() === nombre.toLowerCase().trim())) return 'Ya existe un perfil con ese nombre';
-            if (Object.keys(perfiles).length >= PerfilManager.MAX_PERFILES) return `Máximo de perfiles alcanzado (${PerfilManager.MAX_PERFILES})`;
-            return null;
-        }
-
-        function crearPerfilDesdeSelector() {
-            const input = document.getElementById('nombre-nuevo-perfil-selector');
-            if (!input) return;
-            const nombre = S.sanitizeString(input.value.trim(), 30);
-            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
-
-            const error = _validarNombrePerfil(nombre, perfiles);
-            if (error) { mostrarToast(error, 'error'); return; }
-
-            const id = 'perfil_' + S.generarIDSeguro();
-            perfiles[id] = { nombre, registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 };
-
-            try {
-                if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
-            } catch (e) {
-                console.error('Error al guardar perfil:', e);
-                delete perfiles[id];
-                mostrarToast('Error al guardar: almacenamiento lleno', 'error');
-                return;
-            }
-
-            if (window.PerfilManager) window.PerfilManager.inicializar();
-            mostrarToast(`Perfil "${nombre}" creado`, 'success');
-            input.value = '';
-            renderizarListaPerfiles();
-            requestAnimationFrame(() => {
-                const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
-                if (ultimo) { ultimo.style.animation = 'zoomIn 0.3s ease-out'; ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-            });
-        }
-
-        function cerrarSelectorPerfiles() {
-            ModalManager.cerrar('modal-selector-perfiles');
-        }
-
         function mostrarconfig() {
             ModalManager.alternar('modal-selector-perfiles', 'modal-config', null, () => {
                 {
@@ -4898,116 +5035,6 @@ Generado por Sistema Lushibosca
                 const lbl = $('hint-fondo-label');
                 if (lbl) lbl.textContent = _getLabelFondo(_fondoCard);
             });
-        }
-
-        function abrirEditorPerfil(perfilId) {
-            perfilEnEdicion = perfilId;
-            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
-            const perfil = perfiles[perfilId];
-
-            if (!perfil) {
-                mostrarToast('Perfil no encontrado', 'error');
-                return;
-            }
-
-            document.getElementById('nombre-perfil-editar').value = perfil.nombre;
-            document.getElementById('id-perfil-editar').value = perfilId;
-
-            const btnEliminar = document.getElementById('btn-eliminar-perfil-editor');
-            if (btnEliminar) {
-                btnEliminar.disabled = (perfilId === 'default');
-            }
-
-            ModalManager.alternar('modal-selector-perfiles', 'modal-editar-perfil');
-        }
-
-        function cerrarEditorPerfil() {
-            perfilEnEdicion = null;
-            ModalManager.alternar('modal-editar-perfil', 'modal-selector-perfiles', null, () => {
-                const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
-                if (inputNuevo) inputNuevo.value = '';
-                renderizarListaPerfiles();
-            });
-        }
-
-        function _validarNombrePerfilEdicion(nuevoNombre, perfiles, excluirId) {
-            if (!nuevoNombre) return 'Ingresa un nombre válido';
-            if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/.test(nuevoNombre)) return 'Caracteres no permitidos en el nombre.';
-            if (!perfiles[excluirId]) return 'Perfil no encontrado';
-            const norm = nuevoNombre.toLowerCase().trim();
-            if (Object.entries(perfiles).some(([id, p]) => id !== excluirId && p.nombre.toLowerCase().trim() === norm)) return 'Ya existe otro perfil con ese nombre';
-            return null;
-        }
-
-        function guardarEdicionPerfil() {
-            if (!perfilEnEdicion) return;
-            const nuevoNombre = S.sanitizeString(document.getElementById('nombre-perfil-editar').value.trim(), 30);
-            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
-
-            const error = _validarNombrePerfilEdicion(nuevoNombre, perfiles, perfilEnEdicion);
-            if (error) { mostrarToast(error, 'error'); return; }
-
-            if (perfiles[perfilEnEdicion].nombre === nuevoNombre) {
-                mostrarToast('Sin cambios', 'info'); cerrarEditorPerfil(); return;
-            }
-
-            const nombreAnterior = perfiles[perfilEnEdicion].nombre;
-            perfiles[perfilEnEdicion].nombre = nuevoNombre;
-            try {
-                if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
-            } catch (e) {
-                console.error('Error al guardar perfil:', e);
-                perfiles[perfilEnEdicion].nombre = nombreAnterior;
-                mostrarToast('Error al guardar: almacenamiento lleno', 'error');
-                return;
-            }
-
-            if (perfilEnEdicion === window.PerfilManager?.obtenerPerfilActual()) {
-                const btnTexto = document.getElementById('nombre-perfil-header');
-                if (btnTexto) btnTexto.textContent = nuevoNombre;
-            }
-            if (window.PerfilManager) window.PerfilManager.inicializar();
-            mostrarToast('Perfil actualizado', 'success');
-            cerrarEditorPerfil();
-        }
-
-        function _limpiarClavesPerfil(pid) {
-            ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
-                'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
-            ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
-        }
-
-        async function eliminarPerfilDesdeEditor() {
-            if (!perfilEnEdicion || perfilEnEdicion === 'default') {
-                mostrarToast('No se puede eliminar el perfil Principal', 'error'); return;
-            }
-            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
-            const perfil = perfiles[perfilEnEdicion];
-            if (!perfil) { mostrarToast('Perfil no encontrado', 'error'); return; }
-
-            if (!await ModalManager.confirmar(`¿Estás seguro de que querés eliminar el perfil "${perfil.nombre}"? Esta acción no se puede deshacer.`, 'Eliminar')) return;
-
-            _limpiarClavesPerfil(perfilEnEdicion);
-            delete perfiles[perfilEnEdicion];
-            try {
-                if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
-            } catch (e) {
-                console.error('Error al eliminar perfil:', e); mostrarToast('Error al guardar: almacenamiento lleno', 'error'); return;
-            }
-
-            if (perfilEnEdicion === window.PerfilManager?.obtenerPerfilActual()) {
-                try {
-                    if (!StorageHelper.setItem(STORAGE_KEYS.PERFIL_ACTIVO, 'default')) throw new Error('quota');
-                } catch (e) {
-                    console.error('Error al guardar perfil activo:', e); mostrarToast('Error al guardar: almacenamiento lleno', 'error'); return;
-                }
-                mostrarToast('Perfil eliminado. Recargando...', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                window.PerfilManager?.inicializar();
-                mostrarToast('Perfil eliminado', 'success');
-                cerrarEditorPerfil();
-            }
         }
 
         function toggleModoLote(deltaSwipe, conAnimacion = true) {
@@ -7263,7 +7290,7 @@ Generado por Sistema Lushibosca
             _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
         };
 
-    })(SecurityAndUtils, DataManagement, GistSync, UICore);
+    })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles);
 
     // ====================================================================
     // BIENVENIDA MODULE — primera vez / después de un restablecimiento

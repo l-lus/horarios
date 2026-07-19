@@ -2566,7 +2566,7 @@
     // Vista de calendario histórico: render, navegación por mes, selector de
     // meses, y los popups de día (con/sin registro), incluyendo hover en desktop.
     const UICalendario = (function (S, D, UICore) {
-        const { registrarSwipe, _animarFadeSwap, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup } = UICore;
+        const { registrarSwipe, _animarFadeSwap, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, formatoDiferencia } = UICore;
 
         function _agruparMesesPorAnio(mesesOrdenados) {
             const map = new Map();
@@ -5523,7 +5523,7 @@ Generado por Sistema Lushibosca
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, registrarSwipe, _animarFadeSwap,
-            _animarSlideElemento, toggleSeccionGen, DUR_ANIM
+            _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
         } = UICore;
 
         let modoLoteActivo = false;
@@ -6207,7 +6207,7 @@ Generado por Sistema Lushibosca
 
         function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false) {
             if (!soloReloj) {
-                actualizarListaRegistros(D.registros(), idNuevo);
+                UILogic.actualizarListaRegistros(D.registros(), idNuevo);
             }
 
             const est = calcularEstadoCard();
@@ -6220,12 +6220,12 @@ Generado por Sistema Lushibosca
             _renderBarra(vista);
             UILogic._renderSelectorStats();
             actualizarEstadoBotonTimerMain();
-            if (getVistaHistoricoCalendario()) {
+            if (UILogic.getVistaHistoricoCalendario()) {
                 const selector = document.getElementById('calendario-selector-meses');
                 if (selector && selector.style.display !== 'none') {
-                    _cerrarSelectorMeses(idNuevo);
+                    UILogic._cerrarSelectorMeses(idNuevo);
                 } else {
-                    _renderizarCalendario(idNuevo);
+                    UILogic._renderizarCalendario(idNuevo);
                 }
             }
 
@@ -6487,7 +6487,7 @@ Generado por Sistema Lushibosca
             }
             try {
                 await DataManagement.registrarDiaEspecial(desde, tipo);
-                aplicarFeedbackCampos([
+                UILogic.aplicarFeedbackCampos([
                     { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
                 ]);
@@ -6531,7 +6531,7 @@ Generado por Sistema Lushibosca
             try {
                 if (tipo === 'normal') await DataManagement.borrarPeriodoDirecto(desde, hasta);
                 else await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
-                aplicarFeedbackCampos([
+                UILogic.aplicarFeedbackCampos([
                     { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
                 ]);
@@ -6755,7 +6755,9 @@ Generado por Sistema Lushibosca
             limpiarCampo,
             getFondoCard: () => _fondoCard,
             setTimerAutoVista: (v) => { _timerAutoVista = v; },
-            sumarMinutosAHora
+            sumarMinutosAHora,
+            _getLabelFondo,
+            _iniciarCicloStats
         };
     })(SecurityAndUtils, DataManagement, UICore);
 
@@ -6823,7 +6825,7 @@ Generado por Sistema Lushibosca
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
-            sumarMinutosAHora
+            sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats
         } = UITarjetaFichaje;
 
         /**
@@ -7523,6 +7525,8 @@ Generado por Sistema Lushibosca
             _esFechaHabil, _cubiertoPorSaldo, agruparRegistrosConsecutivos, _irAFicharConFecha,
             _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _nombreMesCapitalizado, _renderSelectorStats,
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
+            actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
+            _getLabelFondo, _iniciarCicloStats,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);

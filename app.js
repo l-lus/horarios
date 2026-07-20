@@ -393,6 +393,9 @@
     const StorageHelper = (function () {
         'use strict';
 
+        let notify = { mostrarToast: () => { } };
+        function configurarNotificaciones(handlers) { notify = { ...notify, ...handlers }; }
+
         function _getKey(key, useProfile) {
             if (useProfile && window.PerfilManager) {
                 return window.PerfilManager.perfilKey(key);
@@ -410,7 +413,7 @@
             } catch (e) {
                 console.error(`Error guardando en Storage (${key}):`, e);
                 if (e.name === 'QuotaExceededError' || e.code === 22) {
-                    if (window.UILogic) UILogic.mostrarToast('Almacenamiento lleno, no se pudo guardar', 'error');
+                    notify.mostrarToast('Almacenamiento lleno, no se pudo guardar', 'error');
                 }
                 return false;
             }
@@ -460,7 +463,8 @@
             getBoolean,
             getNumber,
             getObject,
-            removeItem
+            removeItem,
+            configurarNotificaciones
         };
     })();
 
@@ -581,26 +585,24 @@
     const ModalManager = (function () {
         const _padres = {};
 
+        // Registro de "qué hacer al volver atrás (Escape/gesto del navegador)" por modal.
+        // Cada módulo de UI se registra a sí mismo (ver UILogic._initGlobales) en vez de
+        // que ModalManager conozca de antemano los nombres de sus funciones de cierre.
+        const _accionesVolver = {
+            'modal-confirmar': () => document.getElementById('modal-confirmar-cancel')?.click(),
+        };
+
+        function registrarAccionVolver(modalId, fn) {
+            _accionesVolver[modalId] = fn;
+        }
+
         let _navegandoHaciaAtras = false;
         let _ignorandoPopstate = false;
         let _enAlternanciaHaciaAdelante = false;
         let _enAlternanciaHaciaAtras = false;
 
         function _getAccionVolver(modalId) {
-            const acciones = {
-                'modal-gist': () => window.UILogic?.cerrarModalGist(),
-                'modal-gist-merge': () => window.UILogic?.gistMergeCancelar(),
-                'modal-config': () => window.UILogic && UILogic.cerrarConfig(),
-                'modal-selector-perfiles': () => window.UILogic && UILogic.cerrarSelectorPerfiles(),
-                'modal-editar': () => window.UILogic && UILogic.cerrarEdicion(),
-                'modal-importar': () => window.UILogic && UILogic.cerrarImportar(),
-                'modal-exportar': () => window.UILogic && UILogic.cerrarExportar(),
-                'modal-filtros': () => window.UILogic && UILogic.cerrarFiltros(),
-                'modal-editar-perfil': () => window.UILogic && UILogic.cerrarEditorPerfil(),
-                'modal-editar-grupo': () => window.UILogic && UILogic.cerrarEdicionGrupo(),
-                'modal-confirmar': () => document.getElementById('modal-confirmar-cancel')?.click(),
-            };
-            return acciones[modalId] || null;
+            return _accionesVolver[modalId] || null;
         }
 
         function _ejecutarAccionCierre(modalId) {
@@ -770,7 +772,7 @@
             });
         }
 
-        return { abrir, cerrar, alternar, cerrarTodos, confirmar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, setPadre: (id, padreId) => { if (id && padreId) _padres[id] = padreId; } };
+        return { abrir, cerrar, alternar, cerrarTodos, confirmar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, setPadre: (id, padreId) => { if (id && padreId) _padres[id] = padreId; }, registrarAccionVolver };
     })();
 
     // ====================================================================
@@ -1022,6 +1024,39 @@
     // DATA MANAGEMENT MODULE 
     // ====================================================================
     const DataManagement = (function (S) {
+        // Antes, este módulo llamaba directo a UILogic.mostrarToast/actualizarUI/etc. —
+        // acoplando la capa de datos a la capa de UI vía el global window.UILogic (un
+        // service locator implícito, no inyección de dependencias real). Este objeto
+        // reemplaza esas llamadas: UILogic se registra una sola vez desde su propio
+        // _initGlobales (configurarNotificaciones), y DataManagement ya no conoce su nombre.
+        // Los no-ops son el default seguro hasta que se registre el handler real.
+        let notify = {
+            actualizarBotonLote: () => { },
+            actualizarEstadoBotonTimerMain: () => { },
+            actualizarHintGrupo: () => { },
+            actualizarUI: () => { },
+            aplicarFeedbackCampos: () => { },
+            cerrarEdicion: () => { },
+            cerrarEdicionGrupo: () => { },
+            cerrarFiltros: () => { },
+            cerrarImportar: () => { },
+            descargarJSON: () => { },
+            iniciarTimerAutoCierreBotones: () => { },
+            limpiarError: () => { },
+            mostrarError: () => { },
+            mostrarToast: () => { },
+            obtenerNombrePerfilSafe: () => '',
+            resetearBoton: () => { },
+            restaurarBotonGuardarEdicion: () => { },
+            setBloqueoEdicion: () => { },
+            setBloqueoEdicionGrupo: () => { },
+            verificarBloqueoCredito: () => { },
+        };
+
+        function configurarNotificaciones(handlers) {
+            notify = { ...notify, ...handlers };
+        }
+
         let registros = [], diasHabiles = [1, 2, 3, 4, 5], horasDiarias = 7, editandoId = null; let vistaActual = 'diaria'; let ignorarTiempoFuera = false;
         let filtroActivo = false;
         let filtroDesde = null;
@@ -1047,9 +1082,9 @@
             $('edit-grupo-tipo').value = grupo.subtipo;
             $('edit-grupo-desde').value = grupoEnEdicion.fechaDesde;
             $('edit-grupo-hasta').value = grupoEnEdicion.fechaHasta;
-            UILogic.actualizarHintGrupo();
+            notify.actualizarHintGrupo();
             ModalManager.abrir('modal-editar-grupo');
-            UILogic.setBloqueoEdicionGrupo(true);
+            notify.setBloqueoEdicionGrupo(true);
         }
 
         function _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta) {
@@ -1078,10 +1113,10 @@
                 const nuevaHasta = S.sanitizeString($('edit-grupo-hasta').value.trim(), 10);
 
                 const error = _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta);
-                if (error) { UILogic.mostrarToast(error, 'error'); return; }
+                if (error) { notify.mostrarToast(error, 'error'); return; }
 
                 if (nuevoTipo === grupoEnEdicion.subtipo && nuevaDesde === grupoEnEdicion.fechaDesde && nuevaHasta === grupoEnEdicion.fechaHasta) {
-                    UILogic.mostrarToast('Sin cambios', 'info'); UILogic.cerrarEdicionGrupo(); return;
+                    notify.mostrarToast('Sin cambios', 'info'); notify.cerrarEdicionGrupo(); return;
                 }
 
                 const fechasNuevas = TimeUtils.generarRangoFechas(nuevaDesde, nuevaHasta);
@@ -1090,7 +1125,7 @@
                 const conflictos = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
                 if (conflictos.length > 0) {
                     const dias = conflictos.map(r => r.fecha.substring(8, 10)).sort((a, b) => a - b).join(', ');
-                    UILogic.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
+                    notify.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
                 }
 
                 registros = registros.filter(r => !idsDelGrupo.has(r.id));
@@ -1103,7 +1138,7 @@
                 ordenarRegistros();
                 HistoryManager.saveState(registros);
                 const saved = await guardarYActualizar(nuevosRegistros.map(r => r.id));
-                if (saved) { UILogic.mostrarToast('Grupo actualizado', 'success'); UILogic.cerrarEdicionGrupo(); }
+                if (saved) { notify.mostrarToast('Grupo actualizado', 'success'); notify.cerrarEdicionGrupo(); }
             } finally {
                 btnGuardar.disabled = false;
             }
@@ -1112,30 +1147,30 @@
         async function eliminarGrupoActual() {
             if (!grupoEnEdicion) return;
             if (grupoEnEdicion.registros.length > 60) {
-                UILogic.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: 60 registros por operación.`, 'error');
+                notify.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: 60 registros por operación.`, 'error');
                 return;
             }
             const idsAEliminar = grupoEnEdicion.registros.map(r => r.id);
             registros = registros.filter(r => !idsAEliminar.includes(r.id));
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar();
-            if (saved) { UILogic.mostrarToast('Grupo eliminado', 'success'); UILogic.cerrarEdicionGrupo(); }
+            if (saved) { notify.mostrarToast('Grupo eliminado', 'success'); notify.cerrarEdicionGrupo(); }
         }
 
         function setGrupoEnEdicion(val) { grupoEnEdicion = val; }
 
         async function registrarDiaEspecial(fecha, tipo) {
             const registroExistente = registros.find(r => r.fecha === fecha);
-            if (registroExistente) { UILogic.mostrarToast('Ya existe un registro para hoy', 'warning'); throw new Error('Registro ya existe'); }
+            if (registroExistente) { notify.mostrarToast('Ya existe un registro para hoy', 'warning'); throw new Error('Registro ya existe'); }
 
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
-            if (!tipoConfig) { UILogic.mostrarToast('Tipo inválido', 'error'); throw new Error('Tipo inválido'); }
+            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); throw new Error('Tipo inválido'); }
 
             const entrada = tipoConfig.codigo;
             const salida = tipoConfig.codigo;
             const tipoTexto = `${tipoConfig.emoji} ${tipoConfig.label}`;
 
-            if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) { UILogic.mostrarToast('Límite de registros alcanzado', 'error'); throw new Error('Límite alcanzado'); }
+            if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast('Límite de registros alcanzado', 'error'); throw new Error('Límite alcanzado'); }
 
             const nuevoId = S.generarIDSeguro();
             const t = calcularHoras(entrada, salida, null);
@@ -1147,7 +1182,7 @@
             ordenarRegistros();
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar(nuevoId);
-            if (saved) { UILogic.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success'); }
+            if (saved) { notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success'); }
             else { throw new Error('Error al guardar'); }
         }
 
@@ -1160,8 +1195,8 @@
                 console.error('Error crítico al guardar:', e);
                 saveSuccessful = false;
             }
-            if (saveSuccessful) { UILogic.actualizarUI(idNuevo, false, animarCard); }
-            else { UILogic.mostrarToast('Error al guardar. Almacenamiento lleno o bloqueado.', 'error'); }
+            if (saveSuccessful) { notify.actualizarUI(idNuevo, false, animarCard); }
+            else { notify.mostrarToast('Error al guardar. Almacenamiento lleno o bloqueado.', 'error'); }
             return saveSuccessful;
         }
 
@@ -1235,13 +1270,13 @@
             const entrada = S.sanitizeString($('entrada').value.trim(), 5);
             const salida = S.sanitizeString($('salida').value.trim(), 5);
 
-            UILogic.limpiarError('fecha', null);
-            UILogic.limpiarError('entrada', null);
-            UILogic.limpiarError('salida', null);
+            notify.limpiarError('fecha', null);
+            notify.limpiarError('entrada', null);
+            notify.limpiarError('salida', null);
 
-            if (!fecha || !TimeUtils.validarFecha(fecha)) { UILogic.mostrarError('fecha', null); valido = false; }
-            if (entrada && !TimeUtils.validarHora(entrada)) { UILogic.mostrarError('entrada', null); valido = false; }
-            if (salida && !TimeUtils.validarHora(salida)) { UILogic.mostrarError('salida', null); valido = false; }
+            if (!fecha || !TimeUtils.validarFecha(fecha)) { notify.mostrarError('fecha', null); valido = false; }
+            if (entrada && !TimeUtils.validarHora(entrada)) { notify.mostrarError('entrada', null); valido = false; }
+            if (salida && !TimeUtils.validarHora(salida)) { notify.mostrarError('salida', null); valido = false; }
             return valido;
         }
 
@@ -1263,20 +1298,20 @@
             const saved = await guardarYActualizar(reg.id);
             if (!saved) return;
             if (!usaHoraActual) {
-                UILogic.aplicarFeedbackCampos([
+                notify.aplicarFeedbackCampos([
                     { id: 'entrada', fallback: 'Entrada', mostrar: false },
                     { id: 'salida', fallback: 'Salida', mostrar: true }
                 ]);
             }
-            UILogic.mostrarToast(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
-            UILogic.resetearBoton(btn);
+            notify.mostrarToast(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
+            notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('salida').value = '';
         }
 
         async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
             if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) {
-                UILogic.resetearBoton(btn); UILogic.mostrarToast('Límite alcanzado', 'error'); return;
+                notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); return;
             }
             const nuevoId = S.generarIDSeguro();
             const t = calcularHoras(e || null, s || null, null);
@@ -1290,19 +1325,19 @@
             if (!saved) return;
             const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
             if (entradaManual || salidaManual) {
-                UILogic.aplicarFeedbackCampos([
+                notify.aplicarFeedbackCampos([
                     { id: 'entrada', fallback: 'Entrada', mostrar: entradaManual },
                     { id: 'salida', fallback: 'Salida', mostrar: salidaManual }
                 ]);
             }
-            UILogic.mostrarToast(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
-            UILogic.resetearBoton(btn);
+            notify.mostrarToast(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
+            notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('entrada').value = ''; $('salida').value = '';
         }
 
         async function agregarRegistro() {
-            if (!validarFormulario()) { UILogic.mostrarToast('Verifica los campos', 'error'); return; }
+            if (!validarFormulario()) { notify.mostrarToast('Verifica los campos', 'error'); return; }
 
             const btn = $('btn-agregar');
             btn.disabled = true;
@@ -1312,8 +1347,8 @@
             let s = S.sanitizeString($('salida').value.trim(), 5);
 
             if (f > TimeUtils.obtenerFechaHoy() && !TiposRegistro.esRegistroEspecial(e, s)) {
-                UILogic.resetearBoton(btn); UILogic.mostrarError('fecha', null);
-                UILogic.mostrarToast('Fecha futura no permitida en registro regular', 'warning'); return;
+                notify.resetearBoton(btn); notify.mostrarError('fecha', null);
+                notify.mostrarToast('Fecha futura no permitida en registro regular', 'warning'); return;
             }
 
             if (!e) {
@@ -1334,8 +1369,8 @@
             }
 
             if (!e && s) {
-                if (registroExistente?.salida) { UILogic.resetearBoton(btn); UILogic.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); return; }
-                if (!registroExistente?.entrada) { UILogic.resetearBoton(btn); UILogic.mostrarToast('Debes fichar una entrada primero', 'error'); return; }
+                if (registroExistente?.salida) { notify.resetearBoton(btn); notify.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); return; }
+                if (!registroExistente?.entrada) { notify.resetearBoton(btn); notify.mostrarToast('Debes fichar una entrada primero', 'error'); return; }
             }
 
             if (registroExistente?.entrada && !registroExistente.salida && !e && s) {
@@ -1343,9 +1378,9 @@
             }
 
             if (registroExistente) {
-                UILogic.resetearBoton(btn);
+                notify.resetearBoton(btn);
                 if (usaHoraActual) $('entrada').value = '';
-                UILogic.mostrarToast('Ya existe un registro para esta fecha', 'error'); return;
+                notify.mostrarToast('Ya existe un registro para esta fecha', 'error'); return;
             }
 
             await _crearNuevoRegistro(f, e, s, usaHoraActual, btn);
@@ -1364,7 +1399,7 @@
                     const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
                     if (StorageHelper.getItem(storageKey)) {
                         StorageHelper.removeItem(storageKey);
-                        UILogic.mostrarToast('Timer detenido al borrar el registro', 'info');
+                        notify.mostrarToast('Timer detenido al borrar el registro', 'info');
                     }
                 }
 
@@ -1376,12 +1411,10 @@
                 btnEliminar.innerHTML = '<svg class="icon"><use href="#icon-trash"/></svg> Eliminar';
 
                 if (saved) {
-                    UILogic.mostrarToast('Registro eliminado', 'success');
-                    UILogic.cerrarEdicion();
-                    UILogic.actualizarEstadoBotonTimerMain();
-                    if (window.UILogic && window.UILogic.actualizarBotonLote) {
-                        window.UILogic.actualizarBotonLote();
-                    }
+                    notify.mostrarToast('Registro eliminado', 'success');
+                    notify.cerrarEdicion();
+                    notify.actualizarEstadoBotonTimerMain();
+                    notify.actualizarBotonLote();
                 }
             }
         }
@@ -1412,10 +1445,10 @@
             }
 
             ModalManager.abrir('modal-editar');
-            UILogic.setBloqueoEdicion(true);
+            notify.setBloqueoEdicion(true);
 
             requestAnimationFrame(() => {
-                UILogic.verificarBloqueoCredito();
+                notify.verificarBloqueoCredito();
                 const hintEl = document.getElementById('edit-hint-resumen');
                 if (hintEl) hintEl.dispatchEvent ? document.getElementById('edit-entrada').dispatchEvent(new Event('input')) : null;
             });
@@ -1482,13 +1515,13 @@
             if (reg?.fecha === TimeUtils.obtenerFechaHoy()) {
                 const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
                 StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-                UILogic.actualizarEstadoBotonTimerMain();
+                notify.actualizarEstadoBotonTimerMain();
             }
             registros = registros.filter(r => r.id !== editandoId);
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar();
-            UILogic.restaurarBotonGuardarEdicion(btnGuardar);
-            if (saved) { UILogic.mostrarToast('Registro eliminado (vacío)', 'info'); UILogic.cerrarEdicion(); }
+            notify.restaurarBotonGuardarEdicion(btnGuardar);
+            if (saved) { notify.mostrarToast('Registro eliminado (vacío)', 'info'); notify.cerrarEdicion(); }
         }
 
         async function guardarEdicion() {
@@ -1509,9 +1542,9 @@
 
             if (r.fecha === f && (r.entrada || '') === (e || '') && (r.salida || '') === (s || '') &&
                 (r.tiempoFuera || '') === (tf || '') && (r.credito || '') === (cr || '') && (r.notas || '') === (notas || '')) {
-                UILogic.mostrarToast('Sin cambios', 'info');
-                UILogic.restaurarBotonGuardarEdicion(btnGuardar);
-                UILogic.cerrarEdicion();
+                notify.mostrarToast('Sin cambios', 'info');
+                notify.restaurarBotonGuardarEdicion(btnGuardar);
+                notify.cerrarEdicion();
                 return;
             }
 
@@ -1519,8 +1552,8 @@
 
             const camposError = _validarCamposEdicion(f, e, s, tf);
             if (camposError) {
-                UILogic.restaurarBotonGuardarEdicion(btnGuardar);
-                UILogic.mostrarToast(camposError.msg, camposError.tipo);
+                notify.restaurarBotonGuardarEdicion(btnGuardar);
+                notify.mostrarToast(camposError.msg, camposError.tipo);
                 return;
             }
 
@@ -1537,10 +1570,10 @@
             ordenarRegistros();
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar(null, true);
-            UILogic.restaurarBotonGuardarEdicion(btnGuardar);
+            notify.restaurarBotonGuardarEdicion(btnGuardar);
             if (saved) {
-                UILogic.mostrarToast(cr ? `Guardado con Salida Temprano (+${cr})` : 'Registro actualizado', 'success');
-                UILogic.cerrarEdicion();
+                notify.mostrarToast(cr ? `Guardado con Salida Temprano (+${cr})` : 'Registro actualizado', 'success');
+                notify.cerrarEdicion();
             }
         }
 
@@ -1577,7 +1610,7 @@
                 S.validarRegistroSeguro(r) && r.fecha > hoy && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
             ).length;
             if (descartadosFuturos > 0)
-                UILogic.mostrarToast(`${descartadosFuturos} registro${descartadosFuturos > 1 ? 's' : ''} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${descartadosFuturos > 1 ? 's' : ''}`, 'warning');
+                notify.mostrarToast(`${descartadosFuturos} registro${descartadosFuturos > 1 ? 's' : ''} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${descartadosFuturos > 1 ? 's' : ''}`, 'warning');
             const normalizados = rawList
                 .filter(r => S.validarRegistroSeguro(r))
                 .filter(r => {
@@ -1609,38 +1642,38 @@
                 hash: await S.calcularHashSHA256(registros), timestamp: Date.now()
             };
             try {
-                const nombreSafe = window.UILogic.obtenerNombrePerfilSafe();
+                const nombreSafe = notify.obtenerNombrePerfilSafe();
                 const fechaHoy = TimeUtils.fechaLocalISOFull().slice(0, 10);
-                window.UILogic.descargarJSON(data, `Horarios_${nombreSafe}_${fechaHoy}.json`);
-                window.UILogic.mostrarToast('Datos exportados', 'success');
+                notify.descargarJSON(data, `Horarios_${nombreSafe}_${fechaHoy}.json`);
+                notify.mostrarToast('Datos exportados', 'success');
                 ModalManager.cerrarTodos();
             } catch (e) {
                 console.error(e);
-                UILogic.mostrarToast('Error al exportar', 'error');
+                notify.mostrarToast('Error al exportar', 'error');
             }
         }
 
         async function _validarDatosImport(data) {
-            if (!data || typeof data !== 'object' || Array.isArray(data)) { UILogic.mostrarToast('Estructura de archivo inválida', 'error'); return false; }
-            if (!data.registros || !Array.isArray(data.registros)) { UILogic.mostrarToast('Archivo inválido o corrupto', 'error'); return false; }
+            if (!data || typeof data !== 'object' || Array.isArray(data)) { notify.mostrarToast('Estructura de archivo inválida', 'error'); return false; }
+            if (!data.registros || !Array.isArray(data.registros)) { notify.mostrarToast('Archivo inválido o corrupto', 'error'); return false; }
             const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
-            if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) { UILogic.mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
+            if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) { notify.mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
             if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
-                UILogic.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
+                notify.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
             }
             if (data.rangoExportado !== undefined) {
                 const rangoSafe = S.sanitizeString(String(data.rangoExportado), 100);
-                if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-:]+$/.test(rangoSafe)) { UILogic.mostrarToast('Metadatos de rango inválidos', 'error'); return false; }
+                if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-:]+$/.test(rangoSafe)) { notify.mostrarToast('Metadatos de rango inválidos', 'error'); return false; }
             }
             if (data.hash) {
                 if (await S.calcularHashSHA256(data.registros) !== data.hash) {
-                    UILogic.mostrarToast('⚠️ El archivo puede estar corrupto o modificado', 'warning');
+                    notify.mostrarToast('⚠️ El archivo puede estar corrupto o modificado', 'warning');
                     if (!(await ModalManager.confirmar('El hash de integridad no coincide. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload'))) return false;
                 }
             } else {
                 if (!(await ModalManager.confirmar('Este archivo no tiene verificación de integridad. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload'))) return false;
             }
-            if (data.registros.length > S.SECURITY_LIMITS.MAX_REGISTROS) { UILogic.mostrarToast(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`, 'error'); return false; }
+            if (data.registros.length > S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`, 'error'); return false; }
             return true;
         }
 
@@ -1652,8 +1685,8 @@
                 const local = registros.find(r => r.fecha === imp.fecha);
                 return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
             });
-            if (nuevos.length === 0 && complementarios.length === 0) { UILogic.mostrarToast('No hay días nuevos ni datos para completar', 'info'); return; }
-            if (registros.length + nuevos.length > S.SECURITY_LIMITS.MAX_REGISTROS) { UILogic.mostrarToast(`Límite alcanzado. Solo se pueden agregar ${S.SECURITY_LIMITS.MAX_REGISTROS - registros.length} registros más`, 'error'); return; }
+            if (nuevos.length === 0 && complementarios.length === 0) { notify.mostrarToast('No hay días nuevos ni datos para completar', 'info'); return; }
+            if (registros.length + nuevos.length > S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast(`Límite alcanzado. Solo se pueden agregar ${S.SECURITY_LIMITS.MAX_REGISTROS - registros.length} registros más`, 'error'); return; }
             complementarios.forEach(imp => {
                 const local = registros.find(r => r.fecha === imp.fecha);
                 if (!local) return;
@@ -1673,22 +1706,22 @@
         function importarDatos(modo = 'replace') {
             const fileInput = $('file-import');
             const file = fileInput.files[0];
-            if (!file) { UILogic.mostrarToast('Selecciona un archivo primero', 'error'); return; }
-            if (file.size > S.SECURITY_LIMITS.MAX_JSON_SIZE) { UILogic.mostrarToast('Archivo muy grande', 'error'); return; }
-            if (!file.type || file.type !== 'application/json') { UILogic.mostrarToast('Solo se permiten archivos JSON', 'error'); return; }
+            if (!file) { notify.mostrarToast('Selecciona un archivo primero', 'error'); return; }
+            if (file.size > S.SECURITY_LIMITS.MAX_JSON_SIZE) { notify.mostrarToast('Archivo muy grande', 'error'); return; }
+            if (!file.type || file.type !== 'application/json') { notify.mostrarToast('Solo se permiten archivos JSON', 'error'); return; }
 
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
                     const contenido = e.target.result;
-                    if (!contenido || contenido.trim().length === 0) { UILogic.mostrarToast('Archivo vacío', 'error'); return; }
-                    if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) { UILogic.mostrarToast('Contenido del archivo demasiado grande', 'error'); return; }
+                    if (!contenido || contenido.trim().length === 0) { notify.mostrarToast('Archivo vacío', 'error'); return; }
+                    if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) { notify.mostrarToast('Contenido del archivo demasiado grande', 'error'); return; }
 
                     const data = JSON.parse(contenido, S.reviverJSONSeguro);
                     if (!await _validarDatosImport(data)) return;
 
                     const registrosImportados = normalizarRegistrosImportados(data.registros, calcularHoras);
-                    if (registrosImportados.length === 0) { UILogic.mostrarToast('No se encontraron registros válidos', 'warning'); return; }
+                    if (registrosImportados.length === 0) { notify.mostrarToast('No se encontraron registros válidos', 'warning'); return; }
 
                     if (modo === 'replace') {
                         registros = registrosImportados;
@@ -1707,10 +1740,10 @@
                     }
                 } catch (err) {
                     console.error('Error en importación:', err);
-                    UILogic.mostrarToast(err instanceof SyntaxError ? 'Archivo JSON mal formado' : 'Error al procesar el archivo', 'error');
+                    notify.mostrarToast(err instanceof SyntaxError ? 'Archivo JSON mal formado' : 'Error al procesar el archivo', 'error');
                 }
             };
-            reader.onerror = () => { UILogic.mostrarToast('Error al leer el archivo', 'error'); };
+            reader.onerror = () => { notify.mostrarToast('Error al leer el archivo', 'error'); };
             reader.readAsText(file);
         }
 
@@ -1723,8 +1756,8 @@
                     StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, diasHabiles);
                     StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, horasDiarias);
                 }
-                UILogic.mostrarToast(mensajeExito, 'success');
-                UILogic.cerrarImportar();
+                notify.mostrarToast(mensajeExito, 'success');
+                notify.cerrarImportar();
                 $('file-import').value = '';
             }
         }
@@ -1790,8 +1823,8 @@
             filtroActivo = false; filtroDesde = null; filtroHasta = null; filtroTipo = null;
             $('filtro-fecha-desde').value = ''; $('filtro-fecha-hasta').value = ''; $('filtro-tipo').value = '';
             guardarYActualizar();
-            UILogic.cerrarFiltros();
-            UILogic.mostrarToast('Filtro eliminado', 'info');
+            notify.cerrarFiltros();
+            notify.mostrarToast('Filtro eliminado', 'info');
             document.getElementById('btn-filtro').classList.remove('filtro-activo');
         }
 
@@ -1822,16 +1855,16 @@
 
         async function registrarVacacionesDirecto(desde, hasta, tipo) {
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
-            if (!tipoConfig) { UILogic.mostrarToast('Tipo inválido', 'error'); throw new Error('Tipo inválido'); }
+            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); throw new Error('Tipo inválido'); }
             const entrada = tipoConfig.codigo;
             const salida = tipoConfig.codigo;
 
             const fechasARegistrar = TimeUtils.generarRangoFechas(desde, hasta);
 
-            if (fechasARegistrar.length > 60) { UILogic.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: 60 días por operación.`, 'error'); throw new Error('Límite de días excedido'); }
+            if (fechasARegistrar.length > 60) { notify.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: 60 días por operación.`, 'error'); throw new Error('Límite de días excedido'); }
 
             const nuevosRegistros = fechasARegistrar.filter(f => !registros.some(r => r.fecha === f));
-            if (nuevosRegistros.length === 0) { UILogic.mostrarToast('Todas las fechas ya están registradas', 'warning'); throw new Error('Sin fechas nuevas'); }
+            if (nuevosRegistros.length === 0) { notify.mostrarToast('Todas las fechas ya están registradas', 'warning'); throw new Error('Sin fechas nuevas'); }
 
             const idsNuevosParaAnimar = [];
             nuevosRegistros.forEach(fecha => {
@@ -1848,8 +1881,8 @@
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar(idsNuevosParaAnimar);
             if (saved) {
-                UILogic.mostrarToast(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
-                if (UILogic.actualizarBotonLote) UILogic.actualizarBotonLote();
+                notify.mostrarToast(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
+                notify.actualizarBotonLote();
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -1863,12 +1896,10 @@
                 }
             });
             guardarYActualizar(null, true);
-            UILogic.mostrarToast(mensaje, 'info');
-            if (window.UILogic && window.UILogic.actualizarBotonLote) {
-                const modoLote = document.getElementById('modo-lote');
-                if (modoLote && getComputedStyle(modoLote).display !== 'none') window.UILogic.actualizarBotonLote();
-            }
-            if (window.UILogic && window.UILogic.iniciarTimerAutoCierreBotones) window.UILogic.iniciarTimerAutoCierreBotones();
+            notify.mostrarToast(mensaje, 'info');
+            const modoLote = document.getElementById('modo-lote');
+            if (modoLote && getComputedStyle(modoLote).display !== 'none') notify.actualizarBotonLote();
+            notify.iniciarTimerAutoCierreBotones();
         }
 
         async function borrarPeriodoDirecto(desde, hasta) {
@@ -1876,15 +1907,15 @@
                 if (r.fecha < desde || r.fecha > hasta) return false;
                 return !TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
             });
-            if (registrosAEliminar.length > 60) { UILogic.mostrarToast(`Máximo 60 registros. Encontrados: ${registrosAEliminar.length}`, 'error'); throw new Error('Límite excedido'); }
-            if (registrosAEliminar.length === 0) { UILogic.mostrarToast('No hay registros de jornadas en ese período', 'info'); throw new Error('Sin registros'); }
+            if (registrosAEliminar.length > 60) { notify.mostrarToast(`Máximo 60 registros. Encontrados: ${registrosAEliminar.length}`, 'error'); throw new Error('Límite excedido'); }
+            if (registrosAEliminar.length === 0) { notify.mostrarToast('No hay registros de jornadas en ese período', 'info'); throw new Error('Sin registros'); }
 
             registros = registros.filter(r => !registrosAEliminar.includes(r));
             HistoryManager.saveState(registros);
             const saved = await guardarYActualizar();
             if (saved) {
-                UILogic.mostrarToast(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
-                UILogic.actualizarBotonLote?.();
+                notify.mostrarToast(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
+                notify.actualizarBotonLote();
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -1907,7 +1938,8 @@
             registrarVacacionesDirecto, borrarPeriodoDirecto, registrarDiaEspecial, editarGrupo, guardarEdicionGrupo,
             eliminarGrupoActual, setGrupoEnEdicion: (val) => grupoEnEdicion = val,
             undoAction: function () { _aplicarEstadoHistorial(HistoryManager.undo(), 'Deshecho'); },
-            redoAction: function () { _aplicarEstadoHistorial(HistoryManager.redo(), 'Rehecho'); }
+            redoAction: function () { _aplicarEstadoHistorial(HistoryManager.redo(), 'Rehecho'); },
+            configurarNotificaciones
         };
     })(SecurityAndUtils);
 
@@ -7132,6 +7164,30 @@ Generado por Sistema Lushibosca
             window.PWAInstaller = { instalarApp: PWAInstaller.instalarApp };
             window.PerfilManager = PerfilManager;
             window.UILogic = UILogic;
+
+            // Antes DataManagement llamaba directo a UILogic.mostrarToast/actualizarUI/etc.
+            // (dependencia circular vía window.UILogic). Ahora se registra una sola vez acá.
+            D.configurarNotificaciones({
+                actualizarBotonLote, actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
+                aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
+                descargarJSON, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+                obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
+                setBloqueoEdicionGrupo, verificarBloqueoCredito
+            });
+            StorageHelper.configurarNotificaciones({ mostrarToast });
+
+            // Antes ModalManager tenía hardcodeado un mapa modalId -> UILogic.cerrarX.
+            // Ahora cada modal se registra a sí mismo, ModalManager no conoce a UILogic.
+            ModalManager.registrarAccionVolver('modal-gist', cerrarModalGist);
+            ModalManager.registrarAccionVolver('modal-gist-merge', gistMergeCancelar);
+            ModalManager.registrarAccionVolver('modal-config', cerrarConfig);
+            ModalManager.registrarAccionVolver('modal-selector-perfiles', cerrarSelectorPerfiles);
+            ModalManager.registrarAccionVolver('modal-editar', cerrarEdicion);
+            ModalManager.registrarAccionVolver('modal-importar', cerrarImportar);
+            ModalManager.registrarAccionVolver('modal-exportar', cerrarExportar);
+            ModalManager.registrarAccionVolver('modal-filtros', cerrarFiltros);
+            ModalManager.registrarAccionVolver('modal-editar-perfil', cerrarEditorPerfil);
+            ModalManager.registrarAccionVolver('modal-editar-grupo', cerrarEdicionGrupo);
         }
 
         function _initListenersFormulario() {

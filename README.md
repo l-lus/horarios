@@ -5,6 +5,9 @@
 
 ### VERSION:
 
+### 260720
+* **Mejora:** Se divide el modulo uilogic en 8 submodulos, quedando el mismo como orquestador de los creados
+
 ### 260717
 * **Cambios:**  Se agregar opciones con un popup en los botones rapidos de backup de la tarjeta de registros
 * **Mejora:** Se crea el helper reviverJSONSeguro en el modulo de seguridad

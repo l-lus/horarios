@@ -584,10 +584,6 @@
     // ====================================================================
     const ModalManager = (function () {
         const _padres = {};
-
-        // Registro de "qué hacer al volver atrás (Escape/gesto del navegador)" por modal.
-        // Cada módulo de UI se registra a sí mismo (ver UILogic._initGlobales) en vez de
-        // que ModalManager conozca de antemano los nombres de sus funciones de cierre.
         const _accionesVolver = {
             'modal-confirmar': () => document.getElementById('modal-confirmar-cancel')?.click(),
         };
@@ -1024,12 +1020,6 @@
     // DATA MANAGEMENT MODULE 
     // ====================================================================
     const DataManagement = (function (S) {
-        // Antes, este módulo llamaba directo a UILogic.mostrarToast/actualizarUI/etc. —
-        // acoplando la capa de datos a la capa de UI vía el global window.UILogic (un
-        // service locator implícito, no inyección de dependencias real). Este objeto
-        // reemplaza esas llamadas: UILogic se registra una sola vez desde su propio
-        // _initGlobales (configurarNotificaciones), y DataManagement ya no conoce su nombre.
-        // Los no-ops son el default seguro hasta que se registre el handler real.
         let notify = {
             actualizarBotonLote: () => { },
             actualizarEstadoBotonTimerMain: () => { },
@@ -1946,9 +1936,6 @@
     // ====================================================================
     //                     MÓDULO UI CORE (utilidades genéricas de UI)
     // ====================================================================
-    // Utilidades sin estado de negocio propio: toasts, animaciones genéricas
-    // (slide, fade, flash), popups posicionables, helpers de <select>/botones,
-    // debounce/press-hold/swipe. Lo usan el resto de los módulos de UI.
     const UICore = (function (S, D) {
 
         function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
@@ -2250,18 +2237,11 @@
                 void el.offsetWidth;
                 el.classList.add('campo-flash');
 
-                // Se lee la duración real desde el CSS computado (en vez de hardcodearla)
-                // para que quede sincronizada automáticamente con @keyframes campo-flash.
                 const cs = getComputedStyle(el);
                 const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
                 const iteraciones = parseFloat(cs.animationIterationCount) || 1;
                 const totalMs = duracionMs * iteraciones;
 
-                // Se usa un timeout de reloj real (en vez de depender solo de 'animationend')
-                // porque si el campo queda oculto (display:none) mientras parpadea —p.ej. al
-                // cambiar de modo lote/normal— el navegador cancela la animación sin disparar
-                // el evento, y al volver a mostrarse la reinicia desde cero. El timeout garantiza
-                // que la clase se saque en el momento correcto sin importar si hubo interrupciones.
                 el._flashTimeout = setTimeout(() => el.classList.remove('campo-flash'), totalMs);
             });
         }
@@ -2376,7 +2356,6 @@
     // ====================================================================
     //                     MÓDULO UI PERFILES
     // ====================================================================
-    // Selector y editor de perfiles: crear, renombrar, eliminar, listar.
     const UIPerfiles = (function (S, UICore) {
         const { mostrarToast } = UICore;
 
@@ -2607,8 +2586,6 @@
     // ====================================================================
     //                     MÓDULO UI CALENDARIO
     // ====================================================================
-    // Vista de calendario histórico: render, navegación por mes, selector de
-    // meses, y los popups de día (con/sin registro), incluyendo hover en desktop.
     const UICalendario = (function (S, D, UICore) {
         const { registrarSwipe, _animarFadeSwap, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, formatoDiferencia } = UICore;
 
@@ -3264,8 +3241,6 @@
     // ====================================================================
     //                     MÓDULO UI GIST Y RESPALDO
     // ====================================================================
-    // Sincronización con GitHub Gist (subir/bajar/merge), export/import local,
-    // y el popup de elección Gist-vs-local para los botones de la tarjeta de registros.
     const UIGistYRespaldo = (function (S, D, GistSync, UICore) {
         const {
             mostrarToast, _setBtnDisabled, _setBtnActivo, _flashCampo, _crearPressHold,
@@ -3972,8 +3947,6 @@
     // ====================================================================
     //                     MÓDULO UI HISTORICO
     // ====================================================================
-    // Lista de registros: agrupación por mes/año, grupos expandibles, filtros,
-    // edición y bloqueo de edición de registro/grupo individual, tarjeta histórico.
     const UIHistorico = (function (S, D, UICore) {
         const {
             formatoDiferencia, mostrarToast, _setBtnActivo, debounce,
@@ -4743,9 +4716,6 @@
     // ====================================================================
     //                     MÓDULO UI ESTADISTICAS
     // ====================================================================
-    // Cálculo y render de estadísticas (regularidad, promedios, buffer),
-    // selector de período (mes/semana/año), reporte descargable, y los
-    // popups explicativos de cada stat.
     const UIEstadisticas = (function (S, D, UICore) {
         const {
             formatoDiferencia, mostrarToast, _setBtnActivo, _poblarSelect,
@@ -5522,9 +5492,6 @@ Generado por Sistema Lushibosca
     // ====================================================================
     //                     MÓDULO UI TARJETA DE FICHAJE
     // ====================================================================
-    // La tarjeta principal de fichaje: fondo, cómputo de estado (Compute),
-    // derivación de vista Hoy/Semana (Derive) y su render (Render), timer de
-    // tiempo fuera, modo lote, formulario, y el puente desde el calendario.
     const UITarjetaFichaje = (function (S, D, UICore) {
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
@@ -7126,8 +7093,6 @@ Generado por Sistema Lushibosca
             window.PerfilManager = PerfilManager;
             window.UILogic = UILogic;
 
-            // Antes DataManagement llamaba directo a UILogic.mostrarToast/actualizarUI/etc.
-            // (dependencia circular vía window.UILogic). Ahora se registra una sola vez acá.
             D.configurarNotificaciones({
                 actualizarBotonLote, actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
                 aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
@@ -7137,8 +7102,6 @@ Generado por Sistema Lushibosca
             });
             StorageHelper.configurarNotificaciones({ mostrarToast });
 
-            // Antes ModalManager tenía hardcodeado un mapa modalId -> UILogic.cerrarX.
-            // Ahora cada modal se registra a sí mismo, ModalManager no conoce a UILogic.
             ModalManager.registrarAccionVolver('modal-gist', cerrarModalGist);
             ModalManager.registrarAccionVolver('modal-gist-merge', gistMergeCancelar);
             ModalManager.registrarAccionVolver('modal-config', cerrarConfig);

@@ -2129,6 +2129,18 @@
             setTimeout(() => { fn(); el.classList.remove('fade-out'); }, DUR_ANIM());
         }
 
+        /**
+         * Factory para pares toggle/actualizarEstado de configuraciones booleanas.
+         *
+         * @param {object} cfg
+         * @param {function(): boolean}  cfg.getVal        - Lee el valor actual.
+         * @param {function(boolean): void} cfg.setVal     - Persiste el nuevo valor.
+         * @param {string}               cfg.btnId         - ID del botón a marcar con btn-activo.
+         * @param {string}               cfg.mensajeOn     - Toast cuando queda activo.
+         * @param {string}               cfg.mensajeOff    - Toast cuando queda inactivo.
+         * @param {function(boolean): void} [cfg.onAfterToggle] - Efecto secundario opcional.
+         * @returns {{ toggle: function, actualizarEstado: function }}
+         */
         function _crearToggleConfig({ getVal, setVal, btnId, mensajeOn, mensajeOff, onAfterToggle }) {
             function actualizarEstado() {
                 _setBtnActivo(btnId, getVal());
@@ -6859,19 +6871,6 @@ Generado por Sistema Lushibosca
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
             sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats
         } = UITarjetaFichaje;
-
-        /**
-         * Factory para pares toggle/actualizarEstado de configuraciones booleanas.
-         *
-         * @param {object} cfg
-         * @param {function(): boolean}  cfg.getVal        - Lee el valor actual.
-         * @param {function(boolean): void} cfg.setVal     - Persiste el nuevo valor.
-         * @param {string}               cfg.btnId         - ID del botón a marcar con btn-activo.
-         * @param {string}               cfg.mensajeOn     - Toast cuando queda activo.
-         * @param {string}               cfg.mensajeOff    - Toast cuando queda inactivo.
-         * @param {function(boolean): void} [cfg.onAfterToggle] - Efecto secundario opcional.
-         * @returns {{ toggle: function, actualizarEstado: function }}
-         */
 
         function alternarTema() {
             const temaOscuro = !StorageHelper.getBoolean(STORAGE_KEYS.TEMA_OSCURO, true);

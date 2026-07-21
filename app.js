@@ -964,7 +964,7 @@
                 emoji: '📚',
                 label: 'Capacitación',
                 labelPlural: 'Capacitaciones',
-                descripcion: 'Formacion profesional',
+                descripcion: 'Formación profesional',
                 color: 'purple',
                 contabiliza: true
             },
@@ -1082,7 +1082,7 @@
         }
 
         function _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta) {
-            if (!nuevaDesde || !nuevaHasta) return 'Verifica ambas fechas';
+            if (!nuevaDesde || !nuevaHasta) return 'Verificá ambas fechas';
             if (!TimeUtils.validarFecha(nuevaDesde)) return 'Fecha "Desde" inválida';
             if (!TimeUtils.validarFecha(nuevaHasta)) return 'Fecha "Hasta" inválida';
             if (nuevaDesde > nuevaHasta) return 'La fecha inicial debe ser inferior a la final';
@@ -1314,7 +1314,7 @@
         }
 
         async function agregarRegistro() {
-            if (!validarFormulario()) { notify.mostrarToast('Verifica los campos', 'error'); return; }
+            if (!validarFormulario()) { notify.mostrarToast('Verificá los campos', 'error'); return; }
 
             const btn = $('btn-agregar');
             btn.disabled = true;
@@ -1347,7 +1347,7 @@
 
             if (!e && s) {
                 if (registroExistente?.salida) { notify.resetearBoton(btn); notify.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); return; }
-                if (!registroExistente?.entrada) { notify.resetearBoton(btn); notify.mostrarToast('Debes fichar una entrada primero', 'error'); return; }
+                if (!registroExistente?.entrada) { notify.resetearBoton(btn); notify.mostrarToast('Debés fichar una entrada primero', 'error'); return; }
             }
 
             if (registroExistente?.entrada && !registroExistente.salida && !e && s) {
@@ -1458,7 +1458,7 @@
             if (tf && !TimeUtils.validarHora(tf))
                 return { msg: 'Tiempo fuera inválido', tipo: 'error' };
             if (!e && s)
-                return { msg: 'Debes fichar una entrada', tipo: 'error' };
+                return { msg: 'Debés fichar una entrada', tipo: 'error' };
 
             if (registros.some(reg => reg.fecha === f && reg.id !== editandoId))
                 return { msg: 'Ya existe otro registro para esa fecha', tipo: 'error' };
@@ -1702,7 +1702,7 @@
         function importarDatos(modo = 'replace') {
             const fileInput = $('file-import');
             const file = fileInput.files[0];
-            if (!file) { notify.mostrarToast('Selecciona un archivo primero', 'error'); return; }
+            if (!file) { notify.mostrarToast('Seleccioná un archivo primero', 'error'); return; }
             if (file.size > S.SECURITY_LIMITS.MAX_JSON_SIZE) { notify.mostrarToast('Archivo muy grande', 'error'); return; }
             if (!file.type || file.type !== 'application/json') { notify.mostrarToast('Solo se permiten archivos JSON', 'error'); return; }
 
@@ -2464,7 +2464,7 @@
         }
 
         function _validarNombrePerfil(nombre, perfiles) {
-            if (!nombre) return 'Ingresa un nombre para el perfil';
+            if (!nombre) return 'Ingresá un nombre para el perfil';
             if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/.test(nombre)) return 'El nombre contiene caracteres no válidos.\n Solo letras, números y espacios.';
             if (Object.values(perfiles).some(p => p.nombre.toLowerCase().trim() === nombre.toLowerCase().trim())) return 'Ya existe un perfil con ese nombre';
             if (Object.keys(perfiles).length >= PerfilManager.MAX_PERFILES) return `Máximo de perfiles alcanzado (${PerfilManager.MAX_PERFILES})`;
@@ -2537,7 +2537,7 @@
         }
 
         function _validarNombrePerfilEdicion(nuevoNombre, perfiles, excluirId) {
-            if (!nuevoNombre) return 'Ingresa un nombre válido';
+            if (!nuevoNombre) return 'Ingresá un nombre válido';
             if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/.test(nuevoNombre)) return 'Caracteres no permitidos en el nombre.';
             if (!perfiles[excluirId]) return 'Perfil no encontrado';
             const norm = nuevoNombre.toLowerCase().trim();
@@ -3388,7 +3388,7 @@
                     const hasta = S.sanitizeString(document.getElementById('export-fecha-hasta').value, 10);
 
                     if (!desde || !hasta) {
-                        mostrarToast('Completa ambas fechas', 'error');
+                        mostrarToast('Completá ambas fechas', 'error');
                         btn.disabled = false;
                         return;
                     }
@@ -5913,7 +5913,7 @@ Generado por Sistema Lushibosca
                 mensaje, mostrarMensaje,
                 colorBarra, anchoBarra: prog,
                 colorBorde, estadoFondo,
-                hint: 'Toca para ver Hoy',
+                hint: 'Tocá para ver Hoy',
                 hintEsHTML: false,
             };
         }
@@ -5963,8 +5963,8 @@ Generado por Sistema Lushibosca
             if (objetivoDiario === 0) return labelCero;
             if (cumplido) {
                 const extra = tiempoHoy - objetivoDiario;
-                if (bufferSemanal < 0 && Math.abs(bufferSemanal) > extra) return 'Te podes ir, pero debés tiempo';
-                return extra > 0 ? `Te podes ir (+${TimeUtils.horasATexto(extra)})` : 'Te podes ir';
+                if (bufferSemanal < 0 && Math.abs(bufferSemanal) > extra) return 'Te podés ir, pero debés tiempo';
+                return extra > 0 ? `Te podés ir (+${TimeUtils.horasATexto(extra)})` : 'Te podés ir';
             }
             const faltante = objetivoDiario - tiempoHoy;
             const textoHoras = TimeUtils.horasATexto(faltante);
@@ -5990,7 +5990,7 @@ Generado por Sistema Lushibosca
                     const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanal, 'En curso (cruce de medianoche)');
 
                     const nombreDiaAyer = TimeUtils.obtenerNombreDia(est.ayerStr);
-                    let hint = 'Toca Fichar para registrar salida';
+                    let hint = 'Tocá Fichar para registrar salida';
                     let hintEsHTML = false;
                     const regAyer = est.regAyer;
                     if (regAyer && regAyer.entrada && objetivoDiarioAyerAplica > 0 && !TiposRegistro.esRegistroEspecial(regAyer.entrada, regAyer.salida)) {
@@ -6016,7 +6016,7 @@ Generado por Sistema Lushibosca
                     mostrarMensaje: horasDiarias > 0,
                     colorBarra: 'blue', anchoBarra: 0,
                     colorBorde: 'transparent', estadoFondo: 'esperando',
-                    hint: 'Toca para ver la Semana', hintEsHTML: false,
+                    hint: 'Tocá para ver la Semana', hintEsHTML: false,
                 };
             }
 
@@ -6033,7 +6033,7 @@ Generado por Sistema Lushibosca
                     colorBarra: tipoEspecialHoy.color, anchoBarra: 100,
                     colorBorde: tipoEspecialHoy.color,
                     estadoFondo: 'especial', estadoFondoColor: tipoEspecialHoy.color,
-                    hint: 'Toca para ver la Semana', hintEsHTML: false,
+                    hint: 'Tocá para ver la Semana', hintEsHTML: false,
                 }, avisoAyerHint);
             }
 
@@ -6080,7 +6080,7 @@ Generado por Sistema Lushibosca
                 mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAplica, bufferSemanal);
             }
 
-            let hint = 'Toca para ver la Semana';
+            let hint = 'Tocá para ver la Semana';
             let hintEsHTML = false;
             if (regHoy.entrada && !dayClosed && objetivoDiarioAplica > 0 && !TiposRegistro.esRegistroEspecial(regHoy.entrada, regHoy.salida)) {
                 ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regHoy, objetivoDiarioAplica, bufferSemanal, diasHabiles));
@@ -6362,7 +6362,7 @@ Generado por Sistema Lushibosca
             const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
 
             if (!isRunning && (!registroHoy || diaCerrado)) {
-                Object.assign(btn, { disabled: true, title: diaCerrado ? 'Día finalizado' : 'Debes fichar entrada primero' });
+                Object.assign(btn, { disabled: true, title: diaCerrado ? 'Día finalizado' : 'Debés fichar entrada primero' });
             } else {
                 Object.assign(btn, { disabled: false, title: isRunning ? 'Detener tiempo fuera' : 'Iniciar tiempo fuera' });
             }
@@ -6446,7 +6446,7 @@ Generado por Sistema Lushibosca
             const storedStart = StorageHelper.getItem(storageKey);
             const registroHoy = D.registros().find(r => r.fecha === TimeUtils.obtenerFechaHoy());
 
-            if (!storedStart && !registroHoy) { mostrarToast('Debes crear un registro para hoy primero', 'warning'); return; }
+            if (!storedStart && !registroHoy) { mostrarToast('Debés crear un registro para hoy primero', 'warning'); return; }
 
             if (!storedStart) {
                 StorageHelper.setItem(storageKey, Date.now());
@@ -6559,18 +6559,18 @@ Generado por Sistema Lushibosca
 
             if (!desde && !hasta) {
                 if (!inputDesde.checkValidity() || !inputHasta.checkValidity()) {
-                    mostrarToast('Revisa las fechas ingresadas', 'error'); return;
+                    mostrarToast('Revisá las fechas ingresadas', 'error'); return;
                 }
-                if (tipo === 'normal') { mostrarToast('Completa los campos Desde y Hasta.', 'info'); return; }
+                if (tipo === 'normal') { mostrarToast('Completá los campos Desde y Hasta.', 'info'); return; }
                 await _registrarEspecialHoy(tipo); return;
             }
 
             if (desde && !hasta) {
-                if (tipo === 'normal') { mostrarToast('Completa ambos campos', 'info'); return; }
+                if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); return; }
                 await _registrarEspecialFecha(desde, tipo); return;
             }
 
-            if (!desde && hasta) { mostrarToast('Completa ambos campos', 'info'); return; }
+            if (!desde && hasta) { mostrarToast('Completá ambos campos', 'info'); return; }
             if (desde > hasta) { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); return; }
 
             if (tipo !== 'normal' && !TiposRegistro.obtenerCodigosPorTipo(tipo)) {
@@ -6902,8 +6902,8 @@ Generado por Sistema Lushibosca
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
                 btnId: 'btn-toggle-hover-popup',
-                mensajeOn: 'Se muestra popup automatico en calendario',
-                mensajeOff: 'No se muestra popup automatico en calendario',
+                mensajeOn: 'Se muestra popup automático en calendario',
+                mensajeOff: 'No se muestra popup automático en calendario',
             });
 
         const { toggle: toggleSaldoDesdeEnero, actualizarEstado: actualizarEstadoBotonSaldoDesdeEnero } =
@@ -6911,7 +6911,7 @@ Generado por Sistema Lushibosca
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.SALDO_DESDE_ENERO, v),
                 btnId: 'btn-toggle-saldo-enero',
-                mensajeOn: 'Cálculo de saldo anual desde el primer dia del año',
+                mensajeOn: 'Cálculo de saldo anual desde el primer día del año',
                 mensajeOff: 'Cálculo de saldo anual desde el primer registro del año',
                 onAfterToggle: () => { actualizarUI(); }
             });
@@ -7642,7 +7642,7 @@ Generado por Sistema Lushibosca
             await new Promise(r => setTimeout(r, 1000));
 
             const importar = await ModalManager.confirmar(
-                'No se encontraron registros, si tenes un respaldo local de los datos podes restaurarlos desde aca.',
+                'No se encontraron registros, si tenés un respaldo local de los datos podés restaurarlos desde acá.',
                 'Restaurar',
                 '#icon-upload',
                 { titulo: '¡Bienvenido a Horarios!', labelCancel: 'Continuar', iconoCancel: '#icon-arrow-right' }

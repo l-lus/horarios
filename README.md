@@ -5,9 +5,13 @@
 
 ### VERSION:
 
+### 260721
+* **Cambios:** Se reemplaza el objetivo en el hint (editar registro), por un campo mas en el modal en cuestión
+* **Fix:** Se corrigen varios errores y bugs relativos a la funcion de horas objetivo por registro (todavia en fase de prueba)
+
 ### 260720
 * **Mejora:** Se divide el modulo uilogic en 8 submodulos, quedando el mismo como orquestador de los creados
-* **Nuevo:** Se agrega campo en cada registro para tener su propia hora objetivo, y una opcion para deshabilitar esta opcion, ahora cada registro guarda un campo con las horas objetivos diarias al momento de crearlo, la opcion en ajustes permite deshabilitar esta funcion para que los registros basen los objetivos en la configuracion global de hroas objetivo
+* **Nuevo:** Se agrega campo en cada registro para tener su propia hora objetivo, y una opcion para deshabilitar esta opcion, ahora cada registro guarda un campo con las horas objetivos diarias al momento de crearlo, la opcion en ajustes permite deshabilitar esta funcion para que los registros basen los objetivos en la configuracion global de horas objetivo
 * **Nuevo:** Se agrega el objetivo de horas al hint del modal "editar registro"
 
 ### 260717

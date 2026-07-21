@@ -4410,7 +4410,7 @@
             [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
                 if (btn) btn.disabled = bloqueado || enModoGlobal;
             });
-            if (elObjetivo) elObjetivo.classList.toggle('input-number-inerte', enModoGlobal);
+            if (elObjetivo) elObjetivo.classList.toggle('input-number-inerte', bloqueado || enModoGlobal);
             verificarBloqueoCredito();
         }
 
@@ -6931,8 +6931,8 @@ Generado por Sistema Lushibosca
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
                 btnId: 'btn-toggle-logica-cubierto',
-                mensajeOn: 'Lógica de cubierto por saldo en los registros desactivada',
-                mensajeOff: 'Lógica de cubierto por saldo en los registros activada',
+                mensajeOn: 'Los registros no cubren el faltante con saldo horario',
+                mensajeOff: 'Los registros cubren el faltante según el saldo horario disponible',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -6941,8 +6941,8 @@ Generado por Sistema Lushibosca
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
                 btnId: 'btn-toggle-objetivo-registro',
-                mensajeOn: 'Objetivo diario: se usa siempre el valor global de ajustes (como antes)',
-                mensajeOff: 'Objetivo diario: cada registro usa el objetivo vigente al crearse',
+                mensajeOn: 'Las horas diarias objetivo cambian según el valor global configurado',
+                mensajeOff: 'Las horas diarias objetivo de los registros son independientes',
                 onAfterToggle: () => { actualizarUI(); }
             });
 

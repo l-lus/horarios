@@ -1929,11 +1929,26 @@
             return (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
         }
 
+        // Migración: registros creados antes de este feature no tienen objetivoHoras.
+        // Se estampan una sola vez con el global vigente al abrir la app — se asume que,
+        // si ya había registros cargados, el objetivo de ajustes reflejaba correctamente
+        // ese momento. Devuelve la cantidad de registros migrados (0 si no hizo falta nada).
+        function migrarObjetivoHorasFaltante() {
+            let migrados = 0;
+            registros.forEach(r => {
+                if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
+                    r.objetivoHoras = horasDiarias;
+                    migrados++;
+                }
+            });
+            return migrados;
+        }
+
         return {
             registros: () => registros, horasSemanales: () => (horasDiarias * diasHabiles.length), diasHabiles: () => diasHabiles,
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
-            objetivoDeRegistro,
+            objetivoDeRegistro, migrarObjetivoHorasFaltante,
             recalcularTotalesEnMemoria: function () {
                 registros.forEach(r => {
                     if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
@@ -7289,6 +7304,13 @@ Generado por Sistema Lushibosca
             if (!historialCargado) {
                 HistoryManager.saveState(D.registros());
             }
+
+            const migrados = D.migrarObjetivoHorasFaltante();
+            if (migrados > 0) {
+                console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${D.horasDiarias()}h).`);
+                if (window.PerfilManager) PerfilManager.guardarDatosPerfilActual();
+            }
+
             HistoryManager.updateButtons();
         }
 

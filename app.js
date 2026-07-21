@@ -1621,9 +1621,6 @@
                 }));
 
             normalizados.forEach(r => {
-                // Los registros especiales (remoto, vacaciones, etc.) ya traen su total sanitizado
-                // y acotado del paso anterior — no se recalcula, porque calcularHorasFn les asignaría
-                // el objetivo global del dispositivo que importa, pisando el valor original del registro.
                 if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return;
                 const t = calcularHorasFn(r.entrada, r.salida, r.tiempoFuera || null, r.credito || null);
                 r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
@@ -1916,33 +1913,18 @@
             } else { throw new Error('Error al guardar'); }
         }
 
-        // Resuelve qué objetivo de horas aplica a un registro puntual:
-        // - Si el toggle "ignorarObjetivoPorRegistro" está activo, siempre usa el global vigente
-        //   (comportamiento anterior: objetivo único en vivo para todos los registros).
-        // - Si no, usa el valor estampado en el registro al crearse (registro.objetivoHoras).
-        // - Si el registro no tiene el campo (dato viejo, de antes de este cambio, o inválido),
-        //   cae al global vigente — así los registros históricos no se ven afectados.
         function objetivoDeRegistro(registro) {
             if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
             const v = registro?.objetivoHoras;
             return (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
         }
 
-        // Mismo criterio que objetivoDeRegistro, pero para el formulario de edición abierto:
-        // si el toggle está en modo "objetivo en vivo" (global), el campo Objetivo del formulario
-        // no importa — se usa siempre el global, igual que en el resto de la app (calendario, semana, etc.).
-        // Si está en modo por-registro, se usa el valor que el usuario está editando en ese momento
-        // en el campo (todavía no guardado), para que el crédito reaccione al valor que va a quedar.
         function objetivoEdicionEnVivo() {
             if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
             const v = parseFloat($('edit-objetivo')?.dataset.valor);
             return (Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
         }
 
-        // Migración: registros creados antes de este feature no tienen objetivoHoras.
-        // Se estampan una sola vez con el global vigente al abrir la app — se asume que,
-        // si ya había registros cargados, el objetivo de ajustes reflejaba correctamente
-        // ese momento. Devuelve la cantidad de registros migrados (0 si no hizo falta nada).
         function migrarObjetivoHorasFaltante() {
             let migrados = 0;
             registros.forEach(r => {
@@ -4403,8 +4385,7 @@
                 modalId: 'modal-editar',
                 excluirBotones: 'button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)'
             });
-            // El campo Objetivo solo tiene efecto en modo "por-registro". En modo "en vivo" (global),
-            // queda deshabilitado sin importar el estado de bloqueo del modal.
+
             const enModoGlobal = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
             const elObjetivo = $('edit-objetivo');
             [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
@@ -5803,14 +5784,6 @@ Generado por Sistema Lushibosca
                 return sum + (tipo?.id === 'remoto' ? D.objetivoDeRegistro(r) : tipo ? 0 : r.total);
             }, 0);
 
-            // Objetivo de la semana: suma día por día el objetivo del día correspondiente.
-            // - Día con registro normal o remoto: su propio objetivo (estampado, o global si el toggle
-            //   "en vivo" está activo) — mismo criterio que usa totalSemana para decidir qué cuenta como trabajado.
-            // - Día con registro especial que NO es remoto (feriado, vacaciones, etc.): neutro, no exige objetivo
-            //   ese día, igual que tampoco se cuenta como horas trabajadas.
-            // - Día sin registro todavía (futuro, o de la semana en curso): usa el global vigente.
-            // Con esto, un feriado nunca deja resto: no suma nada de objetivo, así que no hace falta
-            // restarlo aparte con el global actual (lo cual rompía la cuenta en modo objetivo-por-registro).
             const registrosSemanaCompletaPorFecha = new Map(
                 registros.filter(r => r.fecha >= ini && r.fecha <= fn).map(r => [r.fecha, r])
             );
@@ -5820,7 +5793,7 @@ Generado por Sistema Lushibosca
                 const rDia = registrosSemanaCompletaPorFecha.get(isoDate);
                 if (!rDia) { objetivoSemana += horasDiarias; continue; }
                 const tipoDia = TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida);
-                if (tipoDia && tipoDia.id !== 'remoto') continue; // especial no-remoto: neutro
+                if (tipoDia && tipoDia.id !== 'remoto') continue;
                 objetivoSemana += D.objetivoDeRegistro(rDia);
             }
             const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
@@ -7567,9 +7540,7 @@ Generado por Sistema Lushibosca
         const _pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
         function iniciarCambioObjetivoEdicion(incremento) { _pressHoldObjetivoEdicion.iniciar(incremento); }
         function detenerCambioObjetivoEdicion() { _pressHoldObjetivoEdicion.detener(); }
-
-        // Solo actualiza el span en pantalla — el valor se persiste en el registro recién al Guardar
-        // (guardarEdicion lee $('edit-objetivo').dataset.valor), igual que el resto del formulario.
+        
         function cambiarObjetivoEdicion(incremento) {
             const el = $('edit-objetivo');
             if (!el) return;

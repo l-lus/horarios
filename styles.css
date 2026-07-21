@@ -322,6 +322,10 @@ input.error {
     color: var(--text-main);
 }
 
+.input-number-display.input-number-inerte {
+    color: var(--text-disabled);
+}
+
 /* ─── BUTTONS ────────────────────────────────────────────────────────────────── */
 
 button {

@@ -264,7 +264,7 @@
         return {
             validarFecha, validarHora, parsearFechaLocal, formatearFechaLocal,
             obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
-            horaAMinutos, sumarMinutosAHora,
+            horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
             obtenerNombreDia, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
             horasATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular,
             generarRangoFechas
@@ -1241,23 +1241,6 @@
             return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
         }
 
-        function calcularHorasFeriadoEnRango(inicio, fin) {
-            const horasDiariasLocal = horasDiarias;
-            const diasHabilesConfig = diasHabiles;
-            let horasDescontar = 0;
-
-            registros.forEach(r => {
-                const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                if (r.fecha >= inicio && r.fecha <= fin && tipoEspecial) {
-                    if (tipoEspecial.id === 'remoto') return;
-                    const fechaObj = TimeUtils.parsearFechaLocal(r.fecha);
-                    const diaSemana = fechaObj.getDay();
-                    if (diasHabilesConfig.includes(diaSemana)) horasDescontar += horasDiariasLocal;
-                }
-            });
-            return horasDescontar;
-        }
-
         function validarFormulario() {
             let valido = true;
             const fecha = S.sanitizeString($('fecha').value, 10);
@@ -1425,6 +1408,13 @@
             $('edit-tiempo-fuera').value = r.tiempoFuera || '';
             $('edit-notas').value = r.notas || '';
 
+            const objetivoActual = (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras)) ? r.objetivoHoras : horasDiarias;
+            const elObjetivo = $('edit-objetivo');
+            if (elObjetivo) {
+                elObjetivo.dataset.valor = objetivoActual;
+                elObjetivo.textContent = TimeUtils.horasATexto(objetivoActual, 'short');
+            }
+
             const btnCredito = document.getElementById('btn-toggle-credito');
             btnCredito.style.background = '';
             btnCredito.style.color = '';
@@ -1532,10 +1522,15 @@
             if (notas) notas = S.sanitizeNotas(notas, true) || null;
             if (notas === '') notas = null;
 
-            const cr = _calcularCredito(e, s, tf, objetivoDeRegistro(r));
+            let objetivoNuevo = parseFloat($('edit-objetivo')?.dataset.valor);
+            if (isNaN(objetivoNuevo) || objetivoNuevo < 0 || objetivoNuevo > 24) objetivoNuevo = horasDiarias;
+            const objetivoPrevio = (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras)) ? r.objetivoHoras : horasDiarias;
+
+            const cr = _calcularCredito(e, s, tf, objetivoEdicionEnVivo());
 
             if (r.fecha === f && (r.entrada || '') === (e || '') && (r.salida || '') === (s || '') &&
-                (r.tiempoFuera || '') === (tf || '') && (r.credito || '') === (cr || '') && (r.notas || '') === (notas || '')) {
+                (r.tiempoFuera || '') === (tf || '') && (r.credito || '') === (cr || '') && (r.notas || '') === (notas || '') &&
+                objetivoNuevo === objetivoPrevio) {
                 notify.mostrarToast('Sin cambios', 'info');
                 notify.restaurarBotonGuardarEdicion(btnGuardar);
                 notify.cerrarEdicion();
@@ -1556,7 +1551,7 @@
                 const timerDetenido = detenerYRegistrarTimer(r);
                 if (timerDetenido) tf = r.tiempoFuera;
             }
-            r.salida = s || null; r.tiempoFuera = tf; r.credito = cr; r.notas = notas;
+            r.salida = s || null; r.tiempoFuera = tf; r.credito = cr; r.notas = notas; r.objetivoHoras = objetivoNuevo;
 
             const t = calcularHoras(r.entrada, r.salida, r.tiempoFuera, r.credito);
             r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
@@ -1933,6 +1928,17 @@
             return (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
         }
 
+        // Mismo criterio que objetivoDeRegistro, pero para el formulario de edición abierto:
+        // si el toggle está en modo "objetivo en vivo" (global), el campo Objetivo del formulario
+        // no importa — se usa siempre el global, igual que en el resto de la app (calendario, semana, etc.).
+        // Si está en modo por-registro, se usa el valor que el usuario está editando en ese momento
+        // en el campo (todavía no guardado), para que el crédito reaccione al valor que va a quedar.
+        function objetivoEdicionEnVivo() {
+            if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
+            const v = parseFloat($('edit-objetivo')?.dataset.valor);
+            return (Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
+        }
+
         // Migración: registros creados antes de este feature no tienen objetivoHoras.
         // Se estampan una sola vez con el global vigente al abrir la app — se asume que,
         // si ya había registros cargados, el objetivo de ajustes reflejaba correctamente
@@ -1952,7 +1958,7 @@
             registros: () => registros, horasSemanales: () => (horasDiarias * diasHabiles.length), diasHabiles: () => diasHabiles,
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
-            objetivoDeRegistro, migrarObjetivoHorasFaltante,
+            objetivoDeRegistro, objetivoEdicionEnVivo, migrarObjetivoHorasFaltante,
             recalcularTotalesEnMemoria: function () {
                 registros.forEach(r => {
                     if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
@@ -1962,7 +1968,7 @@
                 });
             },
             editandoId: () => editandoId, setEditandoId: (id) => editandoId = id, vistaActual: () => vistaActual, setVistaActual: (v) => vistaActual = v,
-            cargarConfiguracion, calcularHoras, calcularHorasFeriadoEnRango, normalizarRegistrosImportados, guardarYActualizar,
+            cargarConfiguracion, calcularHoras, normalizarRegistrosImportados, guardarYActualizar,
             agregarRegistro, eliminarRegistroActual, editarRegistro, guardarEdicion, borrarTodoHistorial, exportarJSON, importarDatos,
             calcularBufferPeriodo, detectarAyerAbierto, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
             registrarVacacionesDirecto, borrarPeriodoDirecto, registrarDiaEspecial, editarGrupo, guardarEdicionGrupo,
@@ -4397,6 +4403,14 @@
                 modalId: 'modal-editar',
                 excluirBotones: 'button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)'
             });
+            // El campo Objetivo solo tiene efecto en modo "por-registro". En modo "en vivo" (global),
+            // queda deshabilitado sin importar el estado de bloqueo del modal.
+            const enModoGlobal = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+            const elObjetivo = $('edit-objetivo');
+            [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
+                if (btn) btn.disabled = bloqueado || enModoGlobal;
+            });
+            if (elObjetivo) elObjetivo.classList.toggle('input-number-inerte', enModoGlobal);
             verificarBloqueoCredito();
         }
 
@@ -4416,7 +4430,6 @@
         function _actualizarHintEdicion() {
             const hint = document.getElementById('edit-hint-resumen');
             if (!hint) return;
-            const f = document.getElementById('edit-fecha')?.value.trim();
             const e = document.getElementById('edit-entrada')?.value.trim();
             const s = document.getElementById('edit-salida')?.value.trim();
             const tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
@@ -4425,14 +4438,7 @@
             if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }
             if (e?.length === 5 && s?.length === 5) {
                 const t = D.calcularHoras(e, s, tf || null, null, false);
-                if (!t) { hint.textContent = ''; return; }
-
-                const reg = D.registros().find(r => r.id === D.editandoId());
-                const objetivo = reg ? D.objetivoDeRegistro(reg) : D.horasDiarias();
-                const aplicaObjetivo = objetivo > 0 && f && UILogic._esFechaHabil(f, D.diasHabiles());
-                const sufijoObjetivo = aplicaObjetivo ? ` de ${TimeUtils.horasATexto(objetivo, 'short')}` : '';
-
-                hint.textContent = `Total: ${t.horas}h ${t.minutos}m${sufijoObjetivo}`;
+                hint.textContent = t ? `Total: ${t.horas}h ${t.minutos}m` : '';
             } else {
                 hint.textContent = '';
             }
@@ -4710,8 +4716,7 @@
             if (TiposRegistro.esRegistroEspecial(e, s)) return _bloquear();
 
             const calcTemp = D.calcularHoras(e, s, tf, null);
-            const regEnEdicion = D.registros().find(r => r.id === D.editandoId());
-            const objetivoEdicion = regEnEdicion ? D.objetivoDeRegistro(regEnEdicion) : D.horasDiarias();
+            const objetivoEdicion = D.objetivoEdicionEnVivo();
             if (!calcTemp || calcTemp.total >= objetivoEdicion) return _bloquear();
 
             _habilitar();
@@ -5798,19 +5803,26 @@ Generado por Sistema Lushibosca
                 return sum + (tipo?.id === 'remoto' ? D.objetivoDeRegistro(r) : tipo ? 0 : r.total);
             }, 0);
 
-            // Objetivo de la semana: suma día por día el objetivo estampado del registro de ese día
-            // (o el global vigente si ese día todavía no tiene registro, p.ej. días futuros de la semana en curso).
-            // Así, si el objetivo diario cambió a mitad de semana, cada día pesa lo que tenía asignado al crearse.
+            // Objetivo de la semana: suma día por día el objetivo del día correspondiente.
+            // - Día con registro normal o remoto: su propio objetivo (estampado, o global si el toggle
+            //   "en vivo" está activo) — mismo criterio que usa totalSemana para decidir qué cuenta como trabajado.
+            // - Día con registro especial que NO es remoto (feriado, vacaciones, etc.): neutro, no exige objetivo
+            //   ese día, igual que tampoco se cuenta como horas trabajadas.
+            // - Día sin registro todavía (futuro, o de la semana en curso): usa el global vigente.
+            // Con esto, un feriado nunca deja resto: no suma nada de objetivo, así que no hace falta
+            // restarlo aparte con el global actual (lo cual rompía la cuenta en modo objetivo-por-registro).
             const registrosSemanaCompletaPorFecha = new Map(
                 registros.filter(r => r.fecha >= ini && r.fecha <= fn).map(r => [r.fecha, r])
             );
-            let objetivoSemanaBruto = 0;
+            let objetivoSemana = 0;
             for (const isoDate of TimeUtils.generarRangoFechas(ini, fn)) {
                 if (!diasHabiles.includes(TimeUtils.parsearFechaLocal(isoDate).getDay())) continue;
                 const rDia = registrosSemanaCompletaPorFecha.get(isoDate);
-                objetivoSemanaBruto += rDia ? D.objetivoDeRegistro(rDia) : horasDiarias;
+                if (!rDia) { objetivoSemana += horasDiarias; continue; }
+                const tipoDia = TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida);
+                if (tipoDia && tipoDia.id !== 'remoto') continue; // especial no-remoto: neutro
+                objetivoSemana += D.objetivoDeRegistro(rDia);
             }
-            const objetivoSemana = Math.max(0, objetivoSemanaBruto - D.calcularHorasFeriadoEnRango(ini, fn));
             const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 
             const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
@@ -6919,8 +6931,8 @@ Generado por Sistema Lushibosca
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
                 btnId: 'btn-toggle-logica-cubierto',
-                mensajeOn: 'Los registros individuales no cubren el faltante con el saldo horario semanal',
-                mensajeOff: 'Los registros individuales cubren el faltante con el saldo horario semanal',
+                mensajeOn: 'Lógica de cubierto por saldo en los registros desactivada',
+                mensajeOff: 'Lógica de cubierto por saldo en los registros activada',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -6929,8 +6941,8 @@ Generado por Sistema Lushibosca
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
                 btnId: 'btn-toggle-objetivo-registro',
-                mensajeOn: 'Las horas objetivo de los registros se basan siempre en la configuración actual',
-                mensajeOff: 'Las horas objetivos de los registros se basan en la configuración vigente al momento de crearlos',
+                mensajeOn: 'Objetivo diario: se usa siempre el valor global de ajustes (como antes)',
+                mensajeOff: 'Objetivo diario: cada registro usa el objetivo vigente al crearse',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -7552,6 +7564,23 @@ Generado por Sistema Lushibosca
             D.guardarYActualizar();
         }
 
+        const _pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
+        function iniciarCambioObjetivoEdicion(incremento) { _pressHoldObjetivoEdicion.iniciar(incremento); }
+        function detenerCambioObjetivoEdicion() { _pressHoldObjetivoEdicion.detener(); }
+
+        // Solo actualiza el span en pantalla — el valor se persiste en el registro recién al Guardar
+        // (guardarEdicion lee $('edit-objetivo').dataset.valor), igual que el resto del formulario.
+        function cambiarObjetivoEdicion(incremento) {
+            const el = $('edit-objetivo');
+            if (!el) return;
+            let valorActual = parseFloat(el.dataset.valor);
+            if (isNaN(valorActual)) valorActual = D.horasDiarias();
+            const nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
+            el.dataset.valor = nuevoValor;
+            el.textContent = TimeUtils.horasATexto(nuevoValor, 'short');
+            verificarBloqueoCredito();
+        }
+
         function formatearInput(e) {
             let v = e.target.value.replace(/\D/g, '');
             if (v.length > 4) v = v.substring(0, 4);
@@ -7572,6 +7601,7 @@ Generado por Sistema Lushibosca
             actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
+            iniciarCambioObjetivoEdicion, detenerCambioObjetivoEdicion,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote, toggleHoverPopupCalendario,
             eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
             iniciarCambioHoras, detenerCambio, mostrarconfig, alternarFechaActual, verificarBloqueoCredito, gistSubir, gistBajar,
@@ -7803,6 +7833,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnsHoras?.[0]) addHoldEvents(btnsHoras[0], () => UILogic.iniciarCambioHoras(0.5), () => UILogic.detenerCambio());
         if (btnsHoras?.[1]) addHoldEvents(btnsHoras[1], () => UILogic.iniciarCambioHoras(-0.5), () => UILogic.detenerCambio());
     }
+
+    const btnObjetivoInc = $('btn-edit-objetivo-inc');
+    const btnObjetivoDec = $('btn-edit-objetivo-dec');
+    if (btnObjetivoInc) addHoldEvents(btnObjetivoInc, () => UILogic.iniciarCambioObjetivoEdicion(0.5), () => UILogic.detenerCambioObjetivoEdicion());
+    if (btnObjetivoDec) addHoldEvents(btnObjetivoDec, () => UILogic.iniciarCambioObjetivoEdicion(-0.5), () => UILogic.detenerCambioObjetivoEdicion());
 
     $('gist-token')?.addEventListener('input', () => UILogic.actualizarEstadoBotonesGist());
     $('gist-id')?.addEventListener('input', () => UILogic.actualizarEstadoBotonesGist());

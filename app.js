@@ -1626,6 +1626,10 @@
                 }));
 
             normalizados.forEach(r => {
+                // Los registros especiales (remoto, vacaciones, etc.) ya traen su total sanitizado
+                // y acotado del paso anterior — no se recalcula, porque calcularHorasFn les asignaría
+                // el objetivo global del dispositivo que importa, pisando el valor original del registro.
+                if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return;
                 const t = calcularHorasFn(r.entrada, r.salida, r.tiempoFuera || null, r.credito || null);
                 r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
             });
@@ -1812,7 +1816,7 @@
 
                 if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += objetivoDia;
                 if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
-                if (esRemoto) hechas += r.total;
+                if (esRemoto) hechas += objetivoDia;
             }
             return Math.round((hechas - objetivo) * 1e6) / 1e6;
         }
@@ -4855,7 +4859,7 @@
 
             const totalRemotos = registrosRango
                 .filter(r => r.entrada && r.entrada === r.salida && TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'remoto')
-                .reduce((s, r) => s + (r.total || 0), 0);
+                .reduce((s, r) => s + D.objetivoDeRegistro(r), 0);
             const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
             const totalHoras = totalHorasTrabajadas + totalRemotos;
             const promDiario = totalHorasTrabajadas / registrosValidos.length;
@@ -5132,7 +5136,7 @@
         function _sumarHorasEfectivas(regs) {
             return regs.reduce((sum, r) => {
                 const t = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                if (t && t.id === 'remoto') return sum + (r.total || 0);
+                if (t && t.id === 'remoto') return sum + D.objetivoDeRegistro(r);
                 if (!t) return sum + r.total;
                 return sum;
             }, 0);
@@ -5311,7 +5315,7 @@ ${lineasTipos}
 
                     semanasOrdenadas.forEach(([lunesOriginal, datos], index) => {
                         let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
-                        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + (r.total || 0), 0);
+                        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + D.objetivoDeRegistro(r), 0);
 
                         const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
                         const fechaDomingo = new Date(fechaLunes);
@@ -5791,7 +5795,7 @@ Generado por Sistema Lushibosca
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
             const totalSemana = registrosSemana.reduce((sum, r) => {
                 const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                return sum + (tipo?.id === 'remoto' ? (r.total || 0) : tipo ? 0 : r.total);
+                return sum + (tipo?.id === 'remoto' ? D.objetivoDeRegistro(r) : tipo ? 0 : r.total);
             }, 0);
 
             // Objetivo de la semana: suma día por día el objetivo estampado del registro de ese día
@@ -6915,8 +6919,8 @@ Generado por Sistema Lushibosca
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
                 btnId: 'btn-toggle-logica-cubierto',
-                mensajeOn: 'Lógica de cubierto por saldo en los registros desactivada',
-                mensajeOff: 'Lógica de cubierto por saldo en los registros activada',
+                mensajeOn: 'Los registros individuales no cubren el faltante con el saldo horario semanal',
+                mensajeOff: 'Los registros individuales cubren el faltante con el saldo horario semanal',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -6925,8 +6929,8 @@ Generado por Sistema Lushibosca
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
                 btnId: 'btn-toggle-objetivo-registro',
-                mensajeOn: 'Objetivo diario: se usa siempre el valor global de ajustes (como antes)',
-                mensajeOff: 'Objetivo diario: cada registro usa el objetivo vigente al crearse',
+                mensajeOn: 'Las horas objetivo de los registros se basan siempre en la configuración actual',
+                mensajeOff: 'Las horas objetivos de los registros se basan en la configuración vigente al momento de crearlos',
                 onAfterToggle: () => { actualizarUI(); }
             });
 

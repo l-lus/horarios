@@ -19,6 +19,7 @@
         SALDO_DESDE_PRIMERO_MES: 'saldoMensualDesdePrimero',
         IGNORAR_TF: 'ignorarTiempoFuera',
         IGNORAR_LOGICA_CUBIERTO: 'ignorarLogicaCubierto',
+        IGNORAR_OBJETIVO_POR_REGISTRO: 'ignorarObjetivoPorRegistro',
         FONDO_CARD: 'fondoCard',
         PERSISTIR_TARJETAS: 'persistirTarjetas',
         ORDEN_CARDS: 'ordenCards',
@@ -279,7 +280,7 @@
             MAX_STRING_LENGTH: 100,
             MAX_NOTAS_LENGTH: 35,
             MAX_JSON_SIZE: 4 * 1024 * 1024,
-            SCHEMA_VERSION: 3,
+            SCHEMA_VERSION: 4,
         };
 
         const REGEX_PATTERNS = {
@@ -362,11 +363,14 @@
             if (r.notas !== null && r.notas !== undefined && r.notas !== '') {
                 if (typeof r.notas !== 'string' || r.notas.length > SECURITY_LIMITS.MAX_NOTAS_LENGTH) return false;
             }
+            if (r.objetivoHoras !== null && r.objetivoHoras !== undefined) {
+                if (!Number.isFinite(r.objetivoHoras) || r.objetivoHoras < 0 || r.objetivoHoras > 24) return false;
+            }
             if (!Number.isFinite(r.horas) || r.horas < 0 || r.horas > 24) return false;
             if (!Number.isFinite(r.minutos) || r.minutos < 0 || r.minutos > 59) return false;
             if (!Number.isFinite(r.total) || r.total < 0 || r.total > 24) return false;
 
-            const propiedadesPermitidas = ['id', 'fecha', 'entrada', 'salida', 'tiempoFuera', 'horas', 'minutos', 'total', 'credito', 'notas'];
+            const propiedadesPermitidas = ['id', 'fecha', 'entrada', 'salida', 'tiempoFuera', 'horas', 'minutos', 'total', 'credito', 'notas', 'objetivoHoras'];
             const propiedadesActuales = Object.keys(r);
             const tienePropiedadesSospechosas = propiedadesActuales.some(prop => !propiedadesPermitidas.includes(prop));
             if (tienePropiedadesSospechosas) return false;
@@ -1122,7 +1126,7 @@
                 const { entrada, salida } = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
                 const nuevosRegistros = fechasNuevas.map(fechaISO => {
                     const t = calcularHoras(entrada, salida, null);
-                    return { id: S.generarIDSeguro(), fecha: fechaISO, entrada, salida, tiempoFuera: null, horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0 };
+                    return { id: S.generarIDSeguro(), fecha: fechaISO, entrada, salida, tiempoFuera: null, horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias };
                 });
                 registros.push(...nuevosRegistros);
                 ordenarRegistros();
@@ -1166,7 +1170,7 @@
             const t = calcularHoras(entrada, salida, null);
             registros.push({
                 id: nuevoId, fecha: fecha, entrada: entrada, salida: salida, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0
+                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
             });
 
             ordenarRegistros();
@@ -1307,7 +1311,7 @@
             const t = calcularHoras(e || null, s || null, null);
             registros.push({
                 id: nuevoId, fecha: f, entrada: e || null, salida: s || null, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0
+                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
             });
             ordenarRegistros();
             HistoryManager.saveState(registros);
@@ -1489,12 +1493,12 @@
             return null;
         }
 
-        function _calcularCredito(e, s, tf) {
+        function _calcularCredito(e, s, tf, objetivo = horasDiarias) {
             const btn = document.getElementById('btn-toggle-credito');
             if (!btn || btn.dataset.activo !== 'true') return null;
             const calc = calcularHoras(e, s, tf, null);
             if (!calc) return null;
-            const diferencia = horasDiarias - calc.total;
+            const diferencia = objetivo - calc.total;
             if (diferencia <= 0.01) return null;
             const { horas: h, minutos: m } = TimeUtils.descomponerHorasDecimales(diferencia);
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
@@ -1528,7 +1532,7 @@
             if (notas) notas = S.sanitizeNotas(notas, true) || null;
             if (notas === '') notas = null;
 
-            const cr = _calcularCredito(e, s, tf);
+            const cr = _calcularCredito(e, s, tf, objetivoDeRegistro(r));
 
             if (r.fecha === f && (r.entrada || '') === (e || '') && (r.salida || '') === (s || '') &&
                 (r.tiempoFuera || '') === (tf || '') && (r.credito || '') === (cr || '') && (r.notas || '') === (notas || '')) {
@@ -1579,7 +1583,7 @@
 
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA];
+            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA];
             keys.forEach(k => StorageHelper.removeItem(k, true));
 
             if (window.PerfilManager) {
@@ -1616,6 +1620,9 @@
                     total: Math.max(0, Math.min(24, parseFloat(r.total) || 0)),
                     credito: validarHora(r.credito),
                     notas: (r.notas && typeof r.notas === 'string') ? S.sanitizeString(r.notas, S.SECURITY_LIMITS.MAX_NOTAS_LENGTH) || null : null,
+                    objetivoHoras: (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras))
+                        ? Math.max(0, Math.min(24, r.objetivoHoras))
+                        : undefined,
                 }));
 
             normalizados.forEach(r => {
@@ -1801,10 +1808,11 @@
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
                 const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
                 const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
+                const objetivoDia = r ? objetivoDeRegistro(r) : horasDiarias;
 
-                if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += horasDiarias;
+                if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += objetivoDia;
                 if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
-                if (esRemoto) hechas += horasDiarias;
+                if (esRemoto) hechas += r.total;
             }
             return Math.round((hechas - objetivo) * 1e6) / 1e6;
         }
@@ -1863,7 +1871,7 @@
                 idsNuevosParaAnimar.push(nuevoId);
                 registros.push({
                     id: nuevoId, fecha: fecha, entrada: entrada, salida: salida, tiempoFuera: null,
-                    horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0
+                    horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
                 });
             });
 
@@ -1909,10 +1917,23 @@
             } else { throw new Error('Error al guardar'); }
         }
 
+        // Resuelve qué objetivo de horas aplica a un registro puntual:
+        // - Si el toggle "ignorarObjetivoPorRegistro" está activo, siempre usa el global vigente
+        //   (comportamiento anterior: objetivo único en vivo para todos los registros).
+        // - Si no, usa el valor estampado en el registro al crearse (registro.objetivoHoras).
+        // - Si el registro no tiene el campo (dato viejo, de antes de este cambio, o inválido),
+        //   cae al global vigente — así los registros históricos no se ven afectados.
+        function objetivoDeRegistro(registro) {
+            if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
+            const v = registro?.objetivoHoras;
+            return (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
+        }
+
         return {
             registros: () => registros, horasSemanales: () => (horasDiarias * diasHabiles.length), diasHabiles: () => diasHabiles,
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
+            objetivoDeRegistro,
             recalcularTotalesEnMemoria: function () {
                 registros.forEach(r => {
                     if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
@@ -1961,8 +1982,8 @@
         let _toastQueue = [];
         let _toastRunning = false;
 
-        function formatoDiferencia(tiempoTotal) {
-            return TimeUtils.formatoDiferencia(tiempoTotal, D.horasDiarias());
+        function formatoDiferencia(tiempoTotal, objetivo = D.horasDiarias()) {
+            return TimeUtils.formatoDiferencia(tiempoTotal, objetivo);
         }
 
         function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
@@ -2532,7 +2553,7 @@
         }
 
         function _limpiarClavesPerfil(pid) {
-            ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
+            ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
                 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
         }
@@ -2709,7 +2730,6 @@
             const todosLosRegistros = D.registros();
             const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
             const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
-            const horasDiariasObj = D.horasDiarias();
             const diasHabilesObj = D.diasHabiles();
             const filtroActivo = D.obtenerRegistrosFiltrados().length !== D.registros().length;
             const claseDelDia = (fecha) => {
@@ -2721,7 +2741,7 @@
                     return `dia-especial-${tipo ? tipo.color : 'purple'}`;
                 }
                 if (r.entrada && !r.salida) return 'dia-en-curso';
-                if (!UILogic._esFechaHabil(fecha, diasHabilesObj) || horasGte(r.total, horasDiariasObj)) return 'dia-normal';
+                if (!UILogic._esFechaHabil(fecha, diasHabilesObj) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
                 return UILogic._cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
             };
 
@@ -2819,7 +2839,7 @@
 
         let _popupCalendarioEl = null;
 
-        function _buildInfoHtmlRegistro(reg, horasDiarias) {
+        function _buildInfoHtmlRegistro(reg) {
             const esEspecial = TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
             if (esEspecial) {
                 const tipoConfig = TiposRegistro.obtenerTipoPorCodigo(reg.entrada, reg.salida);
@@ -2843,9 +2863,10 @@
                 tfStr = tfH > 0 ? `${tfH}h${tfM > 0 ? ' ' + tfM + 'm' : ''} fuera` : `${tfM}m fuera`;
             }
             let totalConDiff = totalStr, diffColor = '';
-            if (horasDiarias > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabiles())) {
-                const diffText = formatoDiferencia(totalHoras);
-                if (horasGte(totalHoras, horasDiarias)) {
+            const objetivoReg = D.objetivoDeRegistro(reg);
+            if (objetivoReg > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabiles())) {
+                const diffText = formatoDiferencia(totalHoras, objetivoReg);
+                if (horasGte(totalHoras, objetivoReg)) {
                     diffColor = 'var(--c-green)';
                     if (diffText) totalConDiff += ` (${diffText})`;
                 } else if (UILogic._cubiertoPorSaldo(reg.fecha)) {
@@ -2875,7 +2896,7 @@
             const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
 
             const fechaLabel = S.escapeHtml(new Date(reg.fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
-            const infoHtml = _buildInfoHtmlRegistro(reg, D.horasDiarias());
+            const infoHtml = _buildInfoHtmlRegistro(reg);
             const btnGrupoHtml = grupoDelRegistro ? `
                 <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
                     <svg class="icon"><use href="#icon-grid-group"/></svg>
@@ -4044,7 +4065,7 @@
             return svg;
         }
 
-        function crearItemRegistroIndividual(r, horasDiarias, idResaltar = null, hoy = TimeUtils.obtenerFechaHoy()) {
+        function crearItemRegistroIndividual(r, idResaltar = null, hoy = TimeUtils.obtenerFechaHoy()) {
             const item = document.createElement('div');
 
             let className = r.fecha === hoy ? 'registro-item hoy' : 'registro-item';
@@ -4086,9 +4107,10 @@
                 totalEl.classList.add(`${tipoEspecial.color}-text`);
             } else if (r.entrada && r.salida) {
                 totalText = `${r.horas}h ${r.minutos}m`;
-                if (horasDiarias > 0 && UILogic._esFechaHabil(r.fecha, D.diasHabiles())) {
-                    const diffText = formatoDiferencia(r.total);
-                    if (horasGte(r.total, horasDiarias)) {
+                const objetivoReg = D.objetivoDeRegistro(r);
+                if (objetivoReg > 0 && UILogic._esFechaHabil(r.fecha, D.diasHabiles())) {
+                    const diffText = formatoDiferencia(r.total, objetivoReg);
+                    if (horasGte(r.total, objetivoReg)) {
                         totalEl.classList.add('green-text');
                         if (diffText) totalText += ` (${diffText})`;
                     } else if (UILogic._cubiertoPorSaldo(r.fecha)) {
@@ -4115,7 +4137,7 @@
             return item;
         }
 
-        function crearContenedorMes(claveMes, registrosDelMes, horasDiarias, idNuevo, mesHoy, hoy) {
+        function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy) {
             const grupos = agruparRegistrosConsecutivos(registrosDelMes);
 
             const contenedorMesActual = document.createElement('div');
@@ -4164,8 +4186,8 @@
 
                 innerMesActual.appendChild(
                     esGrupo
-                        ? crearGrupoExpandible(grupo, horasDiarias, idNuevo)
-                        : crearItemRegistroIndividual(r, horasDiarias, idNuevo, hoy)
+                        ? crearGrupoExpandible(grupo, idNuevo)
+                        : crearItemRegistroIndividual(r, idNuevo, hoy)
                 );
                 semanaAnterior = semanaActual;
             });
@@ -4193,7 +4215,7 @@
             lista.appendChild(emptyDiv);
         }
 
-        function _crearContenedorAnio(anio, mesesDelAnio, horasDiarias, idNuevo, mesHoy, hoy) {
+        function _crearContenedorAnio(anio, mesesDelAnio, idNuevo, mesHoy, hoy) {
             const contenedor = document.createElement('div');
             contenedor.className = 'registro-mes-container';
 
@@ -4211,7 +4233,7 @@
             if (expandido) { detalle.classList.add('expanded'); chevron.style.transform = 'rotate(180deg)'; }
 
             mesesDelAnio.forEach((registrosDelMes, claveMes) =>
-                innerAnio.appendChild(crearContenedorMes(claveMes, registrosDelMes, horasDiarias, idNuevo, mesHoy, hoy))
+                innerAnio.appendChild(crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy))
             );
 
             contenedor.appendChild(header);
@@ -4226,7 +4248,6 @@
             const registrosAMostrar = D.obtenerRegistrosFiltrados();
             if (registrosAMostrar.length === 0) { _renderEmptyStateLista(lista); return; }
 
-            const horasDiarias = D.horasDiarias();
             const hoy = TimeUtils.obtenerFechaHoy();
             const mesHoy = hoy.substring(0, 7);
             const anioHoy = hoy.substring(0, 4);
@@ -4246,17 +4267,17 @@
             });
 
             mesesAnioActual.forEach((regs, claveMes) =>
-                fragmento.appendChild(crearContenedorMes(claveMes, regs, horasDiarias, idNuevo, mesHoy, hoy))
+                fragmento.appendChild(crearContenedorMes(claveMes, regs, idNuevo, mesHoy, hoy))
             );
             [...mesesPorAnio.keys()].sort().reverse().forEach(anio =>
-                fragmento.appendChild(_crearContenedorAnio(anio, mesesPorAnio.get(anio), horasDiarias, idNuevo, mesHoy, hoy))
+                fragmento.appendChild(_crearContenedorAnio(anio, mesesPorAnio.get(anio), idNuevo, mesHoy, hoy))
             );
 
             lista.appendChild(fragmento);
             _actualizarOffsetsStickyMes();
         }
 
-        function crearGrupoExpandible(grupo, horasDiarias, idResaltar = null) {
+        function crearGrupoExpandible(grupo, idResaltar = null) {
             const primerReg = grupo.registros[0];
             const ultimoReg = grupo.registros[grupo.registros.length - 1];
 
@@ -4376,6 +4397,7 @@
         function _actualizarHintEdicion() {
             const hint = document.getElementById('edit-hint-resumen');
             if (!hint) return;
+            const f = document.getElementById('edit-fecha')?.value.trim();
             const e = document.getElementById('edit-entrada')?.value.trim();
             const s = document.getElementById('edit-salida')?.value.trim();
             const tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
@@ -4384,7 +4406,14 @@
             if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }
             if (e?.length === 5 && s?.length === 5) {
                 const t = D.calcularHoras(e, s, tf || null, null, false);
-                hint.textContent = t ? `Total: ${t.horas}h ${t.minutos}m` : '';
+                if (!t) { hint.textContent = ''; return; }
+
+                const reg = D.registros().find(r => r.id === D.editandoId());
+                const objetivo = reg ? D.objetivoDeRegistro(reg) : D.horasDiarias();
+                const aplicaObjetivo = objetivo > 0 && f && UILogic._esFechaHabil(f, D.diasHabiles());
+                const sufijoObjetivo = aplicaObjetivo ? ` de ${TimeUtils.horasATexto(objetivo, 'short')}` : '';
+
+                hint.textContent = `Total: ${t.horas}h ${t.minutos}m${sufijoObjetivo}`;
             } else {
                 hint.textContent = '';
             }
@@ -4662,7 +4691,9 @@
             if (TiposRegistro.esRegistroEspecial(e, s)) return _bloquear();
 
             const calcTemp = D.calcularHoras(e, s, tf, null);
-            if (!calcTemp || calcTemp.total >= D.horasDiarias()) return _bloquear();
+            const regEnEdicion = D.registros().find(r => r.id === D.editandoId());
+            const objetivoEdicion = regEnEdicion ? D.objetivoDeRegistro(regEnEdicion) : D.horasDiarias();
+            if (!calcTemp || calcTemp.total >= objetivoEdicion) return _bloquear();
 
             _habilitar();
         }
@@ -4807,9 +4838,11 @@
             const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
             const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
 
-            const remotos = conteosPorTipo['remotos'] || 0;
+            const totalRemotos = registrosRango
+                .filter(r => r.entrada && r.entrada === r.salida && TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'remoto')
+                .reduce((s, r) => s + (r.total || 0), 0);
             const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
-            const totalHoras = totalHorasTrabajadas + (remotos * D.horasDiarias());
+            const totalHoras = totalHorasTrabajadas + totalRemotos;
             const promDiario = totalHorasTrabajadas / registrosValidos.length;
             let hPromedio = Math.floor(promDiario), mPromedio = Math.round((promDiario - hPromedio) * 60);
             if (mPromedio === 60) { hPromedio++; mPromedio = 0; }
@@ -5081,10 +5114,10 @@
             _poblarSelect('select-mes-stats', meses, UILogic._nombreMesCapitalizado, mesActual, actualizarEstadisticas, UILogic._agruparMesesPorAnio);
         }
 
-        function _sumarHorasEfectivas(regs, horasDiarias) {
+        function _sumarHorasEfectivas(regs) {
             return regs.reduce((sum, r) => {
                 const t = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                if (t && t.id === 'remoto') return sum + horasDiarias;
+                if (t && t.id === 'remoto') return sum + (r.total || 0);
                 if (!t) return sum + r.total;
                 return sum;
             }, 0);
@@ -5119,7 +5152,7 @@
             };
         }
 
-        function _seccionDetalleAnual(registrosPeriodo, horasDiariasObjetivo) {
+        function _seccionDetalleAnual(registrosPeriodo) {
             const mesesOrdenados = [...new Set(registrosPeriodo.map(r => r.fecha.substring(0, 7)))].sort();
             let seccion = `
 
@@ -5140,14 +5173,14 @@
                     })
                     .filter(Boolean);
                 const nombreMes = TimeUtils.formatoTituloMes(claveMes).split(' ')[0];
-                seccion += `   ${nombreMes.padEnd(12)} ${TimeUtils.horasATexto(_sumarHorasEfectivas(regsM, horasDiariasObjetivo), 'short').padEnd(10)}  (${normales.length} jornadas)`;
+                seccion += `   ${nombreMes.padEnd(12)} ${TimeUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short').padEnd(10)}  (${normales.length} jornadas)`;
                 if (notas.length) seccion += `  [${notas.join(', ')}]`;
                 seccion += '\n';
             });
             return seccion;
         }
 
-        function _seccionDetalleMensual(registrosPeriodo, horasDiariasObjetivo) {
+        function _seccionDetalleMensual(registrosPeriodo) {
             let seccion = `
 
 ──────────────────────────────────────────────────────────────────
@@ -5170,7 +5203,7 @@
                     const total = r.salida ? TimeUtils.horasATexto(r.total, 'short') : 'Incompleto';
                     const tiempoFuera = r.tiempoFuera ? ` (${r.tiempoFuera} fuera)` : '';
                     const infoAsueto = (r.credito && r.credito !== '00:00') ? ' [SALIDA TEMPRANO]' : '';
-                    const indicador = r.salida ? (horasGte(r.total, horasDiariasObjetivo) ? '✓ ' : '✗ ') : '  ';
+                    const indicador = r.salida ? (horasGte(r.total, D.objetivoDeRegistro(r)) ? '✓ ' : '✗ ') : '  ';
                     linea = `${fecha}  ${dia.padEnd(10)} ${entrada} → ${salida}  [${total}]${tiempoFuera}${infoAsueto} ${indicador}`;
                 }
                 seccion += linea + '\n';
@@ -5204,7 +5237,6 @@
             const periodo = _resolverPeriodoDatos(esAnual);
             if (!periodo) return;
             const { periodoLabel, registrosPeriodo, stats, nombreArchivo, mesSeleccionado } = periodo;
-            const horasDiariasObjetivo = D.horasDiarias();
 
             const reporte = {
 
@@ -5234,13 +5266,13 @@ ${lineasTipos}
    • Salida promedio:        ${stats.salidaPromedio}
    • Promedio diario:        ${stats.promedioDiario}
    
-   • Total horas trabajadas: ${TimeUtils.horasATexto(_sumarHorasEfectivas(registrosPeriodo, horasDiariasObjetivo), 'short')}
+   • Total horas trabajadas: ${TimeUtils.horasATexto(_sumarHorasEfectivas(registrosPeriodo), 'short')}
    • Saldo:                  ${stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A'}`;
                 },
 
                 detallePeriodo: () => esAnual
-                    ? _seccionDetalleAnual(registrosPeriodo, horasDiariasObjetivo)
-                    : _seccionDetalleMensual(registrosPeriodo, horasDiariasObjetivo),
+                    ? _seccionDetalleAnual(registrosPeriodo)
+                    : _seccionDetalleMensual(registrosPeriodo),
 
                 totalesPorSemana: () => {
                     if (esAnual || !mesSeleccionado) return '';
@@ -5264,7 +5296,7 @@ ${lineasTipos}
 
                     semanasOrdenadas.forEach(([lunesOriginal, datos], index) => {
                         let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
-                        if (datos.remotos?.length) totalSemanal += datos.remotos.length * horasDiariasObjetivo;
+                        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + (r.total || 0), 0);
 
                         const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
                         const fechaDomingo = new Date(fechaLunes);
@@ -5314,7 +5346,7 @@ ${lineasTipos}
 ⚙️ Ajustes
 ────────────────────────────────────────────────────────────────
 
-   • Horas diarias:          ${D.horasDiarias()}
+   • Horas diarias:          ${D.horasDiarias()}${StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true) ? '' : ' (objetivo estampado por registro)'}
    • Días hábiles/semana:    ${D.diasHabiles().map(d => ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][d]).join(', ')}
    • Horas semanales:        ${D.horasSemanales()}`,
 
@@ -5680,7 +5712,6 @@ Generado por Sistema Lushibosca
 
             const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
             const diasHabilesObj = D.diasHabiles();
-            const horasDiariasObj = D.horasDiarias();
 
             const EPS = 1e-6;
             const pendientes = [];
@@ -5694,7 +5725,7 @@ Generado por Sistema Lushibosca
                 if (esRemoto) {
                     delta = 0;
                 } else if (r && !esEspecial && r.salida) {
-                    const objetivo = _esFechaHabil(isoDate, diasHabilesObj) ? horasDiariasObj : 0;
+                    const objetivo = _esFechaHabil(isoDate, diasHabilesObj) ? D.objetivoDeRegistro(r) : 0;
                     delta = r.total - objetivo;
                 }
 
@@ -5745,10 +5776,22 @@ Generado por Sistema Lushibosca
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
             const totalSemana = registrosSemana.reduce((sum, r) => {
                 const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                return sum + (tipo?.id === 'remoto' ? horasDiarias : tipo ? 0 : r.total);
+                return sum + (tipo?.id === 'remoto' ? (r.total || 0) : tipo ? 0 : r.total);
             }, 0);
 
-            const objetivoSemana = Math.max(0, horasSemanales - D.calcularHorasFeriadoEnRango(ini, fn));
+            // Objetivo de la semana: suma día por día el objetivo estampado del registro de ese día
+            // (o el global vigente si ese día todavía no tiene registro, p.ej. días futuros de la semana en curso).
+            // Así, si el objetivo diario cambió a mitad de semana, cada día pesa lo que tenía asignado al crearse.
+            const registrosSemanaCompletaPorFecha = new Map(
+                registros.filter(r => r.fecha >= ini && r.fecha <= fn).map(r => [r.fecha, r])
+            );
+            let objetivoSemanaBruto = 0;
+            for (const isoDate of TimeUtils.generarRangoFechas(ini, fn)) {
+                if (!diasHabiles.includes(TimeUtils.parsearFechaLocal(isoDate).getDay())) continue;
+                const rDia = registrosSemanaCompletaPorFecha.get(isoDate);
+                objetivoSemanaBruto += rDia ? D.objetivoDeRegistro(rDia) : horasDiarias;
+            }
+            const objetivoSemana = Math.max(0, objetivoSemanaBruto - D.calcularHorasFeriadoEnRango(ini, fn));
             const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 
             const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
@@ -5902,12 +5945,14 @@ Generado por Sistema Lushibosca
 
         function derivarVistaHoy(est) {
             const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanal, diasHabiles } = est;
-            const objetivoDiario = horasDiarias;
+            const objetivoDiario = regHoy ? D.objetivoDeRegistro(regHoy) : horasDiarias;
 
             if (!regHoy || !regHoy.entrada) {
 
                 if (est.ayerAbierto) {
-                    const objetivoDiarioAyerAplica = _esFechaHabil(est.ayerStr, diasHabiles) ? objetivoDiario : 0;
+                    const objetivoDiarioAyerAplica = _esFechaHabil(est.ayerStr, diasHabiles)
+                        ? (est.regAyer ? D.objetivoDeRegistro(est.regAyer) : objetivoDiario)
+                        : 0;
                     const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
                     const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAyerAplica);
                     const colorBarra = objetivoDiarioAyerAplica === 0 ? 'blue' : (cumplido ? 'green' : 'blue');
@@ -6860,6 +6905,16 @@ Generado por Sistema Lushibosca
                 onAfterToggle: () => { actualizarUI(); }
             });
 
+        const { toggle: toggleObjetivoPorRegistro, actualizarEstado: actualizarEstadoBotonObjetivoPorRegistro } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
+                btnId: 'btn-toggle-objetivo-registro',
+                mensajeOn: 'Objetivo diario: se usa siempre el valor global de ajustes (como antes)',
+                mensajeOff: 'Objetivo diario: cada registro usa el objetivo vigente al crearse',
+                onAfterToggle: () => { actualizarUI(); }
+            });
+
         const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
@@ -7208,6 +7263,7 @@ Generado por Sistema Lushibosca
             UILogic.actualizarEstadoBotonSaldoDesdeEnero();
             UILogic.actualizarEstadoBotonSaldoDesdePrimeroDiaMes();
             UILogic.actualizarEstadoBotonLogicaCubierto();
+            UILogic.actualizarEstadoBotonObjetivoPorRegistro();
             UILogic.aplicarVisibilidadCards();
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
@@ -7489,6 +7545,7 @@ Generado por Sistema Lushibosca
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
             actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
+            toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote, toggleHoverPopupCalendario,
             eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
             iniciarCambioHoras, detenerCambio, mostrarconfig, alternarFechaActual, verificarBloqueoCredito, gistSubir, gistBajar,
@@ -7703,6 +7760,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());
     $('btn-toggle-saldo-primero-mes')?.addEventListener('click', () => UILogic.toggleSaldoDesdePrimeroDiaMes());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
+    $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));

@@ -3,7 +3,7 @@
 ### BUGS ACTUALES:
 --
 
-### VERSION:
+> ### VERSION:
 
 ### 260721
 * **Cambios:** Se reemplaza el objetivo en el hint (editar registro), por un campo mas en el modal en cuestión

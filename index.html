@@ -591,6 +591,9 @@
                 </h3>
             </div>
             <div class="modal-panel-body custom-scroll">
+                <div class="config-onboarding-banner" id="config-onboarding-banner">
+                    <p>Configurá tus horas diarias y tus días laborales. Si ya tenés un backup local o un Gist, restauralo desde abajo.</p>
+                </div>
                 <div class="modal-config-cols">
 
                     <div>
@@ -635,7 +638,7 @@
                             </div>
                             <div id="config-total-feedback" class="config-hint-text">(Total semanal: --hs)</div>
                         </div>
-                        <div class="config-actions form-group">
+                        <div class="config-actions form-group config-onboarding-hide">
                             <label>Interfaz</label>
                             <button id="btn-toggle-fondo">
                                 <svg class="icon">
@@ -662,7 +665,7 @@
                                 </svg>
                             </button>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group config-onboarding-hide">
                             <label>Tarjetas y posición</label>
                             <div id="lista-orden-cards">
                                 <div class="orden-card-item" id="orden-item-registrar">
@@ -705,7 +708,7 @@
                         </div>
                     </div>
                     <div>
-                        <div class="config-actions form-group">
+                        <div class="config-actions form-group config-onboarding-hide">
                             <label>Estadísticas</label>
                             <button id="btn-toggle-ignorar-tf">
                                 <svg class="icon">
@@ -773,7 +776,7 @@
                                     <use href="#icon-chevron-right" />
                                 </svg>
                             </button>
-                            <button class="btn-export">
+                            <button class="btn-export config-onboarding-hide">
                                 <svg class="icon">
                                     <use href="#icon-download" />
                                 </svg>
@@ -782,7 +785,7 @@
                                     <use href="#icon-chevron-right" />
                                 </svg>
                             </button>
-                            <button class="btn-delete">
+                            <button class="btn-delete config-onboarding-hide">
                                 <svg class="icon">
                                     <use href="#icon-trash" />
                                 </svg>
@@ -798,9 +801,14 @@
             <div class="modal-panel-footer">
                 <div class="btn-group">
                     <button class="btn-cancel">
-                        <svg class="icon">
+                        <svg class="icon icon-footer-volver">
                             <use href="#icon-back" />
-                        </svg> Volver
+                        </svg>
+                        <svg class="icon icon-footer-empezar">
+                            <use href="#icon-check" />
+                        </svg>
+                        <span class="label-footer-volver">Volver</span>
+                        <span class="label-footer-empezar">Empezar</span>
                     </button>
                 </div>
             </div>

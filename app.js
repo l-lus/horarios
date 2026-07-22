@@ -3322,7 +3322,7 @@
         }
 
         function cerrarImportar() {
-            if (!_modalAbiertoDesdeLista) {
+            if (!_modalAbiertoDesdeLista && !document.body.classList.contains('config-onboarding')) {
                 ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
             }
             ModalManager.alternar('modal-importar', _modalAbiertoDesdeLista ? null : 'modal-config');
@@ -3350,7 +3350,7 @@
         }
 
         function cerrarExportar() {
-            if (!_modalAbiertoDesdeLista) {
+            if (!_modalAbiertoDesdeLista && !document.body.classList.contains('config-onboarding')) {
                 ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
             }
             ModalManager.alternar('modal-exportar', _modalAbiertoDesdeLista ? null : 'modal-config');
@@ -3497,9 +3497,11 @@
             actualizarBotonGistBackup();
             actualizarBotonGistMerge();
             actualizarEstadoBotonesGist();
-            ModalManager.cerrarTodos();
-            ModalManager.abrir('modal-gist');
-            if (_gistModalPadre) ModalManager.setPadre('modal-gist', _gistModalPadre);
+            // alternar() balancea el historial del navegador (push/pop) y ya deja
+            // seteado _padres['modal-gist'] = modalAbierto. cerrarTodos()+abrir() dejaba
+            // una entrada de historial huérfana cada vez, que con el tiempo podía terminar
+            // sacando al usuario de la página al volver.
+            ModalManager.alternar(_gistModalPadre, 'modal-gist');
             _gistLimitesTemp = null;
             _actualizarCampoLimite();
             _gistLimitesOrig = { bajar: GistSync.getSyncLimite('bajar'), subir: GistSync.getSyncLimite('subir') };
@@ -3600,7 +3602,7 @@
                 const padre = _gistModalPadre;
                 _gistModalPadre = null;
                 ModalManager.alternar('modal-gist', padre);
-                if (padre === 'modal-config') {
+                if (padre === 'modal-config' && !document.body.classList.contains('config-onboarding')) {
                     ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
                 }
             } else {
@@ -7105,7 +7107,20 @@ Generado por Sistema Lushibosca
             document.addEventListener('mouseup', endDrag);
         }
 
+        let _resolverOnboarding = null;
+
         function cerrarConfig() {
+            if (document.body.classList.contains('config-onboarding')) {
+                // La clase se saca recién cuando termina la animación de cierre del modal
+                // (~350ms) para que no se "restauren" los botones ocultos mientras se ve
+                // todavía el modal cerrándose.
+                setTimeout(() => document.body.classList.remove('config-onboarding'), 350);
+                StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
+                if (_resolverOnboarding) {
+                    _resolverOnboarding();
+                    _resolverOnboarding = null;
+                }
+            }
             const padre = ModalManager.getPadre('modal-config');
             if (padre) {
                 ModalManager.alternar('modal-config', padre);
@@ -7114,26 +7129,40 @@ Generado por Sistema Lushibosca
             }
         }
 
-        function mostrarconfig() {
-            ModalManager.alternar('modal-selector-perfiles', 'modal-config', null, () => {
-                {
-                    const elHoras = $('config-horas-diarias');
-                    elHoras.dataset.valor = D.horasDiarias();
-                    elHoras.textContent = TimeUtils.horasATexto(D.horasDiarias(), 'short');
-                }
+        // Precarga los campos de Ajustes (horas diarias, días laborales, fondo, etc.) con
+        // los valores vigentes. Compartido entre la apertura normal y el modo onboarding,
+        // para no duplicar esta lógica en dos lugares.
+        function _precargarCamposConfig() {
+            const elHoras = $('config-horas-diarias');
+            elHoras.dataset.valor = D.horasDiarias();
+            elHoras.textContent = TimeUtils.horasATexto(D.horasDiarias(), 'short');
 
-                const diasActivos = D.diasHabiles();
-                const checkboxes = document.querySelectorAll('input[name="dia-habil"]');
-                checkboxes.forEach(cb => {
-                    cb.checked = diasActivos.includes(parseInt(cb.value));
-                    cb.onchange = UILogic.actualizarFeedbackConfig;
-                });
-
-                UILogic.actualizarFeedbackConfig();
-                actualizarEstadoBotonIgnorarTF();
-                const lbl = $('hint-fondo-label');
-                if (lbl) lbl.textContent = _getLabelFondo(UILogic.getFondoCard());
+            const diasActivos = D.diasHabiles();
+            const checkboxes = document.querySelectorAll('input[name="dia-habil"]');
+            checkboxes.forEach(cb => {
+                cb.checked = diasActivos.includes(parseInt(cb.value));
+                cb.onchange = UILogic.actualizarFeedbackConfig;
             });
+
+            UILogic.actualizarFeedbackConfig();
+            actualizarEstadoBotonIgnorarTF();
+            const lbl = $('hint-fondo-label');
+            if (lbl) lbl.textContent = _getLabelFondo(UILogic.getFondoCard());
+        }
+
+        function mostrarconfig() {
+            ModalManager.alternar('modal-selector-perfiles', 'modal-config', null, _precargarCamposConfig);
+        }
+
+        // Primera vez que se abre la app sin registros: se muestra Ajustes directo
+        // (mismo modal real, sin duplicar campos) en "modo onboarding" — con un banner
+        // arriba y el botón del footer cambiado a "Empezar" vía CSS (.config-onboarding).
+        // Devuelve una promesa que se resuelve recién cuando el modal se cierra de verdad,
+        // para que quien llame (BienvenidaModal) pueda esperar a que el usuario termine.
+        function mostrarConfigOnboarding() {
+            document.body.classList.add('config-onboarding');
+            ModalManager.abrir('modal-config', _precargarCamposConfig);
+            return new Promise(resolve => { _resolverOnboarding = resolve; });
         }
 
 
@@ -7600,7 +7629,7 @@ Generado por Sistema Lushibosca
             iniciarCambioObjetivoEdicion, detenerCambioObjetivoEdicion,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote, toggleHoverPopupCalendario,
             eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
-            iniciarCambioHoras, detenerCambio, mostrarconfig, alternarFechaActual, verificarBloqueoCredito, gistSubir, gistBajar,
+            iniciarCambioHoras, detenerCambio, mostrarconfig, mostrarConfigOnboarding, alternarFechaActual, verificarBloqueoCredito, gistSubir, gistBajar,
             toggleCredito, setBloqueoEdicionGrupo, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo, poblarSelectoresTipos,
             mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport, aplicarFeedbackCampos,
             iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones, toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
@@ -7637,18 +7666,9 @@ Generado por Sistema Lushibosca
 
             await new Promise(r => setTimeout(r, 1000));
 
-            const importar = await ModalManager.confirmar(
-                'No se encontraron registros, si tenés un respaldo local de los datos podés restaurarlos desde acá.',
-                'Restaurar',
-                '#icon-upload',
-                { titulo: '¡Bienvenido a Horarios!', labelCancel: 'Continuar', iconoCancel: '#icon-arrow-right' }
-            );
-
-            StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
-
-            if (importar) {
-                window.UILogic?.mostrarImportar(true);
-            }
+            // BIENVENIDA_VISTA se marca en UILogic.cerrarConfig() al cerrar el modal
+            // (así cubre tanto el botón "Empezar" como el back del navegador).
+            await window.UILogic?.mostrarConfigOnboarding();
         }
 
         return { chequearYMostrar };

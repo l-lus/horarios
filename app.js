@@ -4362,6 +4362,7 @@
         }
 
         function cerrarEdicion() {
+            window.UILogic?.detenerCambioObjetivoEdicion();
             ModalManager.cerrar('modal-editar', () => {
                 D.setEditandoId(null);
                 document.dispatchEvent(new Event('scroll'));
@@ -4403,10 +4404,12 @@
 
             const enModoGlobal = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
             const elObjetivo = $('edit-objetivo');
+            const objetivoDeshabilitado = bloqueado || enModoGlobal;
             [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
-                if (btn) btn.disabled = bloqueado || enModoGlobal;
+                if (btn) btn.disabled = objetivoDeshabilitado;
             });
-            if (elObjetivo) elObjetivo.classList.toggle('input-number-inerte', bloqueado || enModoGlobal);
+            if (objetivoDeshabilitado) window.UILogic?.detenerCambioObjetivoEdicion();
+            if (elObjetivo) elObjetivo.classList.toggle('input-number-inerte', objetivoDeshabilitado);
             verificarBloqueoCredito();
         }
 
@@ -7756,11 +7759,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const $ = id => document.getElementById(id);
 
     const addHoldEvents = (btn, onStart, onStop) => {
-        btn.addEventListener('mousedown', onStart);
-        btn.addEventListener('mouseup', onStop);
-        btn.addEventListener('mouseleave', onStop);
-        btn.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(); }, { passive: false });
-        btn.addEventListener('touchend', (e) => { e.preventDefault(); onStop(); }, { passive: false });
+        const start = (e) => {
+            if (btn.disabled) return;
+            if (e.type === 'touchstart') e.preventDefault();
+            onStart();
+        };
+        const stop = (e) => {
+            if (e && e.type === 'touchend') e.preventDefault();
+            onStop();
+        };
+        btn.addEventListener('mousedown', start);
+        btn.addEventListener('touchstart', start, { passive: false });
+        btn.addEventListener('mouseup', stop);
+        btn.addEventListener('mouseleave', stop);
+        btn.addEventListener('touchend', stop, { passive: false });
+        btn.addEventListener('touchcancel', stop);
     };
 
     $('btn-install')?.addEventListener('click', () => PWAInstaller.instalarApp());

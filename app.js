@@ -31,6 +31,7 @@
         HISTORY: 'history',
         GIST_TOKEN: 'gistToken',
         BIENVENIDA_VISTA: 'bienvenidaVista',
+        FERIADOS_PROCESADOS: 'feriadosAR_procesados',
 
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
@@ -877,9 +878,21 @@
             return null;
         }
 
+        function parchearRegistrosEnHistorial(parchadorFn) {
+            let totalParcheado = 0;
+            _stack.forEach(estado => {
+                if (!Array.isArray(estado)) return;
+                estado.forEach(r => {
+                    if (parchadorFn(r)) totalParcheado++;
+                });
+            });
+            if (totalParcheado > 0) saveToLocalStorage();
+            return totalParcheado;
+        }
+
         return {
             saveState, undo, redo, canUndo, canRedo, updateButtons, clear,
-            saveToLocalStorage, loadFromLocalStorage, getCurrentState
+            saveToLocalStorage, loadFromLocalStorage, getCurrentState, parchearRegistrosEnHistorial
         };
     })();
 
@@ -1578,7 +1591,7 @@
 
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA];
+            const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
             keys.forEach(k => StorageHelper.removeItem(k, true));
 
             if (window.PerfilManager) {
@@ -1742,6 +1755,7 @@
 
         async function finalizarImportacionAndSave(mensajeExito) {
             ordenarRegistros();
+            migrarObjetivoHorasFaltante();
             HistoryManager.saveState(registros);
             if (await guardarYActualizar()) {
                 const esPerfilDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
@@ -3667,6 +3681,7 @@
                 if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
                 return (b.entrada || '').localeCompare(a.entrada || '');
             });
+            D.migrarObjetivoHorasFaltante();
             HistoryManager.saveState(D.registros());
 
             await D.guardarYActualizar();
@@ -7297,6 +7312,13 @@ Generado por Sistema Lushibosca
             const migrados = D.migrarObjetivoHorasFaltante();
             if (migrados > 0) {
                 console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${D.horasDiarias()}h).`);
+                HistoryManager.parchearRegistrosEnHistorial(r => {
+                    if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
+                        r.objetivoHoras = D.horasDiarias();
+                        return true;
+                    }
+                    return false;
+                });
                 if (window.PerfilManager) PerfilManager.guardarDatosPerfilActual();
             }
 
@@ -7635,11 +7657,11 @@ Generado por Sistema Lushibosca
     const FeriadosAR = (function () {
         'use strict';
 
-        const SK_PROCESADOS = 'feriadosAR_procesados';
+        const SK_PROCESADOS = STORAGE_KEYS.FERIADOS_PROCESADOS;
         const FERIADOS = window.FERIADOS_AR || {};
 
         function _cargarProcesados() {
-            const raw = StorageHelper.getItem(SK_PROCESADOS, null);
+            const raw = StorageHelper.getItem(SK_PROCESADOS, null, true);
             try {
                 if (!raw) return new Set();
                 const parsed = JSON.parse(raw, SecurityAndUtils.reviverJSONSeguro);
@@ -7655,7 +7677,7 @@ Generado por Sistema Lushibosca
             limite.setDate(limite.getDate() - 60);
             const limiteStr = TimeUtils.formatearFechaLocal(limite);
             set.forEach(f => { if (f < limiteStr) set.delete(f); });
-            StorageHelper.setItem(SK_PROCESADOS, JSON.stringify([...set]));
+            StorageHelper.setItem(SK_PROCESADOS, JSON.stringify([...set]), true);
         }
 
         function _getFeriadosDelMes() {

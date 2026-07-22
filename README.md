@@ -5,6 +5,9 @@
 
 > ### VERSION:
 
+### 260722
+* **Cambios:** Se cambia de estilo el badge "cubierto"
+
 ### 260721
 * **Cambios:** Se reemplaza el objetivo en el hint (editar registro), por un campo mas en el modal en cuestión
 * **Fix:** Se corrigen varios errores y bugs relativos a la funcion de horas objetivo por registro (todavia en fase de prueba)

@@ -716,11 +716,18 @@ button:disabled {
 .registro-total {
     font-size: var(--text-sm);
     font-weight: var(--fw-semibold);
-    margin-top: var(--space-xs);
     color: var(--c-white);
     display: inline-block;
     border-radius: var(--radius);
     padding: 0.1rem var(--space-lg);
+}
+
+.registro-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-xs);
 }
 
 .registro-mes-container {
@@ -1909,10 +1916,9 @@ button.campo-flash {
         text-align: right;
     }
 
-    .registro-total {
+    .registro-badges {
         grid-column: 1 / -1;
         grid-row: 2;
-        margin-top: var(--space-xs);
         justify-self: start;
     }
 }

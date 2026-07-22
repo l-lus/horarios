@@ -2883,7 +2883,7 @@
                 const [tfH, tfM] = reg.tiempoFuera.split(':').map(Number);
                 tfStr = tfH > 0 ? `${tfH}h${tfM > 0 ? ' ' + tfM + 'm' : ''} fuera` : `${tfM}m fuera`;
             }
-            let totalConDiff = totalStr, diffColor = '';
+            let totalConDiff = totalStr, diffColor = '', cubiertoLineaHtml = '';
             const objetivoReg = D.objetivoDeRegistro(reg);
             if (objetivoReg > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabiles())) {
                 const diffText = formatoDiferencia(totalHoras, objetivoReg);
@@ -2892,13 +2892,15 @@
                     if (diffText) totalConDiff += ` (${diffText})`;
                 } else if (UILogic._cubiertoPorSaldo(reg.fecha)) {
                     diffColor = 'var(--c-gold)';
-                    totalConDiff += ` (${diffText}) Cubierto`;
+                    if (diffText) totalConDiff += ` (${diffText})`;
+                    cubiertoLineaHtml = `<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>`;
                 } else {
                     diffColor = 'var(--c-red)';
                     if (diffText) totalConDiff += ` (${diffText})`;
                 }
             }
             return `<div class="cal-popup-info${diffColor ? ' cal-popup-info--dynamic' : ''}"${diffColor ? ` data-color="${diffColor}"` : ''}>${totalConDiff}</div>
+                ${cubiertoLineaHtml}
                 <div class="cal-popup-3l">${S.escapeHtml(reg.entrada)} – ${S.escapeHtml(reg.salida)}</div>
                 ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
         }
@@ -4125,6 +4127,7 @@
             const totalEl = document.createElement('div');
             totalEl.className = 'registro-total';
             let totalText = 'Incompleto';
+            let esCubierto = false;
 
             if (tipoEspecial) {
                 totalText = 'Justificado';
@@ -4139,7 +4142,8 @@
                         if (diffText) totalText += ` (${diffText})`;
                     } else if (UILogic._cubiertoPorSaldo(r.fecha)) {
                         totalEl.classList.add('gold-text');
-                        totalText += ` (${diffText}) Cubierto`;
+                        if (diffText) totalText += ` (${diffText})`;
+                        esCubierto = true;
                     } else {
                         totalEl.classList.add('red-text');
                         if (diffText) totalText += ` (${diffText})`;
@@ -4153,9 +4157,20 @@
             }
 
             totalEl.textContent = totalText;
+
+            const badgesEl = document.createElement('div');
+            badgesEl.className = 'registro-badges';
+            badgesEl.appendChild(totalEl);
+            if (esCubierto) {
+                const cubiertoEl = document.createElement('div');
+                cubiertoEl.className = 'registro-total gold-text';
+                cubiertoEl.textContent = 'Cubierto';
+                badgesEl.appendChild(cubiertoEl);
+            }
+
             info.appendChild(fechaEl);
             info.appendChild(horasEl);
-            info.appendChild(totalEl);
+            info.appendChild(badgesEl);
             item.appendChild(info);
 
             return item;
@@ -4348,9 +4363,13 @@
             totalEl.className = `registro-total ${colorClase}`;
             totalEl.textContent = 'Justificado';
 
+            const badgesEl = document.createElement('div');
+            badgesEl.className = 'registro-badges';
+            badgesEl.appendChild(totalEl);
+
             info.appendChild(fechaEl);
             info.appendChild(horasEl);
-            info.appendChild(totalEl);
+            info.appendChild(badgesEl);
             header.appendChild(info);
 
             header.dataset.accion = 'editar-grupo';

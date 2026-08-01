@@ -7957,9 +7957,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const inputHoras = $('config-horas-diarias');
     if (inputHoras) {
-        const btnsHoras = inputHoras.closest('.input-number-group')?.querySelectorAll('.btn-increment');
-        if (btnsHoras?.[0]) addHoldEvents(btnsHoras[0], () => UILogic.iniciarCambioHoras(0.5), () => UILogic.detenerCambio());
-        if (btnsHoras?.[1]) addHoldEvents(btnsHoras[1], () => UILogic.iniciarCambioHoras(-0.5), () => UILogic.detenerCambio());
+        const btnHorasInc = $('btn-horas-diarias-inc');
+        const btnHorasDec = $('btn-horas-diarias-dec');
+        if (btnHorasInc) addHoldEvents(btnHorasInc, () => UILogic.iniciarCambioHoras(0.5), () => UILogic.detenerCambio());
+        if (btnHorasDec) addHoldEvents(btnHorasDec, () => UILogic.iniciarCambioHoras(-0.5), () => UILogic.detenerCambio());
     }
 
     const btnObjetivoInc = $('btn-edit-objetivo-inc');
@@ -8029,7 +8030,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260731';
+        const _v = '-v260801';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

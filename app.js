@@ -1976,6 +1976,7 @@
                     if (_recalcularCreditoRegistro(r, horasDiarias)) creditosRecalculados++;
                 }
             });
+            if (aplicados > 0) HistoryManager.saveState(registros);
             return { aplicados, creditosRecalculados };
         }
 
@@ -7031,7 +7032,7 @@ Generado por Sistema Lushibosca
             }
 
             const confirmado = await ModalManager.confirmar(
-                `Se va a aplicar el objetivo de ${TimeUtils.horasATexto(horas, 'short')} a los ${totalRegistros} registro${totalRegistros !== 1 ? 's' : ''} existentes, reemplazando el objetivo individual de cada uno (y recalculando la Salida Temprano donde corresponda). Esta acción no se puede deshacer.`,
+                `Se va a reemplazar el objetivo horario de ${totalRegistros} registro${totalRegistros !== 1 ? 's' : ''} existente${totalRegistros !== 1 ? 's' : ''} por ${TimeUtils.horasATexto(horas, 'short')}.`,
                 'Aplicar',
                 '#icon-aplicar-horas'
             );

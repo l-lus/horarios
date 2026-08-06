@@ -5,6 +5,9 @@
 
 > ### VERSION:
 
+### 260806
+* **Cambios:** Se agrega funciona para que al tocar el stat-number, comience el ciclo de entrada - salida en la vista diaria
+
 ### 260722
 * **Cambios:** Se cambia de estilo el badge "cubierto"
 

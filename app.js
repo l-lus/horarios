@@ -6210,7 +6210,8 @@ Generado por Sistema Lushibosca
             if (el) el.classList.remove('ciclo-fade-out', 'ciclo-fade-in');
         }
 
-        function _iniciarCicloStats() {
+        function _iniciarCicloStats(inmediato = false) {
+            if (_cicloStatsInterval) return;
             _detenerCicloStats();
             if (!_cicloStatsEntrada) return;
 
@@ -6250,7 +6251,7 @@ Generado por Sistema Lushibosca
                 }, 350);
             };
 
-            _cicloStatsInterval = setTimeout(_cicloTick, _CICLO_DURACION_MS);
+            _cicloStatsInterval = setTimeout(_cicloTick, inmediato ? 0 : _CICLO_DURACION_MS);
         }
 
         function _renderStats(vista, est) {
@@ -7773,7 +7774,7 @@ Generado por Sistema Lushibosca
             _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _nombreMesCapitalizado, _renderSelectorStats,
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
             actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
-            _getLabelFondo, _iniciarCicloStats,
+            _getLabelFondo, _iniciarCicloStats, vistaActual: D.vistaActual,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);
@@ -7952,7 +7953,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     })();
 
-    $('stats-card')?.addEventListener('click', () => UILogic.alternarVista());
+    $('stats-card')?.addEventListener('click', (e) => {
+        const enStatsNumber = e.target.closest('#stats-semana');
+        if (enStatsNumber && UILogic.vistaActual() !== 'semana') {
+            e.stopPropagation();
+            UILogic._iniciarCicloStats(true);
+            return;
+        }
+        UILogic.alternarVista();
+    });
 
     $('btn-timer-main')?.addEventListener('click', () => UILogic.toggleTimerBreakMain());
     $('btn-agregar')?.addEventListener('click', () => UILogic.ejecutarAccionRegistro());
@@ -8082,7 +8091,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260801';
+        const _v = '-v260806';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

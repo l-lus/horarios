@@ -6211,9 +6211,9 @@ Generado por Sistema Lushibosca
         }
 
         function _iniciarCicloStats(inmediato = false) {
-            if (_cicloStatsInterval) return;
+            if (_cicloStatsInterval) return true;
             _detenerCicloStats();
-            if (!_cicloStatsEntrada) return;
+            if (!_cicloStatsEntrada) return false;
 
             const fases = [
                 _cicloStatsValorHoras,
@@ -6252,6 +6252,7 @@ Generado por Sistema Lushibosca
             };
 
             _cicloStatsInterval = setTimeout(_cicloTick, inmediato ? 0 : _CICLO_DURACION_MS);
+            return true;
         }
 
         function _renderStats(vista, est) {
@@ -7956,9 +7957,11 @@ document.addEventListener('DOMContentLoaded', function () {
     $('stats-card')?.addEventListener('click', (e) => {
         const enStatsNumber = e.target.closest('#stats-semana');
         if (enStatsNumber && UILogic.vistaActual() !== 'semana') {
-            e.stopPropagation();
-            UILogic._iniciarCicloStats(true);
-            return;
+            const ciclado = UILogic._iniciarCicloStats(true);
+            if (ciclado) {
+                e.stopPropagation();
+                return;
+            }
         }
         UILogic.alternarVista();
     });
@@ -8091,7 +8094,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260806';
+        const _v = '-v260807';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

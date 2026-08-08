@@ -5957,6 +5957,39 @@ Generado por Sistema Lushibosca
             return objetivo === 0 || horasGte(valor, objetivo);
         }
 
+        function _cantidadHoras(horasDecimales) {
+            const texto = TimeUtils.horasATexto(horasDecimales);
+            return { texto, singular: TimeUtils._esCantidadSingular(texto) };
+        }
+
+        function _fraseCantidad(horasDecimales, singular, plural) {
+            const { texto, singular: esSingular } = _cantidadHoras(horasDecimales);
+            return `${esSingular ? singular : plural} ${texto}`;
+        }
+
+        function _fraseCantidadSufijo(horasDecimales, singular, plural) {
+            const { texto, singular: esSingular } = _cantidadHoras(horasDecimales);
+            return `${texto} ${esSingular ? singular : plural}`;
+        }
+
+        function _breakStorageKey() {
+            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+            return STORAGE_KEYS.BREAK_TIME(perfilId);
+        }
+
+        function _minutosAHoraWrap(totalMinutos) {
+            const h = Math.floor(totalMinutos / 60) % 24;
+            const m = Math.floor(totalMinutos % 60);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function _hintSalidaODefault(reg, objetivoAplica, bufferSemanal, diasHabiles, hintDefault, permiteEstimado) {
+            if (permiteEstimado && reg && reg.entrada && objetivoAplica > 0 && !TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida)) {
+                return _calcularHintSalidaEstimada(reg, objetivoAplica, bufferSemanal, diasHabiles);
+            }
+            return { hint: hintDefault, hintEsHTML: false };
+        }
+
         function _tituloDia(nombreDia) {
             return `<svg class="icon"><use href="#icon-clock" /></svg>${nombreDia}`;
         }
@@ -5991,18 +6024,14 @@ Generado por Sistema Lushibosca
             } else if (semanaAbierta) {
                 colorBarra = 'blue'; colorBorde = 'blue';
                 estadoFondo = 'en_curso';
-                const diffText = TimeUtils.horasATexto(objetivoSemana - tot);
-                const prefijoFalta = TimeUtils._esCantidadSingular(diffText) ? 'Falta' : 'Faltan';
                 mensaje = objetivoSemana === 0
                     ? `${TimeUtils.horasATexto(tot)} (Sin objetivo)`
-                    : `${prefijoFalta} ${diffText}`;
+                    : _fraseCantidad(objetivoSemana - tot, 'Falta', 'Faltan');
                 mostrarMensaje = true;
             } else {
                 colorBarra = 'red'; colorBorde = 'red';
                 estadoFondo = 'finalizado_fail';
-                const diffText = TimeUtils.horasATexto(objetivoSemana - tot);
-                const prefijoFalto = TimeUtils._esCantidadSingular(diffText) ? 'Faltó' : 'Faltaron';
-                mensaje = `${prefijoFalto} ${diffText}`;
+                mensaje = _fraseCantidad(objetivoSemana - tot, 'Faltó', 'Faltaron');
                 mostrarMensaje = true;
             }
 
@@ -6026,25 +6055,20 @@ Generado por Sistema Lushibosca
                 minutosTotal += (hF * 60) + mF;
             }
 
-            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-            const inicioBreak = StorageHelper.getItem(STORAGE_KEYS.BREAK_TIME(perfilId));
+            const inicioBreak = StorageHelper.getItem(_breakStorageKey());
             if (inicioBreak && !D.getIgnorarTiempoFuera()) {
                 const mins = Math.floor((Date.now() - parseInt(inicioBreak)) / 60000);
                 if (mins > 0) minutosTotal += mins;
             }
 
-            let hS = Math.floor(minutosTotal / 60) % 24;
-            const mS = Math.floor(minutosTotal % 60);
-            const horaSalida = `${String(hS).padStart(2, '0')}:${String(mS).padStart(2, '0')}`;
+            const horaSalida = _minutosAHoraWrap(minutosTotal);
 
             const esLaborable = _esFechaHabil(reg.fecha, diasHabiles);
             const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
 
             if (mostrarBuffer) {
                 const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
-                let hSB = Math.floor(minutosConBuffer / 60) % 24;
-                const mSB = Math.floor(minutosConBuffer % 60);
-                const horaBuf = `${String(hSB).padStart(2, '0')}:${String(mSB).padStart(2, '0')}`;
+                const horaBuf = _minutosAHoraWrap(minutosConBuffer);
                 const colorBuffer = bufferSemanal > 0 ? 'var(--c-green)' : bufferSemanal < 0 ? 'var(--c-red)' : 'var(--text-main)';
                 return {
                     hint: `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color" data-color="${colorBuffer}">(<strong>${horaBuf}</strong>)</span>`,
@@ -6066,9 +6090,7 @@ Generado por Sistema Lushibosca
                 return extra > 0 ? `Te podés ir (+${TimeUtils.horasATexto(extra)})` : 'Te podés ir';
             }
             const faltante = objetivoDiario - tiempoHoy;
-            const textoHoras = TimeUtils.horasATexto(faltante);
-            const prefijo = TimeUtils._esCantidadSingular(textoHoras) ? 'Falta' : 'Faltan';
-            const faltanteTexto = `${prefijo} ${textoHoras}`;
+            const faltanteTexto = _fraseCantidad(faltante, 'Falta', 'Faltan');
 
             return bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
         }
@@ -6089,12 +6111,7 @@ Generado por Sistema Lushibosca
                     const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanal, 'En curso (cruce de medianoche)');
 
                     const nombreDiaAyer = TimeUtils.obtenerNombreDia(est.ayerStr);
-                    let hint = 'Tocá Fichar para registrar salida';
-                    let hintEsHTML = false;
-                    const regAyer = est.regAyer;
-                    if (regAyer && regAyer.entrada && objetivoDiarioAyerAplica > 0 && !TiposRegistro.esRegistroEspecial(regAyer.entrada, regAyer.salida)) {
-                        ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regAyer, objetivoDiarioAyerAplica, bufferSemanal, diasHabiles));
-                    }
+                    const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanal, diasHabiles, 'Tocá Fichar para registrar salida', true);
 
                     return {
                         titulo: `${_tituloDia(nombreDiaAyer)} (ayer)`,
@@ -6153,21 +6170,19 @@ Generado por Sistema Lushibosca
                 if (horasGte(dif, 0)) {
                     colorBarra = 'green'; colorBorde = 'green';
                     estadoFondo = 'finalizado_ok';
-                    const difExtraText = TimeUtils.horasATexto(dif);
-                    mensaje = horasEq(dif, 0) ? 'Perfecto' : `${difExtraText} ${TimeUtils._esCantidadSingular(difExtraText) ? 'extra' : 'extras'}`;
+                    mensaje = horasEq(dif, 0) ? 'Perfecto' : _fraseCantidadSufijo(dif, 'extra', 'extras');
                 } else {
-                    const difText = TimeUtils.horasATexto(Math.abs(dif));
-                    const prefijoFalto = TimeUtils._esCantidadSingular(difText) ? 'Faltó' : 'Faltaron';
+                    const faltoTexto = _fraseCantidad(Math.abs(dif), 'Faltó', 'Faltaron');
 
                     if (_logicaCubiertoActiva() && horasGte(bufferSemanal, 0)) {
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
                         estadoFondoColor = 'gold';
-                        mensaje = `${prefijoFalto} ${difText} (Cubierto)`;
+                        mensaje = `${faltoTexto} (Cubierto)`;
                     } else {
                         colorBarra = 'red'; colorBorde = 'red';
                         estadoFondo = 'finalizado_fail';
-                        mensaje = `${prefijoFalto} ${difText}`;
+                        mensaje = faltoTexto;
                     }
                 }
                 mostrarMensaje = true;
@@ -6179,11 +6194,7 @@ Generado por Sistema Lushibosca
                 mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAplica, bufferSemanal);
             }
 
-            let hint = 'Tocá para ver la Semana';
-            let hintEsHTML = false;
-            if (regHoy.entrada && !dayClosed && objetivoDiarioAplica > 0 && !TiposRegistro.esRegistroEspecial(regHoy.entrada, regHoy.salida)) {
-                ({ hint, hintEsHTML } = _calcularHintSalidaEstimada(regHoy, objetivoDiarioAplica, bufferSemanal, diasHabiles));
-            }
+            const { hint, hintEsHTML } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanal, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
 
             return _conAvisoAyer({
                 titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
@@ -6228,7 +6239,7 @@ Generado por Sistema Lushibosca
                 _cicloStatsValorHoras,
                 `Entrada ${_cicloStatsEntrada}`,
                 _cicloStatsSalida ? `Salida ${_cicloStatsSalida}` : null,
-              _cicloStatsTiempoFuera ? `Tiempo fuera ${TimeUtils.horasATexto(TimeUtils.horaAMinutos(_cicloStatsTiempoFuera) / 60, 'short')}` : null,
+                _cicloStatsTiempoFuera ? `Tiempo fuera ${TimeUtils.horasATexto(TimeUtils.horaAMinutos(_cicloStatsTiempoFuera) / 60, 'short')}` : null,
             ].filter(Boolean);
         }
 
@@ -6365,8 +6376,7 @@ Generado por Sistema Lushibosca
                 const span = document.createElement('span');
                 span.style.color = color;
                 span.style.fontWeight = '500';
-                const textoBuffer = TimeUtils.horasATexto(Math.abs(bufferSemanal));
-                const singular = TimeUtils._esCantidadSingular(textoBuffer);
+                const { texto: textoBuffer, singular } = _cantidadHoras(Math.abs(bufferSemanal));
                 const adjetivo = esPositivo ? (singular ? 'extra' : 'extras') : (singular ? 'faltante' : 'faltantes');
                 span.textContent = `${textoBuffer} ${adjetivo} esta semana`;
                 span.insertBefore(punto, span.firstChild);
@@ -6413,7 +6423,7 @@ Generado por Sistema Lushibosca
             UILogic._renderSelectorStats();
             actualizarEstadoBotonTimerMain();
             if (UILogic.getVistaHistoricoCalendario()) {
-                const selector = document.getElementById('calendario-selector-meses');
+                const selector = $('calendario-selector-meses');
                 if (selector && selector.style.display !== 'none') {
                     UILogic._cerrarSelectorMeses(idNuevo);
                 } else {
@@ -6437,8 +6447,8 @@ Generado por Sistema Lushibosca
 
         function alternarVista() {
             if (_timerAutoVista) { clearTimeout(_timerAutoVista); _timerAutoVista = null; }
-            const card = document.getElementById('stats-card');
-            const content = document.getElementById('stats-card-content');
+            const card = $('stats-card');
+            const content = $('stats-card-content');
             if (card) card.classList.add('cambiando-vista');
             _animarFadeSwap(content, () => {
                 const vistaActual = D.vistaActual() === 'semana' ? 'diaria' : 'semana';
@@ -6451,7 +6461,7 @@ Generado por Sistema Lushibosca
         }
 
         function pegarHoraActual(id) {
-            const input = document.getElementById(id);
+            const input = $(id);
             if (!input) return;
             if (input.value.trim() !== '') {
                 input.value = '';
@@ -6462,7 +6472,7 @@ Generado por Sistema Lushibosca
         }
 
         function limpiarCampo(id) {
-            const input = document.getElementById(id);
+            const input = $(id);
             if (input) {
                 input.value = '';
                 input.dispatchEvent(new Event('input'));
@@ -6490,17 +6500,15 @@ Generado por Sistema Lushibosca
         }
 
         function actualizarEstadoBotonTimerMain() {
-            const btn = document.getElementById('btn-timer-main');
-            const card = document.getElementById('stats-card');
+            const btn = $('btn-timer-main');
+            const card = $('stats-card');
             if (!btn) return;
 
             if (modoLoteActivo) { btn.disabled = true; return; }
 
             const hoy = TimeUtils.obtenerFechaHoy();
             const registroHoy = D.registros().find(r => r.fecha === hoy);
-            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-            const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
-            const isRunning = StorageHelper.getItem(storageKey) !== null;
+            const isRunning = StorageHelper.getItem(_breakStorageKey()) !== null;
             const icon = btn.querySelector('use');
             const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
 
@@ -6528,7 +6536,7 @@ Generado por Sistema Lushibosca
         function _iniciarContadorBreak(storageKey) {
             _detenerContadorBreak();
             function _actualizarContador() {
-                const el = document.getElementById('break-counter');
+                const el = $('break-counter');
                 if (!el) { _detenerContadorBreak(); return; }
                 const start = parseInt(StorageHelper.getItem(storageKey));
                 if (isNaN(start)) { el.textContent = ''; _detenerContadorBreak(); return; }
@@ -6584,8 +6592,7 @@ Generado por Sistema Lushibosca
         }
 
         async function toggleTimerBreakMain() {
-            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
-            const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
+            const storageKey = _breakStorageKey();
             const storedStart = StorageHelper.getItem(storageKey);
             const registroHoy = D.registros().find(r => r.fecha === TimeUtils.obtenerFechaHoy());
 
@@ -6601,12 +6608,12 @@ Generado por Sistema Lushibosca
         }
 
         function toggleModoLote(deltaSwipe, conAnimacion = true) {
-            const modoContenedor = document.getElementById('modo-contenedor');
-            const modoNormal = document.getElementById('modo-normal');
-            const modoLote = document.getElementById('modo-lote');
-            const btnTexto = document.getElementById('btn-registrar-texto');
-            const btnTimer = document.getElementById('btn-timer-main');
-            const btn = document.getElementById('btn-agregar');
+            const modoContenedor = $('modo-contenedor');
+            const modoNormal = $('modo-normal');
+            const modoLote = $('modo-lote');
+            const btnTexto = $('btn-registrar-texto');
+            const btnTimer = $('btn-timer-main');
+            const btn = $('btn-agregar');
 
             modoLoteActivo = !modoLoteActivo;
             const delta = deltaSwipe !== undefined ? deltaSwipe : (modoLoteActivo ? 1 : -1);
@@ -6616,9 +6623,9 @@ Generado por Sistema Lushibosca
                 modoLote.classList.remove('fade-out');
                 modoLote.style.display = 'block';
 
-                document.getElementById('lote-tipo').value = 'feriado';
-                document.getElementById('lote-fecha-desde').value = '';
-                document.getElementById('lote-fecha-hasta').value = '';
+                $('lote-tipo').value = 'feriado';
+                $('lote-fecha-desde').value = '';
+                $('lote-fecha-hasta').value = '';
 
                 btnTexto.textContent = 'Fichar Lote';
                 btn.style.background = '';
@@ -6658,8 +6665,8 @@ Generado por Sistema Lushibosca
         }
 
         function _limpiarCamposLote() {
-            document.getElementById('lote-fecha-desde').value = '';
-            document.getElementById('lote-fecha-hasta').value = '';
+            $('lote-fecha-desde').value = '';
+            $('lote-fecha-hasta').value = '';
         }
 
         async function _registrarEspecialHoy(tipo) {
@@ -6688,9 +6695,9 @@ Generado por Sistema Lushibosca
         }
 
         async function registrarLoteDesdeCard() {
-            const inputDesde = document.getElementById('lote-fecha-desde');
-            const inputHasta = document.getElementById('lote-fecha-hasta');
-            const tipo = document.getElementById('lote-tipo').value;
+            const inputDesde = $('lote-fecha-desde');
+            const inputHasta = $('lote-fecha-hasta');
+            const tipo = $('lote-tipo').value;
 
             if ((inputDesde.value === '' && inputDesde.validity && !inputDesde.validity.valid) ||
                 (inputHasta.value === '' && inputHasta.validity && !inputHasta.validity.valid)) {
@@ -6798,11 +6805,11 @@ Generado por Sistema Lushibosca
         }
 
         function actualizarBotonLote() {
-            const tipo = document.getElementById('lote-tipo').value;
-            const desde = document.getElementById('lote-fecha-desde').value;
-            const hasta = document.getElementById('lote-fecha-hasta').value;
-            const btn = document.getElementById('btn-agregar');
-            const btnTexto = document.getElementById('btn-registrar-texto');
+            const tipo = $('lote-tipo').value;
+            const desde = $('lote-fecha-desde').value;
+            const hasta = $('lote-fecha-hasta').value;
+            const btn = $('btn-agregar');
+            const btnTexto = $('btn-registrar-texto');
             btn.style.background = '';
             btn.style.color = '';
 
@@ -6862,8 +6869,8 @@ Generado por Sistema Lushibosca
         const _FLASH_SCROLL_DELAY = 500;
 
         function _irAFicharConFecha(fecha, esEspecial) {
-            const tarjeta = document.getElementById('card-registrar');
-            const formulario = document.getElementById('form-registro');
+            const tarjeta = $('card-registrar');
+            const formulario = $('form-registro');
             const estaExpandido = formulario && formulario.classList.contains('expanded');
 
             if (!estaExpandido) toggleFormulario();
@@ -6874,13 +6881,13 @@ Generado por Sistema Lushibosca
 
             const aplicarFecha = () => {
                 if (esEspecial) {
-                    const desde = document.getElementById('lote-fecha-desde');
-                    const hasta = document.getElementById('lote-fecha-hasta');
+                    const desde = $('lote-fecha-desde');
+                    const hasta = $('lote-fecha-hasta');
                     if (desde) desde.value = fecha;
                     if (hasta) hasta.value = fecha;
                     setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta', 'lote-tipo'), _FLASH_SCROLL_DELAY);
                 } else {
-                    const input = document.getElementById('fecha');
+                    const input = $('fecha');
                     if (input) input.value = fecha;
                     setTimeout(() => _flashCampo('fecha', 'entrada', 'salida'), _FLASH_SCROLL_DELAY);
                 }
@@ -6908,7 +6915,7 @@ Generado por Sistema Lushibosca
         }
 
         function alternarFechaActual(id) {
-            const c = document.getElementById(id);
+            const c = $(id);
             if (!c) return;
             if (c.value.trim() !== '') {
                 c.value = '';

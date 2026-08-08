@@ -6238,8 +6238,8 @@ Generado por Sistema Lushibosca
             return [
                 _cicloStatsValorHoras,
                 `Entrada ${_cicloStatsEntrada}`,
-                _cicloStatsSalida ? `Salida ${_cicloStatsSalida}` : null,
                 _cicloStatsTiempoFuera ? `Tiempo fuera ${TimeUtils.horasATexto(TimeUtils.horaAMinutos(_cicloStatsTiempoFuera) / 60, 'short')}` : null,
+                _cicloStatsSalida ? `Salida ${_cicloStatsSalida}` : null,
             ].filter(Boolean);
         }
 

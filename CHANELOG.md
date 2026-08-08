@@ -5,6 +5,9 @@
 
 > ### VERSION:
 
+### 260807
+* **Cambios:** cambios en ciclostat, ahora se activa cuando se agrega una entrada o salida, y se agrega el tiempo fuera
+
 ### 260806
 * **Cambios:** Se agrega funciona para que al tocar el stat-number, comience el ciclo de entrada - salida en la vista diaria
 

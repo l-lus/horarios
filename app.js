@@ -1300,6 +1300,9 @@
             HistoryManager.saveState(registros, `salida ${s} (${TimeUtils.fechaCorta(reg.fecha)})`);
             const saved = await guardarYActualizar(reg.id);
             if (!saved) return;
+            if (reg.fecha === TimeUtils.obtenerFechaHoy() && vistaActual !== 'semana') {
+                UILogic._prepararMostrarFaseAlRenderizar('salida');
+            }
             if (!usaHoraActual) {
                 notify.aplicarFeedbackCampos([
                     { id: 'entrada', fallback: 'Entrada', mostrar: false },
@@ -1327,6 +1330,9 @@
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
             const saved = await guardarYActualizar(nuevoId);
             if (!saved) return;
+            if (e && f === TimeUtils.obtenerFechaHoy() && vistaActual !== 'semana') {
+                UILogic._prepararMostrarFaseAlRenderizar('entrada');
+            }
             const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
             if (entradaManual || salidaManual) {
                 notify.aplicarFeedbackCampos([
@@ -6200,8 +6206,11 @@ Generado por Sistema Lushibosca
         let _cicloStatsValorHoras = '';
         let _cicloStatsEntrada = '';
         let _cicloStatsSalida = '';
+        let _cicloStatsTiempoFuera = '';
+        let _cicloStatsFaseAlRenderizar = null;
 
-        const _CICLO_DURACION_MS = 2500;
+        const _CICLO_DURACION_MS = 2000;
+        const _CICLO_PREFIJOS = { entrada: 'Entrada', salida: 'Salida', tiempoFuera: 'Tiempo fuera' };
 
         function _detenerCicloStats() {
             clearTimeout(_cicloStatsInterval);
@@ -6210,19 +6219,20 @@ Generado por Sistema Lushibosca
             if (el) el.classList.remove('ciclo-fade-out', 'ciclo-fade-in');
         }
 
-        function _iniciarCicloStats(inmediato = false) {
-            if (_cicloStatsInterval) return true;
-            _detenerCicloStats();
-            if (!_cicloStatsEntrada) return false;
+        function _prepararMostrarFaseAlRenderizar(tipo) {
+            _cicloStatsFaseAlRenderizar = tipo;
+        }
 
-            const fases = [
+        function _fasesCiclo() {
+            return [
                 _cicloStatsValorHoras,
                 `Entrada ${_cicloStatsEntrada}`,
                 _cicloStatsSalida ? `Salida ${_cicloStatsSalida}` : null,
+              _cicloStatsTiempoFuera ? `Tiempo fuera ${TimeUtils.horasATexto(TimeUtils.horaAMinutos(_cicloStatsTiempoFuera) / 60, 'short')}` : null,
             ].filter(Boolean);
+        }
 
-            let idx = 0;
-
+        function _crearCicloTick(fases, estado) {
             const _cicloTick = () => {
                 const el = $('stats-semana');
                 if (!el) { _detenerCicloStats(); return; }
@@ -6230,8 +6240,8 @@ Generado por Sistema Lushibosca
                 el.classList.add('ciclo-fade-out');
 
                 setTimeout(() => {
-                    idx++;
-                    if (idx >= fases.length) {
+                    estado.idx++;
+                    if (estado.idx >= fases.length) {
                         el.classList.remove('ciclo-fade-out');
                         el.classList.add('ciclo-fade-in');
                         el.textContent = _cicloStatsValorHoras;
@@ -6243,15 +6253,45 @@ Generado por Sistema Lushibosca
 
                     el.classList.remove('ciclo-fade-out');
                     el.classList.add('ciclo-fade-in');
-                    el.textContent = fases[idx];
+                    el.textContent = fases[estado.idx];
                     void el.offsetWidth;
                     el.classList.remove('ciclo-fade-in');
 
                     _cicloStatsInterval = setTimeout(_cicloTick, _CICLO_DURACION_MS);
                 }, 350);
             };
+            return _cicloTick;
+        }
 
-            _cicloStatsInterval = setTimeout(_cicloTick, inmediato ? 0 : _CICLO_DURACION_MS);
+        function _iniciarCicloStats(inmediato = false) {
+            if (_cicloStatsInterval) return true;
+            _detenerCicloStats();
+            if (!_cicloStatsEntrada) return false;
+
+            const fases = _fasesCiclo();
+            const estado = { idx: 0 };
+            const tick = _crearCicloTick(fases, estado);
+
+            _cicloStatsInterval = setTimeout(tick, inmediato ? 0 : _CICLO_DURACION_MS);
+            return true;
+        }
+
+        function _iniciarCicloEnFase(tipo) {
+            if (!_cicloStatsEntrada) return false;
+            clearTimeout(_cicloStatsInterval);
+
+            const fases = _fasesCiclo();
+            const prefijo = _CICLO_PREFIJOS[tipo];
+            const idx = prefijo ? fases.findIndex(f => f.startsWith(prefijo)) : -1;
+            if (idx === -1) return false;
+
+            const estado = { idx };
+            const tick = _crearCicloTick(fases, estado);
+
+            const el = $('stats-semana');
+            if (el) el.textContent = fases[idx];
+
+            _cicloStatsInterval = setTimeout(tick, _CICLO_DURACION_MS);
             return true;
         }
 
@@ -6264,10 +6304,18 @@ Generado por Sistema Lushibosca
             const esEspecial = !!est.tipoEspecialHoy;
             const entradaHoy = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
             const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';
+            const tiempoFueraHoy = (esDiaria && regHoy && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00' && !esEspecial) ? regHoy.tiempoFuera : '';
 
             _cicloStatsValorHoras = vista.stats;
             _cicloStatsEntrada = entradaHoy;
             _cicloStatsSalida = salidaHoy;
+            _cicloStatsTiempoFuera = tiempoFueraHoy;
+
+            if (_cicloStatsFaseAlRenderizar) {
+                const tipo = _cicloStatsFaseAlRenderizar;
+                _cicloStatsFaseAlRenderizar = null;
+                if (_iniciarCicloEnFase(tipo)) return;
+            }
 
             if (!_cicloStatsInterval) {
                 el.textContent = vista.stats;
@@ -6901,7 +6949,8 @@ Generado por Sistema Lushibosca
             setTimerAutoVista: (v) => { _timerAutoVista = v; },
             sumarMinutosAHora,
             _getLabelFondo,
-            _iniciarCicloStats
+            _iniciarCicloStats,
+            _prepararMostrarFaseAlRenderizar
         };
     })(SecurityAndUtils, DataManagement, UICore);
 
@@ -6969,7 +7018,7 @@ Generado por Sistema Lushibosca
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
-            sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats
+            sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats, _prepararMostrarFaseAlRenderizar
         } = UITarjetaFichaje;
 
         function alternarTema() {
@@ -7775,7 +7824,7 @@ Generado por Sistema Lushibosca
             _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _nombreMesCapitalizado, _renderSelectorStats,
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
             actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
-            _getLabelFondo, _iniciarCicloStats, vistaActual: D.vistaActual,
+            _getLabelFondo, _iniciarCicloStats, _prepararMostrarFaseAlRenderizar, vistaActual: D.vistaActual,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);

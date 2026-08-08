@@ -6508,7 +6508,8 @@ Generado por Sistema Lushibosca
 
             const hoy = TimeUtils.obtenerFechaHoy();
             const registroHoy = D.registros().find(r => r.fecha === hoy);
-            const isRunning = StorageHelper.getItem(_breakStorageKey()) !== null;
+            const storageKey = _breakStorageKey();
+            const isRunning = StorageHelper.getItem(storageKey) !== null;
             const icon = btn.querySelector('use');
             const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
 
@@ -8150,7 +8151,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260807';
+        const _v = '-v260808';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

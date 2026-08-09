@@ -1811,9 +1811,9 @@ button.campo-flash {
 
     :is([id^="btn-toggle-"],
         #btn-reporte,
-        .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist,
-        .btn-delete, .btn-cancel, .btn-export, .btn-merge, .btn-backup, .btn-edit,
-        .calendario-nav button):hover:not(:disabled) {
+        .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist, .card-section-title, 
+        .btn-delete, .btn-cancel, .stats-number, .btn-export, .btn-merge, .btn-backup, .btn-edit,
+        .calendario-nav button, .btn-settings, .btn-register):hover:not(:disabled) {
         filter: var(--hover);
     }
 

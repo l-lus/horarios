@@ -17,6 +17,7 @@
         VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
         SALDO_DESDE_ENERO: 'saldoAnualDesdeEnero',
         SALDO_DESDE_PRIMERO_MES: 'saldoMensualDesdePrimero',
+        SEMANAL_EN_VIVO: 'semanalEnVivo',
         IGNORAR_TF: 'ignorarTiempoFuera',
         IGNORAR_LOGICA_CUBIERTO: 'ignorarLogicaCubierto',
         IGNORAR_OBJETIVO_POR_REGISTRO: 'ignorarObjetivoPorRegistro',
@@ -1824,11 +1825,16 @@
             return { ayerStr, regAyer, ayerAbierto };
         }
 
-        function calcularBufferPeriodo(desde, hasta) {
+        function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutosBreakActivo = 0) {
             const hoy = TimeUtils.obtenerFechaHoy();
             const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);
             const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
             const { ayerStr, ayerAbierto } = detectarAyerAbierto(hoy, regsPorFecha);
+
+            const regHoy = regsPorFecha.get(hoy) ?? null;
+            const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
+            const regActivo = (ayerAbierto && !regHoy?.entrada) ? (regsPorFecha.get(ayerStr) ?? null)
+                : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
 
             let objetivo = 0, hechas = 0;
             for (const iso of TimeUtils.generarRangoFechas(desde, hasta)) {
@@ -1843,6 +1849,15 @@
                 if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += objetivoDia;
                 if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
                 if (esRemoto) hechas += objetivoDia;
+
+                if (incluirActivoEnVivo && !diaTerminado && esDiaHabil && !esEspecial && r && r === regActivo) {
+                    const t = calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
+                    const transcurrido = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
+                    if (transcurrido > objetivoDia) {
+                        objetivo += objetivoDia;
+                        hechas += transcurrido;
+                    }
+                }
             }
             return Math.round((hechas - objetivo) * 1e6) / 1e6;
         }
@@ -5901,11 +5916,27 @@ Generado por Sistema Lushibosca
             const { esDiaHabil, quedanDiasFuturos } = _estadoDiasHabiles(diasHabiles);
             const regHoy = registros.find(r => r.fecha === hoy) ?? null;
             const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
-            const bufferSemanal = D.calcularBufferPeriodo(ini, hoy);
+            const semanalEnVivo = StorageHelper.getBoolean(STORAGE_KEYS.SEMANAL_EN_VIVO, false);
+            const minutosBreakActivo = _minutosBreakActivo();
+            const bufferSemanalBase = D.calcularBufferPeriodo(ini, hoy, false);
+            const bufferSemanal = semanalEnVivo ? D.calcularBufferPeriodo(ini, hoy, true, minutosBreakActivo) : bufferSemanalBase;
+
+            const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
+
+            let tiempoHoy = 0;
+            const regActivo = (ayerAbierto && !regHoy?.entrada) ? regAyer
+                : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
+            if (regActivo) {
+                const t = D.calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
+                tiempoHoy = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
+            } else if (!tipoEspecialHoy && regHoy?.salida) {
+                tiempoHoy = regHoy.total;
+            }
 
             const fechaLimite = hoy < fn ? hoy : fn;
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
             const totalSemana = registrosSemana.reduce((sum, r) => {
+                if (semanalEnVivo && regActivo && r.fecha === regActivo.fecha) return sum + tiempoHoy;
                 const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                 return sum + (tipo?.id === 'remoto' ? D.objetivoDeRegistro(r) : tipo ? 0 : r.total);
             }, 0);
@@ -5924,24 +5955,12 @@ Generado por Sistema Lushibosca
             }
             const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 
-            const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
-
-            let tiempoHoy = 0;
-            const regActivo = (ayerAbierto && !regHoy?.entrada) ? regAyer
-                : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
-            if (regActivo) {
-                const t = D.calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
-                tiempoHoy = t ? t.total : 0;
-            } else if (!tipoEspecialHoy && regHoy?.salida) {
-                tiempoHoy = regHoy.total;
-            }
-
             return {
                 hoy, ini, fn,
                 registros, regHoy,
                 horasDiarias, horasSemanales,
                 diasHabiles, esDiaHabil,
-                semanaAbierta, bufferSemanal,
+                semanaAbierta, bufferSemanal, bufferSemanalBase,
                 totalSemana, objetivoSemana,
                 tipoEspecialHoy, tiempoHoy,
                 todosEspeciales,
@@ -5975,6 +5994,14 @@ Generado por Sistema Lushibosca
         function _breakStorageKey() {
             const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
             return STORAGE_KEYS.BREAK_TIME(perfilId);
+        }
+
+        function _minutosBreakActivo() {
+            if (D.getIgnorarTiempoFuera()) return 0;
+            const inicioBreak = StorageHelper.getItem(_breakStorageKey());
+            if (!inicioBreak) return 0;
+            const mins = Math.floor((Date.now() - parseInt(inicioBreak)) / 60000);
+            return mins > 0 ? mins : 0;
         }
 
         function _minutosAHoraWrap(totalMinutos) {
@@ -6015,18 +6042,24 @@ Generado por Sistema Lushibosca
                 estadoFondo = 'esperando';
                 mensaje = 'Semana sin días laborables';
                 mostrarMensaje = true;
+            } else if (semanaAbierta) {
+                estadoFondo = 'en_curso';
+                if (horasGte(tot, objetivoSemana)) {
+                    colorBarra = 'green'; colorBorde = 'green';
+                    const dif = tot - objetivoSemana;
+                    mensaje = horasEq(dif, 0) ? 'Vas justo' : `Vas ${TimeUtils.horasATexto(dif)} de más`;
+                } else {
+                    colorBarra = 'blue'; colorBorde = 'blue';
+                    mensaje = objetivoSemana === 0
+                        ? `${TimeUtils.horasATexto(tot)} (Sin objetivo)`
+                        : _fraseCantidad(objetivoSemana - tot, 'Falta', 'Faltan');
+                }
+                mostrarMensaje = true;
             } else if (horasGte(tot, objetivoSemana)) {
                 colorBarra = 'green'; colorBorde = 'green';
                 estadoFondo = 'finalizado_ok';
                 const dif = tot - objetivoSemana;
                 mensaje = horasEq(dif, 0) ? 'Perfecto' : `Hiciste ${TimeUtils.horasATexto(dif)} de más`;
-                mostrarMensaje = true;
-            } else if (semanaAbierta) {
-                colorBarra = 'blue'; colorBorde = 'blue';
-                estadoFondo = 'en_curso';
-                mensaje = objetivoSemana === 0
-                    ? `${TimeUtils.horasATexto(tot)} (Sin objetivo)`
-                    : _fraseCantidad(objetivoSemana - tot, 'Falta', 'Faltan');
                 mostrarMensaje = true;
             } else {
                 colorBarra = 'red'; colorBorde = 'red';
@@ -6055,11 +6088,7 @@ Generado por Sistema Lushibosca
                 minutosTotal += (hF * 60) + mF;
             }
 
-            const inicioBreak = StorageHelper.getItem(_breakStorageKey());
-            if (inicioBreak && !D.getIgnorarTiempoFuera()) {
-                const mins = Math.floor((Date.now() - parseInt(inicioBreak)) / 60000);
-                if (mins > 0) minutosTotal += mins;
-            }
+            minutosTotal += _minutosBreakActivo();
 
             const horaSalida = _minutosAHoraWrap(minutosTotal);
 
@@ -6096,7 +6125,7 @@ Generado por Sistema Lushibosca
         }
 
         function derivarVistaHoy(est) {
-            const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanal, diasHabiles } = est;
+            const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanalBase, diasHabiles } = est;
             const objetivoDiario = regHoy ? D.objetivoDeRegistro(regHoy) : horasDiarias;
 
             if (!regHoy || !regHoy.entrada) {
@@ -6108,10 +6137,10 @@ Generado por Sistema Lushibosca
                     const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
                     const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAyerAplica);
                     const colorBarra = objetivoDiarioAyerAplica === 0 ? 'blue' : (cumplido ? 'green' : 'blue');
-                    const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanal, 'En curso (cruce de medianoche)');
+                    const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase, 'En curso (cruce de medianoche)');
 
                     const nombreDiaAyer = TimeUtils.obtenerNombreDia(est.ayerStr);
-                    const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanal, diasHabiles, 'Tocá Fichar para registrar salida', true);
+                    const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
 
                     return {
                         titulo: `${_tituloDia(nombreDiaAyer)} (ayer)`,
@@ -6174,7 +6203,7 @@ Generado por Sistema Lushibosca
                 } else {
                     const faltoTexto = _fraseCantidad(Math.abs(dif), 'Faltó', 'Faltaron');
 
-                    if (_logicaCubiertoActiva() && horasGte(bufferSemanal, 0)) {
+                    if (_logicaCubiertoActiva() && horasGte(bufferSemanalBase, 0)) {
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
                         estadoFondoColor = 'gold';
@@ -6191,10 +6220,10 @@ Generado por Sistema Lushibosca
                 colorBorde = cumplido ? 'green' : 'blue';
                 estadoFondo = 'en_curso';
                 mostrarMensaje = true;
-                mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAplica, bufferSemanal);
+                mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAplica, bufferSemanalBase);
             }
 
-            const { hint, hintEsHTML } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanal, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
+            const { hint, hintEsHTML } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
 
             return _conAvisoAyer({
                 titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
@@ -7068,6 +7097,16 @@ Generado por Sistema Lushibosca
                 onAfterToggle: () => { actualizarUI(); }
             });
 
+        const { toggle: toggleSemanalEnVivo, actualizarEstado: actualizarEstadoBotonSemanalEnVivo } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SEMANAL_EN_VIVO, false),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.SEMANAL_EN_VIVO, v),
+                btnId: 'btn-toggle-semanal-en-vivo',
+                mensajeOn: 'Vista semanal y buffer se actualizan en vivo',
+                mensajeOff: 'Vista semanal y buffer esperan al registro completo del día',
+                onAfterToggle: () => { actualizarUI(); }
+            });
+
         const { toggle: toggleSaldoDesdePrimeroDiaMes, actualizarEstado: actualizarEstadoBotonSaldoDesdePrimeroDiaMes } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false),
@@ -7498,6 +7537,7 @@ Generado por Sistema Lushibosca
             UILogic.poblarSelectoresTipos();
             UILogic.actualizarEstadoBotonHoverPopup();
             UILogic.actualizarEstadoBotonSaldoDesdeEnero();
+            UILogic.actualizarEstadoBotonSemanalEnVivo();
             UILogic.actualizarEstadoBotonSaldoDesdePrimeroDiaMes();
             UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.actualizarEstadoBotonObjetivoPorRegistro();
@@ -7811,6 +7851,7 @@ Generado por Sistema Lushibosca
             cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
             actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes,
+            toggleSemanalEnVivo, actualizarEstadoBotonSemanalEnVivo,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
             aplicarHorasConfiguradasATodos, actualizarEstadoBotonAplicarHoras,
@@ -8062,6 +8103,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());
+    $('btn-toggle-semanal-en-vivo')?.addEventListener('click', () => UILogic.toggleSemanalEnVivo());
     $('btn-toggle-saldo-primero-mes')?.addEventListener('click', () => UILogic.toggleSaldoDesdePrimeroDiaMes());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
@@ -8151,7 +8193,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260808';
+        const _v = '-v260807';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

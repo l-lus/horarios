@@ -1085,13 +1085,6 @@
         let filtroTipo = null;
         let grupoEnEdicion = null;
 
-        function _cambiarAVistaDiariaSiSemana() {
-            if (vistaActual === 'semana') {
-                vistaActual = 'diaria';
-                StorageHelper.setItem(STORAGE_KEYS.VISTA_ACTUAL, vistaActual);
-            }
-        }
-
         function ordenarRegistros() {
             registros.sort((a, b) => {
                 if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
@@ -1208,8 +1201,9 @@
             });
 
             ordenarRegistros();
+            const esHoy = fecha === TimeUtils.obtenerFechaHoy();
             HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${TimeUtils.fechaCorta(fecha)})`);
-            const saved = await guardarYActualizar(nuevoId);
+            const saved = await _guardarConCicloSiHoy(nuevoId, esHoy);
             if (saved) { notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success'); }
             else { throw new Error('Error al guardar'); }
         }
@@ -1226,6 +1220,18 @@
             if (saveSuccessful) { notify.actualizarUI(idNuevo, false, animarCard); }
             else { notify.mostrarToast('Error al guardar. Almacenamiento lleno o bloqueado.', 'error'); }
             return saveSuccessful;
+        }
+
+        async function _guardarConCicloSiHoy(idOrIds, esHoy, fase = null) {
+            const ejecutar = async () => {
+                if (esHoy && fase) UILogic._prepararMostrarFaseAlRenderizar(fase);
+                const ok = await guardarYActualizar(idOrIds);
+                if (!ok && esHoy && fase) UILogic._prepararMostrarFaseAlRenderizar(null);
+                return ok;
+            };
+            return esHoy && vistaActual === 'semana'
+                ? UILogic._forzarVista('diaria', ejecutar)
+                : ejecutar();
         }
 
         function cargarConfiguracion() {
@@ -1306,13 +1312,9 @@
             const t = calcularHoras(reg.entrada, s, reg.tiempoFuera || null);
             reg.horas = t?.horas || 0; reg.minutos = t?.minutos || 0; reg.total = t?.total || 0;
             const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
-            if (esHoy) _cambiarAVistaDiariaSiSemana();
             HistoryManager.saveState(registros, `salida ${s} (${TimeUtils.fechaCorta(reg.fecha)})`);
-            const saved = await guardarYActualizar(reg.id);
+            const saved = await _guardarConCicloSiHoy(reg.id, esHoy, 'salida');
             if (!saved) return;
-            if (esHoy) {
-                UILogic._prepararMostrarFaseAlRenderizar('salida');
-            }
             if (!usaHoraActual) {
                 notify.aplicarFeedbackCampos([
                     { id: 'entrada', fallback: 'Entrada', mostrar: false },
@@ -1337,14 +1339,10 @@
             });
             ordenarRegistros();
             const esHoy = e && f === TimeUtils.obtenerFechaHoy();
-            if (esHoy) _cambiarAVistaDiariaSiSemana();
             const detalleAccion = e && s ? `entrada ${e} y salida ${s}` : e ? `entrada ${e}` : `salida ${s}`;
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
-            const saved = await guardarYActualizar(nuevoId);
+            const saved = await _guardarConCicloSiHoy(nuevoId, esHoy, 'entrada');
             if (!saved) return;
-            if (esHoy) {
-                UILogic._prepararMostrarFaseAlRenderizar('entrada');
-            }
             const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
             if (entradaManual || salidaManual) {
                 notify.aplicarFeedbackCampos([
@@ -1932,8 +1930,9 @@
             });
 
             ordenarRegistros();
+            const incluyeHoy = nuevosRegistros.includes(TimeUtils.obtenerFechaHoy());
             HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${nuevosRegistros.length} día${nuevosRegistros.length !== 1 ? 's' : ''})`);
-            const saved = await guardarYActualizar(idsNuevosParaAnimar);
+            const saved = await _guardarConCicloSiHoy(idsNuevosParaAnimar, incluyeHoy);
             if (saved) {
                 notify.mostrarToast(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
                 notify.actualizarBotonLote();
@@ -2230,9 +2229,15 @@
         const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
 
         function _animarFadeSwap(el, fn) {
-            if (!el) { fn(); return; }
+            if (!el) { return Promise.resolve(fn()); }
             el.classList.add('fade-out');
-            setTimeout(() => { fn(); el.classList.remove('fade-out'); }, DUR_ANIM());
+            return new Promise((resolve) => {
+                setTimeout(async () => {
+                    const resultado = await fn();
+                    el.classList.remove('fade-out');
+                    resolve(resultado);
+                }, DUR_ANIM());
+            });
         }
 
         /**
@@ -5681,6 +5686,7 @@ Generado por Sistema Lushibosca
 
         let modoLoteActivo = false;
         let _timerAutoVista = null;
+        let _suprimirAnimacionInterna = false;
 
         function setProgressBarColor(progressEl, status, headerColor) {
             if (!progressEl) return;
@@ -6471,7 +6477,7 @@ Generado por Sistema Lushibosca
                 }
             }
 
-            const debeAnimar = animarCard || (idNuevo !== null && !soloReloj);
+            const debeAnimar = !_suprimirAnimacionInterna && (animarCard || (idNuevo !== null && !soloReloj));
             const renderResto = () => {
                 _renderStats(vista, est);
                 _renderMensaje(vista);
@@ -6485,19 +6491,31 @@ Generado por Sistema Lushibosca
             }
         }
 
-        function alternarVista() {
+        function _forzarVista(nuevaVista, renderFn) {
+            if (D.vistaActual() === nuevaVista) { return Promise.resolve(renderFn()); }
             if (_timerAutoVista) { clearTimeout(_timerAutoVista); _timerAutoVista = null; }
             const card = $('stats-card');
             const content = $('stats-card-content');
             if (card) card.classList.add('cambiando-vista');
-            _animarFadeSwap(content, () => {
-                const vistaActual = D.vistaActual() === 'semana' ? 'diaria' : 'semana';
-                D.setVistaActual(vistaActual);
-                StorageHelper.setItem(STORAGE_KEYS.VISTA_ACTUAL, vistaActual);
+            return _animarFadeSwap(content, async () => {
+                D.setVistaActual(nuevaVista);
+                StorageHelper.setItem(STORAGE_KEYS.VISTA_ACTUAL, nuevaVista);
                 _detenerCicloStats();
-                actualizarUI();
+                _suprimirAnimacionInterna = true;
+                let resultado;
+                try {
+                    resultado = await renderFn();
+                } finally {
+                    _suprimirAnimacionInterna = false;
+                }
                 if (card) card.classList.remove('cambiando-vista');
+                return resultado;
             });
+        }
+
+        function alternarVista() {
+            const nuevaVista = D.vistaActual() === 'semana' ? 'diaria' : 'semana';
+            _forzarVista(nuevaVista, () => actualizarUI());
         }
 
         function pegarHoraActual(id) {
@@ -6980,6 +6998,7 @@ Generado por Sistema Lushibosca
             derivarVistaHoy,
             actualizarUI,
             alternarVista,
+            _forzarVista,
             actualizarEstadoBotonTimerMain,
             toggleTimerBreakMain,
             toggleModoLote,
@@ -7061,7 +7080,7 @@ Generado por Sistema Lushibosca
 
         const {
             setFondoCard, toggleFondoCard, _esFechaHabil, _cubiertoPorSaldo, calcularEstadoCard,
-            derivarVistaSemana, derivarVistaHoy, actualizarUI, alternarVista,
+            derivarVistaSemana, derivarVistaHoy, actualizarUI, alternarVista, _forzarVista,
             actualizarEstadoBotonTimerMain, toggleTimerBreakMain, toggleModoLote,
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
@@ -7884,7 +7903,7 @@ Generado por Sistema Lushibosca
             _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _nombreMesCapitalizado, _renderSelectorStats,
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
             actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
-            _getLabelFondo, _iniciarCicloStats, _prepararMostrarFaseAlRenderizar, vistaActual: D.vistaActual,
+            _getLabelFondo, _iniciarCicloStats, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);
@@ -8204,7 +8223,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260807';
+        const _v = '-v260810';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

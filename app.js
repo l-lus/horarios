@@ -1085,6 +1085,13 @@
         let filtroTipo = null;
         let grupoEnEdicion = null;
 
+        function _cambiarAVistaDiariaSiSemana() {
+            if (vistaActual === 'semana') {
+                vistaActual = 'diaria';
+                StorageHelper.setItem(STORAGE_KEYS.VISTA_ACTUAL, vistaActual);
+            }
+        }
+
         function ordenarRegistros() {
             registros.sort((a, b) => {
                 if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
@@ -1298,10 +1305,12 @@
             reg.salida = s;
             const t = calcularHoras(reg.entrada, s, reg.tiempoFuera || null);
             reg.horas = t?.horas || 0; reg.minutos = t?.minutos || 0; reg.total = t?.total || 0;
+            const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
+            if (esHoy) _cambiarAVistaDiariaSiSemana();
             HistoryManager.saveState(registros, `salida ${s} (${TimeUtils.fechaCorta(reg.fecha)})`);
             const saved = await guardarYActualizar(reg.id);
             if (!saved) return;
-            if (reg.fecha === TimeUtils.obtenerFechaHoy() && vistaActual !== 'semana') {
+            if (esHoy) {
                 UILogic._prepararMostrarFaseAlRenderizar('salida');
             }
             if (!usaHoraActual) {
@@ -1327,11 +1336,13 @@
                 horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
             });
             ordenarRegistros();
+            const esHoy = e && f === TimeUtils.obtenerFechaHoy();
+            if (esHoy) _cambiarAVistaDiariaSiSemana();
             const detalleAccion = e && s ? `entrada ${e} y salida ${s}` : e ? `entrada ${e}` : `salida ${s}`;
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
             const saved = await guardarYActualizar(nuevoId);
             if (!saved) return;
-            if (e && f === TimeUtils.obtenerFechaHoy() && vistaActual !== 'semana') {
+            if (esHoy) {
                 UILogic._prepararMostrarFaseAlRenderizar('entrada');
             }
             const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;

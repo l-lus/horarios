@@ -6254,9 +6254,29 @@ Generado por Sistema Lushibosca
 
         const _COLORES_BORDE = ['blue', 'green', 'red', 'purple', 'orange', 'gold', 'transparent'];
 
-        function _renderTitulo(vista) {
+        function _renderTituloAnimado(el, nuevoHTML, aplicarExtra) {
+            if (!el) { if (aplicarExtra) aplicarExtra(); return; }
+            const aplicarCambio = () => {
+                el.innerHTML = nuevoHTML;
+                el.dataset.firma = nuevoHTML;
+                if (aplicarExtra) aplicarExtra();
+            };
+            if (el.dataset.firma === nuevoHTML) { if (aplicarExtra) aplicarExtra(); return; }
+            if (_suprimirAnimacionInterna) { aplicarCambio(); return; }
+            el.classList.add('ciclo-fade-out');
+            setTimeout(() => {
+                aplicarCambio();
+                el.classList.remove('ciclo-fade-out');
+                el.classList.add('ciclo-fade-in');
+                void el.offsetWidth;
+                el.classList.remove('ciclo-fade-in');
+            }, DUR_ANIM());
+        }
+
+        function _renderTitulo(vista, sinAnimar = false) {
             const el = $('stats-titulo');
-            if (el) el.innerHTML = vista.titulo;
+            if (sinAnimar && el) { el.innerHTML = vista.titulo; el.dataset.firma = vista.titulo; return; }
+            _renderTituloAnimado(el, vista.titulo);
         }
 
         let _cicloStatsInterval = null;
@@ -6453,7 +6473,7 @@ Generado por Sistema Lushibosca
             }, DUR_ANIM());
         }
 
-        function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false) {
+        function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false) {
             if (!soloReloj) {
                 UILogic.actualizarListaRegistros(D.registros(), idNuevo);
             }
@@ -6463,11 +6483,12 @@ Generado por Sistema Lushibosca
                 ? derivarVistaSemana(est)
                 : derivarVistaHoy(est);
 
-            _renderTitulo(vista);
+            const timerFueraCorriendo = StorageHelper.getItem(_breakStorageKey()) !== null;
+            if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo); }
             _renderCard(vista);
             _renderBarra(vista);
             UILogic._renderSelectorStats();
-            actualizarEstadoBotonTimerMain();
+            actualizarEstadoBotonTimerMain(sinAnimarTitulo);
             if (UILogic.getVistaHistoricoCalendario()) {
                 const selector = $('calendario-selector-meses');
                 if (selector && selector.style.display !== 'none') {
@@ -6539,7 +6560,7 @@ Generado por Sistema Lushibosca
 
         const sumarMinutosAHora = TimeUtils.sumarMinutosAHora;
 
-        function _actualizarCardTimerRunning(card, storageKey) {
+        function _actualizarCardTimerRunning(card, storageKey, sinAnimar = false) {
             if (!card) return;
             card.classList.add('timer-running');
             const titulo = card.querySelector('h2');
@@ -6549,15 +6570,26 @@ Generado por Sistema Lushibosca
                 ? '<svg class="icon"><use href="#icon-calendar-simple"/></svg>'
                 : '<svg class="icon"><use href="#icon-clock"/></svg>';
             const contexto = vistaActual === 'semana' ? 'Esta Semana' : TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy());
-            titulo.innerHTML = `${icono} ${contexto} - <svg class="icon"><use href="#icon-exit"/></svg> Tiempo fuera `;
-            const breakCounter = Object.assign(document.createElement('span'), {
-                id: 'break-counter', className: 'break-counter-label'
-            });
-            titulo.appendChild(breakCounter);
-            _iniciarContadorBreak(storageKey);
+            const nuevoHTML = `${icono} ${contexto} - <svg class="icon"><use href="#icon-exit"/></svg> Tiempo fuera `;
+            const agregarContador = () => {
+                if (!$('break-counter')) {
+                    const breakCounter = Object.assign(document.createElement('span'), {
+                        id: 'break-counter', className: 'break-counter-label'
+                    });
+                    titulo.appendChild(breakCounter);
+                }
+                _iniciarContadorBreak(storageKey);
+            };
+            if (sinAnimar) {
+                titulo.innerHTML = nuevoHTML;
+                titulo.dataset.firma = nuevoHTML;
+                agregarContador();
+            } else {
+                _renderTituloAnimado(titulo, nuevoHTML, agregarContador);
+            }
         }
 
-        function actualizarEstadoBotonTimerMain() {
+        function actualizarEstadoBotonTimerMain(sinAnimarTitulo = false) {
             const btn = $('btn-timer-main');
             const card = $('stats-card');
             if (!btn) return;
@@ -6581,7 +6613,7 @@ Generado por Sistema Lushibosca
             if (isRunning) {
                 btn.classList.add('running');
                 Object.assign(btn.style, { color: 'var(--c-red)', borderColor: 'var(--c-red)' });
-                _actualizarCardTimerRunning(card, storageKey);
+                _actualizarCardTimerRunning(card, storageKey, sinAnimarTitulo);
             } else {
                 btn.classList.remove('running');
                 Object.assign(btn.style, { color: 'var(--text-main)', borderColor: 'var(--border)' });
@@ -7738,7 +7770,7 @@ Generado por Sistema Lushibosca
             _restaurarEstadoVisual();
 
             PWAInstaller.init();
-            actualizarUI();
+            actualizarUI(null, false, false, true);
             _iniciarCicloStats();
             actualizarBotonesHistorico();
 

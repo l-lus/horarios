@@ -2957,13 +2957,10 @@
                     <div class="cal-popup-3l">Entrada: ${S.escapeHtml(reg.entrada)}</div>`;
             }
             const totalHoras = reg.total || 0;
-            const h = Math.floor(totalHoras);
-            const m = Math.round((totalHoras - h) * 60);
-            const totalStr = `${h}h${m > 0 ? ' ' + m + 'm' : ''}`;
+            const totalStr = TimeUtils.horasATexto(totalHoras, 'short');
             let tfStr = '';
             if (reg.tiempoFuera && reg.tiempoFuera !== '00:00') {
-                const [tfH, tfM] = reg.tiempoFuera.split(':').map(Number);
-                tfStr = tfH > 0 ? `${tfH}h${tfM > 0 ? ' ' + tfM + 'm' : ''} fuera` : `${tfM}m fuera`;
+                tfStr = `${TimeUtils.horasATexto(TimeUtils.horaAMinutos(reg.tiempoFuera) / 60, 'short')} fuera`;
             }
             let totalConDiff = totalStr, diffColor = '', cubiertoLineaHtml = '';
             const objetivoReg = D.objetivoDeRegistro(reg);
@@ -4221,8 +4218,7 @@
 
             const tfText = (() => {
                 if (!r.tiempoFuera || r.tiempoFuera === '' || r.tiempoFuera === '00:00') return '';
-                const [tfH, tfM] = r.tiempoFuera.split(':').map(Number);
-                const tfStr = tfH > 0 ? `${tfH}h${tfM > 0 ? ' ' + tfM + 'm' : ''}` : `${tfM}m`;
+                const tfStr = TimeUtils.horasATexto(TimeUtils.horaAMinutos(r.tiempoFuera) / 60, 'short');
                 return ` (${tfStr} Fuera)`;
             })();
             const crText = r.credito && r.credito !== '00:00' ? ' (Salida Temprano)' : '';
@@ -4242,7 +4238,7 @@
                 totalText = 'Justificado';
                 totalEl.classList.add(`${tipoEspecial.color}-text`);
             } else if (r.entrada && r.salida) {
-                totalText = `${r.horas}h ${r.minutos}m`;
+                totalText = TimeUtils.horasATexto(r.total, 'short');
                 const objetivoReg = D.objetivoDeRegistro(r);
                 if (objetivoReg > 0 && UILogic._esFechaHabil(r.fecha, D.diasHabiles())) {
                     const diffText = formatoDiferencia(r.total, objetivoReg);

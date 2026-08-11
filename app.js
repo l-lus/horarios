@@ -4966,12 +4966,9 @@
             let tiempoFueraTotalMinutos = 0;
             registrosRango.forEach(r => {
                 if (r.tiempoFuera && r.tiempoFuera !== '00:00') {
-                    const [h, m] = r.tiempoFuera.split(':').map(Number);
-                    if (!isNaN(h) && !isNaN(m)) tiempoFueraTotalMinutos += (h * 60) + m;
+                    tiempoFueraTotalMinutos += TimeUtils.horaAMinutos(r.tiempoFuera);
                 }
             });
-            const hTiempoFuera = Math.floor(tiempoFueraTotalMinutos / 60);
-            const mTiempoFuera = tiempoFueraTotalMinutos % 60;
 
             const registrosValidos = registrosRango.filter(r =>
                 r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
@@ -4997,10 +4994,6 @@
             const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
             const totalHoras = totalHorasTrabajadas + totalRemotos;
             const promDiario = totalHorasTrabajadas / registrosValidos.length;
-            let hPromedio = Math.floor(promDiario), mPromedio = Math.round((promDiario - hPromedio) * 60);
-            if (mPromedio === 60) { hPromedio++; mPromedio = 0; }
-            let hTotal = Math.floor(totalHoras), mTotal = Math.round((totalHoras - hTotal) * 60);
-            if (mTotal === 60) { hTotal++; mTotal = 0; }
 
             const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
 
@@ -5013,9 +5006,9 @@
                 entradaPromedio: TimeUtils.minutosAHora(promedioEntrada),
                 salidaPromedio: TimeUtils.minutosAHora(promedioSalida),
                 diasTrabajados: registrosValidos.length,
-                promedioDiario: `${hPromedio}h ${mPromedio}m`,
-                tiempoFueraTotal: hTiempoFuera > 0 ? `${hTiempoFuera}h ${mTiempoFuera}m` : `${mTiempoFuera}m`,
-                tiempoTotal: `${hTotal}h ${mTotal}m`,
+                promedioDiario: TimeUtils.horasATexto(promDiario, 'short'),
+                tiempoFueraTotal: TimeUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short'),
+                tiempoTotal: TimeUtils.horasATexto(totalHoras, 'short'),
                 ...conteosPorTipo, compensaciones,
                 regularidadEntrada: regEntrada,
                 regularidadJornada: regJornada,

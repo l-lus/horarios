@@ -6273,10 +6273,40 @@ Generado por Sistema Lushibosca
             }, DUR_ANIM());
         }
 
-        function _renderTitulo(vista, sinAnimar = false) {
+        function _renderTitulo(vista, sinAnimar = false, est = null) {
             const el = $('stats-titulo');
-            if (sinAnimar && el) { el.innerHTML = vista.titulo; el.dataset.firma = vista.titulo; return; }
-            _renderTituloAnimado(el, vista.titulo);
+            const aplicarExtra = () => _actualizarTiempoFueraConsolidado(el, est);
+            if (sinAnimar && el) { el.innerHTML = vista.titulo; el.dataset.firma = vista.titulo; aplicarExtra(); return; }
+            _renderTituloAnimado(el, vista.titulo, aplicarExtra);
+        }
+
+        function _actualizarTiempoFueraConsolidado(el, est) {
+            if (!el) return;
+            const existente = el.querySelector('#break-total-label');
+
+            const regHoy = est?.regHoy;
+            const mostrar = !!regHoy && D.vistaActual() !== 'semana'
+                && StorageHelper.getItem(_breakStorageKey()) === null
+                && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
+
+            if (!mostrar) {
+                if (existente) existente.remove();
+                return;
+            }
+
+            const [h, m] = regHoy.tiempoFuera.split(':').map(Number);
+            if (isNaN(h) || isNaN(m)) { if (existente) existente.remove(); return; }
+            const texto = h > 0 ? `${h}h ${m}m` : `${m}m`;
+
+            if (existente) {
+                existente.textContent = texto;
+            } else {
+                const label = Object.assign(document.createElement('span'), {
+                    id: 'break-total-label', className: 'break-counter-label', textContent: texto,
+                });
+                label.title = 'Tiempo fuera registrado hoy';
+                el.appendChild(label);
+            }
         }
 
         let _cicloStatsInterval = null;
@@ -6484,7 +6514,7 @@ Generado por Sistema Lushibosca
                 : derivarVistaHoy(est);
 
             const timerFueraCorriendo = StorageHelper.getItem(_breakStorageKey()) !== null;
-            if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo); }
+            if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo, est); }
             _renderCard(vista);
             _renderBarra(vista);
             UILogic._renderSelectorStats();

@@ -6022,9 +6022,8 @@ Generado por Sistema Lushibosca
         }
 
         function _minutosAHoraWrap(totalMinutos) {
-            const h = Math.floor(totalMinutos / 60) % 24;
-            const m = Math.floor(totalMinutos % 60);
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            const normalizado = ((totalMinutos % 1440) + 1440) % 1440;
+            return TimeUtils.minutosAHora(normalizado);
         }
 
         function _formatearMinutosCorto(totalMinutos) {
@@ -6119,12 +6118,10 @@ Generado por Sistema Lushibosca
         }
 
         function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHabiles) {
-            const [hE, mE] = reg.entrada.split(':').map(Number);
-            let minutosTotal = (hE * 60) + mE + (objetivoDiario * 60);
+            let minutosTotal = TimeUtils.horaAMinutos(reg.entrada) + (objetivoDiario * 60);
 
             if (reg.tiempoFuera && !D.getIgnorarTiempoFuera()) {
-                const [hF, mF] = reg.tiempoFuera.split(':').map(Number);
-                minutosTotal += (hF * 60) + mF;
+                minutosTotal += TimeUtils.horaAMinutos(reg.tiempoFuera);
             }
 
             minutosTotal += _minutosBreakActivo();
@@ -6637,11 +6634,9 @@ Generado por Sistema Lushibosca
             icon.setAttribute('href', '#icon-exit');
             if (isRunning) {
                 btn.classList.add('running');
-                Object.assign(btn.style, { color: 'var(--c-red)', borderColor: 'var(--c-red)' });
                 _actualizarCardTimerRunning(card, storageKey, sinAnimarTitulo);
             } else {
                 btn.classList.remove('running');
-                Object.assign(btn.style, { color: 'var(--text-main)', borderColor: 'var(--border)' });
                 if (card) card.classList.remove('timer-running');
                 _detenerContadorBreak();
             }

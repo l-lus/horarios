@@ -7984,7 +7984,7 @@ Generado por Sistema Lushibosca
             if (!pendientes.length) return;
 
             const nombreMes = TimeUtils.formatoTituloMes(prefijoMes).split(' ')[0];
-            const lineas = pendientes.map(f => `🎉 ${f.nombre} — ${TimeUtils.obtenerNombreDia(f.fecha)} ${parseInt(f.fecha.slice(8), 10)}`);
+            const lineas = pendientes.map(f => `🎉 ${TimeUtils.obtenerNombreDia(f.fecha)} ${parseInt(f.fecha.slice(8), 10)} — ${f.nombre}`);
             const pregunta = pendientes.length > 1 ? `¿Querés agregar estos ${pendientes.length} días como Feriado?` : '¿Querés agregar este día como Feriado?';
             const texto = `${lineas.join('\n')}\n\n${pregunta}`;
 
@@ -8223,7 +8223,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260810';
+        const _v = '-v260811';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

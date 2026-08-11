@@ -6027,6 +6027,28 @@ Generado por Sistema Lushibosca
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
 
+        function _formatearMinutosCorto(totalMinutos) {
+            return TimeUtils.horasATexto(totalMinutos / 60, 'short');
+        }
+
+        const TF_LABEL_ID = 'tiempo-fuera-label';
+
+        function _obtenerOCrearLabelTF(contenedor) {
+            let label = $(TF_LABEL_ID);
+            if (!label) {
+                label = Object.assign(document.createElement('span'), {
+                    id: TF_LABEL_ID, className: 'break-counter-label',
+                });
+                contenedor.appendChild(label);
+            }
+            return label;
+        }
+
+        function _quitarLabelTF() {
+            const label = $(TF_LABEL_ID);
+            if (label) label.remove();
+        }
+
         function _hintSalidaODefault(reg, objetivoAplica, bufferSemanal, diasHabiles, hintDefault, permiteEstimado) {
             if (permiteEstimado && reg && reg.entrada && objetivoAplica > 0 && !TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida)) {
                 return _calcularHintSalidaEstimada(reg, objetivoAplica, bufferSemanal, diasHabiles);
@@ -6254,6 +6276,28 @@ Generado por Sistema Lushibosca
 
         const _COLORES_BORDE = ['blue', 'green', 'red', 'purple', 'orange', 'gold', 'transparent'];
 
+        /**
+         * @param {HTMLElement|HTMLElement[]} elementos
+         * @param {function(): void} aplicarCambio - se ejecuta con los elementos ocultos
+         * @param {number} [duracion] - ms de espera antes de aplicar el cambio (default DUR_ANIM())
+         */
+        function _fadeSwapCiclo(elementos, aplicarCambio, duracion = null) {
+            const els = (Array.isArray(elementos) ? elementos : [elementos]).filter(Boolean);
+            if (els.length === 0) { aplicarCambio(); return; }
+
+            els.forEach(el => el.classList.add('ciclo-fade-out'));
+
+            setTimeout(() => {
+                aplicarCambio();
+                els.forEach(el => {
+                    el.classList.remove('ciclo-fade-out');
+                    el.classList.add('ciclo-fade-in');
+                    void el.offsetWidth;
+                    el.classList.remove('ciclo-fade-in');
+                });
+            }, duracion ?? DUR_ANIM());
+        }
+
         function _renderTituloAnimado(el, nuevoHTML, aplicarExtra) {
             if (!el) { if (aplicarExtra) aplicarExtra(); return; }
             const aplicarCambio = () => {
@@ -6263,14 +6307,7 @@ Generado por Sistema Lushibosca
             };
             if (el.dataset.firma === nuevoHTML) { if (aplicarExtra) aplicarExtra(); return; }
             if (_suprimirAnimacionInterna) { aplicarCambio(); return; }
-            el.classList.add('ciclo-fade-out');
-            setTimeout(() => {
-                aplicarCambio();
-                el.classList.remove('ciclo-fade-out');
-                el.classList.add('ciclo-fade-in');
-                void el.offsetWidth;
-                el.classList.remove('ciclo-fade-in');
-            }, DUR_ANIM());
+            _fadeSwapCiclo(el, aplicarCambio);
         }
 
         function _renderTitulo(vista, sinAnimar = false, est = null) {
@@ -6282,31 +6319,20 @@ Generado por Sistema Lushibosca
 
         function _actualizarTiempoFueraConsolidado(el, est) {
             if (!el) return;
-            const existente = el.querySelector('#break-total-label');
 
             const regHoy = est?.regHoy;
             const mostrar = !!regHoy && D.vistaActual() !== 'semana'
                 && StorageHelper.getItem(_breakStorageKey()) === null
                 && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
 
-            if (!mostrar) {
-                if (existente) existente.remove();
-                return;
-            }
+            if (!mostrar) { _quitarLabelTF(); return; }
 
-            const [h, m] = regHoy.tiempoFuera.split(':').map(Number);
-            if (isNaN(h) || isNaN(m)) { if (existente) existente.remove(); return; }
-            const texto = h > 0 ? `${h}h ${m}m` : `${m}m`;
+            const minutos = TimeUtils.horaAMinutos(regHoy.tiempoFuera);
+            if (!minutos) { _quitarLabelTF(); return; }
 
-            if (existente) {
-                existente.textContent = texto;
-            } else {
-                const label = Object.assign(document.createElement('span'), {
-                    id: 'break-total-label', className: 'break-counter-label', textContent: texto,
-                });
-                label.title = 'Tiempo fuera registrado hoy';
-                el.appendChild(label);
-            }
+            const label = _obtenerOCrearLabelTF(el);
+            label.textContent = _formatearMinutosCorto(minutos);
+            label.title = 'Tiempo fuera registrado hoy';
         }
 
         let _cicloStatsInterval = null;
@@ -6334,7 +6360,7 @@ Generado por Sistema Lushibosca
             return [
                 _cicloStatsValorHoras,
                 `Entrada ${_cicloStatsEntrada}`,
-                _cicloStatsTiempoFuera ? `Tiempo fuera ${TimeUtils.horasATexto(TimeUtils.horaAMinutos(_cicloStatsTiempoFuera) / 60, 'short')}` : null,
+                _cicloStatsTiempoFuera ? `Tiempo fuera ${_formatearMinutosCorto(TimeUtils.horaAMinutos(_cicloStatsTiempoFuera))}` : null,
                 _cicloStatsSalida ? `Salida ${_cicloStatsSalida}` : null,
             ].filter(Boolean);
         }
@@ -6344,28 +6370,13 @@ Generado por Sistema Lushibosca
                 const el = $('stats-semana');
                 if (!el) { _detenerCicloStats(); return; }
 
-                el.classList.add('ciclo-fade-out');
-
-                setTimeout(() => {
+                _fadeSwapCiclo(el, () => {
                     estado.idx++;
-                    if (estado.idx >= fases.length) {
-                        el.classList.remove('ciclo-fade-out');
-                        el.classList.add('ciclo-fade-in');
-                        el.textContent = _cicloStatsValorHoras;
-                        void el.offsetWidth;
-                        el.classList.remove('ciclo-fade-in');
-                        _detenerCicloStats();
-                        return;
-                    }
-
-                    el.classList.remove('ciclo-fade-out');
-                    el.classList.add('ciclo-fade-in');
-                    el.textContent = fases[estado.idx];
-                    void el.offsetWidth;
-                    el.classList.remove('ciclo-fade-in');
-
+                    const terminado = estado.idx >= fases.length;
+                    el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx];
+                    if (terminado) { _detenerCicloStats(); return; }
                     _cicloStatsInterval = setTimeout(_cicloTick, _CICLO_DURACION_MS);
-                }, 350);
+                });
             };
             return _cicloTick;
         }
@@ -6486,21 +6497,10 @@ Generado por Sistema Lushibosca
                 $('stats-mensaje'),
                 $('stats-buffer'),
                 $('toggle-hint'),
-            ].filter(Boolean);
+            ];
 
             _detenerCicloStats();
-
-            els.forEach(el => el.classList.add('ciclo-fade-out'));
-
-            setTimeout(() => {
-                renderFn();
-                els.forEach(el => {
-                    el.classList.remove('ciclo-fade-out');
-                    el.classList.add('ciclo-fade-in');
-                    void el.offsetWidth;
-                    el.classList.remove('ciclo-fade-in');
-                });
-            }, DUR_ANIM());
+            _fadeSwapCiclo(els, renderFn);
         }
 
         function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false) {
@@ -6602,12 +6602,7 @@ Generado por Sistema Lushibosca
             const contexto = vistaActual === 'semana' ? 'Esta Semana' : TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy());
             const nuevoHTML = `${icono} ${contexto} - <svg class="icon"><use href="#icon-exit"/></svg> Tiempo fuera `;
             const agregarContador = () => {
-                if (!$('break-counter')) {
-                    const breakCounter = Object.assign(document.createElement('span'), {
-                        id: 'break-counter', className: 'break-counter-label'
-                    });
-                    titulo.appendChild(breakCounter);
-                }
+                _obtenerOCrearLabelTF(titulo);
                 _iniciarContadorBreak(storageKey);
             };
             if (sinAnimar) {
@@ -6657,19 +6652,12 @@ Generado por Sistema Lushibosca
         function _iniciarContadorBreak(storageKey) {
             _detenerContadorBreak();
             function _actualizarContador() {
-                const el = $('break-counter');
+                const el = $(TF_LABEL_ID);
                 if (!el) { _detenerContadorBreak(); return; }
                 const start = parseInt(StorageHelper.getItem(storageKey));
                 if (isNaN(start)) { el.textContent = ''; _detenerContadorBreak(); return; }
-                const totalSeg = Math.floor((Date.now() - start) / 1000);
-                const mins = Math.floor(totalSeg / 60);
-                const horas = Math.floor(mins / 60);
-                const minsResto = mins % 60;
-                if (horas > 0) {
-                    el.textContent = `${horas}h ${minsResto}m`;
-                } else {
-                    el.textContent = `${mins}m`;
-                }
+                const mins = Math.floor((Date.now() - start) / 60000);
+                el.textContent = _formatearMinutosCorto(mins);
             }
             _actualizarContador();
             _breakCounterInterval = setInterval(_actualizarContador, 1000);

@@ -581,6 +581,7 @@
         }
 
         function obtenerPerfilActual() { return perfilActual; }
+        function esPerfilDefault() { return perfilActual === 'default'; }
         function obtenerDatosPerfil() { return perfiles[perfilActual]; }
         function obtenerTodosPerfiles() { return perfiles; }
 
@@ -590,7 +591,7 @@
 
         return {
             inicializar, cambiarPerfil, guardarDatosPerfilActual,
-            obtenerPerfilActual, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
+            obtenerPerfilActual, esPerfilDefault, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
             guardarPerfiles, perfilKey, MAX_PERFILES
         };
 
@@ -1788,7 +1789,7 @@
             migrarObjetivoHorasFaltante();
             HistoryManager.saveState(registros, descripcion || mensajeExito);
             if (await guardarYActualizar()) {
-                const esPerfilDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
+                const esPerfilDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
                 if (esPerfilDefault) {
                     StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, diasHabiles);
                     StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, horasDiarias);
@@ -7051,7 +7052,8 @@ Generado por Sistema Lushibosca
             sumarMinutosAHora,
             _getLabelFondo,
             _iniciarCicloStats,
-            _prepararMostrarFaseAlRenderizar
+            _prepararMostrarFaseAlRenderizar,
+            _fadeSwapCiclo
         };
     })(SecurityAndUtils, DataManagement, UICore);
 
@@ -7119,7 +7121,8 @@ Generado por Sistema Lushibosca
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
-            sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats, _prepararMostrarFaseAlRenderizar
+            sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats, _prepararMostrarFaseAlRenderizar,
+            _fadeSwapCiclo
         } = UITarjetaFichaje;
 
         function alternarTema() {
@@ -7802,37 +7805,34 @@ Generado por Sistema Lushibosca
         }
 
         function aplicarFeedbackCampos(campos) {
-            const cambiarTextoSuave = (label, nuevoTexto, color) => {
-                if (!label) return;
-                label.style.opacity = '0';
-                label.style.transform = 'translateY(-3px)';
-                setTimeout(() => {
-                    label.textContent = nuevoTexto;
-                    label.style.color = color;
-                    label.style.opacity = '1';
-                    label.style.transform = 'translateY(0)';
-                }, 150);
-            };
-
             const activos = campos
                 .filter(c => c.mostrar)
                 .map(c => {
                     const input = document.getElementById(c.id);
                     const label = input?.closest('.form-group')?.querySelector('label');
                     const textoOriginal = label ? label.textContent : c.fallback;
-                    if (input && label) {
-                        input.classList.add('input-agregado-animacion');
-                        cambiarTextoSuave(label, '✓ Agregado', 'var(--c-green)');
-                    }
+                    if (input && label) input.classList.add('input-agregado-animacion');
                     return { input, label, textoOriginal };
                 });
 
+            const labels = activos.filter(a => a.input && a.label).map(a => a.label);
+
+            _fadeSwapCiclo(labels, () => {
+                activos.forEach(({ input, label }) => {
+                    if (!input || !label) return;
+                    label.textContent = '✓ Agregado';
+                    label.style.color = 'var(--c-green)';
+                });
+            });
+
             setTimeout(() => {
-                activos.forEach(({ input, label, textoOriginal }) => {
-                    if (input && label) {
-                        input.classList.remove('input-agregado-animacion');
-                        cambiarTextoSuave(label, textoOriginal, '');
-                    }
+                activos.forEach(({ input }) => { if (input) input.classList.remove('input-agregado-animacion'); });
+                _fadeSwapCiclo(labels, () => {
+                    activos.forEach(({ input, label, textoOriginal }) => {
+                        if (!input || !label) return;
+                        label.textContent = textoOriginal;
+                        label.style.color = '';
+                    });
                 });
             }, 2000);
         }
@@ -7852,7 +7852,7 @@ Generado por Sistema Lushibosca
             if (seleccionados > 0) {
                 const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
                 D.setDiasHabiles(nuevosDias);
-                const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
+                const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
                 if (esDefault) StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
                 D.guardarYActualizar();
             }
@@ -7861,23 +7861,28 @@ Generado por Sistema Lushibosca
             }
         }
 
+        function _ajustarStepperHoras(el, incremento) {
+            let valorActual = parseFloat(el.dataset.valor);
+            if (isNaN(valorActual)) valorActual = D.horasDiarias();
+            const nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
+            if (isNaN(nuevoValor)) return nuevoValor;
+            el.dataset.valor = nuevoValor;
+            el.textContent = TimeUtils.horasATexto(nuevoValor, 'short');
+            return nuevoValor;
+        }
+
         const _pressHoldHoras = _crearPressHold(incremento => cambiarHorasDiarias(incremento));
         function iniciarCambioHoras(incremento) { _pressHoldHoras.iniciar(incremento); }
         function detenerCambio() { _pressHoldHoras.detener(); }
 
         function cambiarHorasDiarias(incremento) {
-            let valorActual = parseFloat($('config-horas-diarias').dataset.valor);
-            if (isNaN(valorActual)) valorActual = D.horasDiarias();
-            let nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
+            const nuevoValor = _ajustarStepperHoras($('config-horas-diarias'), incremento);
             if (isNaN(nuevoValor)) return;
 
-            const elHoras = $('config-horas-diarias');
-            elHoras.dataset.valor = nuevoValor;
-            elHoras.textContent = TimeUtils.horasATexto(nuevoValor, 'short');
             actualizarFeedbackConfig();
             D.setHorasDiarias(nuevoValor);
 
-            const esDefault = window.PerfilManager && PerfilManager.obtenerPerfilActual() === 'default';
+            const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
             if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
             D.guardarYActualizar();
         }
@@ -7889,11 +7894,7 @@ Generado por Sistema Lushibosca
         function cambiarObjetivoEdicion(incremento) {
             const el = $('edit-objetivo');
             if (!el) return;
-            let valorActual = parseFloat(el.dataset.valor);
-            if (isNaN(valorActual)) valorActual = D.horasDiarias();
-            const nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
-            el.dataset.valor = nuevoValor;
-            el.textContent = TimeUtils.horasATexto(nuevoValor, 'short');
+            _ajustarStepperHoras(el, incremento);
             verificarBloqueoCredito();
         }
 

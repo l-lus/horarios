@@ -1870,7 +1870,9 @@
 
         function limpiarFiltros() {
             filtroActivo = false; filtroDesde = null; filtroHasta = null; filtroTipo = null;
-            $('filtro-fecha-desde').value = ''; $('filtro-fecha-hasta').value = ''; $('filtro-tipo').value = '';
+            if ($('filtro-fecha-desde')) $('filtro-fecha-desde').value = '';
+            if ($('filtro-fecha-hasta')) $('filtro-fecha-hasta').value = '';
+            if ($('filtro-tipo')) $('filtro-tipo').value = '';
             guardarYActualizar();
             notify.cerrarFiltros();
             notify.mostrarToast('Filtro eliminado', 'info');
@@ -4100,7 +4102,7 @@
     const UIHistorico = (function (S, D, UICore) {
         const {
             formatoDiferencia, mostrarToast, _setBtnActivo, debounce,
-            _actualizarOffsetsStickyMes
+            _actualizarOffsetsStickyMes, _posicionarPopup, _registrarCierrePopup
         } = UICore;
 
         let edicionBloqueada = true;
@@ -4696,13 +4698,49 @@
             if (el) el.addEventListener('change', actualizarHintGrupo);
         });
 
-        function mostrarFiltros() {
+        let _popupFiltrosEl = null;
+
+        function mostrarFiltros(event) {
             if (D.obtenerRegistrosFiltrados().length !== D.registros().length) {
                 D.limpiarFiltros();
                 return;
             }
 
-            ModalManager.abrir('modal-filtros');
+            const btnFiltro = document.getElementById('btn-filtro');
+            if (!btnFiltro) return;
+
+            if (_popupFiltrosEl) { _popupFiltrosEl.remove(); _popupFiltrosEl = null; return; }
+
+            const tipos = TiposRegistro.obtenerTodosLosTipos();
+            const opcionesTipo = tipos.map(t => `<option value="${t.id}">${t.emoji} ${t.labelPlural}</option>`).join('');
+
+            const popup = document.createElement('div');
+            popup.className = 'filtro-popup';
+            popup.id = '_filtro-popup';
+            popup.innerHTML = `
+                <div class="filtro-popup-titulo">
+                    <svg class="icon"><use href="#icon-filter" /></svg>
+                    Filtrar Registros
+                </div>
+                <div class="form-group form-group-mb-half">
+                    <label>Desde</label>
+                    <input type="date" id="filtro-fecha-desde" />
+                </div>
+                <div class="form-group form-group-mb-half">
+                    <label>Hasta</label>
+                    <input type="date" id="filtro-fecha-hasta" />
+                </div>
+                <div class="form-group">
+                    <label>Tipo de registro</label>
+                    <select id="filtro-tipo">
+                        <option value="">Todos</option>
+                        <option value="normal">🕒 Jornadas</option>
+                        ${opcionesTipo}
+                    </select>
+                </div>`;
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupFiltrosEl = popup;
 
             const aplicarInmediato = () => {
                 const desde = $('filtro-fecha-desde').value;
@@ -4712,16 +4750,16 @@
             };
 
             ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => {
-                const el = $(id);
-                if (el) {
-                    el.removeEventListener('change', aplicarInmediato);
-                    el.addEventListener('change', aplicarInmediato);
-                }
+                const el = popup.querySelector(`#${id}`);
+                if (el) el.addEventListener('change', aplicarInmediato);
             });
+
+            _registrarCierrePopup(popup, '#btn-filtro', () => true, () => { _popupFiltrosEl = null; });
+            _posicionarPopup(popup, event && event.currentTarget ? event : { currentTarget: btnFiltro });
         }
 
         function cerrarFiltros() {
-            ModalManager.cerrar('modal-filtros');
+            if (_popupFiltrosEl) { _popupFiltrosEl.remove(); _popupFiltrosEl = null; }
         }
 
         function _setIconHistorico(icon, estado) {
@@ -7475,7 +7513,6 @@ Generado por Sistema Lushibosca
             ModalManager.registrarAccionVolver('modal-editar', cerrarEdicion);
             ModalManager.registrarAccionVolver('modal-importar', cerrarImportar);
             ModalManager.registrarAccionVolver('modal-exportar', cerrarExportar);
-            ModalManager.registrarAccionVolver('modal-filtros', cerrarFiltros);
             ModalManager.registrarAccionVolver('modal-editar-perfil', cerrarEditorPerfil);
             ModalManager.registrarAccionVolver('modal-editar-grupo', cerrarEdicionGrupo);
         }
@@ -8117,7 +8154,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelector('#card-historico .card-header-clickable')?.addEventListener('click', () => UILogic.toggleHistorico());
     $('btn-vista-calendario')?.addEventListener('click', () => UILogic.toggleVistaHistorico());
-    $('btn-filtro')?.addEventListener('click', () => UILogic.mostrarFiltros());
+    $('btn-filtro')?.addEventListener('click', (e) => UILogic.mostrarFiltros(e));
     $('btn-undo')?.addEventListener('click', () => HistoryManager.undo());
     $('btn-redo')?.addEventListener('click', () => HistoryManager.redo());
 
@@ -8202,7 +8239,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-exportar .btn-export')?.addEventListener('click', () => UILogic.ejecutarExportacion());
     $('btn-volver-exportar')?.addEventListener('click', () => UILogic.cerrarExportar());
 
-    document.querySelector('#modal-filtros .btn-cancel')?.addEventListener('click', () => UILogic.cerrarFiltros());
 
     document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => UILogic.mostrarconfig());
     $('theme-toggle-modal')?.addEventListener('click', () => UILogic.alternarTema());

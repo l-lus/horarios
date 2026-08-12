@@ -1106,7 +1106,8 @@ button:disabled {
 /* ─── CAL POPUP ──────────────────────────────────────────────────────────────── */
 
 .cal-popup,
-.stat-popup {
+.stat-popup,
+.filtro-popup {
     position: fixed;
     z-index: 90;
     background: var(--bg-card);
@@ -1130,7 +1131,8 @@ button:disabled {
 }
 
 .cal-popup.listo,
-.stat-popup.listo {
+.stat-popup.listo,
+.filtro-popup.listo {
     pointer-events: all;
 }
 
@@ -1227,6 +1229,27 @@ button:disabled {
     border: none;
     border-top: 1px solid var(--border);
     margin: 10px 0;
+}
+
+/* ─── FILTRO POPUP ───────────────────────────────────────────────────────────── */
+
+.filtro-popup {
+    width: 250px;
+    max-width: calc(100vw - 16px);
+    gap: 0;
+}
+
+.filtro-popup-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: var(--fw-bold);
+    color: var(--text-main);
+    margin-bottom: var(--space-md);
+}
+
+.filtro-popup .form-group:last-child {
+    margin-bottom: 0;
 }
 
 /* ─── COLLAPSIBLE SECTIONS ───────────────────────────────────────────────────── */

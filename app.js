@@ -15,8 +15,6 @@
         DIAS_HABILES: 'diasHabiles',
         HORAS_DIARIAS: 'horasDiarias',
         VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
-        SALDO_DESDE_ENERO: 'saldoAnualDesdeEnero',
-        SALDO_DESDE_PRIMERO_MES: 'saldoMensualDesdePrimero',
         SEMANAL_EN_VIVO: 'semanalEnVivo',
         IGNORAR_TF: 'ignorarTiempoFuera',
         IGNORAR_LOGICA_CUBIERTO: 'ignorarLogicaCubierto',
@@ -5073,11 +5071,9 @@
                 const [a, m] = r.fecha.split('-').map(Number);
                 return a === añoActual && m === mesActual + 1;
             });
-            const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1));
             const ultimoDia = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
-            let fechaDesde = primerDiaMes;
-            const desdePrimeroDia = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
-            if (!desdePrimeroDia && registros.length > 0) {
+            let fechaDesde = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1));
+            if (registros.length > 0) {
                 const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
                 if (primerRegistro > fechaDesde) fechaDesde = primerRegistro;
             }
@@ -5131,8 +5127,7 @@
             const registros = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
             let fechaDesde = `${anioNum}-01-01`;
 
-            const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
-            if (!desdeEnero && registros.length > 0) {
+            if (registros.length > 0) {
                 const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
                 if (primerRegistro > fechaDesde) {
                     fechaDesde = primerRegistro;
@@ -5543,17 +5538,12 @@ Generado por Sistema Lushibosca
 
             let info = DESCRIPCIONES_STATS[statId];
             if (statId === 'stat-saldo' && info) {
-                if (modoEstadisticas === 'anual') {
-                    const desdeEnero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false);
-                    const modoTexto = desdeEnero
-                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del año.'
-                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.';
-                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
-                } else if (modoEstadisticas === 'mensual') {
-                    const desdePrimero = StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false);
-                    const modoTexto = desdePrimero
-                        ? 'Actualmente el saldo se calcula a partir del PRIMER DÍA del mes.'
-                        : 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.';
+                const modoTexto = modoEstadisticas === 'anual'
+                    ? 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.'
+                    : modoEstadisticas === 'mensual'
+                        ? 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.'
+                        : null;
+                if (modoTexto) {
                     info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
                 }
             }
@@ -7152,16 +7142,6 @@ Generado por Sistema Lushibosca
                 mensajeOff: 'No se muestra popup automático en calendario',
             });
 
-        const { toggle: toggleSaldoDesdeEnero, actualizarEstado: actualizarEstadoBotonSaldoDesdeEnero } =
-            _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_ENERO, false),
-                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.SALDO_DESDE_ENERO, v),
-                btnId: 'btn-toggle-saldo-enero',
-                mensajeOn: 'Cálculo de saldo anual desde el primer día del año',
-                mensajeOff: 'Cálculo de saldo anual desde el primer registro del año',
-                onAfterToggle: () => { actualizarUI(); }
-            });
-
         const { toggle: toggleSemanalEnVivo, actualizarEstado: actualizarEstadoBotonSemanalEnVivo } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SEMANAL_EN_VIVO, false),
@@ -7169,16 +7149,6 @@ Generado por Sistema Lushibosca
                 btnId: 'btn-toggle-semanal-en-vivo',
                 mensajeOn: 'Vista semanal y buffer se actualizan en vivo',
                 mensajeOff: 'Vista semanal y buffer esperan al registro completo del día',
-                onAfterToggle: () => { actualizarUI(); }
-            });
-
-        const { toggle: toggleSaldoDesdePrimeroDiaMes, actualizarEstado: actualizarEstadoBotonSaldoDesdePrimeroDiaMes } =
-            _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, false),
-                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.SALDO_DESDE_PRIMERO_MES, v),
-                btnId: 'btn-toggle-saldo-primero-mes',
-                mensajeOn: 'Cálculo de saldo mensual desde el 1° del mes',
-                mensajeOff: 'Cálculo de saldo mensual desde el primer registro del mes',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -7601,9 +7571,7 @@ Generado por Sistema Lushibosca
             UILogic.actualizarEstadoBotonIgnorarTF();
             UILogic.poblarSelectoresTipos();
             UILogic.actualizarEstadoBotonHoverPopup();
-            UILogic.actualizarEstadoBotonSaldoDesdeEnero();
             UILogic.actualizarEstadoBotonSemanalEnVivo();
-            UILogic.actualizarEstadoBotonSaldoDesdePrimeroDiaMes();
             UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.actualizarEstadoBotonObjetivoPorRegistro();
             UILogic.actualizarEstadoBotonAplicarHoras();
@@ -7908,12 +7876,12 @@ Generado por Sistema Lushibosca
 
         return {
             init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
-            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError, actualizarEstadoBotonSaldoDesdeEnero,
+            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError,
             limpiarError, resetearBoton, restaurarBotonGuardarEdicion, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
             cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
-            toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion, actualizarEstadoBotonSaldoDesdePrimeroDiaMes,
-            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote, toggleSaldoDesdeEnero, toggleSaldoDesdePrimeroDiaMes,
+            toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
+            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote,
             toggleSemanalEnVivo, actualizarEstadoBotonSemanalEnVivo,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
@@ -8165,9 +8133,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
-    $('btn-toggle-saldo-enero')?.addEventListener('click', () => UILogic.toggleSaldoDesdeEnero());
     $('btn-toggle-semanal-en-vivo')?.addEventListener('click', () => UILogic.toggleSemanalEnVivo());
-    $('btn-toggle-saldo-primero-mes')?.addEventListener('click', () => UILogic.toggleSaldoDesdePrimeroDiaMes());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => UILogic.aplicarHorasConfiguradasATodos());
@@ -8256,7 +8222,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260811';
+        const _v = '-v260812';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

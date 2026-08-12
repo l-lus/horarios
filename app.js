@@ -414,11 +414,7 @@
         function configurarNotificaciones(handlers) { notify = { ...notify, ...handlers }; }
 
         function _getKey(key, useProfile) {
-            if (useProfile && window.PerfilManager) {
-                return window.PerfilManager.perfilKey(key);
-            }
-            if (useProfile) return key + '_default';
-            return key;
+            return useProfile ? PerfilManager.perfilKey(key) : key;
         }
 
         function setItem(key, value, useProfile = false) {
@@ -492,11 +488,13 @@
         const MAX_PERFILES = 9;
         let perfilActual = 'default';
         let perfiles = {};
+        let _inicializado = false;
 
         function inicializar() {
             cargarPerfiles();
             actualizarSelector();
             actualizarNombrePerfil();
+            _inicializado = true;
         }
 
         function cargarPerfiles() {
@@ -530,13 +528,12 @@
         }
 
         function guardarDatosPerfilActual() {
-            if (!window.DataManagement) return false;
             const actual = perfiles[perfilActual];
             perfiles[perfilActual] = {
                 nombre: actual.nombre,
-                registros: [...window.DataManagement.registros()],
-                diasHabiles: window.DataManagement.diasHabiles(),
-                horasDiarias: window.DataManagement.horasDiarias(),
+                registros: [...DataManagement.registros()],
+                diasHabiles: DataManagement.diasHabiles(),
+                horasDiarias: DataManagement.horasDiarias(),
                 ...(actual.gistId && { gistId: actual.gistId }),
                 ...(actual.gistLastSync && { gistLastSync: actual.gistLastSync }),
                 ...(actual.gistAutoSync != null && { gistAutoSync: actual.gistAutoSync }),
@@ -582,6 +579,7 @@
 
         function obtenerPerfilActual() { return perfilActual; }
         function esPerfilDefault() { return perfilActual === 'default'; }
+        function estaInicializado() { return _inicializado; }
         function obtenerDatosPerfil() { return perfiles[perfilActual]; }
         function obtenerTodosPerfiles() { return perfiles; }
 
@@ -590,7 +588,7 @@
         }
 
         return {
-            inicializar, cambiarPerfil, guardarDatosPerfilActual,
+            inicializar, estaInicializado, cambiarPerfil, guardarDatosPerfilActual,
             obtenerPerfilActual, esPerfilDefault, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
             guardarPerfiles, perfilKey, MAX_PERFILES
         };

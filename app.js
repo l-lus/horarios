@@ -142,7 +142,7 @@
 
         function minutosAHora(totalMinutos) {
             const h = Math.floor(Math.abs(totalMinutos) / 60);
-            const m = Math.abs(totalMinutos) % 60;
+            const m = Math.floor(Math.abs(totalMinutos) % 60);
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
 
@@ -8243,7 +8243,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260812';
+        const _v = '-v260813';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

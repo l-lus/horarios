@@ -15,7 +15,6 @@
         DIAS_HABILES: 'diasHabiles',
         HORAS_DIARIAS: 'horasDiarias',
         VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
-        SEMANAL_EN_VIVO: 'semanalEnVivo',
         IGNORAR_TF: 'ignorarTiempoFuera',
         IGNORAR_LOGICA_CUBIERTO: 'ignorarLogicaCubierto',
         IGNORAR_OBJETIVO_POR_REGISTRO: 'ignorarObjetivoPorRegistro',
@@ -5949,10 +5948,9 @@ Generado por Sistema Lushibosca
             const { esDiaHabil, quedanDiasFuturos } = _estadoDiasHabiles(diasHabiles);
             const regHoy = registros.find(r => r.fecha === hoy) ?? null;
             const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
-            const semanalEnVivo = StorageHelper.getBoolean(STORAGE_KEYS.SEMANAL_EN_VIVO, false);
             const minutosBreakActivo = _minutosBreakActivo();
             const bufferSemanalBase = D.calcularBufferPeriodo(ini, hoy, false);
-            const bufferSemanal = semanalEnVivo ? D.calcularBufferPeriodo(ini, hoy, true, minutosBreakActivo) : bufferSemanalBase;
+            const bufferSemanal = D.calcularBufferPeriodo(ini, hoy, true, minutosBreakActivo);
 
             const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
 
@@ -5969,7 +5967,7 @@ Generado por Sistema Lushibosca
             const fechaLimite = hoy < fn ? hoy : fn;
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
             const totalSemana = registrosSemana.reduce((sum, r) => {
-                if (semanalEnVivo && regActivo && r.fecha === regActivo.fecha) return sum + tiempoHoy;
+                if (regActivo && r.fecha === regActivo.fecha) return sum + tiempoHoy;
                 const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                 return sum + (tipo?.id === 'remoto' ? D.objetivoDeRegistro(r) : tipo ? 0 : r.total);
             }, 0);
@@ -7180,16 +7178,6 @@ Generado por Sistema Lushibosca
                 mensajeOff: 'No se muestra popup automático en calendario',
             });
 
-        const { toggle: toggleSemanalEnVivo, actualizarEstado: actualizarEstadoBotonSemanalEnVivo } =
-            _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.SEMANAL_EN_VIVO, false),
-                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.SEMANAL_EN_VIVO, v),
-                btnId: 'btn-toggle-semanal-en-vivo',
-                mensajeOn: 'Vista semanal y buffer se actualizan en vivo',
-                mensajeOff: 'Vista semanal y buffer esperan al registro completo del día',
-                onAfterToggle: () => { actualizarUI(); }
-            });
-
         const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLogicaCubierto } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
@@ -7608,7 +7596,6 @@ Generado por Sistema Lushibosca
             UILogic.actualizarEstadoBotonIgnorarTF();
             UILogic.poblarSelectoresTipos();
             UILogic.actualizarEstadoBotonHoverPopup();
-            UILogic.actualizarEstadoBotonSemanalEnVivo();
             UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.actualizarEstadoBotonObjetivoPorRegistro();
             UILogic.actualizarEstadoBotonAplicarHoras();
@@ -7919,7 +7906,6 @@ Generado por Sistema Lushibosca
             cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
             actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote,
-            toggleSemanalEnVivo, actualizarEstadoBotonSemanalEnVivo,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
             aplicarHorasConfiguradasATodos, actualizarEstadoBotonAplicarHoras,
@@ -8170,7 +8156,6 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
-    $('btn-toggle-semanal-en-vivo')?.addEventListener('click', () => UILogic.toggleSemanalEnVivo());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => UILogic.aplicarHorasConfiguradasATodos());

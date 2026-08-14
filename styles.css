@@ -792,15 +792,12 @@ button:disabled {
 
 .registro-total.green-text,
 .calendario-dia.dia-normal,
-.toast.success,
 .cal-popup-badge--green,
 .progress-fill.green {
     background: var(--c-green);
 }
 
 .registro-total.red-text,
-.toast.error,
-.toast.warning,
 .calendario-dia.dia-incompleto,
 .calendario-dia.dia-especial-red,
 .progress-fill.red,
@@ -834,7 +831,6 @@ button:disabled {
 .calendario-dia.dia-especial-blue,
 .registro-total.blue-text,
 .calendario-dia.dia-en-curso,
-.toast.info,
 .cal-popup-badge--blue,
 .progress-fill.blue {
     background: var(--c-blue);
@@ -943,11 +939,12 @@ button:disabled {
     justify-content: center;
     transform: translateX(-50%) translateY(80px);
     transition: var(--transition-anim);
-    background: var(--bg-toast);
-    color: white;
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 2px solid transparent;
     padding: var(--space-lg) var(--space-xl);
     border-radius: var(--radius);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow);
     opacity: 0;
     z-index: 1000;
     display: flex;
@@ -955,7 +952,6 @@ button:disabled {
     gap: var(--space-md);
     white-space: pre-line;
     pointer-events: none;
-    backdrop-filter: blur(3px);
     width: calc(100% - 4rem);
     max-width: 400px;
     text-align: center;
@@ -966,6 +962,22 @@ button:disabled {
     transform: translateX(-50%) translateY(0);
     pointer-events: auto;
     will-change: transform, opacity;
+}
+
+.toast.success {
+    border-color: var(--c-green);
+}
+
+.toast.error {
+    border-color: var(--c-red);
+}
+
+.toast.warning {
+    border-color: var(--c-orange); 
+}
+
+.toast.info {
+    border-color: var(--c-blue);
 }
 
 /* ─── CALENDARIO ─────────────────────────────────────────────────────────────── */

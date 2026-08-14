@@ -2873,7 +2873,8 @@
                 const clase = claseDelDia(fecha);
                 const esHoy = anio === hoy.getFullYear() && mes === hoy.getMonth() && dia === hoy.getDate();
                 const reg = regsPorFecha[fecha];
-                const esNuevo = idResaltar && reg && reg.id === idResaltar;
+                const idsNuevos = idResaltar ? (Array.isArray(idResaltar) ? idResaltar : [idResaltar]) : [];
+                const esNuevo = reg && idsNuevos.includes(reg.id);
 
                 const cell = document.createElement('div');
                 let clases = `calendario-dia ${clase}`;
@@ -4202,7 +4203,8 @@
             const item = document.createElement('div');
 
             let className = r.fecha === hoy ? 'registro-item hoy' : 'registro-item';
-            if (idResaltar && r.id === idResaltar) className += ' nuevo-registro-animacion';
+            const idsResaltar = idResaltar ? (Array.isArray(idResaltar) ? idResaltar : [idResaltar]) : [];
+            if (idsResaltar.includes(r.id)) className += ' nuevo-registro-animacion';
             item.className = className;
             item.dataset.registroId = r.id;
             item.dataset.accion = 'editar-registro';

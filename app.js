@@ -6392,6 +6392,10 @@ Generado por Sistema Lushibosca
             return _cicloTick;
         }
 
+        function _cicloStatsActivo() {
+            return !!_cicloStatsInterval;
+        }
+
         function _iniciarCicloStats(inmediato = false) {
             if (_cicloStatsInterval) return true;
             _detenerCicloStats();
@@ -7076,6 +7080,7 @@ Generado por Sistema Lushibosca
             sumarMinutosAHora,
             _getLabelFondo,
             _iniciarCicloStats,
+            _cicloStatsActivo,
             _prepararMostrarFaseAlRenderizar,
             _fadeSwapCiclo
         };
@@ -7145,7 +7150,7 @@ Generado por Sistema Lushibosca
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
-            sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats, _prepararMostrarFaseAlRenderizar,
+            sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
             _fadeSwapCiclo
         } = UITarjetaFichaje;
 
@@ -7927,7 +7932,7 @@ Generado por Sistema Lushibosca
             _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _nombreMesCapitalizado, _renderSelectorStats,
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
             actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
-            _getLabelFondo, _iniciarCicloStats, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
+            _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);
@@ -8108,7 +8113,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $('stats-card')?.addEventListener('click', (e) => {
         const enStatsNumber = e.target.closest('#stats-semana');
-        if (enStatsNumber && UILogic.vistaActual() !== 'semana') {
+        if (enStatsNumber && UILogic.vistaActual() !== 'semana' && !UILogic._cicloStatsActivo()) {
             const ciclado = UILogic._iniciarCicloStats(true);
             if (ciclado) {
                 e.stopPropagation();

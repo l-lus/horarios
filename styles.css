@@ -661,7 +661,8 @@ button:disabled {
 .progress-fill {
     height: 100%;
     background: var(--bg-card);
-    transition: width 0.5s;
+    border-radius: var(--radius);
+    transition: width 0.5s, background-color 0.5s ease;
     position: relative;
     overflow: hidden;
 }
@@ -1106,7 +1107,8 @@ button:disabled {
 /* ─── CAL POPUP ──────────────────────────────────────────────────────────────── */
 
 .cal-popup,
-.stat-popup {
+.stat-popup,
+.filtro-popup {
     position: fixed;
     z-index: 90;
     background: var(--bg-card);
@@ -1130,7 +1132,8 @@ button:disabled {
 }
 
 .cal-popup.listo,
-.stat-popup.listo {
+.stat-popup.listo,
+.filtro-popup.listo {
     pointer-events: all;
 }
 
@@ -1227,6 +1230,27 @@ button:disabled {
     border: none;
     border-top: 1px solid var(--border);
     margin: 10px 0;
+}
+
+/* ─── FILTRO POPUP ───────────────────────────────────────────────────────────── */
+
+.filtro-popup {
+    width: 250px;
+    max-width: calc(100vw - 16px);
+    gap: 0;
+}
+
+.filtro-popup-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: var(--fw-bold);
+    color: var(--text-main);
+    margin-bottom: var(--space-md);
+}
+
+.filtro-popup .form-group:last-child {
+    margin-bottom: 0;
 }
 
 /* ─── COLLAPSIBLE SECTIONS ───────────────────────────────────────────────────── */
@@ -1811,9 +1835,9 @@ button.campo-flash {
 
     :is([id^="btn-toggle-"],
         #btn-reporte,
-        .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist,
-        .btn-delete, .btn-cancel, .btn-export, .btn-merge, .btn-backup, .btn-edit,
-        .calendario-nav button):hover:not(:disabled) {
+        .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist, .card-section-title, 
+        .btn-delete, .btn-cancel, .stats-number, .btn-export, .btn-merge, .btn-backup, .btn-edit,
+        .calendario-nav button, .btn-settings, .btn-register):hover:not(:disabled) {
         filter: var(--hover);
     }
 

@@ -1812,7 +1812,7 @@ body.config-onboarding .label-footer-empezar {
 input.campo-flash,
 select.campo-flash,
 button.campo-flash {
-    animation: campo-flash 500ms ease-in-out 2;
+    animation: campo-flash 300ms ease-in-out 2;
 }
 
 @keyframes icono-spin {

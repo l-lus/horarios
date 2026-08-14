@@ -1058,6 +1058,7 @@
             cerrarFiltros: () => { },
             cerrarImportar: () => { },
             descargarJSON: () => { },
+            flashCampo: () => { },
             iniciarTimerAutoCierreBotones: () => { },
             limpiarError: () => { },
             mostrarError: () => { },
@@ -1200,7 +1201,10 @@
             const esHoy = fecha === TimeUtils.obtenerFechaHoy();
             HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${TimeUtils.fechaCorta(fecha)})`);
             const saved = await _guardarConCicloSiHoy(nuevoId, esHoy);
-            if (saved) { notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success'); }
+            if (saved) { 
+                notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success'); 
+                notify.flashCampo('btn-agregar');
+            }
             else { throw new Error('Error al guardar'); }
         }
 
@@ -1318,6 +1322,7 @@
                 ]);
             }
             notify.mostrarToast(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
+            notify.flashCampo('btn-agregar');
             notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('salida').value = '';
@@ -1347,6 +1352,7 @@
                 ]);
             }
             notify.mostrarToast(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
+            notify.flashCampo('btn-agregar');
             notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('entrada').value = ''; $('salida').value = '';
@@ -1934,6 +1940,7 @@
             if (saved) {
                 notify.mostrarToast(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
                 notify.actualizarBotonLote();
+                notify.flashCampo('btn-agregar');
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -1966,6 +1973,7 @@
             const saved = await guardarYActualizar();
             if (saved) {
                 notify.mostrarToast(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
+                notify.flashCampo('btn-agregar');
                 notify.actualizarBotonLote();
             } else { throw new Error('Error al guardar'); }
         }
@@ -7493,7 +7501,7 @@ Generado por Sistema Lushibosca
             D.configurarNotificaciones({
                 actualizarBotonLote, actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
                 aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
-                descargarJSON, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+                descargarJSON, flashCampo: _flashCampo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
                 obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
                 setBloqueoEdicionGrupo, verificarBloqueoCredito
             });

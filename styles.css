@@ -48,7 +48,7 @@
     --modal-overlay: rgba(0, 0, 0, 0.5);
     --touch-target: 48px;
     --input-height: 48px;
-    --app-header-h: calc(60px + var(--space-sm));
+    --app-header-h: 60px;
     --mes-header-h: 54px;
     --sticky-mes-top: var(--app-header-h);
 }
@@ -112,11 +112,7 @@ body {
     padding: 0.6rem;
     box-shadow: var(--shadow);
     position: sticky;
-    top: var(--space-sm);
-    margin: var(--space-sm) auto 0;
-    width: calc(100% - 2 * var(--space-sm));
-    max-width: calc(1400px - 2 * var(--space-sm));
-    border-radius: var(--radius);
+    top: 0;
     z-index: 90;
     display: flex;
     justify-content: space-between;

@@ -1436,7 +1436,6 @@
                     notify.mostrarToast('Registro eliminado', 'success');
                     notify.cerrarEdicion();
                     notify.actualizarEstadoBotonTimerMain();
-                    notify.actualizarBotonLote();
                 }
             }
         }
@@ -1954,8 +1953,6 @@
             });
             guardarYActualizar(null, true);
             notify.mostrarToast(mensaje, 'info', undefined, resultado.descripcion);
-            const modoLote = document.getElementById('modo-lote');
-            if (modoLote && getComputedStyle(modoLote).display !== 'none') notify.actualizarBotonLote();
             notify.iniciarTimerAutoCierreBotones();
         }
 
@@ -6540,6 +6537,7 @@ Generado por Sistema Lushibosca
             _renderBarra(vista);
             UILogic._renderSelectorStats();
             actualizarEstadoBotonTimerMain(sinAnimarTitulo);
+            if (modoLoteActivo) actualizarBotonLote();
             if (UILogic.getVistaHistoricoCalendario()) {
                 const selector = $('calendario-selector-meses');
                 if (selector && selector.style.display !== 'none') {
@@ -6755,7 +6753,6 @@ Generado por Sistema Lushibosca
                 $('lote-fecha-desde').value = '';
                 $('lote-fecha-hasta').value = '';
 
-                btnTexto.textContent = 'Fichar Lote';
                 btn.style.background = '';
                 btn.style.color = '';
 

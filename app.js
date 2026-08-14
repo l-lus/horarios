@@ -1939,7 +1939,6 @@
             const saved = await _guardarConCicloSiHoy(idsNuevosParaAnimar, incluyeHoy);
             if (saved) {
                 notify.mostrarToast(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
-                notify.actualizarBotonLote();
                 notify.flashCampo('btn-agregar');
             } else { throw new Error('Error al guardar'); }
         }
@@ -1974,7 +1973,6 @@
             if (saved) {
                 notify.mostrarToast(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
                 notify.flashCampo('btn-agregar');
-                notify.actualizarBotonLote();
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -6788,10 +6786,6 @@ Generado por Sistema Lushibosca
             } else {
                 await DataManagement.agregarRegistro();
             }
-
-            if (modoLoteActivo) {
-                setTimeout(() => actualizarBotonLote(), 100);
-            }
         }
 
         function _limpiarCamposLote() {
@@ -6807,6 +6801,7 @@ Generado por Sistema Lushibosca
             try {
                 await DataManagement.registrarDiaEspecial(fechaHoy, tipo);
                 _limpiarCamposLote();
+                actualizarBotonLote();
             } catch (e) { console.error('Error al registrar:', e); }
         }
 
@@ -6821,6 +6816,7 @@ Generado por Sistema Lushibosca
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
                 ]);
                 _limpiarCamposLote();
+                actualizarBotonLote();
             } catch (e) { console.error('Error al registrar:', e); }
         }
 
@@ -6865,6 +6861,7 @@ Generado por Sistema Lushibosca
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
                 ]);
                 _limpiarCamposLote();
+                actualizarBotonLote();
             } catch (e) { console.error('Error en operación de lote:', e); }
         }
 

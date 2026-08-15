@@ -968,12 +968,9 @@ button:disabled {
     border-color: var(--c-green);
 }
 
+.toast.warning,
 .toast.error {
     border-color: var(--c-red);
-}
-
-.toast.warning {
-    border-color: var(--c-orange); 
 }
 
 .toast.info {
@@ -1807,16 +1804,16 @@ body.config-onboarding .label-footer-empezar {
 }
 
 @keyframes campo-flash {
-
     0%,
+    60%,
     100% {
-        border-color: var(--text-main);
+        border-color: transparent;
         box-shadow: none;
     }
 
-    30%,
-    70% {
-        border-color: var(--input-focus);
+    20%,
+    40% {
+        border-color: var(--text-main);
         box-shadow: var(--shadow);
     }
 }
@@ -1824,7 +1821,26 @@ body.config-onboarding .label-footer-empezar {
 input.campo-flash,
 select.campo-flash,
 button.campo-flash {
-    animation: campo-flash 300ms ease-in-out 2;
+    animation: campo-flash 500ms ease-in-out 2;
+}
+
+@keyframes campo-flash-color {
+    0%,
+    60%,
+    100% {
+        border-color: transparent;
+        box-shadow: none;
+    }
+
+    20%,
+    40% {
+        border-color: var(--flash-color);
+        box-shadow: var(--shadow);
+    }
+}
+
+button.campo-flash-color {
+    animation: campo-flash-color 500ms ease-in-out 2;
 }
 
 @keyframes icono-spin {

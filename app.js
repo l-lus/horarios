@@ -1059,6 +1059,7 @@
             cerrarImportar: () => { },
             descargarJSON: () => { },
             flashCampo: () => { },
+            flashCampoTipo: () => { },
             iniciarTimerAutoCierreBotones: () => { },
             limpiarError: () => { },
             mostrarError: () => { },
@@ -1165,7 +1166,7 @@
         async function eliminarGrupoActual() {
             if (!grupoEnEdicion) return;
             if (grupoEnEdicion.registros.length > 60) {
-                notify.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: 60 registros por operación.`, 'error');
+                notify.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: 60 registros por operación.`, 'error', 4000);
                 return;
             }
             const idsAEliminar = grupoEnEdicion.registros.map(r => r.id);
@@ -1182,13 +1183,13 @@
             if (registroExistente) { notify.mostrarToast('Ya existe un registro para hoy', 'warning'); throw new Error('Registro ya existe'); }
 
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
-            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); throw new Error('Tipo inválido'); }
+            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Tipo inválido'); }
 
             const entrada = tipoConfig.codigo;
             const salida = tipoConfig.codigo;
             const tipoTexto = `${tipoConfig.emoji} ${tipoConfig.label}`;
 
-            if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast('Límite de registros alcanzado', 'error'); throw new Error('Límite alcanzado'); }
+            if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast('Límite de registros alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite alcanzado'); }
 
             const nuevoId = S.generarIDSeguro();
             const t = calcularHoras(entrada, salida, null);
@@ -1203,7 +1204,7 @@
             const saved = await _guardarConCicloSiHoy(nuevoId, esHoy);
             if (saved) { 
                 notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success'); 
-                notify.flashCampo('btn-agregar');
+                notify.flashCampoTipo('success', 'btn-agregar');
             }
             else { throw new Error('Error al guardar'); }
         }
@@ -1322,7 +1323,7 @@
                 ]);
             }
             notify.mostrarToast(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
-            notify.flashCampo('btn-agregar');
+            notify.flashCampoTipo('success', 'btn-agregar');
             notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('salida').value = '';
@@ -1330,7 +1331,7 @@
 
         async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
             if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) {
-                notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); return;
+                notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
             }
             const nuevoId = S.generarIDSeguro();
             const t = calcularHoras(e || null, s || null, null);
@@ -1352,14 +1353,14 @@
                 ]);
             }
             notify.mostrarToast(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
-            notify.flashCampo('btn-agregar');
+            notify.flashCampoTipo('success', 'btn-agregar');
             notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('entrada').value = ''; $('salida').value = '';
         }
 
         async function agregarRegistro() {
-            if (!validarFormulario()) { notify.mostrarToast('Verificá los campos', 'error'); return; }
+            if (!validarFormulario()) { notify.mostrarToast('Verificá los campos', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
 
             const btn = $('btn-agregar');
             btn.disabled = true;
@@ -1370,7 +1371,7 @@
 
             if (f > TimeUtils.obtenerFechaHoy() && !TiposRegistro.esRegistroEspecial(e, s)) {
                 notify.resetearBoton(btn); notify.mostrarError('fecha', null);
-                notify.mostrarToast('Fecha futura no permitida en registro regular', 'warning'); return;
+                notify.mostrarToast('Fecha futura no permitida en registro regular', 'warning'); notify.flashCampoTipo('warning', 'btn-agregar'); return;
             }
 
             if (!e) {
@@ -1391,8 +1392,8 @@
             }
 
             if (!e && s) {
-                if (registroExistente?.salida) { notify.resetearBoton(btn); notify.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); return; }
-                if (!registroExistente?.entrada) { notify.resetearBoton(btn); notify.mostrarToast('Debés fichar una entrada primero', 'error'); return; }
+                if (registroExistente?.salida) { notify.resetearBoton(btn); notify.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
+                if (!registroExistente?.entrada) { notify.resetearBoton(btn); notify.mostrarToast('Debés fichar una entrada primero', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
             }
 
             if (registroExistente?.entrada && !registroExistente.salida && !e && s) {
@@ -1402,7 +1403,7 @@
             if (registroExistente) {
                 notify.resetearBoton(btn);
                 if (usaHoraActual) $('entrada').value = '';
-                notify.mostrarToast('Ya existe un registro para esta fecha', 'error'); return;
+                notify.mostrarToast('Ya existe un registro para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
             }
 
             await _crearNuevoRegistro(f, e, s, usaHoraActual, btn);
@@ -1696,7 +1697,7 @@
             const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
             if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) { notify.mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
             if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
-                notify.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
+                notify.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
             }
             if (data.rangoExportado !== undefined) {
                 const rangoSafe = S.sanitizeString(String(data.rangoExportado), 100);
@@ -1910,16 +1911,16 @@
 
         async function registrarVacacionesDirecto(desde, hasta, tipo) {
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
-            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); throw new Error('Tipo inválido'); }
+            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Tipo inválido'); }
             const entrada = tipoConfig.codigo;
             const salida = tipoConfig.codigo;
 
             const fechasARegistrar = TimeUtils.generarRangoFechas(desde, hasta);
 
-            if (fechasARegistrar.length > 60) { notify.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: 60 días por operación.`, 'error'); throw new Error('Límite de días excedido'); }
+            if (fechasARegistrar.length > 60) { notify.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: 60 días por operación.`, 'error', 4000); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite de días excedido'); }
 
             const nuevosRegistros = fechasARegistrar.filter(f => !registros.some(r => r.fecha === f));
-            if (nuevosRegistros.length === 0) { notify.mostrarToast('Todas las fechas ya están registradas', 'warning'); throw new Error('Sin fechas nuevas'); }
+            if (nuevosRegistros.length === 0) { notify.mostrarToast('Todas las fechas ya están registradas', 'warning'); notify.flashCampoTipo('warning', 'btn-agregar'); throw new Error('Sin fechas nuevas'); }
 
             const idsNuevosParaAnimar = [];
             nuevosRegistros.forEach(fecha => {
@@ -1938,7 +1939,7 @@
             const saved = await _guardarConCicloSiHoy(idsNuevosParaAnimar, incluyeHoy);
             if (saved) {
                 notify.mostrarToast(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
-                notify.flashCampo('btn-agregar');
+                notify.flashCampoTipo('success', 'btn-agregar');
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -1961,15 +1962,15 @@
                 if (r.fecha < desde || r.fecha > hasta) return false;
                 return !TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
             });
-            if (registrosAEliminar.length > 60) { notify.mostrarToast(`Máximo 60 registros. Encontrados: ${registrosAEliminar.length}`, 'error'); throw new Error('Límite excedido'); }
-            if (registrosAEliminar.length === 0) { notify.mostrarToast('No hay registros de jornadas en ese período', 'info'); throw new Error('Sin registros'); }
+            if (registrosAEliminar.length > 60) { notify.mostrarToast(`Máximo 60 registros por operación. Encontrados: ${registrosAEliminar.length}`, 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite excedido'); }
+            if (registrosAEliminar.length === 0) { notify.mostrarToast('No hay registros de jornadas en ese período', 'info'); notify.flashCampoTipo('info', 'btn-agregar'); throw new Error('Sin registros'); }
 
             registros = registros.filter(r => !registrosAEliminar.includes(r));
             HistoryManager.saveState(registros, `eliminar período (${registrosAEliminar.length} registro${registrosAEliminar.length !== 1 ? 's' : ''})`);
             const saved = await guardarYActualizar();
             if (saved) {
                 notify.mostrarToast(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
-                notify.flashCampo('btn-agregar');
+                notify.flashCampoTipo('success', 'btn-agregar');
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -2353,22 +2354,33 @@
             return cerrar;
         }
 
-        function _flashCampo(...ids) {
+        function _flashCampoConClase(clase, ids, colorVar = null) {
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 clearTimeout(el._flashTimeout);
-                el.classList.remove('campo-flash');
+                el.classList.remove(clase);
+                if (colorVar) el.style.setProperty('--flash-color', colorVar);
                 void el.offsetWidth;
-                el.classList.add('campo-flash');
+                el.classList.add(clase);
 
                 const cs = getComputedStyle(el);
                 const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
                 const iteraciones = parseFloat(cs.animationIterationCount) || 1;
                 const totalMs = duracionMs * iteraciones;
 
-                el._flashTimeout = setTimeout(() => el.classList.remove('campo-flash'), totalMs);
+                el._flashTimeout = setTimeout(() => el.classList.remove(clase), totalMs);
             });
+        }
+
+        function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
+
+        const _COLOR_FLASH_POR_TIPO = {
+            success: 'var(--c-green)', error: 'var(--c-red)', warning: 'var(--c-red)', info: 'var(--c-red)'
+        };
+
+        function _flashCampoTipo(tipo, ...ids) {
+            _flashCampoConClase('campo-flash-color', ids, _COLOR_FLASH_POR_TIPO[tipo] || 'var(--text-main)');
         }
 
         const _slideAnimEstado = new WeakMap();
@@ -2470,7 +2482,7 @@
             _posicionarPopup,
             _registrarCierrePopup,
             _flashCampo,
-            _limpiarClonVisual,
+            _flashCampoTipo,
             _finalizarSlidePendiente,
             _animarSlideElemento,
             toggleSeccionGen,
@@ -5693,7 +5705,7 @@ Generado por Sistema Lushibosca
     const UITarjetaFichaje = (function (S, D, UICore) {
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
-            _setBtnActivo, _setBtnDisabled, _flashCampo, registrarSwipe, _animarFadeSwap,
+            _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
             _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
         } = UICore;
 
@@ -6788,7 +6800,7 @@ Generado por Sistema Lushibosca
         async function _registrarEspecialHoy(tipo) {
             const fechaHoy = UILogic.obtenerFechaHoy();
             if (DataManagement.registros().find(r => r.fecha === fechaHoy)) {
-                mostrarToast('Ya existe un registro para hoy', 'warning'); return;
+                mostrarToast('Ya existe un registro para hoy', 'warning'); _flashCampoTipo('warning', 'btn-agregar'); return;
             }
             try {
                 await DataManagement.registrarDiaEspecial(fechaHoy, tipo);
@@ -6799,7 +6811,7 @@ Generado por Sistema Lushibosca
 
         async function _registrarEspecialFecha(desde, tipo) {
             if (DataManagement.registros().find(r => r.fecha === desde)) {
-                mostrarToast('Ya existe un registro para esa fecha', 'warning'); return;
+                mostrarToast('Ya existe un registro para esa fecha', 'warning'); _flashCampoTipo('warning', 'btn-agregar'); return;
             }
             try {
                 await DataManagement.registrarDiaEspecial(desde, tipo);
@@ -6819,7 +6831,7 @@ Generado por Sistema Lushibosca
 
             if ((inputDesde.value === '' && inputDesde.validity && !inputDesde.validity.valid) ||
                 (inputHasta.value === '' && inputHasta.validity && !inputHasta.validity.valid)) {
-                mostrarToast('Fecha inválida', 'error'); return;
+                mostrarToast('Fecha inválida', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
             }
 
             const desde = inputDesde.value;
@@ -6827,22 +6839,22 @@ Generado por Sistema Lushibosca
 
             if (!desde && !hasta) {
                 if (!inputDesde.checkValidity() || !inputHasta.checkValidity()) {
-                    mostrarToast('Revisá las fechas ingresadas', 'error'); return;
+                    mostrarToast('Revisá las fechas ingresadas', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
                 }
-                if (tipo === 'normal') { mostrarToast('Completá los campos Desde y Hasta.', 'info'); return; }
+                if (tipo === 'normal') { mostrarToast('Completá los campos Desde y Hasta.', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
                 await _registrarEspecialHoy(tipo); return;
             }
 
             if (desde && !hasta) {
-                if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); return; }
+                if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
                 await _registrarEspecialFecha(desde, tipo); return;
             }
 
-            if (!desde && hasta) { mostrarToast('Completá ambos campos', 'info'); return; }
-            if (desde > hasta) { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); return; }
+            if (!desde && hasta) { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
+            if (desde > hasta) { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); _flashCampoTipo('error', 'btn-agregar'); return; }
 
             if (tipo !== 'normal' && !TiposRegistro.obtenerCodigosPorTipo(tipo)) {
-                mostrarToast('Tipo de registro inválido', 'error'); return;
+                mostrarToast('Tipo de registro inválido', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
             }
 
             try {
@@ -6922,10 +6934,10 @@ Generado por Sistema Lushibosca
             btn.style.background = '';
 
             if (!desde && !hasta) return _pintarBotonLote(btn, btnTexto, 'Fichar');
-            if (!desde && hasta) return _setBtnError(btn, btnTexto, 'Requiere Rango');
+            if (!desde && hasta) return _setBtnError(btn, btnTexto, 'Rango incompleto');
 
             if (desde && !hasta) {
-                if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Requiere Rango');
+                if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
                 const existe = DataManagement.registros().find(r => r.fecha === desde);
                 return existe
                     ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'var(--text-muted)')
@@ -7081,7 +7093,7 @@ Generado por Sistema Lushibosca
             mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _getCSSdur, DUR_ANIM, DUR_CALENDARIO, _crearToggleConfig, _setBtnActivo,
             _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
-            _posicionarPopup, _registrarCierrePopup, _flashCampo,
+            _posicionarPopup, _registrarCierrePopup, _flashCampo, _flashCampoTipo,
             _limpiarClonVisual, _finalizarSlidePendiente, _animarSlideElemento, toggleSeccionGen,
             _animarFadeSwap
         } = UICore;
@@ -7479,7 +7491,7 @@ Generado por Sistema Lushibosca
             D.configurarNotificaciones({
                 actualizarBotonLote, actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
                 aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
-                descargarJSON, flashCampo: _flashCampo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+                descargarJSON, flashCampo: _flashCampo, flashCampoTipo: _flashCampoTipo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
                 obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
                 setBloqueoEdicionGrupo, verificarBloqueoCredito
             });

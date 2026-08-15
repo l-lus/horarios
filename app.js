@@ -2194,6 +2194,7 @@
             toast.classList.remove('show');
             toast.textContent = actual.mensaje;
             toast.className = `toast ${actual.tipo}`;
+            toast.style.borderColor = _COLOR_TOAST_POR_TIPO[actual.tipo] || '';
             let duracionFinal = actual.duracionBase || 3000;
             if (_toastQueue.length >= 2) {
                 duracionFinal = Math.floor(duracionFinal / 2);
@@ -2375,12 +2376,12 @@
 
         function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
 
-        const _COLOR_FLASH_POR_TIPO = {
-            success: 'var(--c-green)', error: 'var(--c-red)', warning: 'var(--c-red)', info: 'var(--c-red)'
+        const _COLOR_TOAST_POR_TIPO = {
+            success: 'var(--c-green)', error: 'var(--c-red)', warning: 'var(--c-red)', info: 'var(--c-blue)'
         };
 
         function _flashCampoTipo(tipo, ...ids) {
-            _flashCampoConClase('campo-flash-color', ids, _COLOR_FLASH_POR_TIPO[tipo] || 'var(--text-main)');
+            _flashCampoConClase('campo-flash-color', ids, _COLOR_TOAST_POR_TIPO[tipo] || 'var(--text-main)');
         }
 
         const _slideAnimEstado = new WeakMap();
@@ -6841,7 +6842,7 @@ Generado por Sistema Lushibosca
                 if (!inputDesde.checkValidity() || !inputHasta.checkValidity()) {
                     mostrarToast('Revisá las fechas ingresadas', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
                 }
-                if (tipo === 'normal') { mostrarToast('Completá los campos Desde y Hasta.', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
+                if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
                 await _registrarEspecialHoy(tipo); return;
             }
 
@@ -6899,7 +6900,7 @@ Generado por Sistema Lushibosca
         }
 
         function _setBtnError(btn, btnTexto, mensaje) {
-            _pintarBotonLote(btn, btnTexto, mensaje, 'var(--c-red)');
+            _pintarBotonLote(btn, btnTexto, mensaje, 'var(--text-muted)');
         }
 
         function _actualizarBtnNormal(btn, btnTexto, desde, hasta) {

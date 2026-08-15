@@ -962,27 +962,22 @@ button:disabled {
     transform: translateX(-50%) translateY(0);
     pointer-events: auto;
     will-change: transform, opacity;
-    animation: toast-flash 350ms ease-in-out 0.5s 1;
 }
 
 .toast.success {
-    --toast-color: var(--c-green);
-    border-color: var(--toast-color);
+    border-color: var(--c-green);
 }
 
 .toast.error {
-    --toast-color: var(--c-red);
-    border-color: var(--toast-color);
+    border-color: var(--c-red);
 }
 
 .toast.warning {
-    --toast-color: var(--c-orange);
-    border-color: var(--toast-color);
+    border-color: var(--c-orange); 
 }
 
 .toast.info {
-    --toast-color: var(--c-blue);
-    border-color: var(--toast-color);
+    border-color: var(--c-blue);
 }
 
 /* ─── CALENDARIO ─────────────────────────────────────────────────────────────── */
@@ -1719,16 +1714,6 @@ body.config-onboarding .label-footer-empezar {
     margin-left: 0.3em;
 }
 
-input.campo-flash,
-select.campo-flash,
-button.campo-flash {
-    animation: campo-flash 300ms ease-in-out 2;
-}
-
-.icono-spin {
-    animation: icono-spin 900ms linear infinite;
-}
-
 /* ─── KEYFRAMES ──────────────────────────────────────────────────────────────── */
 
 @keyframes slideDownFade {
@@ -1836,13 +1821,10 @@ button.campo-flash {
     }
 }
 
-@keyframes toast-flash {
-    0%, 100% {
-        box-shadow: var(--shadow);
-    }
-    30%, 70% {
-        box-shadow: 0 0 14px 2px var(--toast-color);
-    }
+input.campo-flash,
+select.campo-flash,
+button.campo-flash {
+    animation: campo-flash 300ms ease-in-out 2;
 }
 
 @keyframes icono-spin {
@@ -1853,6 +1835,10 @@ button.campo-flash {
     to {
         transform: rotate(360deg);
     }
+}
+
+.icono-spin {
+    animation: icono-spin 900ms linear infinite;
 }
 
 /* ─── HOVER (pointer: fine) ──────────────────────────────────────────────────── */

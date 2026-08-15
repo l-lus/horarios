@@ -2924,12 +2924,8 @@
                     entrante.classList.remove('fade-out');
                 }
 
-                if (_vistaHistoricoCalendario) {
-                    if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
-                    _renderizarCalendario();
-                } else {
-                    if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
-                }
+                if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
+                if (_vistaHistoricoCalendario) _renderizarCalendario();
             });
 
             const selector = document.getElementById('calendario-selector-meses');
@@ -2986,10 +2982,20 @@
                 ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
         }
 
+        function _cerrarPopupCalendario() {
+            if (!_popupCalendarioEl) return;
+            _popupCalendarioEl.remove();
+            _popupCalendarioEl = null;
+        }
+
+        function _formatearFechaLabelPopup(fecha) {
+            return S.escapeHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+        }
+
         function _popupCalendario(event, registroId) {
             event.stopPropagation();
 
-            if (_popupCalendarioEl) { _popupCalendarioEl.remove(); _popupCalendarioEl = null; }
+            _cerrarPopupCalendario();
 
             const reg = D.registros().find(r => r.id === registroId);
             if (!reg) return;
@@ -2999,7 +3005,7 @@
             const grupos = UILogic.agruparRegistrosConsecutivos(registrosDelMes);
             const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
 
-            const fechaLabel = S.escapeHtml(new Date(reg.fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+            const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
             const infoHtml = _buildInfoHtmlRegistro(reg);
             const btnGrupoHtml = grupoDelRegistro ? `
                 <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
@@ -3040,7 +3046,7 @@
             popup.addEventListener('mouseleave', () => {
                 if (_popupCalendarioEsHover) {
                     _popupCalendarioHoverTimer = setTimeout(() => {
-                        if (_popupCalendarioEl) { _popupCalendarioEl.remove(); _popupCalendarioEl = null; }
+                        _cerrarPopupCalendario();
                         _popupCalendarioEsHover = false;
                     }, 500);
                 }
@@ -3058,15 +3064,12 @@
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioEsHover = false;
 
-            if (_popupCalendarioEl) {
-                const mismaFecha = _popupCalendarioEl.dataset.fecha === fecha;
-                _popupCalendarioEl.remove();
-                _popupCalendarioEl = null;
-                if (mismaFecha) return;
-            }
+            const mismaFecha = _popupCalendarioEl?.dataset.fecha === fecha;
+            _cerrarPopupCalendario();
+            if (mismaFecha) return;
 
             const esFechaFutura = fecha > TimeUtils.obtenerFechaHoy();
-            const fechaLabel = S.escapeHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+            const fechaLabel = _formatearFechaLabelPopup(fecha);
 
             const popup = document.createElement('div');
             popup.className = 'cal-popup';
@@ -3115,16 +3118,12 @@
             const hoverActivo = esDesktop && stored === 'true';
 
             if (hoverActivo) {
-                if (_popupCalendarioEl) {
-                    _popupCalendarioEl.remove();
-                    _popupCalendarioEl = null;
-                }
+                _cerrarPopupCalendario();
                 clearTimeout(_popupCalendarioHoverTimer);
                 DataManagement.editarRegistro(registroId);
             } else {
-                if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) {
-                    _popupCalendarioEl.remove();
-                    _popupCalendarioEl = null;
+                if (_popupCalendarioEl?.dataset.registroId === registroId) {
+                    _cerrarPopupCalendario();
                     return;
                 }
                 _popupCalendario(event, registroId);
@@ -3137,10 +3136,7 @@
             if (related && _popupCalendarioEl && _popupCalendarioEl.contains(related)) return;
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioHoverTimer = setTimeout(() => {
-                if (_popupCalendarioEl) {
-                    _popupCalendarioEl.remove();
-                    _popupCalendarioEl = null;
-                }
+                _cerrarPopupCalendario();
                 _popupCalendarioEsHover = false;
             }, 500);
         }
@@ -3150,10 +3146,7 @@
         }
 
         function navegarCalendario(delta) {
-            if (_popupCalendarioEl) {
-                _popupCalendarioEl.remove();
-                _popupCalendarioEl = null;
-            }
+            _cerrarPopupCalendario();
 
             const hoy = new Date();
             const base = _calendarioMes || { anio: hoy.getFullYear(), mes: hoy.getMonth() };

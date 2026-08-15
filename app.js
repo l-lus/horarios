@@ -6860,10 +6860,14 @@ Generado por Sistema Lushibosca
             try {
                 if (tipo === 'normal') await DataManagement.borrarPeriodoDirecto(desde, hasta);
                 else await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
-                UILogic.aplicarFeedbackCampos([
-                    { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
-                    { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
-                ]);
+                UILogic.aplicarFeedbackCampos(
+                    [
+                        { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
+                        { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
+                    ],
+                    tipo === 'normal' ? '✓ Borrado' : '✓ Agregado',
+                    tipo === 'normal' ? 'var(--c-red)' : 'var(--c-green)'
+                );
                 _limpiarCamposLote();
                 actualizarBotonLote();
             } catch (e) { console.error('Error en operación de lote:', e); }
@@ -6933,9 +6937,18 @@ Generado por Sistema Lushibosca
             const btnTexto = $('btn-registrar-texto');
             btn.style.background = '';
 
-            if (!desde && !hasta) return _pintarBotonLote(btn, btnTexto, 'Fichar');
-            if (!desde && hasta) return _setBtnError(btn, btnTexto, 'Rango incompleto');
+            if (!desde && !hasta) {
+                if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
+                
+                const hoy = TimeUtils.obtenerFechaHoy();
+                const existeHoy = DataManagement.registros().find(r => r.fecha === hoy);
+                return existeHoy
+                    ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'var(--text-muted)')
+                    : _pintarBotonLote(btn, btnTexto, 'Fichar');
+            }
 
+            if (!desde && hasta) return _setBtnError(btn, btnTexto, 'Rango incompleto');
+            if (!TimeUtils.validarFecha(desde)) return _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida');
             if (desde && !hasta) {
                 if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
                 const existe = DataManagement.registros().find(r => r.fecha === desde);
@@ -6944,7 +6957,6 @@ Generado por Sistema Lushibosca
                     : _pintarBotonLote(btn, btnTexto, 'Fichar');
             }
 
-            if (!TimeUtils.validarFecha(desde)) return _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida');
             if (!TimeUtils.validarFecha(hasta)) return _setBtnError(btn, btnTexto, 'Fecha Final Inválida');
             if (desde > hasta) return _setBtnError(btn, btnTexto, 'Rango Inválido');
 
@@ -7005,6 +7017,7 @@ Generado por Sistema Lushibosca
                     const hasta = $('lote-fecha-hasta');
                     if (desde) desde.value = fecha;
                     if (hasta) hasta.value = fecha;
+                    actualizarBotonLote();
                     setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta', 'lote-tipo'), _FLASH_SCROLL_DELAY);
                 } else {
                     const input = $('fecha');
@@ -7797,7 +7810,7 @@ Generado por Sistema Lushibosca
             window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
         }
 
-        function aplicarFeedbackCampos(campos) {
+        function aplicarFeedbackCampos(campos, texto = '✓ Agregado', color = 'var(--c-green)') {
             const activos = campos
                 .filter(c => c.mostrar)
                 .map(c => {
@@ -7813,8 +7826,8 @@ Generado por Sistema Lushibosca
             _fadeSwapCiclo(labels, () => {
                 activos.forEach(({ input, label }) => {
                     if (!input || !label) return;
-                    label.textContent = '✓ Agregado';
-                    label.style.color = 'var(--c-green)';
+                    label.textContent = texto;
+                    label.style.color = color;
                 });
             });
 
@@ -8246,7 +8259,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260813';
+        const _v = '-v260815';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

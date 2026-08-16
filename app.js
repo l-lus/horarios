@@ -46,12 +46,6 @@
     const horasGte = (valor, objetivo) => (valor - objetivo) > -EPS_HORAS;
     const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;
 
-    function _applyDataColors(root) {
-        root.querySelectorAll('[data-color]').forEach(el => {
-            el.style.color = el.dataset.color;
-        });
-    }
-
     // ====================================================================
     // PWA INSTALLER MODULE
     // ====================================================================
@@ -1461,9 +1455,6 @@
             }
 
             const btnCredito = document.getElementById('btn-toggle-credito');
-            btnCredito.style.background = '';
-            btnCredito.style.color = '';
-            btnCredito.style.border = '';
 
             if (r.credito && r.credito !== '00:00') {
                 btnCredito.dataset.activo = "true";
@@ -2194,7 +2185,6 @@
             toast.classList.remove('show');
             toast.textContent = actual.mensaje;
             toast.className = `toast ${actual.tipo}`;
-            toast.style.borderColor = _COLOR_TOAST_POR_TIPO[actual.tipo] || '';
             let duracionFinal = actual.duracionBase || 3000;
             if (_toastQueue.length >= 2) {
                 duracionFinal = Math.floor(duracionFinal / 2);
@@ -2212,9 +2202,7 @@
 
         function resetearBoton(btn) {
             btn.disabled = false;
-            btn.style.background = '';
-            btn.style.color = '';
-            btn.style.borderColor = '';
+            btn.classList.remove('btn-color-muted', 'btn-color-red');
             btn.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> <span id="btn-registrar-texto">Fichar</span>';
         }
 
@@ -2508,7 +2496,6 @@
                 const container = Object.assign(document.createElement('div'), {
                     className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
                 });
-                if (p.esActual) container.style.cursor = 'default';
 
                 const countText = `${p.totalRegistros} registro${p.totalRegistros !== 1 ? 's' : ''}`;
                 const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
@@ -2517,7 +2504,6 @@
                     className: 'btn-perfil-badge',
                     textContent: p.esActual ? `${countText} · Activo` : countText
                 });
-                if (p.esActual) badge.style.color = 'var(--c-green)';
                 infoSection.appendChild(badge);
 
                 const editBtn = Object.assign(document.createElement('button'), {
@@ -2973,23 +2959,23 @@
             if (reg.tiempoFuera && reg.tiempoFuera !== '00:00') {
                 tfStr = `${TimeUtils.horasATexto(TimeUtils.horaAMinutos(reg.tiempoFuera) / 60, 'short')} fuera`;
             }
-            let totalConDiff = totalStr, diffColor = '', cubiertoLineaHtml = '';
+            let totalConDiff = totalStr, diffClase = '', cubiertoLineaHtml = '';
             const objetivoReg = D.objetivoDeRegistro(reg);
             if (objetivoReg > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabiles())) {
                 const diffText = formatoDiferencia(totalHoras, objetivoReg);
                 if (horasGte(totalHoras, objetivoReg)) {
-                    diffColor = 'var(--c-green)';
+                    diffClase = 'cal-popup-info--green';
                     if (diffText) totalConDiff += ` (${diffText})`;
                 } else if (UILogic._cubiertoPorSaldo(reg.fecha)) {
-                    diffColor = 'var(--c-gold)';
+                    diffClase = 'cal-popup-info--gold';
                     if (diffText) totalConDiff += ` (${diffText})`;
                     cubiertoLineaHtml = `<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>`;
                 } else {
-                    diffColor = 'var(--c-red)';
+                    diffClase = 'cal-popup-info--red';
                     if (diffText) totalConDiff += ` (${diffText})`;
                 }
             }
-            return `<div class="cal-popup-info${diffColor ? ' cal-popup-info--dynamic' : ''}"${diffColor ? ` data-color="${diffColor}"` : ''}>${totalConDiff}</div>
+            return `<div class="cal-popup-info${diffClase ? ' ' + diffClase : ''}">${totalConDiff}</div>
                 ${cubiertoLineaHtml}
                 <div class="cal-popup-3l">${S.escapeHtml(reg.entrada)} – ${S.escapeHtml(reg.salida)}</div>
                 ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
@@ -3041,7 +3027,6 @@
                 </button>
                 ${btnGrupoHtml}`;
 
-            _applyDataColors(popup);
             popup.style.visibility = 'hidden';
             document.body.appendChild(popup);
             _popupCalendarioEl = popup;
@@ -3870,7 +3855,7 @@
             const c = configs[estado];
             _setBtnActivo(btn.id, c.activo);
             if (label) label.textContent = c.texto;
-            if (hint) { hint.textContent = c.hint; hint.style.color = c.color; }
+            if (hint) hint.textContent = c.hint;
 
             if (rangoEl) {
                 const activo = estado === 1 || estado === 2;
@@ -4510,8 +4495,7 @@
                 const icon = btnLock.querySelector('use');
                 icon.setAttribute('href', bloqueado ? '#icon-lock' : '#icon-lock-open');
                 btnLock.title = bloqueado ? "Desbloquear edición" : "Bloquear edición";
-                btnLock.style.color = 'var(--text-main)';
-                btnLock.style.background = bloqueado ? 'var(--c-red)' : 'var(--c-green)';
+                btnLock.classList.toggle('bloqueado', bloqueado);
             }
 
             inputIds.forEach(id => {
@@ -4864,11 +4848,9 @@
 
             const _bloquear = () => {
                 btnCredito.disabled = true;
-                btnCredito.style.cursor = 'not-allowed';
             };
             const _habilitar = () => {
                 btnCredito.disabled = false;
-                btnCredito.style.cursor = 'pointer';
             };
 
             if (document.getElementById('edit-fecha').disabled) return _bloquear();
@@ -5101,7 +5083,8 @@
                     itemSaldo.style.display = '';
                     const b = stats.bufferPeriodo;
                     elSaldo.textContent = b === 0 ? '0h' : TimeUtils.horasATexto(b, 'short');
-                    elSaldo.style.color = b > 0 ? 'var(--c-green)' : b < 0 ? 'var(--c-red)' : 'var(--text-main)';
+                    elSaldo.classList.remove('saldo-positivo', 'saldo-negativo', 'saldo-neutro');
+                    elSaldo.classList.add(b > 0 ? 'saldo-positivo' : b < 0 ? 'saldo-negativo' : 'saldo-neutro');
                 }
             }
         }
@@ -6159,9 +6142,9 @@ Generado por Sistema Lushibosca
             if (mostrarBuffer) {
                 const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
                 const horaBuf = _minutosAHoraWrap(minutosConBuffer);
-                const colorBuffer = bufferSemanal > 0 ? 'var(--c-green)' : bufferSemanal < 0 ? 'var(--c-red)' : 'var(--text-main)';
+                const claseBuffer = bufferSemanal > 0 ? ' hint-buffer-color--green' : bufferSemanal < 0 ? ' hint-buffer-color--red' : '';
                 return {
-                    hint: `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color" data-color="${colorBuffer}">(<strong>${horaBuf}</strong>)</span>`,
+                    hint: `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color${claseBuffer}">(<strong>${horaBuf}</strong>)</span>`,
                     hintEsHTML: true
                 };
             }
@@ -6491,7 +6474,7 @@ Generado por Sistema Lushibosca
         function _renderHint(vista) {
             const el = $('toggle-hint');
             if (!el) return;
-            if (vista.hintEsHTML) { el.innerHTML = vista.hint; _applyDataColors(el); }
+            if (vista.hintEsHTML) { el.innerHTML = vista.hint; }
             else el.textContent = vista.hint;
         }
 
@@ -6502,13 +6485,11 @@ Generado por Sistema Lushibosca
             const { bufferSemanal, horasDiarias, semanaAbierta } = est;
             if (horasDiarias > 0 && Math.abs(bufferSemanal) > 0.01 && semanaAbierta) {
                 const esPositivo = bufferSemanal > 0;
-                const color = esPositivo ? 'var(--c-green)' : 'var(--c-red)';
+                const claseColor = esPositivo ? 'positivo' : 'negativo';
                 const punto = document.createElement('span');
-                punto.className = 'buffer-semanal-punto';
-                punto.style.backgroundColor = color;
+                punto.className = `buffer-semanal-punto ${claseColor}`;
                 const span = document.createElement('span');
-                span.style.color = color;
-                span.style.fontWeight = '500';
+                span.className = `buffer-semanal-texto ${claseColor}`;
                 const { texto: textoBuffer, singular } = _cantidadHoras(Math.abs(bufferSemanal));
                 const adjetivo = esPositivo ? (singular ? 'extra' : 'extras') : (singular ? 'faltante' : 'faltantes');
                 span.textContent = `${textoBuffer} ${adjetivo} esta semana`;
@@ -6761,8 +6742,7 @@ Generado por Sistema Lushibosca
                 $('lote-fecha-desde').value = '';
                 $('lote-fecha-hasta').value = '';
 
-                btn.style.background = '';
-                btn.style.color = '';
+                btn.classList.remove('btn-color-muted', 'btn-color-red');
 
                 setIconoBtn(btn, '#icon-save');
 
@@ -6867,7 +6847,7 @@ Generado por Sistema Lushibosca
                         { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
                     ],
                     tipo === 'normal' ? '✓ Borrado' : '✓ Agregado',
-                    tipo === 'normal' ? 'var(--c-red)' : 'var(--c-green)'
+                    tipo === 'normal' ? 'label-feedback--red' : 'label-feedback--green'
                 );
                 _limpiarCamposLote();
                 actualizarBotonLote();
@@ -6893,14 +6873,15 @@ Generado por Sistema Lushibosca
             });
         }
 
-        function _pintarBotonLote(btn, btnTexto, texto, color = '', icono = '#icon-save') {
+        function _pintarBotonLote(btn, btnTexto, texto, claseColor = '', icono = '#icon-save') {
             btnTexto.textContent = texto;
-            btn.style.color = color;
+            btn.classList.remove('btn-color-muted', 'btn-color-red');
+            if (claseColor) btn.classList.add(claseColor);
             setIconoBtn(btn, icono);
         }
 
         function _setBtnError(btn, btnTexto, mensaje) {
-            _pintarBotonLote(btn, btnTexto, mensaje, 'var(--text-muted)');
+            _pintarBotonLote(btn, btnTexto, mensaje, 'btn-color-muted');
         }
 
         function _actualizarBtnNormal(btn, btnTexto, desde, hasta) {
@@ -6908,8 +6889,8 @@ Generado por Sistema Lushibosca
                 r.fecha >= desde && r.fecha <= hasta && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
             ).length;
             n > 0
-                ? _pintarBotonLote(btn, btnTexto, `Borrar (${n})`, 'var(--c-red)', '#icon-trash')
-                : _pintarBotonLote(btn, btnTexto, 'Sin Registros', 'var(--text-muted)');
+                ? _pintarBotonLote(btn, btnTexto, `Borrar (${n})`, 'btn-color-red', '#icon-trash')
+                : _pintarBotonLote(btn, btnTexto, 'Sin Registros', 'btn-color-muted');
         }
 
         function _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales) {
@@ -6924,7 +6905,7 @@ Generado por Sistema Lushibosca
             const disponibles = diasTotales - diasOcupados;
             const sobreescribirOtros = diasOcupados - yaRegistrados;
 
-            if (disponibles === 0 && yaRegistrados === diasTotales) return _pintarBotonLote(btn, btnTexto, `Fichado (${diasTotales})`, 'var(--text-muted)');
+            if (disponibles === 0 && yaRegistrados === diasTotales) return _pintarBotonLote(btn, btnTexto, `Fichado (${diasTotales})`, 'btn-color-muted');
             if (disponibles === diasTotales) return _pintarBotonLote(btn, btnTexto, `Fichar (${diasTotales})`);
             if (sobreescribirOtros > 0) return _pintarBotonLote(btn, btnTexto, `Fichar (${disponibles} - ${sobreescribirOtros})`);
             return _pintarBotonLote(btn, btnTexto, `Fichar (${disponibles})`);
@@ -6936,7 +6917,6 @@ Generado por Sistema Lushibosca
             const hasta = $('lote-fecha-hasta').value;
             const btn = $('btn-agregar');
             const btnTexto = $('btn-registrar-texto');
-            btn.style.background = '';
 
             if (!desde && !hasta) {
                 if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
@@ -6944,7 +6924,7 @@ Generado por Sistema Lushibosca
                 const hoy = TimeUtils.obtenerFechaHoy();
                 const existeHoy = DataManagement.registros().find(r => r.fecha === hoy);
                 return existeHoy
-                    ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'var(--text-muted)')
+                    ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
                     : _pintarBotonLote(btn, btnTexto, 'Fichar');
             }
 
@@ -6954,7 +6934,7 @@ Generado por Sistema Lushibosca
                 if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
                 const existe = DataManagement.registros().find(r => r.fecha === desde);
                 return existe
-                    ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'var(--text-muted)')
+                    ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
                     : _pintarBotonLote(btn, btnTexto, 'Fichar');
             }
 
@@ -7811,7 +7791,7 @@ Generado por Sistema Lushibosca
             window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
         }
 
-        function aplicarFeedbackCampos(campos, texto = '✓ Agregado', color = 'var(--c-green)') {
+        function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'label-feedback--green') {
             const activos = campos
                 .filter(c => c.mostrar)
                 .map(c => {
@@ -7828,7 +7808,7 @@ Generado por Sistema Lushibosca
                 activos.forEach(({ input, label }) => {
                     if (!input || !label) return;
                     label.textContent = texto;
-                    label.style.color = color;
+                    label.classList.add(claseColor);
                 });
             });
 
@@ -7838,7 +7818,7 @@ Generado por Sistema Lushibosca
                     activos.forEach(({ input, label, textoOriginal }) => {
                         if (!input || !label) return;
                         label.textContent = textoOriginal;
-                        label.style.color = '';
+                        label.classList.remove(claseColor);
                     });
                 });
             }, 2000);

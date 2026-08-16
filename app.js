@@ -1112,8 +1112,8 @@
             $('edit-grupo-desde').value = grupoEnEdicion.fechaDesde;
             $('edit-grupo-hasta').value = grupoEnEdicion.fechaHasta;
             notify.actualizarHintGrupo();
-            ModalManager.abrir('modal-editar-grupo');
             notify.setBloqueoEdicionGrupo(true);
+            ModalManager.abrir('modal-editar-grupo');
         }
 
         function _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta) {
@@ -1480,8 +1480,8 @@
                 btnCredito.classList.remove('btn-activo');
             }
 
-            ModalManager.abrir('modal-editar');
             notify.setBloqueoEdicion(true);
+            ModalManager.abrir('modal-editar');
 
             requestAnimationFrame(() => {
                 notify.verificarBloqueoCredito();
@@ -7782,6 +7782,8 @@ Generado por Sistema Lushibosca
             _initSwipesYStats();
             _initDatosYConfig();
             _restaurarEstadoVisual();
+            setBloqueoEdicion(true);
+            setBloqueoEdicionGrupo(true);
 
             PWAInstaller.init();
             actualizarUI(null, false, false, true);

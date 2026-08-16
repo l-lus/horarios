@@ -1102,15 +1102,15 @@ button:disabled {
     color: var(--text-muted);
 }
 
-#stat-saldo.saldo-positivo {
+.stat-value.saldo-positivo {
     color: var(--c-green);
 }
 
-#stat-saldo.saldo-negativo {
+.stat-value.saldo-negativo {
     color: var(--c-red);
 }
 
-#stat-saldo.saldo-neutro {
+.stat-value.saldo-neutro {
     color: var(--text-main);
 }
 

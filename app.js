@@ -121,6 +121,22 @@
             return !!(h && REGEX_PATTERNS.HORA.test(h));
         }
 
+        /**
+         * Si el valor es un número suelto entre 1 y 60 (sin ":"), lo interpreta
+         * como minutos y lo normaliza a formato hh:mm (ej: "20" -> "00:20", "60" -> "01:00").
+         * Si no aplica (ya es hh:mm, vacío, fuera de rango, etc.) devuelve el valor sin tocar.
+         * @param {string} valor
+         * @returns {string}
+         */
+        function normalizarMinutosSueltos(valor) {
+            if (!valor) return valor;
+            if (!/^\d{1,2}$/.test(valor)) return valor;
+            const n = parseInt(valor, 10);
+            if (n < 1 || n > 60) return valor;
+            if (n === 60) return '01:00';
+            return `00:${String(n).padStart(2, '0')}`;
+        }
+
         function parsearFechaLocal(fechaStr) {
             return new Date(fechaStr.replace(/-/g, '/') + ' 00:00:00');
         }
@@ -266,7 +282,7 @@
         }
 
         return {
-            validarFecha, validarHora, parsearFechaLocal, formatearFechaLocal,
+            validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
             obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
             horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
             obtenerNombreDia, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
@@ -1554,6 +1570,7 @@
             const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
             const s = S.sanitizeString($('edit-salida').value.trim(), 5);
             let tf = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5) || null;
+            tf = tf ? TimeUtils.normalizarMinutosSueltos(tf) : tf;
             let notas = S.sanitizeString($('edit-notas').value.trim(), S.SECURITY_LIMITS.MAX_NOTAS_LENGTH);
             if (notas) notas = S.sanitizeNotas(notas, true) || null;
             if (notas === '') notas = null;
@@ -4550,7 +4567,8 @@
             if (!hint) return;
             const e = document.getElementById('edit-entrada')?.value.trim();
             const s = document.getElementById('edit-salida')?.value.trim();
-            const tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
+            let tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
+            if (tf) tf = TimeUtils.normalizarMinutosSueltos(tf);
             if (!e && !s) { hint.textContent = ''; return; }
             const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(e, s);
             if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }

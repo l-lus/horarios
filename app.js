@@ -1212,8 +1212,8 @@
             const esHoy = fecha === TimeUtils.obtenerFechaHoy();
             HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${TimeUtils.fechaCorta(fecha)})`);
             const saved = await _guardarConCicloSiHoy(nuevoId, esHoy);
-            if (saved) { 
-                notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success'); 
+            if (saved) {
+                notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success');
                 notify.flashCampoTipo('success', 'btn-agregar');
             }
             else { throw new Error('Error al guardar'); }
@@ -5571,7 +5571,7 @@ Generado por Sistema Lushibosca
             'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
-            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles y cálculos de saldo.' },
+            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles.' },
             'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
             'stat-compensaciones': { titulo: 'Salidas Temprano', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
         };
@@ -5585,13 +5585,20 @@ Generado por Sistema Lushibosca
             let info = DESCRIPCIONES_STATS[statId];
             if (statId === 'stat-saldo' && info) {
                 const modoTexto = modoEstadisticas === 'anual'
-                    ? 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.'
+                    ? 'El saldo se calcula a partir del PRIMER REGISTRO del año.'
                     : modoEstadisticas === 'mensual'
-                        ? 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.'
-                        : null;
+                        ? 'El saldo se calcula a partir del PRIMER REGISTRO del mes.'
+                        : modoEstadisticas === 'semanal'
+                            ? 'El saldo se calcula a partir del PRIMER DÍA LABORAL de la semana.'
+                            : null;
                 if (modoTexto) {
                     info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
                 }
+            }
+            if (statId === 'stat-dias-trabajados' && info) {
+                const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                const diasTexto = [...D.diasHabiles()].sort((a, b) => a - b).map(d => nombresDias[d]).join(', ');
+                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Días hábiles: ${diasTexto}.</strong>` };
             }
             if (statId === 'stat-tiempo-fuera-total' && info) {
                 const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
@@ -6935,7 +6942,7 @@ Generado por Sistema Lushibosca
 
             if (!desde && !hasta) {
                 if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
-                
+
                 const hoy = TimeUtils.obtenerFechaHoy();
                 const existeHoy = DataManagement.registros().find(r => r.fecha === hoy);
                 return existeHoy
@@ -7892,7 +7899,7 @@ Generado por Sistema Lushibosca
         const _pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
         function iniciarCambioObjetivoEdicion(incremento) { _pressHoldObjetivoEdicion.iniciar(incremento); }
         function detenerCambioObjetivoEdicion() { _pressHoldObjetivoEdicion.detener(); }
-        
+
         function cambiarObjetivoEdicion(incremento) {
             const el = $('edit-objetivo');
             if (!el) return;

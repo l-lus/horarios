@@ -4505,6 +4505,7 @@
             ModalManager.cerrar('modal-editar', () => {
                 D.setEditandoId(null);
                 document.dispatchEvent(new Event('scroll'));
+                setBloqueoEdicion(true);
             });
         }
 
@@ -4909,6 +4910,7 @@
             ModalManager.cerrar('modal-editar-grupo', () => {
                 D.setGrupoEnEdicion(null);
                 document.dispatchEvent(new Event('scroll'));
+                setBloqueoEdicionGrupo(true);
             });
         }
 

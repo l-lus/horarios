@@ -589,7 +589,12 @@ button:disabled {
 .stats-card-bg__layer {
     position: absolute;
     inset: 0;
+    opacity: 0;
     transition: opacity 0.6s ease;
+}
+
+.stats-card-bg__layer.visible {
+    opacity: 1;
 }
 
 .stats-card-bg svg {
@@ -1400,6 +1405,10 @@ button:disabled {
     order: 1;
 }
 
+.chevron-mes.rotated {
+    transform: rotate(180deg);
+}
+
 .timer-btn.running {
     color: var(--c-red);
     border-color: var(--c-red);
@@ -1737,6 +1746,19 @@ body.config-onboarding .label-footer-empezar {
     gap: 0.4rem;
 }
 
+.orden-card-item.arrastrando {
+    opacity: 0;
+}
+
+.drag-clone {
+    position: fixed;
+    z-index: 999999;
+    pointer-events: none;
+    margin: 0;
+    transform: scale(1.02);
+    opacity: 0.9;
+}
+
 #nombre-archivo-seleccionado {
     text-align: center;
     margin-top: var(--space-sm);
@@ -1822,6 +1844,22 @@ body.config-onboarding .label-footer-empezar {
         opacity: 1;
         transform: translateY(0) scale(1);
     }
+}
+
+@keyframes zoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.zoom-in-anim {
+    animation: zoomIn 0.3s ease-out;
 }
 
 @keyframes llamarAtencion {

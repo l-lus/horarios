@@ -2576,7 +2576,7 @@
             renderizarListaPerfiles();
             requestAnimationFrame(() => {
                 const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
-                if (ultimo) { ultimo.style.animation = 'zoomIn 0.3s ease-out'; ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+                if (ultimo) { ultimo.classList.add('zoom-in-anim'); ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
             });
         }
 
@@ -2806,7 +2806,7 @@
             const btnFiltro = document.getElementById('btn-filtro');
             if (lista) lista.classList.add('hidden');
             if (cal) cal.classList.remove('hidden');
-            if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
+            if (btnFiltro) btnFiltro.disabled = false;
             _renderizarCalendario();
         }
 
@@ -2923,7 +2923,7 @@
                     entrante.classList.remove('fade-out');
                 }
 
-                if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
+                if (btnFiltro) btnFiltro.disabled = false;
                 if (_vistaHistoricoCalendario) _renderizarCalendario();
             });
 
@@ -4307,7 +4307,7 @@
 
             if (debeEstarExpandido) {
                 detalleMesActual.classList.add('expanded');
-                chevron.style.transform = 'rotate(180deg)';
+                chevron.classList.add('rotated');
             }
 
             let semanaAnterior = null;
@@ -4368,7 +4368,7 @@
             detalle.appendChild(innerAnio);
             let expandido = false;
             try { expandido = StorageHelper.getItem(STORAGE_KEYS.ANIO_EXPANDIDO(anio)) === 'true'; } catch (e) { }
-            if (expandido) { detalle.classList.add('expanded'); chevron.style.transform = 'rotate(180deg)'; }
+            if (expandido) { detalle.classList.add('expanded'); chevron.classList.add('rotated'); }
 
             mesesDelAnio.forEach((registrosDelMes, claveMes) =>
                 innerAnio.appendChild(crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy))
@@ -4590,7 +4590,7 @@
                 const chevronAnio = headerAnio.querySelector('.chevron-mes');
                 const anioId = headerAnio.dataset.anioId;
                 const abierto = detalleAnio.classList.toggle('expanded');
-                if (chevronAnio) chevronAnio.style.transform = abierto ? 'rotate(180deg)' : 'rotate(0deg)';
+                if (chevronAnio) chevronAnio.classList.toggle('rotated', abierto);
                 try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(anioId), String(abierto)); } catch (e) { }
             });
         }
@@ -4621,7 +4621,7 @@
 
                 if (detalle.classList.contains('expanded')) {
                     detalle.classList.remove('expanded');
-                    chevronIcon.style.transform = 'rotate(0deg)';
+                    chevronIcon.classList.remove('rotated');
                     try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'false'); } catch (e) { }
                     return;
                 }
@@ -4638,7 +4638,7 @@
                     const oc = otro.closest('.registro-mes-container');
                     const och = oc?.querySelector('.chevron-mes');
                     const oHeader = oc?.querySelector('.registro-mes-header');
-                    if (och) och.style.transform = 'rotate(0deg)';
+                    if (och) och.classList.remove('rotated');
                     const id = oHeader?.dataset[datasetKey];
                     if (id) {
                         try { StorageHelper.setItem(storageKeyFn(id), 'false'); } catch (e) { }
@@ -4652,7 +4652,7 @@
 
                 const _abrirDetalle = () => {
                     detalle.classList.add('expanded');
-                    chevronIcon.style.transform = 'rotate(180deg)';
+                    chevronIcon.classList.add('rotated');
                     try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'true'); } catch (e) { }
                     _scrollAlExpandir(contenedor, detalle);
                 };
@@ -4759,7 +4759,7 @@
         function _setIconHistorico(icon, estado) {
             if (!icon) return;
             icon.classList.toggle('rotated', estado === 'meses');
-            icon.style.transform = estado === 'completo' ? 'rotate(-90deg)' : '';
+            icon.classList.toggle('icon-rotate-neg90', estado === 'completo');
         }
 
         function toggleHistorico() {
@@ -4817,10 +4817,7 @@
                 if (botones && botones.classList.contains('expanded')) {
                     botones.classList.remove('expanded');
 
-                    if (icon) {
-                        icon.style.transform = '';
-                        icon.classList.add('rotated');
-                    }
+                    if (icon) _setIconHistorico(icon, 'meses');
 
                     try {
                         StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
@@ -5820,21 +5817,21 @@ Generado por Sistema Lushibosca
             const outgoing = _bgActiveLayer === 'a' ? layerA : layerB;
 
             incoming.style.zIndex = '2';
-            incoming.style.opacity = '0';
+            incoming.classList.remove('visible');
             incoming.innerHTML = nuevoSVG;
 
             outgoing.style.zIndex = '1';
-            outgoing.style.opacity = '0';
+            outgoing.classList.remove('visible');
 
             if (_bgFadeTimer) { clearTimeout(_bgFadeTimer); _bgFadeTimer = null; }
 
             incoming.offsetHeight;
-            incoming.style.opacity = '1';
+            incoming.classList.add('visible');
 
             _bgActiveLayer = _bgActiveLayer === 'a' ? 'b' : 'a';
             _bgFadeTimer = setTimeout(() => {
                 outgoing.innerHTML = '';
-                outgoing.style.opacity = '0';
+                outgoing.classList.remove('visible');
                 _bgFadeTimer = null;
             }, 650);
         }
@@ -7321,13 +7318,13 @@ Generado por Sistema Lushibosca
                 const rect = item.getBoundingClientRect();
                 initialYOffset = clientY - rect.top;
                 dragClone = item.cloneNode(true);
+                dragClone.classList.add('drag-clone');
                 Object.assign(dragClone.style, {
-                    position: 'fixed', top: `${rect.top}px`, left: `${rect.left}px`,
-                    width: `${rect.width}px`, height: `${rect.height}px`, zIndex: '999999',
-                    pointerEvents: 'none', margin: '0', transform: 'scale(1.02)', opacity: '0.9'
+                    top: `${rect.top}px`, left: `${rect.left}px`,
+                    width: `${rect.width}px`, height: `${rect.height}px`
                 });
                 document.body.appendChild(dragClone);
-                draggingEl.style.opacity = '0';
+                draggingEl.classList.add('arrastrando');
                 if (navigator.vibrate) navigator.vibrate(30);
             }
 
@@ -7362,7 +7359,7 @@ Generado por Sistema Lushibosca
                     dragClone.remove();
                     dragClone = null;
                 }
-                draggingEl.style.opacity = '';
+                draggingEl.classList.remove('arrastrando');
 
                 const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
                 const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
@@ -7660,11 +7657,11 @@ Generado por Sistema Lushibosca
                     const icon = $('icon-indicator-historico');
                     if (contenido) contenido.classList.add('expanded');
                     if (estadoHistorico === 'meses') {
-                        if (icon) { icon.style.transform = ''; icon.classList.add('rotated'); }
+                        if (icon) { icon.classList.remove('icon-rotate-neg90'); icon.classList.add('rotated'); }
                     } else {
                         const botones = $('botones-historico');
                         if (botones) { botones.classList.add('expanded'); UILogic.setTiempoExpansionBotones(Date.now()); }
-                        if (icon) { icon.classList.remove('rotated'); icon.style.transform = 'rotate(-90deg)'; }
+                        if (icon) { icon.classList.remove('rotated'); icon.classList.add('icon-rotate-neg90'); }
                     }
                 }
 
@@ -7740,8 +7737,8 @@ Generado por Sistema Lushibosca
                     const hayArchivo = e.target.files.length > 0;
                     if (hayArchivo) {
                         if (nombreEl) { nombreEl.textContent = `✓ ${e.target.files[0].name}`; nombreEl.style.display = 'block'; }
-                        if (btnCombinar) { btnCombinar.disabled = false; btnCombinar.style.opacity = '1'; }
-                        if (btnReemplazar) { btnReemplazar.disabled = false; btnReemplazar.style.opacity = '1'; }
+                        if (btnCombinar) btnCombinar.disabled = false;
+                        if (btnReemplazar) btnReemplazar.disabled = false;
                     } else {
                         if (nombreEl) { nombreEl.style.display = 'none'; nombreEl.textContent = ''; }
                         if (btnCombinar) btnCombinar.disabled = true;

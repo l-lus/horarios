@@ -570,7 +570,7 @@ button:disabled {
 .stats-card {
     cursor: pointer;
     border: 1px solid transparent;
-    border-left: 4px solid transparent;
+    border-left: 2px solid transparent;
     transition: transform var(--dur-fast) ease-out, opacity var(--dur-fast) ease-out, box-shadow var(--transition-ui), border-color var(--transition-ui);
     height: 15rem;
     position: relative;

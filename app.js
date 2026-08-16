@@ -2628,6 +2628,8 @@
                 const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
                 if (inputNuevo) inputNuevo.value = '';
                 renderizarListaPerfiles();
+                const btnEliminar = document.getElementById('btn-eliminar-perfil-editor');
+                if (btnEliminar) btnEliminar.disabled = true;
             });
         }
 
@@ -7784,6 +7786,8 @@ Generado por Sistema Lushibosca
             _restaurarEstadoVisual();
             setBloqueoEdicion(true);
             setBloqueoEdicionGrupo(true);
+            const btnEliminarPerfil = $('btn-eliminar-perfil-editor');
+            if (btnEliminarPerfil) btnEliminarPerfil.disabled = true;
 
             PWAInstaller.init();
             actualizarUI(null, false, false, true);

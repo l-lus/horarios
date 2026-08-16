@@ -2203,7 +2203,7 @@
             toast.textContent = actual.mensaje;
             toast.className = `toast ${actual.tipo}`;
             let duracionFinal = actual.duracionBase || 3000;
-            if (_toastQueue.length >= 2) {
+            if (_toastQueue.length >= 1) {
                 duracionFinal = Math.floor(duracionFinal / 2);
             }
 

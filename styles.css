@@ -668,6 +668,11 @@ button:disabled {
     margin-top: auto;
 }
 
+.stats-inner .btn-agregar {
+    width: 50%;
+    margin: 0 auto;
+}
+
 .ciclo-fade-out {
     opacity: 0;
     transform: translateY(-6px);

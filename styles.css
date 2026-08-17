@@ -379,6 +379,13 @@ button:disabled {
     margin: -17px;
     background: transparent;
     color: var(--text-main);
+    transition: transform var(--dur-fast), background var(--transition-ui), color var(--transition-ui), opacity var(--dur-anim) var(--ease-anim);
+}
+
+/* Anula el desplazamiento vertical genérico de .fade-out: en un botón
+   solo queremos que el contenido se desvanezca/aparezca in situ. */
+.btn-register.fade-out {
+    transform: none;
 }
 
 .btn-color-muted {

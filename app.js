@@ -2236,13 +2236,31 @@
         const DUR_ANIM = () => _getCSSdur('--dur-anim');
         const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
 
+        const _fadeSwapTokens = new WeakMap();
+
+        /**
+         * Desvanece `el`, ejecuta `fn` (donde se muta su contenido/estado) y lo
+         * vuelve a mostrar. Utilidad genérica para cualquier cambio de contenido
+         * que deba sentirse como una transformación suave en vez de un salto
+         * abrupto (textos, iconos, listas, etc.).
+         *
+         * Si se llama varias veces seguidas sobre el mismo elemento (p.ej. el
+         * usuario sigue tipeando mientras la animación anterior todavía está en
+         * curso), solo la última llamada aplica su resultado final y quita el
+         * 'fade-out'; las anteriores quedan invalidadas para evitar parpadeos
+         * con contenido intermedio.
+         */
         function _animarFadeSwap(el, fn) {
             if (!el) { return Promise.resolve(fn()); }
+            const token = (_fadeSwapTokens.get(el) || 0) + 1;
+            _fadeSwapTokens.set(el, token);
             el.classList.add('fade-out');
             return new Promise((resolve) => {
                 setTimeout(async () => {
                     const resultado = await fn();
-                    el.classList.remove('fade-out');
+                    if (_fadeSwapTokens.get(el) === token) {
+                        el.classList.remove('fade-out');
+                    }
                     resolve(resultado);
                 }, DUR_ANIM());
             });
@@ -6900,10 +6918,23 @@ Generado por Sistema Lushibosca
         }
 
         function _pintarBotonLote(btn, btnTexto, texto, claseColor = '', icono = '#icon-save') {
-            btnTexto.textContent = texto;
-            btn.classList.remove('btn-color-muted', 'btn-color-red');
-            if (claseColor) btn.classList.add(claseColor);
-            setIconoBtn(btn, icono);
+            const iconoActual = btn.querySelector('svg use')?.getAttribute('href');
+            const colorActual = btn.classList.contains('btn-color-muted') ? 'btn-color-muted'
+                : btn.classList.contains('btn-color-red') ? 'btn-color-red' : '';
+            const sinCambios = btnTexto.textContent === texto && iconoActual === icono && colorActual === claseColor;
+
+            const aplicar = () => {
+                btnTexto.textContent = texto;
+                btn.classList.remove('btn-color-muted', 'btn-color-red');
+                if (claseColor) btn.classList.add(claseColor);
+                setIconoBtn(btn, icono);
+            };
+
+            // Si no cambia nada visible (p.ej. se revalida el mismo estado
+            // mientras el usuario sigue tipeando), no animamos: evita parpadeos.
+            if (sinCambios) return aplicar();
+
+            return _animarFadeSwap(btn, aplicar);
         }
 
         function _setBtnError(btn, btnTexto, mensaje) {

@@ -6945,7 +6945,7 @@ Generado por Sistema Lushibosca
             const btnTexto = $('btn-registrar-texto');
 
             if (!desde && !hasta) {
-                if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
+                if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Completar rango');
 
                 const hoy = TimeUtils.obtenerFechaHoy();
                 const existeHoy = DataManagement.registros().find(r => r.fecha === hoy);
@@ -8270,7 +8270,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260815';
+        const _v = '-v260817';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

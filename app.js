@@ -2219,19 +2219,8 @@
 
         function resetearBoton(btn) {
             btn.disabled = false;
-            const btnTexto = $('btn-registrar-texto');
-            const iconoActual = btn.querySelector('svg use')?.getAttribute('href');
-            const sinCambios = btnTexto && btnTexto.textContent === 'Fichar' && iconoActual === '#icon-save'
-                && !btn.classList.contains('btn-color-muted') && !btn.classList.contains('btn-color-red');
-
-            const aplicar = () => {
-                btn.classList.remove('btn-color-muted', 'btn-color-red');
-                if (btnTexto) btnTexto.textContent = 'Fichar';
-                setIconoBtn(btn, '#icon-save');
-            };
-
-            if (sinCambios) return aplicar();
-            return _animarCrossFade(btn, aplicar);
+            btn.classList.remove('btn-color-muted', 'btn-color-red');
+            btn.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> <span id="btn-registrar-texto">Fichar</span>';
         }
 
         function restaurarBotonGuardarEdicion(btnGuardar) {
@@ -2247,71 +2236,16 @@
         const DUR_ANIM = () => _getCSSdur('--dur-anim');
         const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
 
-        const _fadeSwapTokens = new WeakMap();
-
         function _animarFadeSwap(el, fn) {
             if (!el) { return Promise.resolve(fn()); }
-            const token = (_fadeSwapTokens.get(el) || 0) + 1;
-            _fadeSwapTokens.set(el, token);
             el.classList.add('fade-out');
             return new Promise((resolve) => {
                 setTimeout(async () => {
                     const resultado = await fn();
-                    if (_fadeSwapTokens.get(el) === token) {
-                        el.classList.remove('fade-out');
-                    }
+                    el.classList.remove('fade-out');
                     resolve(resultado);
                 }, DUR_ANIM());
             });
-        }
-
-        const _crossFadeState = new WeakMap();
-
-        function _animarCrossFade(el, fn) {
-            if (!el) { return Promise.resolve(fn()); }
-
-            const dur = DUR_ANIM();
-            const ease = getComputedStyle(document.documentElement).getPropertyValue('--ease-anim').trim() || 'ease';
-
-            let estado = _crossFadeState.get(el);
-
-            if (estado) {
-                if (estado.timeoutId) clearTimeout(estado.timeoutId);
-                estado.token++;
-            } else {
-                const rect = el.getBoundingClientRect();
-                const clon = _limpiarClonVisual(el.cloneNode(true));
-                clon.style.cssText = 'position:fixed;margin:0;pointer-events:none;z-index:9999;'
-                    + 'top:' + rect.top + 'px;left:' + rect.left + 'px;width:' + rect.width + 'px;height:' + rect.height + 'px;'
-                    + 'opacity:1;transition:opacity ' + dur + 'ms ' + ease + ';';
-                document.body.appendChild(clon);
-                estado = { clon, timeoutId: null, token: 0 };
-                _crossFadeState.set(el, estado);
-            }
-
-            const miToken = estado.token;
-
-            el.style.transition = 'none';
-            el.style.opacity = '0';
-            el.offsetHeight; 
-
-            const resultado = fn();
-
-            requestAnimationFrame(() => {
-                if (_crossFadeState.get(el) !== estado || estado.token !== miToken) return;
-                el.style.transition = 'opacity ' + dur + 'ms ' + ease;
-                el.style.opacity = '1';
-                estado.clon.style.opacity = '0';
-
-                estado.timeoutId = setTimeout(() => {
-                    estado.clon.remove();
-                    el.style.transition = '';
-                    el.style.opacity = '';
-                    _crossFadeState.delete(el);
-                }, dur + 30);
-            });
-
-            return Promise.resolve(resultado);
         }
 
         /**
@@ -2558,8 +2492,7 @@
             _finalizarSlidePendiente,
             _animarSlideElemento,
             toggleSeccionGen,
-            _animarFadeSwap,
-            _animarCrossFade
+            _animarFadeSwap
         };
     })(SecurityAndUtils, DataManagement);
 
@@ -5783,7 +5716,7 @@ Generado por Sistema Lushibosca
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
-            _animarCrossFade, _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
+            _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
         } = UICore;
 
         let modoLoteActivo = false;
@@ -6967,21 +6900,10 @@ Generado por Sistema Lushibosca
         }
 
         function _pintarBotonLote(btn, btnTexto, texto, claseColor = '', icono = '#icon-save') {
-            const iconoActual = btn.querySelector('svg use')?.getAttribute('href');
-            const colorActual = btn.classList.contains('btn-color-muted') ? 'btn-color-muted'
-                : btn.classList.contains('btn-color-red') ? 'btn-color-red' : '';
-            const sinCambios = btnTexto.textContent === texto && iconoActual === icono && colorActual === claseColor;
-
-            const aplicar = () => {
-                btnTexto.textContent = texto;
-                btn.classList.remove('btn-color-muted', 'btn-color-red');
-                if (claseColor) btn.classList.add(claseColor);
-                setIconoBtn(btn, icono);
-            };
-
-            if (sinCambios) return aplicar();
-
-            return _animarCrossFade(btn, aplicar);
+            btnTexto.textContent = texto;
+            btn.classList.remove('btn-color-muted', 'btn-color-red');
+            if (claseColor) btn.classList.add(claseColor);
+            setIconoBtn(btn, icono);
         }
 
         function _setBtnError(btn, btnTexto, mensaje) {
@@ -7906,14 +7828,14 @@ Generado por Sistema Lushibosca
                     const input = document.getElementById(c.id);
                     const label = input?.closest('.form-group')?.querySelector('label');
                     const textoOriginal = label ? label.textContent : c.fallback;
-                    return { input, label, textoOriginal };
+                    return { label, textoOriginal };
                 });
 
-            const labels = activos.filter(a => a.input && a.label).map(a => a.label);
+            const labels = activos.filter(a => a.label).map(a => a.label);
 
             _fadeSwapCiclo(labels, () => {
-                activos.forEach(({ input, label }) => {
-                    if (!input || !label) return;
+                activos.forEach(({ label }) => {
+                    if (!label) return;
                     label.textContent = texto;
                     label.classList.add(claseColor);
                 });
@@ -7921,8 +7843,8 @@ Generado por Sistema Lushibosca
 
             setTimeout(() => {
                 _fadeSwapCiclo(labels, () => {
-                    activos.forEach(({ input, label, textoOriginal }) => {
-                        if (!input || !label) return;
+                    activos.forEach(({ label, textoOriginal }) => {
+                        if (!label) return;
                         label.textContent = textoOriginal;
                         label.classList.remove(claseColor);
                     });

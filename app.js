@@ -2219,8 +2219,19 @@
 
         function resetearBoton(btn) {
             btn.disabled = false;
-            btn.classList.remove('btn-color-muted', 'btn-color-red');
-            btn.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> <span id="btn-registrar-texto">Fichar</span>';
+            const btnTexto = $('btn-registrar-texto');
+            const iconoActual = btn.querySelector('svg use')?.getAttribute('href');
+            const sinCambios = btnTexto && btnTexto.textContent === 'Fichar' && iconoActual === '#icon-save'
+                && !btn.classList.contains('btn-color-muted') && !btn.classList.contains('btn-color-red');
+
+            const aplicar = () => {
+                btn.classList.remove('btn-color-muted', 'btn-color-red');
+                if (btnTexto) btnTexto.textContent = 'Fichar';
+                setIconoBtn(btn, '#icon-save');
+            };
+
+            if (sinCambios) return aplicar();
+            return _animarCrossFade(btn, aplicar);
         }
 
         function restaurarBotonGuardarEdicion(btnGuardar) {
@@ -2238,18 +2249,6 @@
 
         const _fadeSwapTokens = new WeakMap();
 
-        /**
-         * Desvanece `el`, ejecuta `fn` (donde se muta su contenido/estado) y lo
-         * vuelve a mostrar. Utilidad genérica para cualquier cambio de contenido
-         * que deba sentirse como una transformación suave en vez de un salto
-         * abrupto (textos, iconos, listas, etc.).
-         *
-         * Si se llama varias veces seguidas sobre el mismo elemento (p.ej. el
-         * usuario sigue tipeando mientras la animación anterior todavía está en
-         * curso), solo la última llamada aplica su resultado final y quita el
-         * 'fade-out'; las anteriores quedan invalidadas para evitar parpadeos
-         * con contenido intermedio.
-         */
         function _animarFadeSwap(el, fn) {
             if (!el) { return Promise.resolve(fn()); }
             const token = (_fadeSwapTokens.get(el) || 0) + 1;
@@ -2264,6 +2263,55 @@
                     resolve(resultado);
                 }, DUR_ANIM());
             });
+        }
+
+        const _crossFadeState = new WeakMap();
+
+        function _animarCrossFade(el, fn) {
+            if (!el) { return Promise.resolve(fn()); }
+
+            const dur = DUR_ANIM();
+            const ease = getComputedStyle(document.documentElement).getPropertyValue('--ease-anim').trim() || 'ease';
+
+            let estado = _crossFadeState.get(el);
+
+            if (estado) {
+                if (estado.timeoutId) clearTimeout(estado.timeoutId);
+                estado.token++;
+            } else {
+                const rect = el.getBoundingClientRect();
+                const clon = _limpiarClonVisual(el.cloneNode(true));
+                clon.style.cssText = 'position:fixed;margin:0;pointer-events:none;z-index:9999;'
+                    + 'top:' + rect.top + 'px;left:' + rect.left + 'px;width:' + rect.width + 'px;height:' + rect.height + 'px;'
+                    + 'opacity:1;transition:opacity ' + dur + 'ms ' + ease + ';';
+                document.body.appendChild(clon);
+                estado = { clon, timeoutId: null, token: 0 };
+                _crossFadeState.set(el, estado);
+            }
+
+            const miToken = estado.token;
+
+            el.style.transition = 'none';
+            el.style.opacity = '0';
+            el.offsetHeight; 
+
+            const resultado = fn();
+
+            requestAnimationFrame(() => {
+                if (_crossFadeState.get(el) !== estado || estado.token !== miToken) return;
+                el.style.transition = 'opacity ' + dur + 'ms ' + ease;
+                el.style.opacity = '1';
+                estado.clon.style.opacity = '0';
+
+                estado.timeoutId = setTimeout(() => {
+                    estado.clon.remove();
+                    el.style.transition = '';
+                    el.style.opacity = '';
+                    _crossFadeState.delete(el);
+                }, dur + 30);
+            });
+
+            return Promise.resolve(resultado);
         }
 
         /**
@@ -2510,7 +2558,8 @@
             _finalizarSlidePendiente,
             _animarSlideElemento,
             toggleSeccionGen,
-            _animarFadeSwap
+            _animarFadeSwap,
+            _animarCrossFade
         };
     })(SecurityAndUtils, DataManagement);
 
@@ -5734,7 +5783,7 @@ Generado por Sistema Lushibosca
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
-            _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
+            _animarCrossFade, _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
         } = UICore;
 
         let modoLoteActivo = false;
@@ -6930,11 +6979,9 @@ Generado por Sistema Lushibosca
                 setIconoBtn(btn, icono);
             };
 
-            // Si no cambia nada visible (p.ej. se revalida el mismo estado
-            // mientras el usuario sigue tipeando), no animamos: evita parpadeos.
             if (sinCambios) return aplicar();
 
-            return _animarFadeSwap(btn, aplicar);
+            return _animarCrossFade(btn, aplicar);
         }
 
         function _setBtnError(btn, btnTexto, mensaje) {

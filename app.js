@@ -7906,7 +7906,6 @@ Generado por Sistema Lushibosca
                     const input = document.getElementById(c.id);
                     const label = input?.closest('.form-group')?.querySelector('label');
                     const textoOriginal = label ? label.textContent : c.fallback;
-                    if (input && label) input.classList.add('input-agregado-animacion');
                     return { input, label, textoOriginal };
                 });
 
@@ -7921,7 +7920,6 @@ Generado por Sistema Lushibosca
             });
 
             setTimeout(() => {
-                activos.forEach(({ input }) => { if (input) input.classList.remove('input-agregado-animacion'); });
                 _fadeSwapCiclo(labels, () => {
                     activos.forEach(({ input, label, textoOriginal }) => {
                         if (!input || !label) return;

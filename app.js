@@ -5387,7 +5387,7 @@
         </section>`;
         }
 
-        function _seccionDetalleMensual(registrosPeriodo) {
+        function _seccionDetalleDiario(registrosPeriodo) {
             const ordenados = [...registrosPeriodo].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
             const filas = ordenados.map(r => {
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
@@ -5399,7 +5399,7 @@
                 <tr class="fila-especial">
                     <td>${fecha}</td>
                     <td>${dia}</td>
-                    <td colspan="3">${S.escapeHtml(tipoEspecial.emoji || '')} ${S.escapeHtml(tipoEspecial.label.toUpperCase())}</td>
+                    <td colspan="2">${S.escapeHtml(tipoEspecial.emoji || '')} ${S.escapeHtml(tipoEspecial.label.toUpperCase())}</td>
                     <td></td>
                 </tr>`;
                 }
@@ -5486,7 +5486,6 @@
             tbody tr:last-child td { border-bottom: none; }
             .col-notas { color: var(--r-muted); }
             .detalle-sub { font-size: .76rem; color: var(--r-muted); }
-            .fila-especial td { color: var(--r-muted); font-style: italic; }
             .tag { display: inline-block; font-size: .72rem; padding: .1rem .45rem; border-radius: 999px; margin-left: .25rem; }
             .tag-ok { background: var(--r-green-bg); color: var(--r-green); }
             .tag-bad { background: var(--r-red-bg); color: var(--r-red); }
@@ -5645,7 +5644,8 @@
         </header>
 
         ${_seccionResumenGeneral(stats)}
-        ${esAnual ? _seccionDetalleAnual(registrosPeriodo) : _seccionDetalleMensual(registrosPeriodo)}
+        ${esAnual ? _seccionDetalleAnual(registrosPeriodo) : ''}
+        ${_seccionDetalleDiario(registrosPeriodo)}
         ${esAnual ? '' : _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado)}
         ${_seccionConfiguracion()}
 

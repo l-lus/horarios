@@ -5361,17 +5361,19 @@
                     else if (r.entrada && r.salida) jornadas++;
                 });
 
-                const notas = TiposRegistro.obtenerTodosLosTipos()
-                    .map(t => conteoPorTipo[t.id] ? `${conteoPorTipo[t.id]} ${TiposRegistro.labelSegunCantidad(t, conteoPorTipo[t.id])}` : null)
-                    .filter(Boolean);
+                const notas = [
+                    `${jornadas} ${jornadas === 1 ? 'jornada' : 'jornadas'}`,
+                    ...TiposRegistro.obtenerTodosLosTipos()
+                        .map(t => conteoPorTipo[t.id] ? `${conteoPorTipo[t.id]} ${TiposRegistro.labelSegunCantidad(t, conteoPorTipo[t.id])}` : null)
+                        .filter(Boolean)
+                ];
 
                 const nombreMes = S.escapeHtml(TimeUtils.formatoTituloMes(claveMes).split(' ')[0]);
                 return `
                 <tr>
                     <td class="col-mes">${nombreMes}</td>
                     <td class="col-horas">${S.escapeHtml(TimeUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short'))}</td>
-                    <td class="col-jornadas">${jornadas}</td>
-                    <td class="col-notas">${notas.length ? S.escapeHtml(notas.join(', ')) : '—'}</td>
+                    <td class="col-notas">${S.escapeHtml(notas.join(', '))}</td>
                 </tr>`;
             }).join('');
 
@@ -5380,9 +5382,9 @@
             <h2>📅 Totales por mes</h2>
             <table class="tabla-mes">
                 <thead>
-                    <tr><th>Mes</th><th>Horas</th><th>Jornadas</th><th>Notas</th></tr>
+                    <tr><th>Mes</th><th>Horas</th><th>Notas</th></tr>
                 </thead>
-                <tbody>${filas || '<tr><td colspan="4" class="vacio">Sin registros</td></tr>'}</tbody>
+                <tbody>${filas || '<tr><td colspan="3" class="vacio">Sin registros</td></tr>'}</tbody>
             </table>
         </section>`;
         }
@@ -5510,11 +5512,10 @@
                 .tabla-mes tbody tr:last-child, .tabla-diario tbody tr:last-child, .tabla-semana tbody tr:last-child { border-bottom: none; }
                 .tabla-mes td, .tabla-diario td, .tabla-semana td { border-bottom: none; padding: 0; }
 
-                /* Totales por mes: Mes - Horas - Jornadas / Notas */
-                .tabla-mes tbody tr { grid-template-columns: 1fr auto auto; grid-template-areas: "mes horas jornadas" "notas notas notas"; }
+                /* Totales por mes: Mes - Horas / Notas (incluye jornadas) */
+                .tabla-mes tbody tr { grid-template-columns: 1fr auto; grid-template-areas: "mes horas" "notas notas"; }
                 .tabla-mes .col-mes { grid-area: mes; }
                 .tabla-mes .col-horas { grid-area: horas; text-align: right; }
-                .tabla-mes .col-jornadas { grid-area: jornadas; text-align: right; }
                 .tabla-mes .col-notas { grid-area: notas; }
 
                 /* Totales por semana: Semana - Rango - Total / Notas */

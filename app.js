@@ -5619,8 +5619,9 @@
         </section>`;
         }
 
-        function generarReporte() {
+        function generarReporte(opciones = {}) {
             const esAnual = modoEstadisticas === 'anual';
+            const incluir = { resumen: true, totalesMes: true, detalleDiario: true, totalesSemana: true, configuracion: true, ...opciones };
             const periodo = _resolverPeriodoDatos(esAnual);
             if (!periodo) return;
             const { periodoLabel, registrosPeriodo, stats, nombreArchivo, mesSeleccionado } = periodo;
@@ -5643,11 +5644,11 @@
             <div class="generado">Generado el ${S.escapeHtml(generadoEl)}</div>
         </header>
 
-        ${_seccionResumenGeneral(stats)}
-        ${esAnual ? _seccionDetalleAnual(registrosPeriodo) : ''}
-        ${_seccionDetalleDiario(registrosPeriodo)}
-        ${esAnual ? '' : _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado)}
-        ${_seccionConfiguracion()}
+        ${incluir.resumen ? _seccionResumenGeneral(stats) : ''}
+        ${esAnual && incluir.totalesMes ? _seccionDetalleAnual(registrosPeriodo) : ''}
+        ${incluir.detalleDiario ? _seccionDetalleDiario(registrosPeriodo) : ''}
+        ${!esAnual && incluir.totalesSemana ? _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) : ''}
+        ${incluir.configuracion ? _seccionConfiguracion() : ''}
 
         <footer class="reporte-footer">Generado por Sistema Horarios</footer>
     </div>
@@ -5667,6 +5668,55 @@
                 console.error('Error generando reporte:', e);
                 mostrarToast('Error al generar reporte', 'error');
             }
+        }
+
+        const SECCIONES_REPORTE = [
+            { id: 'resumen', label: 'Resumen general', icono: '#icon-stats' },
+            { id: 'totalesMes', label: 'Totales por mes', icono: '#icon-calendar-simple', soloModo: 'anual' },
+            { id: 'detalleDiario', label: 'Detalle diario', icono: '#icon-clock' },
+            { id: 'totalesSemana', label: 'Totales por semana', icono: '#icon-calendar-simple', soloModo: 'mensual' },
+            { id: 'configuracion', label: 'Ajustes aplicados', icono: '#icon-settings' }
+        ];
+
+        function _renderSeccionesReporte() {
+            const cont = document.getElementById('reporte-secciones-lista');
+            if (!cont) return;
+            const modo = modoEstadisticas === 'anual' ? 'anual' : 'mensual';
+            cont.innerHTML = SECCIONES_REPORTE
+                .filter(sec => !sec.soloModo || sec.soloModo === modo)
+                .map(sec => `
+                <button type="button" class="btn-seccion-reporte btn-activo" data-seccion="${sec.id}">
+                    <svg class="icon"><use href="${sec.icono}" /></svg>
+                    <span>${S.escapeHtml(sec.label)}</span>
+                    <svg class="icon icon-indicator"><use href="#icon-dot" /></svg>
+                </button>`).join('');
+        }
+
+        function abrirModalReporteSecciones() {
+            _renderSeccionesReporte();
+            ModalManager.abrir('modal-reporte-secciones');
+        }
+
+        function cerrarModalReporteSecciones() {
+            ModalManager.cerrar('modal-reporte-secciones');
+        }
+
+        function toggleSeccionReporte(boton) {
+            boton.classList.toggle('btn-activo');
+        }
+
+        function confirmarGenerarReporte() {
+            const cont = document.getElementById('reporte-secciones-lista');
+            const opciones = {};
+            cont?.querySelectorAll('.btn-seccion-reporte').forEach(btn => {
+                opciones[btn.dataset.seccion] = btn.classList.contains('btn-activo');
+            });
+            if (!Object.values(opciones).some(Boolean)) {
+                mostrarToast('Seleccioná al menos una sección', 'error');
+                return;
+            }
+            cerrarModalReporteSecciones();
+            generarReporte(opciones);
         }
 
         const DESCRIPCIONES_STATS = {
@@ -5802,6 +5852,10 @@
             togglePeriodoStats,
             poblarSelectorMeses,
             generarReporte,
+            abrirModalReporteSecciones,
+            cerrarModalReporteSecciones,
+            toggleSeccionReporte,
+            confirmarGenerarReporte,
             _popupStat,
             _onclickStatItem,
             _bindStatItemPopups,
@@ -7258,7 +7312,9 @@
             poblarSelectorAnios, actualizarEstadisticasAnio, poblarSelectorSemanas,
             calcularEstadisticasSemana, actualizarEstadisticasSemana, cambiarMesStats,
             cambiarSemanaStats, cambiarAnioStats, togglePeriodoStats, poblarSelectorMeses,
-            generarReporte, _popupStat, _onclickStatItem, _bindStatItemPopups, toggleStats,
+            generarReporte, abrirModalReporteSecciones, cerrarModalReporteSecciones,
+            toggleSeccionReporte, confirmarGenerarReporte,
+            _popupStat, _onclickStatItem, _bindStatItemPopups, toggleStats,
             setModoEstadisticas
         } = UIEstadisticas;
 
@@ -7627,6 +7683,7 @@
             ModalManager.registrarAccionVolver('modal-exportar', cerrarExportar);
             ModalManager.registrarAccionVolver('modal-editar-perfil', cerrarEditorPerfil);
             ModalManager.registrarAccionVolver('modal-editar-grupo', cerrarEdicionGrupo);
+            ModalManager.registrarAccionVolver('modal-reporte-secciones', cerrarModalReporteSecciones);
         }
 
         function _initListenersFormulario() {
@@ -8029,7 +8086,9 @@
             cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError,
             limpiarError, resetearBoton, restaurarBotonGuardarEdicion, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
-            cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
+            cambiarMesStats, generarReporte, abrirModalReporteSecciones, cerrarModalReporteSecciones,
+            toggleSeccionReporte, confirmarGenerarReporte,
+            toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
             actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
@@ -8262,7 +8321,13 @@ document.addEventListener('DOMContentLoaded', function () {
     $('select-anio-stats')?.addEventListener('change', () => UILogic.cambiarAnioStats());
     $('select-semana-stats')?.addEventListener('change', () => UILogic.cambiarSemanaStats());
     $('btn-toggle-periodo')?.addEventListener('click', () => UILogic.togglePeriodoStats());
-    $('btn-reporte')?.addEventListener('click', () => UILogic.generarReporte());
+    $('btn-reporte')?.addEventListener('click', () => UILogic.abrirModalReporteSecciones());
+    $('reporte-secciones-lista')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-seccion-reporte');
+        if (btn) UILogic.toggleSeccionReporte(btn);
+    });
+    $('btn-confirmar-reporte')?.addEventListener('click', () => UILogic.confirmarGenerarReporte());
+    $('btn-volver-reporte-secciones')?.addEventListener('click', () => UILogic.cerrarModalReporteSecciones());
 
     document.querySelector('#card-historico .card-header-clickable')?.addEventListener('click', () => UILogic.toggleHistorico());
     $('btn-vista-calendario')?.addEventListener('click', () => UILogic.toggleVistaHistorico());

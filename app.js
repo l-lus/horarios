@@ -5368,9 +5368,9 @@
                 const nombreMes = S.escapeHtml(TimeUtils.formatoTituloMes(claveMes).split(' ')[0]);
                 return `
                 <tr>
-                    <td>${nombreMes}</td>
-                    <td>${S.escapeHtml(TimeUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short'))}</td>
-                    <td>${jornadas}</td>
+                    <td class="col-mes">${nombreMes}</td>
+                    <td class="col-horas">${S.escapeHtml(TimeUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short'))}</td>
+                    <td class="col-jornadas">${jornadas}</td>
                     <td class="col-notas">${notas.length ? S.escapeHtml(notas.join(', ')) : '—'}</td>
                 </tr>`;
             }).join('');
@@ -5378,7 +5378,7 @@
             return `
         <section class="seccion">
             <h2>📅 Totales por mes</h2>
-            <table>
+            <table class="tabla-mes">
                 <thead>
                     <tr><th>Mes</th><th>Horas</th><th>Jornadas</th><th>Notas</th></tr>
                 </thead>
@@ -5397,10 +5397,10 @@
                 if (tipoEspecial) {
                     return `
                 <tr class="fila-especial">
-                    <td>${fecha}</td>
-                    <td>${dia}</td>
-                    <td colspan="2">${S.escapeHtml(tipoEspecial.emoji || '')} ${S.escapeHtml(tipoEspecial.label.toUpperCase())}</td>
-                    <td></td>
+                    <td class="col-fecha">${fecha}</td>
+                    <td class="col-dia">${dia}</td>
+                    <td class="col-especial" colspan="2">${S.escapeHtml(tipoEspecial.emoji || '')} ${S.escapeHtml(tipoEspecial.label.toUpperCase())}</td>
+                    <td class="col-tag"></td>
                 </tr>`;
                 }
 
@@ -5414,18 +5414,18 @@
 
                 return `
                 <tr>
-                    <td>${fecha}</td>
-                    <td>${dia}</td>
-                    <td>${entrada} → ${salida}</td>
-                    <td>${total}${tiempoFuera ? `<br><span class="detalle-sub">${tiempoFuera}</span>` : ''}</td>
-                    <td>${indicador}${salidaTemprano}</td>
+                    <td class="col-fecha">${fecha}</td>
+                    <td class="col-dia">${dia}</td>
+                    <td class="col-horario">${entrada} → ${salida}</td>
+                    <td class="col-total">${total}${tiempoFuera ? `<br><span class="detalle-sub">${tiempoFuera}</span>` : ''}</td>
+                    <td class="col-tag">${indicador}${salidaTemprano}</td>
                 </tr>`;
             }).join('');
 
             return `
         <section class="seccion">
             <h2>📋 Detalle diario</h2>
-            <table>
+            <table class="tabla-diario">
                 <thead>
                     <tr><th>Fecha</th><th>Día</th><th>Horario</th><th>Total</th><th></th></tr>
                 </thead>
@@ -5474,12 +5474,13 @@
             header.reporte-header .generado { font-size: .8rem; color: var(--r-muted); margin-top: .15rem; }
             .seccion { background: var(--r-card); border: 1px solid var(--r-border); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
             .seccion h2 { font-size: .95rem; font-weight: 600; margin: 0 0 1rem; }
-            .grid-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; }
-            .stat { border: 1px solid var(--r-border); border-radius: 10px; padding: .75rem .9rem; }
-            .stat .stat-label { font-size: .72rem; color: var(--r-muted); text-transform: uppercase; letter-spacing: .02em; }
-            .stat .stat-valor { font-size: 1.15rem; font-weight: 700; margin-top: .2rem; }
-            .stat.stat-saldo-pos .stat-valor { color: var(--r-green); }
-            .stat.stat-saldo-neg .stat-valor { color: var(--r-red); }
+            .lista-resumen { list-style: none; margin: 0; padding: 0; }
+            .fila-resumen { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-bottom: 1px solid var(--r-border); }
+            .fila-resumen:last-child { border-bottom: none; }
+            .fila-resumen .label { color: var(--r-muted); font-size: .85rem; }
+            .fila-resumen .valor { font-weight: 700; font-size: .95rem; text-align: right; }
+            .fila-resumen .valor.valor-saldo-pos { color: var(--r-green); }
+            .fila-resumen .valor.valor-saldo-neg { color: var(--r-red); }
             table { width: 100%; border-collapse: collapse; font-size: .88rem; }
             th, td { text-align: left; padding: .5rem .5rem; border-bottom: 1px solid var(--r-border); }
             th { font-size: .72rem; text-transform: uppercase; color: var(--r-muted); font-weight: 600; }
@@ -5495,10 +5496,55 @@
             .config-linea { font-size: .85rem; color: var(--r-muted); }
             .config-linea b { color: var(--r-text); font-weight: 600; }
             footer.reporte-footer { text-align: center; font-size: .78rem; color: var(--r-muted); margin-top: 1.5rem; }
+
+            /* --- Responsive: tablas a 2 líneas por fila en pantallas chicas --- */
+            @media (max-width: 600px) {
+                .seccion { padding: 1rem 1.1rem; }
+
+                .tabla-mes thead, .tabla-diario thead, .tabla-semana thead { display: none; }
+
+                .tabla-mes tbody tr, .tabla-diario tbody tr, .tabla-semana tbody tr {
+                    display: grid; column-gap: .5rem; row-gap: .15rem;
+                    padding: .6rem 0; border-bottom: 1px solid var(--r-border);
+                }
+                .tabla-mes tbody tr:last-child, .tabla-diario tbody tr:last-child, .tabla-semana tbody tr:last-child { border-bottom: none; }
+                .tabla-mes td, .tabla-diario td, .tabla-semana td { border-bottom: none; padding: 0; }
+
+                /* Totales por mes: Mes - Horas - Jornadas / Notas */
+                .tabla-mes tbody tr { grid-template-columns: 1fr auto auto; grid-template-areas: "mes horas jornadas" "notas notas notas"; }
+                .tabla-mes .col-mes { grid-area: mes; }
+                .tabla-mes .col-horas { grid-area: horas; text-align: right; }
+                .tabla-mes .col-jornadas { grid-area: jornadas; text-align: right; }
+                .tabla-mes .col-notas { grid-area: notas; }
+
+                /* Totales por semana: Semana - Rango - Total / Notas */
+                .tabla-semana tbody tr { grid-template-columns: auto 1fr auto; grid-template-areas: "semana rango total" "notas notas notas"; }
+                .tabla-semana .col-semana { grid-area: semana; white-space: nowrap; }
+                .tabla-semana .col-rango { grid-area: rango; }
+                .tabla-semana .col-total { grid-area: total; text-align: right; white-space: nowrap; }
+                .tabla-semana .col-notas { grid-area: notas; }
+
+                /* Detalle diario: Fecha - Día - Total (+ indicador) / Horario */
+                .tabla-diario tbody tr:not(.fila-especial) {
+                    grid-template-columns: auto 1fr auto auto;
+                    grid-template-areas: "fecha dia total tag" "horario horario horario horario";
+                }
+                .tabla-diario .col-fecha { grid-area: fecha; white-space: nowrap; }
+                .tabla-diario .col-dia { grid-area: dia; color: var(--r-muted); }
+                .tabla-diario .col-total { grid-area: total; text-align: right; white-space: nowrap; }
+                .tabla-diario .col-tag { grid-area: tag; text-align: right; }
+                .tabla-diario .col-horario { grid-area: horario; color: var(--r-muted); }
+
+                .tabla-diario tbody tr.fila-especial {
+                    grid-template-columns: auto auto 1fr;
+                    grid-template-areas: "fecha dia especial";
+                }
+                .tabla-diario .col-especial { grid-area: especial; }
+            }
+
             @media print {
                 body { background: #fff; padding: 0; }
                 .seccion { border: none; box-shadow: none; padding: 0 0 1rem; }
-                .stat { border-color: #ccc; }
             }
         `;
 
@@ -5506,7 +5552,7 @@
             const bufferOk = stats.bufferPeriodo === null || stats.bufferPeriodo >= 0;
             const tarjetas = [
                 { label: 'Total horas', valor: stats.tiempoTotal },
-                { label: 'Saldo', valor: stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A', clase: `stat-saldo-${bufferOk ? 'pos' : 'neg'}` },
+                { label: 'Saldo', valor: stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A', clase: `valor-saldo-${bufferOk ? 'pos' : 'neg'}` },
                 { label: 'Jornadas', valor: stats.diasTrabajados, esConteo: true },
                 { label: 'Promedio diario', valor: stats.promedioDiario },
                 { label: 'Entrada promedio', valor: stats.entradaPromedio },
@@ -5518,16 +5564,16 @@
                 ...TiposRegistro.obtenerTodosLosTipos().map(t => ({ label: t.labelPlural, valor: stats[t.labelPlural.toLowerCase()] || 0, esConteo: true })),
             ].filter(t => !(t.esConteo && t.valor === 0));
 
-            const tarjetasHtml = tarjetas.map(t => `
-                <div class="stat ${t.clase || ''}">
-                    <div class="stat-label">${S.escapeHtml(t.label)}</div>
-                    <div class="stat-valor">${S.escapeHtml(String(t.valor))}</div>
-                </div>`).join('');
+            const filasHtml = tarjetas.map(t => `
+                <li class="fila-resumen">
+                    <span class="label">${S.escapeHtml(t.label)}</span>
+                    <span class="valor ${t.clase || ''}">${S.escapeHtml(String(t.valor))}</span>
+                </li>`).join('');
 
             return `
         <section class="seccion">
             <h2>📈 Resumen general</h2>
-            <div class="grid-resumen">${tarjetasHtml}</div>
+            <ul class="lista-resumen">${filasHtml}</ul>
         </section>`;
         }
 
@@ -5582,9 +5628,9 @@
                 const rango = `${lunes.split('-').reverse().join('/')} – ${fechaFin.split('-').reverse().join('/')}${esIncompleta ? ' *' : ''}`;
                 return `
                 <tr>
-                    <td>Semana ${index + 1}</td>
-                    <td>${S.escapeHtml(rango)}</td>
-                    <td>${S.escapeHtml(TimeUtils.horasATexto(totalSemanal, 'short'))}</td>
+                    <td class="col-semana">Semana ${index + 1}</td>
+                    <td class="col-rango">${S.escapeHtml(rango)}</td>
+                    <td class="col-total">${S.escapeHtml(TimeUtils.horasATexto(totalSemanal, 'short'))}</td>
                     <td class="col-notas">${notasExtras.length ? S.escapeHtml(notasExtras.join(', ')) : '—'}</td>
                 </tr>`;
             }).join('');
@@ -5596,7 +5642,7 @@
             return `
         <section class="seccion">
             <h2>📅 Totales por semana</h2>
-            <table>
+            <table class="tabla-semana">
                 <thead><tr><th>Semana</th><th>Rango</th><th>Total</th><th>Notas</th></tr></thead>
                 <tbody>${filas}</tbody>
             </table>

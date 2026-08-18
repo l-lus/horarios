@@ -5403,13 +5403,16 @@
                     <td class="col-dia">${dia}</td>
                     <td class="col-especial" colspan="2">${S.escapeHtml(tipoEspecial.emoji || '')} ${S.escapeHtml(tipoEspecial.label.toUpperCase())}</td>
                     <td class="col-tag"></td>
+                    <td class="col-linea2" aria-hidden="true">&nbsp;</td>
                 </tr>`;
                 }
 
                 const entrada = S.escapeHtml(r.entrada || '--:--');
                 const salida = S.escapeHtml(r.salida || '--:--');
                 const total = r.salida ? S.escapeHtml(TimeUtils.horasATexto(r.total, 'short')) : 'Incompleto';
-                const tiempoFuera = r.tiempoFuera ? S.escapeHtml(`${r.tiempoFuera} fuera`) : '';
+                const tiempoFuera = (r.tiempoFuera && r.tiempoFuera !== '00:00')
+                    ? `${S.escapeHtml(TimeUtils.horasATexto(TimeUtils.horaAMinutos(r.tiempoFuera) / 60, 'short'))} fuera`
+                    : '';
                 const salidaTemprano = (r.credito && r.credito !== '00:00') ? ' <span class="tag tag-info">Salida temprano</span>' : '';
                 const cumplido = r.salida ? horasGte(r.total, D.objetivoDeRegistro(r)) : null;
                 const indicador = cumplido === null ? '' : (cumplido ? '<span class="tag tag-ok">✓</span>' : '<span class="tag tag-bad">✗</span>');
@@ -5419,7 +5422,7 @@
                     <td class="col-fecha">${fecha}</td>
                     <td class="col-dia">${dia}</td>
                     <td class="col-horario">${entrada} → ${salida}</td>
-                    <td class="col-total">${total}${tiempoFuera ? `<br><span class="detalle-sub">${tiempoFuera}</span>` : ''}</td>
+                    <td class="col-total">${total}${tiempoFuera ? ` <span class="detalle-sub">· ${tiempoFuera}</span>` : ''}</td>
                     <td class="col-tag">${indicador}${salidaTemprano}</td>
                 </tr>`;
             }).join('');
@@ -5476,9 +5479,8 @@
             header.reporte-header .generado { font-size: .8rem; color: var(--r-muted); margin-top: .15rem; }
             .seccion { background: var(--r-card); border: 1px solid var(--r-border); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
             .seccion h2 { font-size: .95rem; font-weight: 600; margin: 0 0 1rem; }
-            .lista-resumen { list-style: none; margin: 0; padding: 0; }
+            .lista-resumen { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 3rem; }
             .fila-resumen { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-bottom: 1px solid var(--r-border); }
-            .fila-resumen:last-child { border-bottom: none; }
             .fila-resumen .label { color: var(--r-muted); font-size: .85rem; }
             .fila-resumen .valor { font-weight: 700; font-size: .95rem; text-align: right; }
             .fila-resumen .valor.valor-saldo-pos { color: var(--r-green); }
@@ -5488,6 +5490,7 @@
             th { font-size: .72rem; text-transform: uppercase; color: var(--r-muted); font-weight: 600; }
             tbody tr:last-child td { border-bottom: none; }
             .col-notas { color: var(--r-muted); }
+            .col-linea2 { display: none; }
             .detalle-sub { font-size: .76rem; color: var(--r-muted); }
             .tag { display: inline-block; font-size: .72rem; padding: .1rem .45rem; border-radius: 999px; margin-left: .25rem; }
             .tag-ok { background: var(--r-green-bg); color: var(--r-green); }
@@ -5502,6 +5505,7 @@
             /* --- Responsive: tablas a 2 líneas por fila en pantallas chicas --- */
             @media (max-width: 600px) {
                 .seccion { padding: 1rem 1.1rem; }
+                .lista-resumen { grid-template-columns: 1fr; }
 
                 .tabla-mes thead, .tabla-diario thead, .tabla-semana thead { display: none; }
 
@@ -5519,11 +5523,11 @@
                 .tabla-mes .col-notas { grid-area: notas; }
 
                 /* Totales por semana: Semana - Rango - Total / Notas */
-                .tabla-semana tbody tr { grid-template-columns: auto 1fr auto; grid-template-areas: "semana rango total" "notas notas notas"; }
+                .tabla-semana tbody tr { grid-template-columns: auto 1fr; grid-template-areas: "semana rango" "total notas"; }
                 .tabla-semana .col-semana { grid-area: semana; white-space: nowrap; }
-                .tabla-semana .col-rango { grid-area: rango; }
-                .tabla-semana .col-total { grid-area: total; text-align: right; white-space: nowrap; }
-                .tabla-semana .col-notas { grid-area: notas; }
+                .tabla-semana .col-rango { grid-area: rango; text-align: right; }
+                .tabla-semana .col-total { grid-area: total; white-space: nowrap; }
+                .tabla-semana .col-notas { grid-area: notas; text-align: right; }
 
                 /* Detalle diario: Fecha - Día - Total (+ indicador) / Horario */
                 .tabla-diario tbody tr:not(.fila-especial) {
@@ -5538,9 +5542,10 @@
 
                 .tabla-diario tbody tr.fila-especial {
                     grid-template-columns: auto auto 1fr;
-                    grid-template-areas: "fecha dia especial";
+                    grid-template-areas: "fecha dia especial" "linea2 linea2 linea2";
                 }
-                .tabla-diario .col-especial { grid-area: especial; }
+                .tabla-diario .col-especial { grid-area: especial; text-align: right; }
+                .tabla-diario .col-linea2 { display: block; grid-area: linea2; visibility: hidden; }
             }
 
             @media print {

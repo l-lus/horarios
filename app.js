@@ -5504,7 +5504,8 @@
 
             /* --- Responsive: tablas a 2 líneas por fila en pantallas chicas --- */
             @media (max-width: 600px) {
-                .seccion { padding: 1rem 1.1rem; }
+                body { padding: 1.5rem 0.5rem; }
+                .seccion { padding: 1rem 0.6rem; }
                 .lista-resumen { grid-template-columns: 1fr; }
 
                 .tabla-mes thead, .tabla-diario thead, .tabla-semana thead { display: none; }

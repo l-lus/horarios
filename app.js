@@ -102,6 +102,12 @@
             HORA: /^([01]\d|2[0-3]):([0-5]\d)$/
         };
 
+        const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+        function nombreDiaPorIndice(indice) {
+            return NOMBRES_DIAS[indice] || '';
+        }
+
         function validarFecha(f) {
             if (!f || !REGEX_PATTERNS.FECHA.test(f)) return false;
             try {
@@ -182,9 +188,8 @@
 
         function obtenerNombreDia(f) {
             if (!f) return '';
-            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
             const date = parsearFechaLocal(f);
-            return isNaN(date.getTime()) ? '' : dias[date.getDay()];
+            return isNaN(date.getTime()) ? '' : NOMBRES_DIAS[date.getDay()];
         }
 
         function obtenerLunes(fechaInput = new Date()) {
@@ -285,7 +290,7 @@
             validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
             obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
             horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
-            obtenerNombreDia, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
+            obtenerNombreDia, nombreDiaPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
             horasATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular,
             generarRangoFechas, fechaCorta
         };
@@ -1037,6 +1042,10 @@
             return TIPOS_ARRAY;
         }
 
+        function labelSegunCantidad(tipo, cantidad) {
+            return (cantidad === 1 ? tipo.label : tipo.labelPlural).toLowerCase();
+        }
+
         function obtenerCodigosPorTipo(id) {
             const tipo = obtenerTipoPorId(id);
             return tipo ? { entrada: tipo.codigo, salida: tipo.codigo } : null;
@@ -1049,7 +1058,8 @@
             obtenerTipoPorId,
             validarTipoPermitido,
             obtenerTodosLosTipos,
-            obtenerCodigosPorTipo
+            obtenerCodigosPorTipo,
+            labelSegunCantidad
         };
     })();
 
@@ -5316,7 +5326,7 @@
                 const anioNum = parseInt(anio);
                 return {
                     periodoLabel: anio,
-                    nombreArchivo: `reporte_${anio}.txt`,
+                    nombreArchivo: `reporte_${anio}.html`,
                     registrosPeriodo: D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum),
                     stats: calcularEstadisticasAnio(anio),
                     mesSeleccionado: null
@@ -5328,7 +5338,7 @@
             const [año, mesNum] = mes.split('-').map(Number);
             return {
                 periodoLabel: selectMes.options[selectMes.selectedIndex].text,
-                nombreArchivo: `reporte_${mes}.txt`,
+                nombreArchivo: `reporte_${mes}.html`,
                 registrosPeriodo: D.registros().filter(r => {
                     const [aReg, mReg] = r.fecha.split('-').map(Number);
                     return aReg === año && mReg === mesNum;
@@ -5340,61 +5350,88 @@
 
         function _seccionDetalleAnual(registrosPeriodo) {
             const mesesOrdenados = [...new Set(registrosPeriodo.map(r => r.fecha.substring(0, 7)))].sort();
-            let seccion = `
-
-────────────────────────────────────────────────────────────────
-
-📅 TOTALES POR MES
-────────────────────────────────────────────────────────────────
-
-`;
-            mesesOrdenados.forEach(claveMes => {
+            const filas = mesesOrdenados.map(claveMes => {
                 const regsM = registrosPeriodo.filter(r => r.fecha.startsWith(claveMes));
-                const normales = regsM.filter(r => !TiposRegistro.esRegistroEspecial(r.entrada, r.salida) && r.entrada && r.salida);
-                const especiales = regsM.filter(r => TiposRegistro.esRegistroEspecial(r.entrada, r.salida));
+
+                let jornadas = 0;
+                const conteoPorTipo = {};
+                regsM.forEach(r => {
+                    const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                    if (tipo) conteoPorTipo[tipo.id] = (conteoPorTipo[tipo.id] || 0) + 1;
+                    else if (r.entrada && r.salida) jornadas++;
+                });
+
                 const notas = TiposRegistro.obtenerTodosLosTipos()
-                    .map(t => {
-                        const n = especiales.filter(r => TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === t.id).length;
-                        return n ? `${n} ${t.labelPlural.toLowerCase()}` : null;
-                    })
+                    .map(t => conteoPorTipo[t.id] ? `${conteoPorTipo[t.id]} ${TiposRegistro.labelSegunCantidad(t, conteoPorTipo[t.id])}` : null)
                     .filter(Boolean);
-                const nombreMes = TimeUtils.formatoTituloMes(claveMes).split(' ')[0];
-                seccion += `   ${nombreMes.padEnd(12)} ${TimeUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short').padEnd(10)}  (${normales.length} jornadas)`;
-                if (notas.length) seccion += `  [${notas.join(', ')}]`;
-                seccion += '\n';
-            });
-            return seccion;
+
+                const nombreMes = S.escapeHtml(TimeUtils.formatoTituloMes(claveMes).split(' ')[0]);
+                return `
+                <tr>
+                    <td>${nombreMes}</td>
+                    <td>${S.escapeHtml(TimeUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short'))}</td>
+                    <td>${jornadas}</td>
+                    <td class="col-notas">${notas.length ? S.escapeHtml(notas.join(', ')) : '—'}</td>
+                </tr>`;
+            }).join('');
+
+            return `
+        <section class="seccion">
+            <h2>📅 Totales por mes</h2>
+            <table>
+                <thead>
+                    <tr><th>Mes</th><th>Horas</th><th>Jornadas</th><th>Notas</th></tr>
+                </thead>
+                <tbody>${filas || '<tr><td colspan="4" class="vacio">Sin registros</td></tr>'}</tbody>
+            </table>
+        </section>`;
         }
 
         function _seccionDetalleMensual(registrosPeriodo) {
-            let seccion = `
-
-──────────────────────────────────────────────────────────────────
-
-📋 DETALLE DIARIO
-──────────────────────────────────────────────────────────────────
-
-`;
             const ordenados = [...registrosPeriodo].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-            ordenados.forEach(r => {
+            const filas = ordenados.map(r => {
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                const fecha = r.fecha.split('-').reverse().join('/');
-                const dia = TimeUtils.obtenerNombreDia(r.fecha);
-                let linea;
+                const fecha = S.escapeHtml(r.fecha.split('-').reverse().join('/'));
+                const dia = S.escapeHtml(TimeUtils.obtenerNombreDia(r.fecha));
+
                 if (tipoEspecial) {
-                    linea = `${fecha}  ${dia.padEnd(10)} ${tipoEspecial.label.toUpperCase()}`;
-                } else {
-                    const entrada = r.entrada || '--:--';
-                    const salida = r.salida || '--:--';
-                    const total = r.salida ? TimeUtils.horasATexto(r.total, 'short') : 'Incompleto';
-                    const tiempoFuera = r.tiempoFuera ? ` (${r.tiempoFuera} fuera)` : '';
-                    const infoAsueto = (r.credito && r.credito !== '00:00') ? ' [SALIDA TEMPRANO]' : '';
-                    const indicador = r.salida ? (horasGte(r.total, D.objetivoDeRegistro(r)) ? '✓ ' : '✗ ') : '  ';
-                    linea = `${fecha}  ${dia.padEnd(10)} ${entrada} → ${salida}  [${total}]${tiempoFuera}${infoAsueto} ${indicador}`;
+                    return `
+                <tr class="fila-especial">
+                    <td>${fecha}</td>
+                    <td>${dia}</td>
+                    <td colspan="3">${S.escapeHtml(tipoEspecial.emoji || '')} ${S.escapeHtml(tipoEspecial.label.toUpperCase())}</td>
+                    <td></td>
+                </tr>`;
                 }
-                seccion += linea + '\n';
-            });
-            return seccion;
+
+                const entrada = S.escapeHtml(r.entrada || '--:--');
+                const salida = S.escapeHtml(r.salida || '--:--');
+                const total = r.salida ? S.escapeHtml(TimeUtils.horasATexto(r.total, 'short')) : 'Incompleto';
+                const tiempoFuera = r.tiempoFuera ? S.escapeHtml(`${r.tiempoFuera} fuera`) : '';
+                const salidaTemprano = (r.credito && r.credito !== '00:00') ? ' <span class="tag tag-info">Salida temprano</span>' : '';
+                const cumplido = r.salida ? horasGte(r.total, D.objetivoDeRegistro(r)) : null;
+                const indicador = cumplido === null ? '' : (cumplido ? '<span class="tag tag-ok">✓</span>' : '<span class="tag tag-bad">✗</span>');
+
+                return `
+                <tr>
+                    <td>${fecha}</td>
+                    <td>${dia}</td>
+                    <td>${entrada} → ${salida}</td>
+                    <td>${total}${tiempoFuera ? `<br><span class="detalle-sub">${tiempoFuera}</span>` : ''}</td>
+                    <td>${indicador}${salidaTemprano}</td>
+                </tr>`;
+            }).join('');
+
+            return `
+        <section class="seccion">
+            <h2>📋 Detalle diario</h2>
+            <table>
+                <thead>
+                    <tr><th>Fecha</th><th>Día</th><th>Horario</th><th>Total</th><th></th></tr>
+                </thead>
+                <tbody>${filas || '<tr><td colspan="5" class="vacio">Sin registros</td></tr>'}</tbody>
+            </table>
+        </section>`;
         }
 
         function _agruparRegistrosPorSemana(registros) {
@@ -5418,142 +5455,207 @@
             return semanas;
         }
 
+        const REPORTE_ESTILOS = `
+            :root {
+                --r-bg: #f5f6fa; --r-card: #ffffff; --r-border: #dde3ea; --r-text: #1f1f1f;
+                --r-muted: #666768; --r-green: #2f8f6b; --r-green-bg: #eaf7f1;
+                --r-red: #b3493c; --r-red-bg: #fbeceA; --r-blue-bg: #eef1f8;
+            }
+            * { box-sizing: border-box; }
+            body {
+                margin: 0; padding: 2.5rem 1.5rem; background: var(--r-bg); color: var(--r-text);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                font-size: 15px; line-height: 1.5;
+            }
+            .reporte { max-width: 780px; margin: 0 auto; }
+            header.reporte-header { margin-bottom: 2rem; }
+            header.reporte-header h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .35rem; }
+            header.reporte-header .periodo { font-size: 1rem; color: var(--r-muted); }
+            header.reporte-header .generado { font-size: .8rem; color: var(--r-muted); margin-top: .15rem; }
+            .seccion { background: var(--r-card); border: 1px solid var(--r-border); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+            .seccion h2 { font-size: .95rem; font-weight: 600; margin: 0 0 1rem; }
+            .grid-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; }
+            .stat { border: 1px solid var(--r-border); border-radius: 10px; padding: .75rem .9rem; }
+            .stat .stat-label { font-size: .72rem; color: var(--r-muted); text-transform: uppercase; letter-spacing: .02em; }
+            .stat .stat-valor { font-size: 1.15rem; font-weight: 700; margin-top: .2rem; }
+            .stat.stat-saldo-pos .stat-valor { color: var(--r-green); }
+            .stat.stat-saldo-neg .stat-valor { color: var(--r-red); }
+            table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+            th, td { text-align: left; padding: .5rem .5rem; border-bottom: 1px solid var(--r-border); }
+            th { font-size: .72rem; text-transform: uppercase; color: var(--r-muted); font-weight: 600; }
+            tbody tr:last-child td { border-bottom: none; }
+            .col-notas { color: var(--r-muted); }
+            .detalle-sub { font-size: .76rem; color: var(--r-muted); }
+            .fila-especial td { color: var(--r-muted); font-style: italic; }
+            .tag { display: inline-block; font-size: .72rem; padding: .1rem .45rem; border-radius: 999px; margin-left: .25rem; }
+            .tag-ok { background: var(--r-green-bg); color: var(--r-green); }
+            .tag-bad { background: var(--r-red-bg); color: var(--r-red); }
+            .tag-info { background: var(--r-blue-bg); color: #3a5a99; }
+            .vacio { text-align: center; color: var(--r-muted); padding: 1rem 0; }
+            .nota-incompleta { font-size: .78rem; color: var(--r-muted); margin-top: .5rem; }
+            .config-linea { font-size: .85rem; color: var(--r-muted); }
+            .config-linea b { color: var(--r-text); font-weight: 600; }
+            footer.reporte-footer { text-align: center; font-size: .78rem; color: var(--r-muted); margin-top: 1.5rem; }
+            @media print {
+                body { background: #fff; padding: 0; }
+                .seccion { border: none; box-shadow: none; padding: 0 0 1rem; }
+                .stat { border-color: #ccc; }
+            }
+        `;
+
+        function _seccionResumenGeneral(stats) {
+            const bufferOk = stats.bufferPeriodo === null || stats.bufferPeriodo >= 0;
+            const tarjetas = [
+                { label: 'Total horas', valor: stats.tiempoTotal },
+                { label: 'Saldo', valor: stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A', clase: `stat-saldo-${bufferOk ? 'pos' : 'neg'}` },
+                { label: 'Jornadas', valor: stats.diasTrabajados, esConteo: true },
+                { label: 'Promedio diario', valor: stats.promedioDiario },
+                { label: 'Entrada promedio', valor: stats.entradaPromedio },
+                { label: 'Salida promedio', valor: stats.salidaPromedio },
+                { label: 'Entrada regular', valor: stats.regularidadEntrada },
+                { label: 'Jornada regular', valor: stats.regularidadJornada },
+                { label: 'Tiempo fuera', valor: stats.tiempoFueraTotal },
+                { label: 'Salidas temprano', valor: stats.compensaciones, esConteo: true },
+                ...TiposRegistro.obtenerTodosLosTipos().map(t => ({ label: t.labelPlural, valor: stats[t.labelPlural.toLowerCase()] || 0, esConteo: true })),
+            ].filter(t => !(t.esConteo && t.valor === 0));
+
+            const tarjetasHtml = tarjetas.map(t => `
+                <div class="stat ${t.clase || ''}">
+                    <div class="stat-label">${S.escapeHtml(t.label)}</div>
+                    <div class="stat-valor">${S.escapeHtml(String(t.valor))}</div>
+                </div>`).join('');
+
+            return `
+        <section class="seccion">
+            <h2>📈 Resumen general</h2>
+            <div class="grid-resumen">${tarjetasHtml}</div>
+        </section>`;
+        }
+
+        function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
+            if (!mesSeleccionado) return '';
+            const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
+            const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
+            const ultimaDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
+
+            const semanas = _agruparRegistrosPorSemana(registrosPeriodo);
+            const semanasOrdenadas = [...semanas.entries()].sort((a, b) => new Date(a[0]) - new Date(b[0]));
+            if (!semanasOrdenadas.length) return '';
+
+            const semanasIncompletas = [];
+
+            const filas = semanasOrdenadas.map(([lunesOriginal, datos], index) => {
+                let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
+                if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + D.objetivoDeRegistro(r), 0);
+
+                const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
+                const fechaDomingo = new Date(fechaLunes);
+                fechaDomingo.setDate(fechaLunes.getDate() + 6);
+                const domingo = TimeUtils.formatearFechaLocal(fechaDomingo);
+
+                let lunes = lunesOriginal, fechaFin = domingo, esIncompleta = false, continuaEn = '';
+
+                if (domingo > ultimaDiaMes) {
+                    fechaFin = ultimaDiaMes;
+                    esIncompleta = true;
+                    const mesSig = mesActual === 12 ? 1 : mesActual + 1;
+                    const añoSig = mesActual === 12 ? añoActual + 1 : añoActual;
+                    continuaEn = `continúa en ${new Date(añoSig, mesSig - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
+                }
+                if (lunes < primerDiaMes) {
+                    lunes = primerDiaMes;
+                    esIncompleta = true;
+                    const mesAnt = mesActual === 1 ? 12 : mesActual - 1;
+                    const añoAnt = mesActual === 1 ? añoActual - 1 : añoActual;
+                    continuaEn = `viene de ${new Date(añoAnt, mesAnt - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
+                }
+
+                const notasExtras = TiposRegistro.obtenerTodosLosTipos()
+                    .map(t => {
+                        const clave = t.labelPlural.toLowerCase();
+                        const cantidad = datos[clave]?.length || 0;
+                        return cantidad ? `${cantidad} ${TiposRegistro.labelSegunCantidad(t, cantidad)}` : null;
+                    })
+                    .filter(Boolean);
+
+                if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
+
+                const rango = `${lunes.split('-').reverse().join('/')} – ${fechaFin.split('-').reverse().join('/')}${esIncompleta ? ' *' : ''}`;
+                return `
+                <tr>
+                    <td>Semana ${index + 1}</td>
+                    <td>${S.escapeHtml(rango)}</td>
+                    <td>${S.escapeHtml(TimeUtils.horasATexto(totalSemanal, 'short'))}</td>
+                    <td class="col-notas">${notasExtras.length ? S.escapeHtml(notasExtras.join(', ')) : '—'}</td>
+                </tr>`;
+            }).join('');
+
+            const notaIncompletas = semanasIncompletas.length
+                ? `<div class="nota-incompleta">${semanasIncompletas.map(s => S.escapeHtml(s)).join('<br>')}</div>`
+                : '';
+
+            return `
+        <section class="seccion">
+            <h2>📅 Totales por semana</h2>
+            <table>
+                <thead><tr><th>Semana</th><th>Rango</th><th>Total</th><th>Notas</th></tr></thead>
+                <tbody>${filas}</tbody>
+            </table>
+            ${notaIncompletas}
+        </section>`;
+        }
+
+        function _seccionConfiguracion() {
+            const objetivoTexto = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)
+                ? '' : ' (objetivo estampado por registro)';
+            const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+            const tiempoFueraTexto = ignorarTF ? 'No se descuenta del total' : 'Se descuenta del total';
+            return `
+        <section class="seccion">
+            <h2>⚙️ Ajustes aplicados</h2>
+            <p class="config-linea"><b>Horas diarias:</b> ${S.escapeHtml(String(D.horasDiarias()))}${S.escapeHtml(objetivoTexto)}</p>
+            <p class="config-linea"><b>Días hábiles:</b> ${S.escapeHtml(D.diasHabiles().map(d => TimeUtils.nombreDiaPorIndice(d)).join(', '))}</p>
+            <p class="config-linea"><b>Horas semanales:</b> ${S.escapeHtml(String(D.horasSemanales()))}</p>
+            <p class="config-linea"><b>Tiempo fuera:</b> ${S.escapeHtml(tiempoFueraTexto)}</p>
+        </section>`;
+        }
+
         function generarReporte() {
             const esAnual = modoEstadisticas === 'anual';
             const periodo = _resolverPeriodoDatos(esAnual);
             if (!periodo) return;
             const { periodoLabel, registrosPeriodo, stats, nombreArchivo, mesSeleccionado } = periodo;
 
-            const reporte = {
+            const generadoEl = `${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`;
 
-                header: () => `
-================================================================
-REPORTE DE HORAS TRABAJADAS                   
-================================================================
+            const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte de horas — ${S.escapeHtml(periodoLabel)}</title>
+<style>${REPORTE_ESTILOS}</style>
+</head>
+<body>
+    <div class="reporte">
+        <header class="reporte-header">
+            <h1>Reporte de horas trabajadas</h1>
+            <div class="periodo">Período: ${S.escapeHtml(periodoLabel)}</div>
+            <div class="generado">Generado el ${S.escapeHtml(generadoEl)}</div>
+        </header>
 
-📅 Período: ${periodoLabel}
-📊 Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}
+        ${_seccionResumenGeneral(stats)}
+        ${esAnual ? _seccionDetalleAnual(registrosPeriodo) : _seccionDetalleMensual(registrosPeriodo)}
+        ${esAnual ? '' : _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado)}
+        ${_seccionConfiguracion()}
 
-────────────────────────────────────────────────────────────────`,
-
-                resumenGeneral: () => {
-                    const lineasTipos = TiposRegistro.obtenerTodosLosTipos()
-                        .map(t => `   • ${(t.label + ':').padEnd(24)}${stats[t.labelPlural.toLowerCase()] || 0}`)
-                        .join('\n');
-                    return `
-
-📈 RESUMEN GENERAL
-────────────────────────────────────────────────────────────────
-
-   • Jornadas:               ${stats.diasTrabajados}
-${lineasTipos}
-   • Salidas Temprano:       ${stats.compensaciones}
-   • Entrada promedio:       ${stats.entradaPromedio}
-   • Salida promedio:        ${stats.salidaPromedio}
-   • Promedio diario:        ${stats.promedioDiario}
-   
-   • Total horas trabajadas: ${TimeUtils.horasATexto(_sumarHorasEfectivas(registrosPeriodo), 'short')}
-   • Saldo:                  ${stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A'}`;
-                },
-
-                detallePeriodo: () => esAnual
-                    ? _seccionDetalleAnual(registrosPeriodo)
-                    : _seccionDetalleMensual(registrosPeriodo),
-
-                totalesPorSemana: () => {
-                    if (esAnual || !mesSeleccionado) return '';
-                    const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
-                    const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
-                    const ultimaDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
-
-                    const semanas = _agruparRegistrosPorSemana(registrosPeriodo);
-                    const semanasOrdenadas = [...semanas.entries()].sort((a, b) => new Date(a[0]) - new Date(b[0]));
-                    if (!semanasOrdenadas.length) return '';
-
-                    let seccion = `
-
-────────────────────────────────────────────────────────────────
-
-📅 TOTALES POR SEMANA
-────────────────────────────────────────────────────────────────
-
-`;
-                    const semanasIncompletas = [];
-
-                    semanasOrdenadas.forEach(([lunesOriginal, datos], index) => {
-                        let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
-                        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + D.objetivoDeRegistro(r), 0);
-
-                        const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
-                        const fechaDomingo = new Date(fechaLunes);
-                        fechaDomingo.setDate(fechaLunes.getDate() + 6);
-                        const domingo = TimeUtils.formatearFechaLocal(fechaDomingo);
-
-                        let lunes = lunesOriginal, fechaFin = domingo, esIncompleta = false, continuaEn = '';
-
-                        if (domingo > ultimaDiaMes) {
-                            fechaFin = ultimaDiaMes;
-                            esIncompleta = true;
-                            const mesSig = mesActual === 12 ? 1 : mesActual + 1;
-                            const añoSig = mesActual === 12 ? añoActual + 1 : añoActual;
-                            continuaEn = `continúa en ${new Date(añoSig, mesSig - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
-                        }
-                        if (lunes < primerDiaMes) {
-                            lunes = primerDiaMes;
-                            esIncompleta = true;
-                            const mesAnt = mesActual === 1 ? 12 : mesActual - 1;
-                            const añoAnt = mesActual === 1 ? añoActual - 1 : añoActual;
-                            continuaEn = `viene de ${new Date(añoAnt, mesAnt - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
-                        }
-
-                        seccion += `   Semana ${index + 1} (${lunes.split('-').reverse().join('/')} - ${fechaFin.split('-').reverse().join('/')})${esIncompleta ? '*' : ''}:\n`;
-                        seccion += `      └─ ${TimeUtils.horasATexto(totalSemanal, 'short')}`;
-
-                        const notasExtras = TiposRegistro.obtenerTodosLosTipos()
-                            .map(t => {
-                                const clave = t.labelPlural.toLowerCase();
-                                return datos[clave]?.length ? `${datos[clave].length} ${clave}` : null;
-                            })
-                            .filter(Boolean);
-                        if (notasExtras.length) seccion += ` [${notasExtras.join(', ')}]`;
-                        seccion += '\n\n';
-
-                        if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
-                    });
-
-                    if (semanasIncompletas.length) seccion += semanasIncompletas.join('\n') + '\n';
-                    return seccion;
-                },
-
-                configuracion: () => `
-
-────────────────────────────────────────────────────────────────
-
-⚙️ Ajustes
-────────────────────────────────────────────────────────────────
-
-   • Horas diarias:          ${D.horasDiarias()}${StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true) ? '' : ' (objetivo estampado por registro)'}
-   • Días hábiles/semana:    ${D.diasHabiles().map(d => ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][d]).join(', ')}
-   • Horas semanales:        ${D.horasSemanales()}`,
-
-                footer: () => `
-
-────────────────────────────────────────────────────────────────
-
-Generado por Sistema Lushibosca
-`
-            };
-
-            const contenido =
-                reporte.header() +
-                reporte.resumenGeneral() +
-                reporte.detallePeriodo() +
-                reporte.totalesPorSemana() +
-                reporte.configuracion() +
-                reporte.footer();
+        <footer class="reporte-footer">Generado por Sistema Horarios</footer>
+    </div>
+</body>
+</html>`;
 
             try {
-                const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+                const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
                 document.body.appendChild(a);
@@ -5600,8 +5702,7 @@ Generado por Sistema Lushibosca
                 }
             }
             if (statId === 'stat-dias-trabajados' && info) {
-                const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                const diasTexto = [...D.diasHabiles()].sort((a, b) => a - b).map(d => nombresDias[d]).join(', ');
+                const diasTexto = [...D.diasHabiles()].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', ');
                 info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Días hábiles: ${diasTexto}.</strong>` };
             }
             if (statId === 'stat-tiempo-fuera-total' && info) {

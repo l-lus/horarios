@@ -1067,19 +1067,36 @@
         }
 
         function _elegirDelMenu(key) {
-            ModalManager.cerrar('modal-tutorial-tipo');
             if (key === 'esencial') iniciar();
             else iniciarCompleto(key);
         }
+
+        function _actualizarBotonCierreMenu(desdeConfig) {
+            const btn = $('btn-cancelar-tutorial-tipo');
+            if (!btn) return;
+            btn.lastChild.textContent = desdeConfig ? ' Volver' : ' Cerrar';
+            btn.querySelector('use').setAttribute('href', desdeConfig ? '#icon-back' : '#icon-cancelar');
+        }
+
         ModalManager.registrarAccionVolver('modal-tutorial-tipo', () => {
             _activo = false;
-            ModalManager.cerrar('modal-tutorial-tipo');
+            if (ModalManager.getPadre('modal-tutorial-tipo') === 'modal-config') {
+                ModalManager.alternar('modal-tutorial-tipo', 'modal-config');
+            } else {
+                ModalManager.cerrar('modal-tutorial-tipo');
+            }
         });
 
         function elegirYComenzar() {
             _activo = true;
             _renderMenu();
-            ModalManager.abrir('modal-tutorial-tipo');
+            const desdeConfig = $('modal-config')?.classList.contains('show');
+            _actualizarBotonCierreMenu(desdeConfig);
+            if (desdeConfig) {
+                ModalManager.alternar('modal-config', 'modal-tutorial-tipo');
+            } else {
+                ModalManager.abrir('modal-tutorial-tipo');
+            }
         }
 
         return {
@@ -8329,8 +8346,18 @@
         }
 
         function iniciarTutorial() {
-            cerrarConfig();
-            setTimeout(() => TutorialManager.elegirYComenzar(), 350);
+            if (document.body.classList.contains('config-onboarding')) {
+                setTimeout(() => document.body.classList.remove('config-onboarding'), 350);
+                StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
+                if (_resolverOnboarding) {
+                    _resolverOnboarding();
+                    _resolverOnboarding = null;
+                }
+                ModalManager.cerrar('modal-config');
+                setTimeout(() => TutorialManager.elegirYComenzar(), 350);
+            } else {
+                TutorialManager.elegirYComenzar();
+            }
         }
 
         function elegirTutorialDelMenu(key) {

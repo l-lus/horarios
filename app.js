@@ -46,12 +46,6 @@
     const horasGte = (valor, objetivo) => (valor - objetivo) > -EPS_HORAS;
     const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;
 
-    function _applyDataColors(root) {
-        root.querySelectorAll('[data-color]').forEach(el => {
-            el.style.color = el.dataset.color;
-        });
-    }
-
     // ====================================================================
     // PWA INSTALLER MODULE
     // ====================================================================
@@ -108,6 +102,12 @@
             HORA: /^([01]\d|2[0-3]):([0-5]\d)$/
         };
 
+        const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+        function nombreDiaPorIndice(indice) {
+            return NOMBRES_DIAS[indice] || '';
+        }
+
         function validarFecha(f) {
             if (!f || !REGEX_PATTERNS.FECHA.test(f)) return false;
             try {
@@ -125,6 +125,22 @@
 
         function validarHora(h) {
             return !!(h && REGEX_PATTERNS.HORA.test(h));
+        }
+
+        /**
+         * Si el valor es un número suelto entre 1 y 60 (sin ":"), lo interpreta
+         * como minutos y lo normaliza a formato hh:mm (ej: "20" -> "00:20", "60" -> "01:00").
+         * Si no aplica (ya es hh:mm, vacío, fuera de rango, etc.) devuelve el valor sin tocar.
+         * @param {string} valor
+         * @returns {string}
+         */
+        function normalizarMinutosSueltos(valor) {
+            if (!valor) return valor;
+            if (!/^\d{1,2}$/.test(valor)) return valor;
+            const n = parseInt(valor, 10);
+            if (n < 1 || n > 60) return valor;
+            if (n === 60) return '01:00';
+            return `00:${String(n).padStart(2, '0')}`;
         }
 
         function parsearFechaLocal(fechaStr) {
@@ -172,9 +188,8 @@
 
         function obtenerNombreDia(f) {
             if (!f) return '';
-            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
             const date = parsearFechaLocal(f);
-            return isNaN(date.getTime()) ? '' : dias[date.getDay()];
+            return isNaN(date.getTime()) ? '' : NOMBRES_DIAS[date.getDay()];
         }
 
         function obtenerLunes(fechaInput = new Date()) {
@@ -272,10 +287,10 @@
         }
 
         return {
-            validarFecha, validarHora, parsearFechaLocal, formatearFechaLocal,
+            validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
             obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
             horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
-            obtenerNombreDia, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
+            obtenerNombreDia, nombreDiaPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
             horasATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular,
             generarRangoFechas, fechaCorta
         };
@@ -1027,6 +1042,10 @@
             return TIPOS_ARRAY;
         }
 
+        function labelSegunCantidad(tipo, cantidad) {
+            return (cantidad === 1 ? tipo.label : tipo.labelPlural).toLowerCase();
+        }
+
         function obtenerCodigosPorTipo(id) {
             const tipo = obtenerTipoPorId(id);
             return tipo ? { entrada: tipo.codigo, salida: tipo.codigo } : null;
@@ -1039,7 +1058,8 @@
             obtenerTipoPorId,
             validarTipoPermitido,
             obtenerTodosLosTipos,
-            obtenerCodigosPorTipo
+            obtenerCodigosPorTipo,
+            labelSegunCantidad
         };
     })();
 
@@ -1058,6 +1078,8 @@
             cerrarFiltros: () => { },
             cerrarImportar: () => { },
             descargarJSON: () => { },
+            flashCampo: () => { },
+            flashCampoTipo: () => { },
             iniciarTimerAutoCierreBotones: () => { },
             limpiarError: () => { },
             mostrarError: () => { },
@@ -1100,8 +1122,8 @@
             $('edit-grupo-desde').value = grupoEnEdicion.fechaDesde;
             $('edit-grupo-hasta').value = grupoEnEdicion.fechaHasta;
             notify.actualizarHintGrupo();
-            ModalManager.abrir('modal-editar-grupo');
             notify.setBloqueoEdicionGrupo(true);
+            ModalManager.abrir('modal-editar-grupo');
         }
 
         function _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta) {
@@ -1164,7 +1186,7 @@
         async function eliminarGrupoActual() {
             if (!grupoEnEdicion) return;
             if (grupoEnEdicion.registros.length > 60) {
-                notify.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: 60 registros por operación.`, 'error');
+                notify.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: 60 registros por operación.`, 'error', 4000);
                 return;
             }
             const idsAEliminar = grupoEnEdicion.registros.map(r => r.id);
@@ -1181,13 +1203,13 @@
             if (registroExistente) { notify.mostrarToast('Ya existe un registro para hoy', 'warning'); throw new Error('Registro ya existe'); }
 
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
-            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); throw new Error('Tipo inválido'); }
+            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Tipo inválido'); }
 
             const entrada = tipoConfig.codigo;
             const salida = tipoConfig.codigo;
             const tipoTexto = `${tipoConfig.emoji} ${tipoConfig.label}`;
 
-            if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast('Límite de registros alcanzado', 'error'); throw new Error('Límite alcanzado'); }
+            if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast('Límite de registros alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite alcanzado'); }
 
             const nuevoId = S.generarIDSeguro();
             const t = calcularHoras(entrada, salida, null);
@@ -1200,7 +1222,10 @@
             const esHoy = fecha === TimeUtils.obtenerFechaHoy();
             HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${TimeUtils.fechaCorta(fecha)})`);
             const saved = await _guardarConCicloSiHoy(nuevoId, esHoy);
-            if (saved) { notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success'); }
+            if (saved) {
+                notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success');
+                notify.flashCampoTipo('success', 'btn-agregar');
+            }
             else { throw new Error('Error al guardar'); }
         }
 
@@ -1318,6 +1343,7 @@
                 ]);
             }
             notify.mostrarToast(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
+            notify.flashCampoTipo('success', 'btn-agregar');
             notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('salida').value = '';
@@ -1325,7 +1351,7 @@
 
         async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
             if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) {
-                notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); return;
+                notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
             }
             const nuevoId = S.generarIDSeguro();
             const t = calcularHoras(e || null, s || null, null);
@@ -1347,13 +1373,14 @@
                 ]);
             }
             notify.mostrarToast(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
+            notify.flashCampoTipo('success', 'btn-agregar');
             notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('entrada').value = ''; $('salida').value = '';
         }
 
         async function agregarRegistro() {
-            if (!validarFormulario()) { notify.mostrarToast('Verificá los campos', 'error'); return; }
+            if (!validarFormulario()) { notify.mostrarToast('Verificá los campos', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
 
             const btn = $('btn-agregar');
             btn.disabled = true;
@@ -1364,7 +1391,7 @@
 
             if (f > TimeUtils.obtenerFechaHoy() && !TiposRegistro.esRegistroEspecial(e, s)) {
                 notify.resetearBoton(btn); notify.mostrarError('fecha', null);
-                notify.mostrarToast('Fecha futura no permitida en registro regular', 'warning'); return;
+                notify.mostrarToast('Fecha futura no permitida en registro regular', 'warning'); notify.flashCampoTipo('warning', 'btn-agregar'); return;
             }
 
             if (!e) {
@@ -1385,8 +1412,8 @@
             }
 
             if (!e && s) {
-                if (registroExistente?.salida) { notify.resetearBoton(btn); notify.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); return; }
-                if (!registroExistente?.entrada) { notify.resetearBoton(btn); notify.mostrarToast('Debés fichar una entrada primero', 'error'); return; }
+                if (registroExistente?.salida) { notify.resetearBoton(btn); notify.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
+                if (!registroExistente?.entrada) { notify.resetearBoton(btn); notify.mostrarToast('Debés fichar una entrada primero', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
             }
 
             if (registroExistente?.entrada && !registroExistente.salida && !e && s) {
@@ -1396,7 +1423,7 @@
             if (registroExistente) {
                 notify.resetearBoton(btn);
                 if (usaHoraActual) $('entrada').value = '';
-                notify.mostrarToast('Ya existe un registro para esta fecha', 'error'); return;
+                notify.mostrarToast('Ya existe un registro para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
             }
 
             await _crearNuevoRegistro(f, e, s, usaHoraActual, btn);
@@ -1430,7 +1457,6 @@
                     notify.mostrarToast('Registro eliminado', 'success');
                     notify.cerrarEdicion();
                     notify.actualizarEstadoBotonTimerMain();
-                    notify.actualizarBotonLote();
                 }
             }
         }
@@ -1455,9 +1481,6 @@
             }
 
             const btnCredito = document.getElementById('btn-toggle-credito');
-            btnCredito.style.background = '';
-            btnCredito.style.color = '';
-            btnCredito.style.border = '';
 
             if (r.credito && r.credito !== '00:00') {
                 btnCredito.dataset.activo = "true";
@@ -1467,8 +1490,8 @@
                 btnCredito.classList.remove('btn-activo');
             }
 
-            ModalManager.abrir('modal-editar');
             notify.setBloqueoEdicion(true);
+            ModalManager.abrir('modal-editar');
 
             requestAnimationFrame(() => {
                 notify.verificarBloqueoCredito();
@@ -1557,6 +1580,7 @@
             const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
             const s = S.sanitizeString($('edit-salida').value.trim(), 5);
             let tf = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5) || null;
+            tf = tf ? TimeUtils.normalizarMinutosSueltos(tf) : tf;
             let notas = S.sanitizeString($('edit-notas').value.trim(), S.SECURITY_LIMITS.MAX_NOTAS_LENGTH);
             if (notas) notas = S.sanitizeNotas(notas, true) || null;
             if (notas === '') notas = null;
@@ -1691,7 +1715,7 @@
             const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
             if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) { notify.mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
             if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
-                notify.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
+                notify.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
             }
             if (data.rangoExportado !== undefined) {
                 const rangoSafe = S.sanitizeString(String(data.rangoExportado), 100);
@@ -1905,16 +1929,16 @@
 
         async function registrarVacacionesDirecto(desde, hasta, tipo) {
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
-            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); throw new Error('Tipo inválido'); }
+            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Tipo inválido'); }
             const entrada = tipoConfig.codigo;
             const salida = tipoConfig.codigo;
 
             const fechasARegistrar = TimeUtils.generarRangoFechas(desde, hasta);
 
-            if (fechasARegistrar.length > 60) { notify.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: 60 días por operación.`, 'error'); throw new Error('Límite de días excedido'); }
+            if (fechasARegistrar.length > 60) { notify.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: 60 días por operación.`, 'error', 4000); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite de días excedido'); }
 
             const nuevosRegistros = fechasARegistrar.filter(f => !registros.some(r => r.fecha === f));
-            if (nuevosRegistros.length === 0) { notify.mostrarToast('Todas las fechas ya están registradas', 'warning'); throw new Error('Sin fechas nuevas'); }
+            if (nuevosRegistros.length === 0) { notify.mostrarToast('Todas las fechas ya están registradas', 'warning'); notify.flashCampoTipo('warning', 'btn-agregar'); throw new Error('Sin fechas nuevas'); }
 
             const idsNuevosParaAnimar = [];
             nuevosRegistros.forEach(fecha => {
@@ -1933,7 +1957,7 @@
             const saved = await _guardarConCicloSiHoy(idsNuevosParaAnimar, incluyeHoy);
             if (saved) {
                 notify.mostrarToast(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
-                notify.actualizarBotonLote();
+                notify.flashCampoTipo('success', 'btn-agregar');
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -1948,8 +1972,6 @@
             });
             guardarYActualizar(null, true);
             notify.mostrarToast(mensaje, 'info', undefined, resultado.descripcion);
-            const modoLote = document.getElementById('modo-lote');
-            if (modoLote && getComputedStyle(modoLote).display !== 'none') notify.actualizarBotonLote();
             notify.iniciarTimerAutoCierreBotones();
         }
 
@@ -1958,15 +1980,15 @@
                 if (r.fecha < desde || r.fecha > hasta) return false;
                 return !TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
             });
-            if (registrosAEliminar.length > 60) { notify.mostrarToast(`Máximo 60 registros. Encontrados: ${registrosAEliminar.length}`, 'error'); throw new Error('Límite excedido'); }
-            if (registrosAEliminar.length === 0) { notify.mostrarToast('No hay registros de jornadas en ese período', 'info'); throw new Error('Sin registros'); }
+            if (registrosAEliminar.length > 60) { notify.mostrarToast(`Máximo 60 registros por operación. Encontrados: ${registrosAEliminar.length}`, 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite excedido'); }
+            if (registrosAEliminar.length === 0) { notify.mostrarToast('No hay registros de jornadas en ese período', 'info'); notify.flashCampoTipo('info', 'btn-agregar'); throw new Error('Sin registros'); }
 
             registros = registros.filter(r => !registrosAEliminar.includes(r));
             HistoryManager.saveState(registros, `eliminar período (${registrosAEliminar.length} registro${registrosAEliminar.length !== 1 ? 's' : ''})`);
             const saved = await guardarYActualizar();
             if (saved) {
                 notify.mostrarToast(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
-                notify.actualizarBotonLote();
+                notify.flashCampoTipo('success', 'btn-agregar');
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -2191,7 +2213,7 @@
             toast.textContent = actual.mensaje;
             toast.className = `toast ${actual.tipo}`;
             let duracionFinal = actual.duracionBase || 3000;
-            if (_toastQueue.length >= 2) {
+            if (_toastQueue.length >= 1) {
                 duracionFinal = Math.floor(duracionFinal / 2);
             }
 
@@ -2207,9 +2229,7 @@
 
         function resetearBoton(btn) {
             btn.disabled = false;
-            btn.style.background = '';
-            btn.style.color = '';
-            btn.style.borderColor = '';
+            btn.classList.remove('btn-color-muted', 'btn-color-red');
             btn.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> <span id="btn-registrar-texto">Fichar</span>';
         }
 
@@ -2350,22 +2370,33 @@
             return cerrar;
         }
 
-        function _flashCampo(...ids) {
+        function _flashCampoConClase(clase, ids, colorVar = null) {
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 clearTimeout(el._flashTimeout);
-                el.classList.remove('campo-flash');
+                el.classList.remove(clase);
+                if (colorVar) el.style.setProperty('--flash-color', colorVar);
                 void el.offsetWidth;
-                el.classList.add('campo-flash');
+                el.classList.add(clase);
 
                 const cs = getComputedStyle(el);
                 const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
                 const iteraciones = parseFloat(cs.animationIterationCount) || 1;
                 const totalMs = duracionMs * iteraciones;
 
-                el._flashTimeout = setTimeout(() => el.classList.remove('campo-flash'), totalMs);
+                el._flashTimeout = setTimeout(() => el.classList.remove(clase), totalMs);
             });
+        }
+
+        function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
+
+        const _COLOR_TOAST_POR_TIPO = {
+            success: 'var(--c-green)', error: 'var(--c-red)', warning: 'var(--c-red)', info: 'var(--c-blue)'
+        };
+
+        function _flashCampoTipo(tipo, ...ids) {
+            _flashCampoConClase('campo-flash-color', ids, _COLOR_TOAST_POR_TIPO[tipo] || 'var(--text-main)');
         }
 
         const _slideAnimEstado = new WeakMap();
@@ -2467,7 +2498,7 @@
             _posicionarPopup,
             _registrarCierrePopup,
             _flashCampo,
-            _limpiarClonVisual,
+            _flashCampoTipo,
             _finalizarSlidePendiente,
             _animarSlideElemento,
             toggleSeccionGen,
@@ -2492,7 +2523,6 @@
                 const container = Object.assign(document.createElement('div'), {
                     className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
                 });
-                if (p.esActual) container.style.cursor = 'default';
 
                 const countText = `${p.totalRegistros} registro${p.totalRegistros !== 1 ? 's' : ''}`;
                 const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
@@ -2501,7 +2531,6 @@
                     className: 'btn-perfil-badge',
                     textContent: p.esActual ? `${countText} · Activo` : countText
                 });
-                if (p.esActual) badge.style.color = 'var(--c-green)';
                 infoSection.appendChild(badge);
 
                 const editBtn = Object.assign(document.createElement('button'), {
@@ -2574,7 +2603,7 @@
             renderizarListaPerfiles();
             requestAnimationFrame(() => {
                 const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
-                if (ultimo) { ultimo.style.animation = 'zoomIn 0.3s ease-out'; ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+                if (ultimo) { ultimo.classList.add('zoom-in-anim'); ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
             });
         }
 
@@ -2609,6 +2638,8 @@
                 const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
                 if (inputNuevo) inputNuevo.value = '';
                 renderizarListaPerfiles();
+                const btnEliminar = document.getElementById('btn-eliminar-perfil-editor');
+                if (btnEliminar) btnEliminar.disabled = true;
             });
         }
 
@@ -2804,7 +2835,7 @@
             const btnFiltro = document.getElementById('btn-filtro');
             if (lista) lista.classList.add('hidden');
             if (cal) cal.classList.remove('hidden');
-            if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
+            if (btnFiltro) btnFiltro.disabled = false;
             _renderizarCalendario();
         }
 
@@ -2870,7 +2901,8 @@
                 const clase = claseDelDia(fecha);
                 const esHoy = anio === hoy.getFullYear() && mes === hoy.getMonth() && dia === hoy.getDate();
                 const reg = regsPorFecha[fecha];
-                const esNuevo = idResaltar && reg && reg.id === idResaltar;
+                const idsNuevos = idResaltar ? (Array.isArray(idResaltar) ? idResaltar : [idResaltar]) : [];
+                const esNuevo = reg && idsNuevos.includes(reg.id);
 
                 const cell = document.createElement('div');
                 let clases = `calendario-dia ${clase}`;
@@ -2920,12 +2952,8 @@
                     entrante.classList.remove('fade-out');
                 }
 
-                if (_vistaHistoricoCalendario) {
-                    if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
-                    _renderizarCalendario();
-                } else {
-                    if (btnFiltro) { btnFiltro.disabled = false; btnFiltro.style.opacity = ''; }
-                }
+                if (btnFiltro) btnFiltro.disabled = false;
+                if (_vistaHistoricoCalendario) _renderizarCalendario();
             });
 
             const selector = document.getElementById('calendario-selector-meses');
@@ -2960,32 +2988,42 @@
             if (reg.tiempoFuera && reg.tiempoFuera !== '00:00') {
                 tfStr = `${TimeUtils.horasATexto(TimeUtils.horaAMinutos(reg.tiempoFuera) / 60, 'short')} fuera`;
             }
-            let totalConDiff = totalStr, diffColor = '', cubiertoLineaHtml = '';
+            let totalConDiff = totalStr, diffClase = '', cubiertoLineaHtml = '';
             const objetivoReg = D.objetivoDeRegistro(reg);
             if (objetivoReg > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabiles())) {
                 const diffText = formatoDiferencia(totalHoras, objetivoReg);
                 if (horasGte(totalHoras, objetivoReg)) {
-                    diffColor = 'var(--c-green)';
+                    diffClase = 'cal-popup-info--green';
                     if (diffText) totalConDiff += ` (${diffText})`;
                 } else if (UILogic._cubiertoPorSaldo(reg.fecha)) {
-                    diffColor = 'var(--c-gold)';
+                    diffClase = 'cal-popup-info--gold';
                     if (diffText) totalConDiff += ` (${diffText})`;
                     cubiertoLineaHtml = `<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>`;
                 } else {
-                    diffColor = 'var(--c-red)';
+                    diffClase = 'cal-popup-info--red';
                     if (diffText) totalConDiff += ` (${diffText})`;
                 }
             }
-            return `<div class="cal-popup-info${diffColor ? ' cal-popup-info--dynamic' : ''}"${diffColor ? ` data-color="${diffColor}"` : ''}>${totalConDiff}</div>
+            return `<div class="cal-popup-info${diffClase ? ' ' + diffClase : ''}">${totalConDiff}</div>
                 ${cubiertoLineaHtml}
                 <div class="cal-popup-3l">${S.escapeHtml(reg.entrada)} – ${S.escapeHtml(reg.salida)}</div>
                 ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
         }
 
+        function _cerrarPopupCalendario() {
+            if (!_popupCalendarioEl) return;
+            _popupCalendarioEl.remove();
+            _popupCalendarioEl = null;
+        }
+
+        function _formatearFechaLabelPopup(fecha) {
+            return S.escapeHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+        }
+
         function _popupCalendario(event, registroId) {
             event.stopPropagation();
 
-            if (_popupCalendarioEl) { _popupCalendarioEl.remove(); _popupCalendarioEl = null; }
+            _cerrarPopupCalendario();
 
             const reg = D.registros().find(r => r.id === registroId);
             if (!reg) return;
@@ -2995,7 +3033,7 @@
             const grupos = UILogic.agruparRegistrosConsecutivos(registrosDelMes);
             const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
 
-            const fechaLabel = S.escapeHtml(new Date(reg.fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+            const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
             const infoHtml = _buildInfoHtmlRegistro(reg);
             const btnGrupoHtml = grupoDelRegistro ? `
                 <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
@@ -3018,7 +3056,6 @@
                 </button>
                 ${btnGrupoHtml}`;
 
-            _applyDataColors(popup);
             popup.style.visibility = 'hidden';
             document.body.appendChild(popup);
             _popupCalendarioEl = popup;
@@ -3036,7 +3073,7 @@
             popup.addEventListener('mouseleave', () => {
                 if (_popupCalendarioEsHover) {
                     _popupCalendarioHoverTimer = setTimeout(() => {
-                        if (_popupCalendarioEl) { _popupCalendarioEl.remove(); _popupCalendarioEl = null; }
+                        _cerrarPopupCalendario();
                         _popupCalendarioEsHover = false;
                     }, 500);
                 }
@@ -3054,15 +3091,12 @@
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioEsHover = false;
 
-            if (_popupCalendarioEl) {
-                const mismaFecha = _popupCalendarioEl.dataset.fecha === fecha;
-                _popupCalendarioEl.remove();
-                _popupCalendarioEl = null;
-                if (mismaFecha) return;
-            }
+            const mismaFecha = _popupCalendarioEl?.dataset.fecha === fecha;
+            _cerrarPopupCalendario();
+            if (mismaFecha) return;
 
             const esFechaFutura = fecha > TimeUtils.obtenerFechaHoy();
-            const fechaLabel = S.escapeHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+            const fechaLabel = _formatearFechaLabelPopup(fecha);
 
             const popup = document.createElement('div');
             popup.className = 'cal-popup';
@@ -3111,16 +3145,12 @@
             const hoverActivo = esDesktop && stored === 'true';
 
             if (hoverActivo) {
-                if (_popupCalendarioEl) {
-                    _popupCalendarioEl.remove();
-                    _popupCalendarioEl = null;
-                }
+                _cerrarPopupCalendario();
                 clearTimeout(_popupCalendarioHoverTimer);
                 DataManagement.editarRegistro(registroId);
             } else {
-                if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) {
-                    _popupCalendarioEl.remove();
-                    _popupCalendarioEl = null;
+                if (_popupCalendarioEl?.dataset.registroId === registroId) {
+                    _cerrarPopupCalendario();
                     return;
                 }
                 _popupCalendario(event, registroId);
@@ -3133,10 +3163,7 @@
             if (related && _popupCalendarioEl && _popupCalendarioEl.contains(related)) return;
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioHoverTimer = setTimeout(() => {
-                if (_popupCalendarioEl) {
-                    _popupCalendarioEl.remove();
-                    _popupCalendarioEl = null;
-                }
+                _cerrarPopupCalendario();
                 _popupCalendarioEsHover = false;
             }, 500);
         }
@@ -3146,10 +3173,7 @@
         }
 
         function navegarCalendario(delta) {
-            if (_popupCalendarioEl) {
-                _popupCalendarioEl.remove();
-                _popupCalendarioEl = null;
-            }
+            _cerrarPopupCalendario();
 
             const hoy = new Date();
             const base = _calendarioMes || { anio: hoy.getFullYear(), mes: hoy.getMonth() };
@@ -3860,7 +3884,7 @@
             const c = configs[estado];
             _setBtnActivo(btn.id, c.activo);
             if (label) label.textContent = c.texto;
-            if (hint) { hint.textContent = c.hint; hint.style.color = c.color; }
+            if (hint) hint.textContent = c.hint;
 
             if (rangoEl) {
                 const activo = estado === 1 || estado === 2;
@@ -4199,7 +4223,8 @@
             const item = document.createElement('div');
 
             let className = r.fecha === hoy ? 'registro-item hoy' : 'registro-item';
-            if (idResaltar && r.id === idResaltar) className += ' nuevo-registro-animacion';
+            const idsResaltar = idResaltar ? (Array.isArray(idResaltar) ? idResaltar : [idResaltar]) : [];
+            if (idsResaltar.includes(r.id)) className += ' nuevo-registro-animacion';
             item.className = className;
             item.dataset.registroId = r.id;
             item.dataset.accion = 'editar-registro';
@@ -4311,7 +4336,7 @@
 
             if (debeEstarExpandido) {
                 detalleMesActual.classList.add('expanded');
-                chevron.style.transform = 'rotate(180deg)';
+                chevron.classList.add('rotated');
             }
 
             let semanaAnterior = null;
@@ -4372,7 +4397,7 @@
             detalle.appendChild(innerAnio);
             let expandido = false;
             try { expandido = StorageHelper.getItem(STORAGE_KEYS.ANIO_EXPANDIDO(anio)) === 'true'; } catch (e) { }
-            if (expandido) { detalle.classList.add('expanded'); chevron.style.transform = 'rotate(180deg)'; }
+            if (expandido) { detalle.classList.add('expanded'); chevron.classList.add('rotated'); }
 
             mesesDelAnio.forEach((registrosDelMes, claveMes) =>
                 innerAnio.appendChild(crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy))
@@ -4490,6 +4515,7 @@
             ModalManager.cerrar('modal-editar', () => {
                 D.setEditandoId(null);
                 document.dispatchEvent(new Event('scroll'));
+                setBloqueoEdicion(true);
             });
         }
 
@@ -4499,8 +4525,7 @@
                 const icon = btnLock.querySelector('use');
                 icon.setAttribute('href', bloqueado ? '#icon-lock' : '#icon-lock-open');
                 btnLock.title = bloqueado ? "Desbloquear edición" : "Bloquear edición";
-                btnLock.style.color = 'var(--text-main)';
-                btnLock.style.background = bloqueado ? 'var(--c-red)' : 'var(--c-green)';
+                btnLock.classList.toggle('bloqueado', bloqueado);
             }
 
             inputIds.forEach(id => {
@@ -4555,7 +4580,8 @@
             if (!hint) return;
             const e = document.getElementById('edit-entrada')?.value.trim();
             const s = document.getElementById('edit-salida')?.value.trim();
-            const tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
+            let tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
+            if (tf) tf = TimeUtils.normalizarMinutosSueltos(tf);
             if (!e && !s) { hint.textContent = ''; return; }
             const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(e, s);
             if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }
@@ -4595,7 +4621,7 @@
                 const chevronAnio = headerAnio.querySelector('.chevron-mes');
                 const anioId = headerAnio.dataset.anioId;
                 const abierto = detalleAnio.classList.toggle('expanded');
-                if (chevronAnio) chevronAnio.style.transform = abierto ? 'rotate(180deg)' : 'rotate(0deg)';
+                if (chevronAnio) chevronAnio.classList.toggle('rotated', abierto);
                 try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(anioId), String(abierto)); } catch (e) { }
             });
         }
@@ -4626,7 +4652,7 @@
 
                 if (detalle.classList.contains('expanded')) {
                     detalle.classList.remove('expanded');
-                    chevronIcon.style.transform = 'rotate(0deg)';
+                    chevronIcon.classList.remove('rotated');
                     try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'false'); } catch (e) { }
                     return;
                 }
@@ -4643,7 +4669,7 @@
                     const oc = otro.closest('.registro-mes-container');
                     const och = oc?.querySelector('.chevron-mes');
                     const oHeader = oc?.querySelector('.registro-mes-header');
-                    if (och) och.style.transform = 'rotate(0deg)';
+                    if (och) och.classList.remove('rotated');
                     const id = oHeader?.dataset[datasetKey];
                     if (id) {
                         try { StorageHelper.setItem(storageKeyFn(id), 'false'); } catch (e) { }
@@ -4657,7 +4683,7 @@
 
                 const _abrirDetalle = () => {
                     detalle.classList.add('expanded');
-                    chevronIcon.style.transform = 'rotate(180deg)';
+                    chevronIcon.classList.add('rotated');
                     try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'true'); } catch (e) { }
                     _scrollAlExpandir(contenedor, detalle);
                 };
@@ -4764,7 +4790,7 @@
         function _setIconHistorico(icon, estado) {
             if (!icon) return;
             icon.classList.toggle('rotated', estado === 'meses');
-            icon.style.transform = estado === 'completo' ? 'rotate(-90deg)' : '';
+            icon.classList.toggle('icon-rotate-neg90', estado === 'completo');
         }
 
         function toggleHistorico() {
@@ -4822,10 +4848,7 @@
                 if (botones && botones.classList.contains('expanded')) {
                     botones.classList.remove('expanded');
 
-                    if (icon) {
-                        icon.style.transform = '';
-                        icon.classList.add('rotated');
-                    }
+                    if (icon) _setIconHistorico(icon, 'meses');
 
                     try {
                         StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
@@ -4853,11 +4876,9 @@
 
             const _bloquear = () => {
                 btnCredito.disabled = true;
-                btnCredito.style.cursor = 'not-allowed';
             };
             const _habilitar = () => {
                 btnCredito.disabled = false;
-                btnCredito.style.cursor = 'pointer';
             };
 
             if (document.getElementById('edit-fecha').disabled) return _bloquear();
@@ -4899,6 +4920,7 @@
             ModalManager.cerrar('modal-editar-grupo', () => {
                 D.setGrupoEnEdicion(null);
                 document.dispatchEvent(new Event('scroll'));
+                setBloqueoEdicionGrupo(true);
             });
         }
 
@@ -5090,7 +5112,8 @@
                     itemSaldo.style.display = '';
                     const b = stats.bufferPeriodo;
                     elSaldo.textContent = b === 0 ? '0h' : TimeUtils.horasATexto(b, 'short');
-                    elSaldo.style.color = b > 0 ? 'var(--c-green)' : b < 0 ? 'var(--c-red)' : 'var(--text-main)';
+                    elSaldo.classList.remove('saldo-positivo', 'saldo-negativo', 'saldo-neutro');
+                    elSaldo.classList.add(b > 0 ? 'saldo-positivo' : b < 0 ? 'saldo-negativo' : 'saldo-neutro');
                 }
             }
         }
@@ -5303,7 +5326,7 @@
                 const anioNum = parseInt(anio);
                 return {
                     periodoLabel: anio,
-                    nombreArchivo: `reporte_${anio}.txt`,
+                    nombreArchivo: `reporte_${anio}.html`,
                     registrosPeriodo: D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum),
                     stats: calcularEstadisticasAnio(anio),
                     mesSeleccionado: null
@@ -5315,7 +5338,7 @@
             const [año, mesNum] = mes.split('-').map(Number);
             return {
                 periodoLabel: selectMes.options[selectMes.selectedIndex].text,
-                nombreArchivo: `reporte_${mes}.txt`,
+                nombreArchivo: `reporte_${mes}.html`,
                 registrosPeriodo: D.registros().filter(r => {
                     const [aReg, mReg] = r.fecha.split('-').map(Number);
                     return aReg === año && mReg === mesNum;
@@ -5327,61 +5350,93 @@
 
         function _seccionDetalleAnual(registrosPeriodo) {
             const mesesOrdenados = [...new Set(registrosPeriodo.map(r => r.fecha.substring(0, 7)))].sort();
-            let seccion = `
-
-────────────────────────────────────────────────────────────────
-
-📅 TOTALES POR MES
-────────────────────────────────────────────────────────────────
-
-`;
-            mesesOrdenados.forEach(claveMes => {
+            const filas = mesesOrdenados.map(claveMes => {
                 const regsM = registrosPeriodo.filter(r => r.fecha.startsWith(claveMes));
-                const normales = regsM.filter(r => !TiposRegistro.esRegistroEspecial(r.entrada, r.salida) && r.entrada && r.salida);
-                const especiales = regsM.filter(r => TiposRegistro.esRegistroEspecial(r.entrada, r.salida));
-                const notas = TiposRegistro.obtenerTodosLosTipos()
-                    .map(t => {
-                        const n = especiales.filter(r => TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === t.id).length;
-                        return n ? `${n} ${t.labelPlural.toLowerCase()}` : null;
-                    })
-                    .filter(Boolean);
-                const nombreMes = TimeUtils.formatoTituloMes(claveMes).split(' ')[0];
-                seccion += `   ${nombreMes.padEnd(12)} ${TimeUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short').padEnd(10)}  (${normales.length} jornadas)`;
-                if (notas.length) seccion += `  [${notas.join(', ')}]`;
-                seccion += '\n';
-            });
-            return seccion;
+
+                let jornadas = 0;
+                const conteoPorTipo = {};
+                regsM.forEach(r => {
+                    const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                    if (tipo) conteoPorTipo[tipo.id] = (conteoPorTipo[tipo.id] || 0) + 1;
+                    else if (r.entrada && r.salida) jornadas++;
+                });
+
+                const notas = [
+                    `${jornadas} ${jornadas === 1 ? 'jornada' : 'jornadas'}`,
+                    ...TiposRegistro.obtenerTodosLosTipos()
+                        .map(t => conteoPorTipo[t.id] ? `${conteoPorTipo[t.id]} ${TiposRegistro.labelSegunCantidad(t, conteoPorTipo[t.id])}` : null)
+                        .filter(Boolean)
+                ];
+
+                const nombreMes = S.escapeHtml(TimeUtils.formatoTituloMes(claveMes).split(' ')[0]);
+                return `
+                <tr>
+                    <td class="col-mes">${nombreMes}</td>
+                    <td class="col-horas">${S.escapeHtml(TimeUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short'))}</td>
+                    <td class="col-notas">${S.escapeHtml(notas.join(', '))}</td>
+                </tr>`;
+            }).join('');
+
+            return `
+        <section class="seccion">
+            <h2>📅 Totales por mes</h2>
+            <table class="tabla-mes">
+                <thead>
+                    <tr><th>Mes</th><th>Horas</th><th>Notas</th></tr>
+                </thead>
+                <tbody>${filas || '<tr><td colspan="3" class="vacio">Sin registros</td></tr>'}</tbody>
+            </table>
+        </section>`;
         }
 
-        function _seccionDetalleMensual(registrosPeriodo) {
-            let seccion = `
-
-──────────────────────────────────────────────────────────────────
-
-📋 DETALLE DIARIO
-──────────────────────────────────────────────────────────────────
-
-`;
+        function _seccionDetalleDiario(registrosPeriodo) {
             const ordenados = [...registrosPeriodo].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-            ordenados.forEach(r => {
+            const filas = ordenados.map(r => {
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                const fecha = r.fecha.split('-').reverse().join('/');
-                const dia = TimeUtils.obtenerNombreDia(r.fecha);
-                let linea;
+                const fecha = S.escapeHtml(r.fecha.split('-').reverse().join('/'));
+                const dia = S.escapeHtml(TimeUtils.obtenerNombreDia(r.fecha));
+
                 if (tipoEspecial) {
-                    linea = `${fecha}  ${dia.padEnd(10)} ${tipoEspecial.label.toUpperCase()}`;
-                } else {
-                    const entrada = r.entrada || '--:--';
-                    const salida = r.salida || '--:--';
-                    const total = r.salida ? TimeUtils.horasATexto(r.total, 'short') : 'Incompleto';
-                    const tiempoFuera = r.tiempoFuera ? ` (${r.tiempoFuera} fuera)` : '';
-                    const infoAsueto = (r.credito && r.credito !== '00:00') ? ' [SALIDA TEMPRANO]' : '';
-                    const indicador = r.salida ? (horasGte(r.total, D.objetivoDeRegistro(r)) ? '✓ ' : '✗ ') : '  ';
-                    linea = `${fecha}  ${dia.padEnd(10)} ${entrada} → ${salida}  [${total}]${tiempoFuera}${infoAsueto} ${indicador}`;
+                    return `
+                <tr class="fila-especial">
+                    <td class="col-fecha">${fecha}</td>
+                    <td class="col-dia">${dia}</td>
+                    <td class="col-especial" colspan="2">${S.escapeHtml(tipoEspecial.emoji || '')} ${S.escapeHtml(tipoEspecial.label.toUpperCase())}</td>
+                    <td class="col-tag"></td>
+                    <td class="col-linea2" aria-hidden="true">&nbsp;</td>
+                </tr>`;
                 }
-                seccion += linea + '\n';
-            });
-            return seccion;
+
+                const entrada = S.escapeHtml(r.entrada || '--:--');
+                const salida = S.escapeHtml(r.salida || '--:--');
+                const total = r.salida ? S.escapeHtml(TimeUtils.horasATexto(r.total, 'short')) : 'Incompleto';
+                const tiempoFuera = (r.tiempoFuera && r.tiempoFuera !== '00:00')
+                    ? `${S.escapeHtml(TimeUtils.horasATexto(TimeUtils.horaAMinutos(r.tiempoFuera) / 60, 'short'))} fuera`
+                    : '';
+                const salidaTemprano = (r.credito && r.credito !== '00:00') ? ' <span class="tag tag-info">Salida temprano</span>' : '';
+                const cumplido = r.salida ? horasGte(r.total, D.objetivoDeRegistro(r)) : null;
+                const indicador = cumplido === null ? '' : (cumplido ? '<span class="tag tag-ok">✓</span>' : '<span class="tag tag-bad">✗</span>');
+
+                return `
+                <tr>
+                    <td class="col-fecha">${fecha}</td>
+                    <td class="col-dia">${dia}</td>
+                    <td class="col-horario">${entrada} → ${salida}</td>
+                    <td class="col-total">${total}${tiempoFuera ? ` <span class="detalle-sub">· ${tiempoFuera}</span>` : ''}</td>
+                    <td class="col-tag">${indicador}${salidaTemprano}</td>
+                </tr>`;
+            }).join('');
+
+            return `
+        <section class="seccion">
+            <h2>📋 Detalle diario</h2>
+            <table class="tabla-diario">
+                <thead>
+                    <tr><th>Fecha</th><th>Día</th><th>Horario</th><th>Total</th><th></th></tr>
+                </thead>
+                <tbody>${filas || '<tr><td colspan="5" class="vacio">Sin registros</td></tr>'}</tbody>
+            </table>
+        </section>`;
         }
 
         function _agruparRegistrosPorSemana(registros) {
@@ -5405,142 +5460,256 @@
             return semanas;
         }
 
-        function generarReporte() {
+        const REPORTE_ESTILOS = `
+            :root {
+                --r-bg: #f5f6fa; --r-card: #ffffff; --r-border: #dde3ea; --r-text: #1f1f1f;
+                --r-muted: #666768; --r-green: #2f8f6b; --r-green-bg: #eaf7f1;
+                --r-red: #b3493c; --r-red-bg: #fbeceA; --r-blue-bg: #eef1f8;
+            }
+            * { box-sizing: border-box; }
+            body {
+                margin: 0; padding: 2.5rem 1.5rem; background: var(--r-bg); color: var(--r-text);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                font-size: 15px; line-height: 1.5;
+            }
+            .reporte { max-width: 780px; margin: 0 auto; }
+            header.reporte-header { margin-bottom: 2rem; }
+            header.reporte-header h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 .35rem; }
+            header.reporte-header .periodo { font-size: 1rem; color: var(--r-muted); }
+            header.reporte-header .generado { font-size: .8rem; color: var(--r-muted); margin-top: .15rem; }
+            .seccion { background: var(--r-card); border: 1px solid var(--r-border); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+            .seccion h2 { font-size: .95rem; font-weight: 600; margin: 0 0 1rem; }
+            .lista-resumen { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 3rem; }
+            .fila-resumen { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-bottom: 1px solid var(--r-border); }
+            .fila-resumen .label { color: var(--r-muted); font-size: .85rem; }
+            .fila-resumen .valor { font-weight: 700; font-size: .95rem; text-align: right; }
+            .fila-resumen .valor.valor-saldo-pos { color: var(--r-green); }
+            .fila-resumen .valor.valor-saldo-neg { color: var(--r-red); }
+            table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+            th, td { text-align: left; padding: .5rem .5rem; border-bottom: 1px solid var(--r-border); }
+            th { font-size: .72rem; text-transform: uppercase; color: var(--r-muted); font-weight: 600; }
+            tbody tr:last-child td { border-bottom: none; }
+            .col-notas { color: var(--r-muted); }
+            .col-linea2 { display: none; }
+            .detalle-sub { font-size: .76rem; color: var(--r-muted); }
+            .tag { display: inline-block; font-size: .72rem; padding: .1rem .45rem; border-radius: 999px; margin-left: .25rem; }
+            .tag-ok { background: var(--r-green-bg); color: var(--r-green); }
+            .tag-bad { background: var(--r-red-bg); color: var(--r-red); }
+            .tag-info { background: var(--r-blue-bg); color: #3a5a99; }
+            .vacio { text-align: center; color: var(--r-muted); padding: 1rem 0; }
+            .nota-incompleta { font-size: .78rem; color: var(--r-muted); margin-top: .5rem; }
+            .config-linea { font-size: .85rem; color: var(--r-muted); }
+            .config-linea b { color: var(--r-text); font-weight: 600; }
+            footer.reporte-footer { text-align: center; font-size: .78rem; color: var(--r-muted); margin-top: 1.5rem; }
+
+            /* --- Responsive: tablas a 2 líneas por fila en pantallas chicas --- */
+            @media (max-width: 600px) {
+                body { padding: 1.5rem 0.5rem; }
+                .seccion { padding: 1rem 0.6rem; }
+                .lista-resumen { grid-template-columns: 1fr; }
+
+                .tabla-mes thead, .tabla-diario thead, .tabla-semana thead { display: none; }
+
+                .tabla-mes tbody tr, .tabla-diario tbody tr, .tabla-semana tbody tr {
+                    display: grid; column-gap: .5rem; row-gap: .15rem;
+                    padding: .6rem 0; border-bottom: 1px solid var(--r-border);
+                }
+                .tabla-mes tbody tr:last-child, .tabla-diario tbody tr:last-child, .tabla-semana tbody tr:last-child { border-bottom: none; }
+                .tabla-mes td, .tabla-diario td, .tabla-semana td { border-bottom: none; padding: 0; }
+
+                /* Totales por mes: Mes - Horas / Notas (incluye jornadas) */
+                .tabla-mes tbody tr { grid-template-columns: 1fr auto; grid-template-areas: "mes horas" "notas notas"; }
+                .tabla-mes .col-mes { grid-area: mes; }
+                .tabla-mes .col-horas { grid-area: horas; text-align: right; }
+                .tabla-mes .col-notas { grid-area: notas; }
+
+                /* Totales por semana: Semana - Rango - Total / Notas */
+                .tabla-semana tbody tr { grid-template-columns: auto 1fr; grid-template-areas: "semana rango" "total notas"; }
+                .tabla-semana .col-semana { grid-area: semana; white-space: nowrap; }
+                .tabla-semana .col-rango { grid-area: rango; text-align: right; }
+                .tabla-semana .col-total { grid-area: total; white-space: nowrap; }
+                .tabla-semana .col-notas { grid-area: notas; text-align: right; }
+
+                /* Detalle diario: Fecha - Día - Total (+ indicador) / Horario */
+                .tabla-diario tbody tr:not(.fila-especial) {
+                    grid-template-columns: auto 1fr auto auto;
+                    grid-template-areas: "fecha dia total tag" "horario horario horario horario";
+                }
+                .tabla-diario .col-fecha { grid-area: fecha; white-space: nowrap; }
+                .tabla-diario .col-dia { grid-area: dia; color: var(--r-muted); }
+                .tabla-diario .col-total { grid-area: total; text-align: right; white-space: nowrap; }
+                .tabla-diario .col-tag { grid-area: tag; text-align: right; }
+                .tabla-diario .col-horario { grid-area: horario; color: var(--r-muted); }
+
+                .tabla-diario tbody tr.fila-especial {
+                    grid-template-columns: auto auto 1fr;
+                    grid-template-areas: "fecha dia especial" "linea2 linea2 linea2";
+                }
+                .tabla-diario .col-especial { grid-area: especial; text-align: right; }
+                .tabla-diario .col-linea2 { display: block; grid-area: linea2; visibility: hidden; }
+            }
+
+            @media print {
+                body { background: #fff; padding: 0; }
+                .seccion { border: none; box-shadow: none; padding: 0 0 1rem; }
+            }
+        `;
+
+        function _seccionResumenGeneral(stats) {
+            const bufferOk = stats.bufferPeriodo === null || stats.bufferPeriodo >= 0;
+            const tarjetas = [
+                { label: 'Total horas', valor: stats.tiempoTotal },
+                { label: 'Saldo', valor: stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A', clase: `valor-saldo-${bufferOk ? 'pos' : 'neg'}` },
+                { label: 'Jornadas', valor: stats.diasTrabajados, esConteo: true },
+                { label: 'Promedio diario', valor: stats.promedioDiario },
+                { label: 'Entrada promedio', valor: stats.entradaPromedio },
+                { label: 'Salida promedio', valor: stats.salidaPromedio },
+                { label: 'Entrada regular', valor: stats.regularidadEntrada },
+                { label: 'Jornada regular', valor: stats.regularidadJornada },
+                { label: 'Tiempo fuera', valor: stats.tiempoFueraTotal },
+                { label: 'Salidas temprano', valor: stats.compensaciones, esConteo: true },
+                ...TiposRegistro.obtenerTodosLosTipos().map(t => ({ label: t.labelPlural, valor: stats[t.labelPlural.toLowerCase()] || 0, esConteo: true })),
+            ].filter(t => !(t.esConteo && t.valor === 0));
+
+            const filasHtml = tarjetas.map(t => `
+                <li class="fila-resumen">
+                    <span class="label">${S.escapeHtml(t.label)}</span>
+                    <span class="valor ${t.clase || ''}">${S.escapeHtml(String(t.valor))}</span>
+                </li>`).join('');
+
+            return `
+        <section class="seccion">
+            <h2>📈 Resumen general</h2>
+            <ul class="lista-resumen">${filasHtml}</ul>
+        </section>`;
+        }
+
+        function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
+            if (!mesSeleccionado) return '';
+            const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
+            const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
+            const ultimaDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
+
+            const semanas = _agruparRegistrosPorSemana(registrosPeriodo);
+            const semanasOrdenadas = [...semanas.entries()].sort((a, b) => new Date(a[0]) - new Date(b[0]));
+            if (!semanasOrdenadas.length) return '';
+
+            const semanasIncompletas = [];
+
+            const filas = semanasOrdenadas.map(([lunesOriginal, datos], index) => {
+                let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
+                if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + D.objetivoDeRegistro(r), 0);
+
+                const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
+                const fechaDomingo = new Date(fechaLunes);
+                fechaDomingo.setDate(fechaLunes.getDate() + 6);
+                const domingo = TimeUtils.formatearFechaLocal(fechaDomingo);
+
+                let lunes = lunesOriginal, fechaFin = domingo, esIncompleta = false, continuaEn = '';
+
+                if (domingo > ultimaDiaMes) {
+                    fechaFin = ultimaDiaMes;
+                    esIncompleta = true;
+                    const mesSig = mesActual === 12 ? 1 : mesActual + 1;
+                    const añoSig = mesActual === 12 ? añoActual + 1 : añoActual;
+                    continuaEn = `continúa en ${new Date(añoSig, mesSig - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
+                }
+                if (lunes < primerDiaMes) {
+                    lunes = primerDiaMes;
+                    esIncompleta = true;
+                    const mesAnt = mesActual === 1 ? 12 : mesActual - 1;
+                    const añoAnt = mesActual === 1 ? añoActual - 1 : añoActual;
+                    continuaEn = `viene de ${new Date(añoAnt, mesAnt - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
+                }
+
+                const notasExtras = TiposRegistro.obtenerTodosLosTipos()
+                    .map(t => {
+                        const clave = t.labelPlural.toLowerCase();
+                        const cantidad = datos[clave]?.length || 0;
+                        return cantidad ? `${cantidad} ${TiposRegistro.labelSegunCantidad(t, cantidad)}` : null;
+                    })
+                    .filter(Boolean);
+
+                if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
+
+                const rango = `${lunes.split('-').reverse().join('/')} – ${fechaFin.split('-').reverse().join('/')}${esIncompleta ? ' *' : ''}`;
+                return `
+                <tr>
+                    <td class="col-semana">Semana ${index + 1}</td>
+                    <td class="col-rango">${S.escapeHtml(rango)}</td>
+                    <td class="col-total">${S.escapeHtml(TimeUtils.horasATexto(totalSemanal, 'short'))}</td>
+                    <td class="col-notas">${notasExtras.length ? S.escapeHtml(notasExtras.join(', ')) : '—'}</td>
+                </tr>`;
+            }).join('');
+
+            const notaIncompletas = semanasIncompletas.length
+                ? `<div class="nota-incompleta">${semanasIncompletas.map(s => S.escapeHtml(s)).join('<br>')}</div>`
+                : '';
+
+            return `
+        <section class="seccion">
+            <h2>📅 Totales por semana</h2>
+            <table class="tabla-semana">
+                <thead><tr><th>Semana</th><th>Rango</th><th>Total</th><th>Notas</th></tr></thead>
+                <tbody>${filas}</tbody>
+            </table>
+            ${notaIncompletas}
+        </section>`;
+        }
+
+        function _seccionConfiguracion() {
+            const objetivoTexto = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)
+                ? '' : ' (objetivo estampado por registro)';
+            const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+            const tiempoFueraTexto = ignorarTF ? 'No se descuenta del total' : 'Se descuenta del total';
+            return `
+        <section class="seccion">
+            <h2>⚙️ Ajustes aplicados</h2>
+            <p class="config-linea"><b>Horas diarias:</b> ${S.escapeHtml(String(D.horasDiarias()))}${S.escapeHtml(objetivoTexto)}</p>
+            <p class="config-linea"><b>Días hábiles:</b> ${S.escapeHtml(D.diasHabiles().map(d => TimeUtils.nombreDiaPorIndice(d)).join(', '))}</p>
+            <p class="config-linea"><b>Horas semanales:</b> ${S.escapeHtml(String(D.horasSemanales()))}</p>
+            <p class="config-linea"><b>Tiempo fuera:</b> ${S.escapeHtml(tiempoFueraTexto)}</p>
+        </section>`;
+        }
+
+        function generarReporte(opciones = {}) {
             const esAnual = modoEstadisticas === 'anual';
+            const incluir = { resumen: true, totalesMes: true, detalleDiario: true, totalesSemana: true, configuracion: true, ...opciones };
             const periodo = _resolverPeriodoDatos(esAnual);
             if (!periodo) return;
             const { periodoLabel, registrosPeriodo, stats, nombreArchivo, mesSeleccionado } = periodo;
 
-            const reporte = {
+            const generadoEl = `${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`;
 
-                header: () => `
-================================================================
-REPORTE DE HORAS TRABAJADAS                   
-================================================================
+            const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte de horas — ${S.escapeHtml(periodoLabel)}</title>
+<style>${REPORTE_ESTILOS}</style>
+</head>
+<body>
+    <div class="reporte">
+        <header class="reporte-header">
+            <h1>Reporte de horas trabajadas</h1>
+            <div class="periodo">Período: ${S.escapeHtml(periodoLabel)}</div>
+            <div class="generado">Generado el ${S.escapeHtml(generadoEl)}</div>
+        </header>
 
-📅 Período: ${periodoLabel}
-📊 Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}
+        ${incluir.resumen ? _seccionResumenGeneral(stats) : ''}
+        ${esAnual && incluir.totalesMes ? _seccionDetalleAnual(registrosPeriodo) : ''}
+        ${incluir.detalleDiario ? _seccionDetalleDiario(registrosPeriodo) : ''}
+        ${!esAnual && incluir.totalesSemana ? _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) : ''}
+        ${incluir.configuracion ? _seccionConfiguracion() : ''}
 
-────────────────────────────────────────────────────────────────`,
-
-                resumenGeneral: () => {
-                    const lineasTipos = TiposRegistro.obtenerTodosLosTipos()
-                        .map(t => `   • ${(t.label + ':').padEnd(24)}${stats[t.labelPlural.toLowerCase()] || 0}`)
-                        .join('\n');
-                    return `
-
-📈 RESUMEN GENERAL
-────────────────────────────────────────────────────────────────
-
-   • Jornadas:               ${stats.diasTrabajados}
-${lineasTipos}
-   • Salidas Temprano:       ${stats.compensaciones}
-   • Entrada promedio:       ${stats.entradaPromedio}
-   • Salida promedio:        ${stats.salidaPromedio}
-   • Promedio diario:        ${stats.promedioDiario}
-   
-   • Total horas trabajadas: ${TimeUtils.horasATexto(_sumarHorasEfectivas(registrosPeriodo), 'short')}
-   • Saldo:                  ${stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A'}`;
-                },
-
-                detallePeriodo: () => esAnual
-                    ? _seccionDetalleAnual(registrosPeriodo)
-                    : _seccionDetalleMensual(registrosPeriodo),
-
-                totalesPorSemana: () => {
-                    if (esAnual || !mesSeleccionado) return '';
-                    const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
-                    const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
-                    const ultimaDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
-
-                    const semanas = _agruparRegistrosPorSemana(registrosPeriodo);
-                    const semanasOrdenadas = [...semanas.entries()].sort((a, b) => new Date(a[0]) - new Date(b[0]));
-                    if (!semanasOrdenadas.length) return '';
-
-                    let seccion = `
-
-────────────────────────────────────────────────────────────────
-
-📅 TOTALES POR SEMANA
-────────────────────────────────────────────────────────────────
-
-`;
-                    const semanasIncompletas = [];
-
-                    semanasOrdenadas.forEach(([lunesOriginal, datos], index) => {
-                        let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
-                        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + D.objetivoDeRegistro(r), 0);
-
-                        const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
-                        const fechaDomingo = new Date(fechaLunes);
-                        fechaDomingo.setDate(fechaLunes.getDate() + 6);
-                        const domingo = TimeUtils.formatearFechaLocal(fechaDomingo);
-
-                        let lunes = lunesOriginal, fechaFin = domingo, esIncompleta = false, continuaEn = '';
-
-                        if (domingo > ultimaDiaMes) {
-                            fechaFin = ultimaDiaMes;
-                            esIncompleta = true;
-                            const mesSig = mesActual === 12 ? 1 : mesActual + 1;
-                            const añoSig = mesActual === 12 ? añoActual + 1 : añoActual;
-                            continuaEn = `continúa en ${new Date(añoSig, mesSig - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
-                        }
-                        if (lunes < primerDiaMes) {
-                            lunes = primerDiaMes;
-                            esIncompleta = true;
-                            const mesAnt = mesActual === 1 ? 12 : mesActual - 1;
-                            const añoAnt = mesActual === 1 ? añoActual - 1 : añoActual;
-                            continuaEn = `viene de ${new Date(añoAnt, mesAnt - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
-                        }
-
-                        seccion += `   Semana ${index + 1} (${lunes.split('-').reverse().join('/')} - ${fechaFin.split('-').reverse().join('/')})${esIncompleta ? '*' : ''}:\n`;
-                        seccion += `      └─ ${TimeUtils.horasATexto(totalSemanal, 'short')}`;
-
-                        const notasExtras = TiposRegistro.obtenerTodosLosTipos()
-                            .map(t => {
-                                const clave = t.labelPlural.toLowerCase();
-                                return datos[clave]?.length ? `${datos[clave].length} ${clave}` : null;
-                            })
-                            .filter(Boolean);
-                        if (notasExtras.length) seccion += ` [${notasExtras.join(', ')}]`;
-                        seccion += '\n\n';
-
-                        if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
-                    });
-
-                    if (semanasIncompletas.length) seccion += semanasIncompletas.join('\n') + '\n';
-                    return seccion;
-                },
-
-                configuracion: () => `
-
-────────────────────────────────────────────────────────────────
-
-⚙️ Ajustes
-────────────────────────────────────────────────────────────────
-
-   • Horas diarias:          ${D.horasDiarias()}${StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true) ? '' : ' (objetivo estampado por registro)'}
-   • Días hábiles/semana:    ${D.diasHabiles().map(d => ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][d]).join(', ')}
-   • Horas semanales:        ${D.horasSemanales()}`,
-
-                footer: () => `
-
-────────────────────────────────────────────────────────────────
-
-Generado por Sistema Lushibosca
-`
-            };
-
-            const contenido =
-                reporte.header() +
-                reporte.resumenGeneral() +
-                reporte.detallePeriodo() +
-                reporte.totalesPorSemana() +
-                reporte.configuracion() +
-                reporte.footer();
+        <footer class="reporte-footer">Generado por Sistema Horarios</footer>
+    </div>
+</body>
+</html>`;
 
             try {
-                const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+                const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
                 document.body.appendChild(a);
@@ -5554,6 +5723,55 @@ Generado por Sistema Lushibosca
             }
         }
 
+        const SECCIONES_REPORTE = [
+            { id: 'resumen', label: 'Resumen general', icono: '#icon-stats' },
+            { id: 'totalesMes', label: 'Totales por mes', icono: '#icon-calendar-simple', soloModo: 'anual' },
+            { id: 'detalleDiario', label: 'Detalle diario', icono: '#icon-clock' },
+            { id: 'totalesSemana', label: 'Totales por semana', icono: '#icon-calendar-simple', soloModo: 'mensual' },
+            { id: 'configuracion', label: 'Ajustes aplicados', icono: '#icon-settings' }
+        ];
+
+        function _renderSeccionesReporte() {
+            const cont = document.getElementById('reporte-secciones-lista');
+            if (!cont) return;
+            const modo = modoEstadisticas === 'anual' ? 'anual' : 'mensual';
+            cont.innerHTML = SECCIONES_REPORTE
+                .filter(sec => !sec.soloModo || sec.soloModo === modo)
+                .map(sec => `
+                <button type="button" class="btn-seccion-reporte btn-activo" data-seccion="${sec.id}">
+                    <svg class="icon"><use href="${sec.icono}" /></svg>
+                    <span>${S.escapeHtml(sec.label)}</span>
+                    <svg class="icon icon-indicator"><use href="#icon-dot" /></svg>
+                </button>`).join('');
+        }
+
+        function abrirModalReporteSecciones() {
+            _renderSeccionesReporte();
+            ModalManager.abrir('modal-reporte-secciones');
+        }
+
+        function cerrarModalReporteSecciones() {
+            ModalManager.cerrar('modal-reporte-secciones');
+        }
+
+        function toggleSeccionReporte(boton) {
+            boton.classList.toggle('btn-activo');
+        }
+
+        function confirmarGenerarReporte() {
+            const cont = document.getElementById('reporte-secciones-lista');
+            const opciones = {};
+            cont?.querySelectorAll('.btn-seccion-reporte').forEach(btn => {
+                opciones[btn.dataset.seccion] = btn.classList.contains('btn-activo');
+            });
+            if (!Object.values(opciones).some(Boolean)) {
+                mostrarToast('Seleccioná al menos una sección', 'error');
+                return;
+            }
+            cerrarModalReporteSecciones();
+            generarReporte(opciones);
+        }
+
         const DESCRIPCIONES_STATS = {
             'stat-tiempo-total': { titulo: 'Tiempo Total', desc: 'Suma de todas las horas trabajadas en el período seleccionado.' },
             'stat-promedio-diario': { titulo: 'Promedio Diario', desc: 'Promedio de horas trabajadas por jornada en el período.' },
@@ -5562,7 +5780,7 @@ Generado por Sistema Lushibosca
             'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
-            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles y cálculos de saldo.' },
+            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles.' },
             'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
             'stat-compensaciones': { titulo: 'Salidas Temprano', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
         };
@@ -5576,13 +5794,19 @@ Generado por Sistema Lushibosca
             let info = DESCRIPCIONES_STATS[statId];
             if (statId === 'stat-saldo' && info) {
                 const modoTexto = modoEstadisticas === 'anual'
-                    ? 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del año.'
+                    ? 'El saldo se calcula a partir del PRIMER REGISTRO del año.'
                     : modoEstadisticas === 'mensual'
-                        ? 'Actualmente el saldo se calcula a partir del PRIMER REGISTRO del mes.'
-                        : null;
+                        ? 'El saldo se calcula a partir del PRIMER REGISTRO del mes.'
+                        : modoEstadisticas === 'semanal'
+                            ? 'El saldo se calcula a partir del PRIMER DÍA LABORAL de la semana.'
+                            : null;
                 if (modoTexto) {
                     info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
                 }
+            }
+            if (statId === 'stat-dias-trabajados' && info) {
+                const diasTexto = [...D.diasHabiles()].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', ');
+                info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Días hábiles: ${diasTexto}.</strong>` };
             }
             if (statId === 'stat-tiempo-fuera-total' && info) {
                 const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
@@ -5681,6 +5905,10 @@ Generado por Sistema Lushibosca
             togglePeriodoStats,
             poblarSelectorMeses,
             generarReporte,
+            abrirModalReporteSecciones,
+            cerrarModalReporteSecciones,
+            toggleSeccionReporte,
+            confirmarGenerarReporte,
             _popupStat,
             _onclickStatItem,
             _bindStatItemPopups,
@@ -5695,7 +5923,7 @@ Generado por Sistema Lushibosca
     const UITarjetaFichaje = (function (S, D, UICore) {
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
-            _setBtnActivo, _setBtnDisabled, _flashCampo, registrarSwipe, _animarFadeSwap,
+            _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
             _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
         } = UICore;
 
@@ -5826,21 +6054,21 @@ Generado por Sistema Lushibosca
             const outgoing = _bgActiveLayer === 'a' ? layerA : layerB;
 
             incoming.style.zIndex = '2';
-            incoming.style.opacity = '0';
+            incoming.classList.remove('visible');
             incoming.innerHTML = nuevoSVG;
 
             outgoing.style.zIndex = '1';
-            outgoing.style.opacity = '0';
+            outgoing.classList.remove('visible');
 
             if (_bgFadeTimer) { clearTimeout(_bgFadeTimer); _bgFadeTimer = null; }
 
             incoming.offsetHeight;
-            incoming.style.opacity = '1';
+            incoming.classList.add('visible');
 
             _bgActiveLayer = _bgActiveLayer === 'a' ? 'b' : 'a';
             _bgFadeTimer = setTimeout(() => {
                 outgoing.innerHTML = '';
-                outgoing.style.opacity = '0';
+                outgoing.classList.remove('visible');
                 _bgFadeTimer = null;
             }, 650);
         }
@@ -6148,9 +6376,9 @@ Generado por Sistema Lushibosca
             if (mostrarBuffer) {
                 const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
                 const horaBuf = _minutosAHoraWrap(minutosConBuffer);
-                const colorBuffer = bufferSemanal > 0 ? 'var(--c-green)' : bufferSemanal < 0 ? 'var(--c-red)' : 'var(--text-main)';
+                const claseBuffer = bufferSemanal > 0 ? ' hint-buffer-color--green' : bufferSemanal < 0 ? ' hint-buffer-color--red' : '';
                 return {
-                    hint: `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color" data-color="${colorBuffer}">(<strong>${horaBuf}</strong>)</span>`,
+                    hint: `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color${claseBuffer}">(<strong>${horaBuf}</strong>)</span>`,
                     hintEsHTML: true
                 };
             }
@@ -6480,7 +6708,7 @@ Generado por Sistema Lushibosca
         function _renderHint(vista) {
             const el = $('toggle-hint');
             if (!el) return;
-            if (vista.hintEsHTML) { el.innerHTML = vista.hint; _applyDataColors(el); }
+            if (vista.hintEsHTML) { el.innerHTML = vista.hint; }
             else el.textContent = vista.hint;
         }
 
@@ -6491,13 +6719,11 @@ Generado por Sistema Lushibosca
             const { bufferSemanal, horasDiarias, semanaAbierta } = est;
             if (horasDiarias > 0 && Math.abs(bufferSemanal) > 0.01 && semanaAbierta) {
                 const esPositivo = bufferSemanal > 0;
-                const color = esPositivo ? 'var(--c-green)' : 'var(--c-red)';
+                const claseColor = esPositivo ? 'positivo' : 'negativo';
                 const punto = document.createElement('span');
-                punto.className = 'buffer-semanal-punto';
-                punto.style.backgroundColor = color;
+                punto.className = `buffer-semanal-punto ${claseColor}`;
                 const span = document.createElement('span');
-                span.style.color = color;
-                span.style.fontWeight = '500';
+                span.className = `buffer-semanal-texto ${claseColor}`;
                 const { texto: textoBuffer, singular } = _cantidadHoras(Math.abs(bufferSemanal));
                 const adjetivo = esPositivo ? (singular ? 'extra' : 'extras') : (singular ? 'faltante' : 'faltantes');
                 span.textContent = `${textoBuffer} ${adjetivo} esta semana`;
@@ -6534,6 +6760,7 @@ Generado por Sistema Lushibosca
             _renderBarra(vista);
             UILogic._renderSelectorStats();
             actualizarEstadoBotonTimerMain(sinAnimarTitulo);
+            if (modoLoteActivo) actualizarBotonLote();
             if (UILogic.getVistaHistoricoCalendario()) {
                 const selector = $('calendario-selector-meses');
                 if (selector && selector.style.display !== 'none') {
@@ -6749,9 +6976,7 @@ Generado por Sistema Lushibosca
                 $('lote-fecha-desde').value = '';
                 $('lote-fecha-hasta').value = '';
 
-                btnTexto.textContent = 'Fichar Lote';
-                btn.style.background = '';
-                btn.style.color = '';
+                btn.classList.remove('btn-color-muted', 'btn-color-red');
 
                 setIconoBtn(btn, '#icon-save');
 
@@ -6780,10 +7005,6 @@ Generado por Sistema Lushibosca
             } else {
                 await DataManagement.agregarRegistro();
             }
-
-            if (modoLoteActivo) {
-                setTimeout(() => actualizarBotonLote(), 100);
-            }
         }
 
         function _limpiarCamposLote() {
@@ -6794,17 +7015,18 @@ Generado por Sistema Lushibosca
         async function _registrarEspecialHoy(tipo) {
             const fechaHoy = UILogic.obtenerFechaHoy();
             if (DataManagement.registros().find(r => r.fecha === fechaHoy)) {
-                mostrarToast('Ya existe un registro para hoy', 'warning'); return;
+                mostrarToast('Ya existe un registro para hoy', 'warning'); _flashCampoTipo('warning', 'btn-agregar'); return;
             }
             try {
                 await DataManagement.registrarDiaEspecial(fechaHoy, tipo);
                 _limpiarCamposLote();
+                actualizarBotonLote();
             } catch (e) { console.error('Error al registrar:', e); }
         }
 
         async function _registrarEspecialFecha(desde, tipo) {
             if (DataManagement.registros().find(r => r.fecha === desde)) {
-                mostrarToast('Ya existe un registro para esa fecha', 'warning'); return;
+                mostrarToast('Ya existe un registro para esa fecha', 'warning'); _flashCampoTipo('warning', 'btn-agregar'); return;
             }
             try {
                 await DataManagement.registrarDiaEspecial(desde, tipo);
@@ -6813,6 +7035,7 @@ Generado por Sistema Lushibosca
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
                 ]);
                 _limpiarCamposLote();
+                actualizarBotonLote();
             } catch (e) { console.error('Error al registrar:', e); }
         }
 
@@ -6823,7 +7046,7 @@ Generado por Sistema Lushibosca
 
             if ((inputDesde.value === '' && inputDesde.validity && !inputDesde.validity.valid) ||
                 (inputHasta.value === '' && inputHasta.validity && !inputHasta.validity.valid)) {
-                mostrarToast('Fecha inválida', 'error'); return;
+                mostrarToast('Fecha inválida', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
             }
 
             const desde = inputDesde.value;
@@ -6831,32 +7054,37 @@ Generado por Sistema Lushibosca
 
             if (!desde && !hasta) {
                 if (!inputDesde.checkValidity() || !inputHasta.checkValidity()) {
-                    mostrarToast('Revisá las fechas ingresadas', 'error'); return;
+                    mostrarToast('Revisá las fechas ingresadas', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
                 }
-                if (tipo === 'normal') { mostrarToast('Completá los campos Desde y Hasta.', 'info'); return; }
+                if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
                 await _registrarEspecialHoy(tipo); return;
             }
 
             if (desde && !hasta) {
-                if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); return; }
+                if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
                 await _registrarEspecialFecha(desde, tipo); return;
             }
 
-            if (!desde && hasta) { mostrarToast('Completá ambos campos', 'info'); return; }
-            if (desde > hasta) { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); return; }
+            if (!desde && hasta) { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
+            if (desde > hasta) { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); _flashCampoTipo('error', 'btn-agregar'); return; }
 
             if (tipo !== 'normal' && !TiposRegistro.obtenerCodigosPorTipo(tipo)) {
-                mostrarToast('Tipo de registro inválido', 'error'); return;
+                mostrarToast('Tipo de registro inválido', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
             }
 
             try {
                 if (tipo === 'normal') await DataManagement.borrarPeriodoDirecto(desde, hasta);
                 else await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
-                UILogic.aplicarFeedbackCampos([
-                    { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
-                    { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
-                ]);
+                UILogic.aplicarFeedbackCampos(
+                    [
+                        { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
+                        { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
+                    ],
+                    tipo === 'normal' ? '✓ Borrado' : '✓ Agregado',
+                    tipo === 'normal' ? 'label-feedback--red' : 'label-feedback--green'
+                );
                 _limpiarCamposLote();
+                actualizarBotonLote();
             } catch (e) { console.error('Error en operación de lote:', e); }
         }
 
@@ -6879,32 +7107,30 @@ Generado por Sistema Lushibosca
             });
         }
 
+        function _pintarBotonLote(btn, btnTexto, texto, claseColor = '', icono = '#icon-save') {
+            btnTexto.textContent = texto;
+            btn.classList.remove('btn-color-muted', 'btn-color-red');
+            if (claseColor) btn.classList.add(claseColor);
+            setIconoBtn(btn, icono);
+        }
+
         function _setBtnError(btn, btnTexto, mensaje) {
-            btnTexto.textContent = mensaje;
-            btn.style.color = 'var(--c-red)';
-            setIconoBtn(btn, '#icon-save');
+            _pintarBotonLote(btn, btnTexto, mensaje, 'btn-color-muted');
         }
 
         function _actualizarBtnNormal(btn, btnTexto, desde, hasta) {
             const n = DataManagement.registros().filter(r =>
                 r.fecha >= desde && r.fecha <= hasta && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
             ).length;
-            if (n > 0) {
-                btnTexto.textContent = `Borrar (${n})`;
-                btn.style.color = 'var(--c-red)';
-                setIconoBtn(btn, '#icon-trash');
-            } else {
-                btnTexto.textContent = 'Sin Registros';
-                btn.style.color = 'var(--text-muted)';
-                setIconoBtn(btn, '#icon-save');
-            }
+            n > 0
+                ? _pintarBotonLote(btn, btnTexto, `Borrar (${n})`, 'btn-color-red', '#icon-trash')
+                : _pintarBotonLote(btn, btnTexto, 'Sin Registros', 'btn-color-muted');
         }
 
         function _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales) {
             const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(tipo);
-            if (!codigosTipo) {
-                btnTexto.textContent = 'Fichar'; setIconoBtn(btn, '#icon-save'); return;
-            }
+            if (!codigosTipo) return _pintarBotonLote(btn, btnTexto, 'Fichar');
+
             const yaRegistrados = DataManagement.registros().filter(r =>
                 r.fecha >= desde && r.fecha <= hasta &&
                 r.entrada === codigosTipo.entrada && r.salida === codigosTipo.salida
@@ -6913,17 +7139,10 @@ Generado por Sistema Lushibosca
             const disponibles = diasTotales - diasOcupados;
             const sobreescribirOtros = diasOcupados - yaRegistrados;
 
-            if (disponibles === 0 && yaRegistrados === diasTotales) {
-                btnTexto.textContent = `Fichado (${diasTotales})`;
-                btn.style.color = 'var(--text-muted)';
-            } else if (disponibles === diasTotales) {
-                btnTexto.textContent = `Fichar (${diasTotales})`;
-            } else if (sobreescribirOtros > 0) {
-                btnTexto.textContent = `Fichar (${disponibles} - ${sobreescribirOtros})`;
-            } else {
-                btnTexto.textContent = `Fichar (${disponibles})`;
-            }
-            setIconoBtn(btn, '#icon-save');
+            if (disponibles === 0 && yaRegistrados === diasTotales) return _pintarBotonLote(btn, btnTexto, `Fichado (${diasTotales})`, 'btn-color-muted');
+            if (disponibles === diasTotales) return _pintarBotonLote(btn, btnTexto, `Fichar (${diasTotales})`);
+            if (sobreescribirOtros > 0) return _pintarBotonLote(btn, btnTexto, `Fichar (${disponibles} - ${sobreescribirOtros})`);
+            return _pintarBotonLote(btn, btnTexto, `Fichar (${disponibles})`);
         }
 
         function actualizarBotonLote() {
@@ -6932,29 +7151,35 @@ Generado por Sistema Lushibosca
             const hasta = $('lote-fecha-hasta').value;
             const btn = $('btn-agregar');
             const btnTexto = $('btn-registrar-texto');
-            btn.style.background = '';
-            btn.style.color = '';
 
-            if (!desde && !hasta) { btnTexto.textContent = 'Fichar'; setIconoBtn(btn, '#icon-save'); return; }
-            if (!desde && hasta) { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
+            if (!desde && !hasta) {
+                if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Completar rango');
 
-            if (desde && !hasta) {
-                if (tipo === 'normal') { _setBtnError(btn, btnTexto, 'Requiere Rango'); return; }
-                const existe = DataManagement.registros().find(r => r.fecha === desde);
-                btnTexto.textContent = existe ? 'Fichado' : 'Fichar';
-                if (existe) btn.style.color = 'var(--text-muted)';
-                setIconoBtn(btn, '#icon-save');
-                return;
+                const hoy = TimeUtils.obtenerFechaHoy();
+                const existeHoy = DataManagement.registros().find(r => r.fecha === hoy);
+                return existeHoy
+                    ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
+                    : _pintarBotonLote(btn, btnTexto, 'Fichar');
             }
 
-            if (!TimeUtils.validarFecha(desde)) { _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida'); return; }
-            if (!TimeUtils.validarFecha(hasta)) { _setBtnError(btn, btnTexto, 'Fecha Final Inválida'); return; }
-            if (desde > hasta) { _setBtnError(btn, btnTexto, 'Rango Inválido'); return; }
+            if (!desde && hasta) return _setBtnError(btn, btnTexto, 'Rango incompleto');
+            if (!TimeUtils.validarFecha(desde)) return _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida');
+            if (desde && !hasta) {
+                if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
+                const existe = DataManagement.registros().find(r => r.fecha === desde);
+                return existe
+                    ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
+                    : _pintarBotonLote(btn, btnTexto, 'Fichar');
+            }
+
+            if (!TimeUtils.validarFecha(hasta)) return _setBtnError(btn, btnTexto, 'Fecha Final Inválida');
+            if (desde > hasta) return _setBtnError(btn, btnTexto, 'Rango Inválido');
 
             const diasTotales = Math.ceil(Math.abs(TimeUtils.parsearFechaLocal(hasta) - TimeUtils.parsearFechaLocal(desde)) / 864e5) + 1;
 
-            if (tipo === 'normal') _actualizarBtnNormal(btn, btnTexto, desde, hasta);
-            else _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales);
+            return tipo === 'normal'
+                ? _actualizarBtnNormal(btn, btnTexto, desde, hasta)
+                : _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales);
         }
 
         function toggleFormulario() {
@@ -7007,6 +7232,7 @@ Generado por Sistema Lushibosca
                     const hasta = $('lote-fecha-hasta');
                     if (desde) desde.value = fecha;
                     if (hasta) hasta.value = fecha;
+                    actualizarBotonLote();
                     setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta', 'lote-tipo'), _FLASH_SCROLL_DELAY);
                 } else {
                     const input = $('fecha');
@@ -7095,7 +7321,7 @@ Generado por Sistema Lushibosca
             mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _getCSSdur, DUR_ANIM, DUR_CALENDARIO, _crearToggleConfig, _setBtnActivo,
             _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
-            _posicionarPopup, _registrarCierrePopup, _flashCampo,
+            _posicionarPopup, _registrarCierrePopup, _flashCampo, _flashCampoTipo,
             _limpiarClonVisual, _finalizarSlidePendiente, _animarSlideElemento, toggleSeccionGen,
             _animarFadeSwap
         } = UICore;
@@ -7139,7 +7365,9 @@ Generado por Sistema Lushibosca
             poblarSelectorAnios, actualizarEstadisticasAnio, poblarSelectorSemanas,
             calcularEstadisticasSemana, actualizarEstadisticasSemana, cambiarMesStats,
             cambiarSemanaStats, cambiarAnioStats, togglePeriodoStats, poblarSelectorMeses,
-            generarReporte, _popupStat, _onclickStatItem, _bindStatItemPopups, toggleStats,
+            generarReporte, abrirModalReporteSecciones, cerrarModalReporteSecciones,
+            toggleSeccionReporte, confirmarGenerarReporte,
+            _popupStat, _onclickStatItem, _bindStatItemPopups, toggleStats,
             setModoEstadisticas
         } = UIEstadisticas;
 
@@ -7329,13 +7557,13 @@ Generado por Sistema Lushibosca
                 const rect = item.getBoundingClientRect();
                 initialYOffset = clientY - rect.top;
                 dragClone = item.cloneNode(true);
+                dragClone.classList.add('drag-clone');
                 Object.assign(dragClone.style, {
-                    position: 'fixed', top: `${rect.top}px`, left: `${rect.left}px`,
-                    width: `${rect.width}px`, height: `${rect.height}px`, zIndex: '999999',
-                    pointerEvents: 'none', margin: '0', transform: 'scale(1.02)', opacity: '0.9'
+                    top: `${rect.top}px`, left: `${rect.left}px`,
+                    width: `${rect.width}px`, height: `${rect.height}px`
                 });
                 document.body.appendChild(dragClone);
-                draggingEl.style.opacity = '0';
+                draggingEl.classList.add('arrastrando');
                 if (navigator.vibrate) navigator.vibrate(30);
             }
 
@@ -7370,7 +7598,7 @@ Generado por Sistema Lushibosca
                     dragClone.remove();
                     dragClone = null;
                 }
-                draggingEl.style.opacity = '';
+                draggingEl.classList.remove('arrastrando');
 
                 const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
                 const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
@@ -7493,7 +7721,7 @@ Generado por Sistema Lushibosca
             D.configurarNotificaciones({
                 actualizarBotonLote, actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
                 aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
-                descargarJSON, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+                descargarJSON, flashCampo: _flashCampo, flashCampoTipo: _flashCampoTipo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
                 obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
                 setBloqueoEdicionGrupo, verificarBloqueoCredito
             });
@@ -7508,6 +7736,7 @@ Generado por Sistema Lushibosca
             ModalManager.registrarAccionVolver('modal-exportar', cerrarExportar);
             ModalManager.registrarAccionVolver('modal-editar-perfil', cerrarEditorPerfil);
             ModalManager.registrarAccionVolver('modal-editar-grupo', cerrarEdicionGrupo);
+            ModalManager.registrarAccionVolver('modal-reporte-secciones', cerrarModalReporteSecciones);
         }
 
         function _initListenersFormulario() {
@@ -7668,11 +7897,11 @@ Generado por Sistema Lushibosca
                     const icon = $('icon-indicator-historico');
                     if (contenido) contenido.classList.add('expanded');
                     if (estadoHistorico === 'meses') {
-                        if (icon) { icon.style.transform = ''; icon.classList.add('rotated'); }
+                        if (icon) { icon.classList.remove('icon-rotate-neg90'); icon.classList.add('rotated'); }
                     } else {
                         const botones = $('botones-historico');
                         if (botones) { botones.classList.add('expanded'); UILogic.setTiempoExpansionBotones(Date.now()); }
-                        if (icon) { icon.classList.remove('rotated'); icon.style.transform = 'rotate(-90deg)'; }
+                        if (icon) { icon.classList.remove('rotated'); icon.classList.add('icon-rotate-neg90'); }
                     }
                 }
 
@@ -7748,8 +7977,8 @@ Generado por Sistema Lushibosca
                     const hayArchivo = e.target.files.length > 0;
                     if (hayArchivo) {
                         if (nombreEl) { nombreEl.textContent = `✓ ${e.target.files[0].name}`; nombreEl.style.display = 'block'; }
-                        if (btnCombinar) { btnCombinar.disabled = false; btnCombinar.style.opacity = '1'; }
-                        if (btnReemplazar) { btnReemplazar.disabled = false; btnReemplazar.style.opacity = '1'; }
+                        if (btnCombinar) btnCombinar.disabled = false;
+                        if (btnReemplazar) btnReemplazar.disabled = false;
                     } else {
                         if (nombreEl) { nombreEl.style.display = 'none'; nombreEl.textContent = ''; }
                         if (btnCombinar) btnCombinar.disabled = true;
@@ -7768,6 +7997,10 @@ Generado por Sistema Lushibosca
             _initSwipesYStats();
             _initDatosYConfig();
             _restaurarEstadoVisual();
+            setBloqueoEdicion(true);
+            setBloqueoEdicionGrupo(true);
+            const btnEliminarPerfil = $('btn-eliminar-perfil-editor');
+            if (btnEliminarPerfil) btnEliminarPerfil.disabled = true;
 
             PWAInstaller.init();
             actualizarUI(null, false, false, true);
@@ -7799,34 +8032,32 @@ Generado por Sistema Lushibosca
             window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
         }
 
-        function aplicarFeedbackCampos(campos) {
+        function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'label-feedback--green') {
             const activos = campos
                 .filter(c => c.mostrar)
                 .map(c => {
                     const input = document.getElementById(c.id);
                     const label = input?.closest('.form-group')?.querySelector('label');
                     const textoOriginal = label ? label.textContent : c.fallback;
-                    if (input && label) input.classList.add('input-agregado-animacion');
-                    return { input, label, textoOriginal };
+                    return { label, textoOriginal };
                 });
 
-            const labels = activos.filter(a => a.input && a.label).map(a => a.label);
+            const labels = activos.filter(a => a.label).map(a => a.label);
 
             _fadeSwapCiclo(labels, () => {
-                activos.forEach(({ input, label }) => {
-                    if (!input || !label) return;
-                    label.textContent = '✓ Agregado';
-                    label.style.color = 'var(--c-green)';
+                activos.forEach(({ label }) => {
+                    if (!label) return;
+                    label.textContent = texto;
+                    label.classList.add(claseColor);
                 });
             });
 
             setTimeout(() => {
-                activos.forEach(({ input }) => { if (input) input.classList.remove('input-agregado-animacion'); });
                 _fadeSwapCiclo(labels, () => {
-                    activos.forEach(({ input, label, textoOriginal }) => {
-                        if (!input || !label) return;
+                    activos.forEach(({ label, textoOriginal }) => {
+                        if (!label) return;
                         label.textContent = textoOriginal;
-                        label.style.color = '';
+                        label.classList.remove(claseColor);
                     });
                 });
             }, 2000);
@@ -7885,7 +8116,7 @@ Generado por Sistema Lushibosca
         const _pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
         function iniciarCambioObjetivoEdicion(incremento) { _pressHoldObjetivoEdicion.iniciar(incremento); }
         function detenerCambioObjetivoEdicion() { _pressHoldObjetivoEdicion.detener(); }
-        
+
         function cambiarObjetivoEdicion(incremento) {
             const el = $('edit-objetivo');
             if (!el) return;
@@ -7908,7 +8139,9 @@ Generado por Sistema Lushibosca
             cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError,
             limpiarError, resetearBoton, restaurarBotonGuardarEdicion, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
-            cambiarMesStats, generarReporte, toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
+            cambiarMesStats, generarReporte, abrirModalReporteSecciones, cerrarModalReporteSecciones,
+            toggleSeccionReporte, confirmarGenerarReporte,
+            toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
             actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
@@ -8141,7 +8374,13 @@ document.addEventListener('DOMContentLoaded', function () {
     $('select-anio-stats')?.addEventListener('change', () => UILogic.cambiarAnioStats());
     $('select-semana-stats')?.addEventListener('change', () => UILogic.cambiarSemanaStats());
     $('btn-toggle-periodo')?.addEventListener('click', () => UILogic.togglePeriodoStats());
-    $('btn-reporte')?.addEventListener('click', () => UILogic.generarReporte());
+    $('btn-reporte')?.addEventListener('click', () => UILogic.abrirModalReporteSecciones());
+    $('reporte-secciones-lista')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-seccion-reporte');
+        if (btn) UILogic.toggleSeccionReporte(btn);
+    });
+    $('btn-confirmar-reporte')?.addEventListener('click', () => UILogic.confirmarGenerarReporte());
+    $('btn-volver-reporte-secciones')?.addEventListener('click', () => UILogic.cerrarModalReporteSecciones());
 
     document.querySelector('#card-historico .card-header-clickable')?.addEventListener('click', () => UILogic.toggleHistorico());
     $('btn-vista-calendario')?.addEventListener('click', () => UILogic.toggleVistaHistorico());
@@ -8248,7 +8487,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260813';
+        const _v = '-v260817';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

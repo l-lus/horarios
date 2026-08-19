@@ -5130,7 +5130,7 @@
             }
         }
 
-        function calcularEstadisticasMes(mesAnio = null) {
+        function calcularEstadisticasMes(mesAnio = null, registrosPeriodo = null) {
             let mesActual, añoActual;
             if (mesAnio) {
                 const [año, mes] = mesAnio.split('-').map(Number);
@@ -5139,7 +5139,7 @@
                 const hoy = new Date();
                 mesActual = hoy.getMonth(); añoActual = hoy.getFullYear();
             }
-            const registros = D.registros().filter(r => {
+            const registros = registrosPeriodo ?? D.registros().filter(r => {
                 const [a, m] = r.fecha.split('-').map(Number);
                 return a === añoActual && m === mesActual + 1;
             });
@@ -5190,9 +5190,9 @@
             }
         }
 
-        function calcularEstadisticasAnio(anio) {
+        function calcularEstadisticasAnio(anio, registrosPeriodo = null) {
             const anioNum = parseInt(anio);
-            const registros = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
+            const registros = registrosPeriodo ?? D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
             const fechaDesde = _fechaDesdeEfectiva(registros, `${anioNum}-01-01`);
 
             return _calcularEstadisticasRango(registros, {
@@ -5325,11 +5325,12 @@
                 const anio = $('select-anio-stats')?.value;
                 if (!anio) { mostrarToast('No hay año seleccionado', 'error'); return null; }
                 const anioNum = parseInt(anio);
+                const registrosPeriodo = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
                 return {
                     periodoLabel: anio,
                     nombreArchivo: `reporte_${anio}.html`,
-                    registrosPeriodo: D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum),
-                    stats: calcularEstadisticasAnio(anio),
+                    registrosPeriodo,
+                    stats: calcularEstadisticasAnio(anio, registrosPeriodo),
                     mesSeleccionado: null
                 };
             }
@@ -5337,14 +5338,15 @@
             const mes = selectMes?.value;
             if (!mes) { mostrarToast('No hay mes seleccionado', 'error'); return null; }
             const [año, mesNum] = mes.split('-').map(Number);
+            const registrosPeriodo = D.registros().filter(r => {
+                const [aReg, mReg] = r.fecha.split('-').map(Number);
+                return aReg === año && mReg === mesNum;
+            });
             return {
                 periodoLabel: selectMes.options[selectMes.selectedIndex].text,
                 nombreArchivo: `reporte_${mes}.html`,
-                registrosPeriodo: D.registros().filter(r => {
-                    const [aReg, mReg] = r.fecha.split('-').map(Number);
-                    return aReg === año && mReg === mesNum;
-                }),
-                stats: calcularEstadisticasMes(mes),
+                registrosPeriodo,
+                stats: calcularEstadisticasMes(mes, registrosPeriodo),
                 mesSeleccionado: mes
             };
         }

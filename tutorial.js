@@ -4,14 +4,13 @@
 // Este archivo contiene únicamente el contenido (textos, pasos, selectores)
 // del tutorial guiado de la app. Toda la lógica que interpreta y muestra
 // estos datos vive en app.js, dentro del módulo TutorialManager.
-//
-// Se carga antes que app.js y expone su contenido en window.TutorialTexts.
+
 (function () {
     'use strict';
 
     window.TutorialTexts = {
 
-        // ── Tutorial "Esenciales": repaso corto de las funciones principales ──
+        // ── Tutorial "Esenciales" ──
         pasosEsenciales: [
             {
                 selector: '.header-profile-btn',
@@ -50,11 +49,13 @@
             }
         ],
 
-        // ── Tutorial "Completo": recorrido detallado, tarjeta por tarjeta ──
-        // Cada paso puede pedir que el formulario esté abierto (requiereFormAbierto)
-        // y/o que la tarjeta esté en un modo puntual ('normal' o 'lote') antes de
-        // resaltarlo; TutorialManager se encarga de dejar la UI en ese estado.
+        // ── Tutorial "Completo" ──
         tarjetasCompleto: {
+            estado: {
+                nombre: 'Estado',
+                cardSelector: '#stats-card',
+                pasos: []
+            },
             registrar: {
                 nombre: 'Fichar',
                 cardSelector: '#card-registrar',
@@ -150,22 +151,27 @@
                         desc: 'Ya conocés todos los campos y botones de la tarjeta Fichar, en modo Normal y en modo Lote. Podés repetir cualquier tutorial cuando quieras desde Ajustes → Ayuda.'
                     }
                 ]
+            },
+            estadisticas: {
+                nombre: 'Estadísticas',
+                cardSelector: '#card-estadisticas',
+                pasos: []
+            },
+            historico: {
+                nombre: 'Registros',
+                cardSelector: '#card-historico',
+                pasos: []
             }
         },
 
-        // ── Textos de los diálogos de confirmación del tutorial ──
-        dialogoBienvenida: {
-            texto: '¿Querés hacer un recorrido rápido por las funciones principales de la app?',
-            labelOk: 'Sí, comenzar',
-            icono: '#icon-help',
-            opciones: { titulo: '¡Bienvenido a Horarios!', labelCancel: 'No, gracias' }
-        },
-        dialogoElegirTipo: {
-            texto: 'El modo "Esenciales" es un repaso corto de lo más importante. El modo "Completo" explica en detalle cada campo y botón, tarjeta por tarjeta (por ahora solo la tarjeta Fichar).',
-            labelOk: 'Completo (por tarjeta)',
-            icono: '#icon-help',
-            opciones: { titulo: '¿Qué tipo de tutorial querés?', labelCancel: 'Esenciales' }
-        },
+        // ── Lista de opciones del modal "¿Qué querés aprender?" ──
+        menuTutorial: [
+            { key: 'esencial', label: 'Esencial', icono: '#icon-help' },
+            { key: 'estado', label: 'Tarjeta de estado', icono: '#icon-dashboard' },
+            { key: 'registrar', label: 'Tarjeta de fichaje', icono: '#icon-save' },
+            { key: 'estadisticas', label: 'Tarjeta de estadísticas', icono: '#icon-stats' },
+            { key: 'historico', label: 'Tarjeta de registros', icono: '#icon-list' }
+        ],
 
         // ── Mensajes (toasts) usados por la lógica del tutorial ──
         avisoTarjetaOculta: 'Esa tarjeta está oculta. Activala desde Ajustes para ver este tutorial.',

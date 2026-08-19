@@ -803,8 +803,6 @@
     // ====================================================================
     // TUTORIAL MANAGER MODULE
     // ====================================================================
-    // La lógica vive acá; los textos y pasos del tutorial se cargan desde
-    // tutorial.js (window.TutorialTexts), que se incluye antes que este script.
     const TutorialManager = (function () {
         const S = SecurityAndUtils;
         const T = window.TutorialTexts || {};
@@ -842,10 +840,6 @@
         function _bloquearScroll() {
             if (_scrollBloqueado) return;
             _scrollBloqueado = true;
-            // No usamos overflow:hidden en el body: en varios navegadores eso
-            // también impide el scrollIntoView() programático que necesitamos
-            // para llevar cada elemento a la vista. Bloqueamos solo la
-            // interacción manual del usuario (rueda, touch, teclas de scroll).
             document.addEventListener('wheel', _bloquearInteraccionScroll, { passive: false });
             document.addEventListener('touchmove', _bloquearInteraccionScroll, { passive: false });
             document.addEventListener('keydown', _bloquearTeclasScroll, { passive: false });
@@ -872,14 +866,11 @@
             else if (e.key === 'ArrowLeft') { e.preventDefault(); anterior(); }
         }
 
-        // Espera a que el scroll (suave) hacia el elemento termine, comprobando
-        // que su posición se mantenga estable durante varios frames seguidos,
-        // en vez de asumir un tiempo fijo.
         function _esperarFinDeScroll(el, callback) {
             let ultimoTop = null;
             let framesEstables = 0;
             let intentos = 0;
-            const MAX_INTENTOS = 90; // ~1.5s de margen de seguridad como tope
+            const MAX_INTENTOS = 90;
 
             function chequear() {
                 intentos++;
@@ -909,10 +900,6 @@
             return !!lote && lote.style.display === 'block';
         }
 
-        // Deja la UI en el estado que un paso necesita (tarjeta visible, formulario
-        // abierto, modo normal/lote correcto) antes de resaltar su elemento.
-        // Devuelve una promesa que resuelve false si el paso no se puede mostrar
-        // (por ejemplo, la tarjeta está oculta por el usuario en Ajustes).
         function _prepararEntorno(paso) {
             return new Promise(resolve => {
                 const tarjeta = paso.cardSelector && document.querySelector(paso.cardSelector);
@@ -929,8 +916,6 @@
                 }
 
                 setTimeout(() => {
-                    // Abrir el formulario reinicia el modo a "normal", por eso el
-                    // cambio de modo se resuelve después de esa espera.
                     if (paso.modo && (paso.modo === 'lote') !== _modoLoteActivo()) {
                         window.UILogic?.toggleModoLote?.();
                         setTimeout(() => resolve(true), 380);
@@ -965,7 +950,7 @@
 
             const puedeMostrarse = await _prepararEntorno(paso);
             if (puedeMostrarse === false) { finalizar(); return; }
-            if (_pasoActual !== indice) return; // se saltó/cerró mientras preparábamos el entorno
+            if (_pasoActual !== indice) return;
 
             const target = document.querySelector(paso.selector);
             if (!target) { _pasoActual = indice + 1; _mostrarPaso(_pasoActual); return; }
@@ -1006,7 +991,7 @@
             })();
 
             const alListo = () => {
-                if (!_popupEl || _popupEl !== popup) return; // el paso cambió mientras tanto
+                if (!_popupEl || _popupEl !== popup) return;
                 _posicionar(popup, target);
                 popup.style.visibility = '';
                 requestAnimationFrame(() => _posicionar(popup, target));
@@ -1068,17 +1053,39 @@
             _iniciarConPasos(pasosConTarjeta);
         }
 
-        async function elegirYComenzar() {
-            _activo = true;
-            const d = T.dialogoElegirTipo || {};
-            const quiereCompleto = await ModalManager.confirmar(
-                d.texto, d.labelOk, d.icono, d.opciones
-            );
-            if (quiereCompleto) iniciarCompleto('registrar');
-            else iniciar();
+        const MENU_TUTORIAL = T.menuTutorial || [];
+
+        function _renderMenu() {
+            const cont = document.getElementById('tutorial-tipo-lista');
+            if (!cont) return;
+            cont.innerHTML = MENU_TUTORIAL.map(item => `
+                <button type="button" class="btn-tutorial-tipo" data-tutorial-key="${item.key}">
+                    <svg class="icon"><use href="${item.icono}" /></svg>
+                    <span>${S.escapeHtml(item.label)}</span>
+                    <svg class="icon icon-indicator"><use href="#icon-chevron-right" /></svg>
+                </button>`).join('');
         }
 
-        return { iniciar, iniciarCompleto, elegirYComenzar, estaActivo: () => _activo };
+        function _elegirDelMenu(key) {
+            ModalManager.cerrar('modal-tutorial-tipo');
+            if (key === 'esencial') iniciar();
+            else iniciarCompleto(key);
+        }
+        ModalManager.registrarAccionVolver('modal-tutorial-tipo', () => {
+            _activo = false;
+            ModalManager.cerrar('modal-tutorial-tipo');
+        });
+
+        function elegirYComenzar() {
+            _activo = true;
+            _renderMenu();
+            ModalManager.abrir('modal-tutorial-tipo');
+        }
+
+        return {
+            iniciar, iniciarCompleto, elegirYComenzar, elegirDelMenu: _elegirDelMenu,
+            estaActivo: () => _activo
+        };
     })();
 
     // ====================================================================
@@ -8326,6 +8333,14 @@
             setTimeout(() => TutorialManager.elegirYComenzar(), 350);
         }
 
+        function elegirTutorialDelMenu(key) {
+            TutorialManager.elegirDelMenu(key);
+        }
+
+        function cerrarMenuTutorial() {
+            ModalManager.ejecutarAccionCierre('modal-tutorial-tipo');
+        }
+
         function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'label-feedback--green') {
             const activos = campos
                 .filter(c => c.mostrar)
@@ -8429,7 +8444,7 @@
         }
 
         return {
-            init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario, iniciarTutorial,
+            init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario, iniciarTutorial, elegirTutorialDelMenu, cerrarMenuTutorial,
             cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
             resetearBoton, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, irHoyCalendario, obtenerOrdenCards,
@@ -8722,6 +8737,11 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => UILogic.cerrarConfig());
     $('btn-tutorial-restart')?.addEventListener('click', () => UILogic.iniciarTutorial());
+    $('tutorial-tipo-lista')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-tutorial-tipo');
+        if (btn) UILogic.elegirTutorialDelMenu(btn.dataset.tutorialKey);
+    });
+    $('btn-cancelar-tutorial-tipo')?.addEventListener('click', () => UILogic.cerrarMenuTutorial());
 
     const inputHoras = $('config-horas-diarias');
     if (inputHoras) {

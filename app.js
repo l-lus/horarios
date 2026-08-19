@@ -1073,7 +1073,6 @@
     // ====================================================================
     const DataManagement = (function (S) {
         let notify = {
-            actualizarBotonLote: () => { },
             actualizarEstadoBotonTimerMain: () => { },
             actualizarHintGrupo: () => { },
             actualizarUI: () => { },
@@ -1083,7 +1082,6 @@
             cerrarFiltros: () => { },
             cerrarImportar: () => { },
             descargarJSON: () => { },
-            flashCampo: () => { },
             flashCampoTipo: () => { },
             iniciarTimerAutoCierreBotones: () => { },
             limpiarError: () => { },
@@ -1174,10 +1172,7 @@
 
                 registros = registros.filter(r => !idsDelGrupo.has(r.id));
                 const { entrada, salida } = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
-                const nuevosRegistros = fechasNuevas.map(fechaISO => {
-                    const t = calcularHoras(entrada, salida, null);
-                    return { id: S.generarIDSeguro(), fecha: fechaISO, entrada, salida, tiempoFuera: null, horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias };
-                });
+                const nuevosRegistros = fechasNuevas.map(fechaISO => _construirRegistro(fechaISO, entrada, salida));
                 registros.push(...nuevosRegistros);
                 ordenarRegistros();
                 HistoryManager.saveState(registros, `editar grupo (${nuevosRegistros.length} día${nuevosRegistros.length !== 1 ? 's' : ''})`);
@@ -1201,8 +1196,6 @@
             if (saved) { notify.mostrarToast('Grupo eliminado', 'success'); notify.cerrarEdicionGrupo(); }
         }
 
-        function setGrupoEnEdicion(val) { grupoEnEdicion = val; }
-
         async function registrarDiaEspecial(fecha, tipo) {
             const registroExistente = registros.find(r => r.fecha === fecha);
             if (registroExistente) { notify.mostrarToast('Ya existe un registro para hoy', 'warning'); throw new Error('Registro ya existe'); }
@@ -1216,17 +1209,13 @@
 
             if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast('Límite de registros alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite alcanzado'); }
 
-            const nuevoId = S.generarIDSeguro();
-            const t = calcularHoras(entrada, salida, null);
-            registros.push({
-                id: nuevoId, fecha: fecha, entrada: entrada, salida: salida, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
-            });
+            const nuevo = _construirRegistro(fecha, entrada, salida);
+            registros.push(nuevo);
 
             ordenarRegistros();
             const esHoy = fecha === TimeUtils.obtenerFechaHoy();
             HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${TimeUtils.fechaCorta(fecha)})`);
-            const saved = await _guardarConCicloSiHoy(nuevoId, esHoy);
+            const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy);
             if (saved) {
                 notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success');
                 notify.flashCampoTipo('success', 'btn-agregar');
@@ -1307,6 +1296,19 @@
             return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
         }
 
+        /**
+         * Arma un objeto registro nuevo (con ID, horas calculadas y objetivo del momento).
+         * No lo agrega al array `registros` — eso queda a cargo de quien llama.
+         */
+        function _construirRegistro(fecha, entrada, salida) {
+            const e = entrada || null, s = salida || null;
+            const t = calcularHoras(e, s, null);
+            return {
+                id: S.generarIDSeguro(), fecha, entrada: e, salida: s, tiempoFuera: null,
+                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
+            };
+        }
+
         function validarFormulario() {
             let valido = true;
             const fecha = S.sanitizeString($('fecha').value, 10);
@@ -1358,17 +1360,13 @@
             if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) {
                 notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
             }
-            const nuevoId = S.generarIDSeguro();
-            const t = calcularHoras(e || null, s || null, null);
-            registros.push({
-                id: nuevoId, fecha: f, entrada: e || null, salida: s || null, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
-            });
+            const nuevo = _construirRegistro(f, e, s);
+            registros.push(nuevo);
             ordenarRegistros();
             const esHoy = e && f === TimeUtils.obtenerFechaHoy();
             const detalleAccion = e && s ? `entrada ${e} y salida ${s}` : e ? `entrada ${e}` : `salida ${s}`;
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
-            const saved = await _guardarConCicloSiHoy(nuevoId, esHoy, 'entrada');
+            const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
             if (!saved) return;
             const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
             if (entradaManual || salidaManual) {
@@ -1947,13 +1945,9 @@
 
             const idsNuevosParaAnimar = [];
             nuevosRegistros.forEach(fecha => {
-                const t = calcularHoras(entrada, salida, null);
-                const nuevoId = S.generarIDSeguro();
-                idsNuevosParaAnimar.push(nuevoId);
-                registros.push({
-                    id: nuevoId, fecha: fecha, entrada: entrada, salida: salida, tiempoFuera: null,
-                    horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
-                });
+                const nuevo = _construirRegistro(fecha, entrada, salida);
+                idsNuevosParaAnimar.push(nuevo.id);
+                registros.push(nuevo);
             });
 
             ordenarRegistros();
@@ -7733,9 +7727,9 @@
             window.UILogic = UILogic;
 
             D.configurarNotificaciones({
-                actualizarBotonLote, actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
+                actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
                 aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
-                descargarJSON, flashCampo: _flashCampo, flashCampoTipo: _flashCampoTipo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+                descargarJSON, flashCampoTipo: _flashCampoTipo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
                 obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
                 setBloqueoEdicionGrupo, verificarBloqueoCredito
             });

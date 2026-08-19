@@ -1876,7 +1876,7 @@
                 const esDiaHabil = diasHabiles.includes(TimeUtils.parsearFechaLocal(iso).getDay());
                 const r = regsPorFecha.get(iso);
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+                const esRemoto = esEspecial && esTipoRemoto(r);
                 const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
                 const objetivoDia = r ? objetivoDeRegistro(r) : horasDiarias;
 
@@ -2003,6 +2003,22 @@
             return (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
         }
 
+        function esTipoRemoto(registro) {
+            return TiposRegistro.obtenerTipoPorCodigo(registro?.entrada, registro?.salida)?.id === 'remoto';
+        }
+
+        /**
+         * Cuánto aporta un registro a las horas trabajadas efectivas:
+         * un día remoto cuenta como su objetivo (no como horas reales), un día especial
+         * no-remoto no cuenta, y un día normal cuenta su total real.
+         */
+        function horasEfectivasDeRegistro(registro) {
+            const tipo = TiposRegistro.obtenerTipoPorCodigo(registro.entrada, registro.salida);
+            if (tipo && tipo.id === 'remoto') return objetivoDeRegistro(registro);
+            if (!tipo) return registro.total;
+            return 0;
+        }
+
         function objetivoEdicionEnVivo() {
             if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
             const v = parseFloat($('edit-objetivo')?.dataset.valor);
@@ -2055,6 +2071,7 @@
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
             objetivoDeRegistro, objetivoEdicionEnVivo, migrarObjetivoHorasFaltante, aplicarHorasATodosLosRegistros,
+            esTipoRemoto, horasEfectivasDeRegistro,
             recalcularTotalesEnMemoria: function () {
                 registros.forEach(r => {
                     if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
@@ -5312,12 +5329,7 @@
         }
 
         function _sumarHorasEfectivas(regs) {
-            return regs.reduce((sum, r) => {
-                const t = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                if (t && t.id === 'remoto') return sum + D.objetivoDeRegistro(r);
-                if (!t) return sum + r.total;
-                return sum;
-            }, 0);
+            return regs.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0);
         }
 
         function _resolverPeriodoDatos(esAnual) {
@@ -6129,7 +6141,7 @@
             for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
                 const r = registrosMap.get(isoDate);
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+                const esRemoto = esEspecial && D.esTipoRemoto(r);
                 let delta = 0;
                 if (esRemoto) {
                     delta = 0;
@@ -6199,8 +6211,7 @@
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
             const totalSemana = registrosSemana.reduce((sum, r) => {
                 if (regActivo && r.fecha === regActivo.fecha) return sum + tiempoHoy;
-                const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                return sum + (tipo?.id === 'remoto' ? D.objetivoDeRegistro(r) : tipo ? 0 : r.total);
+                return sum + D.horasEfectivasDeRegistro(r);
             }, 0);
 
             const registrosSemanaCompletaPorFecha = new Map(

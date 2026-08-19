@@ -1046,6 +1046,10 @@
             return (cantidad === 1 ? tipo.label : tipo.labelPlural).toLowerCase();
         }
 
+        function claveStat(tipo) {
+            return tipo.labelPlural.toLowerCase();
+        }
+
         function obtenerCodigosPorTipo(id) {
             const tipo = obtenerTipoPorId(id);
             return tipo ? { entrada: tipo.codigo, salida: tipo.codigo } : null;
@@ -1059,7 +1063,8 @@
             validarTipoPermitido,
             obtenerTodosLosTipos,
             obtenerCodigosPorTipo,
-            labelSegunCantidad
+            labelSegunCantidad,
+            claveStat
         };
     })();
 
@@ -4954,7 +4959,7 @@
     // ====================================================================
     const UIEstadisticas = (function (S, D, UICore) {
         const {
-            formatoDiferencia, mostrarToast, _setBtnActivo, _poblarSelect,
+            mostrarToast, _poblarSelect,
             _animarSlideElemento, _posicionarPopup, _registrarCierrePopup,
             toggleSeccionGen, registrarSwipe, _animarFadeSwap
         } = UICore;
@@ -4973,6 +4978,16 @@
             const media = valores.reduce((a, b) => a + b, 0) / valores.length;
             const varianza = valores.reduce((sum, v) => sum + Math.pow(v - media, 2), 0) / valores.length;
             return Math.sqrt(varianza);
+        }
+
+        /**
+         * Devuelve la fecha desde la que arranca un período: la fecha por defecto (ej. 1° del mes/año),
+         * o el primer registro real si es posterior (ej. si el perfil empezó a usarse a mitad de período).
+         */
+        function _fechaDesdeEfectiva(registros, fechaDesdeDefault) {
+            if (registros.length === 0) return fechaDesdeDefault;
+            const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
+            return primerRegistro > fechaDesdeDefault ? primerRegistro : fechaDesdeDefault;
         }
 
 
@@ -5004,7 +5019,7 @@
             const { regularidadPorMes = false } = opciones;
 
             const conteosPorTipo = {};
-            const claveTipoPorCodigo = new Map(TiposRegistro.obtenerTodosLosTipos().map(t => [t.codigo, t.labelPlural.toLowerCase()]));
+            const claveTipoPorCodigo = new Map(TiposRegistro.obtenerTodosLosTipos().map(t => [t.codigo, TiposRegistro.claveStat(t)]));
             claveTipoPorCodigo.forEach(clave => { conteosPorTipo[clave] = 0; });
             registrosRango.forEach(r => {
                 if (r.entrada && r.entrada === r.salida) {
@@ -5040,11 +5055,8 @@
             const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
             const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
 
-            const totalRemotos = registrosRango
-                .filter(r => r.entrada && r.entrada === r.salida && TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'remoto')
-                .reduce((s, r) => s + D.objetivoDeRegistro(r), 0);
             const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
-            const totalHoras = totalHorasTrabajadas + totalRemotos;
+            const totalHoras = _sumarHorasEfectivas(registrosRango);
             const promDiario = totalHorasTrabajadas / registrosValidos.length;
 
             const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
@@ -5085,7 +5097,7 @@
             toggleStatItem('stat-dias-trabajados', stats.diasTrabajados);
 
             TiposRegistro.obtenerTodosLosTipos().forEach(t => {
-                const clave = t.labelPlural.toLowerCase();
+                const clave = TiposRegistro.claveStat(t);
                 toggleStatItem(`stat-${clave}`, stats[clave] || 0);
             });
 
@@ -5132,11 +5144,7 @@
                 return a === añoActual && m === mesActual + 1;
             });
             const ultimoDia = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
-            let fechaDesde = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1));
-            if (registros.length > 0) {
-                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
-                if (primerRegistro > fechaDesde) fechaDesde = primerRegistro;
-            }
+            const fechaDesde = _fechaDesdeEfectiva(registros, TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1)));
             return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: fechaDesde, hasta: ultimoDia });
         }
 
@@ -5185,14 +5193,7 @@
         function calcularEstadisticasAnio(anio) {
             const anioNum = parseInt(anio);
             const registros = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
-            let fechaDesde = `${anioNum}-01-01`;
-
-            if (registros.length > 0) {
-                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
-                if (primerRegistro > fechaDesde) {
-                    fechaDesde = primerRegistro;
-                }
-            }
+            const fechaDesde = _fechaDesdeEfectiva(registros, `${anioNum}-01-01`);
 
             return _calcularEstadisticasRango(registros, {
                 regularidadPorMes: true,
@@ -5445,13 +5446,13 @@
                 const lunes = TimeUtils.obtenerLunesSemanaISO(r.fecha);
                 if (!semanas.has(lunes)) {
                     const base = { trabajados: [] };
-                    TiposRegistro.obtenerTodosLosTipos().forEach(t => { base[t.labelPlural.toLowerCase()] = []; });
+                    TiposRegistro.obtenerTodosLosTipos().forEach(t => { base[TiposRegistro.claveStat(t)] = []; });
                     semanas.set(lunes, base);
                 }
                 const semana = semanas.get(lunes);
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                 if (tipoEspecial) {
-                    const cat = tipoEspecial.labelPlural.toLowerCase();
+                    const cat = TiposRegistro.claveStat(tipoEspecial);
                     if (semana[cat]) semana[cat].push(r);
                 } else {
                     semana.trabajados.push(r);
@@ -5568,7 +5569,7 @@
                 { label: 'Jornada regular', valor: stats.regularidadJornada },
                 { label: 'Tiempo fuera', valor: stats.tiempoFueraTotal },
                 { label: 'Salidas temprano', valor: stats.compensaciones, esConteo: true },
-                ...TiposRegistro.obtenerTodosLosTipos().map(t => ({ label: t.labelPlural, valor: stats[t.labelPlural.toLowerCase()] || 0, esConteo: true })),
+                ...TiposRegistro.obtenerTodosLosTipos().map(t => ({ label: t.labelPlural, valor: stats[TiposRegistro.claveStat(t)] || 0, esConteo: true })),
             ].filter(t => !(t.esConteo && t.valor === 0));
 
             const filasHtml = tarjetas.map(t => `
@@ -5624,7 +5625,7 @@
 
                 const notasExtras = TiposRegistro.obtenerTodosLosTipos()
                     .map(t => {
-                        const clave = t.labelPlural.toLowerCase();
+                        const clave = TiposRegistro.claveStat(t);
                         const cantidad = datos[clave]?.length || 0;
                         return cantidad ? `${cantidad} ${TiposRegistro.labelSegunCantidad(t, cantidad)}` : null;
                     })
@@ -5821,7 +5822,7 @@
             if (!info) {
                 const valueEl = $(statId);
                 const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');
-                const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${t.labelPlural.toLowerCase()}`);
+                const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${TiposRegistro.claveStat(t)}`);
                 info = {
                     titulo: S.escapeHtml(label ? label.textContent : 'Estadística'),
                     desc: tipoMatch
@@ -7814,7 +7815,7 @@
                     const item = document.createElement('div');
                     item.className = 'stat-item';
                     const label = Object.assign(document.createElement('div'), { className: 'stat-label', textContent: t.labelPlural });
-                    const value = Object.assign(document.createElement('div'), { className: 'stat-value', id: `stat-${t.labelPlural.toLowerCase()}`, textContent: '0' });
+                    const value = Object.assign(document.createElement('div'), { className: 'stat-value', id: `stat-${TiposRegistro.claveStat(t)}`, textContent: '0' });
                     item.appendChild(label);
                     item.appendChild(value);
                     anchor.parentNode.insertBefore(item, anchor);

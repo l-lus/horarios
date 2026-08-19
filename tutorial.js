@@ -155,7 +155,39 @@
             estadisticas: {
                 nombre: 'Estadísticas',
                 cardSelector: '#card-estadisticas',
-                pasos: []
+                pasos: [
+                    {
+                        selector: '#card-estadisticas',
+                        titulo: 'Tarjeta Estadísticas',
+                        desc: 'Acá vas a encontrar tus horas trabajadas, promedios y saldo, calculados según el período que elijas. Vamos a recorrerla por partes.'
+                    },
+                    {
+                        selector: '.stats-periodo-row select:not(.hidden)',
+                        titulo: 'Elegí el período',
+                        desc: 'Con este selector elegís qué mes, año o semana querés consultar, según la vista que tengas activa.'
+                    },
+                    {
+                        selector: '#btn-toggle-periodo',
+                        titulo: 'Cambiar de vista',
+                        desc: 'Este botón alterna entre vista Mensual, Anual y Semanal. Mirá cómo cambia.',
+                        demoPeriodo: true
+                    },
+                    {
+                        selector: '#btn-reporte',
+                        titulo: 'Reporte',
+                        desc: 'Genera un reporte descargable con el detalle del período que tengas seleccionado en ese momento.'
+                    },
+                    {
+                        selector: '.stats-grid',
+                        titulo: 'Los datos',
+                        desc: 'Acá tenés el resumen: horas trabajadas, promedios, regularidad, saldo y más. Tocá cualquier dato para ver una explicación de qué significa y cómo se calcula.'
+                    },
+                    {
+                        selector: '#card-estadisticas',
+                        titulo: '¡Eso es todo!',
+                        desc: 'Ya conocés la tarjeta de Estadísticas. Podés repetir cualquier tutorial cuando quieras desde Ajustes → Ayuda.'
+                    }
+                ]
             },
             historico: {
                 nombre: 'Registros',

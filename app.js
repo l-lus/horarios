@@ -24,6 +24,7 @@
         FORMULARIO_EXPANDIDO: 'formularioExpandido',
         STATS_EXPANDIDO: 'statsExpandido',
         HISTORICO_EXPANDIDO: 'historicoExpandido',
+        TUTORIAL_COMPLETADO: 'tutorialCompletado',
         PERFIL_ACTIVO: 'perfilActivo',
         PERFILES: 'perfiles',
         HISTORY: 'history',
@@ -797,6 +798,287 @@
         }
 
         return { abrir, cerrar, alternar, cerrarTodos, confirmar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, setPadre: (id, padreId) => { if (id && padreId) _padres[id] = padreId; }, registrarAccionVolver };
+    })();
+
+    // ====================================================================
+    // TUTORIAL MANAGER MODULE
+    // ====================================================================
+    // La lógica vive acá; los textos y pasos del tutorial se cargan desde
+    // tutorial.js (window.TutorialTexts), que se incluye antes que este script.
+    const TutorialManager = (function () {
+        const S = SecurityAndUtils;
+        const T = window.TutorialTexts || {};
+
+        const PASOS_ESENCIALES = T.pasosEsenciales || [];
+        const TARJETAS_COMPLETO = T.tarjetasCompleto || {};
+
+        let _pasosActivos = PASOS_ESENCIALES;
+        let _pasoActual = 0;
+        let _popupEl = null;
+        let _elResaltado = null;
+        let _scrollBloqueado = false;
+        let _reposicionarActivo = null;
+        let _activo = false;
+
+        function _limpiarResaltado() {
+            if (_elResaltado) {
+                _elResaltado.classList.remove('tutorial-highlight');
+                _elResaltado = null;
+            }
+        }
+
+        const _TECLAS_SCROLL = [' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
+
+        function _bloquearInteraccionScroll(e) {
+            e.preventDefault();
+        }
+
+        function _bloquearTeclasScroll(e) {
+            if (_TECLAS_SCROLL.includes(e.key) && !(_popupEl && e.target && _popupEl.contains(e.target))) {
+                e.preventDefault();
+            }
+        }
+
+        function _bloquearScroll() {
+            if (_scrollBloqueado) return;
+            _scrollBloqueado = true;
+            // No usamos overflow:hidden en el body: en varios navegadores eso
+            // también impide el scrollIntoView() programático que necesitamos
+            // para llevar cada elemento a la vista. Bloqueamos solo la
+            // interacción manual del usuario (rueda, touch, teclas de scroll).
+            document.addEventListener('wheel', _bloquearInteraccionScroll, { passive: false });
+            document.addEventListener('touchmove', _bloquearInteraccionScroll, { passive: false });
+            document.addEventListener('keydown', _bloquearTeclasScroll, { passive: false });
+        }
+
+        function _desbloquearScroll() {
+            if (!_scrollBloqueado) return;
+            _scrollBloqueado = false;
+            document.removeEventListener('wheel', _bloquearInteraccionScroll, { passive: false });
+            document.removeEventListener('touchmove', _bloquearInteraccionScroll, { passive: false });
+            document.removeEventListener('keydown', _bloquearTeclasScroll, { passive: false });
+        }
+
+        function _cerrarPopup() {
+            if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
+            if (_popupEl) { _popupEl.remove(); _popupEl = null; }
+            _limpiarResaltado();
+            document.removeEventListener('keydown', _onKeydown, true);
+        }
+
+        function _onKeydown(e) {
+            if (e.key === 'Escape') { e.preventDefault(); finalizar(); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); siguiente(); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); anterior(); }
+        }
+
+        // Espera a que el scroll (suave) hacia el elemento termine, comprobando
+        // que su posición se mantenga estable durante varios frames seguidos,
+        // en vez de asumir un tiempo fijo.
+        function _esperarFinDeScroll(el, callback) {
+            let ultimoTop = null;
+            let framesEstables = 0;
+            let intentos = 0;
+            const MAX_INTENTOS = 90; // ~1.5s de margen de seguridad como tope
+
+            function chequear() {
+                intentos++;
+                const top = el.getBoundingClientRect().top;
+                if (ultimoTop !== null && Math.abs(top - ultimoTop) < 0.5) {
+                    framesEstables++;
+                } else {
+                    framesEstables = 0;
+                }
+                ultimoTop = top;
+
+                if (framesEstables >= 4 || intentos >= MAX_INTENTOS) {
+                    callback();
+                } else {
+                    requestAnimationFrame(chequear);
+                }
+            }
+            requestAnimationFrame(chequear);
+        }
+
+        function _formEstaAbierto() {
+            return !!document.getElementById('form-registro')?.classList.contains('expanded');
+        }
+
+        function _modoLoteActivo() {
+            const lote = document.getElementById('modo-lote');
+            return !!lote && lote.style.display === 'block';
+        }
+
+        // Deja la UI en el estado que un paso necesita (tarjeta visible, formulario
+        // abierto, modo normal/lote correcto) antes de resaltar su elemento.
+        // Devuelve una promesa que resuelve false si el paso no se puede mostrar
+        // (por ejemplo, la tarjeta está oculta por el usuario en Ajustes).
+        function _prepararEntorno(paso) {
+            return new Promise(resolve => {
+                const tarjeta = paso.cardSelector && document.querySelector(paso.cardSelector);
+                if (tarjeta && getComputedStyle(tarjeta).display === 'none') {
+                    window.UILogic?.mostrarToast?.(T.avisoTarjetaOculta || 'Esa tarjeta está oculta.', 'warning');
+                    resolve(false);
+                    return;
+                }
+
+                let espera = 0;
+                if (paso.requiereFormAbierto && !_formEstaAbierto()) {
+                    window.UILogic?.toggleFormulario?.();
+                    espera = 380;
+                }
+
+                setTimeout(() => {
+                    // Abrir el formulario reinicia el modo a "normal", por eso el
+                    // cambio de modo se resuelve después de esa espera.
+                    if (paso.modo && (paso.modo === 'lote') !== _modoLoteActivo()) {
+                        window.UILogic?.toggleModoLote?.();
+                        setTimeout(() => resolve(true), 380);
+                    } else {
+                        resolve(true);
+                    }
+                }, espera);
+            });
+        }
+
+        function _posicionar(popup, target) {
+            const margin = 10;
+            const rect = target.getBoundingClientRect();
+            const pw = popup.offsetWidth, ph = popup.offsetHeight;
+            let top = rect.bottom + 14;
+            let left = rect.left + (rect.width / 2) - (pw / 2);
+            if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+            if (left < margin) left = margin;
+            if (top + ph > window.innerHeight - margin) top = rect.top - ph - 14;
+            if (top < margin) top = Math.min(margin, window.innerHeight - ph - margin);
+            popup.style.top = `${top}px`;
+            popup.style.left = `${left}px`;
+        }
+
+        async function _mostrarPaso(indice) {
+            if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
+            if (_popupEl) { _popupEl.remove(); _popupEl = null; }
+            _limpiarResaltado();
+
+            const paso = _pasosActivos[indice];
+            if (!paso) { finalizar(); return; }
+
+            const puedeMostrarse = await _prepararEntorno(paso);
+            if (puedeMostrarse === false) { finalizar(); return; }
+            if (_pasoActual !== indice) return; // se saltó/cerró mientras preparábamos el entorno
+
+            const target = document.querySelector(paso.selector);
+            if (!target) { _pasoActual = indice + 1; _mostrarPaso(_pasoActual); return; }
+
+            target.classList.add('tutorial-highlight');
+            _elResaltado = target;
+
+            const esUltimo = indice === _pasosActivos.length - 1;
+            const esPrimero = indice === 0;
+
+            const popup = document.createElement('div');
+            popup.className = 'stat-popup tutorial-popup';
+            popup.id = '_tutorial-popup';
+            popup.innerHTML = `
+                <div class="tutorial-popup-header">
+                    <div class="tutorial-popup-paso">Paso ${indice + 1} de ${_pasosActivos.length}</div>
+                    <button class="tutorial-popup-skip" id="_tutorial-btn-saltar" type="button">Saltar</button>
+                </div>
+                <div class="stat-popup-titulo">${S.escapeHtml(paso.titulo)}</div>
+                <div class="stat-popup-desc">${S.escapeHtml(paso.desc)}</div>
+                <div class="tutorial-popup-nav">
+                    ${!esPrimero ? `<button class="cal-popup-btn-edit" id="_tutorial-btn-atras">Atrás</button>` : ''}
+                    <button class="cal-popup-btn-edit" id="_tutorial-btn-siguiente">${esUltimo ? 'Finalizar' : 'Siguiente'}</button>
+                </div>`;
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupEl = popup;
+
+            popup.querySelector('#_tutorial-btn-siguiente')?.addEventListener('click', () => esUltimo ? finalizar() : siguiente());
+            popup.querySelector('#_tutorial-btn-atras')?.addEventListener('click', anterior);
+            popup.querySelector('#_tutorial-btn-saltar')?.addEventListener('click', finalizar);
+
+            document.addEventListener('keydown', _onKeydown, true);
+
+            const yaVisible = (() => {
+                const r = target.getBoundingClientRect();
+                return r.top >= 0 && r.bottom <= window.innerHeight;
+            })();
+
+            const alListo = () => {
+                if (!_popupEl || _popupEl !== popup) return; // el paso cambió mientras tanto
+                _posicionar(popup, target);
+                popup.style.visibility = '';
+                requestAnimationFrame(() => _posicionar(popup, target));
+
+                const onResizeOrScroll = () => _posicionar(popup, target);
+                window.addEventListener('resize', onResizeOrScroll);
+                _reposicionarActivo = () => window.removeEventListener('resize', onResizeOrScroll);
+
+                setTimeout(() => popup.classList.add('listo'), 200);
+            };
+
+            if (yaVisible) {
+                alListo();
+            } else {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                _esperarFinDeScroll(target, alListo);
+            }
+        }
+
+        function siguiente() {
+            _pasoActual++;
+            if (_pasoActual >= _pasosActivos.length) { finalizar(); return; }
+            _mostrarPaso(_pasoActual);
+        }
+
+        function anterior() {
+            _pasoActual = Math.max(0, _pasoActual - 1);
+            _mostrarPaso(_pasoActual);
+        }
+
+        function finalizar() {
+            _cerrarPopup();
+            _desbloquearScroll();
+            _activo = false;
+            StorageHelper.setItem(STORAGE_KEYS.TUTORIAL_COMPLETADO, true);
+        }
+
+        function _iniciarConPasos(pasos) {
+            if (document.querySelector('.modal.show')) ModalManager.cerrarTodos();
+            _activo = true;
+            _pasosActivos = pasos;
+            _bloquearScroll();
+            _pasoActual = 0;
+            _mostrarPaso(0);
+        }
+
+        function iniciar() {
+            _iniciarConPasos(PASOS_ESENCIALES);
+        }
+
+        function iniciarCompleto(cardKey = 'registrar') {
+            const tarjeta = TARJETAS_COMPLETO[cardKey];
+            if (!tarjeta || !tarjeta.pasos.length) {
+                window.UILogic?.mostrarToast?.(T.avisoTarjetaNoDisponible || 'El tutorial completo de esa tarjeta todavía no está disponible.', 'info');
+                _activo = false;
+                return;
+            }
+            const pasosConTarjeta = tarjeta.pasos.map(p => ({ cardSelector: tarjeta.cardSelector, ...p }));
+            _iniciarConPasos(pasosConTarjeta);
+        }
+
+        async function elegirYComenzar() {
+            _activo = true;
+            const d = T.dialogoElegirTipo || {};
+            const quiereCompleto = await ModalManager.confirmar(
+                d.texto, d.labelOk, d.icono, d.opciones
+            );
+            if (quiereCompleto) iniciarCompleto('registrar');
+            else iniciar();
+        }
+
+        return { iniciar, iniciarCompleto, elegirYComenzar, estaActivo: () => _activo };
     })();
 
     // ====================================================================
@@ -8039,6 +8321,11 @@
             window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
         }
 
+        function iniciarTutorial() {
+            cerrarConfig();
+            setTimeout(() => TutorialManager.elegirYComenzar(), 350);
+        }
+
         function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'label-feedback--green') {
             const activos = campos
                 .filter(c => c.mostrar)
@@ -8142,7 +8429,7 @@
         }
 
         return {
-            init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
+            init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario, iniciarTutorial,
             cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
             resetearBoton, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, irHoyCalendario, obtenerOrdenCards,
@@ -8237,6 +8524,19 @@
             return { prefijoMes, feriados: pool.filter(f => f.fecha.startsWith(prefijoMes)) };
         }
 
+        // Si el tutorial está en curso, espera a que termine antes de mostrar
+        // cualquier aviso propio: evita que el confirm de feriados aparezca
+        // por encima del popup del tutorial.
+        function _esperarTutorialInactivo() {
+            return new Promise(resolve => {
+                function chequear() {
+                    if (!TutorialManager.estaActivo()) { resolve(); return; }
+                    setTimeout(chequear, 500);
+                }
+                chequear();
+            });
+        }
+
         async function chequearYNotificar() {
             const { prefijoMes, feriados: candidatos } = _getFeriadosDelMes();
             if (!candidatos.length) return;
@@ -8251,6 +8551,8 @@
             });
 
             if (!pendientes.length) return;
+
+            await _esperarTutorialInactivo();
 
             const nombreMes = TimeUtils.formatoTituloMes(prefijoMes).split(' ')[0];
             const lineas = pendientes.map(f => `🎉 ${TimeUtils.obtenerNombreDia(f.fecha)} ${parseInt(f.fecha.slice(8), 10)} — ${f.nombre}`);
@@ -8419,6 +8721,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => UILogic.cerrarConfig());
+    $('btn-tutorial-restart')?.addEventListener('click', () => UILogic.iniciarTutorial());
 
     const inputHoras = $('config-horas-diarias');
     if (inputHoras) {
@@ -8521,6 +8824,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // STORAGE HELPER MODULE
 // PERFIL MANAGER MODULE
 // MODAL MANAGER MODULE
+// TUTORIAL MANAGER MODULE
 // HISTORY MANAGER MODULE
 // TIPOS DE REGISTRO MODULE
 // DATA MANAGEMENT MODULE

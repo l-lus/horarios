@@ -71,7 +71,7 @@
                         desc: 'Guarda el registro con los datos cargados en el formulario. Su texto y color cambian según el modo y la situación: "Fichar", "Fichar Lote", "Borrar (3)", etc.'
                     },
                     {
-                        selector: '#btn-timer-main', requiereFormAbierto: false,
+                        selector: '#btn-timer-main', requiereFormAbierto: false, forzarVisible: true,
                         titulo: 'Tiempo Fuera',
                         desc: 'Cronómetro para pausas como el almuerzo. Tocalo para iniciar el conteo y volvé a tocarlo para detenerlo: el tiempo se resta de la jornada de hoy. Necesita que ya exista un registro de hoy con entrada y sin salida.'
                     },

@@ -814,6 +814,7 @@
         let _pasoActual = 0;
         let _popupEl = null;
         let _elResaltado = null;
+        let _elForzadoVisible = null;
         let _scrollBloqueado = false;
         let _reposicionarActivo = null;
         let _activo = false;
@@ -822,6 +823,13 @@
             if (_elResaltado) {
                 _elResaltado.classList.remove('tutorial-highlight');
                 _elResaltado = null;
+            }
+        }
+
+        function _limpiarForzadoVisible() {
+            if (_elForzadoVisible) {
+                _elForzadoVisible.classList.remove('tutorial-forzado-visible');
+                _elForzadoVisible = null;
             }
         }
 
@@ -857,6 +865,7 @@
             if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
             if (_popupEl) { _popupEl.remove(); _popupEl = null; }
             _limpiarResaltado();
+            _limpiarForzadoVisible();
             document.removeEventListener('keydown', _onKeydown, true);
         }
 
@@ -909,6 +918,14 @@
                     return;
                 }
 
+                if (paso.forzarVisible) {
+                    const elForzado = document.querySelector(paso.selector);
+                    if (elForzado) {
+                        elForzado.classList.add('tutorial-forzado-visible');
+                        _elForzadoVisible = elForzado;
+                    }
+                }
+
                 let espera = 0;
                 if (paso.requiereFormAbierto && !_formEstaAbierto()) {
                     window.UILogic?.toggleFormulario?.();
@@ -944,6 +961,7 @@
             if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
             if (_popupEl) { _popupEl.remove(); _popupEl = null; }
             _limpiarResaltado();
+            _limpiarForzadoVisible();
 
             const paso = _pasosActivos[indice];
             if (!paso) { finalizar(); return; }

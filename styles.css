@@ -1805,6 +1805,12 @@ body.config-onboarding .label-footer-empezar {
     pointer-events: none;
 }
 
+.tutorial-forzado-visible#btn-timer-main {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: none;
+}
+
 #icon-indicator-form {
     position: absolute;
     right: 0;

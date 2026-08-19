@@ -7311,7 +7311,6 @@
             limpiarCampo,
             getFondoCard: () => _fondoCard,
             setTimerAutoVista: (v) => { _timerAutoVista = v; },
-            sumarMinutosAHora,
             _getLabelFondo,
             _iniciarCicloStats,
             _cicloStatsActivo,
@@ -7386,7 +7385,7 @@
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
-            sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
+            _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
             _fadeSwapCiclo
         } = UITarjetaFichaje;
 
@@ -8144,36 +8143,36 @@
 
         return {
             init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
-            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError,
-            limpiarError, resetearBoton, restaurarBotonGuardarEdicion, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
-            limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
-            cambiarMesStats, generarReporte, abrirModalReporteSecciones, cerrarModalReporteSecciones,
+            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
+            resetearBoton, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
+            limpiarCampo, mostrarFiltros, irHoyCalendario, obtenerOrdenCards,
+            cambiarMesStats, abrirModalReporteSecciones, cerrarModalReporteSecciones,
             toggleSeccionReporte, confirmarGenerarReporte,
-            toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
-            toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
-            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote,
+            toggleHistorico, toggleStats, actualizarEstadoBotonHoverPopup,
+            toggleTimerBreakMain, toggleBloqueoEdicion,
+            actualizarFeedbackConfig, abrirSelectorPerfiles,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
             aplicarHorasConfiguradasATodos, actualizarEstadoBotonAplicarHoras,
             iniciarCambioObjetivoEdicion, detenerCambioObjetivoEdicion,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote, toggleHoverPopupCalendario,
-            eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
-            iniciarCambioHoras, detenerCambio, mostrarconfig, mostrarConfigOnboarding, alternarFechaActual, verificarBloqueoCredito, gistSubir, gistBajar,
-            toggleCredito, setBloqueoEdicionGrupo, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo, poblarSelectoresTipos,
+            eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, ejecutarAccionRegistro,
+            iniciarCambioHoras, detenerCambio, mostrarconfig, mostrarConfigOnboarding, alternarFechaActual, gistSubir, gistBajar,
+            toggleCredito, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo, poblarSelectoresTipos,
             mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport, aplicarFeedbackCampos,
-            iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones, toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
+            toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
-            togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
-            navegarCalendario, obtenerNombrePerfilSafe, descargarJSON, actualizarEstadoBotonesGist, actualizarBotonesHistorico,
+            togglePersistirTarjetas, toggleVistaHistorico,
+            navegarCalendario, actualizarEstadoBotonesGist,
             abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
-            toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite, detenerCambioLimite,
-            _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
-            _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
+            toggleGistBackup, toggleGistMerge, iniciarCambioLimite, detenerCambioLimite,
+            _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
+            _popupCalendarioDiaSinRegistro,
             _esFechaHabil, _cubiertoPorSaldo, agruparRegistrosConsecutivos, _irAFicharConFecha,
             _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _nombreMesCapitalizado, _renderSelectorStats,
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
             actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
-            _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
+            _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);
@@ -8495,7 +8494,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260817';
+        const _v = '-v260819';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

@@ -872,6 +872,40 @@
             }
         }
 
+        let _demoVistaTimeout = null;
+        let _demoVistaFueIniciada = false;
+        let _vistaHistoricoOriginal = null;
+
+        function _iniciarDemoVista() {
+            _detenerDemoVista();
+            if (!window.UILogic?.toggleVistaHistorico || !window.UILogic?.getVistaHistoricoCalendario) return;
+
+            _demoVistaFueIniciada = true;
+            _vistaHistoricoOriginal = window.UILogic.getVistaHistoricoCalendario();
+
+            _demoVistaTimeout = setTimeout(() => {
+                window.UILogic.toggleVistaHistorico();
+                _demoVistaTimeout = setTimeout(() => {
+                    window.UILogic.toggleVistaHistorico();
+                    _demoVistaTimeout = null;
+                }, 1400);
+            }, 700);
+        }
+
+        function _detenerDemoVista() {
+            if (_demoVistaTimeout) {
+                clearTimeout(_demoVistaTimeout);
+                _demoVistaTimeout = null;
+            }
+            if (_demoVistaFueIniciada) {
+                if (window.UILogic?.getVistaHistoricoCalendario && window.UILogic.getVistaHistoricoCalendario() !== _vistaHistoricoOriginal) {
+                    window.UILogic.toggleVistaHistorico();
+                }
+                _demoVistaFueIniciada = false;
+                _vistaHistoricoOriginal = null;
+            }
+        }
+
         const _TECLAS_SCROLL = [' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
 
         function _bloquearInteraccionScroll(e) {
@@ -906,6 +940,7 @@
             _limpiarResaltado();
             _limpiarForzadoVisible();
             _detenerDemoPeriodo();
+            _detenerDemoVista();
             document.removeEventListener('keydown', _onKeydown, true);
         }
 
@@ -950,8 +985,31 @@
         }
 
         const SECCIONES_COLAPSABLES = {
-            '#card-estadisticas': { contentId: 'form-stats', abrir: () => window.UILogic?.toggleStats?.() },
-            '#card-historico': { contentId: 'contenido-historico', abrir: () => window.UILogic?.toggleHistorico?.() }
+            '#card-estadisticas': {
+                estaAbierta: () => !!document.getElementById('form-stats')?.classList.contains('expanded'),
+                abrir: () => window.UILogic?.toggleStats?.(),
+                esperaMs: 380
+            },
+            '#card-historico': {
+                estaAbierta: () => {
+                    const contenido = document.getElementById('contenido-historico');
+                    const botones = document.getElementById('botones-historico');
+                    return !!contenido?.classList.contains('expanded') && !!botones?.classList.contains('expanded');
+                },
+                abrir: () => {
+                    const contenido = document.getElementById('contenido-historico');
+                    const botones = document.getElementById('botones-historico');
+                    if (!contenido?.classList.contains('expanded')) {
+                        window.UILogic?.toggleHistorico?.();
+                        setTimeout(() => {
+                            if (!botones?.classList.contains('expanded')) window.UILogic?.toggleHistorico?.();
+                        }, 60);
+                    } else if (!botones?.classList.contains('expanded')) {
+                        window.UILogic?.toggleHistorico?.();
+                    }
+                },
+                esperaMs: 780
+            }
         };
 
         function _prepararEntorno(paso) {
@@ -967,12 +1025,9 @@
 
                 const seccion = (paso.cardSelector && paso.selector !== paso.cardSelector)
                     ? SECCIONES_COLAPSABLES[paso.cardSelector] : null;
-                if (seccion) {
-                    const contenedor = document.getElementById(seccion.contentId);
-                    if (contenedor && !contenedor.classList.contains('expanded')) {
-                        seccion.abrir();
-                        espera = Math.max(espera, 380);
-                    }
+                if (seccion && !seccion.estaAbierta()) {
+                    seccion.abrir();
+                    espera = Math.max(espera, seccion.esperaMs || 380);
                 }
 
                 if (paso.forzarVisible) {
@@ -984,6 +1039,7 @@
                 }
 
                 if (paso.demoPeriodo) _iniciarDemoPeriodo();
+                if (paso.demoVista) _iniciarDemoVista();
 
                 if (paso.requiereFormAbierto && !_formEstaAbierto()) {
                     window.UILogic?.toggleFormulario?.();
@@ -1021,6 +1077,7 @@
             _limpiarResaltado();
             _limpiarForzadoVisible();
             _detenerDemoPeriodo();
+            _detenerDemoVista();
 
             const paso = _pasosActivos[indice];
             if (!paso) { finalizar(); return; }

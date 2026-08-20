@@ -192,7 +192,54 @@
             historico: {
                 nombre: 'Registros',
                 cardSelector: '#card-historico',
-                pasos: []
+                pasos: [
+                    {
+                        selector: '#card-historico',
+                        titulo: 'Tarjeta Registros',
+                        desc: 'Acá están todos tus registros: podés filtrarlos, verlos en lista o en calendario, deshacer/rehacer cambios y tocar cualquiera para editarlo. Vamos a recorrer cada botón.'
+                    },
+                    {
+                        selector: '#btn-vista-calendario',
+                        titulo: 'Vista lista o calendario',
+                        desc: 'Alterna entre ver tus registros en una lista agrupada por mes, o marcados sobre un calendario. Mirá cómo cambia.',
+                        demoVista: true
+                    },
+                    {
+                        selector: '#btn-filtro',
+                        titulo: 'Filtrar',
+                        desc: 'Abre un filtro por rango de fechas y por tipo de registro. Mientras haya un filtro activo, este ícono queda resaltado; tocalo de nuevo para quitarlo.'
+                    },
+                    {
+                        selector: '#btn-hist-restaurar',
+                        titulo: 'Restaurar',
+                        desc: 'Importa un backup que hayas exportado antes, para restaurar tus registros en este u otro dispositivo.'
+                    },
+                    {
+                        selector: '#btn-hist-respaldar',
+                        titulo: 'Respaldar',
+                        desc: 'Exporta tus registros a un archivo que podés guardar o compartir, como backup o para pasarlos a otro dispositivo.'
+                    },
+                    {
+                        selector: '#btn-undo',
+                        titulo: 'Deshacer',
+                        desc: 'Revierte el último cambio que hiciste: crear, editar o borrar un registro. También podés usar Ctrl+Z.'
+                    },
+                    {
+                        selector: '#btn-redo',
+                        titulo: 'Rehacer',
+                        desc: 'Vuelve a aplicar un cambio que acabás de deshacer. También podés usar Ctrl+Y.'
+                    },
+                    {
+                        selector: '#lista-registros:not(.hidden), #vista-calendario-historico:not(.hidden)',
+                        titulo: 'Tus registros',
+                        desc: 'Acá aparecen tus registros: agrupados por mes y año en la lista, o marcados día por día en el calendario. Tocá cualquiera para ver el detalle o editarlo.'
+                    },
+                    {
+                        selector: '#card-historico',
+                        titulo: '¡Eso es todo!',
+                        desc: 'Ya conocés la tarjeta de Registros. Podés repetir cualquier tutorial cuando quieras desde Ajustes → Ayuda.'
+                    }
+                ]
             }
         },
 

@@ -24,7 +24,6 @@
     <script src="./flash.js"></script>
     <script src="./fondos.js" defer></script>
     <script src="./feriados.js" defer></script>
-    <script src="./tutorial.js" defer></script>
     <link rel="stylesheet" href="./styles.css">
     <script src="./app.js" defer></script>
     <title>Horarios</title>
@@ -602,7 +601,7 @@
             </div>
             <div class="modal-panel-body custom-scroll">
                 <div class="config-onboarding-banner" id="config-onboarding-banner">
-                    <p>Configurá tus horas diarias y tus días laborales, restaurá registros anteriores o iniciá un tutorial</p>
+                    <p>Configurá tus horas diarias y tus días laborales, o restaurá un backup</p>
                 </div>
                 <div class="modal-config-cols">
 
@@ -724,15 +723,6 @@
                         </div>
                     </div>
                     <div>
-                        <div class="config-actions form-group">
-                            <label>Ayuda</label>
-                            <button id="btn-tutorial-restart">
-                                <svg class="icon">
-                                    <use href="#icon-help" />
-                                </svg>
-                                <span>Tutoriales</span>
-                            </button>
-                        </div>
                         <div class="config-actions form-group config-onboarding-hide">
                             <label>Estadísticas</label>
                             <button id="btn-toggle-ignorar-tf">
@@ -1150,27 +1140,6 @@
                     Descargar
                 </button>
                 <button class="btn-cancel" id="btn-volver-exportar">
-                    <svg class="icon">
-                        <use href="#icon-back" />
-                    </svg>
-                    Volver
-                </button>
-            </div>
-        </div>
-    </div>
-    <div class="modal" id="modal-tutorial-tipo">
-        <div class="modal-content">
-            <h3>
-                <span class="modal-title-block">
-                    <svg class="icon">
-                        <use href="#icon-help" />
-                    </svg>
-                    Secciones del tutorial
-                </span>
-            </h3>
-            <div class="config-actions" id="tutorial-tipo-lista"></div>
-            <div class="btn-group">
-                <button class="btn-cancel" id="btn-cancelar-tutorial-tipo">
                     <svg class="icon">
                         <use href="#icon-back" />
                     </svg>

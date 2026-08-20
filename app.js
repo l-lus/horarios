@@ -24,7 +24,6 @@
         FORMULARIO_EXPANDIDO: 'formularioExpandido',
         STATS_EXPANDIDO: 'statsExpandido',
         HISTORICO_EXPANDIDO: 'historicoExpandido',
-        TUTORIAL_COMPLETADO: 'tutorialCompletado',
         PERFIL_ACTIVO: 'perfilActivo',
         PERFILES: 'perfiles',
         HISTORY: 'history',
@@ -798,564 +797,6 @@
         }
 
         return { abrir, cerrar, alternar, cerrarTodos, confirmar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, setPadre: (id, padreId) => { if (id && padreId) _padres[id] = padreId; }, registrarAccionVolver };
-    })();
-
-    // ====================================================================
-    // TUTORIAL MANAGER MODULE
-    // ====================================================================
-    const TutorialManager = (function () {
-        const S = SecurityAndUtils;
-        const T = window.TutorialTexts || {};
-
-        const PASOS_ESENCIALES = T.pasosEsenciales || [];
-        const TARJETAS_COMPLETO = T.tarjetasCompleto || {};
-
-        let _pasosActivos = PASOS_ESENCIALES;
-        let _pasoActual = 0;
-        let _popupEl = null;
-        let _elResaltado = null;
-        let _elForzadoVisible = null;
-        let _scrollBloqueado = false;
-        let _reposicionarActivo = null;
-        let _activo = false;
-
-        function _limpiarResaltado() {
-            if (_elResaltado) {
-                _elResaltado.classList.remove('tutorial-highlight');
-                _elResaltado = null;
-            }
-        }
-
-        function _limpiarForzadoVisible() {
-            if (_elForzadoVisible) {
-                _elForzadoVisible.classList.remove('tutorial-forzado-visible');
-                _elForzadoVisible = null;
-            }
-        }
-
-        let _demoPeriodoInterval = null;
-        let _demoFueIniciada = false;
-        const ORDEN_DEMO_PERIODO = ['Mensual', 'Anual', 'Semanal'];
-
-        function _iniciarDemoPeriodo() {
-            _detenerDemoPeriodo();
-            if (!window.UILogic?.togglePeriodoStats) return;
-            
-            _demoFueIniciada = true;
-            
-            let restantes = ORDEN_DEMO_PERIODO.length;
-            _demoPeriodoInterval = setInterval(() => {
-                window.UILogic.togglePeriodoStats(1);
-                restantes--;
-                if (restantes <= 0) {
-                    clearInterval(_demoPeriodoInterval);
-                    _demoPeriodoInterval = null;
-                }
-            }, 1100);
-        }
-
-        function _detenerDemoPeriodo() {
-            if (_demoPeriodoInterval) {
-                clearInterval(_demoPeriodoInterval);
-                _demoPeriodoInterval = null;
-            }
-            
-            if (_demoFueIniciada) {
-                const label = document.getElementById('label-periodo-toggle')?.textContent?.trim();
-                const idx = ORDEN_DEMO_PERIODO.indexOf(label);
-                if (idx > 0 && window.UILogic?.togglePeriodoStats) {
-                    for (let i = 0; i < ORDEN_DEMO_PERIODO.length - idx; i++) {
-                        window.UILogic.togglePeriodoStats(1);
-                    }
-                }
-                _demoFueIniciada = false; 
-            }
-        }
-
-        let _demoVistaTimeout = null;
-        let _demoVistaFueIniciada = false;
-        let _vistaHistoricoOriginal = null;
-
-        function _iniciarDemoVista() {
-            _detenerDemoVista();
-            if (!window.UILogic?.toggleVistaHistorico || !window.UILogic?.getVistaHistoricoCalendario) return;
-
-            _demoVistaFueIniciada = true;
-            _vistaHistoricoOriginal = window.UILogic.getVistaHistoricoCalendario();
-
-            _demoVistaTimeout = setTimeout(() => {
-                window.UILogic.toggleVistaHistorico();
-                _demoVistaTimeout = setTimeout(() => {
-                    window.UILogic.toggleVistaHistorico();
-                    _demoVistaTimeout = null;
-                }, 1400);
-            }, 700);
-        }
-
-        function _detenerDemoVista() {
-            if (_demoVistaTimeout) {
-                clearTimeout(_demoVistaTimeout);
-                _demoVistaTimeout = null;
-            }
-            if (_demoVistaFueIniciada) {
-                if (window.UILogic?.getVistaHistoricoCalendario && window.UILogic.getVistaHistoricoCalendario() !== _vistaHistoricoOriginal) {
-                    window.UILogic.toggleVistaHistorico();
-                }
-                _demoVistaFueIniciada = false;
-                _vistaHistoricoOriginal = null;
-            }
-        }
-
-        let _estadoDemoActivo = false;
-        let _estadoFakeActual = null;
-        const _TOTAL_SIMULADO_ESTADO = 3 + 20 / 60;
-        const _TOTAL_SEMANA_SIMULADO = 24;
-        const _OBJETIVO_SEMANA_SIMULADO = 33;
-
-        function _iniciarDemoEstado() {
-            if (_estadoDemoActivo) return;
-            const UL = window.UILogic;
-            if (!UL?.calcularEstadoCard || !UL?.derivarVistaHoy || !UL?.renderStatsCardDesdeEstado) return;
-
-            _estadoDemoActivo = true;
-
-            const estReal = UL.calcularEstadoCard();
-            const estFake = {
-                ...estReal,
-                regHoy: {
-                    id: '_tutorial-demo',
-                    fecha: estReal.hoy,
-                    entrada: '08:00',
-                    salida: null,
-                    tiempoFuera: '00:00',
-                    objetivoHoras: 5
-                },
-                tiempoHoy: _TOTAL_SIMULADO_ESTADO,
-                tipoEspecialHoy: null,
-                esDiaHabil: true,
-                ayerAbierto: false,
-                horasDiarias: 7,
-                semanaAbierta: true,
-                bufferSemanal: 0.75,
-                bufferSemanalBase: 0.75,
-                totalSemana: _TOTAL_SEMANA_SIMULADO,
-                objetivoSemana: _OBJETIVO_SEMANA_SIMULADO,
-                todosEspeciales: false
-            };
-            _estadoFakeActual = estFake;
-
-            const vistaFake = UL.derivarVistaHoy(estFake);
-            UL.renderStatsCardDesdeEstado(estFake, vistaFake, true);
-        }
-
-        function _detenerDemoEstado() {
-            if (!_estadoDemoActivo) return;
-            _estadoDemoActivo = false;
-            _estadoFakeActual = null;
-            window.UILogic?.actualizarUI?.(null, true, false, true);
-        }
-
-        let _demoVistaEstadoTimeout = null;
-
-        function _iniciarDemoVistaEstado() {
-            _detenerDemoVistaEstado();
-            const UL = window.UILogic;
-            if (!UL?.renderStatsCardDesdeEstado || !UL?.derivarVistaSemana || !UL?.derivarVistaHoy || !_estadoFakeActual) return;
-
-            const estFake = _estadoFakeActual;
-            const vistaHoyFake = UL.derivarVistaHoy(estFake);
-            const vistaSemanaFake = UL.derivarVistaSemana(estFake);
-
-            _demoVistaEstadoTimeout = setTimeout(() => {
-                UL.renderStatsCardDesdeEstado(estFake, vistaSemanaFake, true);
-                _demoVistaEstadoTimeout = setTimeout(() => {
-                    UL.renderStatsCardDesdeEstado(estFake, vistaHoyFake, true);
-                    _demoVistaEstadoTimeout = null;
-                }, 4600);
-            }, 700);
-        }
-
-        function _detenerDemoVistaEstado() {
-            if (_demoVistaEstadoTimeout) {
-                clearTimeout(_demoVistaEstadoTimeout);
-                _demoVistaEstadoTimeout = null;
-            }
-        }
-
-        const _TECLAS_SCROLL = [' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
-
-        function _bloquearInteraccionScroll(e) {
-            e.preventDefault();
-        }
-
-        function _bloquearTeclasScroll(e) {
-            if (_TECLAS_SCROLL.includes(e.key) && !(_popupEl && e.target && _popupEl.contains(e.target))) {
-                e.preventDefault();
-            }
-        }
-
-        function _bloquearScroll() {
-            if (_scrollBloqueado) return;
-            _scrollBloqueado = true;
-            document.addEventListener('wheel', _bloquearInteraccionScroll, { passive: false });
-            document.addEventListener('touchmove', _bloquearInteraccionScroll, { passive: false });
-            document.addEventListener('keydown', _bloquearTeclasScroll, { passive: false });
-        }
-
-        function _desbloquearScroll() {
-            if (!_scrollBloqueado) return;
-            _scrollBloqueado = false;
-            document.removeEventListener('wheel', _bloquearInteraccionScroll, { passive: false });
-            document.removeEventListener('touchmove', _bloquearInteraccionScroll, { passive: false });
-            document.removeEventListener('keydown', _bloquearTeclasScroll, { passive: false });
-        }
-
-        let _blockerEl = null;
-
-        function _bloquearInteraccionApp(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        function _crearBlocker() {
-            if (_blockerEl) return;
-            const blocker = document.createElement('div');
-            blocker.className = 'tutorial-blocker';
-            blocker.id = '_tutorial-blocker';
-            blocker.addEventListener('click', _bloquearInteraccionApp, true);
-            blocker.addEventListener('mousedown', _bloquearInteraccionApp, true);
-            blocker.addEventListener('pointerdown', _bloquearInteraccionApp, true);
-            blocker.addEventListener('touchstart', _bloquearInteraccionApp, { capture: true, passive: false });
-            document.body.appendChild(blocker);
-            _blockerEl = blocker;
-        }
-
-        function _quitarBlocker() {
-            if (_blockerEl) {
-                _blockerEl.remove();
-                _blockerEl = null;
-            }
-        }
-
-        function _cerrarPopup() {
-            if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
-            if (_popupEl) { _popupEl.remove(); _popupEl = null; }
-            _limpiarResaltado();
-            _limpiarForzadoVisible();
-            _detenerDemoPeriodo();
-            _detenerDemoVista();
-            _detenerDemoVistaEstado();
-            _detenerDemoEstado();
-            document.removeEventListener('keydown', _onKeydown, true);
-        }
-
-        function _onKeydown(e) {
-            e.stopPropagation();
-            if (e.key === 'Escape') { e.preventDefault(); finalizar(); }
-            else if (e.key === 'ArrowRight') { e.preventDefault(); siguiente(); }
-            else if (e.key === 'ArrowLeft') { e.preventDefault(); anterior(); }
-        }
-
-        function _esperarFinDeScroll(el, callback) {
-            let ultimoTop = null;
-            let framesEstables = 0;
-            let intentos = 0;
-            const MAX_INTENTOS = 90;
-
-            function chequear() {
-                intentos++;
-                const top = el.getBoundingClientRect().top;
-                if (ultimoTop !== null && Math.abs(top - ultimoTop) < 0.5) {
-                    framesEstables++;
-                } else {
-                    framesEstables = 0;
-                }
-                ultimoTop = top;
-
-                if (framesEstables >= 4 || intentos >= MAX_INTENTOS) {
-                    callback();
-                } else {
-                    requestAnimationFrame(chequear);
-                }
-            }
-            requestAnimationFrame(chequear);
-        }
-
-        function _formEstaAbierto() {
-            return !!document.getElementById('form-registro')?.classList.contains('expanded');
-        }
-
-        function _modoLoteActivo() {
-            const lote = document.getElementById('modo-lote');
-            return !!lote && lote.style.display === 'block';
-        }
-
-        const SECCIONES_COLAPSABLES = {
-            '#card-estadisticas': {
-                estaAbierta: () => !!document.getElementById('form-stats')?.classList.contains('expanded'),
-                abrir: () => window.UILogic?.toggleStats?.(),
-                esperaMs: 380
-            },
-            '#card-historico': {
-                estaAbierta: () => {
-                    const contenido = document.getElementById('contenido-historico');
-                    const botones = document.getElementById('botones-historico');
-                    return !!contenido?.classList.contains('expanded') && !!botones?.classList.contains('expanded');
-                },
-                abrir: () => {
-                    const contenido = document.getElementById('contenido-historico');
-                    const botones = document.getElementById('botones-historico');
-                    if (!contenido?.classList.contains('expanded')) {
-                        window.UILogic?.toggleHistorico?.();
-                        setTimeout(() => {
-                            if (!botones?.classList.contains('expanded')) window.UILogic?.toggleHistorico?.();
-                        }, 60);
-                    } else if (!botones?.classList.contains('expanded')) {
-                        window.UILogic?.toggleHistorico?.();
-                    }
-                },
-                esperaMs: 780
-            }
-        };
-
-        function _prepararEntorno(paso) {
-            return new Promise(resolve => {
-                const tarjeta = paso.cardSelector && document.querySelector(paso.cardSelector);
-                if (tarjeta && getComputedStyle(tarjeta).display === 'none') {
-                    window.UILogic?.mostrarToast?.(T.avisoTarjetaOculta || 'Esa tarjeta está oculta.', 'warning');
-                    resolve(false);
-                    return;
-                }
-
-                let espera = 0;
-
-                const seccion = (paso.cardSelector && paso.selector !== paso.cardSelector)
-                    ? SECCIONES_COLAPSABLES[paso.cardSelector] : null;
-                if (seccion && !seccion.estaAbierta()) {
-                    seccion.abrir();
-                    espera = Math.max(espera, seccion.esperaMs || 380);
-                }
-
-                if (paso.forzarVisible) {
-                    const elForzado = document.querySelector(paso.selector);
-                    if (elForzado) {
-                        elForzado.classList.add('tutorial-forzado-visible');
-                        _elForzadoVisible = elForzado;
-                    }
-                }
-
-                if (paso.demoPeriodo) _iniciarDemoPeriodo();
-                if (paso.demoVista) _iniciarDemoVista();
-                if (paso.demoVistaEstado) _iniciarDemoVistaEstado();
-
-                if (paso.cardSelector === '#stats-card') {
-                    _iniciarDemoEstado();
-                } else if (_estadoDemoActivo) {
-                    _detenerDemoEstado();
-                }
-
-                if (paso.requiereFormAbierto && !_formEstaAbierto()) {
-                    window.UILogic?.toggleFormulario?.();
-                    espera = Math.max(espera, 380);
-                }
-
-                setTimeout(() => {
-                    if (paso.modo && (paso.modo === 'lote') !== _modoLoteActivo()) {
-                        window.UILogic?.toggleModoLote?.();
-                        setTimeout(() => resolve(true), 380);
-                    } else {
-                        resolve(true);
-                    }
-                }, espera);
-            });
-        }
-
-        function _posicionar(popup, target) {
-            const margin = 10;
-            const rect = target.getBoundingClientRect();
-            const pw = popup.offsetWidth, ph = popup.offsetHeight;
-            let top = rect.bottom + 14;
-            let left = rect.left + (rect.width / 2) - (pw / 2);
-            if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
-            if (left < margin) left = margin;
-            if (top + ph > window.innerHeight - margin) top = rect.top - ph - 14;
-            if (top < margin) top = Math.min(margin, window.innerHeight - ph - margin);
-            popup.style.top = `${top}px`;
-            popup.style.left = `${left}px`;
-        }
-
-        async function _mostrarPaso(indice) {
-            if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
-            if (_popupEl) { _popupEl.remove(); _popupEl = null; }
-            _limpiarResaltado();
-            _limpiarForzadoVisible();
-            _detenerDemoPeriodo();
-            _detenerDemoVista();
-            _detenerDemoVistaEstado();
-
-            const paso = _pasosActivos[indice];
-            if (!paso) { finalizar(); return; }
-
-            const puedeMostrarse = await _prepararEntorno(paso);
-            if (puedeMostrarse === false) { finalizar(); return; }
-            if (_pasoActual !== indice) return;
-
-            const target = document.querySelector(paso.selector);
-            if (!target) { _pasoActual = indice + 1; _mostrarPaso(_pasoActual); return; }
-
-            target.classList.add('tutorial-highlight');
-            _elResaltado = target;
-
-            const esUltimo = indice === _pasosActivos.length - 1;
-            const esPrimero = indice === 0;
-
-            const popup = document.createElement('div');
-            popup.className = 'stat-popup tutorial-popup';
-            popup.id = '_tutorial-popup';
-            popup.innerHTML = `
-                <div class="tutorial-popup-header">
-                    <div class="tutorial-popup-paso">Paso ${indice + 1} de ${_pasosActivos.length}</div>
-                    <button class="tutorial-popup-skip" id="_tutorial-btn-saltar" type="button">Saltar</button>
-                </div>
-                <div class="stat-popup-titulo">${S.escapeHtml(paso.titulo)}</div>
-                <div class="stat-popup-desc">${S.escapeHtml(paso.desc)}</div>
-                <div class="tutorial-popup-nav">
-                    ${!esPrimero ? `<button class="cal-popup-btn-edit" id="_tutorial-btn-atras">Atrás</button>` : ''}
-                    <button class="cal-popup-btn-edit" id="_tutorial-btn-siguiente">${esUltimo ? 'Finalizar' : 'Siguiente'}</button>
-                </div>`;
-            popup.style.visibility = 'hidden';
-            document.body.appendChild(popup);
-            _popupEl = popup;
-
-            popup.querySelector('#_tutorial-btn-siguiente')?.addEventListener('click', () => esUltimo ? finalizar() : siguiente());
-            popup.querySelector('#_tutorial-btn-atras')?.addEventListener('click', anterior);
-            popup.querySelector('#_tutorial-btn-saltar')?.addEventListener('click', finalizar);
-
-            document.addEventListener('keydown', _onKeydown, true);
-
-            const yaVisible = (() => {
-                const r = target.getBoundingClientRect();
-                return r.top >= 0 && r.bottom <= window.innerHeight;
-            })();
-
-            const alListo = () => {
-                if (!_popupEl || _popupEl !== popup) return;
-                _posicionar(popup, target);
-                popup.style.visibility = '';
-                requestAnimationFrame(() => _posicionar(popup, target));
-
-                const onResizeOrScroll = () => _posicionar(popup, target);
-                window.addEventListener('resize', onResizeOrScroll);
-                _reposicionarActivo = () => window.removeEventListener('resize', onResizeOrScroll);
-
-                setTimeout(() => popup.classList.add('listo'), 200);
-            };
-
-            if (yaVisible) {
-                alListo();
-            } else {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                _esperarFinDeScroll(target, alListo);
-            }
-        }
-
-        function siguiente() {
-            _pasoActual++;
-            if (_pasoActual >= _pasosActivos.length) { finalizar(); return; }
-            _mostrarPaso(_pasoActual);
-        }
-
-        function anterior() {
-            _pasoActual = Math.max(0, _pasoActual - 1);
-            _mostrarPaso(_pasoActual);
-        }
-
-        function finalizar() {
-            _cerrarPopup();
-            _desbloquearScroll();
-            _quitarBlocker();
-            _activo = false;
-            StorageHelper.setItem(STORAGE_KEYS.TUTORIAL_COMPLETADO, true);
-        }
-
-        function _iniciarConPasos(pasos) {
-            if (document.querySelector('.modal.show')) ModalManager.cerrarTodos();
-            document.querySelectorAll('.animated-card').forEach(card => card.classList.remove('animated-card'));
-
-            _activo = true;
-            _pasosActivos = pasos;
-            _bloquearScroll();
-            _crearBlocker();
-            _pasoActual = 0;
-            _mostrarPaso(0);
-        }
-
-        function iniciar() {
-            _iniciarConPasos(PASOS_ESENCIALES);
-        }
-
-        function iniciarCompleto(cardKey = 'registrar') {
-            const tarjeta = TARJETAS_COMPLETO[cardKey];
-            if (!tarjeta || !tarjeta.pasos.length) {
-                window.UILogic?.mostrarToast?.(T.avisoTarjetaNoDisponible || 'El tutorial completo de esa tarjeta todavía no está disponible.', 'info');
-                _activo = false;
-                return;
-            }
-            const pasosConTarjeta = tarjeta.pasos.map(p => ({ cardSelector: tarjeta.cardSelector, ...p }));
-            _iniciarConPasos(pasosConTarjeta);
-        }
-
-        const MENU_TUTORIAL = T.menuTutorial || [];
-
-        function _renderMenu() {
-            const cont = document.getElementById('tutorial-tipo-lista');
-            if (!cont) return;
-            cont.innerHTML = MENU_TUTORIAL.map(item => `
-                <button type="button" class="btn-tutorial-tipo" data-tutorial-key="${item.key}">
-                    <svg class="icon"><use href="${item.icono}" /></svg>
-                    <span>${S.escapeHtml(item.label)}</span>
-                    <svg class="icon icon-indicator"><use href="#icon-chevron-right" /></svg>
-                </button>`).join('');
-        }
-
-        function _elegirDelMenu(key) {
-            if (key === 'esencial') iniciar();
-            else iniciarCompleto(key);
-        }
-
-        function _actualizarBotonCierreMenu(desdeConfig) {
-            const btn = $('btn-cancelar-tutorial-tipo');
-            if (!btn) return;
-            btn.lastChild.textContent = desdeConfig ? ' Volver' : ' Cerrar';
-            btn.querySelector('use').setAttribute('href', desdeConfig ? '#icon-back' : '#icon-cancelar');
-        }
-
-        ModalManager.registrarAccionVolver('modal-tutorial-tipo', () => {
-            _activo = false;
-            if (ModalManager.getPadre('modal-tutorial-tipo') === 'modal-config') {
-                ModalManager.alternar('modal-tutorial-tipo', 'modal-config');
-            } else {
-                ModalManager.cerrar('modal-tutorial-tipo');
-            }
-        });
-
-        function elegirYComenzar() {
-            _activo = true;
-            _renderMenu();
-            const desdeConfig = $('modal-config')?.classList.contains('show');
-            _actualizarBotonCierreMenu(desdeConfig);
-            if (desdeConfig) {
-                ModalManager.alternar('modal-config', 'modal-tutorial-tipo');
-            } else {
-                ModalManager.abrir('modal-tutorial-tipo');
-            }
-        }
-
-        return {
-            iniciar, iniciarCompleto, elegirYComenzar, elegirDelMenu: _elegirDelMenu,
-            estaActivo: () => _activo,
-            estaSimulandoEstado: () => _estadoDemoActivo
-        };
     })();
 
     // ====================================================================
@@ -7311,16 +6752,6 @@
             _fadeSwapCiclo(els, renderFn);
         }
 
-        function renderStatsCardDesdeEstado(est, vista, sinAnimarTitulo = true) {
-            _renderTitulo(vista, sinAnimarTitulo, est);
-            _renderCard(vista);
-            _renderBarra(vista);
-            _renderStats(vista, est);
-            _renderMensaje(vista);
-            _renderHint(vista);
-            _renderBuffer(est);
-        }
-
         function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false) {
             if (!soloReloj) {
                 UILogic.actualizarListaRegistros(D.registros(), idNuevo);
@@ -7863,7 +7294,6 @@
             derivarVistaSemana,
             derivarVistaHoy,
             actualizarUI,
-            renderStatsCardDesdeEstado,
             alternarVista,
             _forzarVista,
             actualizarEstadoBotonTimerMain,
@@ -7950,7 +7380,7 @@
 
         const {
             setFondoCard, toggleFondoCard, _esFechaHabil, _cubiertoPorSaldo, calcularEstadoCard,
-            derivarVistaSemana, derivarVistaHoy, actualizarUI, renderStatsCardDesdeEstado, alternarVista, _forzarVista,
+            derivarVistaSemana, derivarVistaHoy, actualizarUI, alternarVista, _forzarVista,
             actualizarEstadoBotonTimerMain, toggleTimerBreakMain, toggleModoLote,
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
@@ -8593,10 +8023,7 @@
             }
 
             _initAutoSync();
-            setInterval(() => {
-                if (TutorialManager.estaSimulandoEstado()) return;
-                actualizarUI(null, true);
-            }, 20000);
+            setInterval(() => actualizarUI(null, true), 20000);
 
             _initListenerEscape();
             _initListenerUndoRedo();
@@ -8610,29 +8037,6 @@
 
             _actualizarOffsetsStickyMes();
             window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
-        }
-
-        function iniciarTutorial() {
-            if (document.body.classList.contains('config-onboarding')) {
-                setTimeout(() => document.body.classList.remove('config-onboarding'), 350);
-                StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
-                if (_resolverOnboarding) {
-                    _resolverOnboarding();
-                    _resolverOnboarding = null;
-                }
-                ModalManager.cerrar('modal-config');
-                setTimeout(() => TutorialManager.elegirYComenzar(), 350);
-            } else {
-                TutorialManager.elegirYComenzar();
-            }
-        }
-
-        function elegirTutorialDelMenu(key) {
-            TutorialManager.elegirDelMenu(key);
-        }
-
-        function cerrarMenuTutorial() {
-            ModalManager.ejecutarAccionCierre('modal-tutorial-tipo');
         }
 
         function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'label-feedback--green') {
@@ -8738,7 +8142,7 @@
         }
 
         return {
-            init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario, iniciarTutorial, elegirTutorialDelMenu, cerrarMenuTutorial,
+            init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
             cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
             resetearBoton, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, irHoyCalendario, obtenerOrdenCards,
@@ -8769,7 +8173,6 @@
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
             actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
             _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
-            calcularEstadoCard, derivarVistaHoy, derivarVistaSemana, renderStatsCardDesdeEstado,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);
@@ -8834,19 +8237,6 @@
             return { prefijoMes, feriados: pool.filter(f => f.fecha.startsWith(prefijoMes)) };
         }
 
-        // Si el tutorial está en curso, espera a que termine antes de mostrar
-        // cualquier aviso propio: evita que el confirm de feriados aparezca
-        // por encima del popup del tutorial.
-        function _esperarTutorialInactivo() {
-            return new Promise(resolve => {
-                function chequear() {
-                    if (!TutorialManager.estaActivo()) { resolve(); return; }
-                    setTimeout(chequear, 500);
-                }
-                chequear();
-            });
-        }
-
         async function chequearYNotificar() {
             const { prefijoMes, feriados: candidatos } = _getFeriadosDelMes();
             if (!candidatos.length) return;
@@ -8861,14 +8251,6 @@
             });
 
             if (!pendientes.length) return;
-            
-            while (
-                document.querySelector('.modal.show') || 
-                document.getElementById('_tutorial-popup') || 
-                document.body.classList.contains('config-onboarding')
-            ) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
 
             const nombreMes = TimeUtils.formatoTituloMes(prefijoMes).split(' ')[0];
             const lineas = pendientes.map(f => `🎉 ${TimeUtils.obtenerNombreDia(f.fecha)} ${parseInt(f.fecha.slice(8), 10)} — ${f.nombre}`);
@@ -9037,12 +8419,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => UILogic.cerrarConfig());
-    $('btn-tutorial-restart')?.addEventListener('click', () => UILogic.iniciarTutorial());
-    $('tutorial-tipo-lista')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-tutorial-tipo');
-        if (btn) UILogic.elegirTutorialDelMenu(btn.dataset.tutorialKey);
-    });
-    $('btn-cancelar-tutorial-tipo')?.addEventListener('click', () => UILogic.cerrarMenuTutorial());
 
     const inputHoras = $('config-horas-diarias');
     if (inputHoras) {
@@ -9145,7 +8521,6 @@ document.addEventListener('DOMContentLoaded', function () {
 // STORAGE HELPER MODULE
 // PERFIL MANAGER MODULE
 // MODAL MANAGER MODULE
-// TUTORIAL MANAGER MODULE
 // HISTORY MANAGER MODULE
 // TIPOS DE REGISTRO MODULE
 // DATA MANAGEMENT MODULE

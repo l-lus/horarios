@@ -7662,12 +7662,26 @@
             }
         }
 
+        let _ayudaModalPadre = null;
+
         function abrirModalAyuda() {
-            ModalManager.alternar('modal-config', 'modal-ayuda');
+            const modalAbierto = document.querySelector('.modal.show');
+            _ayudaModalPadre = modalAbierto ? modalAbierto.id : null;
+            if (_ayudaModalPadre) {
+                ModalManager.alternar(_ayudaModalPadre, 'modal-ayuda');
+            } else {
+                ModalManager.abrir('modal-ayuda');
+            }
         }
 
         function cerrarModalAyuda() {
-            ModalManager.alternar('modal-ayuda', 'modal-config');
+            if (_ayudaModalPadre) {
+                const padre = _ayudaModalPadre;
+                _ayudaModalPadre = null;
+                ModalManager.alternar('modal-ayuda', padre);
+            } else {
+                ModalManager.cerrar('modal-ayuda');
+            }
         }
 
         function _precargarCamposConfig() {
@@ -8432,6 +8446,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));
     $('btn-toggle-card-historico')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('historico'));
     document.querySelector('.config-actions .btn-ayuda')?.addEventListener('click', () => UILogic.abrirModalAyuda());
+    document.getElementById('btn-ayuda-header')?.addEventListener('click', () => UILogic.abrirModalAyuda());
     document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => UILogic.cerrarModalAyuda());
     document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
         const btn = e.target.closest('.ayuda-indice-item');

@@ -906,6 +906,82 @@
             }
         }
 
+        let _estadoDemoActivo = false;
+        let _estadoFakeActual = null;
+        const _TOTAL_SIMULADO_ESTADO = 3 + 20 / 60;
+        const _TOTAL_SEMANA_SIMULADO = 24;
+        const _OBJETIVO_SEMANA_SIMULADO = 33;
+
+        function _iniciarDemoEstado() {
+            if (_estadoDemoActivo) return;
+            const UL = window.UILogic;
+            if (!UL?.calcularEstadoCard || !UL?.derivarVistaHoy || !UL?.renderStatsCardDesdeEstado) return;
+
+            _estadoDemoActivo = true;
+
+            const estReal = UL.calcularEstadoCard();
+            const estFake = {
+                ...estReal,
+                regHoy: {
+                    id: '_tutorial-demo',
+                    fecha: estReal.hoy,
+                    entrada: '08:00',
+                    salida: null,
+                    tiempoFuera: '00:00',
+                    objetivoHoras: 5
+                },
+                tiempoHoy: _TOTAL_SIMULADO_ESTADO,
+                tipoEspecialHoy: null,
+                esDiaHabil: true,
+                ayerAbierto: false,
+                horasDiarias: 7,
+                semanaAbierta: true,
+                bufferSemanal: 0.75,
+                bufferSemanalBase: 0.75,
+                totalSemana: _TOTAL_SEMANA_SIMULADO,
+                objetivoSemana: _OBJETIVO_SEMANA_SIMULADO,
+                todosEspeciales: false
+            };
+            _estadoFakeActual = estFake;
+
+            const vistaFake = UL.derivarVistaHoy(estFake);
+            UL.renderStatsCardDesdeEstado(estFake, vistaFake, true);
+        }
+
+        function _detenerDemoEstado() {
+            if (!_estadoDemoActivo) return;
+            _estadoDemoActivo = false;
+            _estadoFakeActual = null;
+            window.UILogic?.actualizarUI?.(null, true, false, true);
+        }
+
+        let _demoVistaEstadoTimeout = null;
+
+        function _iniciarDemoVistaEstado() {
+            _detenerDemoVistaEstado();
+            const UL = window.UILogic;
+            if (!UL?.renderStatsCardDesdeEstado || !UL?.derivarVistaSemana || !UL?.derivarVistaHoy || !_estadoFakeActual) return;
+
+            const estFake = _estadoFakeActual;
+            const vistaHoyFake = UL.derivarVistaHoy(estFake);
+            const vistaSemanaFake = UL.derivarVistaSemana(estFake);
+
+            _demoVistaEstadoTimeout = setTimeout(() => {
+                UL.renderStatsCardDesdeEstado(estFake, vistaSemanaFake, true);
+                _demoVistaEstadoTimeout = setTimeout(() => {
+                    UL.renderStatsCardDesdeEstado(estFake, vistaHoyFake, true);
+                    _demoVistaEstadoTimeout = null;
+                }, 4600);
+            }, 700);
+        }
+
+        function _detenerDemoVistaEstado() {
+            if (_demoVistaEstadoTimeout) {
+                clearTimeout(_demoVistaEstadoTimeout);
+                _demoVistaEstadoTimeout = null;
+            }
+        }
+
         const _TECLAS_SCROLL = [' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
 
         function _bloquearInteraccionScroll(e) {
@@ -968,6 +1044,8 @@
             _limpiarForzadoVisible();
             _detenerDemoPeriodo();
             _detenerDemoVista();
+            _detenerDemoVistaEstado();
+            _detenerDemoEstado();
             document.removeEventListener('keydown', _onKeydown, true);
         }
 
@@ -1068,6 +1146,13 @@
 
                 if (paso.demoPeriodo) _iniciarDemoPeriodo();
                 if (paso.demoVista) _iniciarDemoVista();
+                if (paso.demoVistaEstado) _iniciarDemoVistaEstado();
+
+                if (paso.cardSelector === '#stats-card') {
+                    _iniciarDemoEstado();
+                } else if (_estadoDemoActivo) {
+                    _detenerDemoEstado();
+                }
 
                 if (paso.requiereFormAbierto && !_formEstaAbierto()) {
                     window.UILogic?.toggleFormulario?.();
@@ -1106,6 +1191,7 @@
             _limpiarForzadoVisible();
             _detenerDemoPeriodo();
             _detenerDemoVista();
+            _detenerDemoVistaEstado();
 
             const paso = _pasosActivos[indice];
             if (!paso) { finalizar(); return; }
@@ -1267,7 +1353,8 @@
 
         return {
             iniciar, iniciarCompleto, elegirYComenzar, elegirDelMenu: _elegirDelMenu,
-            estaActivo: () => _activo
+            estaActivo: () => _activo,
+            estaSimulandoEstado: () => _estadoDemoActivo
         };
     })();
 
@@ -7224,6 +7311,16 @@
             _fadeSwapCiclo(els, renderFn);
         }
 
+        function renderStatsCardDesdeEstado(est, vista, sinAnimarTitulo = true) {
+            _renderTitulo(vista, sinAnimarTitulo, est);
+            _renderCard(vista);
+            _renderBarra(vista);
+            _renderStats(vista, est);
+            _renderMensaje(vista);
+            _renderHint(vista);
+            _renderBuffer(est);
+        }
+
         function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false) {
             if (!soloReloj) {
                 UILogic.actualizarListaRegistros(D.registros(), idNuevo);
@@ -7766,6 +7863,7 @@
             derivarVistaSemana,
             derivarVistaHoy,
             actualizarUI,
+            renderStatsCardDesdeEstado,
             alternarVista,
             _forzarVista,
             actualizarEstadoBotonTimerMain,
@@ -7852,7 +7950,7 @@
 
         const {
             setFondoCard, toggleFondoCard, _esFechaHabil, _cubiertoPorSaldo, calcularEstadoCard,
-            derivarVistaSemana, derivarVistaHoy, actualizarUI, alternarVista, _forzarVista,
+            derivarVistaSemana, derivarVistaHoy, actualizarUI, renderStatsCardDesdeEstado, alternarVista, _forzarVista,
             actualizarEstadoBotonTimerMain, toggleTimerBreakMain, toggleModoLote,
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
@@ -8495,7 +8593,10 @@
             }
 
             _initAutoSync();
-            setInterval(() => actualizarUI(null, true), 20000);
+            setInterval(() => {
+                if (TutorialManager.estaSimulandoEstado()) return;
+                actualizarUI(null, true);
+            }, 20000);
 
             _initListenerEscape();
             _initListenerUndoRedo();
@@ -8668,6 +8769,7 @@
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
             actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
             _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
+            calcularEstadoCard, derivarVistaHoy, derivarVistaSemana, renderStatsCardDesdeEstado,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);

@@ -54,7 +54,54 @@
             estado: {
                 nombre: 'Estado',
                 cardSelector: '#stats-card',
-                pasos: []
+                pasos: [
+                    {
+                        selector: '#stats-card',
+                        titulo: 'Tarjeta de Estado',
+                        desc: 'Es el resumen rápido de tu jornada. Para explicarte cada parte, vamos a simular por un momento un ejemplo: una jornada en curso de 3 horas 20 minutos, con un objetivo de 5 horas. Es solo una demostración, tus registros reales no se tocan.'
+                    },
+                    {
+                        selector: '#stats-titulo',
+                        titulo: 'Título y vista',
+                        desc: 'Muestra el día actual. Tocá en cualquier parte de la tarjeta para alternar entre la vista de Hoy y la de Semana.'
+                    },
+                    {
+                        selector: '#stats-semana',
+                        titulo: 'Horas trabajadas',
+                        desc: 'El número grande: cuánto llevás trabajado. En nuestro ejemplo, 3 horas 20 minutos.'
+                    },
+                    {
+                        selector: '.progress-bar',
+                        titulo: 'Barra de progreso',
+                        desc: 'Avanza según cuánto te falta para tu objetivo del día (acá, 5 horas). El color cambia: azul en curso, verde al cumplirlo, rojo si cerraste el día sin llegar, dorado si te cubre el saldo semanal.'
+                    },
+                    {
+                        selector: '#stats-mensaje',
+                        titulo: 'Mensaje',
+                        desc: 'Te dice cuánto te falta o cuánto llevás de más. Con nuestro ejemplo (3h20 de 5h), muestra "Faltan 1 hora 40 minutos".'
+                    },
+                    {
+                        selector: '#stats-buffer',
+                        titulo: 'Saldo semanal',
+                        desc: 'Si venís acumulando tiempo extra o en falta durante la semana, acá aparece ese saldo. En nuestro ejemplo se ve como tiempo extra de esta semana.'
+                    },
+                    {
+                        selector: '#toggle-hint',
+                        titulo: 'Salida estimada',
+                        desc: 'Mientras la jornada está en curso, te muestra la hora estimada de salida según tu entrada, tu objetivo y tu saldo semanal. Cuando el día termina, este espacio te invita a tocar para ver la Semana.'
+                    },                    
+                    {
+                        selector: '#stats-card',
+                        titulo: 'Vista semanal',
+                        desc: 'Como te contamos antes, tocando la tarjeta alternás entre Hoy y Semana. En la vista semanal ves el total trabajado, el objetivo de la semana y tu progreso. Mirá cómo cambia y volvé a Hoy.',
+                        demoVistaEstado: true
+                    },
+                    {
+                        selector: '#stats-card',
+                        titulo: '¡Eso es todo!',
+                        desc: 'Ya conocés la tarjeta de Estado. Ahora vuelve a mostrar tus datos reales. Podés repetir cualquier tutorial cuando quieras desde Ajustes → Ayuda.'
+                    }
+                ]
             },
             registrar: {
                 nombre: 'Fichar',

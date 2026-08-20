@@ -958,19 +958,13 @@ button:disabled {
 
 .ayuda-indice-item {
     padding: var(--space-xs) var(--space-md);
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--input-bg);
+    border: 1px solid transparent;
     color: var(--text-muted);
-    font-size: var(--text-sm);
+    background: transparent;
+    font-size: var(--text-base);
     font-weight: var(--fw-medium);
     cursor: pointer;
-    transition: background var(--transition-ui), color var(--transition-ui);
-}
-
-.ayuda-indice-item:hover {
-    background: var(--c-blue);
-    color: var(--c-white);
+    transition: filter var(--transition-ui), color var(--transition-ui);
 }
 
 .ayuda-seccion {
@@ -2046,7 +2040,7 @@ button.campo-flash-color {
         #btn-reporte,
         .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist, .card-section-title, 
         .btn-delete, .btn-cancel, .stats-number, .btn-export, .btn-merge, .btn-backup, .btn-edit,
-        .calendario-nav button, .btn-settings, .btn-register):hover:not(:disabled) {
+        .calendario-nav button, .btn-settings,.ayuda-indice-item,  .btn-register):hover:not(:disabled) {
         filter: var(--hover);
     }
 

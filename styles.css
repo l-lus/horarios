@@ -1319,7 +1319,16 @@ button:disabled {
 }
 
 .tutorial-popup {
-    z-index: 102;
+    z-index: 110;
+}
+
+.tutorial-blocker {
+    position: fixed;
+    inset: 0;
+    z-index: 105;
+    background: transparent;
+    cursor: default;
+    touch-action: none;
 }
 
 .tutorial-popup-header {

@@ -934,6 +934,33 @@
             document.removeEventListener('keydown', _bloquearTeclasScroll, { passive: false });
         }
 
+        let _blockerEl = null;
+
+        function _bloquearInteraccionApp(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function _crearBlocker() {
+            if (_blockerEl) return;
+            const blocker = document.createElement('div');
+            blocker.className = 'tutorial-blocker';
+            blocker.id = '_tutorial-blocker';
+            blocker.addEventListener('click', _bloquearInteraccionApp, true);
+            blocker.addEventListener('mousedown', _bloquearInteraccionApp, true);
+            blocker.addEventListener('pointerdown', _bloquearInteraccionApp, true);
+            blocker.addEventListener('touchstart', _bloquearInteraccionApp, { capture: true, passive: false });
+            document.body.appendChild(blocker);
+            _blockerEl = blocker;
+        }
+
+        function _quitarBlocker() {
+            if (_blockerEl) {
+                _blockerEl.remove();
+                _blockerEl = null;
+            }
+        }
+
         function _cerrarPopup() {
             if (_reposicionarActivo) { _reposicionarActivo(); _reposicionarActivo = null; }
             if (_popupEl) { _popupEl.remove(); _popupEl = null; }
@@ -945,6 +972,7 @@
         }
 
         function _onKeydown(e) {
+            e.stopPropagation();
             if (e.key === 'Escape') { e.preventDefault(); finalizar(); }
             else if (e.key === 'ArrowRight') { e.preventDefault(); siguiente(); }
             else if (e.key === 'ArrowLeft') { e.preventDefault(); anterior(); }
@@ -1159,6 +1187,7 @@
         function finalizar() {
             _cerrarPopup();
             _desbloquearScroll();
+            _quitarBlocker();
             _activo = false;
             StorageHelper.setItem(STORAGE_KEYS.TUTORIAL_COMPLETADO, true);
         }
@@ -1170,6 +1199,7 @@
             _activo = true;
             _pasosActivos = pasos;
             _bloquearScroll();
+            _crearBlocker();
             _pasoActual = 0;
             _mostrarPaso(0);
         }

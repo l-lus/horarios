@@ -1046,6 +1046,10 @@
             return (cantidad === 1 ? tipo.label : tipo.labelPlural).toLowerCase();
         }
 
+        function claveStat(tipo) {
+            return tipo.labelPlural.toLowerCase();
+        }
+
         function obtenerCodigosPorTipo(id) {
             const tipo = obtenerTipoPorId(id);
             return tipo ? { entrada: tipo.codigo, salida: tipo.codigo } : null;
@@ -1059,7 +1063,8 @@
             validarTipoPermitido,
             obtenerTodosLosTipos,
             obtenerCodigosPorTipo,
-            labelSegunCantidad
+            labelSegunCantidad,
+            claveStat
         };
     })();
 
@@ -1068,7 +1073,6 @@
     // ====================================================================
     const DataManagement = (function (S) {
         let notify = {
-            actualizarBotonLote: () => { },
             actualizarEstadoBotonTimerMain: () => { },
             actualizarHintGrupo: () => { },
             actualizarUI: () => { },
@@ -1078,7 +1082,6 @@
             cerrarFiltros: () => { },
             cerrarImportar: () => { },
             descargarJSON: () => { },
-            flashCampo: () => { },
             flashCampoTipo: () => { },
             iniciarTimerAutoCierreBotones: () => { },
             limpiarError: () => { },
@@ -1169,10 +1172,7 @@
 
                 registros = registros.filter(r => !idsDelGrupo.has(r.id));
                 const { entrada, salida } = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
-                const nuevosRegistros = fechasNuevas.map(fechaISO => {
-                    const t = calcularHoras(entrada, salida, null);
-                    return { id: S.generarIDSeguro(), fecha: fechaISO, entrada, salida, tiempoFuera: null, horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias };
-                });
+                const nuevosRegistros = fechasNuevas.map(fechaISO => _construirRegistro(fechaISO, entrada, salida));
                 registros.push(...nuevosRegistros);
                 ordenarRegistros();
                 HistoryManager.saveState(registros, `editar grupo (${nuevosRegistros.length} día${nuevosRegistros.length !== 1 ? 's' : ''})`);
@@ -1196,8 +1196,6 @@
             if (saved) { notify.mostrarToast('Grupo eliminado', 'success'); notify.cerrarEdicionGrupo(); }
         }
 
-        function setGrupoEnEdicion(val) { grupoEnEdicion = val; }
-
         async function registrarDiaEspecial(fecha, tipo) {
             const registroExistente = registros.find(r => r.fecha === fecha);
             if (registroExistente) { notify.mostrarToast('Ya existe un registro para hoy', 'warning'); throw new Error('Registro ya existe'); }
@@ -1211,17 +1209,13 @@
 
             if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast('Límite de registros alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite alcanzado'); }
 
-            const nuevoId = S.generarIDSeguro();
-            const t = calcularHoras(entrada, salida, null);
-            registros.push({
-                id: nuevoId, fecha: fecha, entrada: entrada, salida: salida, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
-            });
+            const nuevo = _construirRegistro(fecha, entrada, salida);
+            registros.push(nuevo);
 
             ordenarRegistros();
             const esHoy = fecha === TimeUtils.obtenerFechaHoy();
             HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${TimeUtils.fechaCorta(fecha)})`);
-            const saved = await _guardarConCicloSiHoy(nuevoId, esHoy);
+            const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy);
             if (saved) {
                 notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success');
                 notify.flashCampoTipo('success', 'btn-agregar');
@@ -1302,6 +1296,19 @@
             return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
         }
 
+        /**
+         * Arma un objeto registro nuevo (con ID, horas calculadas y objetivo del momento).
+         * No lo agrega al array `registros` — eso queda a cargo de quien llama.
+         */
+        function _construirRegistro(fecha, entrada, salida) {
+            const e = entrada || null, s = salida || null;
+            const t = calcularHoras(e, s, null);
+            return {
+                id: S.generarIDSeguro(), fecha, entrada: e, salida: s, tiempoFuera: null,
+                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
+            };
+        }
+
         function validarFormulario() {
             let valido = true;
             const fecha = S.sanitizeString($('fecha').value, 10);
@@ -1353,17 +1360,13 @@
             if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) {
                 notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
             }
-            const nuevoId = S.generarIDSeguro();
-            const t = calcularHoras(e || null, s || null, null);
-            registros.push({
-                id: nuevoId, fecha: f, entrada: e || null, salida: s || null, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
-            });
+            const nuevo = _construirRegistro(f, e, s);
+            registros.push(nuevo);
             ordenarRegistros();
             const esHoy = e && f === TimeUtils.obtenerFechaHoy();
             const detalleAccion = e && s ? `entrada ${e} y salida ${s}` : e ? `entrada ${e}` : `salida ${s}`;
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
-            const saved = await _guardarConCicloSiHoy(nuevoId, esHoy, 'entrada');
+            const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
             if (!saved) return;
             const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
             if (entradaManual || salidaManual) {
@@ -1871,7 +1874,7 @@
                 const esDiaHabil = diasHabiles.includes(TimeUtils.parsearFechaLocal(iso).getDay());
                 const r = regsPorFecha.get(iso);
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+                const esRemoto = esEspecial && esTipoRemoto(r);
                 const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
                 const objetivoDia = r ? objetivoDeRegistro(r) : horasDiarias;
 
@@ -1942,13 +1945,9 @@
 
             const idsNuevosParaAnimar = [];
             nuevosRegistros.forEach(fecha => {
-                const t = calcularHoras(entrada, salida, null);
-                const nuevoId = S.generarIDSeguro();
-                idsNuevosParaAnimar.push(nuevoId);
-                registros.push({
-                    id: nuevoId, fecha: fecha, entrada: entrada, salida: salida, tiempoFuera: null,
-                    horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
-                });
+                const nuevo = _construirRegistro(fecha, entrada, salida);
+                idsNuevosParaAnimar.push(nuevo.id);
+                registros.push(nuevo);
             });
 
             ordenarRegistros();
@@ -1996,6 +1995,22 @@
             if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
             const v = registro?.objetivoHoras;
             return (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
+        }
+
+        function esTipoRemoto(registro) {
+            return TiposRegistro.obtenerTipoPorCodigo(registro?.entrada, registro?.salida)?.id === 'remoto';
+        }
+
+        /**
+         * Cuánto aporta un registro a las horas trabajadas efectivas:
+         * un día remoto cuenta como su objetivo (no como horas reales), un día especial
+         * no-remoto no cuenta, y un día normal cuenta su total real.
+         */
+        function horasEfectivasDeRegistro(registro) {
+            const tipo = TiposRegistro.obtenerTipoPorCodigo(registro.entrada, registro.salida);
+            if (tipo && tipo.id === 'remoto') return objetivoDeRegistro(registro);
+            if (!tipo) return registro.total;
+            return 0;
         }
 
         function objetivoEdicionEnVivo() {
@@ -2050,6 +2065,7 @@
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
             objetivoDeRegistro, objetivoEdicionEnVivo, migrarObjetivoHorasFaltante, aplicarHorasATodosLosRegistros,
+            esTipoRemoto, horasEfectivasDeRegistro,
             recalcularTotalesEnMemoria: function () {
                 registros.forEach(r => {
                     if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
@@ -4954,7 +4970,7 @@
     // ====================================================================
     const UIEstadisticas = (function (S, D, UICore) {
         const {
-            formatoDiferencia, mostrarToast, _setBtnActivo, _poblarSelect,
+            mostrarToast, _poblarSelect,
             _animarSlideElemento, _posicionarPopup, _registrarCierrePopup,
             toggleSeccionGen, registrarSwipe, _animarFadeSwap
         } = UICore;
@@ -4973,6 +4989,16 @@
             const media = valores.reduce((a, b) => a + b, 0) / valores.length;
             const varianza = valores.reduce((sum, v) => sum + Math.pow(v - media, 2), 0) / valores.length;
             return Math.sqrt(varianza);
+        }
+
+        /**
+         * Devuelve la fecha desde la que arranca un período: la fecha por defecto (ej. 1° del mes/año),
+         * o el primer registro real si es posterior (ej. si el perfil empezó a usarse a mitad de período).
+         */
+        function _fechaDesdeEfectiva(registros, fechaDesdeDefault) {
+            if (registros.length === 0) return fechaDesdeDefault;
+            const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
+            return primerRegistro > fechaDesdeDefault ? primerRegistro : fechaDesdeDefault;
         }
 
 
@@ -5004,7 +5030,7 @@
             const { regularidadPorMes = false } = opciones;
 
             const conteosPorTipo = {};
-            const claveTipoPorCodigo = new Map(TiposRegistro.obtenerTodosLosTipos().map(t => [t.codigo, t.labelPlural.toLowerCase()]));
+            const claveTipoPorCodigo = new Map(TiposRegistro.obtenerTodosLosTipos().map(t => [t.codigo, TiposRegistro.claveStat(t)]));
             claveTipoPorCodigo.forEach(clave => { conteosPorTipo[clave] = 0; });
             registrosRango.forEach(r => {
                 if (r.entrada && r.entrada === r.salida) {
@@ -5040,11 +5066,8 @@
             const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
             const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
 
-            const totalRemotos = registrosRango
-                .filter(r => r.entrada && r.entrada === r.salida && TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'remoto')
-                .reduce((s, r) => s + D.objetivoDeRegistro(r), 0);
             const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
-            const totalHoras = totalHorasTrabajadas + totalRemotos;
+            const totalHoras = _sumarHorasEfectivas(registrosRango);
             const promDiario = totalHorasTrabajadas / registrosValidos.length;
 
             const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
@@ -5085,7 +5108,7 @@
             toggleStatItem('stat-dias-trabajados', stats.diasTrabajados);
 
             TiposRegistro.obtenerTodosLosTipos().forEach(t => {
-                const clave = t.labelPlural.toLowerCase();
+                const clave = TiposRegistro.claveStat(t);
                 toggleStatItem(`stat-${clave}`, stats[clave] || 0);
             });
 
@@ -5118,7 +5141,7 @@
             }
         }
 
-        function calcularEstadisticasMes(mesAnio = null) {
+        function calcularEstadisticasMes(mesAnio = null, registrosPeriodo = null) {
             let mesActual, añoActual;
             if (mesAnio) {
                 const [año, mes] = mesAnio.split('-').map(Number);
@@ -5127,16 +5150,12 @@
                 const hoy = new Date();
                 mesActual = hoy.getMonth(); añoActual = hoy.getFullYear();
             }
-            const registros = D.registros().filter(r => {
+            const registros = registrosPeriodo ?? D.registros().filter(r => {
                 const [a, m] = r.fecha.split('-').map(Number);
                 return a === añoActual && m === mesActual + 1;
             });
             const ultimoDia = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
-            let fechaDesde = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1));
-            if (registros.length > 0) {
-                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
-                if (primerRegistro > fechaDesde) fechaDesde = primerRegistro;
-            }
+            const fechaDesde = _fechaDesdeEfectiva(registros, TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1)));
             return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: fechaDesde, hasta: ultimoDia });
         }
 
@@ -5182,17 +5201,10 @@
             }
         }
 
-        function calcularEstadisticasAnio(anio) {
+        function calcularEstadisticasAnio(anio, registrosPeriodo = null) {
             const anioNum = parseInt(anio);
-            const registros = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
-            let fechaDesde = `${anioNum}-01-01`;
-
-            if (registros.length > 0) {
-                const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
-                if (primerRegistro > fechaDesde) {
-                    fechaDesde = primerRegistro;
-                }
-            }
+            const registros = registrosPeriodo ?? D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
+            const fechaDesde = _fechaDesdeEfectiva(registros, `${anioNum}-01-01`);
 
             return _calcularEstadisticasRango(registros, {
                 regularidadPorMes: true,
@@ -5311,12 +5323,7 @@
         }
 
         function _sumarHorasEfectivas(regs) {
-            return regs.reduce((sum, r) => {
-                const t = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                if (t && t.id === 'remoto') return sum + D.objetivoDeRegistro(r);
-                if (!t) return sum + r.total;
-                return sum;
-            }, 0);
+            return regs.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0);
         }
 
         function _resolverPeriodoDatos(esAnual) {
@@ -5324,11 +5331,12 @@
                 const anio = $('select-anio-stats')?.value;
                 if (!anio) { mostrarToast('No hay año seleccionado', 'error'); return null; }
                 const anioNum = parseInt(anio);
+                const registrosPeriodo = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
                 return {
                     periodoLabel: anio,
                     nombreArchivo: `reporte_${anio}.html`,
-                    registrosPeriodo: D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum),
-                    stats: calcularEstadisticasAnio(anio),
+                    registrosPeriodo,
+                    stats: calcularEstadisticasAnio(anio, registrosPeriodo),
                     mesSeleccionado: null
                 };
             }
@@ -5336,14 +5344,15 @@
             const mes = selectMes?.value;
             if (!mes) { mostrarToast('No hay mes seleccionado', 'error'); return null; }
             const [año, mesNum] = mes.split('-').map(Number);
+            const registrosPeriodo = D.registros().filter(r => {
+                const [aReg, mReg] = r.fecha.split('-').map(Number);
+                return aReg === año && mReg === mesNum;
+            });
             return {
                 periodoLabel: selectMes.options[selectMes.selectedIndex].text,
                 nombreArchivo: `reporte_${mes}.html`,
-                registrosPeriodo: D.registros().filter(r => {
-                    const [aReg, mReg] = r.fecha.split('-').map(Number);
-                    return aReg === año && mReg === mesNum;
-                }),
-                stats: calcularEstadisticasMes(mes),
+                registrosPeriodo,
+                stats: calcularEstadisticasMes(mes, registrosPeriodo),
                 mesSeleccionado: mes
             };
         }
@@ -5445,13 +5454,13 @@
                 const lunes = TimeUtils.obtenerLunesSemanaISO(r.fecha);
                 if (!semanas.has(lunes)) {
                     const base = { trabajados: [] };
-                    TiposRegistro.obtenerTodosLosTipos().forEach(t => { base[t.labelPlural.toLowerCase()] = []; });
+                    TiposRegistro.obtenerTodosLosTipos().forEach(t => { base[TiposRegistro.claveStat(t)] = []; });
                     semanas.set(lunes, base);
                 }
                 const semana = semanas.get(lunes);
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                 if (tipoEspecial) {
-                    const cat = tipoEspecial.labelPlural.toLowerCase();
+                    const cat = TiposRegistro.claveStat(tipoEspecial);
                     if (semana[cat]) semana[cat].push(r);
                 } else {
                     semana.trabajados.push(r);
@@ -5568,7 +5577,7 @@
                 { label: 'Jornada regular', valor: stats.regularidadJornada },
                 { label: 'Tiempo fuera', valor: stats.tiempoFueraTotal },
                 { label: 'Salidas temprano', valor: stats.compensaciones, esConteo: true },
-                ...TiposRegistro.obtenerTodosLosTipos().map(t => ({ label: t.labelPlural, valor: stats[t.labelPlural.toLowerCase()] || 0, esConteo: true })),
+                ...TiposRegistro.obtenerTodosLosTipos().map(t => ({ label: t.labelPlural, valor: stats[TiposRegistro.claveStat(t)] || 0, esConteo: true })),
             ].filter(t => !(t.esConteo && t.valor === 0));
 
             const filasHtml = tarjetas.map(t => `
@@ -5624,7 +5633,7 @@
 
                 const notasExtras = TiposRegistro.obtenerTodosLosTipos()
                     .map(t => {
-                        const clave = t.labelPlural.toLowerCase();
+                        const clave = TiposRegistro.claveStat(t);
                         const cantidad = datos[clave]?.length || 0;
                         return cantidad ? `${cantidad} ${TiposRegistro.labelSegunCantidad(t, cantidad)}` : null;
                     })
@@ -5821,7 +5830,7 @@
             if (!info) {
                 const valueEl = $(statId);
                 const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');
-                const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${t.labelPlural.toLowerCase()}`);
+                const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${TiposRegistro.claveStat(t)}`);
                 info = {
                     titulo: S.escapeHtml(label ? label.textContent : 'Estadística'),
                     desc: tipoMatch
@@ -6126,7 +6135,7 @@
             for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
                 const r = registrosMap.get(isoDate);
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const esRemoto = esEspecial && TiposRegistro.obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+                const esRemoto = esEspecial && D.esTipoRemoto(r);
                 let delta = 0;
                 if (esRemoto) {
                     delta = 0;
@@ -6196,8 +6205,7 @@
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
             const totalSemana = registrosSemana.reduce((sum, r) => {
                 if (regActivo && r.fecha === regActivo.fecha) return sum + tiempoHoy;
-                const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                return sum + (tipo?.id === 'remoto' ? D.objetivoDeRegistro(r) : tipo ? 0 : r.total);
+                return sum + D.horasEfectivasDeRegistro(r);
             }, 0);
 
             const registrosSemanaCompletaPorFecha = new Map(
@@ -7303,7 +7311,6 @@
             limpiarCampo,
             getFondoCard: () => _fondoCard,
             setTimerAutoVista: (v) => { _timerAutoVista = v; },
-            sumarMinutosAHora,
             _getLabelFondo,
             _iniciarCicloStats,
             _cicloStatsActivo,
@@ -7378,7 +7385,7 @@
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
-            sumarMinutosAHora, _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
+            _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
             _fadeSwapCiclo
         } = UITarjetaFichaje;
 
@@ -7719,9 +7726,9 @@
             window.UILogic = UILogic;
 
             D.configurarNotificaciones({
-                actualizarBotonLote, actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
+                actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
                 aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
-                descargarJSON, flashCampo: _flashCampo, flashCampoTipo: _flashCampoTipo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+                descargarJSON, flashCampoTipo: _flashCampoTipo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
                 obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
                 setBloqueoEdicionGrupo, verificarBloqueoCredito
             });
@@ -7814,7 +7821,7 @@
                     const item = document.createElement('div');
                     item.className = 'stat-item';
                     const label = Object.assign(document.createElement('div'), { className: 'stat-label', textContent: t.labelPlural });
-                    const value = Object.assign(document.createElement('div'), { className: 'stat-value', id: `stat-${t.labelPlural.toLowerCase()}`, textContent: '0' });
+                    const value = Object.assign(document.createElement('div'), { className: 'stat-value', id: `stat-${TiposRegistro.claveStat(t)}`, textContent: '0' });
                     item.appendChild(label);
                     item.appendChild(value);
                     anchor.parentNode.insertBefore(item, anchor);
@@ -8136,36 +8143,36 @@
 
         return {
             init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
-            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast, mostrarError,
-            limpiarError, resetearBoton, restaurarBotonGuardarEdicion, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
-            limpiarCampo, mostrarFiltros, cerrarFiltros, registrarLoteDesdeCard, irHoyCalendario, obtenerOrdenCards,
-            cambiarMesStats, generarReporte, abrirModalReporteSecciones, cerrarModalReporteSecciones,
+            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
+            resetearBoton, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
+            limpiarCampo, mostrarFiltros, irHoyCalendario, obtenerOrdenCards,
+            cambiarMesStats, abrirModalReporteSecciones, cerrarModalReporteSecciones,
             toggleSeccionReporte, confirmarGenerarReporte,
-            toggleHistorico, toggleStats, sumarMinutosAHora, actualizarEstadoBotonHoverPopup,
-            toggleTimerBreakMain, actualizarEstadoBotonTimerMain, toggleBloqueoEdicion, setBloqueoEdicion,
-            actualizarFeedbackConfig, poblarSelectorMeses, abrirSelectorPerfiles, actualizarBotonLote,
+            toggleHistorico, toggleStats, actualizarEstadoBotonHoverPopup,
+            toggleTimerBreakMain, toggleBloqueoEdicion,
+            actualizarFeedbackConfig, abrirSelectorPerfiles,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
             aplicarHorasConfiguradasATodos, actualizarEstadoBotonAplicarHoras,
             iniciarCambioObjetivoEdicion, detenerCambioObjetivoEdicion,
             cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote, toggleHoverPopupCalendario,
-            eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, renderizarListaPerfiles, ejecutarAccionRegistro,
-            iniciarCambioHoras, detenerCambio, mostrarconfig, mostrarConfigOnboarding, alternarFechaActual, verificarBloqueoCredito, gistSubir, gistBajar,
-            toggleCredito, setBloqueoEdicionGrupo, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo, poblarSelectoresTipos,
+            eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, ejecutarAccionRegistro,
+            iniciarCambioHoras, detenerCambio, mostrarconfig, mostrarConfigOnboarding, alternarFechaActual, gistSubir, gistBajar,
+            toggleCredito, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo, poblarSelectoresTipos,
             mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport, aplicarFeedbackCampos,
-            iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones, toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
+            toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
             togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
-            togglePersistirTarjetas, actualizarEstadoBotonPersistir, toggleVistaHistorico, actualizarHintGrupo,
-            navegarCalendario, obtenerNombrePerfilSafe, descargarJSON, actualizarEstadoBotonesGist, actualizarBotonesHistorico,
+            togglePersistirTarjetas, toggleVistaHistorico,
+            navegarCalendario, actualizarEstadoBotonesGist,
             abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
-            toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite, detenerCambioLimite,
-            _popupCalendario, _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
-            _popupCalendarioDiaSinRegistro, _popupStat, _onclickStatItem, _bindStatItemPopups,
+            toggleGistBackup, toggleGistMerge, iniciarCambioLimite, detenerCambioLimite,
+            _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
+            _popupCalendarioDiaSinRegistro,
             _esFechaHabil, _cubiertoPorSaldo, agruparRegistrosConsecutivos, _irAFicharConFecha,
             _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _nombreMesCapitalizado, _renderSelectorStats,
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
             actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
-            _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
+            _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);
@@ -8487,7 +8494,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260817';
+        const _v = '-v260819';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

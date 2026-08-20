@@ -8445,8 +8445,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));
     $('btn-toggle-card-historico')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('historico'));
-    document.querySelector('.config-actions .btn-ayuda')?.addEventListener('click', () => UILogic.abrirModalAyuda());
-    document.getElementById('btn-ayuda-header')?.addEventListener('click', () => UILogic.abrirModalAyuda());
+    document.getElementById('btn-ayuda-perfiles')?.addEventListener('click', () => UILogic.abrirModalAyuda());
     document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => UILogic.cerrarModalAyuda());
     document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
         const btn = e.target.closest('.ayuda-indice-item');

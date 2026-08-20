@@ -834,11 +834,15 @@
         }
 
         let _demoPeriodoInterval = null;
+        let _demoFueIniciada = false;
         const ORDEN_DEMO_PERIODO = ['Mensual', 'Anual', 'Semanal'];
 
         function _iniciarDemoPeriodo() {
             _detenerDemoPeriodo();
             if (!window.UILogic?.togglePeriodoStats) return;
+            
+            _demoFueIniciada = true;
+            
             let restantes = ORDEN_DEMO_PERIODO.length;
             _demoPeriodoInterval = setInterval(() => {
                 window.UILogic.togglePeriodoStats(1);
@@ -855,12 +859,16 @@
                 clearInterval(_demoPeriodoInterval);
                 _demoPeriodoInterval = null;
             }
-            const label = document.getElementById('label-periodo-toggle')?.textContent?.trim();
-            const idx = ORDEN_DEMO_PERIODO.indexOf(label);
-            if (idx > 0 && window.UILogic?.togglePeriodoStats) {
-                for (let i = 0; i < ORDEN_DEMO_PERIODO.length - idx; i++) {
-                    window.UILogic.togglePeriodoStats(1);
+            
+            if (_demoFueIniciada) {
+                const label = document.getElementById('label-periodo-toggle')?.textContent?.trim();
+                const idx = ORDEN_DEMO_PERIODO.indexOf(label);
+                if (idx > 0 && window.UILogic?.togglePeriodoStats) {
+                    for (let i = 0; i < ORDEN_DEMO_PERIODO.length - idx; i++) {
+                        window.UILogic.togglePeriodoStats(1);
+                    }
                 }
+                _demoFueIniciada = false; 
             }
         }
 
@@ -1100,6 +1108,8 @@
 
         function _iniciarConPasos(pasos) {
             if (document.querySelector('.modal.show')) ModalManager.cerrarTodos();
+            document.querySelectorAll('.animated-card').forEach(card => card.classList.remove('animated-card'));
+
             _activo = true;
             _pasosActivos = pasos;
             _bloquearScroll();
@@ -8662,8 +8672,14 @@
             });
 
             if (!pendientes.length) return;
-
-            await _esperarTutorialInactivo();
+            
+            while (
+                document.querySelector('.modal.show') || 
+                document.getElementById('_tutorial-popup') || 
+                document.body.classList.contains('config-onboarding')
+            ) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
 
             const nombreMes = TimeUtils.formatoTituloMes(prefijoMes).split(' ')[0];
             const lineas = pendientes.map(f => `🎉 ${TimeUtils.obtenerNombreDia(f.fecha)} ${parseInt(f.fecha.slice(8), 10)} — ${f.nombre}`);

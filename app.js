@@ -7662,6 +7662,14 @@
             }
         }
 
+        function abrirModalAyuda() {
+            ModalManager.alternar('modal-config', 'modal-ayuda');
+        }
+
+        function cerrarModalAyuda() {
+            ModalManager.alternar('modal-ayuda', 'modal-config');
+        }
+
         function _precargarCamposConfig() {
             const elHoras = $('config-horas-diarias');
             elHoras.dataset.valor = D.horasDiarias();
@@ -7744,6 +7752,7 @@
             ModalManager.registrarAccionVolver('modal-editar-perfil', cerrarEditorPerfil);
             ModalManager.registrarAccionVolver('modal-editar-grupo', cerrarEdicionGrupo);
             ModalManager.registrarAccionVolver('modal-reporte-secciones', cerrarModalReporteSecciones);
+            ModalManager.registrarAccionVolver('modal-ayuda', cerrarModalAyuda);
         }
 
         function _initListenersFormulario() {
@@ -8143,6 +8152,7 @@
 
         return {
             init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
+            abrirModalAyuda, cerrarModalAyuda,
             cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
             resetearBoton, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
             limpiarCampo, mostrarFiltros, irHoyCalendario, obtenerOrdenCards,
@@ -8414,6 +8424,13 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));
     $('btn-toggle-card-historico')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('historico'));
+    document.querySelector('.config-actions .btn-ayuda')?.addEventListener('click', () => UILogic.abrirModalAyuda());
+    document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => UILogic.cerrarModalAyuda());
+    document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.ayuda-indice-item');
+        if (!btn) return;
+        document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     document.querySelector('.config-actions .btn-gist')?.addEventListener('click', () => UILogic.abrirModalGist());
     document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => UILogic.mostrarImportar());
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());

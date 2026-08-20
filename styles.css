@@ -947,6 +947,55 @@ button:disabled {
     margin-top: var(--space-sm);
 }
 
+.ayuda-indice {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--border);
+}
+
+.ayuda-indice-item {
+    padding: var(--space-xs) var(--space-md);
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--fw-medium);
+    cursor: pointer;
+    transition: background var(--transition-ui), color var(--transition-ui);
+}
+
+.ayuda-indice-item:hover {
+    background: var(--c-blue);
+    color: var(--c-white);
+}
+
+.ayuda-seccion {
+    margin-bottom: var(--space-xl);
+    scroll-margin-top: var(--space-sm);
+}
+
+.ayuda-seccion h4 {
+    margin: 0 0 var(--space-sm);
+    font-size: var(--text-md);
+    font-weight: var(--fw-semibold);
+    color: var(--text-main);
+}
+
+.ayuda-seccion p {
+    margin: 0 0 var(--space-sm);
+    font-size: var(--text-base);
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.ayuda-seccion p:last-child {
+    margin-bottom: 0;
+}
+
 .modal-hr {
     border: 0;
     border-top: 1px solid var(--border);

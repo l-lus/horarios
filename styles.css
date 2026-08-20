@@ -949,7 +949,8 @@ button:disabled {
 
 .ayuda-indice {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column; 
+    align-items: flex-start; 
     gap: var(--space-sm);
     margin-bottom: var(--space-xl);
     padding-bottom: var(--space-lg);
@@ -957,7 +958,10 @@ button:disabled {
 }
 
 .ayuda-indice-item {
-    padding: var(--space-xs) var(--space-md);
+    width: auto; 
+    justify-content: flex-start;
+    text-align: left;
+    padding: var(--space-xs) 0;
     border: 1px solid transparent;
     color: var(--text-muted);
     background: transparent;

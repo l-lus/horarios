@@ -8275,10 +8275,10 @@
             });
 
             if (!pendientes.length) return;
-            
+
             while (
-                document.querySelector('.modal.show') || 
-                document.getElementById('_tutorial-popup')
+                document.querySelector('.modal.show') ||
+                document.body.classList.contains('config-onboarding')
             ) {
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
@@ -8533,7 +8533,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260819';
+        const _v = '-v260820';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

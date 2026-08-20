@@ -8261,6 +8261,13 @@
             });
 
             if (!pendientes.length) return;
+            
+            while (
+                document.querySelector('.modal.show') || 
+                document.getElementById('_tutorial-popup')
+            ) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
 
             const nombreMes = TimeUtils.formatoTituloMes(prefijoMes).split(' ')[0];
             const lineas = pendientes.map(f => `🎉 ${TimeUtils.obtenerNombreDia(f.fecha)} ${parseInt(f.fecha.slice(8), 10)} — ${f.nombre}`);

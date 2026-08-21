@@ -982,7 +982,7 @@
                 emoji: '📢',
                 label: 'Paro',
                 labelPlural: 'Paros',
-                descripcion: 'Fuerza Mayor',
+                descripcion: 'Fuerza mayor',
                 color: 'purple',
                 contabiliza: true
             },

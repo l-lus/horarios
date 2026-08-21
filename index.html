@@ -341,7 +341,7 @@
                     <div id="modo-contenedor">
                         <div id="modo-normal">
                             <div class="form-group form-group-pt">
-                                <label>Fecha</label>
+                                <label for="fecha">Fecha</label>
                                 <div class="input-with-btn">
                                     <input type="date" id="fecha" />
                                     <button class="time-btn flex-shrink-0" id="btn-ir-modo-lote"
@@ -354,7 +354,7 @@
                             </div>
                             <div class="contenedor-horas">
                                 <div class="form-group">
-                                    <label>Entrada</label>
+                                    <label for="entrada">Entrada</label>
                                     <div class="input-with-btn">
                                         <input type="text" id="entrada" inputmode="numeric" maxlength="5"
                                             placeholder="hh:mm" />
@@ -367,7 +367,7 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Salida</label>
+                                    <label for="salida">Salida</label>
                                     <div class="input-with-btn">
                                         <input type="text" id="salida" inputmode="numeric" maxlength="5"
                                             placeholder="hh:mm" />
@@ -384,7 +384,7 @@
 
                         <div id="modo-lote" class="fade-out">
                             <div class="form-group form-group-pt">
-                                <label>Tipo de registro</label>
+                                <label for="lote-tipo">Tipo de registro</label>
                                 <div class="input-with-btn">
                                     <select id="lote-tipo">
                                         <option value="normal">🕒 Jornadas (borrar)</option>
@@ -399,7 +399,7 @@
                             </div>
                             <div class="contenedor-fechas">
                                 <div class="form-group">
-                                    <label>Desde</label>
+                                    <label for="lote-fecha-desde">Desde</label>
                                     <div class="input-with-btn">
                                         <input type="date" id="lote-fecha-desde" />
                                         <button class="time-btn" id="btn-lote-desde" title="Pegar hoy / Limpiar">
@@ -410,7 +410,7 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Hasta</label>
+                                    <label for="lote-fecha-hasta">Hasta</label>
                                     <div class="input-with-btn">
                                         <input type="date" id="lote-fecha-hasta" />
                                         <button class="time-btn" id="btn-lote-hasta" title="Pegar hoy / Limpiar">
@@ -442,9 +442,9 @@
                         <div class="form-group">
                             <label>Período</label>
                             <div class="stats-periodo-row">
-                                <select id="select-mes-stats"></select>
-                                <select id="select-anio-stats" class="hidden"></select>
-                                <select id="select-semana-stats" class="hidden"></select>
+                                <select id="select-mes-stats" aria-label="Período"></select>
+                                <select id="select-anio-stats" class="hidden" aria-label="Período"></select>
+                                <select id="select-semana-stats" class="hidden" aria-label="Período"></select>
                                 <button id="btn-toggle-periodo" class="time-btn btn-toggle-periodo"
                                     title="Alternar vista mensual / anual / semanal">
                                     <svg class="icon">
@@ -587,10 +587,10 @@
             </div><!-- #contenido-historico -->
         </div>
     </div>
-    <div class="modal modal-scrollable" id="modal-config">
+    <div class="modal modal-scrollable" id="modal-config" role="dialog" aria-modal="true" aria-labelledby="modal-config-titulo">
         <div class="modal-content">
             <div class="modal-panel-header">
-                <h3>
+                <h3 id="modal-config-titulo">
                     <span class="modal-title-block">
                         <svg class="icon">
                             <use href="#icon-settings" />
@@ -812,10 +812,10 @@
         </div>
     </div>
 
-    <div class="modal modal-scrollable" id="modal-ayuda">
+    <div class="modal modal-scrollable" id="modal-ayuda" role="dialog" aria-modal="true" aria-labelledby="modal-ayuda-titulo">
         <div class="modal-content">
             <div class="modal-panel-header">
-                <h3>
+                <h3 id="modal-ayuda-titulo">
                     <span class="modal-title-block">
                         <svg class="icon">
                             <use href="#icon-help" />
@@ -891,10 +891,10 @@
         </div>
     </div>
 
-    <div class="modal modal-scrollable" id="modal-gist">
+    <div class="modal modal-scrollable" id="modal-gist" role="dialog" aria-modal="true" aria-labelledby="modal-gist-titulo">
         <div class="modal-content">
             <div class="modal-panel-header">
-                <h3>
+                <h3 id="modal-gist-titulo">
                     <span class="modal-title-block">
                         <svg class="icon">
                             <use href="#icon-gist" />
@@ -905,7 +905,7 @@
             </div>
             <div class="modal-panel-body custom-scroll">
                 <div class="form-group">
-                    <label>Personal Access Token</label>
+                    <label for="gist-token">Personal Access Token</label>
                     <div class="input-with-btn">
                         <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxx" maxlength="100"
                             autocomplete="off" />
@@ -922,7 +922,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Gist ID</label>
+                    <label for="gist-id">Gist ID</label>
                     <div class="input-with-btn">
                         <input type="text" id="gist-id" placeholder="Dejar vacío para crear uno nuevo" maxlength="40"
                             autocomplete="off" />
@@ -975,9 +975,9 @@
                     </div>
                     <div id="gist-rango-horario">
                         <span>Desde</span>
-                        <input type="text" id="gist-rango-desde" inputmode="numeric" maxlength="5" />
+                        <input type="text" id="gist-rango-desde" inputmode="numeric" maxlength="5" aria-label="Desde" />
                         <span>Hasta</span>
-                        <input type="text" id="gist-rango-hasta" inputmode="numeric" maxlength="5" />
+                        <input type="text" id="gist-rango-hasta" inputmode="numeric" maxlength="5" aria-label="Hasta" />
                     </div>
                 </div>
                 <div class="config-hint-text" id="gist-ultima-sync">Sin sincronizar</div>
@@ -1001,10 +1001,10 @@
         </div>
     </div>
 
-    <div class="modal" id="modal-gist-merge">
+    <div class="modal" id="modal-gist-merge" role="dialog" aria-modal="true" aria-labelledby="modal-gist-merge-titulo">
         <div class="modal-content">
             <div class="modal-panel-header">
-                <h3>
+                <h3 id="modal-gist-merge-titulo">
                     <span class="modal-title-block">
                         <svg class="icon">
                             <use href="#icon-cloud-download" />
@@ -1043,10 +1043,10 @@
         </div>
     </div>
 
-    <div class="modal modal-scrollable" id="modal-editar">
+    <div class="modal modal-scrollable" id="modal-editar" role="dialog" aria-modal="true" aria-labelledby="modal-editar-titulo">
         <div class="modal-content">
             <div class="modal-panel-header">
-                <h3>
+                <h3 id="modal-editar-titulo">
                     <span class="modal-title-block">
                         <svg class="icon">
                             <use href="#icon-edit" />
@@ -1057,7 +1057,7 @@
             </div>
             <div class="modal-panel-body custom-scroll">
                 <div class="form-group">
-                    <label>Fecha</label>
+                    <label for="edit-fecha">Fecha</label>
                     <div class="input-with-btn">
                         <input type="date" id="edit-fecha" />
                         <button id="btn-toggle-credito" class="time-btn" title="Asueto | Salida temprana">
@@ -1068,7 +1068,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Entrada</label>
+                    <label for="edit-entrada">Entrada</label>
                     <div class="input-with-btn">
                         <input type="text" id="edit-entrada" inputmode="numeric" maxlength="5" />
                         <button class="time-btn" id="btn-edit-entrada" title="Pegar hora actual o limpiar"><svg
@@ -1079,7 +1079,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Salida</label>
+                    <label for="edit-salida">Salida</label>
                     <div class="input-with-btn">
                         <input type="text" id="edit-salida" inputmode="numeric" maxlength="5" />
                         <button class="time-btn" id="btn-edit-salida" title="Pegar hora actual o limpiar"><svg
@@ -1090,7 +1090,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Tiempo Fuera</label>
+                    <label for="edit-tiempo-fuera">Tiempo Fuera</label>
                     <div class="input-with-btn">
                         <input type="text" id="edit-tiempo-fuera" inputmode="numeric" maxlength="5" />
                         <button class="time-btn" id="btn-edit-tf" title="Limpiar">
@@ -1101,7 +1101,7 @@
                     </div>
                 </div>                
                 <div class="form-group">
-                    <label>Comentarios</label>
+                    <label for="edit-notas">Comentarios</label>
                     <div class="input-with-btn">
                         <input type="text" id="edit-notas" maxlength="35" autocomplete="off" />
                         <button class="time-btn" id="btn-edit-notas" title="Limpiar">
@@ -1142,13 +1142,13 @@
             </div>
         </div>
     </div>
-    <div class="modal" id="modal-importar">
+    <div class="modal" id="modal-importar" role="dialog" aria-modal="true" aria-labelledby="modal-importar-titulo">
         <div class="modal-content">
-            <h3><svg class="icon">
+            <h3 id="modal-importar-titulo"><svg class="icon">
                     <use href="#icon-upload" />
                 </svg> Restaurar Registros</h3>
             <div class="form-group">
-                <input type="file" id="file-import" accept=".json" />
+                <input type="file" id="file-import" accept=".json" aria-label="Archivo de backup a restaurar" />
                 <button type="button" class="btn-backup" id="btn-seleccionar-archivo">
                     <svg class="icon">
                         <use href="#icon-upload" />
@@ -1181,9 +1181,9 @@
             </div>
         </div>
     </div>
-    <div class="modal" id="modal-exportar">
+    <div class="modal" id="modal-exportar" role="dialog" aria-modal="true" aria-labelledby="modal-exportar-titulo">
         <div class="modal-content">
-            <h3>
+            <h3 id="modal-exportar-titulo">
                 <span class="modal-title-block">
                     <svg class="icon">
                         <use href="#icon-download" />
@@ -1192,7 +1192,7 @@
                 </span>
             </h3>
             <div class="form-group">
-                <select id="tipo-exportacion">
+                <select id="tipo-exportacion" aria-label="Tipo de exportación">
                     <option value="todo">📦 Todo el perfil</option>
                     <option value="mes-actual">📅 Mes actual</option>
                     <option value="rango">📊 Rango personalizado</option>
@@ -1201,11 +1201,11 @@
             <div id="campos-rango-exportar" class="collapsible">
                 <div class="collapsible-inner">
                     <div class="form-group">
-                        <label>Desde</label>
+                        <label for="export-fecha-desde">Desde</label>
                         <input type="date" id="export-fecha-desde" />
                     </div>
                     <div class="form-group">
-                        <label>Hasta</label>
+                        <label for="export-fecha-hasta">Hasta</label>
                         <input type="date" id="export-fecha-hasta" />
                     </div>
                 </div>
@@ -1227,9 +1227,9 @@
             </div>
         </div>
     </div>
-    <div class="modal" id="modal-reporte-secciones">
+    <div class="modal" id="modal-reporte-secciones" role="dialog" aria-modal="true" aria-labelledby="modal-reporte-secciones-titulo">
         <div class="modal-content">
-            <h3>
+            <h3 id="modal-reporte-secciones-titulo">
                 <span class="modal-title-block">
                     <svg class="icon">
                         <use href="#icon-list" />
@@ -1254,9 +1254,9 @@
             </div>
         </div>
     </div>
-    <div class="modal" id="modal-selector-perfiles">
+    <div class="modal" id="modal-selector-perfiles" role="dialog" aria-modal="true" aria-labelledby="modal-selector-perfiles-titulo">
         <div class="modal-content">
-            <h3>
+            <h3 id="modal-selector-perfiles-titulo">
                 <span class="modal-title-block">
                     <svg class="icon">
                         <use href="#icon-briefcase" />
@@ -1266,7 +1266,7 @@
             </h3>
             <div id="lista-perfiles-botones" class="perfil-list-container custom-scroll"></div>
             <div class="form-group form-group-border-top">
-                <label>Agregar perfil</label>
+                <label for="nombre-nuevo-perfil-selector">Agregar perfil</label>
                 <div class="input-with-btn">
                     <input type="text" id="nombre-nuevo-perfil-selector" placeholder="Nombre del perfil, lugar..."
                         maxlength="30" />
@@ -1304,9 +1304,9 @@
             </div>
         </div>
     </div>
-    <div class="modal" id="modal-editar-perfil">
+    <div class="modal" id="modal-editar-perfil" role="dialog" aria-modal="true" aria-labelledby="modal-editar-perfil-titulo">
         <div class="modal-content">
-            <h3>
+            <h3 id="modal-editar-perfil-titulo">
                 <span class="modal-title-block">
                     <svg class="icon">
                         <use href="#icon-edit" />
@@ -1316,7 +1316,7 @@
             </h3>
 
             <div class="form-group">
-                <label>Nombre del perfil</label>
+                <label for="nombre-perfil-editar">Nombre del perfil</label>
                 <input type="text" id="nombre-perfil-editar" placeholder="Nombre del perfil, lugar..." maxlength="30" />
             </div>
 
@@ -1348,10 +1348,10 @@
         </div>
     </div>
 
-    <div class="modal modal-scrollable" id="modal-editar-grupo">
+    <div class="modal modal-scrollable" id="modal-editar-grupo" role="dialog" aria-modal="true" aria-labelledby="modal-editar-grupo-titulo">
         <div class="modal-content">
             <div class="modal-panel-header">
-                <h3>
+                <h3 id="modal-editar-grupo-titulo">
                     <span class="modal-title-block">
                         <svg class="icon">
                             <use href="#icon-edit" />
@@ -1362,7 +1362,7 @@
             </div>
             <div class="modal-panel-body custom-scroll">
                 <div class="form-group">
-                    <label>Tipo de registro</label>
+                    <label for="edit-grupo-tipo">Tipo de registro</label>
                     <div class="input-with-btn">
                         <select id="edit-grupo-tipo">
                         </select>
@@ -1370,7 +1370,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Desde</label>
+                    <label for="edit-grupo-desde">Desde</label>
                     <div class="input-with-btn">
                         <input type="date" id="edit-grupo-desde" />
                         <button class="time-btn" id="btn-grupo-desde" title="Pegar hoy / Limpiar">
@@ -1381,7 +1381,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Hasta</label>
+                    <label for="edit-grupo-hasta">Hasta</label>
                     <div class="input-with-btn">
                         <input type="date" id="edit-grupo-hasta" />
                         <button class="time-btn" id="btn-grupo-hasta" title="Pegar hoy / Limpiar">
@@ -1420,7 +1420,7 @@
             </div>
         </div>
     </div>
-    <div class="modal" id="modal-confirmar">
+    <div class="modal" id="modal-confirmar" role="dialog" aria-modal="true" aria-labelledby="modal-confirmar-titulo">
         <div class="modal-content">
             <div class="modal-panel-header">
                 <h3>

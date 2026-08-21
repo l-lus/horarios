@@ -5601,7 +5601,7 @@
                 { label: 'Entrada regular', valor: stats.regularidadEntrada },
                 { label: 'Jornada regular', valor: stats.regularidadJornada },
                 { label: 'Tiempo fuera', valor: stats.tiempoFueraTotal },
-                { label: 'Salidas temprano', valor: stats.compensaciones, esConteo: true },
+                { label: 'Salidas tempranas', valor: stats.compensaciones, esConteo: true },
                 ...TiposRegistro.obtenerTodosLosTipos().map(t => ({ label: t.labelPlural, valor: stats[TiposRegistro.claveStat(t)] || 0, esConteo: true })),
             ].filter(t => !(t.esConteo && t.valor === 0));
 
@@ -5816,7 +5816,7 @@
             'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
             'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles.' },
             'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
-            'stat-compensaciones': { titulo: 'Salidas Temprano', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
+            'stat-compensaciones': { titulo: 'Salidas Tempranas', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
         };
 
         let _popupStatEl = null;

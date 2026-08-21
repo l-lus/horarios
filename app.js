@@ -1627,7 +1627,7 @@
             const saved = await guardarYActualizar(null, true);
             notify.restaurarBotonGuardarEdicion(btnGuardar);
             if (saved) {
-                notify.mostrarToast(cr ? `Guardado con Salida Temprano (+${cr})` : 'Registro actualizado', 'success');
+                notify.mostrarToast(cr ? `Guardado con Salida Temprana (+${cr})` : 'Registro actualizado', 'success');
                 notify.cerrarEdicion();
             }
         }
@@ -4285,7 +4285,7 @@
                 const tfStr = TimeUtils.horasATexto(TimeUtils.horaAMinutos(r.tiempoFuera) / 60, 'short');
                 return ` (${tfStr} Fuera)`;
             })();
-            const crText = r.credito && r.credito !== '00:00' ? ' (Salida Temprano)' : '';
+            const crText = r.credito && r.credito !== '00:00' ? ' (Salida Temprana)' : '';
 
             const horasEl = document.createElement('div');
             horasEl.className = 'registro-horas';
@@ -4613,7 +4613,7 @@
 
             btn.dataset.activo = estaActivo ? "false" : "true";
             _setBtnActivo('btn-toggle-credito', !estaActivo);
-            mostrarToast(!estaActivo ? 'Asueto | Salida temprano activado' : 'Asueto | Salida temprano desactivado', 'info');
+            mostrarToast(!estaActivo ? 'Asueto | Salida temprana activado' : 'Asueto | Salida temprana desactivado', 'info');
         }
 
         function _actualizarHintEdicion() {
@@ -5447,7 +5447,7 @@
                 const tiempoFuera = (r.tiempoFuera && r.tiempoFuera !== '00:00')
                     ? `${S.escapeHtml(TimeUtils.horasATexto(TimeUtils.horaAMinutos(r.tiempoFuera) / 60, 'short'))} fuera`
                     : '';
-                const salidaTemprano = (r.credito && r.credito !== '00:00') ? ' <span class="tag tag-info">Salida temprano</span>' : '';
+                const salidaTemprano = (r.credito && r.credito !== '00:00') ? ' <span class="tag tag-info">Salida temprana</span>' : '';
                 const cumplido = r.salida ? horasGte(r.total, D.objetivoDeRegistro(r)) : null;
                 const indicador = cumplido === null ? '' : (cumplido ? '<span class="tag tag-ok">✓</span>' : '<span class="tag tag-bad">✗</span>');
 
@@ -7494,7 +7494,7 @@
                     ? `Objetivo actualizado en ${aplicados} registro${aplicados !== 1 ? 's' : ''}`
                     : 'Los registros ya tenían este objetivo';
                 if (creditosRecalculados > 0) {
-                    mensaje += ` (${creditosRecalculados} con Salida Temprano recalculada)`;
+                    mensaje += ` (${creditosRecalculados} con Salida Temprana recalculada)`;
                 }
                 mostrarToast(mensaje, 'success');
             }

@@ -121,12 +121,29 @@ body {
     transition: border-bottom-color 0.25s ease;
 }
 
-.header.scrolled.progress-green { border-bottom-color: var(--c-green); }
-.header.scrolled.progress-red { border-bottom-color: var(--c-red); }
-.header.scrolled.progress-purple { border-bottom-color: var(--c-purple); }
-.header.scrolled.progress-orange { border-bottom-color: var(--c-orange); }
-.header.scrolled.progress-gold { border-bottom-color: var(--c-gold); }
-.header.scrolled.progress-blue { border-bottom-color: var(--c-blue); }
+.header.scrolled.progress-green {
+    border-bottom-color: var(--c-green);
+}
+
+.header.scrolled.progress-red {
+    border-bottom-color: var(--c-red);
+}
+
+.header.scrolled.progress-purple {
+    border-bottom-color: var(--c-purple);
+}
+
+.header.scrolled.progress-orange {
+    border-bottom-color: var(--c-orange);
+}
+
+.header.scrolled.progress-gold {
+    border-bottom-color: var(--c-gold);
+}
+
+.header.scrolled.progress-blue {
+    border-bottom-color: var(--c-blue);
+}
 
 .header h1 {
     font-size: var(--text-lg);
@@ -949,8 +966,8 @@ button:disabled {
 
 .ayuda-indice {
     display: flex;
-    flex-direction: column; 
-    align-items: flex-start; 
+    flex-direction: column;
+    align-items: flex-start;
     gap: var(--space-sm);
     margin-bottom: var(--space-xl);
     padding-bottom: var(--space-lg);
@@ -958,7 +975,7 @@ button:disabled {
 }
 
 .ayuda-indice-item {
-    width: auto; 
+    width: auto;
     justify-content: flex-start;
     text-align: left;
     padding: var(--space-xs) 0;
@@ -1983,6 +2000,7 @@ body.config-onboarding .label-footer-empezar {
 }
 
 @keyframes campo-flash {
+
     0%,
     60%,
     100% {
@@ -2004,6 +2022,7 @@ button.campo-flash {
 }
 
 @keyframes campo-flash-color {
+
     0%,
     60%,
     100% {
@@ -2042,9 +2061,9 @@ button.campo-flash-color {
 
     :is([id^="btn-toggle-"],
         #btn-reporte,
-        .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist, .card-section-title, 
+        .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist, .card-section-title,
         .btn-delete, .btn-cancel, .stats-number, .btn-export, .btn-merge, .btn-backup, .btn-edit,
-        .calendario-nav button, .btn-settings,.ayuda-indice-item,  .btn-register):hover:not(:disabled) {
+        .calendario-nav button, .btn-settings, .ayuda-indice-item, .btn-register):hover:not(:disabled) {
         filter: var(--hover);
     }
 

@@ -2530,9 +2530,16 @@
 
         let perfilEnEdicion = null;
 
-        function renderizarListaPerfiles() {
+        function renderizarListaPerfiles(animarCrecimiento = false) {
             const lista = document.getElementById('lista-perfiles-botones');
             if (!lista) return;
+
+            const alturaAnterior = animarCrecimiento ? lista.getBoundingClientRect().height : null;
+            if (animarCrecimiento) {
+                lista.style.transition = '';
+                lista.style.height = alturaAnterior + 'px';
+                lista.style.overflowY = 'hidden';
+            }
 
             lista.innerHTML = '';
             window.PerfilManager.obtenerListaPerfiles().forEach(p => {
@@ -2561,6 +2568,21 @@
                 container.appendChild(editBtn);
                 lista.appendChild(container);
             });
+
+            if (animarCrecimiento) {
+                const alturaNueva = lista.scrollHeight;
+                requestAnimationFrame(() => {
+                    lista.style.transition = `height var(--dur-collapse) ease-out`;
+                    lista.style.height = alturaNueva + 'px';
+                });
+                lista.addEventListener('transitionend', function _limpiarAlturaLista(e) {
+                    if (e.target !== lista || e.propertyName !== 'height') return;
+                    lista.removeEventListener('transitionend', _limpiarAlturaLista);
+                    lista.style.transition = '';
+                    lista.style.height = '';
+                    lista.style.overflowY = '';
+                }, { once: false });
+            }
         }
 
         function abrirSelectorPerfiles() {
@@ -2616,7 +2638,7 @@
             if (window.PerfilManager) window.PerfilManager.inicializar();
             mostrarToast(`Perfil "${nombre}" creado`, 'success');
             input.value = '';
-            renderizarListaPerfiles();
+            renderizarListaPerfiles(true);
             requestAnimationFrame(() => {
                 const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
                 if (ultimo) { ultimo.classList.add('zoom-in-anim'); ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }

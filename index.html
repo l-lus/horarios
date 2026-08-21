@@ -825,54 +825,58 @@
                 </h3>
             </div>
             <div class="modal-panel-body custom-scroll">
-                <nav class="ayuda-indice" id="ayuda-indice">
-                    <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-general">Cómo funciona</button>
-                    <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-fichar">Fichar</button>
-                    <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-estadisticas">Estadísticas</button>
-                    <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-registros">Registros</button>
-                    <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-perfiles">Perfiles</button>
-                    <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-datos">Dónde se guardan tus datos</button>
-                    <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-respaldo">Backup y sincronización</button>
-                </nav>
+                <div class="ayuda-layout">
+                    <nav class="ayuda-indice" id="ayuda-indice">
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-general">Cómo funciona</button>
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-fichar">Fichar</button>
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-estadisticas">Estadísticas</button>
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-registros">Registros</button>
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-perfiles">Perfiles</button>
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-datos">Dónde se guardan tus datos</button>
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-respaldo">Backup y sincronización</button>
+                    </nav>
 
-                <section class="ayuda-seccion" id="ayuda-sec-general">
-                    <h4>Cómo funciona</h4>
-                    <p>La app registra tus jornadas laborales: hora de entrada, hora de salida y el tiempo que estuviste fuera (por ejemplo, el almuerzo). Con eso calcula cuánto trabajaste hoy, en la semana, en el mes o en el año, y lo compara contra tu objetivo de horas.</p>
-                    <p>La tarjeta de arriba de todo muestra tu estado actual. Tocándola alternás entre la vista de Hoy y la vista de Semana.</p>
-                </section>
+                    <div class="ayuda-secciones">
+                        <section class="ayuda-seccion" id="ayuda-sec-general">
+                            <h4>Cómo funciona</h4>
+                            <p>La app registra tus jornadas laborales: hora de entrada, hora de salida y el tiempo que estuviste fuera (por ejemplo, el almuerzo). Con eso calcula cuánto trabajaste hoy, en la semana, en el mes o en el año, y lo compara contra tu objetivo de horas.</p>
+                            <p>La tarjeta de arriba de todo muestra tu estado actual. Tocándola alternás entre la vista de Hoy y la vista de Semana.</p>
+                        </section>
 
-                <section class="ayuda-seccion" id="ayuda-sec-fichar">
-                    <h4>Fichar</h4>
-                    <p>El botón principal registra tu entrada y, más tarde, tu salida. El reloj de al lado sirve para marcar un Tiempo Fuera (como el almuerzo): se resta automáticamente de tu jornada.</p>
-                    <p>Desplegando la flecha del formulario podés cargar o corregir un registro a mano, para hoy o para cualquier fecha pasada. En modo Lote podés cargar feriados, vacaciones u otros días especiales en un rango de fechas de una sola vez, o borrar varios registros de golpe.</p>
-                </section>
+                        <section class="ayuda-seccion" id="ayuda-sec-fichar">
+                            <h4>Fichar</h4>
+                            <p>El botón principal registra tu entrada y, más tarde, tu salida. El reloj de al lado sirve para marcar un Tiempo Fuera (como el almuerzo): se resta automáticamente de tu jornada.</p>
+                            <p>Desplegando la flecha del formulario podés cargar o corregir un registro a mano, para hoy o para cualquier fecha pasada. En modo Lote podés cargar feriados, vacaciones u otros días especiales en un rango de fechas de una sola vez, o borrar varios registros de golpe.</p>
+                        </section>
 
-                <section class="ayuda-seccion" id="ayuda-sec-estadisticas">
-                    <h4>Estadísticas</h4>
-                    <p>Consultá tus horas trabajadas, promedios, regularidad y saldo, por semana, mes o año. Tocando cada dato aparece una explicación de qué significa y cómo se calcula. Desde acá también podés generar un reporte descargable del período elegido.</p>
-                </section>
+                        <section class="ayuda-seccion" id="ayuda-sec-estadisticas">
+                            <h4>Estadísticas</h4>
+                            <p>Consultá tus horas trabajadas, promedios, regularidad y saldo, por semana, mes o año. Tocando cada dato aparece una explicación de qué significa y cómo se calcula. Desde acá también podés generar un reporte descargable del período elegido.</p>
+                        </section>
 
-                <section class="ayuda-seccion" id="ayuda-sec-registros">
-                    <h4>Registros</h4>
-                    <p>Acá están todos tus registros, en lista o en calendario. Podés filtrarlos por fecha o tipo, deshacer y rehacer cambios (también con Ctrl+Z / Ctrl+Y), y tocar cualquiera para editarlo o borrarlo.</p>
-                </section>
+                        <section class="ayuda-seccion" id="ayuda-sec-registros">
+                            <h4>Registros</h4>
+                            <p>Acá están todos tus registros, en lista o en calendario. Podés filtrarlos por fecha o tipo, deshacer y rehacer cambios (también con Ctrl+Z / Ctrl+Y), y tocar cualquiera para editarlo o borrarlo.</p>
+                        </section>
 
-                <section class="ayuda-seccion" id="ayuda-sec-perfiles">
-                    <h4>Perfiles</h4>
-                    <p>Podés tener varios perfiles (por ejemplo, distintos trabajos) con registros, objetivos y ajustes totalmente independientes entre sí. Se cambia de perfil desde el botón de arriba de todo.</p>
-                </section>
+                        <section class="ayuda-seccion" id="ayuda-sec-perfiles">
+                            <h4>Perfiles</h4>
+                            <p>Podés tener varios perfiles (por ejemplo, distintos trabajos) con registros, objetivos y ajustes totalmente independientes entre sí. Se cambia de perfil desde el botón de arriba de todo.</p>
+                        </section>
 
-                <section class="ayuda-seccion" id="ayuda-sec-datos">
-                    <h4>Dónde se guardan tus datos</h4>
-                    <p>Todo se guarda localmente en este dispositivo, en el almacenamiento del navegador (localStorage). No se envía a ningún servidor a menos que vos actives la sincronización con GitHub Gist.</p>
-                    <p>Eso también quiere decir que tus datos no viajan solos entre dispositivos: si borrás los datos del navegador, desinstalás la app o cambiás de celular/computadora, los registros no van a estar ahí a menos que hayas hecho un respaldo o sincronizado antes.</p>
-                </section>
+                        <section class="ayuda-seccion" id="ayuda-sec-datos">
+                            <h4>Dónde se guardan tus datos</h4>
+                            <p>Todo se guarda localmente en este dispositivo, en el almacenamiento del navegador (localStorage). No se envía a ningún servidor a menos que vos actives la sincronización con GitHub Gist.</p>
+                            <p>Eso también quiere decir que tus datos no viajan solos entre dispositivos: si borrás los datos del navegador, desinstalás la app o cambiás de celular/computadora, los registros no van a estar ahí a menos que hayas hecho un respaldo o sincronizado antes.</p>
+                        </section>
 
-                <section class="ayuda-seccion" id="ayuda-sec-respaldo">
-                    <h4>Backup y sincronización</h4>
-                    <p>Desde Ajustes → Datos podés Respaldar (exportar un archivo con todos tus registros) y Restaurar (importar un backup) en este u otro dispositivo.</p>
-                    <p>Si preferís no hacerlo a mano, GitHub Gist te permite sincronizar automáticamente entre dispositivos usando tu propia cuenta de GitHub. Es opcional: la app funciona por completo sin conexión y sin necesidad de configurarlo.</p>
-                </section>
+                        <section class="ayuda-seccion" id="ayuda-sec-respaldo">
+                            <h4>Backup y sincronización</h4>
+                            <p>Desde Ajustes → Datos podés Respaldar (exportar un archivo con todos tus registros) y Restaurar (importar un backup) en este u otro dispositivo.</p>
+                            <p>Si preferís no hacerlo a mano, GitHub Gist te permite sincronizar automáticamente entre dispositivos usando tu propia cuenta de GitHub. Es opcional: la app funciona por completo sin conexión y sin necesidad de configurarlo.</p>
+                        </section>
+                    </div>
+                </div>
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">

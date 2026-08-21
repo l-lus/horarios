@@ -2137,9 +2137,33 @@ button.campo-flash-color {
         align-items: start;
     }
 
-    #modal-config .modal-panel-footer .btn-cancel {
+    #modal-config .modal-panel-footer .btn-cancel,
+    #modal-ayuda .modal-content .btn-cancel {
         width: 50%;
         margin: 0 auto;
+    }
+
+    #modal-ayuda .modal-content {
+        max-width: 700px;
+    }
+
+    .ayuda-layout {
+        display: grid;
+        grid-template-columns: 190px 1fr;
+        gap: var(--space-xl);
+        align-items: start;
+    }
+
+    .ayuda-indice {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        padding-right: var(--space-md);
+        border-bottom: none;
+        border-right: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        max-height: calc(100vh - 260px);
+        overflow-y: auto;
     }
 
     .contenedor-fechas,

@@ -2736,7 +2736,10 @@
             const perfil = perfiles[perfilEnEdicion];
             if (!perfil) { mostrarToast('Perfil no encontrado', 'error'); return; }
 
-            if (!await ModalManager.confirmar(`¿Estás seguro de que querés eliminar el perfil "${perfil.nombre}"? Esta acción no se puede deshacer.`, 'Eliminar')) return;
+            const tieneRegistros = Array.isArray(perfil.registros) && perfil.registros.length > 0;
+            if (tieneRegistros) {
+                if (!await ModalManager.confirmar(`¿Estás seguro de que querés eliminar el perfil "${perfil.nombre}"? Esta acción no se puede deshacer.`, 'Eliminar')) return;
+            }
 
             _limpiarClavesPerfil(perfilEnEdicion);
             delete perfiles[perfilEnEdicion];

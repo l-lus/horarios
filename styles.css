@@ -183,7 +183,8 @@ body {
 }
 
 .card h2,
-.modal h3 {
+.modal h3,
+.mutacion-saliente h2 {
     font-size: var(--text-base);
     margin-bottom: var(--space-lg);
     display: flex;
@@ -196,7 +197,8 @@ body {
     margin-left: auto;
 }
 
-.card h2.no-margin {
+.card h2.no-margin,
+.mutacion-saliente h2.no-margin {
     margin-bottom: 0;
 }
 
@@ -689,16 +691,6 @@ button:disabled {
 .stats-inner .btn-agregar {
     width: 50%;
     margin: 0 auto;
-}
-
-.ciclo-fade-out {
-    opacity: 0;
-    transform: translateY(-6px);
-}
-
-.ciclo-fade-in {
-    opacity: 0;
-    transform: translateY(6px);
 }
 
 /* ─── PROGRESS BAR ───────────────────────────────────────────────────────────── */
@@ -1429,13 +1421,15 @@ button:disabled {
 #lista-registros,
 #vista-calendario-historico,
 #calendario-selector-meses {
-    transition: var(--transition-collapse), transform var(--transition-ui);
+    transition: var(--transition-collapse);
 }
 
-.fade-out,
-#form-stats.fade-out {
-    opacity: 0;
-    transform: translateY(-10px);
+.mutacion-saliente {
+    animation: mutacionSalida var(--dur-anim) ease forwards;
+}
+
+.mutacion-entrante {
+    animation: mutacionEntrada var(--dur-anim) ease forwards;
 }
 
 #lista-registros {
@@ -1967,6 +1961,30 @@ body.config-onboarding .label-footer-empezar {
     to {
         opacity: 1;
         filter: blur(0);
+    }
+}
+
+@keyframes mutacionSalida {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
+
+@keyframes mutacionEntrada {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
     }
 }
 

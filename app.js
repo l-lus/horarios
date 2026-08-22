@@ -127,13 +127,6 @@
             return !!(h && REGEX_PATTERNS.HORA.test(h));
         }
 
-        /**
-         * Si el valor es un número suelto entre 1 y 60 (sin ":"), lo interpreta
-         * como minutos y lo normaliza a formato hh:mm (ej: "20" -> "00:20", "60" -> "01:00").
-         * Si no aplica (ya es hh:mm, vacío, fuera de rango, etc.) devuelve el valor sin tocar.
-         * @param {string} valor
-         * @returns {string}
-         */
         function normalizarMinutosSueltos(valor) {
             if (!valor) return valor;
             if (!/^\d{1,2}$/.test(valor)) return valor;
@@ -257,13 +250,6 @@
             return nombre.charAt(0).toUpperCase() + nombre.slice(1);
         }
 
-        /**
-         * Genera un array de fechas ISO "YYYY-MM-DD" entre `desde` y `hasta` (inclusive).
-         * Nunca muta los Date originales; cada fecha se clona internamente.
-         * @param {string} desde - Fecha ISO inicial "YYYY-MM-DD"
-         * @param {string} hasta - Fecha ISO final  "YYYY-MM-DD"
-         * @returns {string[]}
-         */
         function generarRangoFechas(desde, hasta) {
             const resultado = [];
             const cur = parsearFechaLocal(desde);
@@ -275,11 +261,6 @@
             return resultado;
         }
 
-        /**
-         * Formatea una fecha ISO "YYYY-MM-DD" como "DD/MM/YY" para uso en mensajes cortos (toasts, historial).
-         * @param {string} f - Fecha ISO "YYYY-MM-DD"
-         * @returns {string}
-         */
         function fechaCorta(f) {
             if (!f || f.length < 10) return f || '';
             const [y, m, d] = f.split('-');
@@ -1296,10 +1277,6 @@
             return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
         }
 
-        /**
-         * Arma un objeto registro nuevo (con ID, horas calculadas y objetivo del momento).
-         * No lo agrega al array `registros` — eso queda a cargo de quien llama.
-         */
         function _construirRegistro(fecha, entrada, salida) {
             const e = entrada || null, s = salida || null;
             const t = calcularHoras(e, s, null);
@@ -1503,11 +1480,6 @@
             });
         }
 
-        /**
-         * Valida los campos del formulario de edición antes de guardar.
-         * Usa registros y editandoId del closure del módulo.
-         * @returns {{ msg: string, tipo: string }} | null  — null si no hay error.
-         */
         function _validarCamposEdicion(f, e, s, tf) {
             const hoy = TimeUtils.obtenerFechaHoy();
 
@@ -2004,11 +1976,6 @@
             return TiposRegistro.obtenerTipoPorCodigo(registro?.entrada, registro?.salida)?.id === 'remoto';
         }
 
-        /**
-         * Cuánto aporta un registro a las horas trabajadas efectivas:
-         * un día remoto cuenta como su objetivo (no como horas reales), un día especial
-         * no-remoto no cuenta, y un día normal cuenta su total real.
-         */
         function horasEfectivasDeRegistro(registro) {
             const tipo = TiposRegistro.obtenerTipoPorCodigo(registro.entrada, registro.salida);
             if (tipo && tipo.id === 'remoto') return objetivoDeRegistro(registro);
@@ -2265,30 +2232,60 @@
         const DUR_ANIM = () => _getCSSdur('--dur-anim');
         const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
 
-        function _animarFadeSwap(el, fn) {
-            if (!el) { return Promise.resolve(fn()); }
-            el.classList.add('fade-out');
-            return new Promise((resolve) => {
-                setTimeout(async () => {
-                    const resultado = await fn();
-                    el.classList.remove('fade-out');
-                    resolve(resultado);
-                }, DUR_ANIM());
+        function _fantasmaDe(el) {
+            const rect = el.getBoundingClientRect();
+            const clon = el.cloneNode(true);
+            clon.classList.add('mutacion-saliente');
+            
+            Object.assign(clon.style, {
+                position: 'fixed',
+                top: rect.top + 'px',
+                left: rect.left + 'px',
+                width: rect.width + 'px',
+                height: rect.height + 'px',
+                margin: '0',
+                pointerEvents: 'none',
+                zIndex: '9999'
+            });
+
+            const primerHijo = el.firstElementChild;
+            if (primerHijo) {
+                const childRect = primerHijo.getBoundingClientRect();
+                if (Math.abs(rect.top - childRect.top) < 1) {
+                    clon.firstElementChild.style.marginTop = '0';
+                }
+            }
+
+            document.body.appendChild(clon);
+            return clon;
+        }
+
+        function _animarMutacion(elementos, fn, duracion = null) {
+            const els = (Array.isArray(elementos) ? elementos : [elementos]).filter(Boolean);
+            const dur = duracion ?? DUR_ANIM();
+            if (els.length === 0) { return Promise.resolve(fn()); }
+
+            const fantasmas = els.map(_fantasmaDe);
+            els.forEach(el => el.classList.remove('mutacion-entrante'));
+
+            return Promise.resolve(fn()).then((resultado) => {
+                els.forEach(el => {
+                    void el.offsetWidth;
+                    el.classList.add('mutacion-entrante');
+                });
+                setTimeout(() => {
+                    fantasmas.forEach(f => f.remove());
+                    els.forEach(el => el.classList.remove('mutacion-entrante'));
+                }, dur);
+                return resultado;
             });
         }
 
-        /**
-         * Factory para pares toggle/actualizarEstado de configuraciones booleanas.
-         *
-         * @param {object} cfg
-         * @param {function(): boolean}  cfg.getVal        - Lee el valor actual.
-         * @param {function(boolean): void} cfg.setVal     - Persiste el nuevo valor.
-         * @param {string}               cfg.btnId         - ID del botón a marcar con btn-activo.
-         * @param {string}               cfg.mensajeOn     - Toast cuando queda activo.
-         * @param {string}               cfg.mensajeOff    - Toast cuando queda inactivo.
-         * @param {function(boolean): void} [cfg.onAfterToggle] - Efecto secundario opcional.
-         * @returns {{ toggle: function, actualizarEstado: function }}
-         */
+        function _animarFadeSwap(el, fn) {
+            if (!el) { return Promise.resolve(fn()); }
+            return _animarMutacion(el, fn);
+        }
+
         function _crearToggleConfig({ getVal, setVal, btnId, mensajeOn, mensajeOff, onAfterToggle }) {
             function actualizarEstado() {
                 _setBtnActivo(btnId, getVal());
@@ -2521,7 +2518,8 @@
             _finalizarSlidePendiente,
             _animarSlideElemento,
             toggleSeccionGen,
-            _animarFadeSwap
+            _animarFadeSwap,
+            _animarMutacion
         };
     })(SecurityAndUtils, DataManagement);
 
@@ -2784,7 +2782,7 @@
     //                     MÓDULO UI CALENDARIO
     // ====================================================================
     const UICalendario = (function (S, D, UICore) {
-        const { registrarSwipe, _animarFadeSwap, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, formatoDiferencia } = UICore;
+        const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, formatoDiferencia } = UICore;
 
         function _agruparMesesPorAnio(mesesOrdenados) {
             const map = new Map();
@@ -2806,14 +2804,11 @@
             const grid = document.getElementById('calendario-grid');
             const selector = document.getElementById('calendario-selector-meses');
             const navBotones = document.getElementById('calendario-nav-botones');
-            _animarFadeSwap(selector, () => {
+            _animarMutacion([selector, grid], () => {
                 selector.style.display = 'none';
                 navBotones.style.display = 'flex';
                 grid.style.display = 'grid';
-                grid.classList.add('fade-out');
-                grid.offsetHeight;
                 _renderizarCalendario(idResaltar);
-                grid.classList.remove('fade-out');
             });
         }
 
@@ -2861,14 +2856,11 @@
             }
 
             selector.style.height = grid.getBoundingClientRect().height + 'px';
-            _animarFadeSwap(grid, () => {
+            _animarMutacion([grid, selector], () => {
                 grid.style.display = 'none';
                 navBotones.style.display = 'none';
                 titulo.innerHTML = '<svg class="icon"><use href="#icon-back" /></svg> Volver';
                 selector.style.display = 'grid';
-                selector.classList.add('fade-out');
-                selector.offsetHeight;
-                selector.classList.remove('fade-out');
             });
         }
 
@@ -2987,14 +2979,9 @@
             const btnFiltro = document.getElementById('btn-filtro');
             const saliente = _vistaHistoricoCalendario ? lista : cal;
             const entrante = _vistaHistoricoCalendario ? cal : lista;
-            _animarFadeSwap(saliente, () => {
+            _animarMutacion([saliente, entrante], () => {
                 if (saliente) { saliente.classList.add('hidden'); }
-                if (entrante) {
-                    entrante.classList.remove('hidden');
-                    entrante.classList.add('fade-out');
-                    entrante.offsetHeight;
-                    entrante.classList.remove('fade-out');
-                }
+                if (entrante) { entrante.classList.remove('hidden'); }
 
                 if (btnFiltro) btnFiltro.disabled = false;
                 if (_vistaHistoricoCalendario) _renderizarCalendario();
@@ -5019,10 +5006,6 @@
             return Math.sqrt(varianza);
         }
 
-        /**
-         * Devuelve la fecha desde la que arranca un período: la fecha por defecto (ej. 1° del mes/año),
-         * o el primer registro real si es posterior (ej. si el perfil empezó a usarse a mitad de período).
-         */
         function _fechaDesdeEfectiva(registros, fechaDesdeDefault) {
             if (registros.length === 0) return fechaDesdeDefault;
             const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
@@ -5301,7 +5284,8 @@
         }
 
         function _animarCambioStats(fn) {
-            _animarFadeSwap($('form-stats'), fn);
+            const grid = document.querySelector('.stats-grid');
+            _animarFadeSwap(grid, fn);
         }
 
         function _cambiarPeriodoStats(selectId, actualizarFn) {
@@ -5318,16 +5302,17 @@
             const selectAnio = $('select-anio-stats');
             const label = $('label-periodo-toggle');
             const selectSemana = $('select-semana-stats');
-
+            const grid = document.querySelector('.stats-grid');
             const orden = ['mensual', 'anual', 'semanal'];
             const idx = orden.indexOf(modoEstadisticas);
             modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
             try { StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas); } catch (e) { }
 
-            _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
+            _animarSlideElemento(grid, direccion, () => {
                 selectMes.classList.add('hidden');
                 selectAnio.classList.add('hidden');
                 if (selectSemana) selectSemana.classList.add('hidden');
+                
                 if (modoEstadisticas === 'anual') {
                     selectAnio.classList.remove('hidden');
                     if (label) label.textContent = 'Anual';
@@ -5961,7 +5946,7 @@
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
-            _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
+            _animarMutacion, _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
         } = UICore;
 
         let modoLoteActivo = false;
@@ -6551,28 +6536,6 @@
 
         const _COLORES_BORDE = ['blue', 'green', 'red', 'purple', 'orange', 'gold', 'transparent'];
 
-        /**
-         * @param {HTMLElement|HTMLElement[]} elementos
-         * @param {function(): void} aplicarCambio - se ejecuta con los elementos ocultos
-         * @param {number} [duracion] - ms de espera antes de aplicar el cambio (default DUR_ANIM())
-         */
-        function _fadeSwapCiclo(elementos, aplicarCambio, duracion = null) {
-            const els = (Array.isArray(elementos) ? elementos : [elementos]).filter(Boolean);
-            if (els.length === 0) { aplicarCambio(); return; }
-
-            els.forEach(el => el.classList.add('ciclo-fade-out'));
-
-            setTimeout(() => {
-                aplicarCambio();
-                els.forEach(el => {
-                    el.classList.remove('ciclo-fade-out');
-                    el.classList.add('ciclo-fade-in');
-                    void el.offsetWidth;
-                    el.classList.remove('ciclo-fade-in');
-                });
-            }, duracion ?? DUR_ANIM());
-        }
-
         function _renderTituloAnimado(el, nuevoHTML, aplicarExtra) {
             if (!el) { if (aplicarExtra) aplicarExtra(); return; }
             const aplicarCambio = () => {
@@ -6582,7 +6545,7 @@
             };
             if (el.dataset.firma === nuevoHTML) { if (aplicarExtra) aplicarExtra(); return; }
             if (_suprimirAnimacionInterna) { aplicarCambio(); return; }
-            _fadeSwapCiclo(el, aplicarCambio);
+            _animarMutacion(el, aplicarCambio);
         }
 
         function _renderTitulo(vista, sinAnimar = false, est = null) {
@@ -6624,7 +6587,7 @@
             clearTimeout(_cicloStatsInterval);
             _cicloStatsInterval = null;
             const el = $('stats-semana');
-            if (el) el.classList.remove('ciclo-fade-out', 'ciclo-fade-in');
+            if (el) el.classList.remove('mutacion-entrante');
         }
 
         function _prepararMostrarFaseAlRenderizar(tipo) {
@@ -6645,7 +6608,7 @@
                 const el = $('stats-semana');
                 if (!el) { _detenerCicloStats(); return; }
 
-                _fadeSwapCiclo(el, () => {
+                _animarMutacion(el, () => {
                     estado.idx++;
                     const terminado = estado.idx >= fases.length;
                     el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx];
@@ -6777,7 +6740,7 @@
             ];
 
             _detenerCicloStats();
-            _fadeSwapCiclo(els, renderFn);
+            _animarMutacion(els, renderFn);
         }
 
         function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false) {
@@ -7343,7 +7306,6 @@
             _iniciarCicloStats,
             _cicloStatsActivo,
             _prepararMostrarFaseAlRenderizar,
-            _fadeSwapCiclo
         };
     })(SecurityAndUtils, DataManagement, UICore);
 
@@ -7414,7 +7376,6 @@
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
             _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
-            _fadeSwapCiclo
         } = UITarjetaFichaje;
 
         function alternarTema() {
@@ -8102,7 +8063,7 @@
 
             const labels = activos.filter(a => a.label).map(a => a.label);
 
-            _fadeSwapCiclo(labels, () => {
+            _animarMutacion(labels, () => {
                 activos.forEach(({ label }) => {
                     if (!label) return;
                     label.textContent = texto;
@@ -8111,7 +8072,7 @@
             });
 
             setTimeout(() => {
-                _fadeSwapCiclo(labels, () => {
+                _animarMutacion(labels, () => {
                     activos.forEach(({ label, textoOriginal }) => {
                         if (!label) return;
                         label.textContent = textoOriginal;
@@ -8561,7 +8522,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260820';
+        const _v = '-v260822';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

@@ -103,6 +103,23 @@
         };
 
         const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const NOMBRES_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+        function nombreMesPorIndice(indice) {
+            return NOMBRES_MESES[indice] || '';
+        }
+
+        function _pad2(n) {
+            return String(n).padStart(2, '0');
+        }
+
+        function _hhmm(h, m) {
+            return `${_pad2(h)}:${_pad2(m)}`;
+        }
+
+        function pluralizar(n) {
+            return n !== 1 ? 's' : '';
+        }
 
         function nombreDiaPorIndice(indice) {
             return NOMBRES_DIAS[indice] || '';
@@ -133,7 +150,7 @@
             const n = parseInt(valor, 10);
             if (n < 1 || n > 60) return valor;
             if (n === 60) return '01:00';
-            return `00:${String(n).padStart(2, '0')}`;
+            return `00:${_pad2(n)}`;
         }
 
         function parsearFechaLocal(fechaStr) {
@@ -141,18 +158,18 @@
         }
 
         function formatearFechaLocal(date) {
-            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            return `${date.getFullYear()}-${_pad2(date.getMonth() + 1)}-${_pad2(date.getDate())}`;
         }
 
         function obtenerHoraActual() {
             const d = new Date();
-            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            return _hhmm(d.getHours(), d.getMinutes());
         }
 
         function minutosAHora(totalMinutos) {
             const h = Math.floor(Math.abs(totalMinutos) / 60);
             const m = Math.floor(Math.abs(totalMinutos) % 60);
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            return _hhmm(h, m);
         }
 
         function obtenerFechaHoy() {
@@ -161,8 +178,7 @@
 
         function fechaLocalISOFull() {
             const d = new Date();
-            const pad = n => String(n).padStart(2, '0');
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            return `${d.getFullYear()}-${_pad2(d.getMonth() + 1)}-${_pad2(d.getDate())} ${_pad2(d.getHours())}:${_pad2(d.getMinutes())}:${_pad2(d.getSeconds())}`;
         }
 
         function horaAMinutos(h) {
@@ -176,7 +192,7 @@
             let horas = Math.floor(totalMinutos / 60);
             let mins = Math.floor(totalMinutos % 60);
             if (horas > 23) { horas = 23; mins = 59; }
-            return `${String(horas).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+            return _hhmm(horas, mins);
         }
 
         function obtenerNombreDia(f) {
@@ -246,7 +262,7 @@
         function formatoTituloMes(claveMes) {
             const [año, mes] = claveMes.split('-');
             const fecha = new Date(año, mes - 1, 1);
-            let nombre = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            let nombre = fecha.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
             return nombre.charAt(0).toUpperCase() + nombre.slice(1);
         }
 
@@ -271,8 +287,8 @@
             validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
             obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
             horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
-            obtenerNombreDia, nombreDiaPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
-            horasATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular,
+            obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
+            horasATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular, pluralizar,
             generarRangoFechas, fechaCorta
         };
     })();
@@ -393,8 +409,7 @@
             generarIDSeguro,
             calcularHashSHA256,
             validarRegistroSeguro,
-            reviverJSONSeguro,
-            fechaLocalISO: TimeUtils.fechaLocalISOFull
+            reviverJSONSeguro
         };
     })();
     // ====================================================================
@@ -477,7 +492,7 @@
     // ====================================================================
     // PERFIL MANAGER MODULE
     // ====================================================================
-    const PerfilManager = (function (S) {
+    const PerfilManager = (function () {
         const MAX_PERFILES = 9;
         let perfilActual = 'default';
         let perfiles = {};
@@ -586,7 +601,7 @@
             guardarPerfiles, perfilKey, MAX_PERFILES
         };
 
-    })(SecurityAndUtils);
+    })();
 
     // ====================================================================
     // MODAL MANAGER MODULE
@@ -1156,7 +1171,7 @@
                 const nuevosRegistros = fechasNuevas.map(fechaISO => _construirRegistro(fechaISO, entrada, salida));
                 registros.push(...nuevosRegistros);
                 ordenarRegistros();
-                HistoryManager.saveState(registros, `editar grupo (${nuevosRegistros.length} día${nuevosRegistros.length !== 1 ? 's' : ''})`);
+                HistoryManager.saveState(registros, `editar grupo (${nuevosRegistros.length} día${TimeUtils.pluralizar(nuevosRegistros.length)})`);
                 const saved = await guardarYActualizar(nuevosRegistros.map(r => r.id));
                 if (saved) { notify.mostrarToast('Grupo actualizado', 'success'); notify.cerrarEdicionGrupo(); }
             } finally {
@@ -1172,7 +1187,7 @@
             }
             const idsAEliminar = grupoEnEdicion.registros.map(r => r.id);
             registros = registros.filter(r => !idsAEliminar.includes(r.id));
-            HistoryManager.saveState(registros, `eliminar grupo (${idsAEliminar.length} registro${idsAEliminar.length !== 1 ? 's' : ''})`);
+            HistoryManager.saveState(registros, `eliminar grupo (${idsAEliminar.length} registro${TimeUtils.pluralizar(idsAEliminar.length)})`);
             const saved = await guardarYActualizar();
             if (saved) { notify.mostrarToast('Grupo eliminado', 'success'); notify.cerrarEdicionGrupo(); }
         }
@@ -1528,7 +1543,7 @@
             const diferencia = objetivo - calc.total;
             if (diferencia <= 0.01) return null;
             const { horas: h, minutos: m } = TimeUtils.descomponerHorasDecimales(diferencia);
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            return TimeUtils.minutosAHora(h * 60 + m);
         }
 
         async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {
@@ -1609,7 +1624,7 @@
 
         async function borrarTodoHistorial() {
             const totalRegistros = registros.length;
-            const confirmar = await ModalManager.confirmar(`Esto restablecerá el perfil activo: se eliminarán ${totalRegistros} registro${totalRegistros !== 1 ? 's' : ''} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
+            const confirmar = await ModalManager.confirmar(`Esto restablecerá el perfil activo: se eliminarán ${totalRegistros} registro${TimeUtils.pluralizar(totalRegistros)} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
             if (!confirmar) return;
 
             diasHabiles = [1, 2, 3, 4, 5];
@@ -1629,7 +1644,7 @@
                 }
             }
 
-            HistoryManager.saveState(registros, `restablecer perfil (${totalRegistros} registro${totalRegistros !== 1 ? 's' : ''})`);
+            HistoryManager.saveState(registros, `restablecer perfil (${totalRegistros} registro${TimeUtils.pluralizar(totalRegistros)})`);
             if (await guardarYActualizar()) location.reload();
         }
 
@@ -1731,9 +1746,9 @@
             });
             registros = registros.concat(nuevos);
             const partes = [];
-            const p = (n, s) => `${n} ${s}${n !== 1 ? 's' : ''}`;
-            if (nuevos.length > 0) partes.push(p(nuevos.length, 'día nuevo'));
-            if (complementarios.length > 0) partes.push(p(complementarios.length, 'registro completado'));
+            const p = (n, sustantivo, adjetivo) => `${n} ${sustantivo}${TimeUtils.pluralizar(n)} ${adjetivo}${TimeUtils.pluralizar(n)}`;
+            if (nuevos.length > 0) partes.push(p(nuevos.length, 'día', 'nuevo'));
+            if (complementarios.length > 0) partes.push(p(complementarios.length, 'registro', 'completado'));
             finalizarImportacionAndSave(`Combinado: ${partes.join(', ')}`, 'combinar datos importados');
         }
 
@@ -1927,7 +1942,7 @@
 
             ordenarRegistros();
             const incluyeHoy = nuevosRegistros.includes(TimeUtils.obtenerFechaHoy());
-            HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${nuevosRegistros.length} día${nuevosRegistros.length !== 1 ? 's' : ''})`);
+            HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${nuevosRegistros.length} día${TimeUtils.pluralizar(nuevosRegistros.length)})`);
             const saved = await _guardarConCicloSiHoy(idsNuevosParaAnimar, incluyeHoy);
             if (saved) {
                 notify.mostrarToast(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
@@ -1958,7 +1973,7 @@
             if (registrosAEliminar.length === 0) { notify.mostrarToast('No hay registros de jornadas en ese período', 'info'); notify.flashCampoTipo('info', 'btn-agregar'); throw new Error('Sin registros'); }
 
             registros = registros.filter(r => !registrosAEliminar.includes(r));
-            HistoryManager.saveState(registros, `eliminar período (${registrosAEliminar.length} registro${registrosAEliminar.length !== 1 ? 's' : ''})`);
+            HistoryManager.saveState(registros, `eliminar período (${registrosAEliminar.length} registro${TimeUtils.pluralizar(registrosAEliminar.length)})`);
             const saved = await guardarYActualizar();
             if (saved) {
                 notify.mostrarToast(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
@@ -2007,7 +2022,7 @@
             let nuevoCredito = null;
             if (diferencia > 0.01) {
                 const { horas: h, minutos: m } = TimeUtils.descomponerHorasDecimales(diferencia);
-                nuevoCredito = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                nuevoCredito = TimeUtils.minutosAHora(h * 60 + m);
             }
             r.credito = nuevoCredito;
             const t = calcularHoras(r.entrada, r.salida, r.tiempoFuera, r.credito);
@@ -2026,7 +2041,7 @@
                     if (_recalcularCreditoRegistro(r, horasDiarias)) creditosRecalculados++;
                 }
             });
-            if (aplicados > 0) HistoryManager.saveState(registros, `aplicar horas a todos (${aplicados} registro${aplicados !== 1 ? 's' : ''})`);
+            if (aplicados > 0) HistoryManager.saveState(registros, `aplicar horas a todos (${aplicados} registro${TimeUtils.pluralizar(aplicados)})`);
             return { aplicados, creditosRecalculados };
         }
 
@@ -2584,7 +2599,7 @@
                     className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
                 });
 
-                const countText = `${p.totalRegistros} registro${p.totalRegistros !== 1 ? 's' : ''}`;
+                const countText = `${p.totalRegistros} registro${TimeUtils.pluralizar(p.totalRegistros)}`;
                 const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
                 infoSection.appendChild(Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre', textContent: p.nombre }));
                 const badge = Object.assign(document.createElement('div'), {
@@ -2678,7 +2693,7 @@
             renderizarListaPerfiles(true);
             requestAnimationFrame(() => {
                 const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
-                if (ultimo) { ultimo.classList.add('zoom-in-anim'); ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+                if (ultimo) { ultimo.classList.add('add-perfil'); ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
             });
         }
 
@@ -2697,7 +2712,6 @@
             }
 
             document.getElementById('nombre-perfil-editar').value = perfil.nombre;
-            document.getElementById('id-perfil-editar').value = perfilId;
 
             const btnEliminar = document.getElementById('btn-eliminar-perfil-editor');
             if (btnEliminar) {
@@ -2832,7 +2846,7 @@
 
         function _nombreMesCapitalizado(mesAnio) {
             const [a, m] = mesAnio.split('-');
-            const nombre = new Date(a, m - 1, 1).toLocaleDateString('es-ES', { month: 'long' });
+            const nombre = new Date(a, m - 1, 1).toLocaleDateString('es-AR', { month: 'long' });
             return nombre.charAt(0).toUpperCase() + nombre.slice(1).replace('.', '');
         }
 
@@ -2927,15 +2941,14 @@
             const hoy = new Date();
             const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
             const mes = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
-            const nombresMes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-            if (titulo) titulo.textContent = `${nombresMes[mes]} ${anio}`;
+            if (titulo) titulo.textContent = `${TimeUtils.nombreMesPorIndice(mes)} ${anio}`;
             const fechaStr = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const registrosFiltrados = D.obtenerRegistrosFiltrados();
             const todosLosRegistros = D.registros();
             const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
             const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
             const diasHabilesObj = D.diasHabiles();
-            const filtroActivo = D.obtenerRegistrosFiltrados().length !== D.registros().length;
+            const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
             const claseDelDia = (fecha) => {
                 const r = regsPorFecha[fecha];
                 if (!r && filtroActivo && todosRegsPorFecha[fecha]) return 'dia-filtrado';
@@ -3426,7 +3439,7 @@
             if (!token) throw new Error('Falta el token de GitHub');
 
             const hash = await S.calcularHashSHA256(registros);
-            const data = { registros, diasHabiles, horasDiarias, fecha: S.fechaLocalISO(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
+            const data = { registros, diasHabiles, horasDiarias, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
             const gistId = getGistId();
             const gistIdValido = esGistIdValido(gistId);
             const url = gistIdValido ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
@@ -3635,7 +3648,6 @@
         let _gistModalPadre = null;
         let _gistAutoSyncTemp = null;
         let _gistLimitesTemp = null;
-        let _gistLimitesOrig = null;
         let _gistMergeDesdeModal = false;
 
         function _gistEstadoAutoSyncActual() {
@@ -3684,7 +3696,6 @@
             ModalManager.alternar(_gistModalPadre, 'modal-gist');
             _gistLimitesTemp = null;
             _actualizarCampoLimite();
-            _gistLimitesOrig = { bajar: GistSync.getSyncLimite('bajar'), subir: GistSync.getSyncLimite('subir') };
         }
 
         function _leerRangoHorarioInputs() {
@@ -3721,7 +3732,6 @@
                 GistSync.setSyncLimite('subir', _gistLimitesTemp.subir);
                 _gistLimitesTemp = null;
             }
-            _gistLimitesOrig = null;
         }
 
         function actualizarBotonesHistorico() {
@@ -3770,15 +3780,10 @@
             }
 
             const rango = GistSync.getRangoHorario();
-            const limitesCambiaron = _gistLimitesOrig !== null && (
-                _gistLimitesOrig.bajar !== GistSync.getSyncLimite('bajar') ||
-                _gistLimitesOrig.subir !== GistSync.getSyncLimite('subir')
-            );
             const huboCambios = token !== GistSync.getToken()
                 || gistId !== GistSync.getGistId()
                 || desde !== rango.desde
                 || hasta !== rango.hasta
-                || limitesCambiaron
                 || (_gistAutoSyncTemp !== null && _gistAutoSyncTemp !== GistSync.getAutoSync())
                 || (_gistLimitesTemp !== null);
 
@@ -3796,7 +3801,6 @@
         function cerrarModalGist() {
             _gistAutoSyncTemp = null;
             _gistLimitesTemp = null;
-            _gistLimitesOrig = null;
             if (_gistModalPadre) {
                 const padre = _gistModalPadre;
                 _gistModalPadre = null;
@@ -3834,8 +3838,8 @@
                 });
 
                 const partes = [];
-                if (soloEnGist.length > 0) partes.push(`${soloEnGist.length} día${soloEnGist.length !== 1 ? 's' : ''} nuevo${soloEnGist.length !== 1 ? 's' : ''}`);
-                if (complementarios.length > 0) partes.push(`${complementarios.length} registro${complementarios.length !== 1 ? 's' : ''} completado${complementarios.length !== 1 ? 's' : ''}`);
+                if (soloEnGist.length > 0) partes.push(`${soloEnGist.length} día${TimeUtils.pluralizar(soloEnGist.length)} nuevo${TimeUtils.pluralizar(soloEnGist.length)}`);
+                if (complementarios.length > 0) partes.push(`${complementarios.length} registro${TimeUtils.pluralizar(complementarios.length)} completado${TimeUtils.pluralizar(complementarios.length)}`);
 
                 return {
                     registrosFinales: [...registrosActualizados, ...soloEnGist],
@@ -4104,10 +4108,9 @@
                 return d;
             };
 
-            const plural = (n) => n !== 1 ? 's' : '';
             const bloqueFilas = document.createElement('div');
-            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-cloud'), ` En Gist `, _mkStrong(soloEnGist.length, 'text-green'), ` registro${plural(soloEnGist.length)} nuevos`));
-            const filaAmbos = _mkRow(_mkSvg('#icon-combine'), ` En ambos `, _mkStrong(enAmbos.length), ` registro${plural(enAmbos.length)} (por fecha`);
+            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-cloud'), ` En Gist `, _mkStrong(soloEnGist.length, 'text-green'), ` registro${TimeUtils.pluralizar(soloEnGist.length)} nuevo${TimeUtils.pluralizar(soloEnGist.length)}`));
+            const filaAmbos = _mkRow(_mkSvg('#icon-combine'), ` En ambos `, _mkStrong(enAmbos.length), ` registro${TimeUtils.pluralizar(enAmbos.length)} (por fecha`);
             if (complementarios.length > 0) {
                 filaAmbos.appendChild(document.createTextNode(', '));
                 filaAmbos.appendChild(_mkStrong(complementarios.length, 'text-blue'));
@@ -4115,7 +4118,7 @@
             }
             filaAmbos.appendChild(document.createTextNode(')'));
             bloqueFilas.appendChild(filaAmbos);
-            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-save'), ` Local `, _mkStrong(soloLocal.length), ` registro${plural(soloLocal.length)} no subidos`));
+            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-save'), ` Local `, _mkStrong(soloLocal.length), ` registro${TimeUtils.pluralizar(soloLocal.length)} no subido${TimeUtils.pluralizar(soloLocal.length)}`));
             resumenEl.appendChild(bloqueFilas);
 
             const configEl = Object.assign(document.createElement('div'), {
@@ -4783,7 +4786,7 @@
             const fechaInicio = TimeUtils.parsearFechaLocal(desde);
             const fechaFin = TimeUtils.parsearFechaLocal(hasta);
             const diasTotales = Math.ceil(Math.abs(fechaFin - fechaInicio) / (1000 * 60 * 60 * 24)) + 1;
-            hint.textContent = `${diasTotales} día${diasTotales !== 1 ? 's' : ''}`;
+            hint.textContent = `${diasTotales} día${TimeUtils.pluralizar(diasTotales)}`;
         }
         ['edit-grupo-desde', 'edit-grupo-hasta'].forEach(id => {
             const el = document.getElementById(id);
@@ -5287,11 +5290,10 @@
             const lunes = new Date(lunesISO + 'T00:00:00');
             const domingo = new Date(lunes);
             domingo.setDate(lunes.getDate() + 6);
-            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
             const dL = lunes.getDate();
             const dD = domingo.getDate();
-            const mL = meses[lunes.getMonth()];
-            const mD = meses[domingo.getMonth()];
+            const mL = TimeUtils.nombreMesPorIndice(lunes.getMonth());
+            const mD = TimeUtils.nombreMesPorIndice(domingo.getMonth());
             if (lunes.getMonth() === domingo.getMonth()) {
                 return `${dL} al ${dD} de ${mD}`;
             }
@@ -5668,15 +5670,13 @@
                     fechaFin = ultimaDiaMes;
                     esIncompleta = true;
                     const mesSig = mesActual === 12 ? 1 : mesActual + 1;
-                    const añoSig = mesActual === 12 ? añoActual + 1 : añoActual;
-                    continuaEn = `continúa en ${new Date(añoSig, mesSig - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
+                    continuaEn = `continúa en ${TimeUtils.nombreMesPorIndice(mesSig - 1)}`;
                 }
                 if (lunes < primerDiaMes) {
                     lunes = primerDiaMes;
                     esIncompleta = true;
                     const mesAnt = mesActual === 1 ? 12 : mesActual - 1;
-                    const añoAnt = mesActual === 1 ? añoActual - 1 : añoActual;
-                    continuaEn = `viene de ${new Date(añoAnt, mesAnt - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`;
+                    continuaEn = `viene de ${TimeUtils.nombreMesPorIndice(mesAnt - 1)}`;
                 }
 
                 const notasExtras = TiposRegistro.obtenerTodosLosTipos()
@@ -5736,7 +5736,7 @@
             if (!periodo) return;
             const { periodoLabel, registrosPeriodo, stats, nombreArchivo, mesSeleccionado } = periodo;
 
-            const generadoEl = `${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`;
+            const generadoEl = `${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}`;
 
             const html = `<!DOCTYPE html>
 <html lang="es">
@@ -5977,7 +5977,7 @@
     // ====================================================================
     //                     MÓDULO UI TARJETA DE FICHAJE
     // ====================================================================
-    const UITarjetaFichaje = (function (S, D, UICore) {
+    const UITarjetaFichaje = (function (D, UICore) {
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
@@ -7342,7 +7342,7 @@
             _cicloStatsActivo,
             _prepararMostrarFaseAlRenderizar,
         };
-    })(SecurityAndUtils, DataManagement, UICore);
+    })(DataManagement, UICore);
 
     const UILogic = (function (S, D, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje) {
 
@@ -7479,7 +7479,7 @@
             }
 
             const confirmado = await ModalManager.confirmar(
-                `Se va a reemplazar el objetivo horario de ${totalRegistros} registro${totalRegistros !== 1 ? 's' : ''} existente${totalRegistros !== 1 ? 's' : ''} por ${TimeUtils.horasATexto(horas, 'short')}.`,
+                `Se va a reemplazar el objetivo horario de ${totalRegistros} registro${TimeUtils.pluralizar(totalRegistros)} existente${TimeUtils.pluralizar(totalRegistros)} por ${TimeUtils.horasATexto(horas, 'short')}.`,
                 'Aplicar',
                 '#icon-aplicar-horas'
             );
@@ -7490,7 +7490,7 @@
             if (guardado) {
                 actualizarUI();
                 let mensaje = aplicados > 0
-                    ? `Objetivo actualizado en ${aplicados} registro${aplicados !== 1 ? 's' : ''}`
+                    ? `Objetivo actualizado en ${aplicados} registro${TimeUtils.pluralizar(aplicados)}`
                     : 'Los registros ya tenían este objetivo';
                 if (creditosRecalculados > 0) {
                     mensaje += ` (${creditosRecalculados} con Salida Temprana recalculada)`;

@@ -970,13 +970,12 @@ button:disabled {
 }
 
 .ayuda-indice-item {
-    width: auto;
     justify-content: flex-start;
     text-align: left;
-    padding: var(--space-xs) 0;
+    padding: var(--space-sm);
     border: 1px solid transparent;
     color: var(--text-muted);
-    background: transparent;
+    background: var(--bg-card);
     font-size: var(--text-base);
     font-weight: var(--fw-medium);
     cursor: pointer;
@@ -1690,6 +1689,10 @@ body.config-onboarding .label-footer-empezar {
     font-size: var(--text-md);
 }
 
+.add-perfil {
+    animation: mutacionEntrada var(--dur-anim) ease-out;
+}
+
 /* ─── WEEK SELECTOR ──────────────────────────────────────────────────────────── */
 
 .week-selector {
@@ -1912,22 +1915,6 @@ body.config-onboarding .label-footer-empezar {
         opacity: 1;
         transform: translateY(0) scale(1);
     }
-}
-
-@keyframes zoomIn {
-    from {
-        opacity: 0;
-        transform: scale(0.8);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-.zoom-in-anim {
-    animation: zoomIn 0.3s ease-out;
 }
 
 @keyframes llamarAtencion {

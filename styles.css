@@ -1541,6 +1541,14 @@ body.config-onboarding .label-footer-empezar {
     display: inline;
 }
 
+#btn-ayuda-config {
+    display: none;
+}
+
+body.config-onboarding #btn-ayuda-config {
+    display: flex;
+}
+
 .empty-state__btn-restaurar {
     width: auto;
     margin: var(--space-lg) auto 0;

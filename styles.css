@@ -675,6 +675,10 @@ button:disabled {
     font-size: var(--text-xl);
     font-weight: var(--fw-bold);
     margin: var(--space-sm) 0;
+    line-height: 1.2;
+    min-height: 1.2em;
+    display: flex;
+    align-items: center;
 }
 
 .stats-inner {

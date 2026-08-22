@@ -2260,12 +2260,35 @@
             return clon;
         }
 
+        const _mutacionAnimEstado = new WeakMap();
+
+        function _finalizarMutacionPendiente(el) {
+            const estado = _mutacionAnimEstado.get(el);
+            if (!estado) return;
+            clearTimeout(estado.timeout);
+            if (estado.fantasma && estado.fantasma.parentNode) {
+                estado.fantasma.remove();
+            }
+            el.classList.remove('mutacion-entrante');
+            _mutacionAnimEstado.delete(el);
+        }
+
         function _animarMutacion(elementos, fn, duracion = null) {
             const els = (Array.isArray(elementos) ? elementos : [elementos]).filter(Boolean);
             const dur = duracion ?? DUR_ANIM();
+
+            els.forEach(_finalizarMutacionPendiente);
             if (els.length === 0) { return Promise.resolve(fn()); }
 
-            const fantasmas = els.map(_fantasmaDe);
+            const fantasmasMap = [];
+            els.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    const f = _fantasmaDe(el);
+                    fantasmasMap.push({ el, fantasma: f });
+                }
+            });
+
             els.forEach(el => el.classList.remove('mutacion-entrante'));
 
             return Promise.resolve(fn()).then((resultado) => {
@@ -2273,10 +2296,23 @@
                     void el.offsetWidth;
                     el.classList.add('mutacion-entrante');
                 });
-                setTimeout(() => {
-                    fantasmas.forEach(f => f.remove());
-                    els.forEach(el => el.classList.remove('mutacion-entrante'));
+
+                const timeout = setTimeout(() => {
+                    fantasmasMap.forEach(({ fantasma }) => fantasma.remove());
+                    els.forEach(el => {
+                        el.classList.remove('mutacion-entrante');
+                        _mutacionAnimEstado.delete(el);
+                    });
                 }, dur);
+
+                els.forEach(el => {
+                    const item = fantasmasMap.find(m => m.el === el);
+                    _mutacionAnimEstado.set(el, {
+                        timeout,
+                        fantasma: item ? item.fantasma : null
+                    });
+                });
+
                 return resultado;
             });
         }

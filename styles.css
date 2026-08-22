@@ -721,11 +721,12 @@ button:disabled {
     content: '';
     position: absolute;
     top: 0;
-    left: -60%;
+    left: 0;
     width: 50%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
     animation: shimmer 5s ease-in-out infinite;
+    will-change: transform;
 }
 
 #progress-bar {
@@ -1995,15 +1996,15 @@ body.config-onboarding .label-footer-empezar {
 
 @keyframes shimmer {
     0% {
-        left: -80%;
+        transform: translateX(-160%);
     }
 
     20% {
-        left: 130%;
+        transform: translateX(260%);
     }
 
     100% {
-        left: 130%;
+        transform: translateX(260%);
     }
 }
 

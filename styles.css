@@ -23,7 +23,6 @@
     --border: #dde3ea;
     --input-bg: #f0f2f8;
     --c-blue: rgba(76, 114, 172, 0.8);
-    --c-blue-bg: rgba(76, 114, 172, 0.1);
     --c-green: rgba(76, 172, 140, 0.8);
     --c-green-bg: rgba(96, 172, 148, 0.1);
     --c-red: rgba(172, 90, 76, 0.8);
@@ -1509,7 +1508,7 @@ button:disabled {
 
 body.config-onboarding .config-onboarding-banner {
     display: block;
-    background: var(--c-blue-bg);
+    background: var(--c-green-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: var(--space-lg);
@@ -1517,8 +1516,8 @@ body.config-onboarding .config-onboarding-banner {
 }
 
 .config-onboarding-banner p {
-    margin: 0 0 var(--space-md);
-    font-size: var(--text-sm);
+    margin: var(--space-xs);
+    font-size: var(--text-base);
     color: var(--text-muted);
 }
 

@@ -184,7 +184,8 @@ body {
 
 .card h2,
 .modal h3,
-.mutacion-saliente h2 {
+h2.mutacion-saliente,
+.mutacion-saliente h2 { 
     font-size: var(--text-base);
     margin-bottom: var(--space-lg);
     display: flex;
@@ -198,6 +199,7 @@ body {
 }
 
 .card h2.no-margin,
+h2.mutacion-saliente.no-margin,
 .mutacion-saliente h2.no-margin {
     margin-bottom: 0;
 }

@@ -1408,7 +1408,7 @@ button:disabled {
 
 .nuevo-registro-animacion,
 .input-agregado-animacion {
-    animation: fade-blur 0.5s ease-out forwards;
+    animation: mutacionEntrada var(--dur-anim) ease-out forwards;
 }
 
 .nuevo-registro-animacion {
@@ -1950,18 +1950,6 @@ body.config-onboarding #btn-ayuda-config {
 
     100% {
         transform: scale(1, 1);
-    }
-}
-
-@keyframes fade-blur {
-    from {
-        opacity: 0;
-        filter: blur(5px);
-    }
-
-    to {
-        opacity: 1;
-        filter: blur(0);
     }
 }
 

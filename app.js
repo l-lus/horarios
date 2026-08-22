@@ -1499,7 +1499,7 @@
             requestAnimationFrame(() => {
                 notify.verificarBloqueoCredito();
                 const hintEl = document.getElementById('edit-hint-resumen');
-                if (hintEl) hintEl.dispatchEvent ? document.getElementById('edit-entrada').dispatchEvent(new Event('input')) : null;
+                if (hintEl) document.getElementById('edit-entrada').dispatchEvent(new Event('input'));
             });
         }
 
@@ -1592,7 +1592,7 @@
             if (isNaN(objetivoNuevo) || objetivoNuevo < 0 || objetivoNuevo > 24) objetivoNuevo = horasDiarias;
             const objetivoPrevio = (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras)) ? r.objetivoHoras : horasDiarias;
 
-            const cr = _calcularCredito(e, s, tf, objetivoEdicionEnVivo());
+            let cr = _calcularCredito(e, s, tf, objetivoEdicionEnVivo());
 
             if (r.fecha === f && (r.entrada || '') === (e || '') && (r.salida || '') === (s || '') &&
                 (r.tiempoFuera || '') === (tf || '') && (r.credito || '') === (cr || '') && (r.notas || '') === (notas || '') &&
@@ -1615,7 +1615,10 @@
             r.fecha = f; r.entrada = e || null;
             if (s && !(r.salida || '')) {
                 const timerDetenido = detenerYRegistrarTimer(r);
-                if (timerDetenido) tf = r.tiempoFuera;
+                if (timerDetenido) {
+                    tf = r.tiempoFuera;
+                    cr = _calcularCredito(e, s, tf, objetivoEdicionEnVivo());
+                }
             }
             r.salida = s || null; r.tiempoFuera = tf; r.credito = cr; r.notas = notas; r.objetivoHoras = objetivoNuevo;
 
@@ -8222,6 +8225,7 @@
             setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
             actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
             _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
+            actualizarBotonLote,
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);

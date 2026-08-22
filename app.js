@@ -5338,17 +5338,16 @@
             const selectAnio = $('select-anio-stats');
             const label = $('label-periodo-toggle');
             const selectSemana = $('select-semana-stats');
-            const grid = document.querySelector('.stats-grid');
+
             const orden = ['mensual', 'anual', 'semanal'];
             const idx = orden.indexOf(modoEstadisticas);
             modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
             try { StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas); } catch (e) { }
 
-            _animarSlideElemento(grid, direccion, () => {
+            _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
                 selectMes.classList.add('hidden');
                 selectAnio.classList.add('hidden');
                 if (selectSemana) selectSemana.classList.add('hidden');
-                
                 if (modoEstadisticas === 'anual') {
                     selectAnio.classList.remove('hidden');
                     if (label) label.textContent = 'Anual';

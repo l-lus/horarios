@@ -13,7 +13,6 @@
         MODO_ESTADISTICAS: 'modoEstadisticas',
         HOVER_POPUP: 'hoverPopupCalendario',
         DIAS_HABILES: 'diasHabiles',
-        HISTORIAL_DIAS_HABILES: 'historialDiasHabiles',
         HORAS_DIARIAS: 'horasDiarias',
         VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
         IGNORAR_TF: 'ignorarTiempoFuera',
@@ -543,7 +542,6 @@
                 registros: [...DataManagement.registros()],
                 diasHabiles: DataManagement.diasHabiles(),
                 horasDiarias: DataManagement.horasDiarias(),
-                historialDiasHabiles: DataManagement.historialDiasHabiles(),
                 ...(actual.gistId && { gistId: actual.gistId }),
                 ...(actual.gistLastSync && { gistLastSync: actual.gistLastSync }),
                 ...(actual.gistAutoSync != null && { gistAutoSync: actual.gistAutoSync }),
@@ -1098,10 +1096,6 @@
         }
 
         let registros = [], diasHabiles = [1, 2, 3, 4, 5], horasDiarias = 7, editandoId = null; let vistaActual = 'diaria'; let ignorarTiempoFuera = false;
-        // Historial de tramos de días hábiles: [{ desde: 'YYYY-MM-DD', dias: [0-6...] }, ...] ordenado ascendente por 'desde'.
-        // Permite saber qué configuración de días hábiles regía en una fecha pasada, sin aplicar retroactivamente
-        // un cambio hecho hoy a fechas anteriores. Si está vacío, se asume que la config actual rigió siempre.
-        let historialDiasHabiles = [];
         let filtroActivo = false;
         let filtroDesde = null;
         let filtroHasta = null;
@@ -1635,7 +1629,6 @@
 
             diasHabiles = [1, 2, 3, 4, 5];
             horasDiarias = 7;
-            historialDiasHabiles = [];
             registros.splice(0, registros.length);
             ignorarTiempoFuera = false;
 
@@ -1693,7 +1686,7 @@
 
         async function exportarJSON() {
             const data = {
-                registros, diasHabiles, horasDiarias, historialDiasHabiles,
+                registros, diasHabiles, horasDiarias,
                 fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION,
                 hash: await S.calcularHashSHA256(registros), timestamp: Date.now()
             };
@@ -1712,7 +1705,7 @@
         async function _validarDatosImport(data) {
             if (!data || typeof data !== 'object' || Array.isArray(data)) { notify.mostrarToast('Estructura de archivo inválida', 'error'); return false; }
             if (!data.registros || !Array.isArray(data.registros)) { notify.mostrarToast('Archivo inválido o corrupto', 'error'); return false; }
-            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
+            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
             if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) { notify.mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
             if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
                 notify.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
@@ -1789,10 +1782,6 @@
                             const h = typeof data.horasDiarias === 'string' ? parseFloat(data.horasDiarias) : data.horasDiarias;
                             if (Number.isFinite(h) && h >= 0 && h <= 24) horasDiarias = h;
                         }
-                        // Si el backup trae historial de días hábiles se restaura tal cual; si no (backups viejos),
-                        // se sintetiza un único tramo "vigente desde siempre" para no romper el comportamiento no retroactivo.
-                        const historialImportado = _sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
-                        historialDiasHabiles = historialImportado || [{ desde: '0001-01-01', dias: diasHabiles }];
                         const n = registrosImportados.length;
                         finalizarImportacionAndSave(`Se reemplazaron los datos por ${n === 1 ? '1 registro' : `${n} registros`}`, 'restauración local');
                     } else if (modo === 'merge') {
@@ -1816,7 +1805,6 @@
                 if (esPerfilDefault) {
                     StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, diasHabiles);
                     StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, horasDiarias);
-                    StorageHelper.setItem(STORAGE_KEYS.HISTORIAL_DIAS_HABILES, historialDiasHabiles);
                 }
                 notify.mostrarToast(mensajeExito, 'success');
                 notify.cerrarImportar();
@@ -1873,7 +1861,7 @@
             let objetivo = 0, hechas = 0;
             for (const iso of TimeUtils.generarRangoFechas(desde, hasta)) {
                 if (iso > hoy) continue;
-                const esDiaHabil = diasHabilesEnFecha(iso).includes(TimeUtils.parsearFechaLocal(iso).getDay());
+                const esDiaHabil = diasHabiles.includes(TimeUtils.parsearFechaLocal(iso).getDay());
                 const r = regsPorFecha.get(iso);
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
                 const esRemoto = esEspecial && esTipoRemoto(r);
@@ -1993,53 +1981,6 @@
             } else { throw new Error('Error al guardar'); }
         }
 
-        function _sanitizarHistorialDiasHabiles(historial) {
-            if (!Array.isArray(historial)) return null;
-            const limpio = historial
-                .filter(t => t && typeof t.desde === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.desde) && Array.isArray(t.dias))
-                .map(t => ({ desde: t.desde, dias: t.dias.filter(d => Number.isInteger(d) && d >= 0 && d <= 6) }))
-                .filter(t => t.dias.length > 0);
-            limpio.sort((a, b) => a.desde.localeCompare(b.desde));
-
-            // Fusiona tramos consecutivos con los mismos días (p. ej. generados antes de que
-            // registrarCambioDiasHabiles evitara crear tramos redundantes), conservando el "desde" más antiguo.
-            const mismosDias = (a, b) => a.length === b.length && [...a].sort((x, y) => x - y).every((d, i) => d === [...b].sort((x, y) => x - y)[i]);
-            const fusionado = [];
-            for (const tramo of limpio) {
-                const anterior = fusionado[fusionado.length - 1];
-                if (anterior && mismosDias(anterior.dias, tramo.dias)) continue;
-                fusionado.push(tramo);
-            }
-            return fusionado.length > 0 ? fusionado : null;
-        }
-
-        function diasHabilesEnFecha(iso) {
-            if (!Array.isArray(historialDiasHabiles) || historialDiasHabiles.length === 0) return diasHabiles;
-            let vigente = null;
-            for (const tramo of historialDiasHabiles) {
-                if (tramo.desde <= iso) vigente = tramo;
-                else break;
-            }
-            // Si la fecha es anterior a todos los tramos registrados, se usa el más antiguo:
-            // no hay información de qué regía antes, así que se asume que ya regía desde siempre.
-            if (!vigente) vigente = historialDiasHabiles[0];
-            return Array.isArray(vigente.dias) ? vigente.dias : diasHabiles;
-        }
-
-        function registrarCambioDiasHabiles(nuevosDias) {
-            const hoy = TimeUtils.obtenerFechaHoy();
-            if (!Array.isArray(historialDiasHabiles)) historialDiasHabiles = [];
-            const idx = historialDiasHabiles.findIndex(t => t.desde === hoy);
-            if (idx >= 0) {
-                // Ya hubo un cambio hoy: se reemplaza, no se acumulan tramos del mismo día
-                historialDiasHabiles[idx] = { desde: hoy, dias: nuevosDias };
-            } else {
-                historialDiasHabiles.push({ desde: hoy, dias: nuevosDias });
-                historialDiasHabiles.sort((a, b) => a.desde.localeCompare(b.desde));
-            }
-            diasHabiles = nuevosDias;
-        }
-
         function objetivoDeRegistro(registro) {
             if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
             const v = registro?.objetivoHoras;
@@ -2107,9 +2048,6 @@
         return {
             registros: () => registros, horasSemanales: () => (horasDiarias * diasHabiles.length), diasHabiles: () => diasHabiles,
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
-            historialDiasHabiles: () => historialDiasHabiles,
-            setHistorialDiasHabiles: (v) => { historialDiasHabiles = Array.isArray(v) ? v : []; },
-            diasHabilesEnFecha, registrarCambioDiasHabiles, sanitizarHistorialDiasHabiles: _sanitizarHistorialDiasHabiles,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
             objetivoDeRegistro, objetivoEdicionEnVivo, migrarObjetivoHorasFaltante, aplicarHorasATodosLosRegistros,
             esTipoRemoto, horasEfectivasDeRegistro,
@@ -2313,9 +2251,6 @@
             const rect = el.getBoundingClientRect();
             const clon = el.cloneNode(true);
             clon.classList.add('mutacion-saliente');
-
-            // Si hay un modal abierto, el fantasma debe quedar por debajo de su overlay (z-index: 100)
-            // para no aparecer "flotando" encima del modal mientras se desvanece.
             const zIndex = document.body.classList.contains('modal-open') ? '50' : '9999';
 
             Object.assign(clon.style, {
@@ -3013,6 +2948,7 @@
             const todosLosRegistros = D.registros();
             const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
             const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
+            const diasHabilesObj = D.diasHabiles();
             const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
             const claseDelDia = (fecha) => {
                 const r = regsPorFecha[fecha];
@@ -3023,7 +2959,7 @@
                     return `dia-especial-${tipo ? tipo.color : 'purple'}`;
                 }
                 if (r.entrada && !r.salida) return 'dia-en-curso';
-                if (!UILogic._esFechaHabil(fecha, D.diasHabilesEnFecha(fecha)) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
+                if (!UILogic._esFechaHabil(fecha, diasHabilesObj) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
                 return UILogic._cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
             };
 
@@ -3135,7 +3071,7 @@
             }
             let totalConDiff = totalStr, diffClase = '', cubiertoLineaHtml = '';
             const objetivoReg = D.objetivoDeRegistro(reg);
-            if (objetivoReg > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabilesEnFecha(reg.fecha))) {
+            if (objetivoReg > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabiles())) {
                 const diffText = formatoDiferencia(totalHoras, objetivoReg);
                 if (horasGte(totalHoras, objetivoReg)) {
                     diffClase = 'cal-popup-info--green';
@@ -3499,12 +3435,12 @@
             return response.json();
         }
 
-        async function subir(registros, diasHabiles, horasDiarias, historialDiasHabiles) {
+        async function subir(registros, diasHabiles, horasDiarias) {
             const token = getToken();
             if (!token) throw new Error('Falta el token de GitHub');
 
             const hash = await S.calcularHashSHA256(registros);
-            const data = { registros, diasHabiles, horasDiarias, historialDiasHabiles, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
+            const data = { registros, diasHabiles, horasDiarias, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
             const gistId = getGistId();
             const gistIdValido = esGistIdValido(gistId);
             const url = gistIdValido ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
@@ -3692,7 +3628,6 @@
                 registros: registrosFiltrados,
                 diasHabiles: D.diasHabiles(),
                 horasDiarias: D.horasDiarias(),
-                historialDiasHabiles: D.historialDiasHabiles(),
                 fecha: fechaLocal,
                 version: S.SECURITY_LIMITS.SCHEMA_VERSION,
                 hash: await S.calcularHashSHA256(registrosFiltrados),
@@ -3921,10 +3856,6 @@
                     const hd = parseFloat(data.horasDiarias);
                     if (Number.isFinite(hd) && hd >= 0 && hd <= 24) D.setHorasDiarias(hd);
                 }
-                // Igual que en la restauración local: si el Gist trae historial se restaura, si no
-                // (backups viejos) se sintetiza un tramo único "vigente desde siempre".
-                const historialImportado = D.sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
-                D.setHistorialDiasHabiles(historialImportado || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
                 return {
                     registrosFinales: registrosNormalizados,
                     mensajeExito: `${registrosNormalizados.length} registros restaurados desde Gist`
@@ -4105,8 +4036,7 @@
                 const nuevoId = await GistSync.subir(
                     D.registros(),
                     D.diasHabiles(),
-                    D.horasDiarias(),
-                    D.historialDiasHabiles()
+                    D.horasDiarias()
                 );
                 const gistIdInput = document.getElementById('gist-id');
                 if (gistIdInput) gistIdInput.value = nuevoId;
@@ -4120,7 +4050,7 @@
 
         async function _validarDatosGist(data) {
             if (!data.registros || !Array.isArray(data.registros)) throw new Error('Datos inválidos en el Gist');
-            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
+            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
             if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) throw new Error('Estructura del Gist sospechosa');
             if (data._hashNoCoincide) {
                 const continuar = await ModalManager.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
@@ -4404,7 +4334,7 @@
             } else if (r.entrada && r.salida) {
                 totalText = TimeUtils.horasATexto(r.total, 'short');
                 const objetivoReg = D.objetivoDeRegistro(r);
-                if (objetivoReg > 0 && UILogic._esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha))) {
+                if (objetivoReg > 0 && UILogic._esFechaHabil(r.fecha, D.diasHabiles())) {
                     const diffText = formatoDiferencia(r.total, objetivoReg);
                     if (horasGte(r.total, objetivoReg)) {
                         totalEl.classList.add('green-text');
@@ -6245,6 +6175,7 @@
             }
 
             const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
+            const diasHabilesObj = D.diasHabiles();
 
             const EPS = 1e-6;
             const pendientes = [];
@@ -6258,7 +6189,7 @@
                 if (esRemoto) {
                     delta = 0;
                 } else if (r && !esEspecial && r.salida) {
-                    const objetivo = _esFechaHabil(isoDate, D.diasHabilesEnFecha(isoDate)) ? D.objetivoDeRegistro(r) : 0;
+                    const objetivo = _esFechaHabil(isoDate, diasHabilesObj) ? D.objetivoDeRegistro(r) : 0;
                     delta = r.total - objetivo;
                 }
 
@@ -6281,7 +6212,7 @@
         function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
             if (!Array.isArray(diasHabiles) || diasHabiles.length === 0 || horasDiarias <= 0) return false;
             const fechasLaborables = TimeUtils.generarRangoFechas(ini, fn)
-                .filter(f => D.diasHabilesEnFecha(f).includes(TimeUtils.parsearFechaLocal(f).getDay()));
+                .filter(f => diasHabiles.includes(TimeUtils.parsearFechaLocal(f).getDay()));
             if (fechasLaborables.length === 0) return false;
             return fechasLaborables.every(fecha => {
                 const r = registros.find(x => x.fecha === fecha);
@@ -6331,7 +6262,7 @@
             );
             let objetivoSemana = 0;
             for (const isoDate of TimeUtils.generarRangoFechas(ini, fn)) {
-                if (!D.diasHabilesEnFecha(isoDate).includes(TimeUtils.parsearFechaLocal(isoDate).getDay())) continue;
+                if (!diasHabiles.includes(TimeUtils.parsearFechaLocal(isoDate).getDay())) continue;
                 const rDia = registrosSemanaCompletaPorFecha.get(isoDate);
                 if (!rDia) { objetivoSemana += horasDiarias; continue; }
                 const tipoDia = TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida);
@@ -7966,15 +7897,6 @@
             const perfilActual = PerfilManager.obtenerDatosPerfil();
             D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
             D.setHorasDiarias(perfilActual.horasDiarias !== undefined ? perfilActual.horasDiarias : 7);
-            // Si el perfil no tiene historial (datos previos a este cambio), se sintetiza un único tramo
-            // "vigente desde siempre" con la config actual: el comportamiento para todo lo ya registrado
-            // no cambia hasta que el usuario modifique los días hábiles a partir de ahora.
-            const historialGuardado = D.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
-            D.setHistorialDiasHabiles(
-                historialGuardado && historialGuardado.length > 0
-                    ? historialGuardado
-                    : [{ desde: '0001-01-01', dias: D.diasHabiles() }]
-            );
             D.registros().splice(0, D.registros().length, ...(perfilActual.registros || []));
 
             const historialCargado = HistoryManager.loadFromLocalStorage();
@@ -8210,10 +8132,7 @@
 
             if (seleccionados > 0) {
                 const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-                const diasVigentes = [...D.diasHabiles()].sort((a, b) => a - b);
-                const huboCambio = nuevosDias.length !== diasVigentes.length
-                    || nuevosDias.some((d, i) => d !== diasVigentes[i]);
-                if (huboCambio) D.registrarCambioDiasHabiles(nuevosDias);
+                D.setDiasHabiles(nuevosDias);
                 const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
                 if (esDefault) StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
                 D.guardarYActualizar();
@@ -8221,54 +8140,6 @@
             if (typeof actualizarEstadoBotonPersistir === 'function') {
                 actualizarEstadoBotonPersistir();
             }
-        }
-
-        let _popupHistorialDiasEl = null;
-
-        function _formatoFechaHistorial(iso) {
-            if (iso === '0001-01-01') return 'Desde siempre';
-            return `Desde ${TimeUtils.fechaCorta(iso)}`;
-        }
-
-        function _popupHistorialDiasHabiles(event) {
-            event.stopPropagation();
-            if (_popupHistorialDiasEl) { _popupHistorialDiasEl.remove(); _popupHistorialDiasEl = null; return; }
-
-            const historial = D.historialDiasHabiles();
-            const tramos = Array.isArray(historial) && historial.length > 0
-                ? [...historial].sort((a, b) => b.desde.localeCompare(a.desde))
-                : [];
-
-            let listaHtml;
-            if (tramos.length === 0) {
-                const diasTexto = S.escapeHtml(D.diasHabiles().map(d => TimeUtils.nombreDiaPorIndice(d)).join(', '));
-                listaHtml = `<div class="historial-dias-vacio">Sin cambios registrados: los días actuales rigen desde siempre.</div>
-                    <div class="historial-dias-item historial-dias-item--vigente">
-                        <span class="historial-dias-dias">${diasTexto}</span>
-                    </div>`;
-            } else {
-                listaHtml = tramos.map((tramo, idx) => {
-                    const diasTexto = S.escapeHtml([...tramo.dias].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', '));
-                    const esVigente = idx === 0;
-                    return `<div class="historial-dias-item${esVigente ? ' historial-dias-item--vigente' : ''}">
-                        <span class="historial-dias-fecha">${S.escapeHtml(_formatoFechaHistorial(tramo.desde))}${esVigente ? ' (actual)' : ''}</span>
-                        <span class="historial-dias-dias">${diasTexto}</span>
-                    </div>`;
-                }).join('');
-            }
-
-            const popup = document.createElement('div');
-            popup.className = 'historial-dias-popup';
-            popup.id = '_historial-dias-popup';
-            popup.innerHTML = `
-                <div class="stat-popup-titulo">Historial de días laborales</div>
-                <div class="historial-dias-lista custom-scroll">${listaHtml}</div>`;
-            popup.style.visibility = 'hidden';
-            document.body.appendChild(popup);
-            _popupHistorialDiasEl = popup;
-
-            _registrarCierrePopup(popup, '#btn-historial-dias-habiles', () => true, () => { _popupHistorialDiasEl = null; });
-            _posicionarPopup(popup, event);
         }
 
         function _ajustarStepperHoras(el, incremento) {
@@ -8328,7 +8199,7 @@
             toggleSeccionReporte, confirmarGenerarReporte,
             toggleHistorico, toggleStats, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, toggleBloqueoEdicion,
-            actualizarFeedbackConfig, abrirSelectorPerfiles, _popupHistorialDiasHabiles,
+            actualizarFeedbackConfig, abrirSelectorPerfiles,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
             aplicarHorasConfiguradasATodos, actualizarEstadoBotonAplicarHoras,
@@ -8596,7 +8467,6 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => UILogic.aplicarHorasConfiguradasATodos());
-    $('btn-historial-dias-habiles')?.addEventListener('click', (e) => UILogic._popupHistorialDiasHabiles(e));
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));

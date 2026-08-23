@@ -651,7 +651,15 @@
                                     <input type="checkbox" name="dia-habil" value="0"> <span>Do</span>
                                 </label>
                             </div>
-                            <div id="config-total-feedback" class="config-hint-text">(Total semanal: --hs)</div>
+                            <div class="config-total-feedback-row">
+                                <div id="config-total-feedback" class="config-hint-text">(Total semanal: --hs)</div>
+                                <button id="btn-historial-dias-habiles" class="btn-historial-dias" type="button"
+                                    title="Ver historial de días laborales">
+                                    <svg class="icon">
+                                        <use href="#icon-list" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="config-actions form-group config-onboarding-hide">
                             <label>Interfaz</label>
@@ -1333,6 +1341,105 @@
                     Guardar
                 </button>
                 <button class="btn-delete" id="btn-eliminar-perfil-editor">
+                    <svg class="icon">
+                        <use href="#icon-trash" />
+                    </svg>
+                    Eliminar
+                </button>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-cancel">
+                    <svg class="icon">
+                        <use href="#icon-back" />
+                    </svg>
+                    Volver
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-historial-dias" role="dialog" aria-modal="true" aria-labelledby="modal-historial-dias-titulo">
+        <div class="modal-content">
+            <h3 id="modal-historial-dias-titulo">
+                <span class="modal-title-block">
+                    <svg class="icon">
+                        <use href="#icon-list" />
+                    </svg>
+                    Historial de días laborales
+                </span>
+            </h3>
+
+            <div id="lista-historial-dias" class="perfil-list-container custom-scroll"></div>
+
+            <div class="btn-group">
+                <button class="btn-cancel">
+                    <svg class="icon">
+                        <use href="#icon-back" />
+                    </svg>
+                    Volver
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-editar-tramo-dias" role="dialog" aria-modal="true" aria-labelledby="modal-editar-tramo-dias-titulo">
+        <div class="modal-content">
+            <h3 id="modal-editar-tramo-dias-titulo">
+                <span class="modal-title-block">
+                    <svg class="icon">
+                        <use href="#icon-edit" />
+                    </svg>
+                    Editar tramo
+                </span>
+            </h3>
+
+            <div class="form-group">
+                <label for="editar-tramo-desde">Vigente desde</label>
+                <input type="date" id="editar-tramo-desde" />
+            </div>
+
+            <div class="form-group">
+                <label>Días laborales</label>
+                <div class="week-selector">
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="dia-habil-tramo" value="1">
+                        <span>Lu</span>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="dia-habil-tramo" value="2">
+                        <span>Ma</span>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="dia-habil-tramo" value="3">
+                        <span>Mi</span>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="dia-habil-tramo" value="4">
+                        <span>Ju</span>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="dia-habil-tramo" value="5">
+                        <span>Vi</span>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="dia-habil-tramo" value="6">
+                        <span>Sa</span>
+                    </label>
+                    <label class="day-checkbox">
+                        <input type="checkbox" name="dia-habil-tramo" value="0"> <span>Do</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-edit">
+                    <svg class="icon">
+                        <use href="#icon-check" />
+                    </svg>
+                    Guardar
+                </button>
+                <button class="btn-delete" id="btn-eliminar-tramo-dias">
                     <svg class="icon">
                         <use href="#icon-trash" />
                     </svg>

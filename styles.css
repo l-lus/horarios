@@ -1494,6 +1494,40 @@ button:disabled {
     margin-top: var(--space-xs);
 }
 
+.config-total-feedback-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+}
+
+.config-total-feedback-row .config-hint-text {
+    margin-top: 0;
+}
+
+.btn-historial-dias {
+    width: auto;
+    background: none;
+    border: none;
+    padding: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--transition-ui);
+}
+
+.btn-historial-dias .icon {
+    width: 16px;
+    height: 16px;
+}
+
+.btn-historial-dias:hover {
+    color: var(--text-main);
+}
+
 .empty-state {
     text-align: center;
     padding: 3rem var(--space-lg);

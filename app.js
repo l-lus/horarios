@@ -13,6 +13,7 @@
         MODO_ESTADISTICAS: 'modoEstadisticas',
         HOVER_POPUP: 'hoverPopupCalendario',
         DIAS_HABILES: 'diasHabiles',
+        HISTORIAL_DIAS_HABILES: 'historialDiasHabiles',
         HORAS_DIARIAS: 'horasDiarias',
         VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
         IGNORAR_TF: 'ignorarTiempoFuera',
@@ -542,6 +543,7 @@
                 registros: [...DataManagement.registros()],
                 diasHabiles: DataManagement.diasHabiles(),
                 horasDiarias: DataManagement.horasDiarias(),
+                historialDiasHabiles: DataManagement.historialDiasHabiles(),
                 ...(actual.gistId && { gistId: actual.gistId }),
                 ...(actual.gistLastSync && { gistLastSync: actual.gistLastSync }),
                 ...(actual.gistAutoSync != null && { gistAutoSync: actual.gistAutoSync }),
@@ -1096,6 +1098,10 @@
         }
 
         let registros = [], diasHabiles = [1, 2, 3, 4, 5], horasDiarias = 7, editandoId = null; let vistaActual = 'diaria'; let ignorarTiempoFuera = false;
+        // Historial de tramos de días hábiles: [{ desde: 'YYYY-MM-DD', dias: [0-6...] }, ...] ordenado ascendente por 'desde'.
+        // Permite saber qué configuración de días hábiles regía en una fecha pasada, sin aplicar retroactivamente
+        // un cambio hecho hoy a fechas anteriores. Si está vacío, se asume que la config actual rigió siempre.
+        let historialDiasHabiles = [];
         let filtroActivo = false;
         let filtroDesde = null;
         let filtroHasta = null;
@@ -1629,6 +1635,7 @@
 
             diasHabiles = [1, 2, 3, 4, 5];
             horasDiarias = 7;
+            historialDiasHabiles = [];
             registros.splice(0, registros.length);
             ignorarTiempoFuera = false;
 
@@ -1686,7 +1693,7 @@
 
         async function exportarJSON() {
             const data = {
-                registros, diasHabiles, horasDiarias,
+                registros, diasHabiles, horasDiarias, historialDiasHabiles,
                 fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION,
                 hash: await S.calcularHashSHA256(registros), timestamp: Date.now()
             };
@@ -1705,7 +1712,7 @@
         async function _validarDatosImport(data) {
             if (!data || typeof data !== 'object' || Array.isArray(data)) { notify.mostrarToast('Estructura de archivo inválida', 'error'); return false; }
             if (!data.registros || !Array.isArray(data.registros)) { notify.mostrarToast('Archivo inválido o corrupto', 'error'); return false; }
-            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
+            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
             if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) { notify.mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
             if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
                 notify.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
@@ -1782,6 +1789,10 @@
                             const h = typeof data.horasDiarias === 'string' ? parseFloat(data.horasDiarias) : data.horasDiarias;
                             if (Number.isFinite(h) && h >= 0 && h <= 24) horasDiarias = h;
                         }
+                        // Si el backup trae historial de días hábiles se restaura tal cual; si no (backups viejos),
+                        // se sintetiza un único tramo "vigente desde siempre" para no romper el comportamiento no retroactivo.
+                        const historialImportado = _sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
+                        historialDiasHabiles = historialImportado || [{ desde: '0001-01-01', dias: diasHabiles }];
                         const n = registrosImportados.length;
                         finalizarImportacionAndSave(`Se reemplazaron los datos por ${n === 1 ? '1 registro' : `${n} registros`}`, 'restauración local');
                     } else if (modo === 'merge') {
@@ -1805,6 +1816,7 @@
                 if (esPerfilDefault) {
                     StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, diasHabiles);
                     StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, horasDiarias);
+                    StorageHelper.setItem(STORAGE_KEYS.HISTORIAL_DIAS_HABILES, historialDiasHabiles);
                 }
                 notify.mostrarToast(mensajeExito, 'success');
                 notify.cerrarImportar();
@@ -1861,7 +1873,7 @@
             let objetivo = 0, hechas = 0;
             for (const iso of TimeUtils.generarRangoFechas(desde, hasta)) {
                 if (iso > hoy) continue;
-                const esDiaHabil = diasHabiles.includes(TimeUtils.parsearFechaLocal(iso).getDay());
+                const esDiaHabil = diasHabilesEnFecha(iso).includes(TimeUtils.parsearFechaLocal(iso).getDay());
                 const r = regsPorFecha.get(iso);
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
                 const esRemoto = esEspecial && esTipoRemoto(r);
@@ -1981,6 +1993,53 @@
             } else { throw new Error('Error al guardar'); }
         }
 
+        function _sanitizarHistorialDiasHabiles(historial) {
+            if (!Array.isArray(historial)) return null;
+            const limpio = historial
+                .filter(t => t && typeof t.desde === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.desde) && Array.isArray(t.dias))
+                .map(t => ({ desde: t.desde, dias: t.dias.filter(d => Number.isInteger(d) && d >= 0 && d <= 6) }))
+                .filter(t => t.dias.length > 0);
+            limpio.sort((a, b) => a.desde.localeCompare(b.desde));
+
+            // Fusiona tramos consecutivos con los mismos días (p. ej. generados antes de que
+            // registrarCambioDiasHabiles evitara crear tramos redundantes), conservando el "desde" más antiguo.
+            const mismosDias = (a, b) => a.length === b.length && [...a].sort((x, y) => x - y).every((d, i) => d === [...b].sort((x, y) => x - y)[i]);
+            const fusionado = [];
+            for (const tramo of limpio) {
+                const anterior = fusionado[fusionado.length - 1];
+                if (anterior && mismosDias(anterior.dias, tramo.dias)) continue;
+                fusionado.push(tramo);
+            }
+            return fusionado.length > 0 ? fusionado : null;
+        }
+
+        function diasHabilesEnFecha(iso) {
+            if (!Array.isArray(historialDiasHabiles) || historialDiasHabiles.length === 0) return diasHabiles;
+            let vigente = null;
+            for (const tramo of historialDiasHabiles) {
+                if (tramo.desde <= iso) vigente = tramo;
+                else break;
+            }
+            // Si la fecha es anterior a todos los tramos registrados, se usa el más antiguo:
+            // no hay información de qué regía antes, así que se asume que ya regía desde siempre.
+            if (!vigente) vigente = historialDiasHabiles[0];
+            return Array.isArray(vigente.dias) ? vigente.dias : diasHabiles;
+        }
+
+        function registrarCambioDiasHabiles(nuevosDias) {
+            const hoy = TimeUtils.obtenerFechaHoy();
+            if (!Array.isArray(historialDiasHabiles)) historialDiasHabiles = [];
+            const idx = historialDiasHabiles.findIndex(t => t.desde === hoy);
+            if (idx >= 0) {
+                // Ya hubo un cambio hoy: se reemplaza, no se acumulan tramos del mismo día
+                historialDiasHabiles[idx] = { desde: hoy, dias: nuevosDias };
+            } else {
+                historialDiasHabiles.push({ desde: hoy, dias: nuevosDias });
+                historialDiasHabiles.sort((a, b) => a.desde.localeCompare(b.desde));
+            }
+            diasHabiles = nuevosDias;
+        }
+
         function objetivoDeRegistro(registro) {
             if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
             const v = registro?.objetivoHoras;
@@ -2048,6 +2107,9 @@
         return {
             registros: () => registros, horasSemanales: () => (horasDiarias * diasHabiles.length), diasHabiles: () => diasHabiles,
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
+            historialDiasHabiles: () => historialDiasHabiles,
+            setHistorialDiasHabiles: (v) => { historialDiasHabiles = Array.isArray(v) ? v : []; },
+            diasHabilesEnFecha, registrarCambioDiasHabiles, sanitizarHistorialDiasHabiles: _sanitizarHistorialDiasHabiles,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
             objetivoDeRegistro, objetivoEdicionEnVivo, migrarObjetivoHorasFaltante, aplicarHorasATodosLosRegistros,
             esTipoRemoto, horasEfectivasDeRegistro,
@@ -2251,6 +2313,9 @@
             const rect = el.getBoundingClientRect();
             const clon = el.cloneNode(true);
             clon.classList.add('mutacion-saliente');
+
+            // Si hay un modal abierto, el fantasma debe quedar por debajo de su overlay (z-index: 100)
+            // para no aparecer "flotando" encima del modal mientras se desvanece.
             const zIndex = document.body.classList.contains('modal-open') ? '50' : '9999';
 
             Object.assign(clon.style, {
@@ -2948,7 +3013,6 @@
             const todosLosRegistros = D.registros();
             const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
             const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
-            const diasHabilesObj = D.diasHabiles();
             const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
             const claseDelDia = (fecha) => {
                 const r = regsPorFecha[fecha];
@@ -2959,7 +3023,7 @@
                     return `dia-especial-${tipo ? tipo.color : 'purple'}`;
                 }
                 if (r.entrada && !r.salida) return 'dia-en-curso';
-                if (!UILogic._esFechaHabil(fecha, diasHabilesObj) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
+                if (!UILogic._esFechaHabil(fecha, D.diasHabilesEnFecha(fecha)) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
                 return UILogic._cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
             };
 
@@ -3071,7 +3135,7 @@
             }
             let totalConDiff = totalStr, diffClase = '', cubiertoLineaHtml = '';
             const objetivoReg = D.objetivoDeRegistro(reg);
-            if (objetivoReg > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabiles())) {
+            if (objetivoReg > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabilesEnFecha(reg.fecha))) {
                 const diffText = formatoDiferencia(totalHoras, objetivoReg);
                 if (horasGte(totalHoras, objetivoReg)) {
                     diffClase = 'cal-popup-info--green';
@@ -3435,12 +3499,12 @@
             return response.json();
         }
 
-        async function subir(registros, diasHabiles, horasDiarias) {
+        async function subir(registros, diasHabiles, horasDiarias, historialDiasHabiles) {
             const token = getToken();
             if (!token) throw new Error('Falta el token de GitHub');
 
             const hash = await S.calcularHashSHA256(registros);
-            const data = { registros, diasHabiles, horasDiarias, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
+            const data = { registros, diasHabiles, horasDiarias, historialDiasHabiles, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
             const gistId = getGistId();
             const gistIdValido = esGistIdValido(gistId);
             const url = gistIdValido ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
@@ -3628,6 +3692,7 @@
                 registros: registrosFiltrados,
                 diasHabiles: D.diasHabiles(),
                 horasDiarias: D.horasDiarias(),
+                historialDiasHabiles: D.historialDiasHabiles(),
                 fecha: fechaLocal,
                 version: S.SECURITY_LIMITS.SCHEMA_VERSION,
                 hash: await S.calcularHashSHA256(registrosFiltrados),
@@ -3856,6 +3921,10 @@
                     const hd = parseFloat(data.horasDiarias);
                     if (Number.isFinite(hd) && hd >= 0 && hd <= 24) D.setHorasDiarias(hd);
                 }
+                // Igual que en la restauración local: si el Gist trae historial se restaura, si no
+                // (backups viejos) se sintetiza un tramo único "vigente desde siempre".
+                const historialImportado = D.sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
+                D.setHistorialDiasHabiles(historialImportado || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
                 return {
                     registrosFinales: registrosNormalizados,
                     mensajeExito: `${registrosNormalizados.length} registros restaurados desde Gist`
@@ -4036,7 +4105,8 @@
                 const nuevoId = await GistSync.subir(
                     D.registros(),
                     D.diasHabiles(),
-                    D.horasDiarias()
+                    D.horasDiarias(),
+                    D.historialDiasHabiles()
                 );
                 const gistIdInput = document.getElementById('gist-id');
                 if (gistIdInput) gistIdInput.value = nuevoId;
@@ -4050,7 +4120,7 @@
 
         async function _validarDatosGist(data) {
             if (!data.registros || !Array.isArray(data.registros)) throw new Error('Datos inválidos en el Gist');
-            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
+            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
             if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) throw new Error('Estructura del Gist sospechosa');
             if (data._hashNoCoincide) {
                 const continuar = await ModalManager.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
@@ -4334,7 +4404,7 @@
             } else if (r.entrada && r.salida) {
                 totalText = TimeUtils.horasATexto(r.total, 'short');
                 const objetivoReg = D.objetivoDeRegistro(r);
-                if (objetivoReg > 0 && UILogic._esFechaHabil(r.fecha, D.diasHabiles())) {
+                if (objetivoReg > 0 && UILogic._esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha))) {
                     const diffText = formatoDiferencia(r.total, objetivoReg);
                     if (horasGte(r.total, objetivoReg)) {
                         totalEl.classList.add('green-text');
@@ -6175,7 +6245,6 @@
             }
 
             const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
-            const diasHabilesObj = D.diasHabiles();
 
             const EPS = 1e-6;
             const pendientes = [];
@@ -6189,7 +6258,7 @@
                 if (esRemoto) {
                     delta = 0;
                 } else if (r && !esEspecial && r.salida) {
-                    const objetivo = _esFechaHabil(isoDate, diasHabilesObj) ? D.objetivoDeRegistro(r) : 0;
+                    const objetivo = _esFechaHabil(isoDate, D.diasHabilesEnFecha(isoDate)) ? D.objetivoDeRegistro(r) : 0;
                     delta = r.total - objetivo;
                 }
 
@@ -6212,7 +6281,7 @@
         function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
             if (!Array.isArray(diasHabiles) || diasHabiles.length === 0 || horasDiarias <= 0) return false;
             const fechasLaborables = TimeUtils.generarRangoFechas(ini, fn)
-                .filter(f => diasHabiles.includes(TimeUtils.parsearFechaLocal(f).getDay()));
+                .filter(f => D.diasHabilesEnFecha(f).includes(TimeUtils.parsearFechaLocal(f).getDay()));
             if (fechasLaborables.length === 0) return false;
             return fechasLaborables.every(fecha => {
                 const r = registros.find(x => x.fecha === fecha);
@@ -6262,7 +6331,7 @@
             );
             let objetivoSemana = 0;
             for (const isoDate of TimeUtils.generarRangoFechas(ini, fn)) {
-                if (!diasHabiles.includes(TimeUtils.parsearFechaLocal(isoDate).getDay())) continue;
+                if (!D.diasHabilesEnFecha(isoDate).includes(TimeUtils.parsearFechaLocal(isoDate).getDay())) continue;
                 const rDia = registrosSemanaCompletaPorFecha.get(isoDate);
                 if (!rDia) { objetivoSemana += horasDiarias; continue; }
                 const tipoDia = TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida);
@@ -7351,7 +7420,7 @@
             formatoDiferencia, registrarSwipe, debounce, _crearPressHold,
             _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
             mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON,
-            mostrarToast, resetearBoton, restaurarBotonGuardarEdicion, 
+            mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _getCSSdur, DUR_ANIM, DUR_CALENDARIO, _crearToggleConfig, _setBtnActivo,
             _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
             _posicionarPopup, _registrarCierrePopup, _flashCampo, _flashCampoTipo,
@@ -7792,6 +7861,8 @@
             ModalManager.registrarAccionVolver('modal-editar-grupo', cerrarEdicionGrupo);
             ModalManager.registrarAccionVolver('modal-reporte-secciones', cerrarModalReporteSecciones);
             ModalManager.registrarAccionVolver('modal-ayuda', cerrarModalAyuda);
+            ModalManager.registrarAccionVolver('modal-historial-dias', cerrarModalHistorialDias);
+            ModalManager.registrarAccionVolver('modal-editar-tramo-dias', cerrarEditorTramoDias);
         }
 
         function _initListenersFormulario() {
@@ -7897,6 +7968,15 @@
             const perfilActual = PerfilManager.obtenerDatosPerfil();
             D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
             D.setHorasDiarias(perfilActual.horasDiarias !== undefined ? perfilActual.horasDiarias : 7);
+            // Si el perfil no tiene historial (datos previos a este cambio), se sintetiza un único tramo
+            // "vigente desde siempre" con la config actual: el comportamiento para todo lo ya registrado
+            // no cambia hasta que el usuario modifique los días hábiles a partir de ahora.
+            const historialGuardado = D.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
+            D.setHistorialDiasHabiles(
+                historialGuardado && historialGuardado.length > 0
+                    ? historialGuardado
+                    : [{ desde: '0001-01-01', dias: D.diasHabiles() }]
+            );
             D.registros().splice(0, D.registros().length, ...(perfilActual.registros || []));
 
             const historialCargado = HistoryManager.loadFromLocalStorage();
@@ -8132,7 +8212,10 @@
 
             if (seleccionados > 0) {
                 const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-                D.setDiasHabiles(nuevosDias);
+                const diasVigentes = [...D.diasHabiles()].sort((a, b) => a - b);
+                const huboCambio = nuevosDias.length !== diasVigentes.length
+                    || nuevosDias.some((d, i) => d !== diasVigentes[i]);
+                if (huboCambio) D.registrarCambioDiasHabiles(nuevosDias);
                 const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
                 if (esDefault) StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
                 D.guardarYActualizar();
@@ -8140,6 +8223,164 @@
             if (typeof actualizarEstadoBotonPersistir === 'function') {
                 actualizarEstadoBotonPersistir();
             }
+        }
+
+        let _historialDiasModalPadre = null;
+        let _tramoEnEdicionDesde = null;
+
+        function _formatoFechaHistorial(iso) {
+            if (iso === '0001-01-01') return 'Desde siempre';
+            return `Desde ${TimeUtils.fechaCorta(iso)}`;
+        }
+
+        function _obtenerTramosOrdenados() {
+            const historial = D.historialDiasHabiles();
+            return Array.isArray(historial) && historial.length > 0
+                ? [...historial].sort((a, b) => a.desde.localeCompare(b.desde))
+                : [{ desde: '0001-01-01', dias: D.diasHabiles() }];
+        }
+
+        function _renderizarListaHistorialDias() {
+            const lista = $('lista-historial-dias');
+            if (!lista) return;
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const tramos = _obtenerTramosOrdenados();
+            const vigenteReal = tramos.filter(t => t.desde <= hoy).slice(-1)[0] || tramos[0];
+
+            lista.innerHTML = '';
+            [...tramos].reverse().forEach(tramo => {
+                const esActual = tramo === vigenteReal;
+
+                const container = Object.assign(document.createElement('div'), {
+                    className: `btn-perfil-select${esActual ? ' activo' : ''}`
+                });
+
+                const diasTexto = [...tramo.dias].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', ');
+                const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
+                infoSection.appendChild(Object.assign(document.createElement('div'), {
+                    className: 'btn-perfil-nombre',
+                    textContent: `${_formatoFechaHistorial(tramo.desde)}${esActual ? ' (actual)' : ''}`
+                }));
+                infoSection.appendChild(Object.assign(document.createElement('div'), {
+                    className: 'btn-perfil-badge',
+                    textContent: diasTexto
+                }));
+
+                const editBtn = Object.assign(document.createElement('button'), {
+                    className: 'btn-perfil-edit',
+                    innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
+                    title: 'Editar tramo',
+                    onclick: (e) => { e.stopPropagation(); UILogic.abrirEditorTramoDias(tramo.desde); }
+                });
+
+                container.appendChild(infoSection);
+                container.appendChild(editBtn);
+                lista.appendChild(container);
+            });
+        }
+
+        function abrirModalHistorialDias() {
+            const modalAbierto = document.querySelector('.modal.show');
+            _historialDiasModalPadre = modalAbierto ? modalAbierto.id : null;
+            _renderizarListaHistorialDias();
+            ModalManager.alternar(_historialDiasModalPadre, 'modal-historial-dias');
+        }
+
+        function cerrarModalHistorialDias() {
+            if (_historialDiasModalPadre) {
+                const padre = _historialDiasModalPadre;
+                _historialDiasModalPadre = null;
+                ModalManager.alternar('modal-historial-dias', padre, null, () => {
+                    if (padre === 'modal-config') _precargarCamposConfig();
+                });
+            } else {
+                ModalManager.cerrar('modal-historial-dias');
+            }
+        }
+
+        function abrirEditorTramoDias(desdeOriginal) {
+            const tramos = _obtenerTramosOrdenados();
+            const tramo = tramos.find(t => t.desde === desdeOriginal);
+            if (!tramo) { mostrarToast('Tramo no encontrado', 'error'); return; }
+
+            _tramoEnEdicionDesde = desdeOriginal;
+
+            const inputDesde = $('editar-tramo-desde');
+            if (inputDesde) {
+                inputDesde.value = desdeOriginal === '0001-01-01' ? '' : desdeOriginal;
+                inputDesde.disabled = (desdeOriginal === '0001-01-01');
+            }
+
+            document.querySelectorAll('input[name="dia-habil-tramo"]').forEach(cb => {
+                cb.checked = tramo.dias.includes(parseInt(cb.value));
+            });
+
+            const btnEliminar = $('btn-eliminar-tramo-dias');
+            if (btnEliminar) btnEliminar.disabled = (tramos.length <= 1 || desdeOriginal === '0001-01-01');
+
+            ModalManager.alternar('modal-historial-dias', 'modal-editar-tramo-dias');
+        }
+
+        function cerrarEditorTramoDias() {
+            _tramoEnEdicionDesde = null;
+            ModalManager.alternar('modal-editar-tramo-dias', 'modal-historial-dias', null, _renderizarListaHistorialDias);
+        }
+
+        function _sincronizarDiasVigentes() {
+            const hoy = TimeUtils.obtenerFechaHoy();
+            D.setDiasHabiles(D.diasHabilesEnFecha(hoy));
+        }
+
+        async function guardarEdicionTramoDias() {
+            if (!_tramoEnEdicionDesde) return;
+
+            const esSentinela = _tramoEnEdicionDesde === '0001-01-01';
+            const inputDesde = $('editar-tramo-desde');
+            const nuevaFecha = esSentinela ? '0001-01-01' : (inputDesde?.value || '');
+            const checkboxes = document.querySelectorAll('input[name="dia-habil-tramo"]:checked');
+            const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
+
+            if (!esSentinela && !/^\d{4}-\d{2}-\d{2}$/.test(nuevaFecha)) {
+                mostrarToast('Ingresá una fecha válida', 'error'); return;
+            }
+            if (nuevosDias.length === 0) {
+                mostrarToast('Seleccioná al menos un día', 'error'); return;
+            }
+
+            const tramos = _obtenerTramosOrdenados();
+            const otros = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
+            if (otros.some(t => t.desde === nuevaFecha)) {
+                mostrarToast('Ya existe un tramo con esa fecha', 'error'); return;
+            }
+
+            const nuevoHistorial = D.sanitizarHistorialDiasHabiles([...otros, { desde: nuevaFecha, dias: nuevosDias }]);
+            D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: nuevosDias }]);
+            _sincronizarDiasVigentes();
+
+            const guardado = await D.guardarYActualizar();
+            if (!guardado) return;
+
+            mostrarToast('Tramo actualizado', 'success');
+            cerrarEditorTramoDias();
+        }
+
+        async function eliminarTramoDias() {
+            if (!_tramoEnEdicionDesde || _tramoEnEdicionDesde === '0001-01-01') return;
+            const tramos = _obtenerTramosOrdenados();
+            if (tramos.length <= 1) return;
+
+            if (!await ModalManager.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
+
+            const restantes = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
+            const nuevoHistorial = D.sanitizarHistorialDiasHabiles(restantes);
+            D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
+            _sincronizarDiasVigentes();
+
+            const guardado = await D.guardarYActualizar();
+            if (!guardado) return;
+
+            mostrarToast('Tramo eliminado', 'success');
+            cerrarEditorTramoDias();
         }
 
         function _ajustarStepperHoras(el, incremento) {
@@ -8200,6 +8441,8 @@
             toggleHistorico, toggleStats, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, toggleBloqueoEdicion,
             actualizarFeedbackConfig, abrirSelectorPerfiles,
+            abrirModalHistorialDias, cerrarModalHistorialDias, abrirEditorTramoDias, cerrarEditorTramoDias,
+            guardarEdicionTramoDias, eliminarTramoDias,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
             aplicarHorasConfiguradasATodos, actualizarEstadoBotonAplicarHoras,
@@ -8467,6 +8710,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => UILogic.aplicarHorasConfiguradasATodos());
+    $('btn-historial-dias-habiles')?.addEventListener('click', () => UILogic.abrirModalHistorialDias());
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));
@@ -8549,6 +8793,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#modal-editar-perfil .btn-edit')?.addEventListener('click', () => UILogic.guardarEdicionPerfil());
     $('btn-eliminar-perfil-editor')?.addEventListener('click', () => UILogic.eliminarPerfilDesdeEditor());
     document.querySelector('#modal-editar-perfil .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEditorPerfil());
+    document.querySelector('#modal-historial-dias .btn-cancel')?.addEventListener('click', () => UILogic.cerrarModalHistorialDias());
+    document.querySelector('#modal-editar-tramo-dias .btn-edit')?.addEventListener('click', () => UILogic.guardarEdicionTramoDias());
+    $('btn-eliminar-tramo-dias')?.addEventListener('click', () => UILogic.eliminarTramoDias());
+    document.querySelector('#modal-editar-tramo-dias .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEditorTramoDias());
 
     $('btn-lock-grupo-toggle')?.addEventListener('click', () => UILogic.toggleBloqueoEdicionGrupo());
     $('btn-grupo-desde')?.addEventListener('click', () => UILogic.alternarFechaActual('edit-grupo-desde'));
@@ -8559,7 +8807,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260823';
+        const _v = '-v260822';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

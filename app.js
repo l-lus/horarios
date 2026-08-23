@@ -7351,12 +7351,12 @@
             formatoDiferencia, registrarSwipe, debounce, _crearPressHold,
             _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
             mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON,
-            mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
+            mostrarToast, resetearBoton, restaurarBotonGuardarEdicion, 
             _getCSSdur, DUR_ANIM, DUR_CALENDARIO, _crearToggleConfig, _setBtnActivo,
             _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
             _posicionarPopup, _registrarCierrePopup, _flashCampo, _flashCampoTipo,
             _limpiarClonVisual, _finalizarSlidePendiente, _animarSlideElemento, toggleSeccionGen,
-            _animarFadeSwap
+            _animarFadeSwap, _animarMutacion
         } = UICore;
 
         const {
@@ -8559,7 +8559,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260822';
+        const _v = '-v260823';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

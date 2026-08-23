@@ -2251,7 +2251,8 @@
             const rect = el.getBoundingClientRect();
             const clon = el.cloneNode(true);
             clon.classList.add('mutacion-saliente');
-            
+            const zIndex = document.body.classList.contains('modal-open') ? '50' : '9999';
+
             Object.assign(clon.style, {
                 position: 'fixed',
                 top: rect.top + 'px',
@@ -2260,7 +2261,7 @@
                 height: rect.height + 'px',
                 margin: '0',
                 pointerEvents: 'none',
-                zIndex: '9999'
+                zIndex
             });
 
             const primerHijo = el.firstElementChild;

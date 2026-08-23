@@ -1793,6 +1793,9 @@
                         // se sintetiza un único tramo "vigente desde siempre" para no romper el comportamiento no retroactivo.
                         const historialImportado = _sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
                         historialDiasHabiles = historialImportado || [{ desde: '0001-01-01', dias: diasHabiles }];
+                        // Resincroniza el campo "plano" con lo vigente hoy según el historial recién restaurado,
+                        // por si el backup traía un `diasHabiles` desactualizado respecto de su propio historial.
+                        diasHabiles = diasHabilesEnFecha(TimeUtils.obtenerFechaHoy());
                         const n = registrosImportados.length;
                         finalizarImportacionAndSave(`Se reemplazaron los datos por ${n === 1 ? '1 registro' : `${n} registros`}`, 'restauración local');
                     } else if (modo === 'merge') {
@@ -1995,17 +1998,26 @@
 
         function _sanitizarHistorialDiasHabiles(historial) {
             if (!Array.isArray(historial)) return null;
+            // Se exige una fecha de calendario real (o el centinela "desde siempre") para evitar que un
+            // backup corrupto/manipulado cuele algo como "0000-00-00", que por comparación lexicográfica
+            // terminaría rigiendo por encima de cualquier fecha real.
             const limpio = historial
-                .filter(t => t && typeof t.desde === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.desde) && Array.isArray(t.dias))
+                .filter(t => t && typeof t.desde === 'string' && (t.desde === '0001-01-01' || TimeUtils.validarFecha(t.desde)) && Array.isArray(t.dias))
                 .map(t => ({ desde: t.desde, dias: t.dias.filter(d => Number.isInteger(d) && d >= 0 && d <= 6) }))
                 .filter(t => t.dias.length > 0);
             limpio.sort((a, b) => a.desde.localeCompare(b.desde));
+
+            // Garantiza "desde" único por tramo (p. ej. datos corruptos con dos tramos en la misma fecha
+            // pero días distintos): ante un duplicado se conserva el último, igual que registrarCambioDiasHabiles.
+            const porFecha = new Map();
+            limpio.forEach(t => porFecha.set(t.desde, t));
+            const sinDuplicados = [...porFecha.values()].sort((a, b) => a.desde.localeCompare(b.desde));
 
             // Fusiona tramos consecutivos con los mismos días (p. ej. generados antes de que
             // registrarCambioDiasHabiles evitara crear tramos redundantes), conservando el "desde" más antiguo.
             const mismosDias = (a, b) => a.length === b.length && [...a].sort((x, y) => x - y).every((d, i) => d === [...b].sort((x, y) => x - y)[i]);
             const fusionado = [];
-            for (const tramo of limpio) {
+            for (const tramo of sinDuplicados) {
                 const anterior = fusionado[fusionado.length - 1];
                 if (anterior && mismosDias(anterior.dias, tramo.dias)) continue;
                 fusionado.push(tramo);
@@ -2108,7 +2120,13 @@
             registros: () => registros, horasSemanales: () => (horasDiarias * diasHabiles.length), diasHabiles: () => diasHabiles,
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
             historialDiasHabiles: () => historialDiasHabiles,
-            setHistorialDiasHabiles: (v) => { historialDiasHabiles = Array.isArray(v) ? v : []; },
+            setHistorialDiasHabiles: (v) => {
+                historialDiasHabiles = Array.isArray(v) ? v : [];
+                // Cada vez que se reemplaza el historial (carga inicial, import, restauración desde Gist,
+                // o edición manual de tramos) se resincroniza el campo "plano" con lo vigente HOY, para que
+                // nunca quede desactualizado frente a un tramo futuro que ya entró en vigencia con el paso del tiempo.
+                if (historialDiasHabiles.length > 0) diasHabiles = diasHabilesEnFecha(TimeUtils.obtenerFechaHoy());
+            },
             diasHabilesEnFecha, registrarCambioDiasHabiles, sanitizarHistorialDiasHabiles: _sanitizarHistorialDiasHabiles,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
             objetivoDeRegistro, objetivoEdicionEnVivo, migrarObjetivoHorasFaltante, aplicarHorasATodosLosRegistros,
@@ -8316,7 +8334,7 @@
             });
 
             const btnEliminar = $('btn-eliminar-tramo-dias');
-            if (btnEliminar) btnEliminar.disabled = (tramos.length <= 1 || desdeOriginal === '0001-01-01');
+            if (btnEliminar) btnEliminar.disabled = (tramos.length <= 1 || tramos[0].desde === desdeOriginal);
 
             ModalManager.alternar('modal-historial-dias', 'modal-editar-tramo-dias');
         }
@@ -8324,11 +8342,6 @@
         function cerrarEditorTramoDias() {
             _tramoEnEdicionDesde = null;
             ModalManager.alternar('modal-editar-tramo-dias', 'modal-historial-dias', null, _renderizarListaHistorialDias);
-        }
-
-        function _sincronizarDiasVigentes() {
-            const hoy = TimeUtils.obtenerFechaHoy();
-            D.setDiasHabiles(D.diasHabilesEnFecha(hoy));
         }
 
         async function guardarEdicionTramoDias() {
@@ -8340,7 +8353,7 @@
             const checkboxes = document.querySelectorAll('input[name="dia-habil-tramo"]:checked');
             const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
 
-            if (!esSentinela && !/^\d{4}-\d{2}-\d{2}$/.test(nuevaFecha)) {
+            if (!esSentinela && !TimeUtils.validarFecha(nuevaFecha)) {
                 mostrarToast('Ingresá una fecha válida', 'error'); return;
             }
             if (nuevosDias.length === 0) {
@@ -8355,7 +8368,6 @@
 
             const nuevoHistorial = D.sanitizarHistorialDiasHabiles([...otros, { desde: nuevaFecha, dias: nuevosDias }]);
             D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: nuevosDias }]);
-            _sincronizarDiasVigentes();
 
             const guardado = await D.guardarYActualizar();
             if (!guardado) return;
@@ -8365,16 +8377,20 @@
         }
 
         async function eliminarTramoDias() {
-            if (!_tramoEnEdicionDesde || _tramoEnEdicionDesde === '0001-01-01') return;
+            if (!_tramoEnEdicionDesde) return;
             const tramos = _obtenerTramosOrdenados();
             if (tramos.length <= 1) return;
+            // El tramo más antiguo actúa de "piso": nunca se puede eliminar, sea o no el centinela
+            // "0001-01-01", porque su desaparición haría retroactivo el tramo siguiente (rige desde
+            // el principio de los tiempos vía el fallback de diasHabilesEnFecha), justo lo que esta
+            // función de historial busca evitar.
+            if (tramos[0].desde === _tramoEnEdicionDesde) return;
 
             if (!await ModalManager.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
 
             const restantes = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
             const nuevoHistorial = D.sanitizarHistorialDiasHabiles(restantes);
             D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
-            _sincronizarDiasVigentes();
 
             const guardado = await D.guardarYActualizar();
             if (!guardado) return;

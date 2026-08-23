@@ -2000,7 +2000,17 @@
                 .map(t => ({ desde: t.desde, dias: t.dias.filter(d => Number.isInteger(d) && d >= 0 && d <= 6) }))
                 .filter(t => t.dias.length > 0);
             limpio.sort((a, b) => a.desde.localeCompare(b.desde));
-            return limpio.length > 0 ? limpio : null;
+
+            // Fusiona tramos consecutivos con los mismos días (p. ej. generados antes de que
+            // registrarCambioDiasHabiles evitara crear tramos redundantes), conservando el "desde" más antiguo.
+            const mismosDias = (a, b) => a.length === b.length && [...a].sort((x, y) => x - y).every((d, i) => d === [...b].sort((x, y) => x - y)[i]);
+            const fusionado = [];
+            for (const tramo of limpio) {
+                const anterior = fusionado[fusionado.length - 1];
+                if (anterior && mismosDias(anterior.dias, tramo.dias)) continue;
+                fusionado.push(tramo);
+            }
+            return fusionado.length > 0 ? fusionado : null;
         }
 
         function diasHabilesEnFecha(iso) {
@@ -2303,7 +2313,11 @@
             const rect = el.getBoundingClientRect();
             const clon = el.cloneNode(true);
             clon.classList.add('mutacion-saliente');
-            
+
+            // Si hay un modal abierto, el fantasma debe quedar por debajo de su overlay (z-index: 100)
+            // para no aparecer "flotando" encima del modal mientras se desvanece.
+            const zIndex = document.body.classList.contains('modal-open') ? '50' : '9999';
+
             Object.assign(clon.style, {
                 position: 'fixed',
                 top: rect.top + 'px',
@@ -2312,7 +2326,7 @@
                 height: rect.height + 'px',
                 margin: '0',
                 pointerEvents: 'none',
-                zIndex: '9999'
+                zIndex
             });
 
             const primerHijo = el.firstElementChild;
@@ -7955,7 +7969,7 @@
             // Si el perfil no tiene historial (datos previos a este cambio), se sintetiza un único tramo
             // "vigente desde siempre" con la config actual: el comportamiento para todo lo ya registrado
             // no cambia hasta que el usuario modifique los días hábiles a partir de ahora.
-            const historialGuardado = Array.isArray(perfilActual.historialDiasHabiles) ? perfilActual.historialDiasHabiles : null;
+            const historialGuardado = D.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
             D.setHistorialDiasHabiles(
                 historialGuardado && historialGuardado.length > 0
                     ? historialGuardado
@@ -8196,7 +8210,10 @@
 
             if (seleccionados > 0) {
                 const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-                D.registrarCambioDiasHabiles(nuevosDias);
+                const diasVigentes = [...D.diasHabiles()].sort((a, b) => a - b);
+                const huboCambio = nuevosDias.length !== diasVigentes.length
+                    || nuevosDias.some((d, i) => d !== diasVigentes[i]);
+                if (huboCambio) D.registrarCambioDiasHabiles(nuevosDias);
                 const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
                 if (esDefault) StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
                 D.guardarYActualizar();
@@ -8204,6 +8221,54 @@
             if (typeof actualizarEstadoBotonPersistir === 'function') {
                 actualizarEstadoBotonPersistir();
             }
+        }
+
+        let _popupHistorialDiasEl = null;
+
+        function _formatoFechaHistorial(iso) {
+            if (iso === '0001-01-01') return 'Desde siempre';
+            return `Desde ${TimeUtils.fechaCorta(iso)}`;
+        }
+
+        function _popupHistorialDiasHabiles(event) {
+            event.stopPropagation();
+            if (_popupHistorialDiasEl) { _popupHistorialDiasEl.remove(); _popupHistorialDiasEl = null; return; }
+
+            const historial = D.historialDiasHabiles();
+            const tramos = Array.isArray(historial) && historial.length > 0
+                ? [...historial].sort((a, b) => b.desde.localeCompare(a.desde))
+                : [];
+
+            let listaHtml;
+            if (tramos.length === 0) {
+                const diasTexto = S.escapeHtml(D.diasHabiles().map(d => TimeUtils.nombreDiaPorIndice(d)).join(', '));
+                listaHtml = `<div class="historial-dias-vacio">Sin cambios registrados: los días actuales rigen desde siempre.</div>
+                    <div class="historial-dias-item historial-dias-item--vigente">
+                        <span class="historial-dias-dias">${diasTexto}</span>
+                    </div>`;
+            } else {
+                listaHtml = tramos.map((tramo, idx) => {
+                    const diasTexto = S.escapeHtml([...tramo.dias].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', '));
+                    const esVigente = idx === 0;
+                    return `<div class="historial-dias-item${esVigente ? ' historial-dias-item--vigente' : ''}">
+                        <span class="historial-dias-fecha">${S.escapeHtml(_formatoFechaHistorial(tramo.desde))}${esVigente ? ' (actual)' : ''}</span>
+                        <span class="historial-dias-dias">${diasTexto}</span>
+                    </div>`;
+                }).join('');
+            }
+
+            const popup = document.createElement('div');
+            popup.className = 'historial-dias-popup';
+            popup.id = '_historial-dias-popup';
+            popup.innerHTML = `
+                <div class="stat-popup-titulo">Historial de días laborales</div>
+                <div class="historial-dias-lista custom-scroll">${listaHtml}</div>`;
+            popup.style.visibility = 'hidden';
+            document.body.appendChild(popup);
+            _popupHistorialDiasEl = popup;
+
+            _registrarCierrePopup(popup, '#btn-historial-dias-habiles', () => true, () => { _popupHistorialDiasEl = null; });
+            _posicionarPopup(popup, event);
         }
 
         function _ajustarStepperHoras(el, incremento) {
@@ -8263,7 +8328,7 @@
             toggleSeccionReporte, confirmarGenerarReporte,
             toggleHistorico, toggleStats, actualizarEstadoBotonHoverPopup,
             toggleTimerBreakMain, toggleBloqueoEdicion,
-            actualizarFeedbackConfig, abrirSelectorPerfiles,
+            actualizarFeedbackConfig, abrirSelectorPerfiles, _popupHistorialDiasHabiles,
             toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
             toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
             aplicarHorasConfiguradasATodos, actualizarEstadoBotonAplicarHoras,
@@ -8531,6 +8596,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => UILogic.aplicarHorasConfiguradasATodos());
+    $('btn-historial-dias-habiles')?.addEventListener('click', (e) => UILogic._popupHistorialDiasHabiles(e));
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));

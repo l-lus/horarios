@@ -1227,7 +1227,8 @@ button:disabled {
 
 .cal-popup,
 .stat-popup,
-.filtro-popup {
+.filtro-popup,
+.historial-dias-popup {
     position: fixed;
     z-index: 90;
     background: var(--bg-card);
@@ -1252,7 +1253,8 @@ button:disabled {
 
 .cal-popup.listo,
 .stat-popup.listo,
-.filtro-popup.listo {
+.filtro-popup.listo,
+.historial-dias-popup.listo {
     pointer-events: all;
 }
 
@@ -1361,6 +1363,51 @@ button:disabled {
     border: none;
     border-top: 1px solid var(--border);
     margin: 10px 0;
+}
+
+/* ─── HISTORIAL DÍAS HÁBILES POPUP ───────────────────────────────────────────── */
+
+.historial-dias-popup {
+    width: 240px;
+    max-width: calc(100vw - 16px);
+    gap: 0.5rem;
+    z-index: 110;
+}
+
+.historial-dias-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-height: 220px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: var(--space-xs);
+}
+
+.historial-dias-item {
+    font-size: var(--text-sm);
+    line-height: 1.4;
+}
+
+.historial-dias-fecha {
+    display: block;
+    font-weight: var(--fw-semibold);
+    color: var(--text-muted);
+}
+
+.historial-dias-item--vigente .historial-dias-fecha {
+    color: var(--c-blue);
+}
+
+.historial-dias-dias {
+    display: block;
+    color: var(--text-main);
+}
+
+.historial-dias-vacio {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    font-style: italic;
 }
 
 /* ─── FILTRO POPUP ───────────────────────────────────────────────────────────── */
@@ -1492,6 +1539,40 @@ button:disabled {
     text-align: right;
     display: block;
     margin-top: var(--space-xs);
+}
+
+.config-total-feedback-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+}
+
+.config-total-feedback-row .config-hint-text {
+    margin-top: 0;
+}
+
+.btn-historial-dias {
+    width: auto;
+    background: none;
+    border: none;
+    padding: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--transition-ui);
+}
+
+.btn-historial-dias .icon {
+    width: 16px;
+    height: 16px;
+}
+
+.btn-historial-dias:hover {
+    color: var(--text-main);
 }
 
 .empty-state {

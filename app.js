@@ -8160,7 +8160,9 @@
             _iniciarCicloStats();
             actualizarBotonesHistorico();
 
-            if (D.vistaActual() === 'semana') {
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const hoyEsLaborable = _esFechaHabil(hoy, D.diasHabilesEnFecha(hoy));
+            if (D.vistaActual() === 'semana' && hoyEsLaborable) {
                 setTimerAutoVista(setTimeout(() => {
                     setTimerAutoVista(null);
                     alternarVista();

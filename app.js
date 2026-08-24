@@ -7351,7 +7351,7 @@
             formatoDiferencia, registrarSwipe, debounce, _crearPressHold,
             _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
             mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON,
-            mostrarToast, resetearBoton, restaurarBotonGuardarEdicion, 
+            mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _getCSSdur, DUR_ANIM, DUR_CALENDARIO, _crearToggleConfig, _setBtnActivo,
             _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
             _posicionarPopup, _registrarCierrePopup, _flashCampo, _flashCampoTipo,
@@ -8062,7 +8062,9 @@
             _iniciarCicloStats();
             actualizarBotonesHistorico();
 
-            if (D.vistaActual() === 'semana') {
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const hoyEsLaborable = _esFechaHabil(hoy, D.diasHabiles());
+            if (D.vistaActual() === 'semana' && hoyEsLaborable) {
                 setTimerAutoVista(setTimeout(() => {
                     setTimerAutoVista(null);
                     alternarVista();

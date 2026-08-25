@@ -14,6 +14,8 @@
         HOVER_POPUP: 'hoverPopupCalendario',
         DIAS_HABILES: 'diasHabiles',
         HORAS_DIARIAS: 'horasDiarias',
+        HORAS_DIARIAS_T2: 'horasDiariasT2',
+        DOBLE_TURNO: 'dobleTurno',
         VISTA_HISTORICO_CAL: 'vistaHistoricoCalendario',
         IGNORAR_TF: 'ignorarTiempoFuera',
         IGNORAR_LOGICA_CUBIERTO: 'ignorarLogicaCubierto',
@@ -507,7 +509,7 @@
 
         function cargarPerfiles() {
             const defaultPerfil = {
-                'default': { nombre: 'Principal', registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 }
+                'default': { nombre: 'Principal', registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7, horasDiariasT2: 7, dobleTurno: false }
             };
 
             perfiles = StorageHelper.getObject(STORAGE_KEYS.PERFILES, defaultPerfil);
@@ -542,6 +544,8 @@
                 registros: [...DataManagement.registros()],
                 diasHabiles: DataManagement.diasHabiles(),
                 horasDiarias: DataManagement.horasDiarias(),
+                horasDiariasT2: DataManagement.horasDiariasT2(),
+                dobleTurno: DataManagement.dobleTurno(),
                 ...(actual.gistId && { gistId: actual.gistId }),
                 ...(actual.gistLastSync && { gistLastSync: actual.gistLastSync }),
                 ...(actual.gistAutoSync != null && { gistAutoSync: actual.gistAutoSync }),
@@ -1096,6 +1100,7 @@
         }
 
         let registros = [], diasHabiles = [1, 2, 3, 4, 5], horasDiarias = 7, editandoId = null; let vistaActual = 'diaria'; let ignorarTiempoFuera = false;
+        let horasDiariasT2 = 7, dobleTurno = false;
         let filtroActivo = false;
         let filtroDesde = null;
         let filtroHasta = null;
@@ -1254,6 +1259,12 @@
                 horasDiarias: (perfilData && perfilData.horasDiarias !== undefined)
                     ? perfilData.horasDiarias
                     : StorageHelper.getNumber(STORAGE_KEYS.HORAS_DIARIAS, 7),
+                horasDiariasT2: (perfilData && perfilData.horasDiariasT2 !== undefined)
+                    ? perfilData.horasDiariasT2
+                    : StorageHelper.getNumber(STORAGE_KEYS.HORAS_DIARIAS_T2, 7),
+                dobleTurno: (perfilData && perfilData.dobleTurno !== undefined)
+                    ? perfilData.dobleTurno
+                    : StorageHelper.getBoolean(STORAGE_KEYS.DOBLE_TURNO, false, true),
                 temaOscuro: StorageHelper.getBoolean(STORAGE_KEYS.TEMA_OSCURO, true),
                 vistaActual: StorageHelper.getItem(STORAGE_KEYS.VISTA_ACTUAL, 'diaria'),
                 ignorarTiempoFuera: StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true),
@@ -1292,13 +1303,16 @@
             return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
         }
 
-        function _construirRegistro(fecha, entrada, salida) {
+        function _construirRegistro(fecha, entrada, salida, turno = null) {
             const e = entrada || null, s = salida || null;
             const t = calcularHoras(e, s, null);
-            return {
+            const objetivo = (turno === 2) ? horasDiariasT2 : horasDiarias;
+            const registro = {
                 id: S.generarIDSeguro(), fecha, entrada: e, salida: s, tiempoFuera: null,
-                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: horasDiarias
+                horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: objetivo
             };
+            if (turno === 1 || turno === 2) registro.turno = turno;
+            return registro;
         }
 
         function validarFormulario() {
@@ -1348,11 +1362,11 @@
             $('salida').value = '';
         }
 
-        async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
+        async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn, turno = null) {
             if (registros.length >= S.SECURITY_LIMITS.MAX_REGISTROS) {
                 notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
             }
-            const nuevo = _construirRegistro(f, e, s);
+            const nuevo = _construirRegistro(f, e, s, turno);
             registros.push(nuevo);
             ordenarRegistros();
             const esHoy = e && f === TimeUtils.obtenerFechaHoy();
@@ -1394,20 +1408,30 @@
                 if (ayerAbierto && !registros.find(r => r.fecha === f)) { f = ayer; $('fecha').value = f; }
             }
 
-            let registroExistente = registros.find(r => r.fecha === f);
+            const dobleTurnoActivo = dobleTurno;
+            const registrosDelDia = registros.filter(r => r.fecha === f);
+            const registroExistente = registrosDelDia.find(r => r.entrada && !r.salida) ?? null;
+            const limiteTurnos = dobleTurnoActivo ? 2 : 1;
+            const turnosCompletos = registrosDelDia.length >= limiteTurnos && !registroExistente;
 
             if (!e && !s) {
                 const horaActual = TimeUtils.obtenerHoraActual();
                 if (registroExistente?.entrada && !registroExistente.salida) {
                     s = horaActual; $('salida').value = s;
-                } else {
+                } else if (!turnosCompletos) {
                     e = horaActual; $('entrada').value = e;
                 }
                 usaHoraActual = true;
             }
 
+            if (turnosCompletos) {
+                notify.resetearBoton(btn);
+                if (usaHoraActual) $('entrada').value = '';
+                notify.mostrarToast(dobleTurnoActivo ? 'Ya están registrados los 2 turnos de hoy' : 'Ya existe un registro para esta fecha', 'error');
+                notify.flashCampoTipo('error', 'btn-agregar'); return;
+            }
+
             if (!e && s) {
-                if (registroExistente?.salida) { notify.resetearBoton(btn); notify.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
                 if (!registroExistente?.entrada) { notify.resetearBoton(btn); notify.mostrarToast('Debés fichar una entrada primero', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
             }
 
@@ -1418,10 +1442,11 @@
             if (registroExistente) {
                 notify.resetearBoton(btn);
                 if (usaHoraActual) $('entrada').value = '';
-                notify.mostrarToast('Ya existe un registro para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
+                notify.mostrarToast('Ya existe un registro abierto para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
             }
 
-            await _crearNuevoRegistro(f, e, s, usaHoraActual, btn);
+            const turnoNuevo = dobleTurnoActivo ? (registrosDelDia.length + 1) : null;
+            await _crearNuevoRegistro(f, e, s, usaHoraActual, btn, turnoNuevo);
         }
 
         async function eliminarRegistroActual() {
@@ -1512,7 +1537,9 @@
             if (!e && s)
                 return { msg: 'Debés fichar una entrada', tipo: 'error' };
 
-            if (registros.some(reg => reg.fecha === f && reg.id !== editandoId))
+            const otrosRegistrosMismaFecha = registros.filter(reg => reg.fecha === f && reg.id !== editandoId);
+            const limiteEdicion = dobleTurno ? 2 : 1;
+            if (otrosRegistrosMismaFecha.length >= limiteEdicion)
                 return { msg: 'Ya existe otro registro para esa fecha', tipo: 'error' };
 
             if (e && tf) {
@@ -1629,6 +1656,8 @@
 
             diasHabiles = [1, 2, 3, 4, 5];
             horasDiarias = 7;
+            horasDiariasT2 = 7;
+            dobleTurno = false;
             registros.splice(0, registros.length);
             ignorarTiempoFuera = false;
 
@@ -1674,6 +1703,7 @@
                     objetivoHoras: (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras))
                         ? Math.max(0, Math.min(24, r.objetivoHoras))
                         : undefined,
+                    turno: (r.turno === 1 || r.turno === 2) ? r.turno : undefined,
                 }));
 
             normalizados.forEach(r => {
@@ -1686,7 +1716,7 @@
 
         async function exportarJSON() {
             const data = {
-                registros, diasHabiles, horasDiarias,
+                registros, diasHabiles, horasDiarias, horasDiariasT2, dobleTurno,
                 fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION,
                 hash: await S.calcularHashSHA256(registros), timestamp: Date.now()
             };
@@ -1705,7 +1735,7 @@
         async function _validarDatosImport(data) {
             if (!data || typeof data !== 'object' || Array.isArray(data)) { notify.mostrarToast('Estructura de archivo inválida', 'error'); return false; }
             if (!data.registros || !Array.isArray(data.registros)) { notify.mostrarToast('Archivo inválido o corrupto', 'error'); return false; }
-            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
+            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HORAS_DIARIAS_T2, STORAGE_KEYS.DOBLE_TURNO, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
             if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) { notify.mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
             if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
                 notify.mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
@@ -1782,6 +1812,11 @@
                             const h = typeof data.horasDiarias === 'string' ? parseFloat(data.horasDiarias) : data.horasDiarias;
                             if (Number.isFinite(h) && h >= 0 && h <= 24) horasDiarias = h;
                         }
+                        if (data.horasDiariasT2 !== undefined) {
+                            const h2 = typeof data.horasDiariasT2 === 'string' ? parseFloat(data.horasDiariasT2) : data.horasDiariasT2;
+                            if (Number.isFinite(h2) && h2 >= 0 && h2 <= 24) horasDiariasT2 = h2;
+                        }
+                        if (typeof data.dobleTurno === 'boolean') dobleTurno = data.dobleTurno;
                         const n = registrosImportados.length;
                         finalizarImportacionAndSave(`Se reemplazaron los datos por ${n === 1 ? '1 registro' : `${n} registros`}`, 'restauración local');
                     } else if (modo === 'merge') {
@@ -1805,6 +1840,8 @@
                 if (esPerfilDefault) {
                     StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, diasHabiles);
                     StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, horasDiarias);
+                    StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS_T2, horasDiariasT2);
+                    StorageHelper.setItem(STORAGE_KEYS.DOBLE_TURNO, dobleTurno, true);
                 }
                 notify.mostrarToast(mensajeExito, 'success');
                 notify.cerrarImportar();
@@ -2048,6 +2085,8 @@
         return {
             registros: () => registros, horasSemanales: () => (horasDiarias * diasHabiles.length), diasHabiles: () => diasHabiles,
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
+            horasDiariasT2: () => horasDiariasT2, setHorasDiariasT2: (v) => horasDiariasT2 = v,
+            dobleTurno: () => dobleTurno, setDobleTurno: (v) => dobleTurno = v,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
             objetivoDeRegistro, objetivoEdicionEnVivo, migrarObjetivoHorasFaltante, aplicarHorasATodosLosRegistros,
             esTipoRemoto, horasEfectivasDeRegistro,
@@ -2700,7 +2739,7 @@
             if (error) { mostrarToast(error, 'error'); return; }
 
             const id = 'perfil_' + S.generarIDSeguro();
-            perfiles[id] = { nombre, registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 };
+            perfiles[id] = { nombre, registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7, horasDiariasT2: 7, dobleTurno: false };
 
             try {
                 if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
@@ -3458,12 +3497,12 @@
             return response.json();
         }
 
-        async function subir(registros, diasHabiles, horasDiarias) {
+        async function subir(registros, diasHabiles, horasDiarias, horasDiariasT2, dobleTurno) {
             const token = getToken();
             if (!token) throw new Error('Falta el token de GitHub');
 
             const hash = await S.calcularHashSHA256(registros);
-            const data = { registros, diasHabiles, horasDiarias, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
+            const data = { registros, diasHabiles, horasDiarias, horasDiariasT2, dobleTurno, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
             const gistId = getGistId();
             const gistIdValido = esGistIdValido(gistId);
             const url = gistIdValido ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
@@ -3885,6 +3924,11 @@
                     const hd = parseFloat(data.horasDiarias);
                     if (Number.isFinite(hd) && hd >= 0 && hd <= 24) D.setHorasDiarias(hd);
                 }
+                if (data.horasDiariasT2 != null) {
+                    const hd2 = parseFloat(data.horasDiariasT2);
+                    if (Number.isFinite(hd2) && hd2 >= 0 && hd2 <= 24) D.setHorasDiariasT2(hd2);
+                }
+                if (typeof data.dobleTurno === 'boolean') D.setDobleTurno(data.dobleTurno);
                 return {
                     registrosFinales: registrosNormalizados,
                     mensajeExito: `${registrosNormalizados.length} registros restaurados desde Gist`
@@ -4065,7 +4109,9 @@
                 const nuevoId = await GistSync.subir(
                     D.registros(),
                     D.diasHabiles(),
-                    D.horasDiarias()
+                    D.horasDiarias(),
+                    D.horasDiariasT2(),
+                    D.dobleTurno()
                 );
                 const gistIdInput = document.getElementById('gist-id');
                 if (gistIdInput) gistIdInput.value = nuevoId;
@@ -4079,7 +4125,7 @@
 
         async function _validarDatosGist(data) {
             if (!data.registros || !Array.isArray(data.registros)) throw new Error('Datos inválidos en el Gist');
-            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
+            const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HORAS_DIARIAS_T2, STORAGE_KEYS.DOBLE_TURNO, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
             if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) throw new Error('Estructura del Gist sospechosa');
             if (data._hashNoCoincide) {
                 const continuar = await ModalManager.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
@@ -4117,6 +4163,12 @@
             }
             if (data.horasDiarias != null && parseFloat(data.horasDiarias) !== D.horasDiarias()) {
                 cambios.push(`horas diarias (${D.horasDiarias()}h → ${parseFloat(data.horasDiarias)}h)`);
+            }
+            if (data.horasDiariasT2 != null && parseFloat(data.horasDiariasT2) !== D.horasDiariasT2()) {
+                cambios.push(`horas diarias turno 2 (${D.horasDiariasT2()}h → ${parseFloat(data.horasDiariasT2)}h)`);
+            }
+            if (typeof data.dobleTurno === 'boolean' && data.dobleTurno !== D.dobleTurno()) {
+                cambios.push(`doble turno (${D.dobleTurno() ? 'activado' : 'desactivado'} → ${data.dobleTurno ? 'activado' : 'desactivado'})`);
             }
             return cambios;
         }
@@ -6018,6 +6070,13 @@
         let _timerAutoVista = null;
         let _suprimirAnimacionInterna = false;
 
+        function _regHoyVisible() {
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const registrosHoy = D.registros().filter(r => r.fecha === hoy);
+            if (!D.dobleTurno()) return registrosHoy[0] ?? null;
+            return registrosHoy.find(r => r.entrada && !r.salida) ?? registrosHoy[registrosHoy.length - 1] ?? null;
+        }
+
         function setProgressBarColor(progressEl, status, headerColor) {
             if (!progressEl) return;
             progressEl.className = 'progress-fill';
@@ -6203,7 +6262,11 @@
                 if (r.fecha > limite) limite = r.fecha;
             }
 
-            const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
+            const registrosMap = new Map();
+            for (const r of registrosSemana) {
+                if (!registrosMap.has(r.fecha)) registrosMap.set(r.fecha, []);
+                registrosMap.get(r.fecha).push(r);
+            }
             const diasHabilesObj = D.diasHabiles();
 
             const EPS = 1e-6;
@@ -6211,15 +6274,16 @@
             let pool = 0;
 
             for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
-                const r = registrosMap.get(isoDate);
-                const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const esRemoto = esEspecial && D.esTipoRemoto(r);
+                const regsDia = registrosMap.get(isoDate) || [];
                 let delta = 0;
-                if (esRemoto) {
-                    delta = 0;
-                } else if (r && !esEspecial && r.salida) {
-                    const objetivo = _esFechaHabil(isoDate, diasHabilesObj) ? D.objetivoDeRegistro(r) : 0;
-                    delta = r.total - objetivo;
+                for (const r of regsDia) {
+                    const esEspecial = TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
+                    const esRemoto = esEspecial && D.esTipoRemoto(r);
+                    if (esRemoto) continue;
+                    if (!esEspecial && r.salida) {
+                        const objetivo = _esFechaHabil(isoDate, diasHabilesObj) ? D.objetivoDeRegistro(r) : 0;
+                        delta += r.total - objetivo;
+                    }
                 }
 
                 if (delta > EPS) pool += delta;
@@ -6256,12 +6320,18 @@
             const { inicio: ini, fin: fn } = TimeUtils.obtenerSemanaRangoActual();
             const registros = D.registros();
             const horasDiarias = D.horasDiarias();
+            const horasDiariasT2 = D.horasDiariasT2();
+            const dobleTurnoActivo = D.dobleTurno();
             const horasSemanales = D.horasSemanales();
             const diasHabiles = D.diasHabiles();
             const { ayerStr: ayer, regAyer, ayerAbierto } = D.detectarAyerAbierto(hoy, registros);
 
             const { esDiaHabil, quedanDiasFuturos } = _estadoDiasHabiles(diasHabiles);
-            const regHoy = registros.find(r => r.fecha === hoy) ?? null;
+            const registrosHoy = registros.filter(r => r.fecha === hoy).sort((a, b) => (a.turno || 1) - (b.turno || 1));
+            const regHoy = dobleTurnoActivo
+                ? (registrosHoy.find(r => r.entrada && !r.salida) ?? registrosHoy[registrosHoy.length - 1] ?? null)
+                : (registrosHoy[0] ?? null);
+            const ambosTurnosCompletos = dobleTurnoActivo && registrosHoy.length >= 2 && registrosHoy.every(r => r.entrada && r.salida);
             const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
             const minutosBreakActivo = _minutosBreakActivo();
             const bufferSemanalBase = D.calcularBufferPeriodo(ini, hoy, false);
@@ -6269,41 +6339,55 @@
 
             const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
 
-            let tiempoHoy = 0;
+            const totalDiaAmbosTurnos = ambosTurnosCompletos
+                ? registrosHoy.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0)
+                : null;
+
+            let tiempoTurnoActivo = 0;
             const regActivo = (ayerAbierto && !regHoy?.entrada) ? regAyer
                 : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
             if (regActivo) {
                 const t = D.calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
-                tiempoHoy = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
+                tiempoTurnoActivo = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
             } else if (!tipoEspecialHoy && regHoy?.salida) {
-                tiempoHoy = regHoy.total;
+                tiempoTurnoActivo = regHoy.total;
             }
+            const tiempoHoy = ambosTurnosCompletos ? totalDiaAmbosTurnos : tiempoTurnoActivo;
 
             const fechaLimite = hoy < fn ? hoy : fn;
             const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
             const totalSemana = registrosSemana.reduce((sum, r) => {
-                if (regActivo && r.fecha === regActivo.fecha) return sum + tiempoHoy;
+                if (regActivo && r.id === regActivo.id) return sum + tiempoTurnoActivo;
                 return sum + D.horasEfectivasDeRegistro(r);
             }, 0);
 
-            const registrosSemanaCompletaPorFecha = new Map(
-                registros.filter(r => r.fecha >= ini && r.fecha <= fn).map(r => [r.fecha, r])
-            );
+            const registrosSemanaCompletaPorFecha = new Map();
+            for (const r of registros.filter(r => r.fecha >= ini && r.fecha <= fn)) {
+                if (!registrosSemanaCompletaPorFecha.has(r.fecha)) registrosSemanaCompletaPorFecha.set(r.fecha, []);
+                registrosSemanaCompletaPorFecha.get(r.fecha).push(r);
+            }
             let objetivoSemana = 0;
             for (const isoDate of TimeUtils.generarRangoFechas(ini, fn)) {
                 if (!diasHabiles.includes(TimeUtils.parsearFechaLocal(isoDate).getDay())) continue;
-                const rDia = registrosSemanaCompletaPorFecha.get(isoDate);
-                if (!rDia) { objetivoSemana += horasDiarias; continue; }
-                const tipoDia = TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida);
-                if (tipoDia && tipoDia.id !== 'remoto') continue;
-                objetivoSemana += D.objetivoDeRegistro(rDia);
+                const regsDia = registrosSemanaCompletaPorFecha.get(isoDate) || [];
+                if (regsDia.length === 0) {
+                    objetivoSemana += dobleTurnoActivo ? (horasDiarias + horasDiariasT2) : horasDiarias;
+                    continue;
+                }
+                const turnosPresentes = new Set(regsDia.map(r => r.turno || 1));
+                for (const r of regsDia) {
+                    const tipoDia = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                    if (tipoDia && tipoDia.id !== 'remoto') continue;
+                    objetivoSemana += D.objetivoDeRegistro(r);
+                }
+                if (dobleTurnoActivo && !turnosPresentes.has(2)) objetivoSemana += horasDiariasT2;
             }
             const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 
             return {
                 hoy, ini, fn,
-                registros, regHoy,
-                horasDiarias, horasSemanales,
+                registros, regHoy, registrosHoy, dobleTurnoActivo, ambosTurnosCompletos, totalDiaAmbosTurnos,
+                horasDiarias, horasDiariasT2, horasSemanales,
                 diasHabiles, esDiaHabil,
                 semanaAbierta, bufferSemanal, bufferSemanalBase,
                 totalSemana, objetivoSemana,
@@ -6490,8 +6574,26 @@
         }
 
         function derivarVistaHoy(est) {
-            const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanalBase, diasHabiles } = est;
-            const objetivoDiario = regHoy ? D.objetivoDeRegistro(regHoy) : horasDiarias;
+            const { regHoy, registrosHoy, dobleTurnoActivo, ambosTurnosCompletos, tiempoHoy, horasDiarias, horasDiariasT2, esDiaHabil, tipoEspecialHoy, bufferSemanalBase, diasHabiles } = est;
+            const turnoVisible = dobleTurnoActivo ? (regHoy?.turno || (registrosHoy?.length || 0) + 1) : null;
+            const objetivoDiario = ambosTurnosCompletos
+                ? registrosHoy.reduce((s, r) => s + D.objetivoDeRegistro(r), 0)
+                : regHoy ? D.objetivoDeRegistro(regHoy) : (dobleTurnoActivo && turnoVisible === 2 ? horasDiariasT2 : horasDiarias);
+            const sufijoTurno = dobleTurnoActivo ? (ambosTurnosCompletos ? ' · Turnos 1 y 2' : (turnoVisible ? ` · Turno ${turnoVisible}` : '')) : '';
+
+            if (dobleTurnoActivo && !ambosTurnosCompletos && registrosHoy.length === 1 && registrosHoy[0].salida) {
+                return {
+                    titulo: `${_tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy()))} · Turno 2`,
+                    stats: esDiaHabil ? '🎒' : '🌞',
+                    mensaje: esDiaHabil
+                        ? (horasDiariasT2 === 0 ? '' : `Turno 1: ${TimeUtils.horasATexto(registrosHoy[0].total)} · Esperando Turno 2...`)
+                        : (horasDiariasT2 === 0 ? '' : 'Día libre'),
+                    mostrarMensaje: horasDiariasT2 > 0,
+                    colorBarra: 'blue', anchoBarra: 0,
+                    colorBorde: 'transparent', estadoFondo: 'esperando',
+                    hint: 'Tocá para ver la Semana', hintEsHTML: false,
+                };
+            }
 
             if (!regHoy || !regHoy.entrada) {
 
@@ -6518,7 +6620,7 @@
                 }
 
                 return {
-                    titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
+                    titulo: `${_tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy()))}${sufijoTurno}`,
                     stats: esDiaHabil ? '🎒' : '🌞',
                     mensaje: esDiaHabil
                         ? (horasDiarias === 0 ? '' : 'Esperando registro...')
@@ -6591,7 +6693,7 @@
             const { hint, hintEsHTML } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
 
             return _conAvisoAyer({
-                titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
+                titulo: `${_tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy()))}${sufijoTurno}`,
                 stats: TimeUtils.horasATexto(tiempoHoy),
                 mensaje, mostrarMensaje,
                 colorBarra, anchoBarra: prog,
@@ -6929,7 +7031,7 @@
             if (modoLoteActivo) { btn.disabled = true; return; }
 
             const hoy = TimeUtils.obtenerFechaHoy();
-            const registroHoy = D.registros().find(r => r.fecha === hoy);
+            const registroHoy = _regHoyVisible();
             const storageKey = _breakStorageKey();
             const isRunning = StorageHelper.getItem(storageKey) !== null;
             const icon = btn.querySelector('use');
@@ -7010,7 +7112,7 @@
         async function toggleTimerBreakMain() {
             const storageKey = _breakStorageKey();
             const storedStart = StorageHelper.getItem(storageKey);
-            const registroHoy = D.registros().find(r => r.fecha === TimeUtils.obtenerFechaHoy());
+            const registroHoy = _regHoyVisible();
 
             if (!storedStart && !registroHoy) { mostrarToast('Debés crear un registro para hoy primero', 'warning'); return; }
 
@@ -7495,6 +7597,16 @@
                 onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); }
             });
 
+        const { toggle: toggleDobleTurno, actualizarEstado: actualizarEstadoBotonDobleTurno } =
+            _crearToggleConfig({
+                getVal: () => D.dobleTurno(),
+                setVal: (v) => { D.setDobleTurno(v); if (window.PerfilManager) PerfilManager.guardarDatosPerfilActual(); },
+                btnId: 'btn-toggle-doble-turno',
+                mensajeOn: 'Doble turno activado: se pueden registrar 2 fichajes por día',
+                mensajeOff: 'Doble turno desactivado',
+                onAfterToggle: () => { actualizarUI(); actualizarVistaHorasDiariasConfig(); }
+            });
+
         function actualizarEstadoBotonAplicarHoras() {
             const modoGlobal = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
             _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
@@ -7755,6 +7867,8 @@
 
             UILogic.actualizarFeedbackConfig();
             actualizarEstadoBotonIgnorarTF();
+            actualizarEstadoBotonDobleTurno();
+            UILogic.actualizarVistaHorasDiariasConfig();
             UILogic.actualizarEstadoBotonAplicarHoras();
             const lbl = $('hint-fondo-label');
             if (lbl) lbl.textContent = _getLabelFondo(UILogic.getFondoCard());
@@ -7929,6 +8043,8 @@
             const perfilActual = PerfilManager.obtenerDatosPerfil();
             D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
             D.setHorasDiarias(perfilActual.horasDiarias !== undefined ? perfilActual.horasDiarias : 7);
+            D.setHorasDiariasT2(perfilActual.horasDiariasT2 !== undefined ? perfilActual.horasDiariasT2 : 7);
+            D.setDobleTurno(perfilActual.dobleTurno === true);
             D.registros().splice(0, D.registros().length, ...(perfilActual.registros || []));
 
             const historialCargado = HistoryManager.loadFromLocalStorage();
@@ -8156,11 +8272,12 @@
             const checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
             const seleccionados = checkboxes.length;
             const horas = parseFloat($('config-horas-diarias').dataset.valor) || 0;
-            const total = seleccionados * horas;
+            const horasT2 = D.dobleTurno() ? (parseFloat($('config-horas-diarias-t2')?.dataset.valor) || 0) : 0;
+            const total = seleccionados * (horas + horasT2);
 
             const el = $('config-total-feedback');
             if (el) {
-                if (horas === 0) el.textContent = `(Registro libre sin objetivos)`;
+                if (horas === 0 && horasT2 === 0) el.textContent = `(Registro libre sin objetivos)`;
                 else el.textContent = `(Total semanal: ${TimeUtils.horasATexto(total, 'short')})`;
             }
 
@@ -8200,6 +8317,37 @@
             const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
             if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
             D.guardarYActualizar();
+        }
+
+        const _pressHoldHorasT2 = _crearPressHold(incremento => cambiarHorasDiariasT2(incremento));
+        function iniciarCambioHorasT2(incremento) { _pressHoldHorasT2.iniciar(incremento); }
+        function detenerCambioHorasT2() { _pressHoldHorasT2.detener(); }
+
+        function cambiarHorasDiariasT2(incremento) {
+            const nuevoValor = _ajustarStepperHoras($('config-horas-diarias-t2'), incremento);
+            if (isNaN(nuevoValor)) return;
+
+            actualizarFeedbackConfig();
+            D.setHorasDiariasT2(nuevoValor);
+
+            const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
+            if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS_T2, nuevoValor);
+            D.guardarYActualizar();
+        }
+
+        function actualizarVistaHorasDiariasConfig() {
+            const activo = D.dobleTurno();
+            const grupoT2 = $('grupo-horas-diarias-t2');
+            const labelT1 = $('label-horas-diarias-t1');
+            if (grupoT2) grupoT2.style.display = activo ? '' : 'none';
+            if (labelT1) labelT1.textContent = activo ? 'Horas diarias · Turno 1' : 'Horas diarias globales';
+            if (activo) {
+                const elT2 = $('config-horas-diarias-t2');
+                if (elT2) {
+                    elT2.dataset.valor = D.horasDiariasT2();
+                    elT2.textContent = TimeUtils.horasATexto(D.horasDiariasT2(), 'short');
+                }
+            }
         }
 
         const _pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
@@ -8243,7 +8391,9 @@
             toggleCamposRangoExport, toggleCredito, toggleFondoCard, toggleFormulario, toggleGistBackup, toggleGistMerge,
             toggleHistorico, toggleHoverPopupCalendario, toggleIgnorarTiempoFuera, toggleLogicaCubierto, toggleModoLote, toggleObjetivoPorRegistro,
             togglePeriodoStats, togglePersistirTarjetas, toggleSeccionReporte, toggleStats, toggleTimerBreakMain, toggleVerToken,
-            toggleVisibilidadCard, toggleVistaHistorico, vistaActual: D.vistaActual
+            toggleVisibilidadCard, toggleVistaHistorico, vistaActual: D.vistaActual,
+            toggleDobleTurno, actualizarEstadoBotonDobleTurno, actualizarVistaHorasDiariasConfig,
+            iniciarCambioHorasT2, detenerCambioHorasT2, cambiarHorasDiariasT2
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);
@@ -8513,6 +8663,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnHorasInc) addHoldEvents(btnHorasInc, () => UILogic.iniciarCambioHoras(0.5), () => UILogic.detenerCambio());
         if (btnHorasDec) addHoldEvents(btnHorasDec, () => UILogic.iniciarCambioHoras(-0.5), () => UILogic.detenerCambio());
     }
+
+    const inputHorasT2 = $('config-horas-diarias-t2');
+    if (inputHorasT2) {
+        const btnHorasT2Inc = $('btn-horas-diarias-t2-inc');
+        const btnHorasT2Dec = $('btn-horas-diarias-t2-dec');
+        if (btnHorasT2Inc) addHoldEvents(btnHorasT2Inc, () => UILogic.iniciarCambioHorasT2(0.5), () => UILogic.detenerCambioHorasT2());
+        if (btnHorasT2Dec) addHoldEvents(btnHorasT2Dec, () => UILogic.iniciarCambioHorasT2(-0.5), () => UILogic.detenerCambioHorasT2());
+    }
+    $('btn-toggle-doble-turno')?.addEventListener('click', () => UILogic.toggleDobleTurno());
 
     const btnObjetivoInc = $('btn-edit-objetivo-inc');
     const btnObjetivoDec = $('btn-edit-objetivo-dec');

@@ -2107,36 +2107,32 @@
             if (!el || el.dataset.swipeInit) return;
             el.dataset.swipeInit = '1';
             let _x = null, _y = null;
-            let _direccionBloqueada = null; // Nos dirá si el gesto es 'x' (swipe) o 'y' (scroll)
+            let _direccionBloqueada = null;
 
             el.addEventListener('touchstart', e => {
                 if (e.touches.length !== 1) return;
                 if (ignoreInputs && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
                 _x = e.touches[0].clientX;
                 _y = e.touches[0].clientY;
-                _direccionBloqueada = null; // Reiniciamos el bloqueo en cada toque
+                _direccionBloqueada = null;
             }, { passive: true });
 
-            // NUEVO: Evaluamos el movimiento en tiempo real
             el.addEventListener('touchmove', e => {
                 if (_x === null || _y === null) return;
                 
                 const dx = Math.abs(e.touches[0].clientX - _x);
                 const dy = Math.abs(e.touches[0].clientY - _y);
 
-                // Si aún no decidimos y el dedo ya se movió 5px, bloqueamos una intención
                 if (!_direccionBloqueada && (dx > 5 || dy > 5)) {
                     _direccionBloqueada = dx > dy ? 'x' : 'y';
                 }
 
-                // Si la intención es un swipe lateral, DETENEMOS el scroll del navegador
                 if (_direccionBloqueada === 'x' && e.cancelable) {
                     e.preventDefault();
                 }
-            }, { passive: false }); // passive debe ser false para poder usar preventDefault
+            }, { passive: false });
 
             el.addEventListener('touchend', e => {
-                // Si la intención era hacer scroll ('y'), abortamos el swipe
                 if (_x === null || _direccionBloqueada === 'y') {
                     _x = null; _y = null;
                     return;
@@ -3774,21 +3770,27 @@
             btnRespaldar.parentNode.replaceChild(newRespaldar, btnRespaldar);
             btnRestaurar.parentNode.replaceChild(newRestaurar, btnRestaurar);
 
+            const autoCierre = () => {
+                if (window.UILogic && window.UILogic.iniciarTimerAutoCierreBotones) {
+                    window.UILogic.iniciarTimerAutoCierreBotones();
+                }
+            };
+
             if (tieneGist) {
                 newRespaldar.title = 'Subir a Gist';
-                newRespaldar.addEventListener('click', () => gistSubir());
+                newRespaldar.addEventListener('click', () => { autoCierre(); gistSubir(); });
                 newRespaldar.querySelector('use').setAttribute('href', '#icon-cloud-upload');
 
                 newRestaurar.title = 'Bajar de Gist';
-                newRestaurar.addEventListener('click', () => gistBajar());
+                newRestaurar.addEventListener('click', () => { autoCierre(); gistBajar(); });
                 newRestaurar.querySelector('use').setAttribute('href', '#icon-cloud-download');
             } else {
                 newRespaldar.title = 'Respaldar';
-                newRespaldar.addEventListener('click', () => mostrarExportar(true));
+                newRespaldar.addEventListener('click', () => { autoCierre(); mostrarExportar(true); });
                 newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
 
                 newRestaurar.title = 'Restaurar';
-                newRestaurar.addEventListener('click', () => mostrarImportar(true));
+                newRestaurar.addEventListener('click', () => { autoCierre(); mostrarImportar(true); });
                 newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
             }
         }

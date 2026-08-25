@@ -2251,7 +2251,6 @@
             const rect = el.getBoundingClientRect();
             const clon = el.cloneNode(true);
             clon.classList.add('mutacion-saliente');
-            const zIndex = document.body.classList.contains('modal-open') ? '50' : '9999';
 
             Object.assign(clon.style, {
                 position: 'fixed',
@@ -2261,7 +2260,7 @@
                 height: rect.height + 'px',
                 margin: '0',
                 pointerEvents: 'none',
-                zIndex
+                zIndex: '80'
             });
 
             const primerHijo = el.firstElementChild;
@@ -8195,39 +8194,26 @@
         }
 
         return {
-            init, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, pegarHoraActual, alternarTema, alternarVista, cerrarConfig, abrirSelectorMesesCalendario,
-            abrirModalAyuda, cerrarModalAyuda,
-            cerrarEdicion, mostrarImportar, cerrarImportar, actualizarUI, mostrarToast,
-            resetearBoton, toggleFormulario, aplicarOrdenCards, iniciarDragOrdenCards,
-            limpiarCampo, mostrarFiltros, irHoyCalendario, obtenerOrdenCards,
-            cambiarMesStats, abrirModalReporteSecciones, cerrarModalReporteSecciones,
-            toggleSeccionReporte, confirmarGenerarReporte,
-            toggleHistorico, toggleStats, actualizarEstadoBotonHoverPopup,
-            toggleTimerBreakMain, toggleBloqueoEdicion,
-            actualizarFeedbackConfig, abrirSelectorPerfiles,
-            toggleLogicaCubierto, actualizarEstadoBotonLogicaCubierto,
-            toggleObjetivoPorRegistro, actualizarEstadoBotonObjetivoPorRegistro,
-            aplicarHorasConfiguradasATodos, actualizarEstadoBotonAplicarHoras,
-            iniciarCambioObjetivoEdicion, detenerCambioObjetivoEdicion,
-            cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil, guardarEdicionPerfil, toggleModoLote, toggleHoverPopupCalendario,
-            eliminarPerfilDesdeEditor, crearPerfilDesdeSelector, ejecutarAccionRegistro,
-            iniciarCambioHoras, detenerCambio, mostrarconfig, mostrarConfigOnboarding, alternarFechaActual, gistSubir, gistBajar,
-            toggleCredito, toggleBloqueoEdicionGrupo, cerrarEdicionGrupo, poblarSelectoresTipos,
-            mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport, aplicarFeedbackCampos,
-            toggleIgnorarTiempoFuera, actualizarEstadoBotonIgnorarTF,
-            togglePeriodoStats, cambiarAnioStats, cambiarSemanaStats, toggleFondoCard, setFondoCard, toggleVisibilidadCard, aplicarVisibilidadCards,
-            togglePersistirTarjetas, toggleVistaHistorico,
-            navegarCalendario, actualizarEstadoBotonesGist,
-            abrirModalGist, cerrarModalGist, guardarConfigGist, toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
-            toggleGistBackup, toggleGistMerge, iniciarCambioLimite, detenerCambioLimite,
-            _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
-            _popupCalendarioDiaSinRegistro,
-            _esFechaHabil, _cubiertoPorSaldo, agruparRegistrosConsecutivos, _irAFicharConFecha,
-            _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _nombreMesCapitalizado, _renderSelectorStats,
-            setModoEstadisticas, setTiempoExpansionBotones, getFondoCard,
-            actualizarListaRegistros, getVistaHistoricoCalendario, _cerrarSelectorMeses, _renderizarCalendario,
-            _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar, _forzarVista, vistaActual: D.vistaActual,
-            actualizarBotonLote,
+            _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _cerrarPopupCalendarioHover, _cerrarSelectorMeses, _cicloStatsActivo, _cubiertoPorSaldo,
+            _esFechaHabil, _forzarVista, _iniciarCicloStats, _irAFicharConFecha, _nombreMesCapitalizado, _onclickCalendarioDia,
+            _popupCalendarioDiaSinRegistro, _popupCalendarioHover, _prepararMostrarFaseAlRenderizar, _renderSelectorStats, _renderizarCalendario, abrirEditorPerfil,
+            abrirGistEnBrowser, abrirModalAyuda, abrirModalGist, abrirModalReporteSecciones, abrirSelectorMesesCalendario, abrirSelectorPerfiles,
+            actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
+            actualizarEstadoBotonesGist, actualizarFeedbackConfig, actualizarListaRegistros, actualizarUI, agruparRegistrosConsecutivos, alternarFechaActual,
+            alternarTema, alternarVista, aplicarFeedbackCampos, aplicarHorasConfiguradasATodos, aplicarOrdenCards, aplicarVisibilidadCards,
+            cambiarAnioStats, cambiarMesStats, cambiarSemanaStats, cerrarConfig, cerrarEdicion, cerrarEdicionGrupo,
+            cerrarEditorPerfil, cerrarExportar, cerrarImportar, cerrarModalAyuda, cerrarModalGist, cerrarModalReporteSecciones,
+            cerrarSelectorPerfiles, confirmarGenerarReporte, crearPerfilDesdeSelector, detenerCambio, detenerCambioLimite, detenerCambioObjetivoEdicion,
+            ejecutarAccionRegistro, ejecutarExportacion, eliminarPerfilDesdeEditor, getFondoCard, getVistaHistoricoCalendario, gistBajar,
+            gistMergeAplicar, gistMergeCancelar, gistSubir, guardarConfigGist, guardarEdicionPerfil, iniciarCambioHoras,
+            iniciarCambioLimite, iniciarCambioObjetivoEdicion, iniciarDragOrdenCards, iniciarTimerAutoCierreBotones, init, irHoyCalendario,
+            limpiarCampo, mostrarConfigOnboarding, mostrarExportar, mostrarFiltros, mostrarImportar, mostrarToast,
+            mostrarconfig, navegarCalendario, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, obtenerOrdenCards, pegarHoraActual, poblarSelectoresTipos,
+            resetearBoton, setFondoCard, setModoEstadisticas, setTiempoExpansionBotones, toggleBloqueoEdicion, toggleBloqueoEdicionGrupo,
+            toggleCamposRangoExport, toggleCredito, toggleFondoCard, toggleFormulario, toggleGistBackup, toggleGistMerge,
+            toggleHistorico, toggleHoverPopupCalendario, toggleIgnorarTiempoFuera, toggleLogicaCubierto, toggleModoLote, toggleObjetivoPorRegistro,
+            togglePeriodoStats, togglePersistirTarjetas, toggleSeccionReporte, toggleStats, toggleTimerBreakMain, toggleVerToken,
+            toggleVisibilidadCard, toggleVistaHistorico, vistaActual: D.vistaActual
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);

@@ -6687,7 +6687,7 @@
                 : regHoy ? D.objetivoDeRegistro(regHoy) : (dobleTurnoActivo && turnoVisible === 2 ? horasDiariasT2 : horasDiarias);
             const sufijoTurno = dobleTurnoActivo ? (ambosTurnosCompletos ? ' · Turnos 1 y 2' : (turnoVisible ? ` · Turno ${turnoVisible}` : '')) : '';
 
-            if (dobleTurnoActivo && !ambosTurnosCompletos && registrosHoy.length === 1 && registrosHoy[0].salida) {
+            if (dobleTurnoActivo && !ambosTurnosCompletos && !tipoEspecialHoy && registrosHoy.length === 1 && registrosHoy[0].salida) {
                 return {
                     titulo: `${_tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy()))} · Turno 2`,
                     stats: esDiaHabil ? '🎒' : '🌞',

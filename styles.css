@@ -764,10 +764,20 @@ button:disabled {
     letter-spacing: 0.5px;
 }
 
+.registro-fecha-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xs);
+}
+
 .registro-fecha {
     font-weight: var(--fw-semibold);
-    margin-bottom: var(--space-xs);
     color: var(--text-main);
+}
+
+.registro-turno-badge {
+    flex-shrink: 0;
 }
 
 .registro-horas {
@@ -2209,7 +2219,7 @@ button.campo-flash-color {
         column-gap: 0.75rem;
     }
 
-    .registro-fecha {
+    .registro-fecha-row {
         grid-column: 1;
         grid-row: 1;
     }

@@ -4487,6 +4487,17 @@
             fechaEl.className = 'registro-fecha';
             const etiqueta = tipoEspecial ? ` ${tipoEspecial.emoji} (${tipoEspecial.label})` : '';
             fechaEl.textContent = `${TimeUtils.obtenerNombreDia(r.fecha)} ${r.fecha.substring(8)}${etiqueta}`;
+
+            const fechaRow = document.createElement('div');
+            fechaRow.className = 'registro-fecha-row';
+            fechaRow.appendChild(fechaEl);
+            if (r.turno === 1 || r.turno === 2) {
+                const turnoEl = document.createElement('div');
+                turnoEl.className = 'registro-total purple-text registro-turno-badge';
+                turnoEl.textContent = `Turno ${r.turno}`;
+                fechaRow.appendChild(turnoEl);
+            }
+
             const tfText = (() => {
                 if (!r.tiempoFuera || r.tiempoFuera === '' || r.tiempoFuera === '00:00') return '';
                 const tfStr = TimeUtils.horasATexto(TimeUtils.horaAMinutos(r.tiempoFuera) / 60, 'short');
@@ -4536,12 +4547,6 @@
 
             const badgesEl = document.createElement('div');
             badgesEl.className = 'registro-badges';
-            if (r.turno === 1 || r.turno === 2) {
-                const turnoEl = document.createElement('div');
-                turnoEl.className = 'registro-total purple-text';
-                turnoEl.textContent = `Turno ${r.turno}`;
-                badgesEl.appendChild(turnoEl);
-            }
             badgesEl.appendChild(totalEl);
             if (esCubierto) {
                 const cubiertoEl = document.createElement('div');
@@ -4550,7 +4555,7 @@
                 badgesEl.appendChild(cubiertoEl);
             }
 
-            info.appendChild(fechaEl);
+            info.appendChild(fechaRow);
             info.appendChild(horasEl);
             info.appendChild(badgesEl);
             item.appendChild(info);
@@ -5236,27 +5241,27 @@
         }
 
 
-        function _calcularRegularidadRango(registrosValidos, regularidadPorMes) {
-            if (regularidadPorMes) {
-                const meses = [...new Set(registrosValidos.map(r => r.fecha.substring(0, 7)))];
-                const desE = [], desJ = [];
+        function _desviacionCampo(regs, porMes, extractor) {
+            if (porMes) {
+                const meses = [...new Set(regs.map(r => r.fecha.substring(0, 7)))];
+                const des = [];
                 meses.forEach(mes => {
-                    const regs = registrosValidos.filter(r => r.fecha.startsWith(mes));
-                    if (regs.length < 2) return;
-                    const dE = desviacionEstandar(regs.map(r => TimeUtils.horaAMinutos(r.entrada)));
-                    const dJ = desviacionEstandar(regs.map(r => Math.round(r.total * 60)));
-                    if (dE !== null) desE.push(dE);
-                    if (dJ !== null) desJ.push(dJ);
+                    const regsMes = regs.filter(r => r.fecha.startsWith(mes));
+                    if (regsMes.length < 2) return;
+                    const d = desviacionEstandar(regsMes.map(extractor));
+                    if (d !== null) des.push(d);
                 });
-                const avg = arr => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
-                return {
-                    regEntrada: calcularRegularidad(avg(desE)),
-                    regJornada: calcularRegularidad(avg(desJ))
-                };
+                return des.length > 0 ? des.reduce((a, b) => a + b, 0) / des.length : null;
             }
+            return desviacionEstandar(regs.map(extractor));
+        }
+
+        function _calcularRegularidadRango(registrosValidos, regularidadPorMes) {
+            const dEntrada = _desviacionCampo(registrosValidos, regularidadPorMes, r => TimeUtils.horaAMinutos(r.entrada));
+            const dJornada = _desviacionCampo(registrosValidos, regularidadPorMes, r => Math.round(r.total * 60));
             return {
-                regEntrada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)))),
-                regJornada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => Math.round(r.total * 60))))
+                regEntrada: calcularRegularidad(dEntrada),
+                regJornada: calcularRegularidad(dJornada)
             };
         }
 
@@ -5297,14 +5302,39 @@
             if (registrosValidos.length === 0) return vacios;
 
             const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
-            const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
-            const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
 
-            const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
+            const dobleTurnoActivo = D.dobleTurno();
+            const gruposPorTurno = dobleTurnoActivo ? _agruparPorTurno(registrosValidos) : null;
+            const hayMultiplesTurnos = !!(gruposPorTurno && gruposPorTurno.size > 1);
+
+            const entradaPromedioTxt = hayMultiplesTurnos
+                ? _formatearPorTurno(gruposPorTurno, regs => TimeUtils.minutosAHora(avgMin(regs.map(r => TimeUtils.horaAMinutos(r.entrada)))))
+                : TimeUtils.minutosAHora(avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada))));
+
+            const salidaPromedioTxt = hayMultiplesTurnos
+                ? _formatearPorTurno(gruposPorTurno, regs => TimeUtils.minutosAHora(avgMin(regs.map(r => TimeUtils.horaAMinutos(r.salida)))))
+                : TimeUtils.minutosAHora(avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida))));
+
+            const horasPorDia = new Map();
+            registrosValidos.forEach(r => {
+                horasPorDia.set(r.fecha, (horasPorDia.get(r.fecha) || 0) + r.total);
+            });
+            const diasTrabajados = horasPorDia.size;
+
             const totalHoras = _sumarHorasEfectivas(registrosRango);
-            const promDiario = totalHorasTrabajadas / registrosValidos.length;
+            const promDiario = [...horasPorDia.values()].reduce((s, v) => s + v, 0) / diasTrabajados;
 
             const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
+            const regEntradaTxt = hayMultiplesTurnos
+                ? _formatearPorTurno(gruposPorTurno, regs => calcularRegularidad(_desviacionCampo(regs, regularidadPorMes, r => TimeUtils.horaAMinutos(r.entrada))), ' · ')
+                : regEntrada;
+            const regJornadaTxt = dobleTurnoActivo
+                ? calcularRegularidad(_desviacionCampo(
+                    [...horasPorDia.entries()].map(([fecha, horas]) => ({ fecha, total: horas })),
+                    regularidadPorMes,
+                    r => Math.round(r.total * 60)
+                ))
+                : regJornada;
 
             const horasDiariasObj = D.horasDiarias();
             const bufferPeriodo = (horasDiariasObj > 0 && opciones.desde && opciones.hasta)
@@ -5312,15 +5342,15 @@
                 : null;
 
             return {
-                entradaPromedio: TimeUtils.minutosAHora(promedioEntrada),
-                salidaPromedio: TimeUtils.minutosAHora(promedioSalida),
-                diasTrabajados: registrosValidos.length,
+                entradaPromedio: entradaPromedioTxt,
+                salidaPromedio: salidaPromedioTxt,
+                diasTrabajados,
                 promedioDiario: TimeUtils.horasATexto(promDiario, 'short'),
                 tiempoFueraTotal: TimeUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short'),
                 tiempoTotal: TimeUtils.horasATexto(totalHoras, 'short'),
                 ...conteosPorTipo, compensaciones,
-                regularidadEntrada: regEntrada,
-                regularidadJornada: regJornada,
+                regularidadEntrada: regEntradaTxt,
+                regularidadJornada: regJornadaTxt,
                 bufferPeriodo
             };
         }
@@ -5554,6 +5584,21 @@
             const meses = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
             const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
             _poblarSelect('select-mes-stats', meses, UILogic._nombreMesCapitalizado, mesActual, actualizarEstadisticas, UILogic._agruparMesesPorAnio);
+        }
+
+        function _agruparPorTurno(regs) {
+            const grupos = new Map();
+            regs.forEach(r => {
+                const t = r.turno || 1;
+                if (!grupos.has(t)) grupos.set(t, []);
+                grupos.get(t).push(r);
+            });
+            return grupos;
+        }
+
+        function _formatearPorTurno(grupos, formatearFn, separador = ' | ') {
+            const turnos = [...grupos.keys()].sort((a, b) => a - b);
+            return turnos.map(t => `T${t}: ${formatearFn(grupos.get(t))}`).join(separador);
         }
 
         function _sumarHorasEfectivas(regs) {

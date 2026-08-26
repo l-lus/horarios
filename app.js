@@ -1911,6 +1911,7 @@
                 notify.mostrarToast(mensajeExito, 'success');
                 notify.cerrarImportar();
                 $('file-import').value = '';
+                UILogic.refrescarConfigSiVisible?.();
             }
         }
 
@@ -4117,6 +4118,7 @@
 
             await D.guardarYActualizar();
             UILogic.actualizarUI();
+            UILogic.refrescarConfigSiVisible?.();
 
             if (!modoAutomatico) _gistMergeCerrarOVolver();
             const lastSyncEl = document.getElementById('gist-ultima-sync');
@@ -8165,6 +8167,16 @@
             ModalManager.alternar('modal-selector-perfiles', 'modal-config', null, _precargarCamposConfig);
         }
 
+        // Refresca los campos de "Ajustes" (horas, días, doble turno) si ese modal
+        // está visible en este momento. Se usa tras una restauración (local o Gist)
+        // que puede haber ocurrido con "modal-config" abierto de fondo (p.ej. durante
+        // el onboarding), para que lo que se ve refleje los datos recién importados.
+        function refrescarConfigSiVisible() {
+            if (document.getElementById('modal-config')?.classList.contains('show')) {
+                _precargarCamposConfig();
+            }
+        }
+
         function mostrarConfigOnboarding() {
             document.body.classList.add('config-onboarding');
             ModalManager.abrir('modal-config', _precargarCamposConfig);
@@ -8680,7 +8692,8 @@
             togglePeriodoStats, togglePersistirTarjetas, toggleSeccionReporte, toggleStats, toggleTimerBreakMain, toggleVerToken,
             toggleVisibilidadCard, toggleVistaHistorico, vistaActual: D.vistaActual,
             toggleDobleTurno, actualizarEstadoBotonDobleTurno, actualizarVistaHorasDiariasConfig,
-            iniciarCambioHorasT2, detenerCambioHorasT2, cambiarHorasDiariasT2
+            iniciarCambioHorasT2, detenerCambioHorasT2, cambiarHorasDiariasT2,
+            refrescarConfigSiVisible
         };
 
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);

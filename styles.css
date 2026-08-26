@@ -1278,20 +1278,21 @@ button:disabled {
     gap: 0.4rem;
 }
 
-.cal-popup-multi {
-    position: fixed;
-    z-index: 90;
+.cal-popup--doble {
+    max-width: 220px;
+    gap: 0.4rem;
+}
+
+.cal-popup-turno {
     display: flex;
-    gap: var(--space-sm);
-    pointer-events: none;
+    flex-direction: column;
+    gap: 0.4rem;
 }
 
-.cal-popup-multi .cal-popup {
-    position: static;
-}
-
-.cal-popup-multi.listo .cal-popup {
-    pointer-events: all;
+.cal-popup-divisor {
+    height: 1px;
+    background: var(--border);
+    margin: 0.2rem 0;
 }
 
 .cal-popup.listo,

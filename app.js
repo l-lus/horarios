@@ -390,11 +390,14 @@
             if (r.objetivoHoras !== null && r.objetivoHoras !== undefined) {
                 if (!Number.isFinite(r.objetivoHoras) || r.objetivoHoras < 0 || r.objetivoHoras > 24) return false;
             }
+            if (r.turno !== null && r.turno !== undefined) {
+                if (r.turno !== 1 && r.turno !== 2) return false;
+            }
             if (!Number.isFinite(r.horas) || r.horas < 0 || r.horas > 24) return false;
             if (!Number.isFinite(r.minutos) || r.minutos < 0 || r.minutos > 59) return false;
             if (!Number.isFinite(r.total) || r.total < 0 || r.total > 24) return false;
 
-            const propiedadesPermitidas = ['id', 'fecha', 'entrada', 'salida', 'tiempoFuera', 'horas', 'minutos', 'total', 'credito', 'notas', 'objetivoHoras'];
+            const propiedadesPermitidas = ['id', 'fecha', 'entrada', 'salida', 'tiempoFuera', 'horas', 'minutos', 'total', 'credito', 'notas', 'objetivoHoras', 'turno'];
             const propiedadesActuales = Object.keys(r);
             const tienePropiedadesSospechosas = propiedadesActuales.some(prop => !propiedadesPermitidas.includes(prop));
             if (tienePropiedadesSospechosas) return false;
@@ -3276,13 +3279,12 @@
             return S.escapeHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
         }
 
-        function _crearNodoPopup(reg) {
+        function _crearBloqueTurno(reg) {
             const claveMes = reg.fecha.substring(0, 7);
             const registrosDelMes = D.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
             const grupos = UILogic.agruparRegistrosConsecutivos(registrosDelMes);
             const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === reg.id));
 
-            const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
             const infoHtml = _buildInfoHtmlRegistro(reg);
             const btnGrupoHtml = grupoDelRegistro ? `
                 <button class="cal-popup-btn-edit" data-accion="grupo">
@@ -3290,11 +3292,10 @@
                     Editar grupo
                 </button>` : '';
 
-            const popup = document.createElement('div');
-            popup.className = 'cal-popup';
-            popup.dataset.registroId = reg.id;
-            popup.innerHTML = `
-                <div class="cal-popup-fecha">${fechaLabel}</div>
+            const bloque = document.createElement('div');
+            bloque.className = 'cal-popup-turno';
+            bloque.dataset.registroId = reg.id;
+            bloque.innerHTML = `
                 ${infoHtml}
                 <button class="cal-popup-btn-edit" data-accion="editar">
                     <svg class="icon"><use href="#icon-edit"/></svg>
@@ -3302,16 +3303,16 @@
                 </button>
                 ${btnGrupoHtml}`;
 
-            popup.querySelector('[data-accion="editar"]')?.addEventListener('click', () => {
+            bloque.querySelector('[data-accion="editar"]')?.addEventListener('click', () => {
                 DataManagement.editarRegistro(reg.id);
                 _cerrarPopupCalendario();
             });
-            popup.querySelector('[data-accion="grupo"]')?.addEventListener('click', () => {
+            bloque.querySelector('[data-accion="grupo"]')?.addEventListener('click', () => {
                 DataManagement.editarGrupo(grupoDelRegistro);
                 _cerrarPopupCalendario();
             });
 
-            return popup;
+            return bloque;
         }
 
         function _popupCalendario(event, registroId, registroId2 = null) {
@@ -3325,10 +3326,20 @@
 
             const contenedor = document.createElement('div');
             contenedor.id = '_cal-popup';
-            contenedor.className = 'cal-popup-multi';
+            contenedor.className = 'cal-popup' + (reg2 ? ' cal-popup--doble' : '');
             contenedor.dataset.registroId = reg.id;
-            contenedor.appendChild(_crearNodoPopup(reg));
-            if (reg2) contenedor.appendChild(_crearNodoPopup(reg2));
+
+            const fecha = document.createElement('div');
+            fecha.className = 'cal-popup-fecha';
+            fecha.innerHTML = _formatearFechaLabelPopup(reg.fecha);
+            contenedor.appendChild(fecha);
+            contenedor.appendChild(_crearBloqueTurno(reg));
+            if (reg2) {
+                const divisor = document.createElement('div');
+                divisor.className = 'cal-popup-divisor';
+                contenedor.appendChild(divisor);
+                contenedor.appendChild(_crearBloqueTurno(reg2));
+            }
 
             contenedor.style.visibility = 'hidden';
             document.body.appendChild(contenedor);

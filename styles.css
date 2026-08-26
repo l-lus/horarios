@@ -1643,6 +1643,10 @@ body.config-onboarding #btn-ayuda-config {
     color: var(--c-blue);
 }
 
+.text-orange {
+    color: var(--c-orange);
+}
+
 /* ─── HEADER PROFILE / PERFILES ──────────────────────────────────────────────── */
 
 .header-profile-btn {

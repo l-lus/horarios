@@ -1796,17 +1796,38 @@
         }
 
         function _aplicarMergeImport(registrosImportados) {
-            const fechasExistentes = new Set(registros.map(r => r.fecha));
-            const nuevos = registrosImportados.filter(imp => !fechasExistentes.has(imp.fecha));
-            const complementarios = registrosImportados.filter(imp => {
-                if (!fechasExistentes.has(imp.fecha)) return false;
-                const local = registros.find(r => r.fecha === imp.fecha);
+            const dobleTurnoActivo = dobleTurno;
+            const clave = (r) => dobleTurnoActivo ? `${r.fecha}_${r.turno || 1}` : r.fecha;
+
+            // Con doble turno desactivado, como máximo puede haber 1 registro por
+            // fecha: si el archivo trae más de uno para el mismo día, se descartan
+            // los sobrantes en vez de generar un segundo registro "fantasma".
+            let candidatos = registrosImportados;
+            let omitidosPorTurnoUnico = 0;
+            if (!dobleTurnoActivo) {
+                const vistos = new Set();
+                candidatos = registrosImportados.filter(imp => {
+                    if (vistos.has(imp.fecha)) { omitidosPorTurnoUnico++; return false; }
+                    vistos.add(imp.fecha);
+                    return true;
+                });
+            }
+
+            const localesPorClave = new Map(registros.map(r => [clave(r), r]));
+            const nuevos = candidatos.filter(imp => !localesPorClave.has(clave(imp)));
+            const complementarios = candidatos.filter(imp => {
+                const local = localesPorClave.get(clave(imp));
                 return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
             });
-            if (nuevos.length === 0 && complementarios.length === 0) { notify.mostrarToast('No hay días nuevos ni datos para completar', 'info'); return; }
+            if (nuevos.length === 0 && complementarios.length === 0) {
+                notify.mostrarToast(omitidosPorTurnoUnico > 0
+                    ? 'No hay datos para agregar: los registros del archivo son de doble turno y está desactivado'
+                    : 'No hay días nuevos ni datos para completar', 'info');
+                return;
+            }
             if (registros.length + nuevos.length > S.SECURITY_LIMITS.MAX_REGISTROS) { notify.mostrarToast(`Límite alcanzado. Solo se pueden agregar ${S.SECURITY_LIMITS.MAX_REGISTROS - registros.length} registros más`, 'error'); return; }
             complementarios.forEach(imp => {
-                const local = registros.find(r => r.fecha === imp.fecha);
+                const local = localesPorClave.get(clave(imp));
                 if (!local) return;
                 if (!local.salida && imp.salida) local.salida = imp.salida;
                 if (!local.tiempoFuera && imp.tiempoFuera) local.tiempoFuera = imp.tiempoFuera;
@@ -1816,8 +1837,10 @@
             registros = registros.concat(nuevos);
             const partes = [];
             const p = (n, sustantivo, adjetivo) => `${n} ${sustantivo}${TimeUtils.pluralizar(n)} ${adjetivo}${TimeUtils.pluralizar(n)}`;
-            if (nuevos.length > 0) partes.push(p(nuevos.length, 'día', 'nuevo'));
+            if (nuevos.length > 0) partes.push(p(nuevos.length, 'registro', 'nuevo'));
             if (complementarios.length > 0) partes.push(p(complementarios.length, 'registro', 'completado'));
+            if (omitidosPorTurnoUnico > 0) partes.push(`${omitidosPorTurnoUnico} omitido${TimeUtils.pluralizar(omitidosPorTurnoUnico)} (doble turno desactivado)`);
+
             finalizarImportacionAndSave(`Combinado: ${partes.join(', ')}`, 'combinar datos importados');
         }
 
@@ -3787,6 +3810,8 @@
                 registros: registrosFiltrados,
                 diasHabiles: D.diasHabiles(),
                 horasDiarias: D.horasDiarias(),
+                horasDiariasT2: D.horasDiariasT2(),
+                dobleTurno: D.dobleTurno(),
                 fecha: fechaLocal,
                 version: S.SECURITY_LIMITS.SCHEMA_VERSION,
                 hash: await S.calcularHashSHA256(registrosFiltrados),
@@ -3982,7 +4007,7 @@
         }
 
         function _calcularRegistrosMerge(modo, mergeData) {
-            const { registrosNormalizados, soloEnGist, complementarios = [], data } = mergeData;
+            const { registrosNormalizados, soloEnGist, complementarios = [], data, omitidosPorTurnoUnico = 0 } = mergeData;
 
             if (modo === 'merge') {
                 if (soloEnGist.length === 0 && complementarios.length === 0) {
@@ -3992,8 +4017,12 @@
                     return { limiteAlcanzado: true };
                 }
 
+                const dobleTurnoActivo = D.dobleTurno();
+                const clave = (r) => dobleTurnoActivo ? `${r.fecha}_${r.turno || 1}` : r.fecha;
+                const complementariosPorClave = new Map(complementarios.map(c => [clave(c), c]));
+
                 const registrosActualizados = D.registros().map(local => {
-                    const imp = complementarios.find(c => c.fecha === local.fecha);
+                    const imp = complementariosPorClave.get(clave(local));
                     if (!imp) return local;
                     const actualizado = { ...local };
                     if (!actualizado.salida && imp.salida) actualizado.salida = imp.salida;
@@ -4004,8 +4033,9 @@
                 });
 
                 const partes = [];
-                if (soloEnGist.length > 0) partes.push(`${soloEnGist.length} día${TimeUtils.pluralizar(soloEnGist.length)} nuevo${TimeUtils.pluralizar(soloEnGist.length)}`);
+                if (soloEnGist.length > 0) partes.push(`${soloEnGist.length} registro${TimeUtils.pluralizar(soloEnGist.length)} nuevo${TimeUtils.pluralizar(soloEnGist.length)}`);
                 if (complementarios.length > 0) partes.push(`${complementarios.length} registro${TimeUtils.pluralizar(complementarios.length)} completado${TimeUtils.pluralizar(complementarios.length)}`);
+                if (omitidosPorTurnoUnico > 0) partes.push(`${omitidosPorTurnoUnico} omitido${TimeUtils.pluralizar(omitidosPorTurnoUnico)} (doble turno desactivado)`);
 
                 return {
                     registrosFinales: [...registrosActualizados, ...soloEnGist],
@@ -4051,7 +4081,9 @@
 
             if (resultado.vacio) {
                 if (!modoAutomatico) _gistMergeCerrarOVolver();
-                mostrarToast('Sin datos nuevos para completar', 'info');
+                mostrarToast(mergeData.omitidosPorTurnoUnico > 0
+                    ? 'Sin datos para agregar: los registros del Gist son de doble turno y está desactivado'
+                    : 'Sin datos nuevos para completar', 'info');
                 return;
             }
             if (resultado.limiteAlcanzado) {
@@ -4238,17 +4270,33 @@
         }
 
         function _calcularDiffGist(registrosNormalizados) {
-            const localesPorFecha = new Map(D.registros().map(r => [r.fecha, r]));
-            const gistPorFecha = new Map(registrosNormalizados.map(r => [r.fecha, r]));
+            const dobleTurnoActivo = D.dobleTurno();
+            const clave = (r) => dobleTurnoActivo ? `${r.fecha}_${r.turno || 1}` : r.fecha;
 
-            const soloEnGist = registrosNormalizados.filter(r => !localesPorFecha.has(r.fecha));
-            const enAmbos = registrosNormalizados.filter(r => localesPorFecha.has(r.fecha));
-            const soloLocal = D.registros().filter(r => !gistPorFecha.has(r.fecha));
+            // Con doble turno desactivado, como máximo se considera 1 registro
+            // del Gist por fecha (evita duplicar días si el Gist trae 2 turnos).
+            let candidatosGist = registrosNormalizados;
+            let omitidosPorTurnoUnico = 0;
+            if (!dobleTurnoActivo) {
+                const vistos = new Set();
+                candidatosGist = registrosNormalizados.filter(r => {
+                    if (vistos.has(r.fecha)) { omitidosPorTurnoUnico++; return false; }
+                    vistos.add(r.fecha);
+                    return true;
+                });
+            }
+
+            const localesPorClave = new Map(D.registros().map(r => [clave(r), r]));
+            const gistPorClave = new Map(candidatosGist.map(r => [clave(r), r]));
+
+            const soloEnGist = candidatosGist.filter(r => !localesPorClave.has(clave(r)));
+            const enAmbos = candidatosGist.filter(r => localesPorClave.has(clave(r)));
+            const soloLocal = D.registros().filter(r => !gistPorClave.has(clave(r)));
             const complementarios = enAmbos.filter(imp => {
-                const local = localesPorFecha.get(imp.fecha);
+                const local = localesPorClave.get(clave(imp));
                 return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
             });
-            return { soloEnGist, enAmbos, soloLocal, complementarios };
+            return { soloEnGist, enAmbos, soloLocal, complementarios, omitidosPorTurnoUnico };
         }
 
         function _calcularConfigCambios(data) {
@@ -4270,7 +4318,7 @@
             return cambios;
         }
 
-        function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios) {
+        function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complementarios, omitidosPorTurnoUnico = 0 }, registrosNormalizados, configCambios) {
             resumenEl.innerHTML = '';
             const _mkSvg = (id) => {
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -4298,6 +4346,9 @@
             filaAmbos.appendChild(document.createTextNode(')'));
             bloqueFilas.appendChild(filaAmbos);
             bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-save'), ` Local `, _mkStrong(soloLocal.length), ` registro${TimeUtils.pluralizar(soloLocal.length)} no subido${TimeUtils.pluralizar(soloLocal.length)}`));
+            if (omitidosPorTurnoUnico > 0) {
+                bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-help'), ` `, _mkStrong(omitidosPorTurnoUnico, 'text-orange'), ` registro${TimeUtils.pluralizar(omitidosPorTurnoUnico)} del Gist omitido${TimeUtils.pluralizar(omitidosPorTurnoUnico)} al combinar (doble turno desactivado)`));
+            }
             resumenEl.appendChild(bloqueFilas);
 
             const configEl = Object.assign(document.createElement('div'), {
@@ -4328,8 +4379,8 @@
                 if (!registrosNormalizados) return;
 
                 const diff = _calcularDiffGist(registrosNormalizados);
-                const { soloEnGist, complementarios } = diff;
-                _gistMergeData = { registrosNormalizados, soloEnGist, complementarios, data };
+                const { soloEnGist, complementarios, omitidosPorTurnoUnico } = diff;
+                _gistMergeData = { registrosNormalizados, soloEnGist, complementarios, data, omitidosPorTurnoUnico };
 
                 if (modoAutomatico) {
                     await gistMergeAplicar(GistSync.getMergeBehavior(), true);
@@ -8561,7 +8612,7 @@
             const activo = D.dobleTurno();
             const grupoT2 = $('grupo-horas-diarias-t2');
             const labelT1 = $('label-horas-diarias-t1');
-            if (grupoT2) grupoT2.style.display = activo ? '' : 'none';
+            if (grupoT2) grupoT2.classList.toggle('expanded', activo);
             if (labelT1) labelT1.textContent = activo ? 'Horas diarias · Turno 1' : 'Horas diarias globales';
             if (activo) {
                 const elT2 = $('config-horas-diarias-t2');

@@ -6693,7 +6693,7 @@
                     titulo: `${_tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy()))} · Turno 2`,
                     stats: esDiaHabil ? '🎒' : '🌞',
                     mensaje: esDiaHabil
-                        ? (horasDiariasT2 === 0 ? '' : `Turno 1: ${TimeUtils.horasATexto(registrosHoy[0].total)} · Esperando Turno 2...`)
+                        ? (horasDiariasT2 === 0 ? '' : 'Esperando Turno 2...')
                         : (horasDiariasT2 === 0 ? '' : 'Día libre'),
                     mostrarMensaje: horasDiariasT2 > 0,
                     colorBarra: 'blue', anchoBarra: 0,
@@ -6825,9 +6825,10 @@
 
         function _renderTitulo(vista, sinAnimar = false, est = null) {
             const el = $('stats-titulo');
+            const tituloFinal = _tituloConTurnoActivo(vista.titulo);
             const aplicarExtra = () => _actualizarTiempoFueraConsolidado(el, est);
-            if (sinAnimar && el) { el.innerHTML = vista.titulo; el.dataset.firma = vista.titulo; aplicarExtra(); return; }
-            _renderTituloAnimado(el, vista.titulo, aplicarExtra);
+            if (sinAnimar && el) { el.innerHTML = tituloFinal; el.dataset.firma = tituloFinal; aplicarExtra(); return; }
+            _renderTituloAnimado(el, tituloFinal, aplicarExtra);
         }
 
         function _actualizarTiempoFueraConsolidado(el, est) {
@@ -6854,6 +6855,9 @@
         let _cicloStatsSalida = '';
         let _cicloStatsTiempoFuera = '';
         let _cicloStatsFaseAlRenderizar = null;
+        let _cicloStatsTurnos = null;
+        let _cicloStatsTituloOriginal = '';
+        let _cicloStatsTurnoActual = null;
 
         const _CICLO_DURACION_MS = 2000;
         const _CICLO_PREFIJOS = { entrada: 'Entrada', salida: 'Salida', tiempoFuera: 'Tiempo fuera' };
@@ -6863,18 +6867,51 @@
             _cicloStatsInterval = null;
             const el = $('stats-semana');
             if (el) el.classList.remove('mutacion-entrante');
+            if (_cicloStatsTurnoActual !== null) {
+                _cicloStatsTurnoActual = null;
+                _actualizarTituloDuranteCiclo();
+            }
         }
 
         function _prepararMostrarFaseAlRenderizar(tipo) {
             _cicloStatsFaseAlRenderizar = tipo;
         }
 
+        function _hayDatosCiclo() {
+            return !!_cicloStatsEntrada || !!(_cicloStatsTurnos && _cicloStatsTurnos.length);
+        }
+
+        function _tituloConTurnoActivo(tituloOriginal) {
+            if (_cicloStatsTurnoActual == null) return tituloOriginal;
+            return tituloOriginal.replace(/Turnos\s*1\s*y\s*2/, `Turno ${_cicloStatsTurnoActual}`);
+        }
+
+        function _actualizarTituloDuranteCiclo() {
+            if (!_cicloStatsTituloOriginal) return;
+            const el = $('stats-titulo');
+            if (!el) return;
+            const nuevoHTML = _tituloConTurnoActivo(_cicloStatsTituloOriginal);
+            if (el.innerHTML !== nuevoHTML) {
+                el.innerHTML = nuevoHTML;
+                el.dataset.firma = nuevoHTML;
+            }
+        }
+
         function _fasesCiclo() {
+            if (_cicloStatsTurnos && _cicloStatsTurnos.length) {
+                const fases = [{ texto: _cicloStatsValorHoras, turno: null }];
+                for (const t of _cicloStatsTurnos) {
+                    if (t.entrada) fases.push({ texto: `Entrada ${t.entrada}`, turno: t.turno });
+                    if (t.tiempoFuera) fases.push({ texto: `Tiempo fuera ${_formatearMinutosCorto(TimeUtils.horaAMinutos(t.tiempoFuera))}`, turno: t.turno });
+                    if (t.salida) fases.push({ texto: `Salida ${t.salida}`, turno: t.turno });
+                }
+                return fases;
+            }
             return [
-                _cicloStatsValorHoras,
-                `Entrada ${_cicloStatsEntrada}`,
-                _cicloStatsTiempoFuera ? `Tiempo fuera ${_formatearMinutosCorto(TimeUtils.horaAMinutos(_cicloStatsTiempoFuera))}` : null,
-                _cicloStatsSalida ? `Salida ${_cicloStatsSalida}` : null,
+                { texto: _cicloStatsValorHoras, turno: null },
+                { texto: `Entrada ${_cicloStatsEntrada}`, turno: null },
+                _cicloStatsTiempoFuera ? { texto: `Tiempo fuera ${_formatearMinutosCorto(TimeUtils.horaAMinutos(_cicloStatsTiempoFuera))}`, turno: null } : null,
+                _cicloStatsSalida ? { texto: `Salida ${_cicloStatsSalida}`, turno: null } : null,
             ].filter(Boolean);
         }
 
@@ -6886,7 +6923,9 @@
                 _animarMutacion(el, () => {
                     estado.idx++;
                     const terminado = estado.idx >= fases.length;
-                    el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx];
+                    el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx].texto;
+                    _cicloStatsTurnoActual = terminado ? null : fases[estado.idx].turno;
+                    _actualizarTituloDuranteCiclo();
                     if (terminado) { _detenerCicloStats(); return; }
                     _cicloStatsInterval = setTimeout(_cicloTick, _CICLO_DURACION_MS);
                 });
@@ -6901,7 +6940,7 @@
         function _iniciarCicloStats(inmediato = false) {
             if (_cicloStatsInterval) return true;
             _detenerCicloStats();
-            if (!_cicloStatsEntrada) return false;
+            if (!_hayDatosCiclo()) return false;
 
             const fases = _fasesCiclo();
             const estado = { idx: 0 };
@@ -6912,19 +6951,26 @@
         }
 
         function _iniciarCicloEnFase(tipo) {
-            if (!_cicloStatsEntrada) return false;
+            if (!_hayDatosCiclo()) return false;
             clearTimeout(_cicloStatsInterval);
 
             const fases = _fasesCiclo();
             const prefijo = _CICLO_PREFIJOS[tipo];
-            const idx = prefijo ? fases.findIndex(f => f.startsWith(prefijo)) : -1;
+            let idx = -1;
+            if (prefijo) {
+                for (let i = fases.length - 1; i >= 0; i--) {
+                    if (fases[i].texto.startsWith(prefijo)) { idx = i; break; }
+                }
+            }
             if (idx === -1) return false;
 
             const estado = { idx };
             const tick = _crearCicloTick(fases, estado);
 
             const el = $('stats-semana');
-            if (el) el.textContent = fases[idx];
+            if (el) el.textContent = fases[idx].texto;
+            _cicloStatsTurnoActual = fases[idx].turno;
+            _actualizarTituloDuranteCiclo();
 
             _cicloStatsInterval = setTimeout(tick, _CICLO_DURACION_MS);
             return true;
@@ -6937,14 +6983,25 @@
             const esDiaria = D.vistaActual() !== 'semana';
             const regHoy = est.regHoy;
             const esEspecial = !!est.tipoEspecialHoy;
-            const entradaHoy = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
-            const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';
-            const tiempoFueraHoy = (esDiaria && regHoy && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00' && !esEspecial) ? regHoy.tiempoFuera : '';
+            const mostrarAmbosTurnos = esDiaria && est.dobleTurnoActivo && est.ambosTurnosCompletos && !esEspecial;
 
             _cicloStatsValorHoras = vista.stats;
-            _cicloStatsEntrada = entradaHoy;
-            _cicloStatsSalida = salidaHoy;
-            _cicloStatsTiempoFuera = tiempoFueraHoy;
+            _cicloStatsTituloOriginal = vista.titulo;
+
+            if (mostrarAmbosTurnos) {
+                _cicloStatsTurnos = est.registrosHoy.map(r => ({
+                    turno: r.turno || 1,
+                    entrada: r.entrada || '',
+                    salida: r.salida || '',
+                    tiempoFuera: (r.tiempoFuera && r.tiempoFuera !== '00:00') ? r.tiempoFuera : '',
+                }));
+                _cicloStatsEntrada = ''; _cicloStatsSalida = ''; _cicloStatsTiempoFuera = '';
+            } else {
+                _cicloStatsTurnos = null;
+                _cicloStatsEntrada = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
+                _cicloStatsSalida = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';
+                _cicloStatsTiempoFuera = (esDiaria && regHoy && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00' && !esEspecial) ? regHoy.tiempoFuera : '';
+            }
 
             if (_cicloStatsFaseAlRenderizar) {
                 const tipo = _cicloStatsFaseAlRenderizar;

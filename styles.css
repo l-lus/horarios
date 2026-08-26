@@ -486,6 +486,24 @@ button:disabled {
     font-weight: var(--fw-bold);
 }
 
+/* Mantiene visible el estado (on/off) del doble turno aun cuando el botón
+   está bloqueado fuera del onboarding, en vez de verse simplemente "roto" */
+#btn-toggle-doble-turno:disabled {
+    opacity: 0.6;
+}
+
+#btn-toggle-doble-turno.btn-activo:disabled {
+    background: var(--c-green-bg);
+    color: var(--c-green);
+    border-color: var(--c-green);
+}
+
+.hint-doble-turno-bloqueado {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+
 /* ─── COLLAPSIBLE ────────────────────────────────────────────────────────────── */
 
 .collapsible {

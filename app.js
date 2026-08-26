@@ -7806,7 +7806,7 @@
                 onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); }
             });
 
-        const { toggle: toggleDobleTurno, actualizarEstado: actualizarEstadoBotonDobleTurno } =
+        const { toggle: _toggleDobleTurnoInterno, actualizarEstado: actualizarEstadoBotonDobleTurno } =
             _crearToggleConfig({
                 getVal: () => D.dobleTurno(),
                 setVal: (v) => { D.setDobleTurno(v); if (window.PerfilManager) PerfilManager.guardarDatosPerfilActual(); },
@@ -7815,6 +7815,18 @@
                 mensajeOff: 'Doble turno desactivado',
                 onAfterToggle: () => { actualizarUI(); actualizarVistaHorasDiariasConfig(); }
             });
+
+        // El doble turno solo puede activarse/desactivarse durante el onboarding
+        // (primera vez, restablecer datos o crear perfil nuevo). Cambiarlo en
+        // cualquier otro momento dejaría registros "muertos" de un turno que
+        // ya no se puede editar ni eliminar desde la UI normal.
+        function toggleDobleTurno() {
+            if (!document.body.classList.contains('config-onboarding')) {
+                mostrarToast('Doble turno solo puede activarse o desactivarse al crear o restablecer un perfil', 'error');
+                return;
+            }
+            _toggleDobleTurnoInterno();
+        }
 
         function actualizarEstadoBotonAplicarHoras() {
             const modoGlobal = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
@@ -8077,6 +8089,7 @@
             UILogic.actualizarFeedbackConfig();
             actualizarEstadoBotonIgnorarTF();
             actualizarEstadoBotonDobleTurno();
+            _setBtnDisabled('btn-toggle-doble-turno', !document.body.classList.contains('config-onboarding'));
             UILogic.actualizarVistaHorasDiariasConfig();
             UILogic.actualizarEstadoBotonAplicarHoras();
             const lbl = $('hint-fondo-label');

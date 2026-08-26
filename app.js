@@ -1340,6 +1340,23 @@
                 : `Salida ${s} agregada \n(entrada: ${reg.entrada})`;
         }
 
+        function _seSuperponeConOtroTurno(fecha, entrada, salida, idExcluir = null) {
+            if (!entrada || !salida) return null;
+            const m = TimeUtils.horaAMinutos;
+            const i1 = m(entrada), f1 = m(salida);
+            if (f1 <= i1) return null; // registro que cruza medianoche: no se valida solapamiento
+            const otros = registros.filter(r =>
+                r.fecha === fecha && r.id !== idExcluir && r.entrada && r.salida &&
+                !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
+            );
+            for (const r of otros) {
+                const i2 = m(r.entrada), f2 = m(r.salida);
+                if (f2 <= i2) continue;
+                if (i1 < f2 && i2 < f1) return r;
+            }
+            return null;
+        }
+
         async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
             const timerDetenido = detenerYRegistrarTimer(reg);
             reg.salida = s;
@@ -1436,6 +1453,12 @@
             }
 
             if (registroExistente?.entrada && !registroExistente.salida && !e && s) {
+                const conflicto = _seSuperponeConOtroTurno(f, registroExistente.entrada, s, registroExistente.id);
+                if (conflicto) {
+                    notify.resetearBoton(btn);
+                    notify.mostrarToast(`Se superpone con el otro turno (${conflicto.entrada} → ${conflicto.salida})`, 'error');
+                    notify.flashCampoTipo('error', 'btn-agregar'); return;
+                }
                 await _completarSalidaRegistro(registroExistente, s, usaHoraActual, btn); return;
             }
 
@@ -1443,6 +1466,15 @@
                 notify.resetearBoton(btn);
                 if (usaHoraActual) $('entrada').value = '';
                 notify.mostrarToast('Ya existe un registro abierto para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
+            }
+
+            if (e && s) {
+                const conflicto = _seSuperponeConOtroTurno(f, e, s);
+                if (conflicto) {
+                    notify.resetearBoton(btn);
+                    notify.mostrarToast(`Se superpone con el otro turno (${conflicto.entrada} → ${conflicto.salida})`, 'error');
+                    notify.flashCampoTipo('error', 'btn-agregar'); return;
+                }
             }
 
             const turnoNuevo = dobleTurnoActivo ? (registrosDelDia.length + 1) : null;
@@ -1541,6 +1573,12 @@
             const limiteEdicion = dobleTurno ? 2 : 1;
             if (otrosRegistrosMismaFecha.length >= limiteEdicion)
                 return { msg: 'Ya existe otro registro para esa fecha', tipo: 'error' };
+
+            if (e && s) {
+                const conflicto = _seSuperponeConOtroTurno(f, e, s, editandoId);
+                if (conflicto)
+                    return { msg: `Se superpone con el otro turno (${conflicto.entrada} → ${conflicto.salida})`, tipo: 'error' };
+            }
 
             if (e && tf) {
                 const minutosEntrada = TimeUtils.horaAMinutos(e);
@@ -1914,6 +1952,7 @@
                 }
 
                 const turnosPresentes = new Set(regsDia.map(r => r.turno || 1));
+                const hayEspecialQueJustificaElDia = regsDia.some(r => TiposRegistro.esRegistroEspecial(r.entrada, r.salida));
 
                 for (const r of regsDia) {
                     const esEspecial = TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
@@ -1940,8 +1979,9 @@
                 }
 
                 // Turno faltante ese día (nunca registrado): cuenta como objetivo pendiente, igual que un día sin ningún registro,
-                // pero solo para días ya pasados (hoy todavía puede completarse más tarde).
-                if (dobleTurno && esDiaHabil && iso !== hoy) {
+                // salvo que un registro especial (feriado, licencia, etc.) ya esté justificando el día completo,
+                // y solo para días ya pasados (hoy todavía puede completarse más tarde).
+                if (dobleTurno && esDiaHabil && iso !== hoy && !hayEspecialQueJustificaElDia) {
                     if (!turnosPresentes.has(2)) objetivo += horasDiariasT2;
                     if (!turnosPresentes.has(1)) objetivo += horasDiarias;
                 }
@@ -6436,12 +6476,17 @@
                     continue;
                 }
                 const turnosPresentes = new Set(regsDia.map(r => r.turno || 1));
+                let hayEspecialQueJustificaElDia = false;
                 for (const r of regsDia) {
                     const tipoDia = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                    if (tipoDia) hayEspecialQueJustificaElDia = true;
                     if (tipoDia && tipoDia.id !== 'remoto') continue;
                     objetivoSemana += D.objetivoDeRegistro(r);
                 }
-                if (dobleTurnoActivo && !turnosPresentes.has(2)) objetivoSemana += horasDiariasT2;
+                if (dobleTurnoActivo && !hayEspecialQueJustificaElDia) {
+                    if (!turnosPresentes.has(2)) objetivoSemana += horasDiariasT2;
+                    if (!turnosPresentes.has(1)) objetivoSemana += horasDiarias;
+                }
             }
             const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 

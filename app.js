@@ -405,6 +405,29 @@
             return true;
         }
 
+        // Clave de identidad de un registro para comparar/combinar listas (import local, Gist, etc.):
+        // con doble turno activo, dos registros del mismo día son distintos si tienen distinto turno;
+        // con doble turno desactivado, la fecha sola identifica al día (como máximo 1 registro por fecha).
+        function claveRegistroPorTurno(r, dobleTurnoActivo) {
+            return dobleTurnoActivo ? `${r.fecha}_${r.turno || 1}` : r.fecha;
+        }
+
+        // Con doble turno desactivado, una lista de registros externa (archivo o Gist) puede traer
+        // más de un registro para la misma fecha (p.ej. exportada con doble turno activo). Sin doble
+        // turno no hay dónde ubicar un segundo registro del mismo día, así que se descarta el
+        // sobrante en vez de generar un registro "fantasma". Con doble turno activo no se descarta nada.
+        function dedupPorTurnoUnico(lista, dobleTurnoActivo) {
+            if (dobleTurnoActivo) return { candidatos: lista, omitidosPorTurnoUnico: 0 };
+            const vistos = new Set();
+            let omitidosPorTurnoUnico = 0;
+            const candidatos = lista.filter(r => {
+                if (vistos.has(r.fecha)) { omitidosPorTurnoUnico++; return false; }
+                vistos.add(r.fecha);
+                return true;
+            });
+            return { candidatos, omitidosPorTurnoUnico };
+        }
+
         return {
             SECURITY_LIMITS,
             REGEX_PATTERNS,
@@ -414,7 +437,9 @@
             generarIDSeguro,
             calcularHashSHA256,
             validarRegistroSeguro,
-            reviverJSONSeguro
+            reviverJSONSeguro,
+            claveRegistroPorTurno,
+            dedupPorTurnoUnico
         };
     })();
     // ====================================================================
@@ -1306,10 +1331,29 @@
             return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
         }
 
+        // Objetivo diario "base" según el turno del registro (turno 2 usa horasDiariasT2,
+        // turno 1 o sin turno usa horasDiarias). Fuente única de verdad para no repetir
+        // este ternario en cada lugar que necesita el objetivo por defecto de un turno.
+        function _horasObjetivoPorTurno(turno) {
+            return (turno === 2) ? horasDiariasT2 : horasDiarias;
+        }
+
+        // Con doble turno activo, si a un día ya pasado le falta alguno de los 2 turnos
+        // (nunca se ficharon), esas horas cuentan como objetivo pendiente, igual que un
+        // día entero sin registros. `turnosPresentes` es el Set de turnos (1 y/o 2) que
+        // sí tienen registro ese día. Se usa tanto en el cálculo de saldo/balance como
+        // en el objetivo semanal de la tarjeta principal.
+        function _objetivoTurnoFaltante(turnosPresentes) {
+            let faltante = 0;
+            if (!turnosPresentes.has(2)) faltante += horasDiariasT2;
+            if (!turnosPresentes.has(1)) faltante += horasDiarias;
+            return faltante;
+        }
+
         function _construirRegistro(fecha, entrada, salida, turno = null) {
             const e = entrada || null, s = salida || null;
             const t = calcularHoras(e, s, null);
-            const objetivo = (turno === 2) ? horasDiariasT2 : horasDiarias;
+            const objetivo = _horasObjetivoPorTurno(turno);
             const registro = {
                 id: S.generarIDSeguro(), fecha, entrada: e, salida: s, tiempoFuera: null,
                 horas: t?.horas || 0, minutos: t?.minutos || 0, total: t?.total || 0, objetivoHoras: objetivo
@@ -1341,6 +1385,21 @@
             return usaHoraActual
                 ? `Salida registrada con hora actual \n(entrada: ${reg.entrada})`
                 : `Salida ${s} agregada \n(entrada: ${reg.entrada})`;
+        }
+
+        // Determina qué turno le corresponde a un registro dado el resto de registros
+        // que ya existen en su misma fecha (típicamente al editar y cambiar la fecha
+        // de un registro). Si el turno actual del registro sigue libre en esa fecha,
+        // se conserva; si está ocupado por otro registro (o el registro no tenía turno
+        // asignado), se reasigna al primer slot libre. Devuelve null si doble turno
+        // está desactivado, o si por algún motivo no queda ningún slot libre.
+        function _resolverTurnoEdicion(otrosRegistrosMismaFecha, turnoActual) {
+            if (!dobleTurno) return null;
+            const turnosOcupados = new Set(otrosRegistrosMismaFecha.map(r => r.turno || 1));
+            if ((turnoActual === 1 || turnoActual === 2) && !turnosOcupados.has(turnoActual)) return turnoActual;
+            if (!turnosOcupados.has(1)) return 1;
+            if (!turnosOcupados.has(2)) return 2;
+            return null;
         }
 
         function _seSuperponeConOtroTurno(fecha, entrada, salida, idExcluir = null) {
@@ -1578,6 +1637,10 @@
             if (otrosRegistrosMismaFecha.length >= limiteEdicion)
                 return { msg: 'Ya existe otro registro para esa fecha', tipo: 'error' };
 
+            const registroEditado = registros.find(reg => reg.id === editandoId);
+            if (dobleTurno && _resolverTurnoEdicion(otrosRegistrosMismaFecha, registroEditado?.turno) === null)
+                return { msg: 'No hay un turno disponible para esa fecha', tipo: 'error' };
+
             if (e && s) {
                 const conflicto = _seSuperponeConOtroTurno(f, e, s, editandoId);
                 if (conflicto)
@@ -1644,8 +1707,11 @@
             if (notas) notas = S.sanitizeNotas(notas, true) || null;
             if (notas === '') notas = null;
 
+            const otrosRegistrosMismaFecha = registros.filter(reg => reg.fecha === f && reg.id !== editandoId);
+            const turnoResuelto = _resolverTurnoEdicion(otrosRegistrosMismaFecha, r.turno);
+
             let objetivoNuevo = parseFloat($('edit-objetivo')?.dataset.valor);
-            if (isNaN(objetivoNuevo) || objetivoNuevo < 0 || objetivoNuevo > 24) objetivoNuevo = horasDiarias;
+            if (isNaN(objetivoNuevo) || objetivoNuevo < 0 || objetivoNuevo > 24) objetivoNuevo = _horasObjetivoPorTurno(turnoResuelto);
             const objetivoPrevio = (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras)) ? r.objetivoHoras : horasDiarias;
 
             let cr = _calcularCredito(e, s, tf, objetivoEdicionEnVivo());
@@ -1669,6 +1735,8 @@
             }
 
             r.fecha = f; r.entrada = e || null;
+            if (turnoResuelto === 1 || turnoResuelto === 2) r.turno = turnoResuelto;
+            else delete r.turno;
             if (s && !(r.salida || '')) {
                 const timerDetenido = detenerYRegistrarTimer(r);
                 if (timerDetenido) {
@@ -1800,21 +1868,8 @@
 
         function _aplicarMergeImport(registrosImportados) {
             const dobleTurnoActivo = dobleTurno;
-            const clave = (r) => dobleTurnoActivo ? `${r.fecha}_${r.turno || 1}` : r.fecha;
-
-            // Con doble turno desactivado, como máximo puede haber 1 registro por
-            // fecha: si el archivo trae más de uno para el mismo día, se descartan
-            // los sobrantes en vez de generar un segundo registro "fantasma".
-            let candidatos = registrosImportados;
-            let omitidosPorTurnoUnico = 0;
-            if (!dobleTurnoActivo) {
-                const vistos = new Set();
-                candidatos = registrosImportados.filter(imp => {
-                    if (vistos.has(imp.fecha)) { omitidosPorTurnoUnico++; return false; }
-                    vistos.add(imp.fecha);
-                    return true;
-                });
-            }
+            const clave = (r) => S.claveRegistroPorTurno(r, dobleTurnoActivo);
+            const { candidatos, omitidosPorTurnoUnico } = S.dedupPorTurnoUnico(registrosImportados, dobleTurnoActivo);
 
             const localesPorClave = new Map(registros.map(r => [clave(r), r]));
             const nuevos = candidatos.filter(imp => !localesPorClave.has(clave(imp)));
@@ -2010,8 +2065,7 @@
                 // salvo que un registro especial (feriado, licencia, etc.) ya esté justificando el día completo,
                 // y solo para días ya pasados (hoy todavía puede completarse más tarde).
                 if (dobleTurno && esDiaHabil && iso !== hoy && !hayEspecialQueJustificaElDia) {
-                    if (!turnosPresentes.has(2)) objetivo += horasDiariasT2;
-                    if (!turnosPresentes.has(1)) objetivo += horasDiarias;
+                    objetivo += _objetivoTurnoFaltante(turnosPresentes);
                 }
             }
             return Math.round((hechas - objetivo) * 1e6) / 1e6;
@@ -2115,9 +2169,9 @@
         }
 
         function objetivoDeRegistro(registro) {
-            if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
+            if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return _horasObjetivoPorTurno(registro?.turno);
             const v = registro?.objetivoHoras;
-            return (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
+            return (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24) ? v : _horasObjetivoPorTurno(registro?.turno);
         }
 
         function esTipoRemoto(registro) {
@@ -2132,16 +2186,17 @@
         }
 
         function objetivoEdicionEnVivo() {
-            if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return horasDiarias;
+            const turnoEditado = registros.find(r => r.id === editandoId)?.turno;
+            if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return _horasObjetivoPorTurno(turnoEditado);
             const v = parseFloat($('edit-objetivo')?.dataset.valor);
-            return (Number.isFinite(v) && v >= 0 && v <= 24) ? v : horasDiarias;
+            return (Number.isFinite(v) && v >= 0 && v <= 24) ? v : _horasObjetivoPorTurno(turnoEditado);
         }
 
         function migrarObjetivoHorasFaltante() {
             let migrados = 0;
             registros.forEach(r => {
                 if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
-                    r.objetivoHoras = horasDiarias;
+                    r.objetivoHoras = _horasObjetivoPorTurno(r.turno);
                     migrados++;
                 }
             });
@@ -2183,6 +2238,8 @@
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
             horasDiariasT2: () => horasDiariasT2, setHorasDiariasT2: (v) => horasDiariasT2 = v,
             dobleTurno: () => dobleTurno, setDobleTurno: (v) => dobleTurno = v,
+            horasObjetivoPorTurno: _horasObjetivoPorTurno,
+            objetivoTurnoFaltante: _objetivoTurnoFaltante,
             getIgnorarTiempoFuera: () => ignorarTiempoFuera, setIgnorarTiempoFuera: (v) => { ignorarTiempoFuera = v; },
             objetivoDeRegistro, objetivoEdicionEnVivo, migrarObjetivoHorasFaltante, aplicarHorasATodosLosRegistros,
             esTipoRemoto, horasEfectivasDeRegistro,
@@ -4287,20 +4344,8 @@
 
         function _calcularDiffGist(registrosNormalizados) {
             const dobleTurnoActivo = D.dobleTurno();
-            const clave = (r) => dobleTurnoActivo ? `${r.fecha}_${r.turno || 1}` : r.fecha;
-
-            // Con doble turno desactivado, como máximo se considera 1 registro
-            // del Gist por fecha (evita duplicar días si el Gist trae 2 turnos).
-            let candidatosGist = registrosNormalizados;
-            let omitidosPorTurnoUnico = 0;
-            if (!dobleTurnoActivo) {
-                const vistos = new Set();
-                candidatosGist = registrosNormalizados.filter(r => {
-                    if (vistos.has(r.fecha)) { omitidosPorTurnoUnico++; return false; }
-                    vistos.add(r.fecha);
-                    return true;
-                });
-            }
+            const clave = (r) => S.claveRegistroPorTurno(r, dobleTurnoActivo);
+            const { candidatos: candidatosGist, omitidosPorTurnoUnico } = S.dedupPorTurnoUnico(registrosNormalizados, dobleTurnoActivo);
 
             const localesPorClave = new Map(D.registros().map(r => [clave(r), r]));
             const gistPorClave = new Map(candidatosGist.map(r => [clave(r), r]));
@@ -6597,8 +6642,7 @@
                     objetivoSemana += D.objetivoDeRegistro(r);
                 }
                 if (dobleTurnoActivo && !hayEspecialQueJustificaElDia) {
-                    if (!turnosPresentes.has(2)) objetivoSemana += horasDiariasT2;
-                    if (!turnosPresentes.has(1)) objetivoSemana += horasDiarias;
+                    objetivoSemana += D.objetivoTurnoFaltante(turnosPresentes);
                 }
             }
             const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
@@ -6797,7 +6841,7 @@
             const turnoVisible = dobleTurnoActivo ? (regHoy?.turno || (registrosHoy?.length || 0) + 1) : null;
             const objetivoDiario = ambosTurnosCompletos
                 ? registrosHoy.reduce((s, r) => s + D.objetivoDeRegistro(r), 0)
-                : regHoy ? D.objetivoDeRegistro(regHoy) : (dobleTurnoActivo && turnoVisible === 2 ? horasDiariasT2 : horasDiarias);
+                : regHoy ? D.objetivoDeRegistro(regHoy) : D.horasObjetivoPorTurno(turnoVisible);
             const sufijoTurno = dobleTurnoActivo ? (ambosTurnosCompletos ? ' · Turnos 1 y 2' : (turnoVisible ? ` · Turno ${turnoVisible}` : '')) : '';
 
             if (dobleTurnoActivo && !ambosTurnosCompletos && !tipoEspecialHoy && registrosHoy.length === 1 && registrosHoy[0].salida) {
@@ -9039,7 +9083,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260823';
+        const _v = '-v260826';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

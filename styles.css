@@ -1250,6 +1250,22 @@ button:disabled {
     gap: 0.4rem;
 }
 
+.cal-popup-multi {
+    position: fixed;
+    z-index: 90;
+    display: flex;
+    gap: var(--space-sm);
+    pointer-events: none;
+}
+
+.cal-popup-multi .cal-popup {
+    position: static;
+}
+
+.cal-popup-multi.listo .cal-popup {
+    pointer-events: all;
+}
+
 .cal-popup.listo,
 .stat-popup.listo,
 .filtro-popup.listo {

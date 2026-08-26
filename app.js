@@ -3008,21 +3008,33 @@
             const fechaStr = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const registrosFiltrados = D.obtenerRegistrosFiltrados();
             const todosLosRegistros = D.registros();
-            const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
+            const regsPorFecha = {};
+            registrosFiltrados.forEach(r => {
+                (regsPorFecha[r.fecha] ??= []).push(r);
+            });
+            Object.values(regsPorFecha).forEach(arr => arr.sort((a, b) => (a.turno || 1) - (b.turno || 1)));
             const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
             const diasHabilesObj = D.diasHabiles();
             const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
             const claseDelDia = (fecha) => {
-                const r = regsPorFecha[fecha];
-                if (!r && filtroActivo && todosRegsPorFecha[fecha]) return 'dia-filtrado';
-                if (!r) return 'dia-sin-registro';
-                if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
-                    const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                    return `dia-especial-${tipo ? tipo.color : 'purple'}`;
-                }
-                if (r.entrada && !r.salida) return 'dia-en-curso';
-                if (!UILogic._esFechaHabil(fecha, diasHabilesObj) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
-                return UILogic._cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
+                const regs = regsPorFecha[fecha];
+                if ((!regs || regs.length === 0) && filtroActivo && todosRegsPorFecha[fecha]) return 'dia-filtrado';
+                if (!regs || regs.length === 0) return 'dia-sin-registro';
+                const clasesDia = regs.map(r => {
+                    if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
+                        const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                        return `dia-especial-${tipo ? tipo.color : 'purple'}`;
+                    }
+                    if (r.entrada && !r.salida) return 'dia-en-curso';
+                    if (!UILogic._esFechaHabil(fecha, diasHabilesObj) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
+                    return UILogic._cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
+                });
+                if (clasesDia.length === 1) return clasesDia[0];
+                if (clasesDia.some(c => c === 'dia-en-curso')) return 'dia-en-curso';
+                if (clasesDia.some(c => c === 'dia-incompleto')) return 'dia-incompleto';
+                if (clasesDia.some(c => c === 'dia-cubierto')) return 'dia-cubierto';
+                if (clasesDia.every(c => c === 'dia-normal')) return 'dia-normal';
+                return clasesDia[clasesDia.length - 1];
             };
 
             const diasNombre = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -3048,9 +3060,11 @@
                 const fecha = fechaStr(anio, mes, dia);
                 const clase = claseDelDia(fecha);
                 const esHoy = anio === hoy.getFullYear() && mes === hoy.getMonth() && dia === hoy.getDate();
-                const reg = regsPorFecha[fecha];
+                const regsDia = regsPorFecha[fecha] || [];
+                const reg = regsDia[0] || null;
+                const reg2 = regsDia[1] || null;
                 const idsNuevos = idResaltar ? (Array.isArray(idResaltar) ? idResaltar : [idResaltar]) : [];
-                const esNuevo = reg && idsNuevos.includes(reg.id);
+                const esNuevo = regsDia.some(r => idsNuevos.includes(r.id));
 
                 const cell = document.createElement('div');
                 let clases = `calendario-dia ${clase}`;
@@ -3062,8 +3076,9 @@
 
                 if (reg) {
                     cell.dataset.regId = reg.id;
-                    cell.addEventListener('click', (e) => UILogic._onclickCalendarioDia(e, reg.id));
-                    cell.addEventListener('mouseenter', (e) => UILogic._popupCalendarioHover(e, reg.id));
+                    if (reg2) cell.dataset.regId2 = reg2.id;
+                    cell.addEventListener('click', (e) => UILogic._onclickCalendarioDia(e, reg.id, reg2?.id ?? null));
+                    cell.addEventListener('mouseenter', (e) => UILogic._popupCalendarioHover(e, reg.id, reg2?.id ?? null));
                     cell.addEventListener('mouseleave', (e) => UILogic._cerrarPopupCalendarioHover(e));
                 } else if (clase === 'dia-sin-registro') {
                     cell.classList.add('cursor-pointer');
@@ -3113,16 +3128,19 @@
 
         function _buildInfoHtmlRegistro(reg) {
             const esEspecial = TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
+            const turnoBadgeHtml = (reg.turno === 1 || reg.turno === 2)
+                ? `<span class="cal-popup-badge cal-popup-badge--purple">Turno ${reg.turno}</span>`
+                : '';
             if (esEspecial) {
                 const tipoConfig = TiposRegistro.obtenerTipoPorCodigo(reg.entrada, reg.salida);
                 const emoji = S.escapeHtml(tipoConfig?.emoji ?? '');
                 const label = tipoConfig ? S.escapeHtml(tipoConfig.label) : S.escapeHtml(reg.entrada);
                 const colorSafe = /^[a-z]+$/.test(tipoConfig?.color || '') ? tipoConfig.color : 'purple';
-                return `<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${emoji} ${label}</span>`;
+                return `${turnoBadgeHtml}<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${emoji} ${label}</span>`;
             }
             if (reg.entrada && !reg.salida) {
                 const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
-                return `<div class="cal-popup-info cal-popup-info--blue">${esHoy ? 'En curso' : 'Incompleto'}</div>
+                return `${turnoBadgeHtml}<div class="cal-popup-info cal-popup-info--blue">${esHoy ? 'En curso' : 'Incompleto'}</div>
                     <div class="cal-popup-3l">Entrada: ${S.escapeHtml(reg.entrada)}</div>`;
             }
             const totalHoras = reg.total || 0;
@@ -3147,7 +3165,7 @@
                     if (diffText) totalConDiff += ` (${diffText})`;
                 }
             }
-            return `<div class="cal-popup-info${diffClase ? ' ' + diffClase : ''}">${totalConDiff}</div>
+            return `${turnoBadgeHtml}<div class="cal-popup-info${diffClase ? ' ' + diffClase : ''}">${totalConDiff}</div>
                 ${cubiertoLineaHtml}
                 <div class="cal-popup-3l">${S.escapeHtml(reg.entrada)} – ${S.escapeHtml(reg.salida)}</div>
                 ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
@@ -3163,57 +3181,66 @@
             return S.escapeHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
         }
 
-        function _popupCalendario(event, registroId) {
+        function _crearNodoPopup(reg) {
+            const claveMes = reg.fecha.substring(0, 7);
+            const registrosDelMes = D.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
+            const grupos = UILogic.agruparRegistrosConsecutivos(registrosDelMes);
+            const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === reg.id));
+
+            const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
+            const infoHtml = _buildInfoHtmlRegistro(reg);
+            const btnGrupoHtml = grupoDelRegistro ? `
+                <button class="cal-popup-btn-edit" data-accion="grupo">
+                    <svg class="icon"><use href="#icon-grid-group"/></svg>
+                    Editar grupo
+                </button>` : '';
+
+            const popup = document.createElement('div');
+            popup.className = 'cal-popup';
+            popup.dataset.registroId = reg.id;
+            popup.innerHTML = `
+                <div class="cal-popup-fecha">${fechaLabel}</div>
+                ${infoHtml}
+                <button class="cal-popup-btn-edit" data-accion="editar">
+                    <svg class="icon"><use href="#icon-edit"/></svg>
+                    Editar
+                </button>
+                ${btnGrupoHtml}`;
+
+            popup.querySelector('[data-accion="editar"]')?.addEventListener('click', () => {
+                DataManagement.editarRegistro(reg.id);
+                _cerrarPopupCalendario();
+            });
+            popup.querySelector('[data-accion="grupo"]')?.addEventListener('click', () => {
+                DataManagement.editarGrupo(grupoDelRegistro);
+                _cerrarPopupCalendario();
+            });
+
+            return popup;
+        }
+
+        function _popupCalendario(event, registroId, registroId2 = null) {
             event.stopPropagation();
 
             _cerrarPopupCalendario();
 
             const reg = D.registros().find(r => r.id === registroId);
             if (!reg) return;
+            const reg2 = registroId2 ? D.registros().find(r => r.id === registroId2) : null;
 
-            const claveMes = reg.fecha.substring(0, 7);
-            const registrosDelMes = D.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
-            const grupos = UILogic.agruparRegistrosConsecutivos(registrosDelMes);
-            const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
+            const contenedor = document.createElement('div');
+            contenedor.id = '_cal-popup';
+            contenedor.className = 'cal-popup-multi';
+            contenedor.dataset.registroId = reg.id;
+            contenedor.appendChild(_crearNodoPopup(reg));
+            if (reg2) contenedor.appendChild(_crearNodoPopup(reg2));
 
-            const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
-            const infoHtml = _buildInfoHtmlRegistro(reg);
-            const btnGrupoHtml = grupoDelRegistro ? `
-                <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
-                    <svg class="icon"><use href="#icon-grid-group"/></svg>
-                    Editar grupo
-                </button>` : '';
+            contenedor.style.visibility = 'hidden';
+            document.body.appendChild(contenedor);
+            _popupCalendarioEl = contenedor;
 
-            if (grupoDelRegistro) window._calPopupGrupo = grupoDelRegistro;
-
-            const popup = document.createElement('div');
-            popup.className = 'cal-popup';
-            popup.id = '_cal-popup';
-            popup.dataset.registroId = reg.id;
-            popup.innerHTML = `
-                <div class="cal-popup-fecha">${fechaLabel}</div>
-                ${infoHtml}
-                <button class="cal-popup-btn-edit" id="_cal-popup-btn-edit">
-                    <svg class="icon"><use href="#icon-edit"/></svg>
-                    Editar
-                </button>
-                ${btnGrupoHtml}`;
-
-            popup.style.visibility = 'hidden';
-            document.body.appendChild(popup);
-            _popupCalendarioEl = popup;
-
-            popup.querySelector('#_cal-popup-btn-edit')?.addEventListener('click', () => {
-                DataManagement.editarRegistro(reg.id);
-                document.getElementById('_cal-popup')?.remove();
-            });
-            popup.querySelector('#_cal-popup-btn-grupo')?.addEventListener('click', () => {
-                DataManagement.editarGrupo(window._calPopupGrupo);
-                document.getElementById('_cal-popup')?.remove();
-            });
-
-            popup.addEventListener('mouseenter', () => clearTimeout(_popupCalendarioHoverTimer));
-            popup.addEventListener('mouseleave', () => {
+            contenedor.addEventListener('mouseenter', () => clearTimeout(_popupCalendarioHoverTimer));
+            contenedor.addEventListener('mouseleave', () => {
                 if (_popupCalendarioEsHover) {
                     _popupCalendarioHoverTimer = setTimeout(() => {
                         _cerrarPopupCalendario();
@@ -3222,8 +3249,9 @@
                 }
             });
 
-            _registrarCierrePopup(popup, '.calendario-dia', dia => dia.dataset.regId === reg.id, () => { _popupCalendarioEl = null; });
-            _posicionarPopup(popup, event);
+            const idsPopup = [reg.id, ...(reg2 ? [reg2.id] : [])];
+            _registrarCierrePopup(contenedor, '.calendario-dia', dia => idsPopup.includes(dia.dataset.regId) || idsPopup.includes(dia.dataset.regId2), () => { _popupCalendarioEl = null; });
+            _posicionarPopup(contenedor, event);
         }
 
         let _popupCalendarioEsHover = false;
@@ -3268,7 +3296,7 @@
             _posicionarPopup(popup, event);
         }
 
-        function _popupCalendarioHover(event, registroId) {
+        function _popupCalendarioHover(event, registroId, registroId2 = null) {
             if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
             if (!window.matchMedia('(hover: hover)').matches) return;
             const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
@@ -3278,16 +3306,16 @@
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioHoverTimer = setTimeout(() => {
                 _popupCalendarioEsHover = true;
-                _popupCalendario(event, registroId);
+                _popupCalendario(event, registroId, registroId2);
             }, 150);
         }
 
-        function _onclickCalendarioDia(event, registroId) {
+        function _onclickCalendarioDia(event, registroId, registroId2 = null) {
             const esDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
             const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
             const hoverActivo = esDesktop && stored === 'true';
 
-            if (hoverActivo) {
+            if (hoverActivo && !registroId2) {
                 _cerrarPopupCalendario();
                 clearTimeout(_popupCalendarioHoverTimer);
                 DataManagement.editarRegistro(registroId);
@@ -3296,7 +3324,7 @@
                     _cerrarPopupCalendario();
                     return;
                 }
-                _popupCalendario(event, registroId);
+                _popupCalendario(event, registroId, registroId2);
             }
         }
 
@@ -4390,7 +4418,6 @@
             fechaEl.className = 'registro-fecha';
             const etiqueta = tipoEspecial ? ` ${tipoEspecial.emoji} (${tipoEspecial.label})` : '';
             fechaEl.textContent = `${TimeUtils.obtenerNombreDia(r.fecha)} ${r.fecha.substring(8)}${etiqueta}`;
-
             const tfText = (() => {
                 if (!r.tiempoFuera || r.tiempoFuera === '' || r.tiempoFuera === '00:00') return '';
                 const tfStr = TimeUtils.horasATexto(TimeUtils.horaAMinutos(r.tiempoFuera) / 60, 'short');
@@ -4440,6 +4467,12 @@
 
             const badgesEl = document.createElement('div');
             badgesEl.className = 'registro-badges';
+            if (r.turno === 1 || r.turno === 2) {
+                const turnoEl = document.createElement('div');
+                turnoEl.className = 'registro-total purple-text';
+                turnoEl.textContent = `Turno ${r.turno}`;
+                badgesEl.appendChild(turnoEl);
+            }
             badgesEl.appendChild(totalEl);
             if (esCubierto) {
                 const cubiertoEl = document.createElement('div');

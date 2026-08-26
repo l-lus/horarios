@@ -623,26 +623,16 @@
                         <div class="form-group" id="grupo-horas-diarias-t2" style="display:none">
                             <label>Horas diarias · Turno 2</label>
                             <div class="input-number-group">
+                                <div class="btn-increment btn-fantasma">
+                                    <svg class="icon">
+                                        <use href="#icon-aplicar-horas" />
+                                    </svg>
+                                </div>
                                 <span id="config-horas-diarias-t2" class="input-number-display" data-valor="0">0h</span>
                                 <button id="btn-horas-diarias-t2-inc" class="btn-increment" title="Incrementar tiempo">+</button>
                                 <button id="btn-horas-diarias-t2-dec" class="btn-increment" title="Disminuir tiempo">-</button>
                             </div>
-                        </div>
-                        <div class="config-actions form-group">
-                            <label>Fichaje</label>
-                            <button id="btn-toggle-doble-turno"
-                                title="El doble turno solo puede activarse o desactivarse al crear o restablecer un perfil">
-                                <svg class="icon">
-                                    <use href="#icon-combine" />
-                                </svg>
-                                <span>Doble turno</span>
-                                <svg class="icon icon-indicator">
-                                    <use href="#icon-dot" />
-                                </svg>
-                            </button>
-                            <p class="hint-doble-turno-bloqueado config-onboarding-hide">Solo se puede cambiar al
-                                crear o restablecer un perfil</p>
-                        </div>
+                        </div>                        
                         <div class="form-group">
                             <label>Días laborales</label>
                             <div class="week-selector">
@@ -675,6 +665,21 @@
                                 </label>
                             </div>
                             <div id="config-total-feedback" class="config-hint-text">(Total semanal: --hs)</div>
+                        </div>
+                        <div class="config-actions form-group">
+                            <label>Fichaje</label>
+                            <p class="hint-doble-turno-bloqueado config-onboarding-hide">Solo se puede cambiar al
+                                crear o restablecer un perfil</p>
+                            <button id="btn-toggle-doble-turno"
+                                title="El doble turno solo puede activarse o desactivarse al crear o restablecer un perfil">
+                                <svg class="icon">
+                                    <use href="#icon-combine" />
+                                </svg>
+                                <span>Doble turno</span>
+                                <svg class="icon icon-indicator">
+                                    <use href="#icon-dot" />
+                                </svg>
+                            </button>                            
                         </div>
                         <div class="config-actions form-group config-onboarding-hide">
                             <label>Interfaz</label>

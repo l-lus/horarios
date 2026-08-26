@@ -1477,7 +1477,8 @@
                 }
             }
 
-            const turnoNuevo = dobleTurnoActivo ? (registrosDelDia.length + 1) : null;
+            const turnosOcupados = new Set(registrosDelDia.map(r => r.turno || 1));
+            const turnoNuevo = dobleTurnoActivo ? (!turnosOcupados.has(1) ? 1 : 2) : null;
             await _crearNuevoRegistro(f, e, s, usaHoraActual, btn, turnoNuevo);
         }
 

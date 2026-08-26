@@ -1128,6 +1128,20 @@
         let filtroTipo = null;
         let grupoEnEdicion = null;
 
+        function _perfilIdActual() {
+            return window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+        }
+
+        function _esPerfilDefault() {
+            return !!(window.PerfilManager && PerfilManager.esPerfilDefault());
+        }
+
+        function _aplicarTiempo(registro, t) {
+            registro.horas = t?.horas || 0;
+            registro.minutos = t?.minutos || 0;
+            registro.total = t?.total || 0;
+        }
+
         function ordenarRegistros() {
             registros.sort((a, b) => {
                 if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
@@ -1414,7 +1428,7 @@
             const timerDetenido = detenerYRegistrarTimer(reg);
             reg.salida = s;
             const t = calcularHoras(reg.entrada, s, reg.tiempoFuera || null);
-            reg.horas = t?.horas || 0; reg.minutos = t?.minutos || 0; reg.total = t?.total || 0;
+            _aplicarTiempo(reg, t);
             const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
             HistoryManager.saveState(registros, `salida ${s} (${TimeUtils.fechaCorta(reg.fecha)})`);
             const saved = await _guardarConCicloSiHoy(reg.id, esHoy, 'salida');
@@ -1543,7 +1557,7 @@
                 const hoy = TimeUtils.obtenerFechaHoy();
 
                 if (registroABorrar && registroABorrar.fecha === hoy) {
-                    const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+                    const perfilId = _perfilIdActual();
                     const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
                     if (StorageHelper.getItem(storageKey)) {
                         StorageHelper.removeItem(storageKey);
@@ -1671,7 +1685,7 @@
         async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {
             const reg = registros.find(r => r.id === editandoId);
             if (reg?.fecha === TimeUtils.obtenerFechaHoy()) {
-                const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+                const perfilId = _perfilIdActual();
                 StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
                 notify.actualizarEstadoBotonTimerMain();
             }
@@ -1737,7 +1751,7 @@
             r.salida = s || null; r.tiempoFuera = tf; r.credito = cr; r.notas = notas; r.objetivoHoras = objetivoNuevo;
 
             const t = calcularHoras(r.entrada, r.salida, r.tiempoFuera, r.credito);
-            r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
+            _aplicarTiempo(r, t);
 
             ordenarRegistros();
             HistoryManager.saveState(registros, `editar registro (${TimeUtils.fechaCorta(f)})`);
@@ -1761,7 +1775,7 @@
             registros.splice(0, registros.length);
             ignorarTiempoFuera = false;
 
-            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+            const perfilId = _perfilIdActual();
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
             const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
             keys.forEach(k => StorageHelper.removeItem(k, true));
@@ -1809,7 +1823,7 @@
             normalizados.forEach(r => {
                 if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return;
                 const t = calcularHorasFn(r.entrada, r.salida, r.tiempoFuera || null, r.credito || null);
-                r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
+                _aplicarTiempo(r, t);
             });
             return normalizados;
         }
@@ -1946,7 +1960,7 @@
             migrarObjetivoHorasFaltante();
             HistoryManager.saveState(registros, descripcion || mensajeExito);
             if (await guardarYActualizar()) {
-                const esPerfilDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
+                const esPerfilDefault = _esPerfilDefault();
                 if (esPerfilDefault) {
                     StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, diasHabiles);
                     StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, horasDiarias);
@@ -1961,7 +1975,7 @@
         }
 
         function detenerYRegistrarTimer(registro) {
-            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+            const perfilId = _perfilIdActual();
             const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
             const storedStart = StorageHelper.getItem(storageKey);
             if (!storedStart) return false;
@@ -2200,7 +2214,7 @@
             }
             r.credito = nuevoCredito;
             const t = calcularHoras(r.entrada, r.salida, r.tiempoFuera, r.credito);
-            r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
+            _aplicarTiempo(r, t);
             return true;
         }
 
@@ -2224,6 +2238,9 @@
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
             horasDiariasT2: () => horasDiariasT2, setHorasDiariasT2: (v) => horasDiariasT2 = v,
             dobleTurno: () => dobleTurno, setDobleTurno: (v) => dobleTurno = v,
+            perfilIdActual: _perfilIdActual,
+            esPerfilDefault: _esPerfilDefault,
+            aplicarTiempo: _aplicarTiempo,
             horasObjetivoPorTurno: _horasObjetivoPorTurno,
             objetivoTurnoFaltante: _objetivoTurnoFaltante,
             objetivoDiaVacio: _objetivoDiaVacio,
@@ -2787,6 +2804,10 @@
 
         let perfilEnEdicion = null;
 
+        function _perfilesActuales() {
+            return window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+        }
+
         function renderizarListaPerfiles(animarCrecimiento = false) {
             const lista = document.getElementById('lista-perfiles-botones');
             if (!lista) return;
@@ -2875,7 +2896,7 @@
             const input = document.getElementById('nombre-nuevo-perfil-selector');
             if (!input) return;
             const nombre = S.sanitizeString(input.value.trim(), 30);
-            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+            const perfiles = _perfilesActuales();
 
             const error = _validarNombrePerfil(nombre, perfiles);
             if (error) { mostrarToast(error, 'error'); return; }
@@ -2908,7 +2929,7 @@
 
         function abrirEditorPerfil(perfilId) {
             perfilEnEdicion = perfilId;
-            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+            const perfiles = _perfilesActuales();
             const perfil = perfiles[perfilId];
 
             if (!perfil) {
@@ -2949,7 +2970,7 @@
         function guardarEdicionPerfil() {
             if (!perfilEnEdicion) return;
             const nuevoNombre = S.sanitizeString(document.getElementById('nombre-perfil-editar').value.trim(), 30);
-            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+            const perfiles = _perfilesActuales();
 
             const error = _validarNombrePerfilEdicion(nuevoNombre, perfiles, perfilEnEdicion);
             if (error) { mostrarToast(error, 'error'); return; }
@@ -2988,7 +3009,7 @@
             if (!perfilEnEdicion || perfilEnEdicion === 'default') {
                 mostrarToast('No se puede eliminar el perfil Principal', 'error'); return;
             }
-            const perfiles = window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+            const perfiles = _perfilesActuales();
             const perfil = perfiles[perfilEnEdicion];
             if (!perfil) { mostrarToast('Perfil no encontrado', 'error'); return; }
 
@@ -6671,7 +6692,7 @@
         }
 
         function _breakStorageKey() {
-            const perfilId = window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+            const perfilId = D.perfilIdActual();
             return STORAGE_KEYS.BREAK_TIME(perfilId);
         }
 
@@ -7403,7 +7424,7 @@
             const minutos = Math.floor(totalSeg / 60) + (totalSeg % 60 >= 30 ? 1 : 0);
             registroHoy.tiempoFuera = sumarMinutosAHora(registroHoy.tiempoFuera || '00:00', minutos);
             const t = D.calcularHoras(registroHoy.entrada, registroHoy.salida, registroHoy.tiempoFuera);
-            registroHoy.horas = t?.horas || 0; registroHoy.minutos = t?.minutos || 0; registroHoy.total = t?.total || 0;
+            D.aplicarTiempo(registroHoy, t);
             HistoryManager.saveState(D.registros(), `tiempo fuera +${minutos}min (${TimeUtils.fechaCorta(registroHoy.fecha)})`);
             StorageHelper.removeItem(storageKey);
             await D.guardarYActualizar(registroHoy.id);
@@ -8606,7 +8627,7 @@
             if (seleccionados > 0) {
                 const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
                 D.setDiasHabiles(nuevosDias);
-                const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
+                const esDefault = D.esPerfilDefault();
                 if (esDefault) StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
                 D.guardarYActualizar();
             }
@@ -8636,7 +8657,7 @@
             actualizarFeedbackConfig();
             D.setHorasDiarias(nuevoValor);
 
-            const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
+            const esDefault = D.esPerfilDefault();
             if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
             D.guardarYActualizar();
         }
@@ -8652,7 +8673,7 @@
             actualizarFeedbackConfig();
             D.setHorasDiariasT2(nuevoValor);
 
-            const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
+            const esDefault = D.esPerfilDefault();
             if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS_T2, nuevoValor);
             D.guardarYActualizar();
         }

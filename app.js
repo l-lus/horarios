@@ -1887,35 +1887,63 @@
         function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutosBreakActivo = 0) {
             const hoy = TimeUtils.obtenerFechaHoy();
             const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);
-            const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
-            const { ayerStr, ayerAbierto } = detectarAyerAbierto(hoy, regsPorFecha);
+            const regsPorFecha = new Map();
+            for (const r of registrosRango) {
+                if (!regsPorFecha.has(r.fecha)) regsPorFecha.set(r.fecha, []);
+                regsPorFecha.get(r.fecha).push(r);
+            }
+            const { ayerStr, ayerAbierto } = detectarAyerAbierto(hoy, registrosRango);
 
-            const regHoy = regsPorFecha.get(hoy) ?? null;
-            const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
-            const regActivo = (ayerAbierto && !regHoy?.entrada) ? (regsPorFecha.get(ayerStr) ?? null)
-                : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
+            const regsHoyArr = regsPorFecha.get(hoy) || [];
+            const regHoyVisible = dobleTurno
+                ? (regsHoyArr.find(r => r.entrada && !r.salida) ?? regsHoyArr[regsHoyArr.length - 1] ?? null)
+                : (regsHoyArr[0] ?? null);
+            const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoyVisible?.entrada, regHoyVisible?.salida);
+            const regActivo = (ayerAbierto && !regHoyVisible?.entrada) ? (regsPorFecha.get(ayerStr)?.[0] ?? null)
+                : (!tipoEspecialHoy && regHoyVisible?.entrada && !regHoyVisible.salida) ? regHoyVisible : null;
 
             let objetivo = 0, hechas = 0;
             for (const iso of TimeUtils.generarRangoFechas(desde, hasta)) {
                 if (iso > hoy) continue;
                 const esDiaHabil = diasHabiles.includes(TimeUtils.parsearFechaLocal(iso).getDay());
-                const r = regsPorFecha.get(iso);
-                const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const esRemoto = esEspecial && esTipoRemoto(r);
-                const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
-                const objetivoDia = r ? objetivoDeRegistro(r) : horasDiarias;
+                const regsDia = regsPorFecha.get(iso) || [];
 
-                if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += objetivoDia;
-                if (r && r.salida && !esEspecial && diaTerminado) hechas += r.total;
-                if (esRemoto) hechas += objetivoDia;
+                if (regsDia.length === 0) {
+                    if (esDiaHabil && iso !== hoy) objetivo += dobleTurno ? (horasDiarias + horasDiariasT2) : horasDiarias;
+                    continue;
+                }
 
-                if (incluirActivoEnVivo && !diaTerminado && esDiaHabil && !esEspecial && r && r === regActivo) {
-                    const t = calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
-                    const transcurrido = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
-                    if (transcurrido > objetivoDia) {
-                        objetivo += objetivoDia;
-                        hechas += transcurrido;
+                const turnosPresentes = new Set(regsDia.map(r => r.turno || 1));
+
+                for (const r of regsDia) {
+                    const esEspecial = TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
+                    const esRemoto = esEspecial && esTipoRemoto(r);
+                    const esElActivo = r === regActivo;
+                    const objetivoDia = objetivoDeRegistro(r);
+
+                    if (esElActivo) {
+                        // Registro en curso: neutral (no cuenta ni como objetivo ni como hecho) salvo que ya haya superado su propio objetivo
+                        if (incluirActivoEnVivo && esDiaHabil && !esEspecial) {
+                            const t = calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
+                            const transcurrido = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
+                            if (transcurrido > objetivoDia) {
+                                objetivo += objetivoDia;
+                                hechas += transcurrido;
+                            }
+                        }
+                        continue;
                     }
+
+                    if (esDiaHabil && (!esEspecial || esRemoto)) objetivo += objetivoDia;
+                    if (r.salida && !esEspecial) hechas += r.total;
+                    if (esRemoto) hechas += objetivoDia;
+                }
+
+                // Turno faltante ese día (nunca registrado): cuenta como objetivo pendiente, igual que un día sin ningún registro,
+                // pero solo para días ya pasados (hoy todavía puede completarse más tarde).
+                if (dobleTurno && esDiaHabil && iso !== hoy) {
+                    if (!turnosPresentes.has(2)) objetivo += horasDiariasT2;
+                    if (!turnosPresentes.has(1)) objetivo += horasDiarias;
                 }
             }
             return Math.round((hechas - objetivo) * 1e6) / 1e6;

@@ -3112,21 +3112,24 @@
                 const regs = regsPorFecha[fecha];
                 if ((!regs || regs.length === 0) && filtroActivo && todosRegsPorFecha[fecha]) return 'dia-filtrado';
                 if (!regs || regs.length === 0) return 'dia-sin-registro';
-                const clasesDia = regs.map(r => {
-                    if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
-                        const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                        return `dia-especial-${tipo ? tipo.color : 'purple'}`;
-                    }
-                    if (r.entrada && !r.salida) return 'dia-en-curso';
-                    if (!UILogic._esFechaHabil(fecha, diasHabilesObj) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
-                    return UILogic._cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
-                });
-                if (clasesDia.length === 1) return clasesDia[0];
-                if (clasesDia.some(c => c === 'dia-en-curso')) return 'dia-en-curso';
-                if (clasesDia.some(c => c === 'dia-incompleto')) return 'dia-incompleto';
-                if (clasesDia.some(c => c === 'dia-cubierto')) return 'dia-cubierto';
-                if (clasesDia.every(c => c === 'dia-normal')) return 'dia-normal';
-                return clasesDia[clasesDia.length - 1];
+
+                const especiales = regs.filter(r => TiposRegistro.esRegistroEspecial(r.entrada, r.salida));
+                const enCurso = regs.filter(r => r.entrada && !r.salida);
+                const normales = regs.filter(r => !especiales.includes(r) && !enCurso.includes(r));
+
+                if (enCurso.length) return 'dia-en-curso';
+                if (especiales.length) {
+                    const tipo = TiposRegistro.obtenerTipoPorCodigo(especiales[0].entrada, especiales[0].salida);
+                    return `dia-especial-${tipo ? tipo.color : 'purple'}`;
+                }
+                if (!UILogic._esFechaHabil(fecha, diasHabilesObj)) return 'dia-normal';
+
+                // Comparar el total combinado del día (suma de todos los turnos cerrados)
+                // contra el objetivo combinado, en vez de evaluar cada turno por separado.
+                const totalDia = normales.reduce((s, r) => s + (r.total || 0), 0);
+                const objetivoDia = normales.reduce((s, r) => s + D.objetivoDeRegistro(r), 0);
+                if (horasGte(totalDia, objetivoDia)) return 'dia-normal';
+                return UILogic._cubiertoPorSaldo(fecha) ? 'dia-cubierto' : 'dia-incompleto';
             };
 
             const diasNombre = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];

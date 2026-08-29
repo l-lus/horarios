@@ -1625,6 +1625,24 @@
             if (esCompensatorioNuevo) {
                 const refInput = S.sanitizeString($('edit-referencia-compensatorio')?.value || '', 10);
                 referenciaCompensatorioNueva = TimeUtils.validarFecha(refInput) ? refInput : undefined;
+
+                if (referenciaCompensatorioNueva) {
+                    if (referenciaCompensatorioNueva > f) {
+                        notify.restaurarBotonGuardarEdicion(btnGuardar);
+                        notify.mostrarToast('El día a compensar no puede ser posterior al compensatorio', 'error');
+                        return;
+                    }
+                    const entradaOrig = r.entrada, salidaOrig = r.salida, fechaOrig = r.fecha, refOrig = r.referenciaCompensatorio;
+                    r.entrada = e || null; r.salida = s || null; r.fecha = f; r.referenciaCompensatorio = referenciaCompensatorioNueva;
+                    const asigTest = _calcularAsignacionesCompensatorio();
+                    const resuelto = _buscarAsignacionCompensatorio(r.id, 'compensatorioId', asigTest);
+                    r.entrada = entradaOrig; r.salida = salidaOrig; r.fecha = fechaOrig; r.referenciaCompensatorio = refOrig;
+                    if (!resuelto?.referenciaFecha) {
+                        notify.restaurarBotonGuardarEdicion(btnGuardar);
+                        notify.mostrarToast('Ese día no tiene excedente disponible (o ya fue usado por otro compensatorio)', 'error');
+                        return;
+                    }
+                }
             }
 
             let cr = _calcularCredito(e, s, tf, objetivoEdicionEnVivo());
@@ -4645,7 +4663,11 @@
             if (esCubierto) badgesExtra.push({ texto: 'Cubierto', clase: 'gold-text' });
             if (tipoEspecial?.id === 'compensatorio') {
                 const fechaCompensada = D.fechaCompensadaPorRegistro(r, asignacionesCompensatorio);
-                if (fechaCompensada) badgesExtra.push({ texto: TimeUtils.fechaCorta(fechaCompensada), clase: `${tipoEspecial.color}-text` });
+                if (fechaCompensada) {
+                    badgesExtra.push({ texto: TimeUtils.fechaCorta(fechaCompensada), clase: `${tipoEspecial.color}-text` });
+                } else {
+                    badgesExtra.push({ texto: '⚠ Sin referencia', clase: 'red-text' });
+                }
             }
             if (!tipoEspecial) {
                 const fechaCompensado = D.fechaCompensadoDeRegistro(r, asignacionesCompensatorio);

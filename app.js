@@ -1538,6 +1538,25 @@
             });
         }
 
+        // Botón "pegar referencia automática o limpiar" del campo Día a compensar: si el campo tiene
+        // valor, lo limpia; si no, lo completa con la fecha que elegiría _calcularAsignacionesCompensatorio
+        // si este registro NO tuviera una referencia manual (para eso se calcula sobre una copia de
+        // `registros` con `referenciaCompensatorio` quitado solo para este registro, sin tocar el real).
+        function pegarReferenciaAutomatica() {
+            const elRef = $('edit-referencia-compensatorio');
+            if (!elRef || editandoId === null) return;
+
+            if (elRef.value) {
+                elRef.value = '';
+            } else {
+                const listaSinManual = registros.map(x => x.id === editandoId ? { ...x, referenciaCompensatorio: undefined } : x);
+                const asignaciones = _calcularAsignacionesCompensatorio(listaSinManual);
+                const asignacion = asignaciones.find(a => a.compensatorioId === editandoId);
+                elRef.value = asignacion?.referenciaFecha || '';
+            }
+            elRef.dispatchEvent(new Event('input'));
+        }
+
         function _validarCamposEdicion(f, e, s, tf) {
             if (_fechaFuturaInvalida(f, e, s))
                 return { msg: 'Fecha futura no permitida en registro regular', tipo: 'warning' };
@@ -2113,8 +2132,8 @@
 
         const LIMITE_DIAS_COMPENSATORIO = 14;
 
-        function _calcularAsignacionesCompensatorio() {
-            const ordenados = [...registros].sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
+        function _calcularAsignacionesCompensatorio(listaRegistros = registros) {
+            const ordenados = [...listaRegistros].sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
             const disponibles = [];
             const fechaLimiteDesde = (fechaRef) => {
                 const d = TimeUtils.parsearFechaLocal(fechaRef);
@@ -2259,7 +2278,7 @@
             },
             editandoId: () => editandoId, setEditandoId: (id) => editandoId = id, vistaActual: () => vistaActual, setVistaActual: (v) => vistaActual = v,
             cargarConfiguracion, calcularHoras, normalizarRegistrosImportados, guardarYActualizar,
-            agregarRegistro, eliminarRegistroActual, editarRegistro, guardarEdicion, borrarTodoHistorial, exportarJSON, importarDatos,
+            agregarRegistro, eliminarRegistroActual, editarRegistro, guardarEdicion, pegarReferenciaAutomatica, borrarTodoHistorial, exportarJSON, importarDatos,
             calcularBufferPeriodo, detectarAyerAbierto, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
             registrarVacacionesDirecto, borrarPeriodoDirecto, registrarDiaEspecial, editarGrupo, guardarEdicionGrupo,
             eliminarGrupoActual, setGrupoEnEdicion: (val) => grupoEnEdicion = val,
@@ -8036,6 +8055,7 @@
                 borrarTodoHistorial: D.borrarTodoHistorial,
                 editarRegistro: D.editarRegistro,
                 guardarEdicion: D.guardarEdicion,
+                pegarReferenciaAutomatica: D.pegarReferenciaAutomatica,
                 eliminarRegistroActual: D.eliminarRegistroActual,
                 undoAction: D.undoAction,
                 redoAction: D.redoAction,
@@ -8960,6 +8980,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-credito')?.addEventListener('click', () => UILogic.toggleCredito());
     $('btn-lock-toggle')?.addEventListener('click', () => UILogic.toggleBloqueoEdicion());
     $('btn-edit-entrada')?.addEventListener('click', () => UILogic.pegarHoraActual('edit-entrada'));
+    $('btn-edit-referencia-compensatorio')?.addEventListener('click', () => DataManagement.pegarReferenciaAutomatica());
     $('btn-edit-salida')?.addEventListener('click', () => UILogic.pegarHoraActual('edit-salida'));
     $('btn-edit-tf')?.addEventListener('click', () => UILogic.limpiarCampo('edit-tiempo-fuera'));
     $('btn-edit-notas')?.addEventListener('click', () => UILogic.limpiarCampo('edit-notas'));

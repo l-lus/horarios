@@ -1538,10 +1538,6 @@
             });
         }
 
-        // Botón "pegar referencia automática o limpiar" del campo Día a compensar: si el campo tiene
-        // valor, lo limpia; si no, lo completa con la fecha que elegiría _calcularAsignacionesCompensatorio
-        // si este registro NO tuviera una referencia manual (para eso se calcula sobre una copia de
-        // `registros` con `referenciaCompensatorio` quitado solo para este registro, sin tocar el real).
         function pegarReferenciaAutomatica() {
             const elRef = $('edit-referencia-compensatorio');
             if (!elRef || editandoId === null) return;
@@ -2167,9 +2163,6 @@
                 }
                 return idx === -1 ? null : disponibles.splice(idx, 1)[0];
             };
-            // Referencia elegida a mano por el usuario en el editor (campo opcional `referenciaCompensatorio`
-            // en el registro): se busca ese día puntual en el pool de disponibles, sin el límite de 14 días
-            // ni el criterio de "mayor excedente" — es una elección explícita, no una sugerencia automática.
             const sacarPorFecha = (fecha) => {
                 const idx = disponibles.findIndex(d => d.fecha === fecha);
                 return idx === -1 ? null : disponibles.splice(idx, 1)[0];
@@ -4972,8 +4965,6 @@
                 const esCompensatorio = tipoEspecial?.id === 'compensatorio';
                 const grupoRef = document.getElementById('grupo-referencia-compensatorio');
                 if (grupoRef) grupoRef.classList.toggle('expanded', esCompensatorio);
-                // Solo se limpia al salir del tipo compensatorio; mientras se mantenga, no se pisa
-                // lo que el usuario ya haya elegido acá (aunque cambien otros campos del formulario).
                 if (!esCompensatorio) elRef.value = '';
             }
 

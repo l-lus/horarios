@@ -390,11 +390,14 @@
             if (r.objetivoHoras !== null && r.objetivoHoras !== undefined) {
                 if (!Number.isFinite(r.objetivoHoras) || r.objetivoHoras < 0 || r.objetivoHoras > 24) return false;
             }
+            if (r.referenciaCompensatorio !== null && r.referenciaCompensatorio !== undefined) {
+                if (typeof r.referenciaCompensatorio !== 'string' || !TimeUtils.validarFecha(r.referenciaCompensatorio)) return false;
+            }
             if (!Number.isFinite(r.horas) || r.horas < 0 || r.horas > 24) return false;
             if (!Number.isFinite(r.minutos) || r.minutos < 0 || r.minutos > 59) return false;
             if (!Number.isFinite(r.total) || r.total < 0 || r.total > 24) return false;
 
-            const propiedadesPermitidas = ['id', 'fecha', 'entrada', 'salida', 'tiempoFuera', 'horas', 'minutos', 'total', 'credito', 'notas', 'objetivoHoras'];
+            const propiedadesPermitidas = ['id', 'fecha', 'entrada', 'salida', 'tiempoFuera', 'horas', 'minutos', 'total', 'credito', 'notas', 'objetivoHoras', 'referenciaCompensatorio'];
             const propiedadesActuales = Object.keys(r);
             const tienePropiedadesSospechosas = propiedadesActuales.some(prop => !propiedadesPermitidas.includes(prop));
             if (tienePropiedadesSospechosas) return false;
@@ -1507,6 +1510,14 @@
                 elObjetivo.textContent = TimeUtils.horasATexto(objetivoActual, 'short');
             }
 
+            const elRef = $('edit-referencia-compensatorio');
+            if (elRef) {
+                const esCompensatorio = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'compensatorio';
+                const grupoRef = $('grupo-referencia-compensatorio');
+                if (grupoRef) grupoRef.classList.toggle('expanded', esCompensatorio);
+                elRef.value = esCompensatorio ? (r.referenciaCompensatorio || _fechaCompensadaPorRegistro(r) || '') : '';
+            }
+
             const btnCredito = document.getElementById('btn-toggle-credito');
 
             if (r.credito && r.credito !== '00:00') {
@@ -1609,11 +1620,18 @@
             if (!_esObjetivoValido(objetivoNuevo)) objetivoNuevo = horasDiarias;
             const objetivoPrevio = (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras)) ? r.objetivoHoras : horasDiarias;
 
+            const esCompensatorioNuevo = TiposRegistro.obtenerTipoPorCodigo(e, s)?.id === 'compensatorio';
+            let referenciaCompensatorioNueva;
+            if (esCompensatorioNuevo) {
+                const refInput = S.sanitizeString($('edit-referencia-compensatorio')?.value || '', 10);
+                referenciaCompensatorioNueva = TimeUtils.validarFecha(refInput) ? refInput : undefined;
+            }
+
             let cr = _calcularCredito(e, s, tf, objetivoEdicionEnVivo());
 
             if (r.fecha === f && (r.entrada || '') === (e || '') && (r.salida || '') === (s || '') &&
                 (r.tiempoFuera || '') === (tf || '') && (r.credito || '') === (cr || '') && (r.notas || '') === (notas || '') &&
-                objetivoNuevo === objetivoPrevio) {
+                objetivoNuevo === objetivoPrevio && (r.referenciaCompensatorio || '') === (referenciaCompensatorioNueva || '')) {
                 notify.mostrarToast('Sin cambios', 'info');
                 notify.restaurarBotonGuardarEdicion(btnGuardar);
                 notify.cerrarEdicion();
@@ -1638,6 +1656,8 @@
                 }
             }
             r.salida = s || null; r.tiempoFuera = tf; r.credito = cr; r.notas = notas; r.objetivoHoras = objetivoNuevo;
+            if (referenciaCompensatorioNueva) r.referenciaCompensatorio = referenciaCompensatorioNueva;
+            else delete r.referenciaCompensatorio;
 
             _aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera, r.credito);
 
@@ -1704,6 +1724,9 @@
                     notas: (r.notas && typeof r.notas === 'string') ? S.sanitizeString(r.notas, S.SECURITY_LIMITS.MAX_NOTAS_LENGTH) || null : null,
                     objetivoHoras: (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras))
                         ? Math.max(0, Math.min(24, r.objetivoHoras))
+                        : undefined,
+                    referenciaCompensatorio: (typeof r.referenciaCompensatorio === 'string' && TimeUtils.validarFecha(r.referenciaCompensatorio))
+                        ? r.referenciaCompensatorio
                         : undefined,
                 }));
 
@@ -2107,11 +2130,18 @@
                 }
                 return idx === -1 ? null : disponibles.splice(idx, 1)[0];
             };
+            // Referencia elegida a mano por el usuario en el editor (campo opcional `referenciaCompensatorio`
+            // en el registro): se busca ese día puntual en el pool de disponibles, sin el límite de 14 días
+            // ni el criterio de "mayor excedente" — es una elección explícita, no una sugerencia automática.
+            const sacarPorFecha = (fecha) => {
+                const idx = disponibles.findIndex(d => d.fecha === fecha);
+                return idx === -1 ? null : disponibles.splice(idx, 1)[0];
+            };
             const asignaciones = [];
             for (const r of ordenados) {
                 const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
                 if (tipo?.id === 'compensatorio') {
-                    const elegido = sacarMejor(r.fecha);
+                    const elegido = r.referenciaCompensatorio ? sacarPorFecha(r.referenciaCompensatorio) : sacarMejor(r.fecha);
                     asignaciones.push({
                         compensatorioId: r.id, compensatorioFecha: r.fecha,
                         referenciaId: elegido ? elegido.id : null, referenciaFecha: elegido ? elegido.fecha : null,
@@ -4859,7 +4889,7 @@
             edicionBloqueada = bloqueado;
             _setBloqueoEdicionGenerico(bloqueado, {
                 btnLockId: 'btn-lock-toggle',
-                inputIds: ['edit-fecha', 'edit-entrada', 'edit-salida', 'edit-tiempo-fuera', 'edit-notas'],
+                inputIds: ['edit-fecha', 'edit-entrada', 'edit-salida', 'edit-tiempo-fuera', 'edit-notas', 'edit-referencia-compensatorio'],
                 modalId: 'modal-editar',
                 excluirBotones: 'button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)'
             });
@@ -4890,13 +4920,24 @@
 
         function _actualizarHintEdicion() {
             const hint = document.getElementById('edit-hint-resumen');
-            if (!hint) return;
             const e = document.getElementById('edit-entrada')?.value.trim();
             const s = document.getElementById('edit-salida')?.value.trim();
             let tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
             if (tf) tf = TimeUtils.normalizarMinutosSueltos(tf);
+
+            const tipoEspecial = (e || s) ? TiposRegistro.obtenerTipoPorCodigo(e, s) : null;
+            const elRef = document.getElementById('edit-referencia-compensatorio');
+            if (elRef) {
+                const esCompensatorio = tipoEspecial?.id === 'compensatorio';
+                const grupoRef = document.getElementById('grupo-referencia-compensatorio');
+                if (grupoRef) grupoRef.classList.toggle('expanded', esCompensatorio);
+                // Solo se limpia al salir del tipo compensatorio; mientras se mantenga, no se pisa
+                // lo que el usuario ya haya elegido acá (aunque cambien otros campos del formulario).
+                if (!esCompensatorio) elRef.value = '';
+            }
+
+            if (!hint) return;
             if (!e && !s) { hint.textContent = ''; return; }
-            const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(e, s);
             if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }
             if (e?.length === 5 && s?.length === 5) {
                 const t = D.calcularHoras(e, s, tf || null, null, false);

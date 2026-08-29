@@ -1515,7 +1515,7 @@
                 const esCompensatorio = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'compensatorio';
                 const grupoRef = $('grupo-referencia-compensatorio');
                 if (grupoRef) grupoRef.classList.toggle('expanded', esCompensatorio);
-                elRef.value = esCompensatorio ? (r.referenciaCompensatorio || _fechaCompensadaPorRegistro(r) || '') : '';
+                elRef.value = esCompensatorio ? (r.referenciaCompensatorio || '') : '';
             }
 
             const btnCredito = document.getElementById('btn-toggle-credito');
@@ -1545,7 +1545,12 @@
             if (elRef.value) {
                 elRef.value = '';
             } else {
-                const listaSinManual = registros.map(x => x.id === editandoId ? { ...x, referenciaCompensatorio: undefined } : x);
+                const f = S.sanitizeString($('edit-fecha').value, 10);
+                const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
+                const s = S.sanitizeString($('edit-salida').value.trim(), 5);
+                const listaSinManual = registros.map(x => x.id === editandoId
+                    ? { ...x, fecha: f, entrada: e || null, salida: s || null, referenciaCompensatorio: undefined }
+                    : x);
                 const asignaciones = _calcularAsignacionesCompensatorio(listaSinManual);
                 const asignacion = asignaciones.find(a => a.compensatorioId === editandoId);
                 elRef.value = asignacion?.referenciaFecha || '';
@@ -1647,11 +1652,18 @@
                         notify.mostrarToast('El día a compensar no puede ser posterior al compensatorio', 'error');
                         return;
                     }
-                    const entradaOrig = r.entrada, salidaOrig = r.salida, fechaOrig = r.fecha, refOrig = r.referenciaCompensatorio;
-                    r.entrada = e || null; r.salida = s || null; r.fecha = f; r.referenciaCompensatorio = referenciaCompensatorioNueva;
-                    const asigTest = _calcularAsignacionesCompensatorio();
+                    const asignacionesActuales = _calcularAsignacionesCompensatorio();
+                    const yaUsadoPorOtro = asignacionesActuales.find(a => a.compensatorioId !== r.id && a.referenciaFecha === referenciaCompensatorioNueva);
+                    if (yaUsadoPorOtro) {
+                        notify.restaurarBotonGuardarEdicion(btnGuardar);
+                        notify.mostrarToast(`Ese día ya está asignado al compensatorio del ${TimeUtils.fechaCorta(yaUsadoPorOtro.compensatorioFecha)}`, 'error');
+                        return;
+                    }
+                    const listaSimulada = registros.map(x => x.id === r.id
+                        ? { ...x, fecha: f, entrada: e || null, salida: s || null, referenciaCompensatorio: referenciaCompensatorioNueva }
+                        : x);
+                    const asigTest = _calcularAsignacionesCompensatorio(listaSimulada);
                     const resuelto = _buscarAsignacionCompensatorio(r.id, 'compensatorioId', asigTest);
-                    r.entrada = entradaOrig; r.salida = salidaOrig; r.fecha = fechaOrig; r.referenciaCompensatorio = refOrig;
                     if (!resuelto?.referenciaFecha) {
                         notify.restaurarBotonGuardarEdicion(btnGuardar);
                         notify.mostrarToast('Ese día no tiene excedente disponible (o ya fue usado por otro compensatorio)', 'error');
@@ -2148,41 +2160,56 @@
 
         function _calcularAsignacionesCompensatorio(listaRegistros = registros) {
             const ordenados = [...listaRegistros].sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
-            const disponibles = [];
+
+            const excedentePorFecha = new Map();
+            for (const r of ordenados) {
+                const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+                if (!tipo) {
+                    const excedente = _excedenteDeRegistro(r);
+                    if (excedente > 0) excedentePorFecha.set(r.fecha, { id: r.id, fecha: r.fecha, excedente });
+                }
+            }
+
+            const compensatorios = ordenados.filter(r => TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'compensatorio');
+            const asignaciones = new Map();
+            const usados = new Set();
+
+            for (const r of compensatorios) {
+                if (!r.referenciaCompensatorio) continue;
+                const candidata = excedentePorFecha.get(r.referenciaCompensatorio);
+                const valido = !!candidata && r.referenciaCompensatorio <= r.fecha && !usados.has(r.referenciaCompensatorio);
+                asignaciones.set(r.id, {
+                    compensatorioId: r.id, compensatorioFecha: r.fecha,
+                    referenciaId: valido ? candidata.id : null,
+                    referenciaFecha: valido ? candidata.fecha : null,
+                    excedente: valido ? candidata.excedente : 0
+                });
+                if (valido) usados.add(r.referenciaCompensatorio);
+            }
+
             const fechaLimiteDesde = (fechaRef) => {
                 const d = TimeUtils.parsearFechaLocal(fechaRef);
                 d.setDate(d.getDate() - LIMITE_DIAS_COMPENSATORIO);
                 return TimeUtils.formatearFechaLocal(d);
             };
-            const sacarMejor = (fechaRef) => {
-                const limite = fechaLimiteDesde(fechaRef);
-                let idx = -1;
-                for (let i = 0; i < disponibles.length; i++) {
-                    if (disponibles[i].fecha < limite) continue;
-                    if (idx === -1 || disponibles[i].excedente > disponibles[idx].excedente) idx = i;
+            for (const r of compensatorios) {
+                if (asignaciones.has(r.id)) continue;
+                const limite = fechaLimiteDesde(r.fecha);
+                let mejor = null;
+                for (const [fecha, candidata] of excedentePorFecha) {
+                    if (usados.has(fecha) || fecha < limite || fecha > r.fecha) continue;
+                    if (!mejor || candidata.excedente > mejor.excedente) mejor = candidata;
                 }
-                return idx === -1 ? null : disponibles.splice(idx, 1)[0];
-            };
-            const sacarPorFecha = (fecha) => {
-                const idx = disponibles.findIndex(d => d.fecha === fecha);
-                return idx === -1 ? null : disponibles.splice(idx, 1)[0];
-            };
-            const asignaciones = [];
-            for (const r of ordenados) {
-                const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                if (tipo?.id === 'compensatorio') {
-                    const elegido = r.referenciaCompensatorio ? sacarPorFecha(r.referenciaCompensatorio) : sacarMejor(r.fecha);
-                    asignaciones.push({
-                        compensatorioId: r.id, compensatorioFecha: r.fecha,
-                        referenciaId: elegido ? elegido.id : null, referenciaFecha: elegido ? elegido.fecha : null,
-                        excedente: elegido ? elegido.excedente : 0
-                    });
-                } else if (!tipo) {
-                    const excedente = _excedenteDeRegistro(r);
-                    if (excedente > 0) disponibles.push({ id: r.id, fecha: r.fecha, excedente });
-                }
+                asignaciones.set(r.id, {
+                    compensatorioId: r.id, compensatorioFecha: r.fecha,
+                    referenciaId: mejor ? mejor.id : null,
+                    referenciaFecha: mejor ? mejor.fecha : null,
+                    excedente: mejor ? mejor.excedente : 0
+                });
+                if (mejor) usados.add(mejor.fecha);
             }
-            return asignaciones;
+
+            return [...asignaciones.values()];
         }
 
         function _buscarAsignacionCompensatorio(idBuscado, campoId, asignacionesPrecalculadas = null) {
@@ -3331,6 +3358,7 @@
         let _popupCalendarioEl = null;
 
         function _buildInfoHtmlRegistro(reg) {
+            const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
             const esEspecial = TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
             if (esEspecial) {
                 const tipoConfig = TiposRegistro.obtenerTipoPorCodigo(reg.entrada, reg.salida);
@@ -3339,7 +3367,7 @@
                 const colorSafe = /^[a-z]+$/.test(tipoConfig?.color || '') ? tipoConfig.color : 'purple';
                 let fechaCompensadaHtml = '';
                 if (tipoConfig?.id === 'compensatorio') {
-                    const fechaCompensada = D.fechaCompensadaPorRegistro(reg);
+                    const fechaCompensada = D.fechaCompensadaPorRegistro(reg, asignacionesCompensatorio);
                     if (fechaCompensada) {
                         fechaCompensadaHtml = ` <span class="cal-popup-badge cal-popup-badge--${colorSafe}">${S.escapeHtml(TimeUtils.fechaCorta(fechaCompensada))}</span>`;
                     }
@@ -3364,7 +3392,7 @@
                 if (horasGte(totalHoras, objetivoReg)) {
                     diffClase = 'cal-popup-info--green';
                     if (diffText) totalConDiff += ` (${diffText})`;
-                } else if (UILogic._cubiertoPorSaldo(reg.fecha)) {
+                } else if (UILogic._cubiertoPorSaldo(reg.fecha, asignacionesCompensatorio)) {
                     diffClase = 'cal-popup-info--gold';
                     if (diffText) totalConDiff += ` (${diffText})`;
                     cubiertoLineaHtml = `<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>`;
@@ -3373,7 +3401,7 @@
                     if (diffText) totalConDiff += ` (${diffText})`;
                 }
             }
-            const fechaCompensado = D.fechaCompensadoDeRegistro(reg);
+            const fechaCompensado = D.fechaCompensadoDeRegistro(reg, asignacionesCompensatorio);
             if (fechaCompensado) {
                 compensadoLineaHtml = `<span class="cal-popup-badge cal-popup-badge--purple">→ ${S.escapeHtml(TimeUtils.fechaCorta(fechaCompensado))}</span>`;
             }

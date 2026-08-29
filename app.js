@@ -300,6 +300,7 @@
     const SecurityAndUtils = (function () {
         const SECURITY_LIMITS = {
             MAX_REGISTROS: 1000,
+            MAX_HISTORIAL_DIAS_HABILES: 20,
             MAX_STRING_LENGTH: 100,
             MAX_NOTAS_LENGTH: 35,
             MAX_JSON_SIZE: 4 * 1024 * 1024,
@@ -1098,9 +1099,6 @@
         }
 
         let registros = [], diasHabiles = [1, 2, 3, 4, 5], horasDiarias = 7, editandoId = null; let vistaActual = 'diaria'; let ignorarTiempoFuera = false;
-        // Historial de tramos de días hábiles: [{ desde: 'YYYY-MM-DD', dias: [0-6...] }, ...] ordenado ascendente por 'desde'.
-        // Permite saber qué configuración de días hábiles regía en una fecha pasada, sin aplicar retroactivamente
-        // un cambio hecho hoy a fechas anteriores. Si está vacío, se asume que la config actual rigió siempre.
         let historialDiasHabiles = [];
         let filtroActivo = false;
         let filtroDesde = null;
@@ -1813,12 +1811,8 @@
                             const h = typeof data.horasDiarias === 'string' ? parseFloat(data.horasDiarias) : data.horasDiarias;
                             if (Number.isFinite(h) && h >= 0 && h <= 24) horasDiarias = h;
                         }
-                        // Si el backup trae historial de días hábiles se restaura tal cual; si no (backups viejos),
-                        // se sintetiza un único tramo "vigente desde siempre" para no romper el comportamiento no retroactivo.
                         const historialImportado = _sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
                         historialDiasHabiles = historialImportado || [{ desde: '0001-01-01', dias: diasHabiles }];
-                        // Resincroniza el campo "plano" con lo vigente hoy según el historial recién restaurado,
-                        // por si el backup traía un `diasHabiles` desactualizado respecto de su propio historial.
                         diasHabiles = diasHabilesEnFecha(TimeUtils.obtenerFechaHoy());
                         const n = registrosImportados.length;
                         finalizarImportacionAndSave(`Se reemplazaron los datos por ${n === 1 ? '1 registro' : `${n} registros`}`, 'restauración local');
@@ -2026,23 +2020,16 @@
 
         function _sanitizarHistorialDiasHabiles(historial) {
             if (!Array.isArray(historial)) return null;
-            // Se exige una fecha de calendario real (o el centinela "desde siempre") para evitar que un
-            // backup corrupto/manipulado cuele algo como "0000-00-00", que por comparación lexicográfica
-            // terminaría rigiendo por encima de cualquier fecha real.
             const limpio = historial
                 .filter(t => t && typeof t.desde === 'string' && (t.desde === '0001-01-01' || TimeUtils.validarFecha(t.desde)) && Array.isArray(t.dias))
                 .map(t => ({ desde: t.desde, dias: t.dias.filter(d => Number.isInteger(d) && d >= 0 && d <= 6) }))
                 .filter(t => t.dias.length > 0);
             limpio.sort((a, b) => a.desde.localeCompare(b.desde));
 
-            // Garantiza "desde" único por tramo (p. ej. datos corruptos con dos tramos en la misma fecha
-            // pero días distintos): ante un duplicado se conserva el último, igual que registrarCambioDiasHabiles.
             const porFecha = new Map();
             limpio.forEach(t => porFecha.set(t.desde, t));
             const sinDuplicados = [...porFecha.values()].sort((a, b) => a.desde.localeCompare(b.desde));
 
-            // Fusiona tramos consecutivos con los mismos días (p. ej. generados antes de que
-            // registrarCambioDiasHabiles evitara crear tramos redundantes), conservando el "desde" más antiguo.
             const mismosDias = (a, b) => a.length === b.length && [...a].sort((x, y) => x - y).every((d, i) => d === [...b].sort((x, y) => x - y)[i]);
             const fusionado = [];
             for (const tramo of sinDuplicados) {
@@ -2050,7 +2037,15 @@
                 if (anterior && mismosDias(anterior.dias, tramo.dias)) continue;
                 fusionado.push(tramo);
             }
-            return fusionado.length > 0 ? fusionado : null;
+
+            const limitado = fusionado.length > S.SECURITY_LIMITS.MAX_HISTORIAL_DIAS_HABILES
+                ? fusionado.slice(-S.SECURITY_LIMITS.MAX_HISTORIAL_DIAS_HABILES)
+                : fusionado;
+            if (limitado.length < fusionado.length) {
+                console.warn(`historialDiasHabiles: se descartaron ${fusionado.length - limitado.length} tramos antiguos (límite: ${S.SECURITY_LIMITS.MAX_HISTORIAL_DIAS_HABILES}).`);
+            }
+
+            return limitado.length > 0 ? limitado : null;
         }
 
         function diasHabilesEnFecha(iso) {
@@ -2060,8 +2055,6 @@
                 if (tramo.desde <= iso) vigente = tramo;
                 else break;
             }
-            // Si la fecha es anterior a todos los tramos registrados, se usa el más antiguo:
-            // no hay información de qué regía antes, así que se asume que ya regía desde siempre.
             if (!vigente) vigente = historialDiasHabiles[0];
             return Array.isArray(vigente.dias) ? vigente.dias : diasHabiles;
         }
@@ -2071,7 +2064,6 @@
             if (!Array.isArray(historialDiasHabiles)) historialDiasHabiles = [];
             const idx = historialDiasHabiles.findIndex(t => t.desde === hoy);
             if (idx >= 0) {
-                // Ya hubo un cambio hoy: se reemplaza, no se acumulan tramos del mismo día
                 historialDiasHabiles[idx] = { desde: hoy, dias: nuevosDias };
             } else {
                 historialDiasHabiles.push({ desde: hoy, dias: nuevosDias });
@@ -2218,9 +2210,6 @@
             historialDiasHabiles: () => historialDiasHabiles,
             setHistorialDiasHabiles: (v) => {
                 historialDiasHabiles = Array.isArray(v) ? v : [];
-                // Cada vez que se reemplaza el historial (carga inicial, import, restauración desde Gist,
-                // o edición manual de tramos) se resincroniza el campo "plano" con lo vigente HOY, para que
-                // nunca quede desactualizado frente a un tramo futuro que ya entró en vigencia con el paso del tiempo.
                 if (historialDiasHabiles.length > 0) diasHabiles = diasHabilesEnFecha(TimeUtils.obtenerFechaHoy());
             },
             diasHabilesEnFecha, registrarCambioDiasHabiles, sanitizarHistorialDiasHabiles: _sanitizarHistorialDiasHabiles,
@@ -2640,11 +2629,6 @@
             return cerrar;
         }
 
-        // Crea, monta y posiciona un popup flotante genérico (usado por Calendario, Filtros y Estadísticas).
-        // Todos comparten la misma mecánica de apertura/cierre/estilo; lo único que varía entre ellos
-        // es className/id/dataset, el HTML interno y el trigger que los abre/cierra.
-        // Devuelve { popup, cerrar } — `cerrar` es la función de cierre registrada, por si el caller la necesita
-        // (por ejemplo, para cerrar el popup al hacer click en un botón interno antes de navegar a otro lado).
         function _crearPopupFlotante({ className, id, dataset = {}, html, event, selectorTrigger, esMismoTrigger, alCerrar }) {
             const popup = document.createElement('div');
             popup.className = className;
@@ -2659,10 +2643,6 @@
             return { popup, cerrar };
         }
 
-        // Abre `modalId` recordando el modal actualmente visible (si lo hay) como su "padre", para poder
-        // volver a él al cerrarlo. No hace falta una variable de estado por cada modal que use este patrón
-        // (como tenían Ayuda/Gist/Historial de días por separado): ModalManager ya registra la relación
-        // padre-hijo internamente en `alternar`, y la expone vía `getPadre`.
         function _abrirModalConPadre(modalId, setupFn = null) {
             const modalAbierto = document.querySelector('.modal.show');
             const padre = modalAbierto ? modalAbierto.id : null;
@@ -2671,8 +2651,6 @@
             else ModalManager.abrir(modalId);
         }
 
-        // Cierra `modalId` volviendo al padre que quedó registrado al abrirlo (si lo hay).
-        // `callbackAbrirPadre`, si se pasa, recibe el id del padre como argumento.
         function _cerrarModalConPadre(modalId, callbackAbrirPadre = null) {
             const padre = ModalManager.getPadre(modalId);
             if (padre) ModalManager.alternar(modalId, padre, null, callbackAbrirPadre ? () => callbackAbrirPadre(padre) : null);
@@ -4107,8 +4085,6 @@
                     const hd = parseFloat(data.horasDiarias);
                     if (Number.isFinite(hd) && hd >= 0 && hd <= 24) D.setHorasDiarias(hd);
                 }
-                // Igual que en la restauración local: si el Gist trae historial se restaura, si no
-                // (backups viejos) se sintetiza un tramo único "vigente desde siempre".
                 const historialImportado = D.sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
                 D.setHistorialDiasHabiles(historialImportado || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
                 return {
@@ -4547,8 +4523,6 @@
             return svg;
         }
 
-        // Bloque "info" compartido por un item de registro individual y un grupo expandible:
-        // fecha, horas, y badges (con el total como primer badge, más badges extra opcionales).
         function _crearInfoRegistro({ fechaText, horasText, totalText, totalClase = '', badgesExtra = [] }) {
             const info = document.createElement('div');
             info.className = 'registro-info';
@@ -8171,9 +8145,6 @@
             const perfilActual = PerfilManager.obtenerDatosPerfil();
             D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
             D.setHorasDiarias(perfilActual.horasDiarias !== undefined ? perfilActual.horasDiarias : 7);
-            // Si el perfil no tiene historial (datos previos a este cambio), se sintetiza un único tramo
-            // "vigente desde siempre" con la config actual: el comportamiento para todo lo ya registrado
-            // no cambia hasta que el usuario modifique los días hábiles a partir de ahora.
             const historialGuardado = D.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
             D.setHistorialDiasHabiles(
                 historialGuardado && historialGuardado.length > 0
@@ -8557,12 +8528,7 @@
             if (!_tramoEnEdicionDesde) return;
             const tramos = _obtenerTramosOrdenados();
             if (tramos.length <= 1) return;
-            // El tramo más antiguo actúa de "piso": nunca se puede eliminar, sea o no el centinela
-            // "0001-01-01", porque su desaparición haría retroactivo el tramo siguiente (rige desde
-            // el principio de los tiempos vía el fallback de diasHabilesEnFecha), justo lo que esta
-            // función de historial busca evitar.
             if (tramos[0].desde === _tramoEnEdicionDesde) return;
-
             if (!await ModalManager.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
 
             const restantes = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
@@ -8987,7 +8953,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260827';
+        const _v = '-v260828';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

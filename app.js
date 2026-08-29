@@ -2659,6 +2659,26 @@
             return { popup, cerrar };
         }
 
+        // Abre `modalId` recordando el modal actualmente visible (si lo hay) como su "padre", para poder
+        // volver a él al cerrarlo. No hace falta una variable de estado por cada modal que use este patrón
+        // (como tenían Ayuda/Gist/Historial de días por separado): ModalManager ya registra la relación
+        // padre-hijo internamente en `alternar`, y la expone vía `getPadre`.
+        function _abrirModalConPadre(modalId, setupFn = null) {
+            const modalAbierto = document.querySelector('.modal.show');
+            const padre = modalAbierto ? modalAbierto.id : null;
+            if (setupFn) setupFn();
+            if (padre) ModalManager.alternar(padre, modalId);
+            else ModalManager.abrir(modalId);
+        }
+
+        // Cierra `modalId` volviendo al padre que quedó registrado al abrirlo (si lo hay).
+        // `callbackAbrirPadre`, si se pasa, recibe el id del padre como argumento.
+        function _cerrarModalConPadre(modalId, callbackAbrirPadre = null) {
+            const padre = ModalManager.getPadre(modalId);
+            if (padre) ModalManager.alternar(modalId, padre, null, callbackAbrirPadre ? () => callbackAbrirPadre(padre) : null);
+            else ModalManager.cerrar(modalId);
+        }
+
         function _flashCampoConClase(clase, ids, colorVar = null) {
             ids.forEach(id => {
                 const el = document.getElementById(id);
@@ -2787,6 +2807,8 @@
             _posicionarPopup,
             _registrarCierrePopup,
             _crearPopupFlotante,
+            _abrirModalConPadre,
+            _cerrarModalConPadre,
             _flashCampo,
             _flashCampoTipo,
             _finalizarSlidePendiente,
@@ -3711,7 +3733,7 @@
     // ====================================================================
     const UIGistYRespaldo = (function (S, D, GistSync, UICore) {
         const {
-            mostrarToast, _setBtnDisabled, _setBtnActivo, _flashCampo, _crearPressHold,
+            mostrarToast, _setBtnDisabled, _setBtnActivo, _flashCampo, _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre,
             descargarJSON, obtenerNombrePerfilSafe, _posicionarPopup, _registrarCierrePopup
         } = UICore;
 
@@ -3878,7 +3900,6 @@
             }
         }
 
-        let _gistModalPadre = null;
         let _gistAutoSyncTemp = null;
         let _gistLimitesTemp = null;
         let _gistMergeDesdeModal = false;
@@ -3902,31 +3923,29 @@
         }
 
         function abrirModalGist() {
-            const modalAbierto = document.querySelector('.modal.show');
-            _gistModalPadre = modalAbierto ? modalAbierto.id : null;
+            _abrirModalConPadre('modal-gist', () => {
+                const tokenInput = document.getElementById('gist-token');
+                const gistIdInput = document.getElementById('gist-id');
+                const lastSyncEl = document.getElementById('gist-ultima-sync');
 
-            const tokenInput = document.getElementById('gist-token');
-            const gistIdInput = document.getElementById('gist-id');
-            const lastSyncEl = document.getElementById('gist-ultima-sync');
+                if (tokenInput) tokenInput.value = GistSync.getToken();
+                if (gistIdInput) gistIdInput.value = GistSync.getGistId();
+                if (lastSyncEl) {
+                    const last = GistSync.getLastSync();
+                    lastSyncEl.textContent = last ? `Sincronizado: ${GistSync.formatLastSync(last)}` : 'No sincronizado';
+                }
 
-            if (tokenInput) tokenInput.value = GistSync.getToken();
-            if (gistIdInput) gistIdInput.value = GistSync.getGistId();
-            if (lastSyncEl) {
-                const last = GistSync.getLastSync();
-                lastSyncEl.textContent = last ? `Sincronizado: ${GistSync.formatLastSync(last)}` : 'No sincronizado';
-            }
+                const rango = GistSync.getRangoHorario();
+                const desdeEl = document.getElementById('gist-rango-desde');
+                const hastaEl = document.getElementById('gist-rango-hasta');
+                if (desdeEl) desdeEl.value = rango.desde;
+                if (hastaEl) hastaEl.value = rango.hasta;
 
-            const rango = GistSync.getRangoHorario();
-            const desdeEl = document.getElementById('gist-rango-desde');
-            const hastaEl = document.getElementById('gist-rango-hasta');
-            if (desdeEl) desdeEl.value = rango.desde;
-            if (hastaEl) hastaEl.value = rango.hasta;
-
-            _gistAutoSyncTemp = GistSync.getAutoSync();
-            actualizarBotonGistBackup();
-            actualizarBotonGistMerge();
-            actualizarEstadoBotonesGist();
-            ModalManager.alternar(_gistModalPadre, 'modal-gist');
+                _gistAutoSyncTemp = GistSync.getAutoSync();
+                actualizarBotonGistBackup();
+                actualizarBotonGistMerge();
+                actualizarEstadoBotonesGist();
+            });
             _gistLimitesTemp = null;
             _actualizarCampoLimite();
         }
@@ -4040,17 +4059,11 @@
         function cerrarModalGist() {
             _gistAutoSyncTemp = null;
             _gistLimitesTemp = null;
-            if (_gistModalPadre) {
-                const padre = _gistModalPadre;
-                _gistModalPadre = null;
-                ModalManager.alternar('modal-gist', padre);
+            _cerrarModalConPadre('modal-gist', (padre) => {
                 if (padre === 'modal-config' && !document.body.classList.contains('config-onboarding')) {
                     ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
                 }
-            } else {
-                ModalManager.cerrar('modal-gist');
-                _gistModalPadre = null;
-            }
+            });
             actualizarBotonesHistorico();
         }
 
@@ -7615,7 +7628,7 @@
     const UILogic = (function (S, D, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje) {
 
         const {
-            formatoDiferencia, registrarSwipe, debounce, _crearPressHold,
+            formatoDiferencia, registrarSwipe, debounce, _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre,
             _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
             mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON,
             mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
@@ -7954,26 +7967,12 @@
             }
         }
 
-        let _ayudaModalPadre = null;
-
         function abrirModalAyuda() {
-            const modalAbierto = document.querySelector('.modal.show');
-            _ayudaModalPadre = modalAbierto ? modalAbierto.id : null;
-            if (_ayudaModalPadre) {
-                ModalManager.alternar(_ayudaModalPadre, 'modal-ayuda');
-            } else {
-                ModalManager.abrir('modal-ayuda');
-            }
+            _abrirModalConPadre('modal-ayuda');
         }
 
         function cerrarModalAyuda() {
-            if (_ayudaModalPadre) {
-                const padre = _ayudaModalPadre;
-                _ayudaModalPadre = null;
-                ModalManager.alternar('modal-ayuda', padre);
-            } else {
-                ModalManager.cerrar('modal-ayuda');
-            }
+            _cerrarModalConPadre('modal-ayuda');
         }
 
         function _precargarCamposConfig() {
@@ -8431,7 +8430,6 @@
             }
         }
 
-        let _historialDiasModalPadre = null;
         let _tramoEnEdicionDesde = null;
 
         function _formatoFechaHistorial(iso) {
@@ -8486,22 +8484,13 @@
         }
 
         function abrirModalHistorialDias() {
-            const modalAbierto = document.querySelector('.modal.show');
-            _historialDiasModalPadre = modalAbierto ? modalAbierto.id : null;
-            _renderizarListaHistorialDias();
-            ModalManager.alternar(_historialDiasModalPadre, 'modal-historial-dias');
+            _abrirModalConPadre('modal-historial-dias', _renderizarListaHistorialDias);
         }
 
         function cerrarModalHistorialDias() {
-            if (_historialDiasModalPadre) {
-                const padre = _historialDiasModalPadre;
-                _historialDiasModalPadre = null;
-                ModalManager.alternar('modal-historial-dias', padre, null, () => {
-                    if (padre === 'modal-config') _precargarCamposConfig();
-                });
-            } else {
-                ModalManager.cerrar('modal-historial-dias');
-            }
+            _cerrarModalConPadre('modal-historial-dias', (padre) => {
+                if (padre === 'modal-config') _precargarCamposConfig();
+            });
         }
 
         function abrirEditorTramoDias(desdeOriginal) {

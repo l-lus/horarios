@@ -3506,11 +3506,11 @@
                 html: `
                 <div class="cal-popup-fecha">${fechaLabel}</div>
                 <div class="cal-popup-sin-reg">Sin registros</div>
-                ${esFechaFutura ? '' : `<button class="cal-popup-btn-edit cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
+                ${esFechaFutura ? '' : `<button class="cal-popup-btn-edit cal-popup-btn-accion cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
                     <svg class="icon"><use href="#icon-clock"/></svg>
                     Jornada regular
                 </button>`}
-                <button class="cal-popup-btn-edit cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
+                <button class="cal-popup-btn-edit cal-popup-btn-accion cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
                     <svg class="icon"><use href="#icon-calendar-simple"/></svg>
                     Jornada especial
                 </button>`,

@@ -3236,7 +3236,7 @@
 
         let _calendarioMes = null;
 
-        function _renderizarCalendario(idResaltar = null) {
+        function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = null) {
             const grid = document.getElementById('calendario-grid');
             const titulo = document.getElementById('calendario-titulo-mes');
             if (!grid) return;
@@ -3257,7 +3257,7 @@
             const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
             const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
             const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
-            const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
+            const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
             const claseDelDia = (fecha) => {
                 const r = regsPorFecha[fecha];
                 if (!r && filtroActivo && todosRegsPorFecha[fecha]) return 'dia-filtrado';
@@ -4823,7 +4823,7 @@
             return contenedor;
         }
 
-        function actualizarListaRegistros(registros, idNuevo = null) {
+        function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalculadas = null) {
             const lista = $('lista-registros');
             lista.innerHTML = '';
 
@@ -4835,7 +4835,7 @@
             const anioHoy = hoy.substring(0, 4);
             const gruposPorMes = agruparRegistrosPorMes(registrosAMostrar);
             const fragmento = document.createDocumentFragment();
-            const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
+            const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
 
             const mesesAnioActual = new Map();
             const mesesPorAnio = new Map();
@@ -6565,7 +6565,7 @@
             });
         }
 
-        function calcularEstadoCard() {
+        function calcularEstadoCard(asignacionesPrecalculadas = null) {
             const hoy = TimeUtils.obtenerFechaHoy();
             const { inicio: ini, fin: fn } = TimeUtils.obtenerSemanaRangoActual();
             const registros = D.registros();
@@ -6578,7 +6578,7 @@
             const regHoy = registros.find(r => r.fecha === hoy) ?? null;
             const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
             const minutosBreakActivo = _minutosBreakActivo();
-            const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
+            const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
             const bufferSemanalBase = D.calcularBufferPeriodo(ini, hoy, false, 0, asignacionesCompensatorio);
             const bufferSemanal = D.calcularBufferPeriodo(ini, hoy, true, minutosBreakActivo, asignacionesCompensatorio);
 
@@ -7133,11 +7133,13 @@
         }
 
         function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false) {
+            const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
+
             if (!soloReloj) {
-                UILogic.actualizarListaRegistros(D.registros(), idNuevo);
+                UILogic.actualizarListaRegistros(D.registros(), idNuevo, asignacionesCompensatorio);
             }
 
-            const est = calcularEstadoCard();
+            const est = calcularEstadoCard(asignacionesCompensatorio);
             const vista = D.vistaActual() === 'semana'
                 ? derivarVistaSemana(est)
                 : derivarVistaHoy(est);
@@ -7154,7 +7156,7 @@
                 if (selector && selector.style.display !== 'none') {
                     UILogic._cerrarSelectorMeses(idNuevo);
                 } else {
-                    UILogic._renderizarCalendario(idNuevo);
+                    UILogic._renderizarCalendario(idNuevo, asignacionesCompensatorio);
                 }
             }
 
@@ -9056,7 +9058,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260828';
+        const _v = '-v260830';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

@@ -264,6 +264,16 @@ h2.mutacion-saliente.no-margin,
     margin-bottom: var(--space-lg);
 }
 
+.form-row {
+    display: flex;
+    gap: var(--space-md);
+}
+
+.form-row .form-group {
+    flex: 1;
+    min-width: 0;
+}
+
 .form-group-pt {
     padding-top: var(--space-lg);
 }

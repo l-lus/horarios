@@ -5458,7 +5458,7 @@
                 tiempoFueraTotal: '--:--', tiempoTotal: '--:--',
                 ...conteosPorTipo, compensaciones,
                 regularidadEntrada: '--:--', regularidadJornada: '--:--',
-                bufferPeriodo: null
+                bufferPeriodo: null, aprovechamientoSaldo: null
             };
             if (registrosValidos.length === 0) return vacios;
 
@@ -5476,6 +5476,9 @@
             const bufferPeriodo = (horasDiariasObj > 0 && opciones.desde && opciones.hasta)
                 ? D.calcularBufferPeriodo(opciones.desde, opciones.hasta)
                 : null;
+            const aprovechamientoSaldo = (horasDiariasObj > 0 && opciones.desde && opciones.hasta)
+                ? UILogic.calcularAprovechamientoSaldo(opciones.desde, opciones.hasta)
+                : null;
 
             return {
                 entradaPromedio: TimeUtils.minutosAHora(promedioEntrada),
@@ -5487,7 +5490,7 @@
                 ...conteosPorTipo, compensaciones,
                 regularidadEntrada: regEntrada,
                 regularidadJornada: regJornada,
-                bufferPeriodo
+                bufferPeriodo, aprovechamientoSaldo
             };
         }
 
@@ -5537,6 +5540,17 @@
                     elSaldo.textContent = b === 0 ? '0h' : TimeUtils.horasATexto(b, 'short');
                     elSaldo.classList.remove('saldo-positivo', 'saldo-negativo', 'saldo-neutro');
                     elSaldo.classList.add(b > 0 ? 'saldo-positivo' : b < 0 ? 'saldo-negativo' : 'saldo-neutro');
+                }
+            }
+
+            const elAprovechamiento = $('stat-aprovechamiento-saldo');
+            const itemAprovechamiento = $('stat-item-aprovechamiento-saldo');
+            if (elAprovechamiento && itemAprovechamiento) {
+                if (stats.aprovechamientoSaldo === null) {
+                    itemAprovechamiento.style.display = 'none';
+                } else {
+                    itemAprovechamiento.style.display = '';
+                    elAprovechamiento.textContent = `${stats.aprovechamientoSaldo}%`;
                 }
             }
         }
@@ -6188,6 +6202,7 @@
             'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
             'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles.' },
+            'stat-aprovechamiento-saldo': { titulo: 'Saldo usado', desc: '% del excedente de horas generado en el período que efectivamente se usó para algo (cubrir una jornada que no llegó al objetivo, o ser la referencia de un compensatorio), en vez de quedar sin usar. Se calcula semana a semana (igual que el badge "Cubierto"), así que puede incluir días fuera del rango visible si la semana los abarca.' },
             'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
             'stat-compensaciones': { titulo: 'Salidas Tempranas', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
         };
@@ -6508,42 +6523,39 @@
             return !StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
         }
 
-        function _cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
-            if (!_logicaCubiertoActiva()) return false;
-            const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
+        function _calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
             const lunesDate = TimeUtils.parsearFechaLocal(lunes);
             lunesDate.setDate(lunesDate.getDate() + 6);
             const domingo = TimeUtils.formatearFechaLocal(lunesDate);
-            const hoy = TimeUtils.obtenerFechaHoy();
-            const topeCalendario = domingo < hoy ? domingo : hoy;
+            const limite = domingo < hasta ? domingo : hasta;
 
-            const registrosSemana = D.registros().filter(r => r.fecha >= lunes && r.fecha <= topeCalendario);
-            let limite = fecha;
-            for (const r of registrosSemana) {
-                if (r.fecha > limite) limite = r.fecha;
-            }
-
+            const registrosSemana = D.registros().filter(r => r.fecha >= lunes && r.fecha <= limite);
             const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
 
             const EPS = 1e-6;
             const pendientes = [];
-            let pool = 0;
+            let pool = 0, poolGenerado = 0, poolUsado = 0;
 
             for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
                 const r = registrosMap.get(isoDate);
                 const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
                 const esRemoto = esEspecial && D.esTipoRemoto(r);
-                let delta = 0;
+                let deltaBruto = 0;
+                let montoCompensado = 0;
                 if (esRemoto) {
-                    delta = 0;
+                    deltaBruto = 0;
                 } else if (r && !esEspecial && r.salida) {
                     const objetivo = _esFechaHabil(isoDate, D.diasHabilesEnFecha(isoDate)) ? D.objetivoDeRegistro(r) : 0;
-                    delta = r.total - objetivo;
-                    if (delta > EPS && D.fechaCompensadoDeRegistro(r, asignacionesPrecalculadas)) delta = 0;
+                    deltaBruto = r.total - objetivo;
+                    if (deltaBruto > EPS) montoCompensado = D.montoCompensadoDeReferencia(r, asignacionesPrecalculadas);
                 }
+                const deltaDisponible = deltaBruto - montoCompensado;
 
-                if (delta > EPS) pool += delta;
-                else if (delta < -EPS) pendientes.push({ fecha: isoDate, restante: -delta });
+                if (deltaBruto > EPS) poolGenerado += deltaBruto;
+                if (montoCompensado > EPS) poolUsado += montoCompensado;
+
+                if (deltaDisponible > EPS) pool += deltaDisponible;
+                else if (deltaDisponible < -EPS) pendientes.push({ fecha: isoDate, restante: -deltaDisponible });
 
                 for (const deuda of pendientes) {
                     if (pool <= EPS) break;
@@ -6551,11 +6563,44 @@
                     const pago = Math.min(pool, deuda.restante);
                     deuda.restante -= pago;
                     pool -= pago;
+                    poolUsado += pago;
                 }
             }
 
+            return { pendientes, poolGenerado, poolUsado };
+        }
+
+        function _cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
+            if (!_logicaCubiertoActiva()) return false;
+            const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const { pendientes } = _calcularPoolSemana(lunes, hoy, asignacionesPrecalculadas);
+            const EPS = 1e-6;
             const deuda = pendientes.find(d => d.fecha === fecha);
             return deuda ? deuda.restante <= EPS : false;
+        }
+
+        function calcularAprovechamientoSaldo(desde, hasta) {
+            if (!_logicaCubiertoActiva()) return null;
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const topeReal = hasta < hoy ? hasta : hoy;
+            if (desde > topeReal) return null;
+
+            const asignaciones = D.calcularAsignacionesCompensatorio();
+            let lunes = TimeUtils.obtenerLunesSemanaISO(desde);
+            let poolGenerado = 0, poolUsado = 0;
+
+            while (lunes <= topeReal) {
+                const r = _calcularPoolSemana(lunes, topeReal, asignaciones);
+                poolGenerado += r.poolGenerado;
+                poolUsado += r.poolUsado;
+                const siguienteLunes = TimeUtils.parsearFechaLocal(lunes);
+                siguienteLunes.setDate(siguienteLunes.getDate() + 7);
+                lunes = TimeUtils.formatearFechaLocal(siguienteLunes);
+            }
+
+            if (poolGenerado <= 1e-6) return null;
+            return Math.round((poolUsado / poolGenerado) * 1000) / 10;
         }
 
         function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
@@ -7680,6 +7725,7 @@
             toggleFondoCard,
             _esFechaHabil,
             _cubiertoPorSaldo,
+            calcularAprovechamientoSaldo,
             calcularEstadoCard,
             derivarVistaSemana,
             derivarVistaHoy,
@@ -7768,7 +7814,7 @@
         } = UIEstadisticas;
 
         const {
-            setFondoCard, toggleFondoCard, _esFechaHabil, _cubiertoPorSaldo, calcularEstadoCard,
+            setFondoCard, toggleFondoCard, _esFechaHabil, _cubiertoPorSaldo, calcularAprovechamientoSaldo, calcularEstadoCard,
             derivarVistaSemana, derivarVistaHoy, actualizarUI, alternarVista, _forzarVista,
             actualizarEstadoBotonTimerMain, toggleTimerBreakMain, toggleModoLote,
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
@@ -8701,6 +8747,7 @@
 
         return {
             _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _cerrarPopupCalendarioHover, _cerrarSelectorMeses, _cicloStatsActivo, _cubiertoPorSaldo,
+            calcularAprovechamientoSaldo,
             _esFechaHabil, _forzarVista, _iniciarCicloStats, _irAFicharConFecha, _nombreMesCapitalizado, _onclickCalendarioDia,
             _popupCalendarioDiaSinRegistro, _popupCalendarioHover, _prepararMostrarFaseAlRenderizar, _renderSelectorStats, _renderizarCalendario, abrirEditorPerfil,
             abrirEditorTramoDias, abrirGistEnBrowser, abrirModalAyuda, abrirModalGist, abrirModalHistorialDias, abrirModalReporteSecciones,

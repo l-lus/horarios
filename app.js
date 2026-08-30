@@ -5384,8 +5384,7 @@
         function calcularRegularidad(desviacionMinutos) {
             if (desviacionMinutos === null) return '--:--';
             const mins = Math.round(desviacionMinutos);
-            const label = mins <= 20 ? 'Alta' : mins <= 40 ? 'Media' : 'Baja';
-            return `±${mins}m | ${label}`;
+            return mins <= 20 ? 'Alta' : mins <= 40 ? 'Media' : 'Baja';
         }
 
         function desviacionEstandar(valores) {

@@ -847,16 +847,16 @@
                 <div class="ayuda-layout">
                     <nav class="ayuda-indice" id="ayuda-indice">
                         <button type="button" class="ayuda-indice-item"
-                            data-target="ayuda-sec-general">Caracteristicas</button>
+                            data-target="ayuda-sec-general">Características</button>
                         <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-fichar">Fichar</button>
                         <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-tf">Tiempo fuera</button>
                         <button type="button" class="ayuda-indice-item"
                             data-target="ayuda-sec-estadisticas">Estadísticas</button>
                         <button type="button" class="ayuda-indice-item"
                             data-target="ayuda-sec-registros">Registros</button>
-                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-remoto">Remoto*</button>
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-remoto">Remoto</button>
                         <button type="button" class="ayuda-indice-item"
-                            data-target="ayuda-sec-compensatorio">Compensatorio*</button>
+                            data-target="ayuda-sec-compensatorio">Compensatorio</button>
                         <button type="button" class="ayuda-indice-item"
                             data-target="ayuda-sec-perfiles">Perfiles</button>
                         <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-datos">Dónde se guardan
@@ -925,21 +925,21 @@
                         <section class="ayuda-seccion" id="ayuda-sec-compensatorio">
                             <h4>Compensatorio (registro especial)</h4>
                             <p>El tipo especial <strong>Compensatorio</strong> sirve para tomarte un día justificado a
-                                cambio de horas extra que ya trabajaste. Al cargarlo, la app busca automáticamente,
-                                dentro de los 14 días anteriores, el día con mayor excedente de horas (por encima de tu
-                                objetivo) que todavía no haya sido usado para compensar otro día, y le resta ese
-                                excedente al buffer y al restante semanal <strong>de la semana en la que está ese día de
-                                    referencia</strong> (no de la semana del compensatorio), ya que es ahí donde el
-                                tiempo extra deja de estar disponible.</p>
-                            <p>Por eso vas a ver, al lado del badge "Compensatorio", otro badge con la fecha (dd/mm/aa)
-                                del día que está siendo compensado.</p>
+                                cambio de horas extra que ya tengas acumuladas en otro registro. Por defecto, la app
+                                busca automáticamente, dentro de los 14 días anteriores, el día con mayor excedente de
+                                horas (por encima de tu objetivo) que todavía no haya sido usado para compensar otro
+                                día.</p>
+                            <p>También podés elegir vos mismo el día a compensar, en el campo "Fecha compensada" del
+                                editor (con el botón de al lado podés pegar la sugerencia automática o limpiar el
+                                campo). Una referencia elegida a mano no tiene el límite de 14 días, y tiene
+                                <strong>prioridad</strong> sobre las asignaciones automáticas.</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-perfiles">
                             <h4>Perfiles</h4>
                             <p>Podés tener varios perfiles (por ejemplo, distintos trabajos) con registros, objetivos y
                                 ajustes totalmente independientes entre sí. Se cambia de perfil desde el botón situado
-                                en el borde superior derecho de la página.</p>
+                                en el borde superior derecho de la app.</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-datos">
@@ -950,11 +950,11 @@
 
                         <section class="ayuda-seccion" id="ayuda-sec-respaldo">
                             <h4>Backup y sincronización</h4>
-                            <p>Desde Perfiles → Ajustes → Respaldar podés exportar un archivo con todos tus registros y
-                                Restaurar (importar un backup) en este u otro dispositivo.</p>
+                            <p>Desde Perfiles → Ajustes → Respaldar podés exportar un archivo con todos tus registros,
+                                o usar "Restaurar" para importar un backup en este u otro dispositivo.</p>
                             <p>Si preferís no hacerlo a mano, el menú de GitHub Gist te permite sincronizar
-                                automáticamente entre dispositivos creando un token con tu cuenta de GitHub (usar el
-                                scope "gist" solamente por seguridad).</p>
+                                automáticamente entre dispositivos creando un token con tu cuenta de GitHub (por
+                                seguridad, usá solamente el scope "gist").</p>
                         </section>
                     </div>
                 </div>
@@ -1153,7 +1153,7 @@
                 <div id="grupo-referencia-compensatorio" class="collapsible">
                     <div class="collapsible-inner">
                         <div class="form-group">
-                            <label for="edit-referencia-compensatorio">Día compensado</label>
+                            <label for="edit-referencia-compensatorio">Fecha compensada (vacio=Automático)</label>
                             <div class="input-with-btn">
                                 <input type="date" id="edit-referencia-compensatorio" />
                                 <button class="time-btn" id="btn-edit-referencia-compensatorio"

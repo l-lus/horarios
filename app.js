@@ -5550,7 +5550,8 @@
                     itemAprovechamiento.style.display = 'none';
                 } else {
                     itemAprovechamiento.style.display = '';
-                    elAprovechamiento.textContent = `${stats.aprovechamientoSaldo}%`;
+                    const { porcentaje, horas } = stats.aprovechamientoSaldo;
+                    elAprovechamiento.textContent = `${porcentaje}% | ${TimeUtils.horasATexto(horas, 'short')}`;
                 }
             }
         }
@@ -6600,7 +6601,10 @@
             }
 
             if (poolGenerado <= 1e-6) return null;
-            return Math.round((poolUsado / poolGenerado) * 1000) / 10;
+            return {
+                porcentaje: Math.round((poolUsado / poolGenerado) * 1000) / 10,
+                horas: poolUsado
+            };
         }
 
         function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {

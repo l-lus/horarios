@@ -1514,7 +1514,12 @@
             if (elRef) {
                 const esCompensatorio = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'compensatorio';
                 const grupoRef = $('grupo-referencia-compensatorio');
-                if (grupoRef) grupoRef.classList.toggle('expanded', esCompensatorio);
+                if (grupoRef) {
+                    grupoRef.classList.add('sin-transicion');
+                    grupoRef.classList.toggle('expanded', esCompensatorio);
+                    void grupoRef.offsetHeight;
+                    grupoRef.classList.remove('sin-transicion');
+                }
                 elRef.value = esCompensatorio ? (r.referenciaCompensatorio || '') : '';
             }
 

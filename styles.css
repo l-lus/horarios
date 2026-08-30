@@ -574,6 +574,10 @@ button:disabled {
     transition: var(--transition-collapse);
 }
 
+.collapsible.sin-transicion {
+    transition: none;
+}
+
 .collapsible.expanded {
     grid-template-rows: 1fr;
     opacity: 1;

@@ -300,6 +300,7 @@
     const SecurityAndUtils = (function () {
         const SECURITY_LIMITS = {
             MAX_REGISTROS: 1000,
+            MAX_REGISTROS_POR_OPERACION: 30,
             MAX_HISTORIAL_DIAS_HABILES: 20,
             MAX_STRING_LENGTH: 100,
             MAX_NOTAS_LENGTH: 35,
@@ -1172,7 +1173,7 @@
             if (ini < dosPasado || fin > dosFuturo) return 'El rango debe estar entre 2 años atrás y 2 años adelante';
             if (!TiposRegistro.validarTipoPermitido(nuevoTipo)) return 'Tipo de registro inválido';
             const dias = Math.ceil(Math.abs(fin - ini) / 864e5) + 1;
-            if (dias > 60) return `El rango contiene ${dias} días.\n Máximo: 60 días por operación.`;
+            if (dias > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) return `El rango contiene ${dias} días.\n Máximo: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación.`;
             return null;
         }
 
@@ -1216,8 +1217,8 @@
 
         async function eliminarGrupoActual() {
             if (!grupoEnEdicion) return;
-            if (grupoEnEdicion.registros.length > 60) {
-                notify.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: 60 registros por operación.`, 'error', 4000);
+            if (grupoEnEdicion.registros.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) {
+                notify.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} registros por operación.`, 'error', 4000);
                 return;
             }
             const idsAEliminar = grupoEnEdicion.registros.map(r => r.id);
@@ -2039,7 +2040,7 @@
 
             const fechasARegistrar = TimeUtils.generarRangoFechas(desde, hasta);
 
-            if (fechasARegistrar.length > 60) { notify.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: 60 días por operación.`, 'error', 4000); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite de días excedido'); }
+            if (fechasARegistrar.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) { notify.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación.`, 'error', 4000); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite de días excedido'); }
 
             const nuevosRegistros = fechasARegistrar.filter(f => !registros.some(r => r.fecha === f));
             if (nuevosRegistros.length === 0) { notify.mostrarToast('Todas las fechas ya están registradas', 'warning'); notify.flashCampoTipo('warning', 'btn-agregar'); throw new Error('Sin fechas nuevas'); }
@@ -2079,7 +2080,7 @@
                 if (r.fecha < desde || r.fecha > hasta) return false;
                 return !TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
             });
-            if (registrosAEliminar.length > 60) { notify.mostrarToast(`Máximo 60 registros por operación. Encontrados: ${registrosAEliminar.length}`, 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite excedido'); }
+            if (registrosAEliminar.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) { notify.mostrarToast(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} registros por operación. Encontrados: ${registrosAEliminar.length}`, 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite excedido'); }
             if (registrosAEliminar.length === 0) { notify.mostrarToast('No hay registros de jornadas en ese período', 'info'); notify.flashCampoTipo('info', 'btn-agregar'); throw new Error('Sin registros'); }
 
             registros = registros.filter(r => !registrosAEliminar.includes(r));

@@ -1442,6 +1442,27 @@ button:disabled {
     margin: 10px 0;
 }
 
+.stat-popup-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-md);
+    font-size: var(--text-sm);
+}
+
+.stat-popup-metric span {
+    color: var(--text-muted);
+}
+
+.stat-popup-metric strong {
+    color: var(--text-main);
+    white-space: nowrap;
+}
+
+.stat-popup-metric + .stat-popup-metric {
+    margin-top: 0.3rem;
+}
+
 /* ─── FILTRO POPUP ───────────────────────────────────────────────────────────── */
 
 .filtro-popup {

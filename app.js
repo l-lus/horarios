@@ -5380,6 +5380,7 @@
         } = UICore;
 
         let modoEstadisticas = 'mensual';
+        let _ultimosStatsRenderizados = null;
 
         function calcularRegularidad(desviacionMinutos) {
             if (desviacionMinutos === null) return '--:--';
@@ -5544,17 +5545,7 @@
                 }
             }
 
-            const elAprovechamiento = $('stat-aprovechamiento-saldo');
-            const itemAprovechamiento = $('stat-item-aprovechamiento-saldo');
-            if (elAprovechamiento && itemAprovechamiento) {
-                if (stats.aprovechamientoSaldo === null) {
-                    itemAprovechamiento.style.display = 'none';
-                } else {
-                    itemAprovechamiento.style.display = '';
-                    const { porcentaje, horas } = stats.aprovechamientoSaldo;
-                    elAprovechamiento.textContent = `${porcentaje}% | ${TimeUtils.horasATexto(horas, 'short')}`;
-                }
-            }
+            _ultimosStatsRenderizados = stats;
         }
 
         function calcularEstadisticasMes(mesAnio = null, registrosPeriodo = null) {
@@ -5984,7 +5975,7 @@
             const bufferOk = stats.bufferPeriodo === null || stats.bufferPeriodo >= 0;
             const tarjetas = [
                 { label: 'Total horas', valor: stats.tiempoTotal },
-                { label: 'Saldo', valor: stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A', clase: `valor-saldo-${bufferOk ? 'pos' : 'neg'}` },
+                { label: 'Banco de horas', valor: stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A', clase: `valor-saldo-${bufferOk ? 'pos' : 'neg'}` },
                 { label: 'Jornadas', valor: stats.diasTrabajados, esConteo: true },
                 { label: 'Promedio diario', valor: stats.promedioDiario },
                 { label: 'Entrada promedio', valor: stats.entradaPromedio },
@@ -6203,9 +6194,8 @@
             'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
-            'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles.' },
-            'stat-aprovechamiento-saldo': { titulo: 'Saldo Útil', desc: '% del saldo de horas que efectivamente se usó para cubrir una jornada o ser la referencia de un compensatorio en vez de quedar como remanente en el saldo.' },
-            'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
+            'stat-saldo': { titulo: 'Banco de horas', desc: 'Remanente entre las horas trabajadas y las horas objetivo del período, después de haber usado parte para cubrir jornadas cortas o compensatorios.' },
+            'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de registros con entradas y salidas regulares en el período.' },
             'stat-compensaciones': { titulo: 'Salidas Tempranas', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
         };
 
@@ -6217,16 +6207,27 @@
 
             let info = DESCRIPCIONES_STATS[statId];
             if (statId === 'stat-saldo' && info) {
-                const modoTexto = modoEstadisticas === 'anual'
-                    ? 'El saldo se calcula a partir del PRIMER REGISTRO del año.'
-                    : modoEstadisticas === 'mensual'
-                        ? 'El saldo se calcula a partir del PRIMER REGISTRO del mes.'
-                        : modoEstadisticas === 'semanal'
-                            ? 'El saldo se calcula a partir del PRIMER DÍA LABORAL de la semana.'
-                            : null;
-                if (modoTexto) {
-                    info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
+                let descExtra = '';
+
+                const stats = _ultimosStatsRenderizados;
+                if (stats && stats.aprovechamientoSaldo) {
+                    const { porcentaje, horas: horasUtil } = stats.aprovechamientoSaldo;
+                    const saldoGenerado = (stats.bufferPeriodo || 0) + horasUtil;
+                    descExtra += `<hr class="stat-popup-sep">`
+                        + `<div class="stat-popup-metric"><span>Generado</span><strong>${S.escapeHtml(TimeUtils.horasATexto(saldoGenerado, 'short'))}</strong></div>`
+                        + `<div class="stat-popup-metric"><span>Utilizado</span><strong>${porcentaje}% · ${S.escapeHtml(TimeUtils.horasATexto(horasUtil, 'short'))}</strong></div>`;
                 }
+
+                const modoTexto = modoEstadisticas === 'anual'
+                    ? 'Se calcula a partir del PRIMER REGISTRO del año.'
+                    : modoEstadisticas === 'mensual'
+                        ? 'Se calcula a partir del PRIMER REGISTRO del mes.'
+                        : modoEstadisticas === 'semanal'
+                            ? 'Se calcula a partir del PRIMER DÍA LABORAL de la semana.'
+                            : null;
+                if (modoTexto) descExtra += `<hr class="stat-popup-sep"><strong>${modoTexto}</strong>`;
+
+                if (descExtra) info = { titulo: info.titulo, desc: `${info.desc}${descExtra}` };
             }
             if (statId === 'stat-dias-trabajados' && info) {
                 const diasTexto = [...D.diasHabiles()].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', ');

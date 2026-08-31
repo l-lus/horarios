@@ -5472,11 +5472,13 @@
             const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
 
             const horasDiariasObj = D.horasDiarias();
-            const bufferPeriodo = (horasDiariasObj > 0 && opciones.desde && opciones.hasta)
-                ? D.calcularBufferPeriodo(opciones.desde, opciones.hasta)
+            const hayPeriodo = horasDiariasObj > 0 && opciones.desde && opciones.hasta;
+            const asignacionesCompensatorio = hayPeriodo ? D.calcularAsignacionesCompensatorio() : null;
+            const bufferPeriodo = hayPeriodo
+                ? D.calcularBufferPeriodo(opciones.desde, opciones.hasta, true, 0, asignacionesCompensatorio)
                 : null;
-            const aprovechamientoSaldo = (horasDiariasObj > 0 && opciones.desde && opciones.hasta)
-                ? UILogic.calcularAprovechamientoSaldo(opciones.desde, opciones.hasta)
+            const aprovechamientoSaldo = hayPeriodo
+                ? UILogic.calcularAprovechamientoSaldo(opciones.desde, opciones.hasta, asignacionesCompensatorio)
                 : null;
 
             return {
@@ -6580,13 +6582,13 @@
             return deuda ? deuda.restante <= EPS : false;
         }
 
-        function calcularAprovechamientoSaldo(desde, hasta) {
+        function calcularAprovechamientoSaldo(desde, hasta, asignacionesPrecalculadas = null) {
             if (!_logicaCubiertoActiva()) return null;
             const hoy = TimeUtils.obtenerFechaHoy();
             const topeReal = hasta < hoy ? hasta : hoy;
             if (desde > topeReal) return null;
 
-            const asignaciones = D.calcularAsignacionesCompensatorio();
+            const asignaciones = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
             let lunes = TimeUtils.obtenerLunesSemanaISO(desde);
             let poolGenerado = 0, poolUsado = 0;
 

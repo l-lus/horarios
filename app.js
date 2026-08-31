@@ -7872,8 +7872,8 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
                 btnId: 'btn-toggle-logica-cubierto',
-                mensajeOn: 'Los registros no cubren el faltante con saldo horario',
-                mensajeOff: 'Los registros cubren el faltante según el saldo horario disponible',
+                mensajeOn: 'Los registros no cubren el faltante con banco de horas',
+                mensajeOff: 'Los registros cubren el faltante según el banco de horas disponible',
                 onAfterToggle: () => { actualizarUI(); }
             });
 

@@ -214,21 +214,25 @@ h2.mutacion-saliente.no-margin,
     overflow-x: hidden;
 }
 
-.custom-scroll::-webkit-scrollbar {
+.custom-scroll::-webkit-scrollbar,
+.ayuda-indice::-webkit-scrollbar {
     width: 4px;
 }
 
-.custom-scroll::-webkit-scrollbar-track {
+.custom-scroll::-webkit-scrollbar-track,
+.ayuda-indice::-webkit-scrollbar-track {
     background: var(--bg-body);
     border-radius: var(--radius);
 }
 
-.custom-scroll::-webkit-scrollbar-thumb {
+.custom-scroll::-webkit-scrollbar-thumb,
+.ayuda-indice::-webkit-scrollbar-thumb {
     background: var(--border);
     border-radius: var(--radius);
 }
 
-.custom-scroll::-webkit-scrollbar-thumb:hover {
+.custom-scroll::-webkit-scrollbar-thumb:hover,
+.ayuda-indice::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
 }
 

@@ -6204,7 +6204,7 @@
             'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
             'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles.' },
-            'stat-aprovechamiento-saldo': { titulo: 'Saldo usado', desc: '% del excedente de horas generado en el período que efectivamente se usó para algo (cubrir una jornada que no llegó al objetivo, o ser la referencia de un compensatorio), en vez de quedar sin usar. Se calcula semana a semana (igual que el badge "Cubierto"), así que puede incluir días fuera del rango visible si la semana los abarca.' },
+            'stat-aprovechamiento-saldo': { titulo: 'Saldo Útil', desc: '% del saldo de horas que efectivamente se usó para cubrir una jornada o ser la referencia de un compensatorio en vez de quedar como remanente en el saldo.' },
             'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de jornadas con entrada y salida completas registradas en el período.' },
             'stat-compensaciones': { titulo: 'Salidas Tempranas', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
         };

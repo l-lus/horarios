@@ -6211,11 +6211,11 @@
 
                 const stats = _ultimosStatsRenderizados;
                 if (stats && stats.aprovechamientoSaldo) {
-                    const { porcentaje, horas: horasUtil } = stats.aprovechamientoSaldo;
+                    const { horas: horasUtil } = stats.aprovechamientoSaldo;
                     const saldoGenerado = (stats.bufferPeriodo || 0) + horasUtil;
                     descExtra += `<hr class="stat-popup-sep">`
                         + `<div class="stat-popup-metric"><span>Generado</span><strong>${S.escapeHtml(TimeUtils.horasATexto(saldoGenerado, 'short'))}</strong></div>`
-                        + `<div class="stat-popup-metric"><span>Utilizado</span><strong>${porcentaje}% · ${S.escapeHtml(TimeUtils.horasATexto(horasUtil, 'short'))}</strong></div>`;
+                        + `<div class="stat-popup-metric"><span>Utilizado</span><strong>${S.escapeHtml(TimeUtils.horasATexto(horasUtil, 'short'))}</strong></div>`;
                 }
 
                 const modoTexto = modoEstadisticas === 'anual'

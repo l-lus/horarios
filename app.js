@@ -6739,12 +6739,16 @@
         const TF_LABEL_ID = 'tiempo-fuera-label';
 
         function _obtenerOCrearLabelTF(contenedor) {
+            const enBadge = !!contenedor.querySelector('.tf-badge');
             const destino = contenedor.querySelector('.tf-badge') || contenedor;
             let label = contenedor.querySelector('#' + TF_LABEL_ID);
             if (!label) {
-                label = Object.assign(document.createElement('span'), {
-                    id: TF_LABEL_ID, className: 'break-counter-label',
-                });
+                label = document.createElement('span');
+                label.id = TF_LABEL_ID;
+                label.className = 'break-counter-label';
+                if (!enBadge) {
+                    label.innerHTML = '<svg class="icon"><use href="#icon-exit"/></svg><span class="break-counter-label-text"></span>';
+                }
                 destino.appendChild(label);
             }
             return label;
@@ -7015,7 +7019,9 @@
             if (!minutos) { _quitarLabelTF(el); return; }
 
             const label = _obtenerOCrearLabelTF(el);
-            label.textContent = _formatearMinutosCorto(minutos);
+            const textEl = label.querySelector('.break-counter-label-text');
+            const texto = _formatearMinutosCorto(minutos);
+            if (textEl) { textEl.textContent = texto; } else { label.textContent = texto; }
             label.title = 'Tiempo fuera registrado hoy';
         }
 

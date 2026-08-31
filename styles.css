@@ -2003,6 +2003,14 @@ body.config-onboarding #btn-ayuda-config {
     font-weight: var(--fw-medium);
     color: var(--c-red);
     margin-left: var(--space-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+}
+
+.break-counter-label .icon {
+    width: 0.85em;
+    height: 0.85em;
 }
 
 .tf-badge {

@@ -6200,8 +6200,8 @@
             'stat-promedio-diario': { titulo: 'Promedio Diario', desc: 'Promedio de horas trabajadas por jornada en el período.' },
             'stat-entrada-promedio': { titulo: 'Entrada Promedio', desc: 'Hora de entrada promedio entre todas las jornadas del período.' },
             'stat-salida-promedio': { titulo: 'Salida Promedio', desc: 'Hora de salida promedio entre todas las jornadas del período.' },
-            'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Indica la desviación promedio respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
-            'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Indica la desviación promedio respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
             'stat-saldo': { titulo: 'Saldo', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período, según tus ajustes de horas diarias, días hábiles.' },
             'stat-aprovechamiento-saldo': { titulo: 'Saldo usado', desc: '% del excedente de horas generado en el período que efectivamente se usó para algo (cubrir una jornada que no llegó al objetivo, o ser la referencia de un compensatorio), en vez de quedar sin usar. Se calcula semana a semana (igual que el badge "Cubierto"), así que puede incluir días fuera del rango visible si la semana los abarca.' },
@@ -6355,11 +6355,11 @@
         let _timerAutoVista = null;
         let _suprimirAnimacionInterna = false;
 
-        function setProgressBarColor(progressEl, status, headerColor) {
+        function setProgressBarColor(progressEl, status, headerColor, forzarShimmer = false) {
             if (!progressEl) return;
             progressEl.className = 'progress-fill';
             progressEl.classList.add(status);
-            if (status === 'blue') progressEl.classList.add('shimmer');
+            if (status === 'blue' || forzarShimmer) progressEl.classList.add('shimmer');
 
             const header = document.querySelector('.header');
             if (header) {
@@ -7138,7 +7138,9 @@
             const el = $('progress-bar');
             if (!el) return;
             el.style.width = `${vista.anchoBarra}%`;
-            setProgressBarColor(el, vista.colorBarra, vista.colorBorde);
+            const esDiaria = D.vistaActual() !== 'semana';
+            const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
+            setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
         }
 
         function _renderMensaje(vista) {

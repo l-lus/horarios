@@ -6739,12 +6739,13 @@
         const TF_LABEL_ID = 'tiempo-fuera-label';
 
         function _obtenerOCrearLabelTF(contenedor) {
+            const destino = contenedor.querySelector('.tf-badge') || contenedor;
             let label = contenedor.querySelector('#' + TF_LABEL_ID);
             if (!label) {
                 label = Object.assign(document.createElement('span'), {
                     id: TF_LABEL_ID, className: 'break-counter-label',
                 });
-                contenedor.appendChild(label);
+                destino.appendChild(label);
             }
             return label;
         }
@@ -7288,7 +7289,7 @@
                 ? '<svg class="icon"><use href="#icon-calendar-simple"/></svg>'
                 : '<svg class="icon"><use href="#icon-clock"/></svg>';
             const contexto = vistaActual === 'semana' ? 'Esta Semana' : TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy());
-            const nuevoHTML = `${icono} ${contexto} - <svg class="icon"><use href="#icon-exit"/></svg> Tiempo fuera `;
+            const nuevoHTML = `${icono} ${contexto}<span class="tf-badge"><svg class="icon"><use href="#icon-exit"/></svg>Tiempo fuera</span>`;
             const agregarContador = () => {
                 _obtenerOCrearLabelTF(titulo);
                 _iniciarContadorBreak(storageKey);

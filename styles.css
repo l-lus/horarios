@@ -193,6 +193,10 @@ h2.mutacion-saliente,
     color: var(--text-main);
 }
 
+#stats-titulo {
+    min-height: var(--space-lg);
+}
+
 .modal h3 .version-text {
     margin-left: auto;
 }
@@ -1995,10 +1999,35 @@ body.config-onboarding #btn-ayuda-config {
 }
 
 .break-counter-label {
-    font-size: 0.8em;
+    font-size: var(--text-base);
     font-weight: var(--fw-medium);
     color: var(--c-red);
-    margin-left: 0.3em;
+    margin-left: var(--space-sm);
+}
+
+.tf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: auto;
+    background: var(--c-red);
+    color: var(--c-white);
+    font-size: var(--text-base);
+    font-weight: var(--fw-medium);
+    line-height: 1;
+    padding: 0.1rem 0.6rem;
+    border-radius: var(--radius);
+    white-space: nowrap;
+}
+
+.tf-badge .icon {
+    width: 0.9em;
+    height: 0.9em;
+}
+
+.tf-badge .break-counter-label {
+    color: inherit;
+    margin-left: 0.15em;
 }
 
 /* ─── KEYFRAMES ──────────────────────────────────────────────────────────────── */

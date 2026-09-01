@@ -68,6 +68,54 @@ body.dark-mode {
     --hover: brightness(1.2);
 }
 
+/* ─── TEMA ROSA (pastel) ───────────────────────────────────────────────── */
+html[data-theme="pink"] body,
+body[data-theme="pink"] {
+    --bg-body: #fdf1f6;
+    --bg-card: #ffffff;
+    --bg-header: #fdf1f6ee;
+    --text-main: #4a2c39;
+    --text-muted: #8a6572;
+    --text-disabled: #8a657299;
+    --border: #f4d9e5;
+    --input-bg: #fbe7f0;
+    --c-gray-btn: #fbe7f0;
+    --shadow: 0 1px 4px rgba(172, 76, 130, 0.1), 0 0 0 1px rgba(172, 76, 130, 0.05);
+    --hover: brightness(0.95);
+}
+
+/* ─── TEMA VERDE (pastel) ──────────────────────────────────────────────── */
+html[data-theme="green"] body,
+body[data-theme="green"] {
+    --bg-body: #f0f8f2;
+    --bg-card: #ffffff;
+    --bg-header: #f0f8f2ee;
+    --text-main: #24402c;
+    --text-muted: #628a6d;
+    --text-disabled: #628a6d99;
+    --border: #d9ecdd;
+    --input-bg: #e7f5eb;
+    --c-gray-btn: #e7f5eb;
+    --shadow: 0 1px 4px rgba(76, 152, 100, 0.1), 0 0 0 1px rgba(76, 152, 100, 0.05);
+    --hover: brightness(0.95);
+}
+
+/* ─── TEMA AZUL (pastel) ───────────────────────────────────────────────── */
+html[data-theme="blue"] body,
+body[data-theme="blue"] {
+    --bg-body: #eef4fc;
+    --bg-card: #ffffff;
+    --bg-header: #eef4fcee;
+    --text-main: #223449;
+    --text-muted: #5f7691;
+    --text-disabled: #5f769199;
+    --border: #d7e6f6;
+    --input-bg: #e5eff9;
+    --c-gray-btn: #e5eff9;
+    --shadow: 0 1px 4px rgba(76, 114, 172, 0.1), 0 0 0 1px rgba(76, 114, 172, 0.05);
+    --hover: brightness(0.95);
+}
+
 /* ─── RESET ─────────────────────────────────────────────────────────────────── */
 
 body.modal-open {

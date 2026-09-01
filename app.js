@@ -496,6 +496,42 @@
     })();
 
     // ====================================================================
+    // THEME MANAGER (temas: claro, oscuro, rosa, verde, azul)
+    // ====================================================================
+    const ThemeManager = (function () {
+        const TEMAS = ['light', 'dark', 'pink', 'green', 'blue'];
+
+        function temaGuardado() {
+            const raw = StorageHelper.getItem(STORAGE_KEYS.TEMA_OSCURO, null);
+            if (raw === null) return 'dark';
+            if (raw === 'true') return 'dark';
+            if (raw === 'false') return 'light';
+            return TEMAS.includes(raw) ? raw : 'dark';
+        }
+
+        function aplicarTema(tema) {
+            document.documentElement.classList.toggle('dark-mode', tema === 'dark');
+            if (tema === 'light' || tema === 'dark') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', tema);
+            }
+            const esClaro = tema === 'light';
+            ['theme-toggle', 'theme-toggle-modal', 'btn-tema-selector'].forEach(id => {
+                const icon = document.getElementById(id)?.querySelector('use');
+                if (icon) icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
+            });
+        }
+
+        function siguienteTema(temaActual) {
+            const idx = TEMAS.indexOf(temaActual);
+            return TEMAS[(idx + 1) % TEMAS.length];
+        }
+
+        return { TEMAS, temaGuardado, aplicarTema, siguienteTema };
+    })();
+
+    // ====================================================================
     // PERFIL MANAGER MODULE
     // ====================================================================
     const PerfilManager = (function () {
@@ -1290,7 +1326,7 @@
                 horasDiarias: (perfilData && perfilData.horasDiarias !== undefined)
                     ? perfilData.horasDiarias
                     : StorageHelper.getNumber(STORAGE_KEYS.HORAS_DIARIAS, 7),
-                temaOscuro: StorageHelper.getBoolean(STORAGE_KEYS.TEMA_OSCURO, true),
+                tema: ThemeManager.temaGuardado(),
                 vistaActual: StorageHelper.getItem(STORAGE_KEYS.VISTA_ACTUAL, 'diaria'),
                 ignorarTiempoFuera: StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true),
                 modoEstadisticas: StorageHelper.getItem(STORAGE_KEYS.MODO_ESTADISTICAS, 'mensual'),
@@ -2977,16 +3013,13 @@
 
                 renderizarListaPerfiles();
 
-                const temaOscuro = document.documentElement.classList.contains('dark-mode');
+                const esClaro = !document.documentElement.classList.contains('dark-mode')
+                    && !document.documentElement.getAttribute('data-theme');
                 const toggleBtnModal = document.getElementById('theme-toggle-modal');
 
                 if (toggleBtnModal) {
                     const icon = toggleBtnModal.querySelector('use');
-                    if (temaOscuro) {
-                        icon.setAttribute('href', '#icon-sun');
-                    } else {
-                        icon.setAttribute('href', '#icon-moon');
-                    }
+                    icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
                 }
             });
         }
@@ -7838,13 +7871,10 @@
         } = UITarjetaFichaje;
 
         function alternarTema() {
-            const temaOscuro = !StorageHelper.getBoolean(STORAGE_KEYS.TEMA_OSCURO, true);
-            document.documentElement.classList.toggle('dark-mode', temaOscuro);
-            StorageHelper.setItem(STORAGE_KEYS.TEMA_OSCURO, temaOscuro);
-            ['theme-toggle', 'theme-toggle-modal', 'btn-tema-selector'].forEach(id => {
-                const icon = document.getElementById(id)?.querySelector('use');
-                if (icon) icon.setAttribute('href', temaOscuro ? '#icon-sun' : '#icon-moon');
-            });
+            const temaActual = ThemeManager.temaGuardado();
+            const temaSiguiente = ThemeManager.siguienteTema(temaActual);
+            StorageHelper.setItem(STORAGE_KEYS.TEMA_OSCURO, temaSiguiente);
+            ThemeManager.aplicarTema(temaSiguiente);
         }
 
         const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
@@ -8356,12 +8386,7 @@
 
         function _restaurarEstadoVisual() {
             const config = D.cargarConfiguracion();
-            const temaOscuro = config.temaOscuro;
-            if (temaOscuro) document.documentElement.classList.add('dark-mode');
-            [$('theme-toggle'), $('theme-toggle-modal')].forEach(btn => {
-                const use = btn?.querySelector('use');
-                if (use) use.setAttribute('href', temaOscuro ? '#icon-sun' : '#icon-moon');
-            });
+            ThemeManager.aplicarTema(config.tema);
 
             $('fecha').value = TimeUtils.obtenerFechaHoy();
 

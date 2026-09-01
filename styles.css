@@ -1727,11 +1727,13 @@ body.config-onboarding .label-footer-empezar {
     display: inline;
 }
 
-#btn-ayuda-config {
+#btn-ayuda-config,
+#theme-toggle-config {
     display: none;
 }
 
-body.config-onboarding #btn-ayuda-config {
+body.config-onboarding #btn-ayuda-config,
+body.config-onboarding #theme-toggle-config {
     display: flex;
 }
 

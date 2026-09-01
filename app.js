@@ -517,7 +517,7 @@
                 document.documentElement.setAttribute('data-theme', tema);
             }
             const esClaro = tema === 'light';
-            ['theme-toggle', 'theme-toggle-modal', 'btn-tema-selector'].forEach(id => {
+            ['theme-toggle', 'theme-toggle-modal', 'theme-toggle-config', 'btn-tema-selector'].forEach(id => {
                 const icon = document.getElementById(id)?.querySelector('use');
                 if (icon) icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
             });
@@ -9134,6 +9134,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => UILogic.mostrarconfig());
     $('theme-toggle-modal')?.addEventListener('click', () => UILogic.alternarTema());
+    $('theme-toggle-config')?.addEventListener('click', () => UILogic.alternarTema());
     document.querySelector('#modal-selector-perfiles .btn-cancel')?.addEventListener('click', () => UILogic.cerrarSelectorPerfiles());
     $('btn-crear-perfil')?.addEventListener('click', () => UILogic.crearPerfilDesdeSelector());
 

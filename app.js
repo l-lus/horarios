@@ -278,10 +278,10 @@
             return resultado;
         }
 
-        function fechaCorta(f) {
+        function fechaCorta(f, anioCompleto = false) {
             if (!f || f.length < 10) return f || '';
             const [y, m, d] = f.split('-');
-            return `${d}/${m}/${y.slice(2)}`;
+            return `${d}/${m}/${anioCompleto ? y : y.slice(2)}`;
         }
 
         return {
@@ -5733,10 +5733,6 @@
             return regs.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0);
         }
 
-        function _fechaDDMMYYYY(fechaISO) {
-            return fechaISO.split('-').reverse().join('/');
-        }
-
         function _resolverPeriodoDatos(esAnual) {
             if (esAnual) {
                 const anio = $('select-anio-stats')?.value;
@@ -5813,7 +5809,7 @@
             const ordenados = [...registrosPeriodo].sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
             const filas = ordenados.map(r => {
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                const fecha = S.escapeHtml(_fechaDDMMYYYY(r.fecha));
+                const fecha = S.escapeHtml(TimeUtils.fechaCorta(r.fecha, true));
                 const dia = S.escapeHtml(TimeUtils.obtenerNombreDia(r.fecha));
 
                 if (tipoEspecial) {
@@ -6050,7 +6046,7 @@
 
                 if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
 
-                const rango = `${_fechaDDMMYYYY(lunes)} – ${_fechaDDMMYYYY(fechaFin)}${esIncompleta ? ' *' : ''}`;
+                const rango = `${TimeUtils.fechaCorta(lunes, true)} – ${TimeUtils.fechaCorta(fechaFin, true)}${esIncompleta ? ' *' : ''}`;
                 return `
                 <tr>
                     <td class="col-semana">Semana ${index + 1}</td>

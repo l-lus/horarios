@@ -6194,9 +6194,9 @@
             'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
-            'stat-saldo': { titulo: 'Banco de horas', desc: 'Remanente entre las horas trabajadas y las horas objetivo del período, después de haber usado parte para cubrir jornadas cortas o compensatorios.' },
+            'stat-saldo': { titulo: 'Banco de horas', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período seleccionado, incluyendo compensatorios.' },
             'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de registros con entradas y salidas regulares en el período.' },
-            'stat-compensaciones': { titulo: 'Salidas Tempranas', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada.' },
+            'stat-compensaciones': { titulo: 'Salidas Tempranas', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada o asueto dentro del registro en curso.' },
         };
 
         let _popupStatEl = null;
@@ -9119,7 +9119,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260830';
+        const _v = '-v260901';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

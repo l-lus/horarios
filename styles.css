@@ -693,6 +693,11 @@ button:disabled {
     inset: 0;
     pointer-events: none;
     z-index: 0;
+    transition: transform calc(var(--dur-anim)*5) ease;
+}
+
+.stats-card-bg--zoom {
+    transform: scale(1.1);
 }
 
 .stats-card-bg__layer {

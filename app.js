@@ -6425,6 +6425,7 @@
             const bg = $('stats-card-bg');
             if (!bg) return;
             bg.dataset.estado = estado;
+            bg.classList.toggle('stats-card-bg--zoom', D.vistaActual() !== 'semana');
 
             const coloresVar = {
                 blue: 'rgba(76,114,172,0.12)',

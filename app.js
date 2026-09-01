@@ -5733,6 +5733,10 @@
             return regs.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0);
         }
 
+        function _fechaDDMMYYYY(fechaISO) {
+            return fechaISO.split('-').reverse().join('/');
+        }
+
         function _resolverPeriodoDatos(esAnual) {
             if (esAnual) {
                 const anio = $('select-anio-stats')?.value;
@@ -5806,10 +5810,10 @@
         }
 
         function _seccionDetalleDiario(registrosPeriodo) {
-            const ordenados = [...registrosPeriodo].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            const ordenados = [...registrosPeriodo].sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
             const filas = ordenados.map(r => {
                 const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                const fecha = S.escapeHtml(r.fecha.split('-').reverse().join('/'));
+                const fecha = S.escapeHtml(_fechaDDMMYYYY(r.fecha));
                 const dia = S.escapeHtml(TimeUtils.obtenerNombreDia(r.fecha));
 
                 if (tipoEspecial) {
@@ -6007,7 +6011,7 @@
             const ultimaDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
 
             const semanas = _agruparRegistrosPorSemana(registrosPeriodo);
-            const semanasOrdenadas = [...semanas.entries()].sort((a, b) => new Date(a[0]) - new Date(b[0]));
+            const semanasOrdenadas = [...semanas.entries()].sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
             if (!semanasOrdenadas.length) return '';
 
             const semanasIncompletas = [];
@@ -6046,7 +6050,7 @@
 
                 if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
 
-                const rango = `${lunes.split('-').reverse().join('/')} – ${fechaFin.split('-').reverse().join('/')}${esIncompleta ? ' *' : ''}`;
+                const rango = `${_fechaDDMMYYYY(lunes)} – ${_fechaDDMMYYYY(fechaFin)}${esIncompleta ? ' *' : ''}`;
                 return `
                 <tr>
                     <td class="col-semana">Semana ${index + 1}</td>
@@ -6299,15 +6303,8 @@
                     poblarSelectorAnios();
                 } else if (modoEstadisticas === 'semanal') {
                     poblarSelectorSemanas();
-                    actualizarEstadisticasSemana($('select-semana-stats')?.value);
                 } else {
                     poblarSelectorMeses();
-                    const selectMes = $('select-mes-stats');
-                    if (selectMes && selectMes.value) {
-                        actualizarEstadisticas(selectMes.value);
-                    } else {
-                        actualizarEstadisticas();
-                    }
                 }
             });
         }
@@ -7872,8 +7869,8 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
                 btnId: 'btn-toggle-logica-cubierto',
-                mensajeOn: 'Los registros no cubren el faltante con banco de horas',
-                mensajeOff: 'Los registros cubren el faltante según el banco de horas disponible',
+                mensajeOn: 'Los registros no cubren el faltante con saldo horario',
+                mensajeOff: 'Los registros cubren el faltante según el saldo horario disponible',
                 onAfterToggle: () => { actualizarUI(); }
             });
 

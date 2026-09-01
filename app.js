@@ -6368,6 +6368,7 @@
         let _fondoCard = 'golden-gate';
         let _bgFadeTimer = null;
         let _bgActiveLayer = 'a';
+        let _bgUltimaFirma = null;
 
         function setFondoCard(valor) {
             _fondoCard = valor;
@@ -6447,6 +6448,10 @@
             const color = colorOverride
                 ? (coloresVar[colorOverride] || colores.especial)
                 : (colores[estado] || colores.esperando);
+
+            const firma = `${_fondoCard}|${color}`;
+            if (firma === _bgUltimaFirma) return;
+            _bgUltimaFirma = firma;
 
             if (_fondoCard === 'ninguno') {
                 bg.innerHTML = '';

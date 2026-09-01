@@ -2380,7 +2380,7 @@
 
             el.addEventListener('touchmove', e => {
                 if (_x === null || _y === null) return;
-                
+
                 const dx = Math.abs(e.touches[0].clientX - _x);
                 const dy = Math.abs(e.touches[0].clientY - _y);
 
@@ -2398,11 +2398,11 @@
                     _x = null; _y = null;
                     return;
                 }
-                
+
                 const dx = e.changedTouches[0].clientX - _x;
                 const dy = e.changedTouches[0].clientY - _y;
                 _x = null; _y = null;
-                
+
                 if (Math.abs(dy) > maxY) return;
                 if (Math.abs(dx) < minX) return;
                 callback(dx < 0 ? 1 : -1);
@@ -2903,7 +2903,7 @@
         function _obtenerTodosPerfilesSafe() {
             return window.PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
         }
-        
+
         function _guardarPerfilesConManejo(perfiles, contextoError = 'Error al guardar perfil:') {
             try {
                 if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
@@ -7349,7 +7349,7 @@
             function _actualizarContador() {
                 const titulo = $('stats-titulo');
                 const el = titulo ? titulo.querySelector('#' + TF_LABEL_ID) : null;
-                
+
                 if (!el) { _detenerContadorBreak(); return; }
                 const start = parseInt(StorageHelper.getItem(storageKey));
                 if (isNaN(start)) { el.textContent = ''; _detenerContadorBreak(); return; }
@@ -7871,8 +7871,8 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
                 btnId: 'btn-toggle-logica-cubierto',
-                mensajeOn: 'Los registros no cubren el faltante con saldo horario',
-                mensajeOff: 'Los registros cubren el faltante según el saldo horario disponible',
+                mensajeOn: 'Los registros no cubren el faltante con el banco de horas',
+                mensajeOff: 'Los registros cubren el faltante con el banco de horas disponible',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -7881,8 +7881,8 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
                 btnId: 'btn-toggle-objetivo-registro',
-                mensajeOn: 'Las horas diarias objetivo cambian según el valor global configurado',
-                mensajeOff: 'Las horas diarias objetivo de los registros son independientes',
+                mensajeOn: 'Las horas objetivo cambian dinámicamente según el valor global configurado',
+                mensajeOff: 'Las horas objetivo son independientes en cada registro',
                 onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); }
             });
 

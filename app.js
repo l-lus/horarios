@@ -8513,7 +8513,9 @@
 
             const hoy = TimeUtils.obtenerFechaHoy();
             const hoyEsLaborable = _esFechaHabil(hoy, D.diasHabilesEnFecha(hoy));
-            if (D.vistaActual() === 'semana' && hoyEsLaborable) {
+            const regHoy = D.registros().find(r => r.fecha === hoy) ?? null;
+            const hayRegistroHoy = !!regHoy && (!!regHoy.entrada || !!regHoy.salida);
+            if (D.vistaActual() === 'semana' && hoyEsLaborable && hayRegistroHoy) {
                 setTimerAutoVista(setTimeout(() => {
                     setTimerAutoVista(null);
                     alternarVista();

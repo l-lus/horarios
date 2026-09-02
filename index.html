@@ -562,26 +562,34 @@
                             </div>
                         </div>
                     </div>
-                    <div id="lista-registros" class="custom-scroll"></div>
-                    <div id="vista-calendario-historico" class="hidden">
-                        <div class="calendario-nav">
-                            <span class="calendario-titulo" id="calendario-titulo-mes" title="Mostrar meses"></span>
-                            <div id="calendario-nav-botones">
-                                <button class="btn-hoy-calendario" title="Ir al mes actual">Hoy</button>
-                                <button title="Mes anterior">
-                                    <svg class="icon icon-rotate-90">
-                                        <use href="#icon-chevron-down" />
-                                    </svg>
-                                </button>
-                                <button title="Mes siguiente">
-                                    <svg class="icon icon-rotate-neg90">
-                                        <use href="#icon-chevron-down" />
-                                    </svg>
-                                </button>
-                            </div>
+                    <div class="collapsible expanded" id="wrap-lista-registros">
+                        <div class="collapsible-inner">
+                            <div id="lista-registros" class="custom-scroll"></div>
                         </div>
-                        <div class="calendario-grid" id="calendario-grid"></div>
-                        <div id="calendario-selector-meses" class="custom-scroll">
+                    </div>
+                    <div class="collapsible" id="wrap-vista-calendario-historico">
+                        <div class="collapsible-inner">
+                            <div id="vista-calendario-historico">
+                                <div class="calendario-nav">
+                                    <span class="calendario-titulo" id="calendario-titulo-mes" title="Mostrar meses"></span>
+                                    <div id="calendario-nav-botones">
+                                        <button class="btn-hoy-calendario" title="Ir al mes actual">Hoy</button>
+                                        <button title="Mes anterior">
+                                            <svg class="icon icon-rotate-90">
+                                                <use href="#icon-chevron-down" />
+                                            </svg>
+                                        </button>
+                                        <button title="Mes siguiente">
+                                            <svg class="icon icon-rotate-neg90">
+                                                <use href="#icon-chevron-down" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="calendario-grid" id="calendario-grid"></div>
+                                <div id="calendario-selector-meses" class="custom-scroll">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div><!-- .detalle-inner -->

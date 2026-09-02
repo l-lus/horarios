@@ -3264,11 +3264,11 @@
 
         function _activarVistaCalendarioHistorico() {
             if (!_vistaHistoricoCalendario) return;
-            const lista = document.getElementById('lista-registros');
-            const cal = document.getElementById('vista-calendario-historico');
+            const wrapLista = document.getElementById('wrap-lista-registros');
+            const wrapCal = document.getElementById('wrap-vista-calendario-historico');
             const btnFiltro = document.getElementById('btn-filtro');
-            if (lista) lista.classList.add('hidden');
-            if (cal) cal.classList.remove('hidden');
+            wrapLista?.classList.remove('expanded');
+            wrapCal?.classList.add('expanded');
             if (btnFiltro) btnFiltro.disabled = false;
             _renderizarCalendario();
         }
@@ -3371,18 +3371,19 @@
             _vistaHistoricoCalendario = !_vistaHistoricoCalendario;
             try { StorageHelper.setItem(STORAGE_KEYS.VISTA_HISTORICO_CAL, _vistaHistoricoCalendario); } catch (e) { }
 
-            const lista = document.getElementById('lista-registros');
-            const cal = document.getElementById('vista-calendario-historico');
+            const wrapLista = document.getElementById('wrap-lista-registros');
+            const wrapCal = document.getElementById('wrap-vista-calendario-historico');
             const btnFiltro = document.getElementById('btn-filtro');
-            const saliente = _vistaHistoricoCalendario ? lista : cal;
-            const entrante = _vistaHistoricoCalendario ? cal : lista;
-            _animarMutacion([saliente, entrante], () => {
-                if (saliente) { saliente.classList.add('hidden'); }
-                if (entrante) { entrante.classList.remove('hidden'); }
 
-                if (btnFiltro) btnFiltro.disabled = false;
-                if (_vistaHistoricoCalendario) _renderizarCalendario();
-            });
+            if (_vistaHistoricoCalendario) {
+                wrapLista?.classList.remove('expanded');
+                wrapCal?.classList.add('expanded');
+                _renderizarCalendario();
+            } else {
+                wrapCal?.classList.remove('expanded');
+                wrapLista?.classList.add('expanded');
+            }
+            if (btnFiltro) btnFiltro.disabled = false;
 
             const selector = document.getElementById('calendario-selector-meses');
             const grid = document.getElementById('calendario-grid');
@@ -6224,8 +6225,8 @@
             'stat-promedio-diario': { titulo: 'Promedio Diario', desc: 'Promedio de horas trabajadas por jornada en el período.' },
             'stat-entrada-promedio': { titulo: 'Entrada Promedio', desc: 'Hora de entrada promedio entre todas las jornadas del período.' },
             'stat-salida-promedio': { titulo: 'Salida Promedio', desc: 'Hora de salida promedio entre todas las jornadas del período.' },
-            'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio en minutos respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
-            'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio en minutos respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-regularidad-entrada': { titulo: 'Entrada Regular', desc: 'Qué tan constante es tu hora de entrada. Muestra la desviación promedio respecto al horario habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
+            'stat-regularidad-jornada': { titulo: 'Jornada Regular', desc: 'Qué tan constante es la duración de tu jornada. Muestra la desviación promedio respecto a la duración habitual: hasta 20m es Alta, hasta 40m Media, y más de 40m Baja.' },
             'stat-tiempo-fuera-total': { titulo: 'Tiempo Fuera', desc: 'Suma de los tiempos fuera (salidas del establecimiento, almuerzo, etc.) registrados en las jornadas del período.' },
             'stat-saldo': { titulo: 'Banco de horas', desc: 'Diferencia entre las horas trabajadas y las horas objetivo del período seleccionado, incluyendo compensatorios.' },
             'stat-dias-trabajados': { titulo: 'Jornadas', desc: 'Cantidad de registros con entradas y salidas regulares en el período.' },
@@ -9153,7 +9154,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260901';
+        const _v = '-v260902';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

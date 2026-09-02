@@ -499,7 +499,7 @@
     // THEME MANAGER (temas: claro, oscuro, rosa, verde, azul)
     // ====================================================================
     const ThemeManager = (function () {
-        const TEMAS = ['light', 'dark', 'pink', 'green', 'blue'];
+        const TEMAS = ['light', 'dark', 'pink', 'green', 'blue', 'lilac'];
 
         function temaGuardado() {
             const raw = StorageHelper.getItem(STORAGE_KEYS.TEMA_OSCURO, null);

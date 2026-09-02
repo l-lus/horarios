@@ -116,6 +116,22 @@ body[data-theme="blue"] {
     --hover: brightness(0.95);
 }
 
+/* ─── TEMA VIOLETA PASTEL (Lilac / Lavanda) ───────────────────────────── */
+html[data-theme="lilac"] body,
+body[data-theme="lilac"] {
+    --bg-body: #f6f3fc;
+    --bg-card: #ffffff;
+    --bg-header: #f6f3fcee;
+    --text-main: #3a2e4f;
+    --text-muted: #7b6894;
+    --text-disabled: #7b689499;
+    --border: #e6def2;
+    --input-bg: #f0e9fa;
+    --c-gray-btn: #f0e9fa;
+    --shadow: 0 1px 4px rgba(120, 80, 180, 0.1), 0 0 0 1px rgba(120, 80, 180, 0.05);
+    --hover: brightness(0.95);
+}
+
 /* ─── RESET ─────────────────────────────────────────────────────────────────── */
 
 body.modal-open {

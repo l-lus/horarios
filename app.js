@@ -3264,11 +3264,11 @@
 
         function _activarVistaCalendarioHistorico() {
             if (!_vistaHistoricoCalendario) return;
-            const wrapLista = document.getElementById('wrap-lista-registros');
-            const wrapCal = document.getElementById('wrap-vista-calendario-historico');
+            const lista = document.getElementById('lista-registros');
+            const cal = document.getElementById('vista-calendario-historico');
             const btnFiltro = document.getElementById('btn-filtro');
-            wrapLista?.classList.remove('expanded');
-            wrapCal?.classList.add('expanded');
+            if (lista) lista.classList.add('hidden');
+            if (cal) cal.classList.remove('hidden');
             if (btnFiltro) btnFiltro.disabled = false;
             _renderizarCalendario();
         }
@@ -3371,19 +3371,18 @@
             _vistaHistoricoCalendario = !_vistaHistoricoCalendario;
             try { StorageHelper.setItem(STORAGE_KEYS.VISTA_HISTORICO_CAL, _vistaHistoricoCalendario); } catch (e) { }
 
-            const wrapLista = document.getElementById('wrap-lista-registros');
-            const wrapCal = document.getElementById('wrap-vista-calendario-historico');
+            const lista = document.getElementById('lista-registros');
+            const cal = document.getElementById('vista-calendario-historico');
             const btnFiltro = document.getElementById('btn-filtro');
+            const saliente = _vistaHistoricoCalendario ? lista : cal;
+            const entrante = _vistaHistoricoCalendario ? cal : lista;
+            _animarMutacion([saliente, entrante], () => {
+                if (saliente) { saliente.classList.add('hidden'); }
+                if (entrante) { entrante.classList.remove('hidden'); }
 
-            if (_vistaHistoricoCalendario) {
-                wrapLista?.classList.remove('expanded');
-                wrapCal?.classList.add('expanded');
-                _renderizarCalendario();
-            } else {
-                wrapCal?.classList.remove('expanded');
-                wrapLista?.classList.add('expanded');
-            }
-            if (btnFiltro) btnFiltro.disabled = false;
+                if (btnFiltro) btnFiltro.disabled = false;
+                if (_vistaHistoricoCalendario) _renderizarCalendario();
+            });
 
             const selector = document.getElementById('calendario-selector-meses');
             const grid = document.getElementById('calendario-grid');

@@ -790,7 +790,7 @@ button:disabled {
     position: absolute;
     inset: 0;
     opacity: 0;
-    transition: opacity 0.6s ease;
+    transition: opacity calc(var(--dur-anim)*2) ease;
 }
 
 .stats-card-bg__layer.visible {

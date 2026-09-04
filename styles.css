@@ -682,6 +682,7 @@ button:disabled {
 #gist-limite-sync {
     margin-top: var(--space-sm);
     transition: opacity var(--transition-ui);
+    color: var(--text-muted);
 }
 
 #gist-rango-horario.disabled,

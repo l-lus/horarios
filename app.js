@@ -20,6 +20,7 @@
         IGNORAR_LOGICA_CUBIERTO: 'ignorarLogicaCubierto',
         IGNORAR_OBJETIVO_POR_REGISTRO: 'ignorarObjetivoPorRegistro',
         FONDO_CARD: 'fondoCard',
+        FONDO_MATRIX: 'fondoMatrix',
         PERSISTIR_TARJETAS: 'persistirTarjetas',
         ORDEN_CARDS: 'ordenCards',
         FORMULARIO_EXPANDIDO: 'formularioExpandido',
@@ -7887,6 +7888,29 @@
                 onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
             });
 
+        const { toggle: toggleFondoMatrix, actualizarEstado: actualizarEstadoBotonFondoMatrix } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.FONDO_MATRIX, true),
+                setVal: (v) => {
+                    StorageHelper.setItem(STORAGE_KEYS.FONDO_MATRIX, v);
+                    if (v) {
+                        window.MatrixRain?.iniciar();
+                    } else {
+                        window.MatrixRain?.detener();
+                    }
+                },
+                btnId: 'btn-toggle-matrix',
+                mensajeOn: 'Fondo animado Matrix activado',
+                mensajeOff: 'Fondo animado Matrix desactivado',
+                onAfterToggle: (nuevo) => {
+                    if (nuevo) {
+                        window.MatrixRain?.iniciar();
+                    } else {
+                        window.MatrixRain?.detener();
+                    }
+                }
+            });
+
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
@@ -8332,6 +8356,13 @@
             D.setIgnorarTiempoFuera(config.ignorarTiempoFuera || false);
             UILogic.actualizarEstadoBotonIgnorarTF();
             UILogic.poblarSelectoresTipos();
+            const matrixActivo = StorageHelper.getBoolean(STORAGE_KEYS.FONDO_MATRIX, true);
+            if (matrixActivo) {
+                window.MatrixRain?.iniciar();
+            } else {
+                window.MatrixRain?.detener();
+            }
+            UILogic.actualizarEstadoBotonFondoMatrix();
             UILogic.actualizarEstadoBotonHoverPopup();
             UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.actualizarEstadoBotonObjetivoPorRegistro();
@@ -8791,7 +8822,7 @@
             _popupCalendarioDiaSinRegistro, _popupCalendarioHover, _prepararMostrarFaseAlRenderizar, _renderSelectorStats, _renderizarCalendario, abrirEditorPerfil,
             abrirEditorTramoDias, abrirGistEnBrowser, abrirModalAyuda, abrirModalGist, abrirModalHistorialDias, abrirModalReporteSecciones,
             abrirSelectorMesesCalendario, abrirSelectorPerfiles,
-            actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
+            actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonFondoMatrix, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
             actualizarEstadoBotonesGist, actualizarFeedbackConfig, actualizarListaRegistros, actualizarUI, agruparRegistrosConsecutivos, alternarFechaActual,
             alternarTema, alternarVista, aplicarFeedbackCampos, aplicarHorasConfiguradasATodos, aplicarOrdenCards, aplicarVisibilidadCards,
             cambiarAnioStats, cambiarMesStats, cambiarSemanaStats, cerrarConfig, cerrarEdicion, cerrarEdicionGrupo,
@@ -8804,7 +8835,7 @@
             limpiarCampo, mostrarConfigOnboarding, mostrarExportar, mostrarFiltros, mostrarImportar, mostrarToast,
             mostrarconfig, navegarCalendario, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, obtenerOrdenCards, pegarHoraActual, poblarSelectoresTipos,
             resetearBoton, setFondoCard, setModoEstadisticas, setTiempoExpansionBotones, toggleBloqueoEdicion, toggleBloqueoEdicionGrupo,
-            toggleCamposRangoExport, toggleCredito, toggleFondoCard, toggleFormulario, toggleGistBackup, toggleGistMerge,
+            toggleCamposRangoExport, toggleCredito, toggleFondoCard, toggleFondoMatrix, toggleFormulario, toggleGistBackup, toggleGistMerge,
             toggleHistorico, toggleHoverPopupCalendario, toggleIgnorarTiempoFuera, toggleLogicaCubierto, toggleModoLote, toggleObjetivoPorRegistro,
             togglePeriodoStats, togglePersistirTarjetas, toggleSeccionReporte, toggleStats, toggleTimerBreakMain, toggleVerToken,
             toggleVisibilidadCard, toggleVistaHistorico, vistaActual: D.vistaActual, refrescarConfigSiVisible
@@ -9047,6 +9078,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
+    $('btn-toggle-matrix')?.addEventListener('click', () => UILogic.toggleFondoMatrix());
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());

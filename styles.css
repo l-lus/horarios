@@ -132,6 +132,59 @@ body[data-theme="lilac"] {
     --hover: brightness(0.95);
 }
 
+/* ─── FONDO ANIMADO MATRIX ─────────────────────────────────────────────────── */
+#matrix-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+    display: none;
+}
+
+body.matrix-active #matrix-canvas {
+    display: block;
+}
+
+body.matrix-active {
+    --bg-body: #030603;
+    background: #030603;
+}
+
+html body.matrix-active {
+    --bg-body: #030603;
+    --bg-card: rgba(18, 24, 20, 0.88);
+    --bg-header: rgba(4, 8, 4, 0.85);
+    --text-main: #e3e8e4;
+    --text-muted: #8ea292;
+    --text-disabled: #556658;
+    --border: #1a3820;
+    --input-bg: #09120b;
+    --c-gray-btn: #112015;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 1px rgba(0, 255, 102, 0.25);
+    color-scheme: dark;
+}
+
+body.matrix-active .container {
+    position: relative;
+    z-index: 1;
+}
+
+body.matrix-active .card,
+body.matrix-active .modal-content {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 255, 102, 0.16);
+}
+
+body.matrix-active .header {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0, 255, 102, 0.18);
+}
+
 /* ─── RESET ─────────────────────────────────────────────────────────────────── */
 
 body.modal-open {

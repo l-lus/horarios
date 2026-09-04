@@ -24,12 +24,14 @@
     <script src="./flash.js"></script>
     <script src="./fondos.js" defer></script>
     <script src="./feriados.js" defer></script>
+    <script src="./matrix.js" defer></script>
     <link rel="stylesheet" href="./styles.css">
     <script src="./app.js" defer></script>
     <title>Horarios</title>
 </head>
 
 <body>
+    <canvas id="matrix-canvas" aria-hidden="true"></canvas>
     <svg class="svg-sprite">
         <symbol id="icon-moon" viewBox="0 0 24 24">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" class="icon-line" stroke-width="2"
@@ -47,6 +49,11 @@
                 <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
             </g>
+        </symbol>
+        <symbol id="icon-matrix" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5" class="icon-line"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19" class="icon-line"></line>
         </symbol>
         <symbol id="icon-combine" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -673,6 +680,15 @@
                                     <use href="#icon-landscape" />
                                 </svg>
                                 <span id="hint-fondo-label">Golden Gate</span>
+                            </button>
+                            <button id="btn-toggle-matrix">
+                                <svg class="icon">
+                                    <use href="#icon-matrix" />
+                                </svg>
+                                <span>Fondo Matrix animado</span>
+                                <svg class="icon icon-indicator">
+                                    <use href="#icon-dot" />
+                                </svg>
                             </button>
                             <button id="btn-toggle-hover-popup">
                                 <svg class="icon">

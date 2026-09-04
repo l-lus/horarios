@@ -295,6 +295,113 @@
     })();
 
     // ====================================================================
+    // PUSH REMINDER MODULE — recordatorio de fin de jornada vía Cloudflare
+    // ====================================================================
+    const PushReminder = (function () {
+        // TODO: completar con los valores reales una vez desplegado el Worker
+        const WORKER_URL = 'https://horarios-push.tu-subdominio.workers.dev';
+        const VAPID_PUBLIC_KEY = 'PEGA_ACA_TU_VAPID_PUBLIC_KEY';
+
+        function _urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            return Uint8Array.from([...atob(base64)].map(c => c.charCodeAt(0)));
+        }
+
+        // Identificador único por instalación (navegador/dispositivo), para que
+        // dos personas usando la misma app en distintos celulares no pisen el
+        // mismo recordatorio en el Worker al fichar el mismo día.
+        function _idInstalacion() {
+            const KEY = 'pushInstallId';
+            try {
+                let id = localStorage.getItem(KEY);
+                if (!id) {
+                    id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+                    localStorage.setItem(KEY, id);
+                }
+                return id;
+            } catch {
+                return 'sin-storage';
+            }
+        }
+
+        function _perfilActivo() {
+            return (window.PerfilManager ? PerfilManager.obtenerPerfilActual() : null) || 'default';
+        }
+
+        // Clave compuesta: instalación + perfil + fecha, para que no colisionen
+        // ni distintas personas (distinto navegador) ni distintos perfiles
+        // dentro del mismo dispositivo fichando el mismo día.
+        function _claveRecordatorio(fechaISO) {
+            return `${_idInstalacion()}:${_perfilActivo()}:${fechaISO}`;
+        }
+
+        async function _asegurarSuscripcion() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+            if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith('PEGA_ACA')) return null;
+
+            try {
+                const permiso = await Notification.requestPermission();
+                if (permiso !== 'granted') return null;
+
+                const reg = await navigator.serviceWorker.ready;
+                const existente = await reg.pushManager.getSubscription();
+                if (existente) return existente;
+
+                return await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: _urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+            } catch (err) {
+                console.error('No se pudo suscribir a push:', err);
+                return null;
+            }
+        }
+
+        // entradaHHMM: 'HH:MM' de hoy. objetivoHoras: número (puede ser decimal).
+        async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras) {
+            if (!entradaHHMM || !objetivoHoras) return;
+
+            const sub = await _asegurarSuscripcion();
+            if (!sub) return;
+
+            const [h, m] = entradaHHMM.split(':').map(Number);
+            if (Number.isNaN(h) || Number.isNaN(m)) return;
+
+            const target = new Date();
+            target.setHours(h, m, 0, 0);
+            target.setTime(target.getTime() + objetivoHoras * 60 * 60 * 1000);
+
+            try {
+                await fetch(`${WORKER_URL}/api/schedule`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: _claveRecordatorio(fechaISO),
+                        subscription: sub.toJSON(),
+                        targetTime: target.getTime(),
+                        title: 'Horarios',
+                        message: 'Se cumplió tu horario de hoy'
+                    })
+                });
+            } catch (err) {
+                console.error('No se pudo programar el recordatorio:', err);
+            }
+        }
+
+        function cancelarFinDeJornada(fechaISO) {
+            if (!fechaISO) return;
+            fetch(`${WORKER_URL}/api/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: _claveRecordatorio(fechaISO) })
+            }).catch(err => console.error('No se pudo cancelar el recordatorio:', err));
+        }
+
+        return { programarFinDeJornada, cancelarFinDeJornada };
+    })();
+
+    // ====================================================================
     // SECURITY AND UTILS MODULE
     // ====================================================================
     const SecurityAndUtils = (function () {
@@ -1407,6 +1514,7 @@
             HistoryManager.saveState(registros, `salida ${s} (${TimeUtils.fechaCorta(reg.fecha)})`);
             const saved = await _guardarConCicloSiHoy(reg.id, esHoy, 'salida');
             if (!saved) return;
+            if (esHoy) PushReminder.cancelarFinDeJornada(reg.fecha);
             if (!usaHoraActual) {
                 notify.aplicarFeedbackCampos([
                     { id: 'entrada', fallback: 'Entrada', mostrar: false },
@@ -1432,6 +1540,7 @@
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
             const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
             if (!saved) return;
+            if (esHoy && !s) PushReminder.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras);
             const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
             if (entradaManual || salidaManual) {
                 notify.aplicarFeedbackCampos([
@@ -8536,6 +8645,28 @@
 
             _actualizarOffsetsStickyMes();
             window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
+
+            _manejarAccionDeShortcut();
+        }
+
+        // Atiende los accesos directos de Android declarados en manifest.json
+        // (./index.html?accion=entrada|salida|restante)
+        function _manejarAccionDeShortcut() {
+            const params = new URLSearchParams(location.search);
+            const accion = params.get('accion');
+            if (!accion) return;
+
+            // Limpia el query param para que un refresh no vuelva a disparar la acción
+            history.replaceState(null, '', location.pathname + location.hash);
+
+            if (accion === 'entrada' || accion === 'salida') {
+                const btn = $('btn-agregar');
+                // ejecutarAccionRegistro ya decide sola si corresponde fichar
+                // entrada o salida según el registro de hoy
+                if (btn && !btn.disabled) setTimeout(() => btn.click(), 300);
+            } else if (accion === 'restante') {
+                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 300);
+            }
         }
 
         function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'label-feedback--green') {

@@ -71,3 +71,36 @@ self.addEventListener('fetch', event => {
       })
   );
 });
+
+// Push — recordatorio de fin de jornada (viene del Worker de Cloudflare)
+self.addEventListener('push', event => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: 'Horarios', body: event.data ? event.data.text() : '' };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Horarios', {
+      body: data.body || 'Se cumplió tu horario de hoy',
+      icon: './icons/icon-192.png',
+      badge: './icons/icon-192.png',
+      tag: 'horarios-recordatorio',
+      renotify: true,
+    })
+  );
+});
+
+// Click en la notificación — enfoca la app si ya está abierta, si no la abre
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow('./');
+    })
+  );
+});

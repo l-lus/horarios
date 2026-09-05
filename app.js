@@ -298,9 +298,8 @@
     // PUSH REMINDER MODULE — recordatorio de fin de jornada vía Cloudflare
     // ====================================================================
     const PushReminder = (function () {
-        // TODO: completar con los valores reales una vez desplegado el Worker
-        const WORKER_URL = 'https://horarios-push.tu-subdominio.workers.dev';
-        const VAPID_PUBLIC_KEY = 'PEGA_ACA_TU_VAPID_PUBLIC_KEY';
+        const WORKER_URL = 'https://horarios-push.l-lus.workers.dev';
+        const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
 
         function _urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);

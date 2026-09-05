@@ -409,26 +409,36 @@
             }
         }
 
-        async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
-            if (!getHabilitado() || !entradaHHMM || !objetivoHoras) return;
-
-            const sub = await _asegurarSuscripcion();
-            if (!sub) return;
-
+        // Calcula el target time (ms epoch) que le correspondería a un turno
+        // abierto, sin tocar la red. Se separa de programarFinDeJornada para
+        // poder comparar "qué debería estar programado" contra "qué está
+        // programado" sin gastar un request — ver _sincronizarPushHoy en
+        // DataManagement, que es quien más se beneficia de esto.
+        function _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
+            if (!entradaHHMM || !objetivoHoras) return null;
             const [h, m] = entradaHHMM.split(':').map(Number);
-            if (Number.isNaN(h) || Number.isNaN(m)) return;
+            if (Number.isNaN(h) || Number.isNaN(m)) return null;
 
             let objetivoAjustado = objetivoHoras;
             if (getUsarBufferSemanal() && Number.isFinite(bufferSemanalHoras)) {
                 objetivoAjustado = Math.max(0, objetivoHoras - bufferSemanalHoras);
             }
-
             const anticipacionMin = getAnticipacionMin();
-
             const target = new Date();
             target.setHours(h, m, 0, 0);
             target.setTime(target.getTime() + objetivoAjustado * 60 * 60 * 1000 - anticipacionMin * 60 * 1000);
+            return target.getTime();
+        }
 
+        async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
+            if (!getHabilitado()) return;
+            const targetMs = _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras);
+            if (targetMs == null) return;
+
+            const sub = await _asegurarSuscripcion();
+            if (!sub) return;
+
+            const anticipacionMin = getAnticipacionMin();
             const mensaje = anticipacionMin > 0
                 ? `Te faltan ${anticipacionMin} min para cumplir tu horario de hoy`
                 : 'Se cumplió tu horario de hoy';
@@ -440,12 +450,12 @@
                     body: JSON.stringify({
                         id: _claveRecordatorio(fechaISO),
                         subscription: sub.toJSON(),
-                        targetTime: target.getTime(),
+                        targetTime: targetMs,
                         title: 'Horarios',
                         message: mensaje
                     })
                 });
-                if (res.ok) _guardarInfoActiva(fechaISO, target.getTime());
+                if (res.ok) _guardarInfoActiva(fechaISO, targetMs);
             } catch (err) {
                 console.error('No se pudo programar el recordatorio:', err);
             }
@@ -453,7 +463,12 @@
 
         function cancelarFinDeJornada(fechaISO) {
             if (!fechaISO) return;
-            _borrarInfoActiva();
+            // El cache local (_guardarInfoActiva) solo representa el push de HOY
+            // (es lo único que programarFinDeJornada guarda ahí). Si estamos
+            // cancelando una fecha distinta (ej. cerrar un turno de ayer que
+            // quedó abierto), no hay que tocar ese cache o se pierde el hint
+            // de un push de hoy que sigue vigente.
+            if (fechaISO === TimeUtils.obtenerFechaHoy()) _borrarInfoActiva();
             fetch(`${WORKER_URL}/api/cancel`, {
                 method: 'POST',
                 headers: _headersWorker(),
@@ -465,7 +480,9 @@
             programarFinDeJornada, cancelarFinDeJornada,
             getAnticipacionMin, setAnticipacionMin,
             getUsarBufferSemanal, setUsarBufferSemanal,
-            getHabilitado, setHabilitado
+            getHabilitado, setHabilitado,
+            calcularTarget: _calcularTarget,
+            targetProgramadoParaHoy: () => obtenerInfoActiva()?.targetTimeMs ?? null,
         };
     })();
 
@@ -1418,6 +1435,7 @@
                 const nuevosRegistros = fechasNuevas.map(fechaISO => _construirRegistro(fechaISO, entrada, salida));
                 registros.push(...nuevosRegistros);
                 ordenarRegistros();
+                _sincronizarPushHoy();
                 HistoryManager.saveState(registros, `editar grupo (${nuevosRegistros.length} día${TimeUtils.pluralizar(nuevosRegistros.length)})`);
                 const saved = await guardarYActualizar(nuevosRegistros.map(r => r.id));
                 if (saved) { notify.mostrarToast('Grupo actualizado', 'success'); notify.cerrarEdicionGrupo(); }
@@ -1434,6 +1452,7 @@
             }
             const idsAEliminar = grupoEnEdicion.registros.map(r => r.id);
             registros = registros.filter(r => !idsAEliminar.includes(r.id));
+            _sincronizarPushHoy();
             HistoryManager.saveState(registros, `eliminar grupo (${idsAEliminar.length} registro${TimeUtils.pluralizar(idsAEliminar.length)})`);
             const saved = await guardarYActualizar();
             if (saved) { notify.mostrarToast('Grupo eliminado', 'success'); notify.cerrarEdicionGrupo(); }
@@ -1582,7 +1601,11 @@
             HistoryManager.saveState(registros, `salida ${s} (${TimeUtils.fechaCorta(reg.fecha)})`);
             const saved = await _guardarConCicloSiHoy(reg.id, esHoy, 'salida');
             if (!saved) return;
-            if (esHoy) PushReminder.cancelarFinDeJornada(reg.fecha);
+            // Cancelar siempre (no solo si esHoy): cubre el caso "trasnoche" en
+            // que este registro es de AYER pero recién se cierra hoy — si no
+            // se cancela acá, el push de ayer puede seguir vivo en Cloudflare
+            // y disparar la notificación aunque el turno ya esté cerrado.
+            PushReminder.cancelarFinDeJornada(reg.fecha);
             if (!usaHoraActual) {
                 notify.aplicarFeedbackCampos([
                     { id: 'entrada', fallback: 'Entrada', mostrar: false },
@@ -1594,6 +1617,35 @@
             notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('salida').value = '';
+        }
+
+        // Resincroniza el recordatorio push contra el estado REAL de `registros`
+        // para la fecha de hoy. Se debe llamar después de cualquier operación
+        // que pueda agregar, quitar o modificar el registro de hoy por una vía
+        // que no sea el flujo normal de fichar entrada/salida (undo/redo,
+        // eliminar, importar, restablecer, editar en lote, merge con Gist,
+        // etc.) — si no, puede quedar un recordatorio programado en Cloudflare
+        // que ya no corresponde a nada, o faltar uno que sí debería existir.
+        // Optimización: antes de tocar el Worker, calcula qué target time
+        // *debería* estar programado y lo compara contra el que ya está
+        // cacheado localmente. Si coinciden, no hace ningún request.
+        function _sincronizarPushHoy() {
+            const hoy = TimeUtils.obtenerFechaHoy();
+            // En día no laboral no se programa recordatorio, aunque haya un
+            // turno abierto (el objetivo de "fin de jornada" no aplica fuera
+            // de los días hábiles configurados).
+            const esDiaHabil = UILogic._esFechaHabil(hoy, diasHabilesEnFecha(hoy));
+            const abierto = esDiaHabil && registros.find(r => r.fecha === hoy && r.entrada && !r.salida);
+            const nuevoTarget = abierto
+                ? PushReminder.calcularTarget(abierto.entrada, abierto.objetivoHoras, _bufferSemanalActual())
+                : null;
+            const targetActual = PushReminder.targetProgramadoParaHoy();
+            if (nuevoTarget === targetActual) return; // sin cambios reales, no gastamos requests
+
+            if (targetActual != null) PushReminder.cancelarFinDeJornada(hoy);
+            if (abierto && nuevoTarget != null) {
+                PushReminder.programarFinDeJornada(abierto.fecha, abierto.entrada, abierto.objetivoHoras, _bufferSemanalActual());
+            }
         }
 
         function _bufferSemanalActual() {
@@ -1613,7 +1665,7 @@
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
             const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
             if (!saved) return;
-            if (esHoy && !s) {
+            if (esHoy && !s && UILogic._esFechaHabil(f, diasHabilesEnFecha(f))) {
                 const bufferSemanal = _bufferSemanalActual();
                 PushReminder.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
             }
@@ -1699,6 +1751,7 @@
                 }
 
                 registros = registros.filter(r => r.id !== editandoId);
+                _sincronizarPushHoy();
                 HistoryManager.saveState(registros, `eliminar registro${registroABorrar ? ` (${TimeUtils.fechaCorta(registroABorrar.fecha)})` : ''}`);
 
                 const saved = await guardarYActualizar();
@@ -1840,9 +1893,9 @@
                 const perfilId = _obtenerPerfilIdActual();
                 StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
                 notify.actualizarEstadoBotonTimerMain();
-                PushReminder.cancelarFinDeJornada(reg.fecha);
             }
             registros = registros.filter(r => r.id !== editandoId);
+            _sincronizarPushHoy();
             HistoryManager.saveState(registros, `eliminar registro vacío${reg ? ` (${TimeUtils.fechaCorta(reg.fecha)})` : ''}`);
             const saved = await guardarYActualizar();
             notify.restaurarBotonGuardarEdicion(btnGuardar);
@@ -1852,7 +1905,6 @@
         async function guardarEdicion() {
             const r = registros.find(x => x.id === editandoId);
             if (!r) return;
-            const fechaOriginal = r.fecha;
             const btnGuardar = $('modal-editar').querySelector('.btn-edit');
             btnGuardar.disabled = true;
 
@@ -1941,11 +1993,11 @@
             const saved = await guardarYActualizar(null, true);
             notify.restaurarBotonGuardarEdicion(btnGuardar);
             if (saved) {
-                const hoy = TimeUtils.obtenerFechaHoy();
-                if (fechaOriginal === hoy) PushReminder.cancelarFinDeJornada(fechaOriginal);
-                if (r.fecha === hoy && r.entrada && !r.salida) {
-                    PushReminder.programarFinDeJornada(r.fecha, r.entrada, r.objetivoHoras, _bufferSemanalActual());
-                }
+                // Resincronizar el recordatorio push contra el estado real,
+                // no solo contra el registro que se acaba de editar: así no
+                // se cancela por error el push de otro registro de hoy si
+                // el que se editó no era el que tenía el turno abierto.
+                _sincronizarPushHoy();
                 notify.mostrarToast(cr ? `Guardado con Salida Temprana (+${cr})` : 'Registro actualizado', 'success');
                 notify.cerrarEdicion();
             }
@@ -1961,6 +2013,7 @@
             historialDiasHabiles = [];
             registros.splice(0, registros.length);
             ignorarTiempoFuera = false;
+            _sincronizarPushHoy(); // registros quedó vacío -> esto cancela cualquier push pendiente de hoy
 
             const perfilId = _obtenerPerfilIdActual();
             StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
@@ -2133,6 +2186,7 @@
         async function finalizarImportacionAndSave(mensajeExito, descripcion = null) {
             ordenarRegistros();
             migrarObjetivoHorasFaltante();
+            _sincronizarPushHoy();
             HistoryManager.saveState(registros, descripcion || mensajeExito);
             if (await guardarYActualizar()) {
                 const esPerfilDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
@@ -2298,6 +2352,7 @@
                     _recalcularHorasSiValido(r);
                 }
             });
+            _sincronizarPushHoy();
             guardarYActualizar(null, true);
             notify.mostrarToast(mensaje, 'info', undefined, resultado.descripcion);
             notify.iniciarTimerAutoCierreBotones();
@@ -2312,6 +2367,7 @@
             if (registrosAEliminar.length === 0) { notify.mostrarToast('No hay registros de jornadas en ese período', 'info'); notify.flashCampoTipo('info', 'btn-agregar'); throw new Error('Sin registros'); }
 
             registros = registros.filter(r => !registrosAEliminar.includes(r));
+            _sincronizarPushHoy();
             HistoryManager.saveState(registros, `eliminar período (${registrosAEliminar.length} registro${TimeUtils.pluralizar(registrosAEliminar.length)})`);
             const saved = await guardarYActualizar();
             if (saved) {
@@ -2554,6 +2610,7 @@
             calcularBufferPeriodo, detectarAyerAbierto, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
             registrarVacacionesDirecto, borrarPeriodoDirecto, registrarDiaEspecial, editarGrupo, guardarEdicionGrupo,
             eliminarGrupoActual, setGrupoEnEdicion: (val) => grupoEnEdicion = val,
+            sincronizarPushHoy: _sincronizarPushHoy,
             undoAction: function () { _aplicarEstadoHistorial(HistoryManager.undo(), 'Deshecho'); },
             redoAction: function () { _aplicarEstadoHistorial(HistoryManager.redo(), 'Rehecho'); },
             configurarNotificaciones
@@ -4456,6 +4513,7 @@
                 return (b.entrada || '').localeCompare(a.entrada || '');
             });
             D.migrarObjetivoHorasFaltante();
+            D.sincronizarPushHoy();
             HistoryManager.saveState(D.registros(), modo === 'replace' ? 'reemplazar con Gist' : 'combinar con Gist');
 
             await D.guardarYActualizar();
@@ -8140,6 +8198,7 @@
         async function _reprogramarSiHabilitado(habilitado) {
             if (!habilitado) return;
             const hoy = TimeUtils.obtenerFechaHoy();
+            if (!_esFechaHabil(hoy, D.diasHabilesEnFecha(hoy))) return;
             const regHoy = D.registros().find(r => r.fecha === hoy && r.entrada && !r.salida);
             if (!regHoy) return;
             const { inicio: iniSemana } = TimeUtils.obtenerSemanaRangoActual();

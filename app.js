@@ -461,19 +461,11 @@
             }).catch(err => console.error('No se pudo cancelar el recordatorio:', err));
         }
 
-        function obtenerTextoHint() {
-            if (!getHabilitado()) return 'Las notificaciones de fin de jornada están desactivadas';
-            const info = obtenerInfoActiva();
-            if (!info) return 'No hay ninguna notificación programada para hoy';
-            return `Notificación programada para hoy a las ${_formatoHora(info.targetTimeMs)}`;
-        }
-
         return {
             programarFinDeJornada, cancelarFinDeJornada,
             getAnticipacionMin, setAnticipacionMin,
             getUsarBufferSemanal, setUsarBufferSemanal,
-            getHabilitado, setHabilitado,
-            obtenerTextoHint
+            getHabilitado, setHabilitado
         };
     })();
 
@@ -8128,7 +8120,6 @@
                 btnId: 'btn-toggle-push-buffer',
                 mensajeOn: 'El recordatorio de fin de jornada descuenta tu saldo semanal a favor',
                 mensajeOff: 'El recordatorio de fin de jornada usa el objetivo diario tal cual',
-                onAfterToggle: () => actualizarHintPushActivo(),
             });
 
         async function _reprogramarSiHabilitado(habilitado) {
@@ -8150,7 +8141,6 @@
                 mensajeOff: 'Notificaciones de fin de jornada desactivadas',
                 onAfterToggle: async (nuevo) => {
                     await _reprogramarSiHabilitado(nuevo);
-                    actualizarHintPushActivo();
                 },
             });
 
@@ -8161,12 +8151,6 @@
 
         function cambiarPushAnticipacion(minutos) {
             PushReminder.setAnticipacionMin(minutos);
-            actualizarHintPushActivo();
-        }
-
-        function actualizarHintPushActivo() {
-            const hint = $('hint-push-activo');
-            if (hint) hint.textContent = PushReminder.obtenerTextoHint();
         }
 
         function abrirModalNotificaciones() {
@@ -8174,7 +8158,6 @@
                 actualizarEstadoBotonPushHabilitado();
                 actualizarEstadoBotonPushBuffer();
                 actualizarSelectPushAnticipacion();
-                actualizarHintPushActivo();
             });
         }
 
@@ -9075,7 +9058,7 @@
             abrirSelectorMesesCalendario, abrirSelectorPerfiles,
             actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
             actualizarEstadoBotonPushBuffer, togglePushBuffer, actualizarSelectPushAnticipacion, cambiarPushAnticipacion,
-            actualizarEstadoBotonPushHabilitado, togglePushHabilitado, actualizarHintPushActivo,
+            actualizarEstadoBotonPushHabilitado, togglePushHabilitado,
             abrirModalNotificaciones, cerrarModalNotificaciones,
             actualizarEstadoBotonesGist, actualizarFeedbackConfig, actualizarListaRegistros, actualizarUI, agruparRegistrosConsecutivos, alternarFechaActual,
             alternarTema, alternarVista, aplicarFeedbackCampos, aplicarHorasConfiguradasATodos, aplicarOrdenCards, aplicarVisibilidadCards,

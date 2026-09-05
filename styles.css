@@ -752,6 +752,12 @@ button:disabled {
     flex: 1;
 }
 
+#modal-notificaciones .config-hint-text {
+    text-align: center;
+    line-height: 1.4;
+    margin-top: var(--space-md);
+}
+
 .icon-indicator {
     flex-shrink: 0;
     margin-left: auto;

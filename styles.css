@@ -739,14 +739,16 @@ button:disabled {
 
 #modal-config .config-actions button,
 #modal-config #lista-orden-cards button,
-#modal-reporte-secciones .config-actions button {
+#modal-reporte-secciones .config-actions button,
+#modal-notificaciones .form-group button {
     justify-content: flex-start;
     text-align: left;
 }
 
 #modal-config .config-actions button>span,
 #modal-config #lista-orden-cards button>span,
-#modal-reporte-secciones .config-actions button>span {
+#modal-reporte-secciones .config-actions button>span,
+#modal-notificaciones .form-group button>span {
     flex: 1;
 }
 

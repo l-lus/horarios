@@ -767,23 +767,14 @@
                             </button>
                         </div>
                         <div class="config-actions form-group config-onboarding-hide">
-                            <label>Recordatorio de fin de jornada</label>
-                            <div class="input-with-btn">
-                                <select id="config-push-anticipacion">
-                                    <option value="0">Avisar en punto</option>
-                                    <option value="5">Avisar 5 min antes</option>
-                                    <option value="10">Avisar 10 min antes</option>
-                                    <option value="15">Avisar 15 min antes</option>
-                                </select>
-                                <div class="time-btn flex-shrink-0 btn-fantasma"></div>
-                            </div>
-                            <button id="btn-toggle-push-buffer">
+                            <label>Notificaciones</label>
+                            <button id="btn-abrir-notificaciones">
                                 <svg class="icon">
                                     <use href="#icon-clock-in" />
                                 </svg>
-                                <span>Considerar saldo semanal (banco de horas)</span>
+                                <span>Notificaciones</span>
                                 <svg class="icon icon-indicator">
-                                    <use href="#icon-dot" />
+                                    <use href="#icon-chevron-right" />
                                 </svg>
                             </button>
                         </div>
@@ -1469,6 +1460,70 @@
                     Eliminar
                 </button>
             </div>
+
+            <div class="btn-group">
+                <button class="btn-cancel">
+                    <svg class="icon">
+                        <use href="#icon-back" />
+                    </svg>
+                    Volver
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-notificaciones" role="dialog" aria-modal="true"
+        aria-labelledby="modal-notificaciones-titulo">
+        <div class="modal-content">
+            <h3 id="modal-notificaciones-titulo">
+                <span class="modal-title-block">
+                    <svg class="icon">
+                        <use href="#icon-clock-in" />
+                    </svg>
+                    Notificaciones
+                </span>
+            </h3>
+
+            <div class="form-group">
+                <button id="btn-toggle-push-habilitado">
+                    <svg class="icon">
+                        <use href="#icon-clock-in" />
+                    </svg>
+                    <span>Notifificar salida</span>
+                    <svg class="icon icon-indicator">
+                        <use href="#icon-dot" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="form-group">
+                <button id="btn-toggle-push-buffer">
+                    <svg class="icon">
+                        <use href="#icon-clock-in" />
+                    </svg>
+                    <span>Considerar banco de horas</span>
+                    <svg class="icon icon-indicator">
+                        <use href="#icon-dot" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label>Avisar</label>
+                <div class="input-with-btn">
+                    <select id="config-push-anticipacion">
+                        <option value="0">En punto</option>
+                        <option value="5">5 minutos antes</option>
+                        <option value="10">10 minutos antes</option>
+                        <option value="15">15 minutos antes</option>
+                    </select>
+                    <div class="time-btn flex-shrink-0 btn-fantasma"></div>
+                </div>
+            </div>
+
+            
+
+            <div id="hint-push-activo" class="config-hint-text"></div>
 
             <div class="btn-group">
                 <button class="btn-cancel">

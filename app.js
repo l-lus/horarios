@@ -33,6 +33,8 @@
         FERIADOS_PROCESADOS: 'feriadosAR_procesados',
         PUSH_ANTICIPACION_MIN: 'pushAnticipacionMin',
         PUSH_USAR_BUFFER_SEMANAL: 'pushUsarBufferSemanal',
+        PUSH_HABILITADO: 'pushHabilitado',
+        PUSH_INFO_ACTIVA: 'pushInfoActiva',
 
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
@@ -350,6 +352,41 @@
         function setUsarBufferSemanal(valor) {
             StorageHelper.setItem(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, !!valor);
         }
+        function getHabilitado() {
+            return StorageHelper.getBoolean(STORAGE_KEYS.PUSH_HABILITADO, true);
+        }
+        function setHabilitado(valor) {
+            const nuevo = !!valor;
+            StorageHelper.setItem(STORAGE_KEYS.PUSH_HABILITADO, nuevo);
+            if (!nuevo) {
+                const activa = obtenerInfoActiva();
+                if (activa) cancelarFinDeJornada(activa.fechaISO);
+            }
+        }
+
+        // --- Info del recordatorio activo (para mostrar el hint en el modal) ---
+        function _guardarInfoActiva(fechaISO, targetTimeMs) {
+            StorageHelper.setItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, JSON.stringify({ fechaISO, targetTimeMs }));
+        }
+        function _borrarInfoActiva() {
+            try { localStorage.removeItem(STORAGE_KEYS.PUSH_INFO_ACTIVA); } catch { /* noop */ }
+        }
+        // Devuelve { fechaISO, targetTimeMs } solo si corresponde al día de hoy
+        // (si quedó de un día anterior por cualquier motivo, se considera vencida).
+        function obtenerInfoActiva() {
+            const raw = StorageHelper.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null);
+            if (!raw) return null;
+            try {
+                const info = JSON.parse(raw);
+                if (!info || info.fechaISO !== TimeUtils.obtenerFechaHoy()) return null;
+                return info;
+            } catch {
+                return null;
+            }
+        }
+        function _formatoHora(ms) {
+            return new Date(ms).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        }
 
         async function _asegurarSuscripcion() {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
@@ -378,7 +415,7 @@
         // negativo = en contra). Opcional; solo se aplica si el usuario activó
         // "Considerar saldo semanal" en Ajustes.
         async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
-            if (!entradaHHMM || !objetivoHoras) return;
+            if (!getHabilitado() || !entradaHHMM || !objetivoHoras) return;
 
             const sub = await _asegurarSuscripcion();
             if (!sub) return;
@@ -402,7 +439,7 @@
                 : 'Se cumplió tu horario de hoy';
 
             try {
-                await fetch(`${WORKER_URL}/api/schedule`, {
+                const res = await fetch(`${WORKER_URL}/api/schedule`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -413,6 +450,7 @@
                         message: mensaje
                     })
                 });
+                if (res.ok) _guardarInfoActiva(fechaISO, target.getTime());
             } catch (err) {
                 console.error('No se pudo programar el recordatorio:', err);
             }
@@ -420,6 +458,7 @@
 
         function cancelarFinDeJornada(fechaISO) {
             if (!fechaISO) return;
+            _borrarInfoActiva();
             fetch(`${WORKER_URL}/api/cancel`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -427,10 +466,19 @@
             }).catch(err => console.error('No se pudo cancelar el recordatorio:', err));
         }
 
+        function obtenerTextoHint() {
+            if (!getHabilitado()) return 'Las notificaciones de fin de jornada están desactivadas';
+            const info = obtenerInfoActiva();
+            if (!info) return 'No hay ninguna notificación programada para hoy';
+            return `Notificación programada para hoy a las ${_formatoHora(info.targetTimeMs)}`;
+        }
+
         return {
             programarFinDeJornada, cancelarFinDeJornada,
             getAnticipacionMin, setAnticipacionMin,
-            getUsarBufferSemanal, setUsarBufferSemanal
+            getUsarBufferSemanal, setUsarBufferSemanal,
+            getHabilitado, setHabilitado,
+            obtenerTextoHint
         };
     })();
 
@@ -8074,6 +8122,17 @@
                 btnId: 'btn-toggle-push-buffer',
                 mensajeOn: 'El recordatorio de fin de jornada descuenta tu saldo semanal a favor',
                 mensajeOff: 'El recordatorio de fin de jornada usa el objetivo diario tal cual',
+                onAfterToggle: () => actualizarHintPushActivo(),
+            });
+
+        const { toggle: togglePushHabilitado, actualizarEstado: actualizarEstadoBotonPushHabilitado } =
+            _crearToggleConfig({
+                getVal: () => PushReminder.getHabilitado(),
+                setVal: (v) => PushReminder.setHabilitado(v),
+                btnId: 'btn-toggle-push-habilitado',
+                mensajeOn: 'Notificaciones de fin de jornada activadas',
+                mensajeOff: 'Notificaciones de fin de jornada desactivadas',
+                onAfterToggle: () => actualizarHintPushActivo(),
             });
 
         function actualizarSelectPushAnticipacion() {
@@ -8083,6 +8142,25 @@
 
         function cambiarPushAnticipacion(minutos) {
             PushReminder.setAnticipacionMin(minutos);
+            actualizarHintPushActivo();
+        }
+
+        function actualizarHintPushActivo() {
+            const hint = $('hint-push-activo');
+            if (hint) hint.textContent = PushReminder.obtenerTextoHint();
+        }
+
+        function abrirModalNotificaciones() {
+            _abrirModalConPadre('modal-notificaciones', () => {
+                actualizarEstadoBotonPushHabilitado();
+                actualizarEstadoBotonPushBuffer();
+                actualizarSelectPushAnticipacion();
+                actualizarHintPushActivo();
+            });
+        }
+
+        function cerrarModalNotificaciones() {
+            _cerrarModalConPadre('modal-notificaciones');
         }
 
         async function aplicarHorasConfiguradasATodos() {
@@ -8403,6 +8481,7 @@
             ModalManager.registrarAccionVolver('modal-reporte-secciones', cerrarModalReporteSecciones);
             ModalManager.registrarAccionVolver('modal-ayuda', cerrarModalAyuda);
             ModalManager.registrarAccionVolver('modal-historial-dias', cerrarModalHistorialDias);
+            ModalManager.registrarAccionVolver('modal-notificaciones', cerrarModalNotificaciones);
             ModalManager.registrarAccionVolver('modal-editar-tramo-dias', cerrarEditorTramoDias);
         }
 
@@ -8501,6 +8580,7 @@
             UILogic.actualizarEstadoBotonObjetivoPorRegistro();
             UILogic.actualizarEstadoBotonAplicarHoras();
             UILogic.actualizarEstadoBotonPushBuffer();
+            UILogic.actualizarEstadoBotonPushHabilitado();
             UILogic.actualizarSelectPushAnticipacion();
             UILogic.aplicarVisibilidadCards();
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
@@ -8981,6 +9061,8 @@
             abrirSelectorMesesCalendario, abrirSelectorPerfiles,
             actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
             actualizarEstadoBotonPushBuffer, togglePushBuffer, actualizarSelectPushAnticipacion, cambiarPushAnticipacion,
+            actualizarEstadoBotonPushHabilitado, togglePushHabilitado, actualizarHintPushActivo,
+            abrirModalNotificaciones, cerrarModalNotificaciones,
             actualizarEstadoBotonesGist, actualizarFeedbackConfig, actualizarListaRegistros, actualizarUI, agruparRegistrosConsecutivos, alternarFechaActual,
             alternarTema, alternarVista, aplicarFeedbackCampos, aplicarHorasConfiguradasATodos, aplicarOrdenCards, aplicarVisibilidadCards,
             cambiarAnioStats, cambiarMesStats, cambiarSemanaStats, cerrarConfig, cerrarEdicion, cerrarEdicionGrupo,
@@ -9241,7 +9323,10 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
     $('btn-toggle-push-buffer')?.addEventListener('click', () => UILogic.togglePushBuffer());
+    $('btn-toggle-push-habilitado')?.addEventListener('click', () => UILogic.togglePushHabilitado());
     $('config-push-anticipacion')?.addEventListener('change', (e) => UILogic.cambiarPushAnticipacion(e.target.value));
+    $('btn-abrir-notificaciones')?.addEventListener('click', () => UILogic.abrirModalNotificaciones());
+    document.querySelector('#modal-notificaciones .btn-cancel')?.addEventListener('click', () => UILogic.cerrarModalNotificaciones());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => UILogic.aplicarHorasConfiguradasATodos());
     $('btn-historial-dias-habiles')?.addEventListener('click', () => UILogic.abrirModalHistorialDias());
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());

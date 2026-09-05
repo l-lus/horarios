@@ -3340,7 +3340,10 @@
                 const cell = document.createElement('div');
                 let clases = `calendario-dia ${clase}`;
                 if (esHoy) clases += ' hoy';
-                if (esNuevo) clases += ' nuevo-registro-animacion';
+                if (esNuevo) {
+                    clases += ' nuevo-registro-animacion';
+                    cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
+                }
                 if (reg) clases += ' cursor-pointer';
                 cell.className = clases;
                 cell.textContent = dia;
@@ -3373,6 +3376,12 @@
 
             const lista = document.getElementById('lista-registros');
             const cal = document.getElementById('vista-calendario-historico');
+            if (lista) {
+                lista.querySelectorAll('.nuevo-registro-animacion').forEach(el => el.classList.remove('nuevo-registro-animacion'));
+            }
+            if (cal) {
+                cal.querySelectorAll('.nuevo-registro-animacion').forEach(el => el.classList.remove('nuevo-registro-animacion'));
+            }
             const btnFiltro = document.getElementById('btn-filtro');
             const saliente = _vistaHistoricoCalendario ? lista : cal;
             const entrante = _vistaHistoricoCalendario ? cal : lista;
@@ -4687,7 +4696,11 @@
 
             let className = r.fecha === hoy ? 'registro-item hoy' : 'registro-item';
             const idsResaltar = idResaltar ? (Array.isArray(idResaltar) ? idResaltar : [idResaltar]) : [];
-            if (idsResaltar.includes(r.id)) className += ' nuevo-registro-animacion';
+            const esNuevo = idsResaltar.includes(r.id);
+            if (esNuevo) {
+                className += ' nuevo-registro-animacion';
+                item.addEventListener('animationend', () => item.classList.remove('nuevo-registro-animacion'), { once: true });
+            }
             item.className = className;
             item.dataset.registroId = r.id;
             item.dataset.accion = 'editar-registro';
@@ -4921,6 +4934,7 @@
 
             if (animarGrupo) {
                 className += ' nuevo-registro-animacion';
+                header.addEventListener('animationend', () => header.classList.remove('nuevo-registro-animacion'), { once: true });
             }
             header.className = className;
 
@@ -7234,7 +7248,8 @@
             const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
 
             if (!soloReloj) {
-                UILogic.actualizarListaRegistros(D.registros(), idNuevo, asignacionesCompensatorio);
+                const idNuevoLista = UILogic.getVistaHistoricoCalendario() ? null : idNuevo;
+                UILogic.actualizarListaRegistros(D.registros(), idNuevoLista, asignacionesCompensatorio);
             }
 
             const est = calcularEstadoCard(asignacionesCompensatorio);
@@ -9151,7 +9166,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260902';
+        const _v = '-v260905';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

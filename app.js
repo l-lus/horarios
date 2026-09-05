@@ -31,6 +31,8 @@
         GIST_TOKEN: 'gistToken',
         BIENVENIDA_VISTA: 'bienvenidaVista',
         FERIADOS_PROCESADOS: 'feriadosAR_procesados',
+        PUSH_ANTICIPACION_MIN: 'pushAnticipacionMin',
+        PUSH_USAR_BUFFER_SEMANAL: 'pushUsarBufferSemanal',
 
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
@@ -335,6 +337,20 @@
             return `${_idInstalacion()}:${_perfilActivo()}:${fechaISO}`;
         }
 
+        // --- Preferencias configurables desde Ajustes ---
+        function getAnticipacionMin() {
+            return StorageHelper.getNumber(STORAGE_KEYS.PUSH_ANTICIPACION_MIN, 0);
+        }
+        function setAnticipacionMin(minutos) {
+            StorageHelper.setItem(STORAGE_KEYS.PUSH_ANTICIPACION_MIN, Number(minutos) || 0);
+        }
+        function getUsarBufferSemanal() {
+            return StorageHelper.getBoolean(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, false);
+        }
+        function setUsarBufferSemanal(valor) {
+            StorageHelper.setItem(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, !!valor);
+        }
+
         async function _asegurarSuscripcion() {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
             if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith('PEGA_ACA')) return null;
@@ -358,7 +374,10 @@
         }
 
         // entradaHHMM: 'HH:MM' de hoy. objetivoHoras: número (puede ser decimal).
-        async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras) {
+        // bufferSemanalHoras: saldo semanal actual en horas (positivo = a favor,
+        // negativo = en contra). Opcional; solo se aplica si el usuario activó
+        // "Considerar saldo semanal" en Ajustes.
+        async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
             if (!entradaHHMM || !objetivoHoras) return;
 
             const sub = await _asegurarSuscripcion();
@@ -367,9 +386,20 @@
             const [h, m] = entradaHHMM.split(':').map(Number);
             if (Number.isNaN(h) || Number.isNaN(m)) return;
 
+            let objetivoAjustado = objetivoHoras;
+            if (getUsarBufferSemanal() && Number.isFinite(bufferSemanalHoras)) {
+                objetivoAjustado = Math.max(0, objetivoHoras - bufferSemanalHoras);
+            }
+
+            const anticipacionMin = getAnticipacionMin();
+
             const target = new Date();
             target.setHours(h, m, 0, 0);
-            target.setTime(target.getTime() + objetivoHoras * 60 * 60 * 1000);
+            target.setTime(target.getTime() + objetivoAjustado * 60 * 60 * 1000 - anticipacionMin * 60 * 1000);
+
+            const mensaje = anticipacionMin > 0
+                ? `Te faltan ${anticipacionMin} min para cumplir tu horario de hoy`
+                : 'Se cumplió tu horario de hoy';
 
             try {
                 await fetch(`${WORKER_URL}/api/schedule`, {
@@ -380,7 +410,7 @@
                         subscription: sub.toJSON(),
                         targetTime: target.getTime(),
                         title: 'Horarios',
-                        message: 'Se cumplió tu horario de hoy'
+                        message: mensaje
                     })
                 });
             } catch (err) {
@@ -397,7 +427,11 @@
             }).catch(err => console.error('No se pudo cancelar el recordatorio:', err));
         }
 
-        return { programarFinDeJornada, cancelarFinDeJornada };
+        return {
+            programarFinDeJornada, cancelarFinDeJornada,
+            getAnticipacionMin, setAnticipacionMin,
+            getUsarBufferSemanal, setUsarBufferSemanal
+        };
     })();
 
     // ====================================================================
@@ -1539,7 +1573,11 @@
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
             const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
             if (!saved) return;
-            if (esHoy && !s) PushReminder.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras);
+            if (esHoy && !s) {
+                const { inicio: iniSemana } = TimeUtils.obtenerSemanaRangoActual();
+                const bufferSemanal = calcularBufferPeriodo(iniSemana, TimeUtils.obtenerFechaHoy(), true, 0, _calcularAsignacionesCompensatorio());
+                PushReminder.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
+            }
             const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
             if (entradaManual || salidaManual) {
                 notify.aplicarFeedbackCampos([
@@ -8029,6 +8067,24 @@
             _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
         }
 
+        const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuffer } =
+            _crearToggleConfig({
+                getVal: () => PushReminder.getUsarBufferSemanal(),
+                setVal: (v) => PushReminder.setUsarBufferSemanal(v),
+                btnId: 'btn-toggle-push-buffer',
+                mensajeOn: 'El recordatorio de fin de jornada descuenta tu saldo semanal a favor',
+                mensajeOff: 'El recordatorio de fin de jornada usa el objetivo diario tal cual',
+            });
+
+        function actualizarSelectPushAnticipacion() {
+            const select = $('config-push-anticipacion');
+            if (select) select.value = String(PushReminder.getAnticipacionMin());
+        }
+
+        function cambiarPushAnticipacion(minutos) {
+            PushReminder.setAnticipacionMin(minutos);
+        }
+
         async function aplicarHorasConfiguradasATodos() {
             const btn = $('btn-aplicar-horas-todos');
             if (btn && btn.disabled) return;
@@ -8444,6 +8500,8 @@
             UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.actualizarEstadoBotonObjetivoPorRegistro();
             UILogic.actualizarEstadoBotonAplicarHoras();
+            UILogic.actualizarEstadoBotonPushBuffer();
+            UILogic.actualizarSelectPushAnticipacion();
             UILogic.aplicarVisibilidadCards();
             UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
             UILogic.iniciarDragOrdenCards();
@@ -8922,6 +8980,7 @@
             abrirEditorTramoDias, abrirGistEnBrowser, abrirModalAyuda, abrirModalGist, abrirModalHistorialDias, abrirModalReporteSecciones,
             abrirSelectorMesesCalendario, abrirSelectorPerfiles,
             actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
+            actualizarEstadoBotonPushBuffer, togglePushBuffer, actualizarSelectPushAnticipacion, cambiarPushAnticipacion,
             actualizarEstadoBotonesGist, actualizarFeedbackConfig, actualizarListaRegistros, actualizarUI, agruparRegistrosConsecutivos, alternarFechaActual,
             alternarTema, alternarVista, aplicarFeedbackCampos, aplicarHorasConfiguradasATodos, aplicarOrdenCards, aplicarVisibilidadCards,
             cambiarAnioStats, cambiarMesStats, cambiarSemanaStats, cerrarConfig, cerrarEdicion, cerrarEdicionGrupo,
@@ -9181,6 +9240,8 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
+    $('btn-toggle-push-buffer')?.addEventListener('click', () => UILogic.togglePushBuffer());
+    $('config-push-anticipacion')?.addEventListener('change', (e) => UILogic.cambiarPushAnticipacion(e.target.value));
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => UILogic.aplicarHorasConfiguradasATodos());
     $('btn-historial-dias-habiles')?.addEventListener('click', () => UILogic.abrirModalHistorialDias());
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());

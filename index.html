@@ -766,6 +766,27 @@
                                 </svg>
                             </button>
                         </div>
+                        <div class="config-actions form-group config-onboarding-hide">
+                            <label>Recordatorio de fin de jornada</label>
+                            <div class="input-with-btn">
+                                <select id="config-push-anticipacion">
+                                    <option value="0">Avisar en punto</option>
+                                    <option value="5">Avisar 5 min antes</option>
+                                    <option value="10">Avisar 10 min antes</option>
+                                    <option value="15">Avisar 15 min antes</option>
+                                </select>
+                                <div class="time-btn flex-shrink-0 btn-fantasma"></div>
+                            </div>
+                            <button id="btn-toggle-push-buffer">
+                                <svg class="icon">
+                                    <use href="#icon-clock-in" />
+                                </svg>
+                                <span>Considerar saldo semanal (banco de horas)</span>
+                                <svg class="icon icon-indicator">
+                                    <use href="#icon-dot" />
+                                </svg>
+                            </button>
+                        </div>
                         <div class="config-actions">
                             <label>Datos</label>
                             <button class="btn-gist">

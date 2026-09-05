@@ -355,7 +355,10 @@
             StorageHelper.setItem(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, !!valor);
         }
         function getHabilitado() {
-            return StorageHelper.getBoolean(STORAGE_KEYS.PUSH_HABILITADO, true);
+            // Default false: la app es de acceso libre (sin login), así que
+            // las notificaciones deben ser opt-in explícito, no algo que
+            // ya viene activado sin que el usuario haga nada.
+            return StorageHelper.getBoolean(STORAGE_KEYS.PUSH_HABILITADO, false);
         }
         function setHabilitado(valor) {
             const nuevo = !!valor;

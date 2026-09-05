@@ -304,6 +304,17 @@
     const PushReminder = (function () {
         const WORKER_URL = 'https://horarios-push.l-lus.workers.dev';
         const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
+        // Secreto compartido con el Worker (ver `npx wrangler secret put APP_SECRET`
+        // en horarios-push). No es autenticación real —cualquiera que lea este
+        // archivo público lo puede extraer— pero filtra el bot scanning al azar.
+        // Reemplazar por el mismo valor cargado como secret en el Worker.
+        const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9';
+
+        function _headersWorker() {
+            const headers = { 'Content-Type': 'application/json' };
+            if (APP_SECRET && !APP_SECRET.startsWith('PEGA_ACA')) headers['X-App-Secret'] = APP_SECRET;
+            return headers;
+        }
 
         function _urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -344,7 +355,9 @@
             return StorageHelper.getNumber(STORAGE_KEYS.PUSH_ANTICIPACION_MIN, 0);
         }
         function setAnticipacionMin(minutos) {
-            StorageHelper.setItem(STORAGE_KEYS.PUSH_ANTICIPACION_MIN, Number(minutos) || 0);
+            const n = Number(minutos);
+            const seguro = Number.isFinite(n) ? Math.min(60, Math.max(0, n)) : 0;
+            StorageHelper.setItem(STORAGE_KEYS.PUSH_ANTICIPACION_MIN, seguro);
         }
         function getUsarBufferSemanal() {
             return StorageHelper.getBoolean(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, false);
@@ -441,7 +454,7 @@
             try {
                 const res = await fetch(`${WORKER_URL}/api/schedule`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: _headersWorker(),
                     body: JSON.stringify({
                         id: _claveRecordatorio(fechaISO),
                         subscription: sub.toJSON(),
@@ -461,7 +474,7 @@
             _borrarInfoActiva();
             fetch(`${WORKER_URL}/api/cancel`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: _headersWorker(),
                 body: JSON.stringify({ id: _claveRecordatorio(fechaISO) })
             }).catch(err => console.error('No se pudo cancelar el recordatorio:', err));
         }
@@ -1609,6 +1622,14 @@
             $('salida').value = '';
         }
 
+        // Saldo semanal actual (a favor/en contra), usado para ajustar la hora
+        // objetivo del recordatorio push. Centraliza un cálculo que estaba
+        // repetido en varios puntos de programación/reprogramación.
+        function _bufferSemanalActual() {
+            const { inicio: iniSemana } = TimeUtils.obtenerSemanaRangoActual();
+            return calcularBufferPeriodo(iniSemana, TimeUtils.obtenerFechaHoy(), true, 0, _calcularAsignacionesCompensatorio());
+        }
+
         async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
             if (!_hayEspacioParaRegistros(1)) {
                 notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
@@ -1622,8 +1643,7 @@
             const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
             if (!saved) return;
             if (esHoy && !s) {
-                const { inicio: iniSemana } = TimeUtils.obtenerSemanaRangoActual();
-                const bufferSemanal = calcularBufferPeriodo(iniSemana, TimeUtils.obtenerFechaHoy(), true, 0, _calcularAsignacionesCompensatorio());
+                const bufferSemanal = _bufferSemanalActual();
                 PushReminder.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
             }
             const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
@@ -1849,6 +1869,7 @@
                 const perfilId = _obtenerPerfilIdActual();
                 StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
                 notify.actualizarEstadoBotonTimerMain();
+                PushReminder.cancelarFinDeJornada(reg.fecha);
             }
             registros = registros.filter(r => r.id !== editandoId);
             HistoryManager.saveState(registros, `eliminar registro vacío${reg ? ` (${TimeUtils.fechaCorta(reg.fecha)})` : ''}`);
@@ -1860,6 +1881,7 @@
         async function guardarEdicion() {
             const r = registros.find(x => x.id === editandoId);
             if (!r) return;
+            const fechaOriginal = r.fecha;
             const btnGuardar = $('modal-editar').querySelector('.btn-edit');
             btnGuardar.disabled = true;
 
@@ -1948,6 +1970,15 @@
             const saved = await guardarYActualizar(null, true);
             notify.restaurarBotonGuardarEdicion(btnGuardar);
             if (saved) {
+                // Resincronizar el recordatorio push: cualquier edición puede dejar
+                // desactualizada la hora programada (o el registro ya no corresponde
+                // a un turno abierto de hoy), así que se cancela y, si sigue
+                // aplicando, se reprograma con los datos ya actualizados.
+                const hoy = TimeUtils.obtenerFechaHoy();
+                if (fechaOriginal === hoy) PushReminder.cancelarFinDeJornada(fechaOriginal);
+                if (r.fecha === hoy && r.entrada && !r.salida) {
+                    PushReminder.programarFinDeJornada(r.fecha, r.entrada, r.objetivoHoras, _bufferSemanalActual());
+                }
                 notify.mostrarToast(cr ? `Guardado con Salida Temprana (+${cr})` : 'Registro actualizado', 'success');
                 notify.cerrarEdicion();
             }
@@ -8125,6 +8156,18 @@
                 onAfterToggle: () => actualizarHintPushActivo(),
             });
 
+        // Si se reactivan las notificaciones y hay un fichaje de hoy sin salida,
+        // reprograma el recordatorio ya mismo (en vez de esperar al próximo fichaje).
+        async function _reprogramarSiHabilitado(habilitado) {
+            if (!habilitado) return;
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const regHoy = D.registros().find(r => r.fecha === hoy && r.entrada && !r.salida);
+            if (!regHoy) return;
+            const { inicio: iniSemana } = TimeUtils.obtenerSemanaRangoActual();
+            const bufferSemanal = D.calcularBufferPeriodo(iniSemana, hoy, true, 0, D.calcularAsignacionesCompensatorio());
+            await PushReminder.programarFinDeJornada(regHoy.fecha, regHoy.entrada, regHoy.objetivoHoras, bufferSemanal);
+        }
+
         const { toggle: togglePushHabilitado, actualizarEstado: actualizarEstadoBotonPushHabilitado } =
             _crearToggleConfig({
                 getVal: () => PushReminder.getHabilitado(),
@@ -8132,7 +8175,10 @@
                 btnId: 'btn-toggle-push-habilitado',
                 mensajeOn: 'Notificaciones de fin de jornada activadas',
                 mensajeOff: 'Notificaciones de fin de jornada desactivadas',
-                onAfterToggle: () => actualizarHintPushActivo(),
+                onAfterToggle: async (nuevo) => {
+                    await _reprogramarSiHabilitado(nuevo);
+                    actualizarHintPushActivo();
+                },
             });
 
         function actualizarSelectPushAnticipacion() {

@@ -304,10 +304,6 @@
     const PushReminder = (function () {
         const WORKER_URL = 'https://horarios-push.l-lus.workers.dev';
         const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
-        // Secreto compartido con el Worker (ver `npx wrangler secret put APP_SECRET`
-        // en horarios-push). No es autenticación real —cualquiera que lea este
-        // archivo público lo puede extraer— pero filtra el bot scanning al azar.
-        // Reemplazar por el mismo valor cargado como secret en el Worker.
         const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9';
 
         function _headersWorker() {
@@ -322,9 +318,6 @@
             return Uint8Array.from([...atob(base64)].map(c => c.charCodeAt(0)));
         }
 
-        // Identificador único por instalación (navegador/dispositivo), para que
-        // dos personas usando la misma app en distintos celulares no pisen el
-        // mismo recordatorio en el Worker al fichar el mismo día.
         function _idInstalacion() {
             const KEY = 'pushInstallId';
             try {
@@ -343,14 +336,10 @@
             return (window.PerfilManager ? PerfilManager.obtenerPerfilActual() : null) || 'default';
         }
 
-        // Clave compuesta: instalación + perfil + fecha, para que no colisionen
-        // ni distintas personas (distinto navegador) ni distintos perfiles
-        // dentro del mismo dispositivo fichando el mismo día.
         function _claveRecordatorio(fechaISO) {
             return `${_idInstalacion()}:${_perfilActivo()}:${fechaISO}`;
         }
 
-        // --- Preferencias configurables desde Ajustes ---
         function getAnticipacionMin() {
             return StorageHelper.getNumber(STORAGE_KEYS.PUSH_ANTICIPACION_MIN, 0);
         }
@@ -377,15 +366,12 @@
             }
         }
 
-        // --- Info del recordatorio activo (para mostrar el hint en el modal) ---
         function _guardarInfoActiva(fechaISO, targetTimeMs) {
             StorageHelper.setItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, JSON.stringify({ fechaISO, targetTimeMs }));
         }
         function _borrarInfoActiva() {
             try { localStorage.removeItem(STORAGE_KEYS.PUSH_INFO_ACTIVA); } catch { /* noop */ }
         }
-        // Devuelve { fechaISO, targetTimeMs } solo si corresponde al día de hoy
-        // (si quedó de un día anterior por cualquier motivo, se considera vencida).
         function obtenerInfoActiva() {
             const raw = StorageHelper.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null);
             if (!raw) return null;
@@ -423,10 +409,6 @@
             }
         }
 
-        // entradaHHMM: 'HH:MM' de hoy. objetivoHoras: número (puede ser decimal).
-        // bufferSemanalHoras: saldo semanal actual en horas (positivo = a favor,
-        // negativo = en contra). Opcional; solo se aplica si el usuario activó
-        // "Considerar saldo semanal" en Ajustes.
         async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
             if (!getHabilitado() || !entradaHHMM || !objetivoHoras) return;
 
@@ -1622,9 +1604,6 @@
             $('salida').value = '';
         }
 
-        // Saldo semanal actual (a favor/en contra), usado para ajustar la hora
-        // objetivo del recordatorio push. Centraliza un cálculo que estaba
-        // repetido en varios puntos de programación/reprogramación.
         function _bufferSemanalActual() {
             const { inicio: iniSemana } = TimeUtils.obtenerSemanaRangoActual();
             return calcularBufferPeriodo(iniSemana, TimeUtils.obtenerFechaHoy(), true, 0, _calcularAsignacionesCompensatorio());
@@ -1970,10 +1949,6 @@
             const saved = await guardarYActualizar(null, true);
             notify.restaurarBotonGuardarEdicion(btnGuardar);
             if (saved) {
-                // Resincronizar el recordatorio push: cualquier edición puede dejar
-                // desactualizada la hora programada (o el registro ya no corresponde
-                // a un turno abierto de hoy), así que se cancela y, si sigue
-                // aplicando, se reprograma con los datos ya actualizados.
                 const hoy = TimeUtils.obtenerFechaHoy();
                 if (fechaOriginal === hoy) PushReminder.cancelarFinDeJornada(fechaOriginal);
                 if (r.fecha === hoy && r.entrada && !r.salida) {
@@ -8156,8 +8131,6 @@
                 onAfterToggle: () => actualizarHintPushActivo(),
             });
 
-        // Si se reactivan las notificaciones y hay un fichaje de hoy sin salida,
-        // reprograma el recordatorio ya mismo (en vez de esperar al próximo fichaje).
         async function _reprogramarSiHabilitado(habilitado) {
             if (!habilitado) return;
             const hoy = TimeUtils.obtenerFechaHoy();
@@ -8832,20 +8805,15 @@
             _manejarAccionDeShortcut();
         }
 
-        // Atiende los accesos directos de Android declarados en manifest.json
-        // (./index.html?accion=entrada|salida|restante)
         function _manejarAccionDeShortcut() {
             const params = new URLSearchParams(location.search);
             const accion = params.get('accion');
             if (!accion) return;
 
-            // Limpia el query param para que un refresh no vuelva a disparar la acción
             history.replaceState(null, '', location.pathname + location.hash);
 
             if (accion === 'entrada' || accion === 'salida') {
                 const btn = $('btn-agregar');
-                // ejecutarAccionRegistro ya decide sola si corresponde fichar
-                // entrada o salida según el registro de hoy
                 if (btn && !btn.disabled) setTimeout(() => btn.click(), 300);
             } else if (accion === 'restante') {
                 setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 300);

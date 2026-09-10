@@ -971,7 +971,8 @@
                             <h4>Notificaciones</h4>
                             <p>Desde Ajustes → Notificaciones podés activar una notificación push para avisarte cuando
                                 se cumpla el objetivo del día.</p>
-                            <p><strong>Notificar horario cumplido:</strong> Es el interruptor para habilitar las alertas. Si al
+                            <p><strong>Notificar horario cumplido:</strong> Es el interruptor para habilitar las
+                                alertas. Si al
                                 activarlo ya había un registro en curso, se programa la notificación para ese fichaje.
                             </p>
                             <p><strong>Incluir banco de horas:</strong> La notificación se programa en función de la
@@ -979,7 +980,8 @@
                             <p><strong>Solo el último día hábil:</strong> Es una subopción de la anterior. Si está
                                 activa, el banco de horas se considera únicamente para el último día hábil de la semana,
                                 teniendo en cuenta los registros especiales.</p>
-                            <p>El campo <strong>¿Cuándo?</strong> define con cuántos minutos de anticipación a la hora de
+                            <p>El campo <strong>¿Cuándo?</strong> define con cuántos minutos de anticipación a la hora
+                                de
                                 salida calculada llegará la notificación. Por defecto, se usa la hora de salida exacta.
                             </p>
                             <p>Las notificaciones dependen de que el navegador o dispositivo tenga los permisos
@@ -1517,9 +1519,6 @@
                     Notificaciones
                 </span>
             </h3>
-
-            <div id="push-permiso-estado" class="push-permiso-estado" role="status" aria-live="polite"></div>
-
             <div class="form-group">
                 <button id="btn-toggle-push-habilitado">
                     <svg class="icon">
@@ -1531,7 +1530,6 @@
                     </svg>
                 </button>
             </div>
-
             <div class="config-actions form-group ">
                 <label>Banco de horas</label>
                 <button id="btn-toggle-push-buffer">
@@ -1553,7 +1551,6 @@
                     </svg>
                 </button>
             </div>
-
             <div class="form-group">
                 <label>¿Cuándo?</label>
                 <div class="input-with-btn">
@@ -1566,6 +1563,7 @@
                     </select>
                 </div>
             </div>
+            <div id="push-permiso-estado" class="push-permiso-estado" role="status" aria-live="polite"></div>
             <div class="config-hint-text">
                 Las notificaciones pueden retrasarse según el uso y modo de ahorro de energía del dispositivo, o
                 anularse por límites del servidor.

@@ -8358,10 +8358,21 @@
             _sincronizarPushHoyDebounced();
         }
 
+        let _permisoNotifStatus = null;
+        async function _suscribirCambiosPermisoNotificaciones() {
+            if (_permisoNotifStatus || !navigator.permissions?.query) return;
+            try {
+                _permisoNotifStatus = await navigator.permissions.query({ name: 'notifications' });
+                _permisoNotifStatus.onchange = () => actualizarEstadoPermisoNotificaciones();
+            } catch {
+            }
+        }
+
         function actualizarEstadoPermisoNotificaciones() {
             const el = $('push-permiso-estado');
             if (!el) return;
             el.innerHTML = '';
+
             if (!('Notification' in window)) return;
 
             const permiso = Notification.permission;
@@ -8995,6 +9006,7 @@
             if (btnEliminarPerfil) btnEliminarPerfil.disabled = true;
 
             PWAInstaller.init();
+            _suscribirCambiosPermisoNotificaciones();
             actualizarUI(null, false, false, true);
             _iniciarCicloStats();
             actualizarBotonesHistorico();

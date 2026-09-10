@@ -462,6 +462,28 @@
             return target.getTime();
         }
 
+        function _construirMensajeNotificacion(anticipacionMin, bufferSemanalHoras) {
+            const usaBuffer = getUsarBufferSemanal() && Number.isFinite(bufferSemanalHoras) && Math.abs(bufferSemanalHoras * 60) >= 1;
+            if (!usaBuffer) {
+                return anticipacionMin > 0
+                    ? `Te faltan ${anticipacionMin} min para cumplir tu horario de hoy`
+                    : 'Se cumplió tu horario de hoy';
+            }
+
+            const tiempoTexto = TimeUtils.horasATexto(Math.abs(bufferSemanalHoras));
+            const debeTiempo = bufferSemanalHoras < 0;
+
+            if (debeTiempo) {
+                return anticipacionMin > 0
+                    ? `En ${anticipacionMin} min cumplís tu jornada (incluye recuperar ${tiempoTexto} adeudados)`
+                    : `Horario cumplido. Se compensaron ${tiempoTexto} adeudados de la semana`;
+            } else {
+                return anticipacionMin > 0
+                    ? `En ${anticipacionMin} min cumplís tu jornada (salís ${tiempoTexto} antes por saldo a favor)`
+                    : `Horario cumplido. Salís ${tiempoTexto} antes por tu saldo a favor semanal`;
+            }
+        }
+
         async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
             if (!getHabilitado()) return;
             const targetMs = _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras);
@@ -471,9 +493,7 @@
             if (!sub) return;
 
             const anticipacionMin = getAnticipacionMin();
-            const mensaje = anticipacionMin > 0
-                ? `Te faltan ${anticipacionMin} min para cumplir tu horario de hoy`
-                : 'Se cumplió tu horario de hoy';
+            const mensaje = _construirMensajeNotificacion(anticipacionMin, bufferSemanalHoras);
 
             try {
                 const res = await _postWorker('/api/schedule', {

@@ -475,12 +475,12 @@
 
             if (debeTiempo) {
                 return anticipacionMin > 0
-                    ? `En ${anticipacionMin} min cumplís tu jornada (incluye recuperar ${tiempoTexto} adeudados)`
-                    : `Horario cumplido. Se compensaron ${tiempoTexto} adeudados de la semana`;
+                    ? `En ${anticipacionMin} min cumplís tu jornada (incluye recuperar ${tiempoTexto} faltantes)`
+                    : `Horario cumplido. Se compensaron ${tiempoTexto} faltantes de la semana`;
             } else {
                 return anticipacionMin > 0
-                    ? `En ${anticipacionMin} min cumplís tu jornada (salís ${tiempoTexto} antes por saldo a favor)`
-                    : `Horario cumplido. Salís ${tiempoTexto} antes por tu saldo a favor semanal`;
+                    ? `En ${anticipacionMin} min cumplís tu jornada (salís ${tiempoTexto} antes por tiempo extra)`
+                    : `Horario cumplido. Salís ${tiempoTexto} antes por tiempo extra semanal`;
             }
         }
 

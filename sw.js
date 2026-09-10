@@ -1,9 +1,11 @@
-const CACHE_NAME = 'horarios-v260909.1823-cache';
+const CACHE_NAME = 'horarios-v260910.1110-cache';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
   './icon.svg',
+  './icons/icon-192.png',
+  './icons/badge-96.png',
   './app.js',
   './styles.css',
   './fondos.js',
@@ -85,7 +87,7 @@ self.addEventListener('push', event => {
     self.registration.showNotification(data.title || 'Horarios', {
       body: data.body || 'Se cumplió tu horario de hoy',
       icon: './icons/icon-192.png',
-      badge: './icons/icon-192.png',
+      badge: './icons/badge-96.png',
       tag: 'horarios-recordatorio',
       renotify: true,
     })

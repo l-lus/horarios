@@ -530,7 +530,6 @@
             const activa = esHoy ? obtenerInfoActiva(perfilId) : null;
             if (esHoy) _borrarInfoActiva(perfilId);
 
-            // Si es hoy pero no había nada agendado en la nube, evitamos el request innecesario
             if (esHoy && !activa) {
                 return;
             }
@@ -1708,7 +1707,7 @@
                 ? PushReminder.calcularTarget(abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy))
                 : null;
             const targetActual = PushReminder.targetProgramadoParaHoy();
-            if (nuevoTarget === targetActual) return; // sin cambios reales, no gastamos requests
+            if (nuevoTarget === targetActual) return;
 
             if (abierto && nuevoTarget != null) {
                 PushReminder.programarFinDeJornada(abierto.fecha, abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy));
@@ -2902,11 +2901,7 @@
             const toast = $('toast');
             if (!toast || toast.dataset.cierreInit) return;
             toast.dataset.cierreInit = '1';
-
-            // Desktop: un click alcanza para descartarlo.
             toast.addEventListener('click', () => _cerrarToastActual());
-
-            // Mobile: swipe en cualquier dirección (registrarSwipe solo escucha eventos touch).
             registrarSwipe(toast, () => _cerrarToastActual(), { minX: 40 });
         }
 
@@ -8309,9 +8304,6 @@
             _setBtnDisabled('btn-toggle-push-buffer-ultimo-dia', !habilitado || !usaBufferSemanal);
         }
 
-        // Solo feedback visual: el botón "Configurar notificaciones" del modal
-        // principal no es un toggle en sí (navega al submodal), pero refleja
-        // con el mismo estilo verde si las notificaciones están activadas.
         function actualizarEstadoBotonNotificaciones() {
             _setBtnActivo('btn-toggle-notification', PushReminder.getHabilitado());
         }
@@ -8366,6 +8358,34 @@
             _sincronizarPushHoyDebounced();
         }
 
+        function actualizarEstadoPermisoNotificaciones() {
+            const el = $('push-permiso-estado');
+            if (!el) return;
+            el.innerHTML = '';
+            if (!('Notification' in window)) return;
+
+            const permiso = Notification.permission;
+            let claseColor, texto;
+            if (permiso === 'granted') {
+                claseColor = 'positivo';
+                texto = 'Permisos de notificaciones aceptados';
+            } else if (permiso === 'denied') {
+                claseColor = 'negativo';
+                texto = 'Permisos de notificaciones bloqueados en el navegador';
+            } else {
+                claseColor = 'neutral';
+                texto = 'Todavía no se pidió permiso al navegador';
+            }
+
+            const punto = document.createElement('span');
+            punto.className = `buffer-semanal-punto ${claseColor}`;
+            const span = document.createElement('span');
+            span.className = `buffer-semanal-texto ${claseColor}`;
+            span.textContent = texto;
+            span.insertBefore(punto, span.firstChild);
+            el.appendChild(span);
+        }
+
         function abrirModalNotificaciones() {
             _abrirModalConPadre('modal-notificaciones', () => {
                 actualizarEstadoBotonPushHabilitado();
@@ -8374,6 +8394,7 @@
                 _actualizarDisponibilidadBotonesPush();
                 actualizarEstadoBotonNotificaciones();
                 actualizarSelectPushAnticipacion();
+                actualizarEstadoPermisoNotificaciones();
             });
         }
 

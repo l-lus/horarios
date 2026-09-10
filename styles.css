@@ -2098,6 +2098,17 @@ body.config-onboarding #theme-toggle-config {
     background-color: var(--c-red);
 }
 
+.push-permiso-estado {
+    display: flex;
+    align-items: center;
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.buffer-semanal-punto.neutral {
+    background-color: var(--c-orange);
+}
+
 .buffer-semanal-texto {
     font-weight: var(--fw-medium);
 }

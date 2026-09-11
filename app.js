@@ -8933,6 +8933,31 @@
             }
         }
 
+        let _relojUIInterval = null;
+
+        function _iniciarRelojUI() {
+            if (_relojUIInterval) return;
+            _relojUIInterval = setInterval(() => actualizarUI(null, true), 20000);
+        }
+
+        function _detenerRelojUI() {
+            clearInterval(_relojUIInterval);
+            _relojUIInterval = null;
+        }
+
+        function _initListenerVisibility() {
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    _detenerRelojUI();
+                    _detenerCicloStats();
+                } else {
+                    actualizarUI(null, true);
+                    _iniciarRelojUI();
+                    _iniciarCicloStats();
+                }
+            });
+        }
+
         function _initListenerEscape() {
             document.addEventListener('keydown', (e) => {
                 if (e.key !== 'Escape') return;
@@ -9022,7 +9047,8 @@
             }
 
             _initAutoSync();
-            setInterval(() => actualizarUI(null, true), 20000);
+            _iniciarRelojUI();
+            _initListenerVisibility();
 
             _initListenerEscape();
             _initListenerUndoRedo();

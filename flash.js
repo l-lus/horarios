@@ -10,11 +10,11 @@
 
         if (s === 'dark') {
             html.classList.add('dark-mode');
-        } else if (s === 'pink' || s === 'green' || s === 'blue') {
+        } else if (s === 'pink' || s === 'green' || s === 'blue' || s === 'lilac' || s === 'matrix') {
             html.setAttribute('data-theme', s);
         }
         // s === 'light' -> no se aplica nada, queda el tema claro por defecto
     } catch (e) { }
 }());
 
-// Parche anti parpadeo blanco en modo oscuro / temas pastel
+// Parche anti parpadeo blanco en modo oscuro / temas pastel / tema matrix

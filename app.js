@@ -20,7 +20,6 @@
         IGNORAR_LOGICA_CUBIERTO: 'ignorarLogicaCubierto',
         IGNORAR_OBJETIVO_POR_REGISTRO: 'ignorarObjetivoPorRegistro',
         FONDO_CARD: 'fondoCard',
-        FONDO_MATRIX: 'fondoMatrix',
         PERSISTIR_TARJETAS: 'persistirTarjetas',
         ORDEN_CARDS: 'ordenCards',
         FORMULARIO_EXPANDIDO: 'formularioExpandido',
@@ -497,10 +496,10 @@
     })();
 
     // ====================================================================
-    // THEME MANAGER (temas: claro, oscuro, rosa, verde, azul)
+    // THEME MANAGER (temas: claro, oscuro, rosa, verde, azul, lila, matrix)
     // ====================================================================
     const ThemeManager = (function () {
-        const TEMAS = ['light', 'dark', 'pink', 'green', 'blue', 'lilac'];
+        const TEMAS = ['light', 'dark', 'pink', 'green', 'blue', 'lilac', 'matrix'];
 
         function temaGuardado() {
             const raw = StorageHelper.getItem(STORAGE_KEYS.TEMA_OSCURO, null);
@@ -510,6 +509,21 @@
             return TEMAS.includes(raw) ? raw : 'dark';
         }
 
+        function actualizarIconosTema(temaActual) {
+            const tema = temaActual || temaGuardado();
+            const esClaro = tema === 'light';
+            ['theme-toggle', 'theme-toggle-modal', 'theme-toggle-config', 'btn-tema-selector'].forEach(id => {
+                const icon = document.getElementById(id)?.querySelector('use');
+                if (icon) {
+                    if (tema === 'matrix') {
+                        icon.setAttribute('href', '#icon-matrix');
+                    } else {
+                        icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
+                    }
+                }
+            });
+        }
+
         function aplicarTema(tema) {
             document.documentElement.classList.toggle('dark-mode', tema === 'dark');
             if (tema === 'light' || tema === 'dark') {
@@ -517,11 +531,14 @@
             } else {
                 document.documentElement.setAttribute('data-theme', tema);
             }
-            const esClaro = tema === 'light';
-            ['theme-toggle', 'theme-toggle-modal', 'theme-toggle-config', 'btn-tema-selector'].forEach(id => {
-                const icon = document.getElementById(id)?.querySelector('use');
-                if (icon) icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
-            });
+
+            if (tema === 'matrix') {
+                window.MatrixRain?.iniciar();
+            } else {
+                window.MatrixRain?.detener();
+            }
+
+            actualizarIconosTema(tema);
         }
 
         function siguienteTema(temaActual) {
@@ -529,7 +546,7 @@
             return TEMAS[(idx + 1) % TEMAS.length];
         }
 
-        return { TEMAS, temaGuardado, aplicarTema, siguienteTema };
+        return { TEMAS, temaGuardado, aplicarTema, siguienteTema, actualizarIconosTema };
     })();
 
     // ====================================================================
@@ -3013,15 +3030,7 @@
                 if (inputNuevo) inputNuevo.value = '';
 
                 renderizarListaPerfiles();
-
-                const esClaro = !document.documentElement.classList.contains('dark-mode')
-                    && !document.documentElement.getAttribute('data-theme');
-                const toggleBtnModal = document.getElementById('theme-toggle-modal');
-
-                if (toggleBtnModal) {
-                    const icon = toggleBtnModal.querySelector('use');
-                    icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
-                }
+                ThemeManager.actualizarIconosTema();
             });
         }
 
@@ -7888,29 +7897,6 @@
                 onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
             });
 
-        const { toggle: toggleFondoMatrix, actualizarEstado: actualizarEstadoBotonFondoMatrix } =
-            _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.FONDO_MATRIX, true),
-                setVal: (v) => {
-                    StorageHelper.setItem(STORAGE_KEYS.FONDO_MATRIX, v);
-                    if (v) {
-                        window.MatrixRain?.iniciar();
-                    } else {
-                        window.MatrixRain?.detener();
-                    }
-                },
-                btnId: 'btn-toggle-matrix',
-                mensajeOn: 'Fondo animado Matrix activado',
-                mensajeOff: 'Fondo animado Matrix desactivado',
-                onAfterToggle: (nuevo) => {
-                    if (nuevo) {
-                        window.MatrixRain?.iniciar();
-                    } else {
-                        window.MatrixRain?.detener();
-                    }
-                }
-            });
-
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
             _crearToggleConfig({
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
@@ -8356,13 +8342,6 @@
             D.setIgnorarTiempoFuera(config.ignorarTiempoFuera || false);
             UILogic.actualizarEstadoBotonIgnorarTF();
             UILogic.poblarSelectoresTipos();
-            const matrixActivo = StorageHelper.getBoolean(STORAGE_KEYS.FONDO_MATRIX, true);
-            if (matrixActivo) {
-                window.MatrixRain?.iniciar();
-            } else {
-                window.MatrixRain?.detener();
-            }
-            UILogic.actualizarEstadoBotonFondoMatrix();
             UILogic.actualizarEstadoBotonHoverPopup();
             UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.actualizarEstadoBotonObjetivoPorRegistro();
@@ -8822,7 +8801,7 @@
             _popupCalendarioDiaSinRegistro, _popupCalendarioHover, _prepararMostrarFaseAlRenderizar, _renderSelectorStats, _renderizarCalendario, abrirEditorPerfil,
             abrirEditorTramoDias, abrirGistEnBrowser, abrirModalAyuda, abrirModalGist, abrirModalHistorialDias, abrirModalReporteSecciones,
             abrirSelectorMesesCalendario, abrirSelectorPerfiles,
-            actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonFondoMatrix, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
+            actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
             actualizarEstadoBotonesGist, actualizarFeedbackConfig, actualizarListaRegistros, actualizarUI, agruparRegistrosConsecutivos, alternarFechaActual,
             alternarTema, alternarVista, aplicarFeedbackCampos, aplicarHorasConfiguradasATodos, aplicarOrdenCards, aplicarVisibilidadCards,
             cambiarAnioStats, cambiarMesStats, cambiarSemanaStats, cerrarConfig, cerrarEdicion, cerrarEdicionGrupo,
@@ -8835,7 +8814,7 @@
             limpiarCampo, mostrarConfigOnboarding, mostrarExportar, mostrarFiltros, mostrarImportar, mostrarToast,
             mostrarconfig, navegarCalendario, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, obtenerOrdenCards, pegarHoraActual, poblarSelectoresTipos,
             resetearBoton, setFondoCard, setModoEstadisticas, setTiempoExpansionBotones, toggleBloqueoEdicion, toggleBloqueoEdicionGrupo,
-            toggleCamposRangoExport, toggleCredito, toggleFondoCard, toggleFondoMatrix, toggleFormulario, toggleGistBackup, toggleGistMerge,
+            toggleCamposRangoExport, toggleCredito, toggleFondoCard, toggleFormulario, toggleGistBackup, toggleGistMerge,
             toggleHistorico, toggleHoverPopupCalendario, toggleIgnorarTiempoFuera, toggleLogicaCubierto, toggleModoLote, toggleObjetivoPorRegistro,
             togglePeriodoStats, togglePersistirTarjetas, toggleSeccionReporte, toggleStats, toggleTimerBreakMain, toggleVerToken,
             toggleVisibilidadCard, toggleVistaHistorico, vistaActual: D.vistaActual, refrescarConfigSiVisible
@@ -9078,7 +9057,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
-    $('btn-toggle-matrix')?.addEventListener('click', () => UILogic.toggleFondoMatrix());
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
@@ -9183,7 +9161,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260902';
+        const _v = '-v260910';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

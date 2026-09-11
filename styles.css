@@ -132,7 +132,7 @@ body[data-theme="lilac"] {
     --hover: brightness(0.95);
 }
 
-/* ─── FONDO ANIMADO MATRIX ─────────────────────────────────────────────────── */
+/* ─── TEMA MATRIX (animado) ────────────────────────────────────────────── */
 #matrix-canvas {
     position: fixed;
     top: 0;
@@ -144,15 +144,19 @@ body[data-theme="lilac"] {
     display: none;
 }
 
+html[data-theme="matrix"] #matrix-canvas,
 body.matrix-active #matrix-canvas {
     display: block;
 }
 
+html[data-theme="matrix"] body,
+body[data-theme="matrix"],
 body.matrix-active {
     --bg-body: #030603;
     background: #030603;
 }
 
+html[data-theme="matrix"] body,
 html body.matrix-active {
     --bg-body: #030603;
     --bg-card: rgba(18, 24, 20, 0.88);
@@ -164,14 +168,18 @@ html body.matrix-active {
     --input-bg: #09120b;
     --c-gray-btn: #112015;
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 1px rgba(0, 255, 102, 0.25);
+    --hover: brightness(1.2);
     color-scheme: dark;
 }
 
+html[data-theme="matrix"] .container,
 body.matrix-active .container {
     position: relative;
     z-index: 1;
 }
 
+html[data-theme="matrix"] .card,
+html[data-theme="matrix"] .modal-content,
 body.matrix-active .card,
 body.matrix-active .modal-content {
     backdrop-filter: blur(8px);
@@ -179,6 +187,7 @@ body.matrix-active .modal-content {
     border: 1px solid rgba(0, 255, 102, 0.16);
 }
 
+html[data-theme="matrix"] .header,
 body.matrix-active .header {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);

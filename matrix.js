@@ -143,7 +143,6 @@
 
         activo = true;
         document.body.classList.add('matrix-active');
-        _actualizarBtn(true);
 
         ajustarDimensiones();
 
@@ -158,7 +157,6 @@
         if (!activo) return;
         activo = false;
         document.body.classList.remove('matrix-active');
-        _actualizarBtn(false);
 
         if (animId) {
             cancelAnimationFrame(animId);
@@ -171,11 +169,6 @@
         if (ctx && canvas) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
-    }
-
-    function _actualizarBtn(estado) {
-        const btn = document.getElementById('btn-toggle-matrix');
-        if (btn) btn.classList.toggle('btn-activo', estado);
     }
 
     function toggle() {

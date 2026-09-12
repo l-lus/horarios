@@ -417,7 +417,7 @@
                     ?? StorageHelper.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, false));
             if (!raw) return null;
             try {
-                const info = JSON.parse(raw);
+                const info = JSON.parse(raw, SecurityAndUtils.reviverJSONSeguro);
                 if (!info || info.fechaISO !== TimeUtils.obtenerFechaHoy()) return null;
                 return info;
             } catch {

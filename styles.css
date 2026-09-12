@@ -1419,7 +1419,7 @@ button:disabled {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+    box-shadow: var(--shadow);
     padding: var(--space-md) var(--space-lg);
     display: flex;
     flex-direction: column;

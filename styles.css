@@ -496,6 +496,11 @@ input.error {
     flex-grow: 1;
 }
 
+.contenedor-fechas .form-group:last-child,
+.contenedor-horas .form-group:last-child {
+    margin-bottom: 0;
+}
+
 .input-number-group input {
     text-align: center;
 }
@@ -2449,6 +2454,12 @@ button.campo-flash-color {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: var(--space-md);
+    }
+
+    .contenedor-fechas .form-group,
+    .contenedor-horas .form-group {
+        min-width: 0;
+        margin-bottom: 0;
     }
 
     .header-profile-btn {

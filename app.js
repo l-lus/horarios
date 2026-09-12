@@ -467,7 +467,7 @@
             if (!usaBuffer) {
                 return anticipacionMin > 0
                     ? `Te faltan ${anticipacionMin} min para cumplir tu horario de hoy`
-                    : 'Se cumplió tu horario de hoy';
+                    : 'Se cumplió tu horario de hoy. ¡Podés irte!';
             }
 
             const tiempoTexto = TimeUtils.horasATexto(Math.abs(bufferSemanalHoras));
@@ -475,12 +475,12 @@
 
             if (debeTiempo) {
                 return anticipacionMin > 0
-                    ? `En ${anticipacionMin} min cumplís tu jornada (incluye recuperar ${tiempoTexto} faltantes)`
-                    : `Horario cumplido. Se compensaron ${tiempoTexto} faltantes de la semana`;
+                    ? `En ${anticipacionMin} min podés irte (incluye recuperar ${tiempoTexto} faltantes)`
+                    : `Podés irte. Ya recuperaste los ${tiempoTexto} faltantes de la semana`;
             } else {
                 return anticipacionMin > 0
-                    ? `En ${anticipacionMin} min cumplís tu jornada (salís ${tiempoTexto} antes por tiempo extra)`
-                    : `Horario cumplido. Salís ${tiempoTexto} antes por tiempo extra semanal`;
+                    ? `En ${anticipacionMin} min podés irte (salís ${tiempoTexto} antes por tiempo extra)`
+                    : `Podés irte ${tiempoTexto} antes por tu tiempo extra semanal`;
             }
         }
 

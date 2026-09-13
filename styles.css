@@ -62,9 +62,9 @@ body.dark-mode {
     --text-main: #e3e3e3;
     --text-muted: #b4b4b4;
     --text-disabled: #b4b4b4a2;
-    --border: #313333;
-    --input-bg: #313333;
-    --c-gray-btn: #313333;
+    --border: var(--bg-body);
+    --input-bg: var(--bg-body);
+    --c-gray-btn: var(--bg-body);
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     --hover: brightness(1.2);
 }
@@ -895,7 +895,7 @@ button:disabled {
 
 .progress-bar {
     width: 100%;
-    height: 4px;
+    height: 10px;
     background: transparent;
     border-radius: var(--radius);
     overflow: hidden;
@@ -1805,6 +1805,10 @@ body.config-onboarding #theme-toggle-config {
     margin-top: var(--space-lg);
 }
 
+#stats-mensaje {
+    color: var(--text-muted);
+}
+
 .stats-periodo-row select,
 .flex-1,
 .registro-info {
@@ -2002,7 +2006,6 @@ body.config-onboarding #theme-toggle-config {
 
 #stats-buffer {
     font-size: var(--text-base);
-    margin-top: var(--space-sm);
     min-height: 1.2rem;
 }
 

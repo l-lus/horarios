@@ -7257,7 +7257,7 @@
                 const horaBuf = _minutosAHoraWrap(minutosConBuffer);
                 const claseBuffer = bufferSemanal > 0 ? ' hint-buffer-color--green' : bufferSemanal < 0 ? ' hint-buffer-color--red' : '';
                 return {
-                    hint: `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color${claseBuffer}">(<strong>${horaBuf}</strong>)</span>`,
+                    hint: `Salida estimada: <strong>${horaSalida}</strong> <span class="hint-buffer-color${claseBuffer}"><strong>${horaBuf}</strong></span>`,
                     hintEsHTML: true
                 };
             }

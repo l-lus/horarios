@@ -62,9 +62,9 @@ body.dark-mode {
     --text-main: #e3e3e3;
     --text-muted: #b4b4b4;
     --text-disabled: #b4b4b4a2;
-    --border: var(--bg-body);
-    --input-bg: var(--bg-body);
-    --c-gray-btn: var(--bg-body);
+    --border: #313333;
+    --input-bg: #313333;
+    --c-gray-btn: #313333;
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     --hover: brightness(1.2);
 }
@@ -82,6 +82,22 @@ body[data-theme="pink"] {
     --input-bg: #fbe7f0;
     --c-gray-btn: #fbe7f0;
     --shadow: 0 1px 4px rgba(172, 76, 130, 0.1), 0 0 0 1px rgba(172, 76, 130, 0.05);
+    --hover: brightness(0.95);
+}
+
+/* ─── TEMA CREMA (Cálido / Vainilla) ───────────────────────────────────── */
+html[data-theme="crema"] body,
+body[data-theme="crema"] {
+    --bg-body: #fbf6ee;
+    --bg-card: #ffffff;
+    --bg-header: #fbf6eeee;
+    --text-main: #423223;
+    --text-muted: #85705d;
+    --text-disabled: #85705d99;
+    --border: #ede1cc;
+    --input-bg: #f7eee1;
+    --c-gray-btn: #f7eee1;
+    --shadow: 0 1px 4px rgba(140, 100, 60, 0.1), 0 0 0 1px rgba(140, 100, 60, 0.05);
     --hover: brightness(0.95);
 }
 
@@ -895,7 +911,7 @@ button:disabled {
 
 .progress-bar {
     width: 100%;
-    height: 10px;
+    height: 6px;
     background: transparent;
     border-radius: var(--radius);
     overflow: hidden;

@@ -2219,7 +2219,53 @@ body.config-onboarding #theme-toggle-config {
     margin-left: 0.15em;
 }
 
+.estado-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+    font-size: var(--text-base);
+    font-weight: var(--fw-medium);
+    line-height: 1;
+    padding: 0.1rem 0.6rem;
+    border-radius: var(--radius);
+    white-space: nowrap;
+}
+
+.estado-badge--en-curso {
+    background: var(--c-blue);
+    color: var(--text-main);
+    animation: estadoBadgeParpadeo 2s ease-in-out infinite;
+}
+
+.estado-badge--finalizado {
+    color: var(--c-white);
+}
+
+.estado-badge--finalizado.estado-badge--green {
+    background: var(--c-green);
+}
+
+.estado-badge--finalizado.estado-badge--red {
+    background: var(--c-red);
+}
+
+.estado-badge--finalizado.estado-badge--gold {
+    background: var(--c-gold);
+}
+
 /* ─── KEYFRAMES ──────────────────────────────────────────────────────────────── */
+
+@keyframes estadoBadgeParpadeo {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
 
 @keyframes slideDownFade {
     from {

@@ -7157,7 +7157,12 @@
                 if (!enBadge) {
                     label.innerHTML = '<svg class="icon"><use href="#icon-exit"/></svg><span class="break-counter-label-text"></span>';
                 }
-                destino.appendChild(label);
+                const estadoBadge = !enBadge ? contenedor.querySelector('.estado-badge') : null;
+                if (estadoBadge) {
+                    destino.insertBefore(label, estadoBadge);
+                } else {
+                    destino.appendChild(label);
+                }
             }
             return label;
         }
@@ -7177,6 +7182,14 @@
 
         function _tituloDia(nombreDia) {
             return `<svg class="icon"><use href="#icon-clock" /></svg>${nombreDia}`;
+        }
+
+        function _badgeEstadoHoy(dayClosed, colorFinal) {
+            if (!dayClosed) {
+                return `<span class="estado-badge estado-badge--en-curso">En curso</span>`;
+            }
+            const color = colorFinal || 'green';
+            return `<span class="estado-badge estado-badge--finalizado estado-badge--${color}">Finalizado</span>`;
         }
 
         function _conAvisoAyer(vista, avisoAyerHint) {
@@ -7300,7 +7313,7 @@
                     const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
 
                     return {
-                        titulo: `${_tituloDia(nombreDiaAyer)} (ayer)`,
+                        titulo: `${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false)}`,
                         stats: TimeUtils.horasATexto(tiempoHoy),
                         mensaje, mostrarMensaje: true,
                         colorBarra, anchoBarra: prog,
@@ -7382,8 +7395,10 @@
 
             const { hint, hintEsHTML } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
 
+            const colorFinal = estadoFondoColor || (estadoFondo === 'finalizado_fail' ? 'red' : 'green');
+
             return _conAvisoAyer({
-                titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
+                titulo: `${_tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal)}`,
                 stats: TimeUtils.horasATexto(tiempoHoy),
                 mensaje, mostrarMensaje,
                 colorBarra, anchoBarra: prog,

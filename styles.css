@@ -2133,6 +2133,7 @@ body.config-onboarding #theme-toggle-config {
 
 .buffer-semanal-punto.neutral {
     background-color: var(--c-orange);
+    border-radius: 50%;
 }
 
 .buffer-semanal-texto {

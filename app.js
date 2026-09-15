@@ -7126,8 +7126,14 @@
             return objetivo === 0 || horasGte(valor, objetivo);
         }
 
+        let _formatoCortoStatsCache = false;
+
+        function _refrescarFormatoCortoStatsCache() {
+            _formatoCortoStatsCache = StorageHelper.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false);
+        }
+
         function _modoTextoStats() {
-            return StorageHelper.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false) ? 'short' : 'long';
+            return _formatoCortoStatsCache ? 'short' : 'long';
         }
 
         function _horasTextoStats(horasDecimales) {
@@ -8218,6 +8224,7 @@
             _iniciarCicloStats,
             _cicloStatsActivo,
             _prepararMostrarFaseAlRenderizar,
+            _refrescarFormatoCortoStatsCache,
         };
     })(DataManagement, UICore);
 
@@ -8288,6 +8295,7 @@
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
             _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
+            _refrescarFormatoCortoStatsCache,
         } = UITarjetaFichaje;
 
         function alternarTema() {
@@ -8343,7 +8351,7 @@
                 btnId: 'btn-toggle-formato-corto-stats',
                 mensajeOn: 'La tarjeta de estadísticas usa formato corto (5h 9m)',
                 mensajeOff: 'La tarjeta de estadísticas usa formato dictado (5 horas 9 minutos)',
-                onAfterToggle: () => { actualizarUI(); }
+                onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
             });
 
         function actualizarEstadoBotonAplicarHoras() {
@@ -8885,6 +8893,7 @@
             UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.actualizarEstadoBotonObjetivoPorRegistro();
             UILogic.actualizarEstadoBotonFormatoCortoStats();
+            UILogic._refrescarFormatoCortoStatsCache();
             UILogic.actualizarEstadoBotonAplicarHoras();
             UILogic.actualizarEstadoBotonPushBuffer();
             UILogic.actualizarEstadoBotonPushHabilitado();
@@ -9390,7 +9399,7 @@
             abrirEditorTramoDias, abrirGistEnBrowser, abrirModalAyuda, abrirModalGist, abrirModalHistorialDias, abrirModalReporteSecciones,
             abrirSelectorMesesCalendario, abrirSelectorPerfiles,
             actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-            actualizarEstadoBotonFormatoCortoStats, toggleFormatoCortoStats,
+            actualizarEstadoBotonFormatoCortoStats, toggleFormatoCortoStats, _refrescarFormatoCortoStatsCache,
             actualizarEstadoBotonPushBuffer, togglePushBuffer,
             actualizarEstadoBotonPushBufferUltimoDia, togglePushBufferUltimoDia,
             actualizarSelectPushAnticipacion, cambiarPushAnticipacion,

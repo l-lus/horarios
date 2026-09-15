@@ -5236,6 +5236,23 @@
             return contenedor;
         }
 
+        function _consolidarMesesAbiertos(lista, mesHoy) {
+            const abiertos = Array.from(lista.querySelectorAll('.registro-mes-detalle.expanded'))
+                .map(det => ({ det, header: det.closest('.registro-mes-container')?.querySelector('.registro-mes-header') }))
+                .filter(o => o.header && o.header.dataset.accion === 'toggle-mes');
+
+            if (abiertos.length <= 1) return;
+            const preferido = abiertos.find(o => o.header.dataset.mesId === mesHoy)
+                || abiertos.reduce((a, b) => (a.header.dataset.mesId > b.header.dataset.mesId ? a : b));
+
+            abiertos.forEach(({ det, header }) => {
+                if (det === preferido.det) return;
+                det.classList.remove('expanded');
+                header.querySelector('.chevron-mes')?.classList.remove('rotated');
+                try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'false'); } catch (e) { }
+            });
+        }
+
         function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalculadas = null) {
             const lista = $('lista-registros');
             lista.innerHTML = '';
@@ -5270,6 +5287,7 @@
             );
 
             lista.appendChild(fragmento);
+            _consolidarMesesAbiertos(lista, mesHoy);
             _actualizarOffsetsStickyMes();
         }
 

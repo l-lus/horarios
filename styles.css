@@ -235,7 +235,7 @@ body {
     margin-left: var(--space-lg);
 }
 
-/* ─── FLEX COMPARTIDO (display:flex + align-items:center + gap:0.5rem) ───────── */
+/* ─── FLEX COMPARTIDO  ──────────────────────────────────────────────────── ──── */
 
 .header-actions,
 .input-with-btn,
@@ -557,7 +557,6 @@ button:active {
     transform: scale(1);
 }
 
-/* Transición en estado base para que aplique en ambas direcciones */
 button:disabled {
     background: transparent;
     cursor: not-allowed;
@@ -619,7 +618,6 @@ button:disabled {
     touch-action: manipulation;
 }
 
-/* icon-btn y filter-btn comparten fondo transparente */
 .icon-btn,
 .filter-btn {
     background: transparent;
@@ -1025,7 +1023,6 @@ button:disabled {
     border-radius: var(--radius);
 }
 
-/* Header de mes anidado dentro de un año colapsable: se apila debajo del header del año */
 .registro-mes-detalle .registro-mes-header {
     top: calc(var(--sticky-mes-top) + var(--mes-header-h));
     z-index: 4;
@@ -1047,7 +1044,7 @@ button:disabled {
     opacity: 1;
 }
 
-/* ─── COLORES COMPARTIDOS (registro-total, calendario-dia, progress-fill, toast, cal-popup-badge) */
+/* ─── COLORES COMPARTIDOS ────────────────────────────────────────────────────── */
 
 .registro-total.green-text,
 .calendario-dia.dia-normal,
@@ -1753,7 +1750,7 @@ button:disabled {
     color: var(--text-muted);
 }
 
-/* ─── ONBOARDING (modal-config en modo bienvenida) ─────────────────────────── */
+/* ─── ONBOARDING  ────────────────────────────────────────────────────────────── */
 
 .config-onboarding-banner {
     display: none;

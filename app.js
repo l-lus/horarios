@@ -12,6 +12,7 @@
         VISTA_ACTUAL: 'vistaActual',
         MODO_ESTADISTICAS: 'modoEstadisticas',
         HOVER_POPUP: 'hoverPopupCalendario',
+        FORMATO_CORTO_STATS: 'formatoCortoStats',
         DIAS_HABILES: 'diasHabiles',
         HISTORIAL_DIAS_HABILES: 'historialDiasHabiles',
         HORAS_DIARIAS: 'horasDiarias',
@@ -7125,9 +7126,19 @@
             return objetivo === 0 || horasGte(valor, objetivo);
         }
 
+        function _modoTextoStats() {
+            return StorageHelper.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false) ? 'short' : 'long';
+        }
+
+        function _horasTextoStats(horasDecimales) {
+            return TimeUtils.horasATexto(horasDecimales, _modoTextoStats());
+        }
+
         function _cantidadHoras(horasDecimales) {
-            const texto = TimeUtils.horasATexto(horasDecimales);
-            return { texto, singular: TimeUtils._esCantidadSingular(texto) };
+            const { horas, minutos } = TimeUtils.descomponerHorasDecimales(horasDecimales);
+            const texto = _horasTextoStats(horasDecimales);
+            const singular = horas === 1 || (horas === 0 && minutos === 1);
+            return { texto, singular };
         }
 
         function _fraseCantidad(horasDecimales, singular, plural) {
@@ -7225,7 +7236,7 @@
             if (horasDiarias === 0) {
                 colorBarra = 'blue'; colorBorde = 'transparent';
                 estadoFondo = 'esperando';
-                mensaje = `Total fichado: ${TimeUtils.horasATexto(tot)}`;
+                mensaje = `Total fichado: ${_horasTextoStats(tot)}`;
                 mostrarMensaje = false;
             } else if (todosEspeciales) {
                 colorBarra = 'blue'; colorBorde = 'transparent';
@@ -7237,11 +7248,11 @@
                 if (horasGte(prog, objetivoSemana)) {
                     colorBarra = 'green'; colorBorde = 'green';
                     const dif = prog - objetivoSemana;
-                    mensaje = horasEq(dif, 0) ? 'Vas justo' : `Vas ${TimeUtils.horasATexto(dif)} de más`;
+                    mensaje = horasEq(dif, 0) ? 'Vas justo' : `Vas ${_horasTextoStats(dif)} de más`;
                 } else {
                     colorBarra = 'blue'; colorBorde = 'blue';
                     mensaje = objetivoSemana === 0
-                        ? `${TimeUtils.horasATexto(prog)} (Sin objetivo)`
+                        ? `${_horasTextoStats(prog)} (Sin objetivo)`
                         : _fraseCantidad(objetivoSemana - prog, 'Falta', 'Faltan');
                 }
                 mostrarMensaje = true;
@@ -7249,7 +7260,7 @@
                 colorBarra = 'green'; colorBorde = 'green';
                 estadoFondo = 'finalizado_ok';
                 const dif = prog - objetivoSemana;
-                mensaje = horasEq(dif, 0) ? 'Perfecto' : `Hiciste ${TimeUtils.horasATexto(dif)} de más`;
+                mensaje = horasEq(dif, 0) ? 'Perfecto' : `Hiciste ${_horasTextoStats(dif)} de más`;
                 mostrarMensaje = true;
             } else {
                 colorBarra = 'red'; colorBorde = 'red';
@@ -7260,7 +7271,7 @@
 
             return {
                 titulo: `<svg class="icon"><use href="#icon-calendar-simple" /></svg> Esta Semana`,
-                stats: todosEspeciales ? '🌞' : TimeUtils.horasATexto(tot),
+                stats: todosEspeciales ? '🌞' : _horasTextoStats(tot),
                 mensaje, mostrarMensaje,
                 colorBarra, anchoBarra: progreso,
                 colorBorde, estadoFondo,
@@ -7304,7 +7315,7 @@
             if (cumplido) {
                 const extra = tiempoHoy - objetivoDiario;
                 if (bufferSemanal < 0 && Math.abs(bufferSemanal) > extra) return 'Te podés ir, pero debés tiempo';
-                return extra > 0 ? `Te podés ir (+${TimeUtils.horasATexto(extra)})` : 'Te podés ir';
+                return extra > 0 ? `Te podés ir (+${_horasTextoStats(extra)})` : 'Te podés ir';
             }
             const faltante = objetivoDiario - tiempoHoy;
             const faltanteTexto = _fraseCantidad(faltante, 'Falta', 'Faltan');
@@ -7332,7 +7343,7 @@
 
                     return {
                         titulo: `${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false)}`,
-                        stats: TimeUtils.horasATexto(tiempoHoy),
+                        stats: _horasTextoStats(tiempoHoy),
                         mensaje, mostrarMensaje: true,
                         colorBarra, anchoBarra: prog,
                         colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
@@ -7417,7 +7428,7 @@
 
             return _conAvisoAyer({
                 titulo: `${_tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal)}`,
-                stats: TimeUtils.horasATexto(tiempoHoy),
+                stats: _horasTextoStats(tiempoHoy),
                 mensaje, mostrarMensaje,
                 colorBarra, anchoBarra: prog,
                 colorBorde, estadoFondo, estadoFondoColor,
@@ -8325,6 +8336,16 @@
                 onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); }
             });
 
+        const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBotonFormatoCortoStats } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.FORMATO_CORTO_STATS, v),
+                btnId: 'btn-toggle-formato-corto-stats',
+                mensajeOn: 'La tarjeta de estadísticas usa formato corto (5h 9m)',
+                mensajeOff: 'La tarjeta de estadísticas usa formato dictado (5 horas 9 minutos)',
+                onAfterToggle: () => { actualizarUI(); }
+            });
+
         function actualizarEstadoBotonAplicarHoras() {
             const modoGlobal = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
             _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
@@ -8863,6 +8884,7 @@
             UILogic.actualizarEstadoBotonHoverPopup();
             UILogic.actualizarEstadoBotonLogicaCubierto();
             UILogic.actualizarEstadoBotonObjetivoPorRegistro();
+            UILogic.actualizarEstadoBotonFormatoCortoStats();
             UILogic.actualizarEstadoBotonAplicarHoras();
             UILogic.actualizarEstadoBotonPushBuffer();
             UILogic.actualizarEstadoBotonPushHabilitado();
@@ -9368,6 +9390,7 @@
             abrirEditorTramoDias, abrirGistEnBrowser, abrirModalAyuda, abrirModalGist, abrirModalHistorialDias, abrirModalReporteSecciones,
             abrirSelectorMesesCalendario, abrirSelectorPerfiles,
             actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
+            actualizarEstadoBotonFormatoCortoStats, toggleFormatoCortoStats,
             actualizarEstadoBotonPushBuffer, togglePushBuffer,
             actualizarEstadoBotonPushBufferUltimoDia, togglePushBufferUltimoDia,
             actualizarSelectPushAnticipacion, cambiarPushAnticipacion,
@@ -9633,6 +9656,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
+    $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => UILogic.toggleFormatoCortoStats());
     $('btn-toggle-push-buffer')?.addEventListener('click', () => UILogic.togglePushBuffer());
     $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => UILogic.togglePushBufferUltimoDia());
     $('btn-toggle-push-habilitado')?.addEventListener('click', () => UILogic.togglePushHabilitado());

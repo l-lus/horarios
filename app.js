@@ -9655,7 +9655,12 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-volver-reporte-secciones')?.addEventListener('click', () => UILogic.cerrarModalReporteSecciones());
 
     document.querySelector('#card-historico .card-header-clickable')?.addEventListener('click', () => UILogic.toggleHistorico());
-    $('btn-vista-calendario')?.addEventListener('click', () => UILogic.toggleVistaHistorico());
+    $('btn-vista-calendario')?.addEventListener('click', () => {
+        if (window.UILogic && window.UILogic.iniciarTimerAutoCierreBotones) {
+            window.UILogic.iniciarTimerAutoCierreBotones();
+        }
+        UILogic.toggleVistaHistorico();
+    });
     $('btn-filtro')?.addEventListener('click', (e) => UILogic.mostrarFiltros(e));
     $('btn-undo')?.addEventListener('click', () => HistoryManager.undo());
     $('btn-redo')?.addEventListener('click', () => HistoryManager.redo());

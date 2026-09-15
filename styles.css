@@ -2397,13 +2397,13 @@ button.campo-flash {
     60%,
     100% {
         outline-color: var(--text-muted);
-        outline-width: 3px;
+        outline-width: 2px;
     }
 
     20%,
     40% {
         outline-color: var(--bg-card);
-        outline-width: 5px;
+        outline-width: 4px;
     }
 }
 

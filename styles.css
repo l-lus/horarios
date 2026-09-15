@@ -2233,7 +2233,7 @@ body.config-onboarding #theme-toggle-config {
 
 .estado-badge--en-curso {
     background: var(--c-blue);
-    color: var(--text-main);
+    color: var(--c-white);
     animation: estadoBadgeParpadeo 2s ease-in-out infinite;
 }
 
@@ -2389,6 +2389,26 @@ input.campo-flash,
 select.campo-flash,
 button.campo-flash {
     animation: campo-flash 500ms ease-in-out 2;
+}
+
+@keyframes calendario-hoy-flash {
+
+    0%,
+    60%,
+    100% {
+        outline-color: var(--text-muted);
+        outline-width: 3px;
+    }
+
+    20%,
+    40% {
+        outline-color: var(--bg-card);
+        outline-width: 5px;
+    }
+}
+
+.calendario-dia.hoy.campo-flash {
+    animation: calendario-hoy-flash 500ms ease-in-out 2;
 }
 
 @keyframes campo-flash-color {

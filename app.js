@@ -3143,23 +3143,24 @@
             else ModalManager.cerrar(modalId);
         }
 
+        function _flashElemento(el, clase, colorVar = null) {
+            if (!el) return;
+            clearTimeout(el._flashTimeout);
+            el.classList.remove(clase);
+            if (colorVar) el.style.setProperty('--flash-color', colorVar);
+            void el.offsetWidth;
+            el.classList.add(clase);
+
+            const cs = getComputedStyle(el);
+            const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
+            const iteraciones = parseFloat(cs.animationIterationCount) || 1;
+            const totalMs = duracionMs * iteraciones;
+
+            el._flashTimeout = setTimeout(() => el.classList.remove(clase), totalMs);
+        }
+
         function _flashCampoConClase(clase, ids, colorVar = null) {
-            ids.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                clearTimeout(el._flashTimeout);
-                el.classList.remove(clase);
-                if (colorVar) el.style.setProperty('--flash-color', colorVar);
-                void el.offsetWidth;
-                el.classList.add(clase);
-
-                const cs = getComputedStyle(el);
-                const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
-                const iteraciones = parseFloat(cs.animationIterationCount) || 1;
-                const totalMs = duracionMs * iteraciones;
-
-                el._flashTimeout = setTimeout(() => el.classList.remove(clase), totalMs);
-            });
+            ids.forEach(id => _flashElemento(document.getElementById(id), clase, colorVar));
         }
 
         function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
@@ -3277,6 +3278,7 @@
             _cerrarModalConPadre,
             _flashCampo,
             _flashCampoTipo,
+            _flashElemento,
             _finalizarSlidePendiente,
             _animarSlideElemento,
             toggleSeccionGen,
@@ -3541,7 +3543,7 @@
     //                     MÓDULO UI CALENDARIO
     // ====================================================================
     const UICalendario = (function (S, D, UICore) {
-        const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia } = UICore;
+        const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO } = UICore;
 
         function _agruparMesesPorAnio(mesesOrdenados) {
             const map = new Map();
@@ -3994,16 +3996,23 @@
             _animarCalendario(delta, () => _renderizarCalendario());
         }
 
+        function _flashDiaHoyCalendario() {
+            const el = document.querySelector('#calendario-grid .calendario-dia.hoy');
+            _flashElemento(el, 'campo-flash');
+        }
+
         function irHoyCalendario() {
             const hoy = new Date();
             if (_calendarioMes === null ||
                 (_calendarioMes.anio === hoy.getFullYear() && _calendarioMes.mes === hoy.getMonth())) {
+                _flashDiaHoyCalendario();
                 return;
             }
             const base = _calendarioMes;
             const delta = (base.anio * 12 + base.mes) > (hoy.getFullYear() * 12 + hoy.getMonth()) ? -1 : 1;
             _calendarioMes = null;
             _animarCalendario(delta, () => _renderizarCalendario());
+            setTimeout(_flashDiaHoyCalendario, DUR_CALENDARIO() + 20);
         }
 
         return {

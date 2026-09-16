@@ -2205,6 +2205,7 @@ body.config-onboarding #theme-toggle-config {
     padding: 0.1rem 0.6rem;
     border-radius: var(--radius);
     white-space: nowrap;
+    animation: estadoBadgeParpadeo 3s ease-in-out infinite;
 }
 
 .tf-badge .icon {
@@ -2232,7 +2233,7 @@ body.config-onboarding #theme-toggle-config {
 .estado-badge--en-curso {
     background: var(--c-blue);
     color: var(--c-white);
-    animation: estadoBadgeParpadeo 2s ease-in-out infinite;
+    animation: estadoBadgeParpadeo 3s ease-in-out infinite;
 }
 
 .estado-badge--finalizado {

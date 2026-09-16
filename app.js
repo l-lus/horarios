@@ -7765,7 +7765,7 @@
                 ? '<svg class="icon"><use href="#icon-calendar-simple"/></svg>'
                 : '<svg class="icon"><use href="#icon-clock"/></svg>';
             const contexto = vistaActual === 'semana' ? 'Esta Semana' : TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy());
-            const nuevoHTML = `${icono} ${contexto}<span class="tf-badge"><svg class="icon"><use href="#icon-exit"/></svg>Tiempo fuera</span>`;
+            const nuevoHTML = `${icono} ${contexto}<span class="tf-badge">Tiempo fuera</span>`;
             const agregarContador = () => {
                 _obtenerOCrearLabelTF(titulo);
                 _iniciarContadorBreak(storageKey);
@@ -9786,7 +9786,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260910';
+        const _v = '-v260916';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

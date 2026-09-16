@@ -5159,7 +5159,7 @@
             headerMes.appendChild(document.createTextNode(' ' + TimeUtils.formatoTituloMes(claveMes)));
 
             const detalleMesActual = document.createElement('div');
-            detalleMesActual.className = 'registro-mes-detalle';
+            detalleMesActual.className = 'registro-mes-detalle collapsible';
             const innerMesActual = document.createElement('div');
             innerMesActual.className = 'detalle-inner';
             detalleMesActual.appendChild(innerMesActual);
@@ -5230,7 +5230,7 @@
             header.appendChild(chevron);
             header.appendChild(document.createTextNode(' ' + anio));
 
-            const detalle = Object.assign(document.createElement('div'), { className: 'registro-mes-detalle' });
+            const detalle = Object.assign(document.createElement('div'), { className: 'registro-mes-detalle collapsible' });
             const innerAnio = Object.assign(document.createElement('div'), { className: 'detalle-inner' });
             detalle.appendChild(innerAnio);
             let expandido = false;

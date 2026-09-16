@@ -1028,20 +1028,8 @@ button:disabled {
     z-index: 4;
 }
 
-.registro-mes-detalle {
-    display: grid;
-    grid-template-rows: 0fr;
-    opacity: 0;
-    transition: grid-template-rows var(--dur-collapse) ease-out, opacity var(--dur-collapse) ease-out;
-}
-
 .registro-mes-detalle.expanded>.detalle-inner {
     overflow: visible;
-}
-
-.registro-mes-detalle.expanded {
-    grid-template-rows: 1fr;
-    opacity: 1;
 }
 
 /* ─── COLORES COMPARTIDOS ────────────────────────────────────────────────────── */
@@ -1602,11 +1590,6 @@ button:disabled {
 
 /* ─── SECCIONES COLAPSABLES ──────────────────────────────────────────────────── */
 
-.form-collapsible.expanded {
-    grid-template-rows: 1fr;
-    opacity: 1;
-}
-
 #botones-historico {
     transition: var(--transition-collapse), padding var(--dur-anim) ease-out, margin var(--dur-anim) ease-out;
     padding-top: 0;
@@ -1621,11 +1604,6 @@ button:disabled {
 }
 
 /* ─── ANIMACIONES ────────────────────────────────────────────────────────────── */
-
-.nuevo-registro-animacion,
-.input-agregado-animacion {
-    animation: mutacionEntrada var(--dur-anim) ease-out forwards;
-}
 
 .nuevo-registro-animacion {
     transform-origin: center;
@@ -1675,7 +1653,8 @@ button:disabled {
     right: 0;
 }
 
-.chevron.rotated {
+.chevron.rotated,
+.chevron-mes.rotated {
     transform: rotate(180deg);
 }
 
@@ -1688,10 +1667,6 @@ button:disabled {
     flex-shrink: 0;
     transition: transform var(--transition-ui);
     order: 1;
-}
-
-.chevron-mes.rotated {
-    transform: rotate(180deg);
 }
 
 .timer-btn.running {

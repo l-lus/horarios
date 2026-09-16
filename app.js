@@ -37,6 +37,7 @@
         PUSH_BUFFER_SOLO_ULTIMO_DIA: 'pushBufferSoloUltimoDia',
         PUSH_HABILITADO: 'pushHabilitado',
         PUSH_INFO_ACTIVA: 'pushInfoActiva',
+        PUSH_AVISO_COUNT: 'pushAvisoNuevaFuncionCount',
 
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
@@ -553,7 +554,8 @@
                 STORAGE_KEYS.PUSH_ANTICIPACION_MIN,
                 STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL,
                 STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA,
-                STORAGE_KEYS.PUSH_INFO_ACTIVA
+                STORAGE_KEYS.PUSH_INFO_ACTIVA,
+                STORAGE_KEYS.PUSH_AVISO_COUNT
             ].forEach(k => {
                 StorageHelper.removeItem(k, true);
                 StorageHelper.removeItem(k, false);
@@ -2732,6 +2734,7 @@
         let toastTimeout = null;
         let _toastQueue = [];
         let _toastRunning = false;
+        let _toastAccionActual = null;
         const MAX_TOAST_QUEUE = 4;
 
         function formatoDiferencia(tiempoTotal, objetivo = D.horasDiarias()) {
@@ -2850,13 +2853,13 @@
             URL.revokeObjectURL(url);
         }
 
-        function mostrarToast(mensaje, tipo = 'info', duracion = 3000, detalle = null) {
+        function mostrarToast(mensaje, tipo = 'info', duracion = 3000, detalle = null, accion = null) {
             const texto = detalle ? `${mensaje}, ${detalle}` : mensaje;
             const textoLimpio = S.sanitizeString(texto, 200);
             const ultimo = _toastQueue[_toastQueue.length - 1];
             const actual = _toastRunning ? $('toast')?.textContent : null;
             if ((ultimo && ultimo.mensaje === textoLimpio) || actual === textoLimpio) return;
-            _toastQueue.push({ mensaje: textoLimpio, tipo, duracionBase: duracion });
+            _toastQueue.push({ mensaje: textoLimpio, tipo, duracionBase: duracion, accion });
             if (_toastQueue.length > MAX_TOAST_QUEUE) {
                 _toastQueue.splice(0, _toastQueue.length - MAX_TOAST_QUEUE);
             }
@@ -2866,15 +2869,18 @@
         function _procesarToastQueue() {
             if (_toastQueue.length === 0) {
                 _toastRunning = false;
+                _toastAccionActual = null;
                 return;
             }
 
             _toastRunning = true;
             const actual = _toastQueue.shift();
+            _toastAccionActual = actual.accion || null;
             const toast = $('toast');
             toast.classList.remove('show');
             toast.textContent = actual.mensaje;
             toast.className = `toast ${actual.tipo}`;
+            toast.classList.toggle('toast-accionable', !!actual.accion);
             let duracionFinal = actual.duracionBase || 3000;
             if (_toastQueue.length >= 1) {
                 duracionFinal = Math.floor(duracionFinal / 2);
@@ -2902,7 +2908,11 @@
             const toast = $('toast');
             if (!toast || toast.dataset.cierreInit) return;
             toast.dataset.cierreInit = '1';
-            toast.addEventListener('click', () => _cerrarToastActual());
+            toast.addEventListener('click', () => {
+                const accion = _toastAccionActual;
+                _cerrarToastActual();
+                if (accion) accion();
+            });
             registrarSwipe(toast, () => _cerrarToastActual(), { minX: 40 });
         }
 
@@ -3489,7 +3499,7 @@
         function _limpiarClavesPerfil(pid) {
             ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
                 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS,
-                STORAGE_KEYS.PUSH_HABILITADO, STORAGE_KEYS.PUSH_ANTICIPACION_MIN, STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, STORAGE_KEYS.PUSH_INFO_ACTIVA
+                STORAGE_KEYS.PUSH_HABILITADO, STORAGE_KEYS.PUSH_ANTICIPACION_MIN, STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, STORAGE_KEYS.PUSH_INFO_ACTIVA, STORAGE_KEYS.PUSH_AVISO_COUNT
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
         }
 
@@ -9539,11 +9549,53 @@
         return { chequearYNotificar };
     })();
 
+    // ====================================================================
+    // AVISO PUSH — recordatorio discreto de la función de notificaciones
+    // ====================================================================
+    const AvisoPush = (function () {
+        'use strict';
+
+        const MAX_AVISOS = 3;
+        const MIN_REGISTROS = 30;
+
+        function _soportaPush() {
+            return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+        }
+
+        async function chequearYAvisar() {
+            if (PushReminder.getHabilitado()) return;
+            if (!_soportaPush() || Notification.permission === 'denied') return;
+            if (DataManagement.registros().length <= MIN_REGISTROS) return;
+
+            const vistos = StorageHelper.getNumber(STORAGE_KEYS.PUSH_AVISO_COUNT, 0, true);
+            if (vistos >= MAX_AVISOS) return;
+
+            while (
+                document.querySelector('.modal.show') ||
+                document.body.classList.contains('config-onboarding')
+            ) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
+            if (PushReminder.getHabilitado()) return;
+
+            StorageHelper.setItem(STORAGE_KEYS.PUSH_AVISO_COUNT, vistos + 1, true);
+            window.UILogic?.mostrarToast(
+                'Podés activar las notificaciones de salida desde Perfil → Ajustes → Notificaciones o tocando este aviso',
+                'info', 6000, null,
+                () => window.UILogic?.abrirModalNotificaciones()
+            );
+        }
+
+        return { chequearYAvisar };
+    })();
+
     UILogic.init();
 
     (async () => {
         await BienvenidaModal.chequearYMostrar();
         setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
+        setTimeout(() => AvisoPush.chequearYAvisar(), 6500);
     })();
 })();
 

@@ -1267,6 +1267,10 @@ button:disabled {
     border-color: var(--c-blue);
 }
 
+.toast.toast-accionable {
+    cursor: pointer;
+}
+
 /* ─── CALENDARIO ─────────────────────────────────────────────────────────────── */
 
 #calendario-selector-meses {

@@ -398,6 +398,17 @@
         function setHabilitado(valor) {
             StorageHelper.setItem(STORAGE_KEYS.PUSH_HABILITADO, !!valor, true);
         }
+        const UMBRAL_REGISTROS_ACTIVACION = 15;
+        function _soportaPush() {
+            return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+        }
+        function puedeHabilitarse() {
+            if (!_soportaPush()) return false;
+            if (Notification.permission === 'denied') return false;
+            const registros = window.DataManagement?.registros?.() || [];
+            const regulares = registros.filter(r => !TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida));
+            return regulares.length > UMBRAL_REGISTROS_ACTIVACION;
+        }
 
         function _guardarInfoActiva(fechaISO, targetTimeMs) {
             StorageHelper.setItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, JSON.stringify({ fechaISO, targetTimeMs }), true);
@@ -565,7 +576,7 @@
         return {
             programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
             getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
-            getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado,
+            getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse,
             getBufferSoloUltimoDia, calcularTarget: _calcularTarget,
             targetProgramadoParaHoy: () => obtenerInfoActiva()?.targetTimeMs ?? null,
             restablecer,
@@ -3025,12 +3036,18 @@
             return _animarMutacion(el, fn);
         }
 
-        function _crearToggleConfig({ getVal, setVal, btnId, mensajeOn, mensajeOff, onAfterToggle }) {
+        function _crearToggleConfig({ getVal, setVal, btnId, mensajeOn, mensajeOff, onAfterToggle, puedeActivar }) {
             function actualizarEstado() {
-                _setBtnActivo(btnId, getVal());
+                const val = getVal();
+                _setBtnActivo(btnId, val);
+                if (puedeActivar) _setBtnDisabled(btnId, !val && !puedeActivar());
             }
             function toggle() {
                 const nuevo = !getVal();
+                if (nuevo && puedeActivar && !puedeActivar()) {
+                    actualizarEstado();
+                    return;
+                }
                 setVal(nuevo);
                 actualizarEstado();
                 mostrarToast(nuevo ? mensajeOn : mensajeOff, 'info', 4000);
@@ -8422,6 +8439,7 @@
                 btnId: 'btn-toggle-push-habilitado',
                 mensajeOn: 'Notificaciones de horario cumplido activadas',
                 mensajeOff: 'Notificaciones de horario cumplido desactivadas',
+                puedeActivar: () => PushReminder.puedeHabilitarse(),
                 onAfterToggle: () => {
                     _actualizarDisponibilidadBotonesPush();
                     actualizarEstadoBotonNotificaciones();
@@ -9555,17 +9573,11 @@
     const AvisoPush = (function () {
         'use strict';
 
-        const MAX_AVISOS = 3;
-        const MIN_REGISTROS = 30;
-
-        function _soportaPush() {
-            return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
-        }
+        const MAX_AVISOS = 2;
 
         async function chequearYAvisar() {
             if (PushReminder.getHabilitado()) return;
-            if (!_soportaPush() || Notification.permission === 'denied') return;
-            if (DataManagement.registros().length <= MIN_REGISTROS) return;
+            if (!PushReminder.puedeHabilitarse()) return;
 
             const vistos = StorageHelper.getNumber(STORAGE_KEYS.PUSH_AVISO_COUNT, 0, true);
             if (vistos >= MAX_AVISOS) return;
@@ -9581,7 +9593,7 @@
 
             StorageHelper.setItem(STORAGE_KEYS.PUSH_AVISO_COUNT, vistos + 1, true);
             window.UILogic?.mostrarToast(
-                'Podés activar las notificaciones de salida desde Perfil → Ajustes → Notificaciones o tocando este aviso',
+                'Podés activar las notificaciones de salida desde Ajustes o tocando este aviso',
                 'info', 6000, null,
                 () => window.UILogic?.abrirModalNotificaciones()
             );

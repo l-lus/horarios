@@ -47,7 +47,7 @@
 
 
     // ====================================================================
-    // PRECISIÓN NUMÉRICA — helper compartido
+    // NUMERIC PRECISION — shared helper
     // ====================================================================
     const EPS_HORAS = 1e-6;
     const horasGte = (valor, objetivo) => (valor - objetivo) > -EPS_HORAS;
@@ -301,7 +301,7 @@
     })();
 
     // ====================================================================
-    // PUSH REMINDER MODULE — notifiación vía Cloudflare
+    // PUSH REMINDER MODULE — notification via Cloudflare
     // ====================================================================
     const PushReminder = (function () {
         const WORKER_URL = 'https://horarios-push.lushibosca.workers.dev';
@@ -772,7 +772,7 @@
     })();
 
     // ====================================================================
-    // THEME MANAGER (temas: claro, oscuro, rosa, verde, azul)
+    // THEME MANAGER (themes: light, dark, pink, green, blue)
     // ====================================================================
     const ThemeManager = (function () {
         const TEMAS = ['light', 'dark', 'pink', 'green', 'blue', 'lilac', 'crema'];
@@ -808,7 +808,7 @@
     })();
 
     // ====================================================================
-    // PERFIL MANAGER MODULE
+    // PROFILE MANAGER MODULE
     // ====================================================================
     const PerfilManager = (function () {
         const MAX_PERFILES = 9;
@@ -1237,7 +1237,7 @@
     })();
 
     // ====================================================================
-    // TIPOS DE REGISTRO MODULE
+    // RECORD TYPES MODULE
     // ====================================================================
     const TiposRegistro = (function () {
         const TIPOS = {
@@ -2706,7 +2706,7 @@
     })(SecurityAndUtils);
 
     // ====================================================================
-    //                     MÓDULO UI CORE (utilidades genéricas de UI)
+    //                     UI CORE MODULE (generic UI utilities)
     // ====================================================================
     const UICore = (function (S, D) {
 
@@ -3288,7 +3288,7 @@
     })(SecurityAndUtils, DataManagement);
 
     // ====================================================================
-    //                     MÓDULO UI PERFILES
+    //                     UI PROFILES MODULE
     // ====================================================================
     const UIPerfiles = (function (S, UICore) {
         const { mostrarToast } = UICore;
@@ -3540,7 +3540,7 @@
     })(SecurityAndUtils, UICore);
 
     // ====================================================================
-    //                     MÓDULO UI CALENDARIO
+    //                     UI CALENDAR MODULE
     // ====================================================================
     const UICalendario = (function (S, D, UICore) {
         const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO } = UICore;
@@ -4037,7 +4037,7 @@
 
 
     // ====================================================================
-    //                     MÓDULO GIST SYNC
+    //                     GIST SYNC MODULE
     // ====================================================================
     const GistSync = (function (S) {
         const GIST_FILENAME = 'horarios_backup.json';
@@ -4213,7 +4213,7 @@
     })(SecurityAndUtils);
 
     // ====================================================================
-    //                     MÓDULO UI GIST Y RESPALDO
+    //                     UI GIST AND BACKUP MODULE
     // ====================================================================
     const UIGistYRespaldo = (function (S, D, GistSync, UICore) {
         const {
@@ -4931,7 +4931,7 @@
     })(SecurityAndUtils, DataManagement, GistSync, UICore);
 
     // ====================================================================
-    //                     MÓDULO UI HISTORICO
+    //                     UI HISTORY MODULE
     // ====================================================================
     const UIHistorico = (function (S, D, UICore) {
         const {
@@ -5806,7 +5806,7 @@
     })(SecurityAndUtils, DataManagement, UICore);
 
     // ====================================================================
-    //                     MÓDULO UI ESTADISTICAS
+    //                     UI STATISTICS MODULE
     // ====================================================================
     const UIEstadisticas = (function (S, D, UICore) {
         const {
@@ -6354,7 +6354,7 @@
             .config-linea b { color: var(--r-text); font-weight: 600; }
             footer.reporte-footer { text-align: center; font-size: .78rem; color: var(--r-muted); margin-top: 1.5rem; }
 
-            /* --- Responsive: tablas a 2 líneas por fila en pantallas chicas --- */
+            /* --- Responsive: 2-line-per-row tables on small screens --- */
             @media (max-width: 600px) {
                 body { padding: 1.5rem 0.5rem; }
                 .seccion { padding: 1rem 0.6rem; }
@@ -6369,20 +6369,20 @@
                 .tabla-mes tbody tr:last-child, .tabla-diario tbody tr:last-child, .tabla-semana tbody tr:last-child { border-bottom: none; }
                 .tabla-mes td, .tabla-diario td, .tabla-semana td { border-bottom: none; padding: 0; }
 
-                /* Totales por mes: Mes - Horas / Notas (incluye jornadas) */
+                /* Monthly totals: Month - Hours / Notes (includes shifts) */
                 .tabla-mes tbody tr { grid-template-columns: 1fr auto; grid-template-areas: "mes horas" "notas notas"; }
                 .tabla-mes .col-mes { grid-area: mes; }
                 .tabla-mes .col-horas { grid-area: horas; text-align: right; }
                 .tabla-mes .col-notas { grid-area: notas; }
 
-                /* Totales por semana: Semana - Rango - Total / Notas */
+                /* Weekly totals: Week - Range - Total / Notes */
                 .tabla-semana tbody tr { grid-template-columns: auto 1fr; grid-template-areas: "semana rango" "total notas"; }
                 .tabla-semana .col-semana { grid-area: semana; white-space: nowrap; }
                 .tabla-semana .col-rango { grid-area: rango; text-align: right; }
                 .tabla-semana .col-total { grid-area: total; white-space: nowrap; }
                 .tabla-semana .col-notas { grid-area: notas; text-align: right; }
 
-                /* Detalle diario: Fecha - Día - Total (+ indicador) / Horario */
+                /* Daily detail: Date - Day - Total (+ indicator) / Schedule */
                 .tabla-diario tbody tr:not(.fila-especial) {
                     grid-template-columns: auto 1fr auto auto;
                     grid-template-areas: "fecha dia total tag" "horario horario horario horario";
@@ -6772,7 +6772,7 @@
     })(SecurityAndUtils, DataManagement, UICore);
 
     // ====================================================================
-    //                     MÓDULO UI TARJETA DE FICHAJE
+    //                     UI CLOCK-IN CARD MODULE
     // ====================================================================
     const UITarjetaFichaje = (function (D, UICore) {
         const {
@@ -9436,7 +9436,7 @@
     })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);
 
     // ====================================================================
-    // BIENVENIDA MODULE
+    // WELCOME MODULE
     // ====================================================================
     const BienvenidaModal = (function () {
         'use strict';
@@ -9458,7 +9458,7 @@
     })();
 
     // ====================================================================
-    // FERIADOS MODULE
+    // HOLIDAYS MODULE
     // ====================================================================
     const FeriadosAR = (function () {
         'use strict';
@@ -9805,26 +9805,26 @@ document.addEventListener('DOMContentLoaded', function () {
     })();
 });
 
-// MODULOS:
+// MODULES:
 
 // PWA INSTALLER MODULE
 // TIME AND DATE UTILITIES MODULE (TimeUtils)
 // PUSH REMINDER MODULE
 // SECURITY AND UTILS MODULE
 // STORAGE HELPER MODULE
-// PERFIL MANAGER MODULE
+// PROFILE MANAGER MODULE
 // MODAL MANAGER MODULE
 // HISTORY MANAGER MODULE
-// TIPOS DE REGISTRO MODULE
+// RECORD TYPES MODULE
 // DATA MANAGEMENT MODULE
-// UI CORE MODULE (helpers genéricos de UI)
-// UI PERFILES MODULE
-// UI CALENDARIO MODULE
+// UI CORE MODULE (generic UI helpers)
+// UI PROFILES MODULE
+// UI CALENDAR MODULE
 // GIST SYNC MODULE
-// UI GIST Y RESPALDO MODULE
-// UI HISTORICO MODULE
-// UI ESTADISTICAS MODULE
-// UI TARJETA DE FICHAJE MODULE
-// UI LOGIC MODULE (orquestador: init, bootstrap, config general)
-// BIENVENIDA MODULE
-// FERIADOS MODULE
+// UI GIST AND BACKUP MODULE
+// UI HISTORY MODULE
+// UI STATISTICS MODULE
+// UI CLOCK-IN CARD MODULE
+// UI LOGIC MODULE (orchestrator: init, bootstrap, general config)
+// WELCOME MODULE
+// HOLIDAYS MODULE

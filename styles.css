@@ -176,7 +176,7 @@ body {
     overflow-y: auto;
 }
 
-/* ─── LAYOUT ─────────────────────────────────────────────────────────────────── */
+/* ─── DISEÑO ─────────────────────────────────────────────────────────────────── */
 
 .container {
     max-width: 1400px;
@@ -250,7 +250,7 @@ body {
     gap: var(--space-sm);
 }
 
-/* ─── CARD ───────────────────────────────────────────────────────────────────── */
+/* ─── TARJETA ────────────────────────────────────────────────────────────────── */
 
 .card,
 .modal-content {
@@ -317,7 +317,7 @@ h2.mutacion-saliente.no-margin,
     background: var(--text-muted);
 }
 
-/* ─── ICONS ──────────────────────────────────────────────────────────────────── */
+/* ─── ICONOS ─────────────────────────────────────────────────────────────────── */
 
 .icon {
     width: 1.2em;
@@ -347,7 +347,7 @@ h2.mutacion-saliente.no-margin,
     transform: rotate(-90deg);
 }
 
-/* ─── FORMS ──────────────────────────────────────────────────────────────────── */
+/* ─── FORMULARIOS ────────────────────────────────────────────────────────────── */
 
 .form-group {
     margin-bottom: var(--space-lg);
@@ -534,7 +534,7 @@ input.error {
     color: var(--text-disabled);
 }
 
-/* ─── BUTTONS ────────────────────────────────────────────────────────────────── */
+/* ─── BOTONES ────────────────────────────────────────────────────────────────── */
 
 button {
     width: 100%;
@@ -657,7 +657,7 @@ button:disabled {
     font-weight: var(--fw-bold);
 }
 
-/* ─── COLLAPSIBLE ────────────────────────────────────────────────────────────── */
+/* ─── COLAPSABLE ─────────────────────────────────────────────────────────────── */
 
 .collapsible {
     display: grid;
@@ -745,7 +745,7 @@ button:disabled {
     margin-top: var(--space-md);
 }
 
-/* ─── CONFIG ─────────────────────────────────────────────────────────────────── */
+/* ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────── */
 
 .config-actions {
     display: flex;
@@ -788,7 +788,7 @@ button:disabled {
     opacity: 1;
 }
 
-/* ─── STATS CARD ─────────────────────────────────────────────────────────────── */
+/* ─── TARJETA DE ESTADÍSTICAS ────────────────────────────────────────────────── */
 
 .stats-card {
     cursor: pointer;
@@ -905,7 +905,7 @@ button:disabled {
     margin: 0 auto;
 }
 
-/* ─── PROGRESS BAR ───────────────────────────────────────────────────────────── */
+/* ─── BARRA DE PROGRESO ──────────────────────────────────────────────────────── */
 
 .progress-bar {
     width: 100%;
@@ -1427,7 +1427,7 @@ button:disabled {
     font-size: var(--text-sm);
 }
 
-/* ─── CAL POPUP ──────────────────────────────────────────────────────────────── */
+/* ─── POPUP DEL CALENDARIO ───────────────────────────────────────────────────── */
 
 .cal-popup,
 .stat-popup,
@@ -1529,7 +1529,7 @@ button:disabled {
     color: var(--text-main);
 }
 
-/* ─── STAT POPUP ─────────────────────────────────────────────────────────────── */
+/* ─── POPUP DE ESTADÍSTICA ───────────────────────────────────────────────────── */
 
 .stat-item {
     cursor: pointer;
@@ -1600,7 +1600,7 @@ button:disabled {
     margin-bottom: 0;
 }
 
-/* ─── COLLAPSIBLE SECTIONS ───────────────────────────────────────────────────── */
+/* ─── SECCIONES COLAPSABLES ──────────────────────────────────────────────────── */
 
 .form-collapsible.expanded {
     grid-template-rows: 1fr;
@@ -1657,7 +1657,7 @@ button:disabled {
     overflow: visible;
 }
 
-/* ─── MISC COMPONENTS ────────────────────────────────────────────────────────── */
+/* ─── COMPONENTES VARIOS ─────────────────────────────────────────────────────── */
 
 .card-header-clickable {
     cursor: pointer;
@@ -1855,7 +1855,7 @@ body.config-onboarding #theme-toggle-config {
     color: var(--c-blue);
 }
 
-/* ─── HEADER PROFILE / PERFILES ──────────────────────────────────────────────── */
+/* ─── PERFIL DE CABECERA / PERFILES ──────────────────────────────────────────── */
 
 .header-profile-btn {
     background: transparent;
@@ -1954,7 +1954,7 @@ body.config-onboarding #theme-toggle-config {
     animation: mutacionEntrada var(--dur-anim) ease-out;
 }
 
-/* ─── WEEK SELECTOR ──────────────────────────────────────────────────────────── */
+/* ─── SELECTOR DE SEMANA ─────────────────────────────────────────────────────── */
 
 .week-selector {
     display: flex;
@@ -2001,7 +2001,7 @@ body.config-onboarding #theme-toggle-config {
     transform: scale(1.1);
 }
 
-/* ─── SPECIFIC ELEMENTS ──────────────────────────────────────────────────────── */
+/* ─── ELEMENTOS ESPECÍFICOS ──────────────────────────────────────────────────── */
 
 .svg-sprite,
 #btn-install,
@@ -2477,7 +2477,7 @@ button.campo-flash-color {
     }
 }
 
-/* ─── DESKTOP (min-width: 1024px) ────────────────────────────────────────────── */
+/* ─── ESCRITORIO (min-width: 1024px) ─────────────────────────────────────────── */
 
 @media (min-width: 1024px) {
     .container {

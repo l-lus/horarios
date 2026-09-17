@@ -9607,7 +9607,7 @@
     (async () => {
         await BienvenidaModal.chequearYMostrar();
         setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
-        setTimeout(() => AvisoPush.chequearYAvisar(), 6500);
+        setTimeout(() => AvisoPush.chequearYAvisar(), 5000);
     })();
 })();
 

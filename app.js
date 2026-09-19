@@ -186,7 +186,7 @@
 
         function fechaLocalISOFull() {
             const d = new Date();
-            return `${d.getFullYear()}-${_pad2(d.getMonth() + 1)}-${_pad2(d.getDate())} ${_pad2(d.getHours())}:${_pad2(d.getMinutes())}:${_pad2(d.getSeconds())}`;
+            return `${formatearFechaLocal(d)} ${_pad2(d.getHours())}:${_pad2(d.getMinutes())}:${_pad2(d.getSeconds())}`;
         }
 
         function horaAMinutos(h) {
@@ -196,11 +196,8 @@
         }
 
         function sumarMinutosAHora(horaString, minutosASumar) {
-            let totalMinutos = minutosASumar + horaAMinutos(horaString);
-            let horas = Math.floor(totalMinutos / 60);
-            let mins = Math.floor(totalMinutos % 60);
-            if (horas > 23) { horas = 23; mins = 59; }
-            return _hhmm(horas, mins);
+            const totalMinutos = minutosASumar + horaAMinutos(horaString);
+            return totalMinutos >= 24 * 60 ? '23:59' : minutosAHora(totalMinutos);
         }
 
         function obtenerNombreDia(f) {

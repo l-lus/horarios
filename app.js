@@ -269,9 +269,8 @@
 
         function formatoTituloMes(claveMes) {
             const [año, mes] = claveMes.split('-');
-            const fecha = new Date(año, mes - 1, 1);
-            let nombre = fecha.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-            return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+            const nombre = nombreMesPorIndice(mes - 1);
+            return nombre.charAt(0).toUpperCase() + nombre.slice(1) + ' ' + año;
         }
 
         function generarRangoFechas(desde, hasta) {
@@ -283,6 +282,10 @@
                 cur.setDate(cur.getDate() + 1);
             }
             return resultado;
+        }
+
+        function segundosAMinutosRedondeado(segundos) {
+            return Math.floor(segundos / 60) + (segundos % 60 >= 30 ? 1 : 0);
         }
 
         function fechaCorta(f, anioCompleto = false) {
@@ -297,7 +300,7 @@
             horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
             obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
             horasATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular, pluralizar,
-            generarRangoFechas, fechaCorta
+            generarRangoFechas, fechaCorta, segundosAMinutosRedondeado, _pad2
         };
     })();
 
@@ -2138,7 +2141,7 @@
                 S.validarRegistroSeguro(r) && r.fecha > hoy && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
             ).length;
             if (descartadosFuturos > 0)
-                notify.mostrarToast(`${descartadosFuturos} registro${descartadosFuturos > 1 ? 's' : ''} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${descartadosFuturos > 1 ? 's' : ''}`, 'warning');
+                notify.mostrarToast(`${descartadosFuturos} registro${TimeUtils.pluralizar(descartadosFuturos)} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${TimeUtils.pluralizar(descartadosFuturos)}`, 'warning');
             const normalizados = rawList
                 .filter(r => S.validarRegistroSeguro(r))
                 .filter(r => {
@@ -2312,8 +2315,7 @@
             const segundosTranscurridos = Math.floor(diffMs / 1000);
             if (segundosTranscurridos < 30) { StorageHelper.removeItem(storageKey); return false; }
 
-            let minutosTranscurridos = Math.floor(segundosTranscurridos / 60);
-            if ((segundosTranscurridos % 60) >= 30) minutosTranscurridos += 1;
+            let minutosTranscurridos = TimeUtils.segundosAMinutosRedondeado(segundosTranscurridos);
 
             const tiempoActual = registro.tiempoFuera || '00:00';
             registro.tiempoFuera = TimeUtils.sumarMinutosAHora(tiempoActual, minutosTranscurridos);
@@ -3583,9 +3585,9 @@
         }
 
         function _nombreMesCapitalizado(mesAnio) {
-            const [a, m] = mesAnio.split('-');
-            const nombre = new Date(a, m - 1, 1).toLocaleDateString('es-AR', { month: 'long' });
-            return nombre.charAt(0).toUpperCase() + nombre.slice(1).replace('.', '');
+            const [, m] = mesAnio.split('-');
+            const nombre = TimeUtils.nombreMesPorIndice(m - 1);
+            return nombre.charAt(0).toUpperCase() + nombre.slice(1);
         }
 
         function _cerrarSelectorMeses(idResaltar = null) {
@@ -3680,7 +3682,7 @@
             const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
             const mes = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
             if (titulo) titulo.textContent = `${TimeUtils.nombreMesPorIndice(mes)} ${anio}`;
-            const fechaStr = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const fechaStr = (y, m, d) => `${y}-${TimeUtils._pad2(m + 1)}-${TimeUtils._pad2(d)}`;
             const registrosFiltrados = D.obtenerRegistrosFiltrados();
             const todosLosRegistros = D.registros();
             const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
@@ -3857,7 +3859,10 @@
         }
 
         function _formatearFechaLabelPopup(fecha) {
-            return S.escapeHtml(new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+            const d = new Date(fecha + 'T12:00:00');
+            const diaSemana = TimeUtils.obtenerNombreDia(fecha).toLowerCase();
+            const mes = TimeUtils.nombreMesPorIndice(d.getMonth());
+            return S.escapeHtml(`${diaSemana}, ${d.getDate()} de ${mes}`);
         }
 
         function _popupCalendario(event, registroId) {
@@ -6801,7 +6806,7 @@
     // ====================================================================
     //                     UI CLOCK-IN CARD MODULE
     // ====================================================================
-    const UITarjetaFichaje = (function (D, UICore) {
+    const UITarjetaFichaje = (function (D) {
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
@@ -7876,7 +7881,7 @@
                 actualizarUI(); return;
             }
 
-            const minutos = Math.floor(totalSeg / 60) + (totalSeg % 60 >= 30 ? 1 : 0);
+            const minutos = TimeUtils.segundosAMinutosRedondeado(totalSeg);
             registroHoy.tiempoFuera = sumarMinutosAHora(registroHoy.tiempoFuera || '00:00', minutos);
             const t = D.calcularHoras(registroHoy.entrada, registroHoy.salida, registroHoy.tiempoFuera);
             registroHoy.horas = t?.horas || 0; registroHoy.minutos = t?.minutos || 0; registroHoy.total = t?.total || 0;
@@ -8262,7 +8267,7 @@
             _prepararMostrarFaseAlRenderizar,
             _refrescarFormatoCortoStatsCache,
         };
-    })(DataManagement, UICore);
+    })(DataManagement);
 
     const UILogic = (function (S, D, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje) {
 
@@ -9517,7 +9522,7 @@
         function _getFeriadosDelMes() {
             const hoy = new Date();
             const anioActual = hoy.getFullYear();
-            const mesActual = String(hoy.getMonth() + 1).padStart(2, '0');
+            const mesActual = TimeUtils._pad2(hoy.getMonth() + 1);
             const prefijoMes = `${anioActual}-${mesActual}`;
             const pool = FERIADOS[anioActual] || [];
             return { prefijoMes, feriados: pool.filter(f => f.fecha.startsWith(prefijoMes)) };

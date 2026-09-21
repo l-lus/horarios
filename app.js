@@ -305,7 +305,7 @@
     // PUSH REMINDER MODULE — notification via Cloudflare
     // ====================================================================
     const PushReminder = (function () {
-        const WORKER_URL = 'https://horarios-push.lushibosca.workers.dev';
+        const WORKER_URL = 'https://horarios-push.l-lus.workers.dev';
         const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
         const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9';
         const MARGEN_CRON_MS = 60 * 1000;
@@ -346,6 +346,25 @@
                     : `sin-storage-${Date.now()}-${Math.random().toString(36).slice(2)}`;
             }
             return _idInstalacionFallback;
+        }
+        
+        let _ownerTokenFallback = null;
+
+        function _generarOwnerToken() {
+            const bytes = new Uint8Array(32);
+            crypto.getRandomValues(bytes);
+            return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function _ownerToken() {
+            const KEY = 'pushOwnerToken';
+            const existente = StorageHelper.getItem(KEY, null);
+            if (existente && /^[a-f0-9]{64}$/.test(existente)) return existente;
+
+            const nuevo = _generarOwnerToken();
+            if (StorageHelper.setItem(KEY, nuevo)) return nuevo;
+            if (!_ownerTokenFallback) _ownerTokenFallback = _generarOwnerToken();
+            return _ownerTokenFallback;
         }
 
         function _perfilActivo() {
@@ -511,6 +530,7 @@
             try {
                 const res = await _postWorker('/api/schedule', {
                     id: _claveRecordatorio(fechaISO),
+                    ownerToken: _ownerToken(),
                     subscription: sub.toJSON(),
                     targetTime: targetMs,
                     title: 'Horarios',
@@ -554,7 +574,7 @@
                 return;
             }
 
-            _postWorker('/api/cancel', { id: _claveRecordatorio(fechaISO, perfilId) }, true)
+            _postWorker('/api/cancel', { id: _claveRecordatorio(fechaISO, perfilId), ownerToken: _ownerToken() }, true)
                 .catch(err => console.error('No se pudo cancelar el recordatorio:', err));
         }
 
@@ -9852,7 +9872,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260916';
+        const _v = '-v260921';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

@@ -2,4 +2,5 @@ node_modules/
 android/
 .DS_Store
 *.apk
-horarios-push
+horarios-push/
+docs/

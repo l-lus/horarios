@@ -9595,7 +9595,7 @@
     const AvisoPush = (function () {
         'use strict';
 
-        const MAX_AVISOS = 2;
+        const MAX_AVISOS = 3;
 
         async function chequearYAvisar() {
             if (PushReminder.getHabilitado()) return;

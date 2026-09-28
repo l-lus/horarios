@@ -22,6 +22,8 @@
     --space-xl: 1.5rem;
     --border: #dde3ea;
     --input-bg: #f0f2f8;
+    --surface-row-hover: #e6e9f2;
+    --toggle-track-off: #c7ccd6;
     --c-blue: rgba(76, 114, 172, 0.8);
     --c-green: rgba(76, 172, 140, 0.8);
     --c-green-bg: rgba(96, 172, 148, 0.1);
@@ -64,6 +66,8 @@ body.dark-mode {
     --text-disabled: #b4b4b4a2;
     --border: #313333;
     --input-bg: #313333;
+    --surface-row-hover: #3c3e3e;
+    --toggle-track-off: #5b5d5d;
     --c-gray-btn: #313333;
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     --hover: brightness(1.2);
@@ -80,6 +84,8 @@ body[data-theme="pink"] {
     --text-disabled: #8a657299;
     --border: #f4d9e5;
     --input-bg: #fbe7f0;
+    --surface-row-hover: #f6d8e6;
+    --toggle-track-off: #e3b6cd;
     --c-gray-btn: #fbe7f0;
     --shadow: 0 1px 4px rgba(172, 76, 130, 0.1), 0 0 0 1px rgba(172, 76, 130, 0.05);
     --hover: brightness(0.95);
@@ -96,6 +102,8 @@ body[data-theme="crema"] {
     --text-disabled: #85705d99;
     --border: #ede1cc;
     --input-bg: #f7eee1;
+    --surface-row-hover: #f0e2cb;
+    --toggle-track-off: #ddc7a0;
     --c-gray-btn: #f7eee1;
     --shadow: 0 1px 4px rgba(140, 100, 60, 0.1), 0 0 0 1px rgba(140, 100, 60, 0.05);
     --hover: brightness(0.95);
@@ -112,6 +120,8 @@ body[data-theme="green"] {
     --text-disabled: #628a6d99;
     --border: #d9ecdd;
     --input-bg: #e7f5eb;
+    --surface-row-hover: #d8ecde;
+    --toggle-track-off: #a8d2b4;
     --c-gray-btn: #e7f5eb;
     --shadow: 0 1px 4px rgba(76, 152, 100, 0.1), 0 0 0 1px rgba(76, 152, 100, 0.05);
     --hover: brightness(0.95);
@@ -128,6 +138,8 @@ body[data-theme="blue"] {
     --text-disabled: #5f769199;
     --border: #d7e6f6;
     --input-bg: #e5eff9;
+    --surface-row-hover: #d4e5f5;
+    --toggle-track-off: #a7c6e8;
     --c-gray-btn: #e5eff9;
     --shadow: 0 1px 4px rgba(76, 114, 172, 0.1), 0 0 0 1px rgba(76, 114, 172, 0.05);
     --hover: brightness(0.95);
@@ -144,6 +156,8 @@ body[data-theme="lilac"] {
     --text-disabled: #7b689499;
     --border: #e6def2;
     --input-bg: #f0e9fa;
+    --surface-row-hover: #e5d9f3;
+    --toggle-track-off: #c7ace3;
     --c-gray-btn: #f0e9fa;
     --shadow: 0 1px 4px rgba(120, 80, 180, 0.1), 0 0 0 1px rgba(120, 80, 180, 0.05);
     --hover: brightness(0.95);
@@ -650,7 +664,7 @@ button:disabled {
     align-items: center;
 }
 
-.btn-activo {
+.btn-activo:not(.settings-list button, .drag-handle) {
     background: var(--c-green-bg);
     color: var(--c-green);
     border-color: var(--c-green);
@@ -754,21 +768,27 @@ button:disabled {
 }
 
 .config-actions>label {
-    margin-bottom: -0.5rem;
+    margin-bottom: -0.125rem;
+    font-size: var(--text-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding-left: var(--space-xs);
 }
 
 #modal-config .config-actions button,
-#modal-config #lista-orden-cards button,
+.drag-handle,
 #modal-reporte-secciones .config-actions button,
 #modal-notificaciones .form-group button {
     justify-content: flex-start;
     text-align: left;
 }
 
-#modal-config .config-actions button>span,
-#modal-config #lista-orden-cards button>span,
-#modal-reporte-secciones .config-actions button>span,
-#modal-notificaciones .form-group button>span {
+#modal-config .config-actions button>span:not(.toggle-switch),
+.drag-handle>span:not(.toggle-switch),
+#modal-reporte-secciones .config-actions button>span:not(.toggle-switch),
+#modal-notificaciones .form-group button>span:not(.toggle-switch) {
     flex: 1;
 }
 
@@ -786,6 +806,88 @@ button:disabled {
 
 .btn-activo .icon-indicator {
     opacity: 1;
+}
+
+/* ─── LISTAS DE AJUSTES (filas agrupadas tipo tarjeta) ───────────────────────── */
+
+.settings-list {
+    display: flex;
+    flex-direction: column;
+    background: var(--input-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.settings-list>button {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: var(--space-lg) var(--space-md);
+}
+
+.settings-list>button:not(:last-child) {
+    border-bottom: 1px solid var(--border);
+}
+
+.settings-list>button:hover:not(:disabled),
+.settings-list>button:active:not(:disabled) {
+    background: var(--surface-row-hover);
+}
+
+.settings-list>button:disabled {
+    background: transparent;
+}
+
+.settings-list>button .icon:first-child,
+.drag-handle .icon:first-child {
+    color: var(--c-green);
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.settings-list .btn-delete,
+.settings-list .btn-delete .icon:first-child {
+    color: var(--c-red);
+    opacity: 1;
+}
+
+/* ─── TOGGLE SWITCH (estilo iOS) ──────────────────────────────────────────────── */
+
+.toggle-switch {
+    flex-shrink: 0;
+    margin-left: auto;
+    width: 2.6rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    background: var(--toggle-track-off);
+    position: relative;
+    transition: background var(--dur-fast) ease;
+}
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(1.5rem - 4px);
+    height: calc(1.5rem - 4px);
+    border-radius: 50%;
+    background: var(--c-white);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform var(--dur-fast) var(--ease-pop);
+}
+
+.btn-activo .toggle-switch {
+    background: var(--c-green);
+}
+
+.btn-activo .toggle-switch::after {
+    transform: translateX(calc(2.6rem - 1.5rem));
+}
+
+button:disabled .toggle-switch {
+    opacity: 0.5;
 }
 
 /* ─── TARJETA DE ESTADÍSTICAS ────────────────────────────────────────────────── */

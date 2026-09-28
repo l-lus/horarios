@@ -6640,7 +6640,7 @@
                 <button type="button" class="btn-seccion-reporte btn-activo" data-seccion="${sec.id}">
                     <svg class="icon"><use href="${sec.icono}" /></svg>
                     <span>${S.escapeHtml(sec.label)}</span>
-                    <svg class="icon icon-indicator"><use href="#icon-dot" /></svg>
+                    <span class="toggle-switch" aria-hidden="true"></span>
                 </button>`).join('');
         }
 

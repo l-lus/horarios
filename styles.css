@@ -851,6 +851,22 @@ button:disabled {
     opacity: 1;
 }
 
+/* ─── FILA CON DESCRIPCIÓN (estilo OneUI: título + subtítulo) ────────────────── */
+
+.settings-list-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding-right: var(--space-sm);
+}
+
+.settings-list-desc {
+    font-size: var(--text-sm);
+    font-weight: var(--fw-medium);
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+
 /* ─── TOGGLE SWITCH (estilo iOS) ──────────────────────────────────────────────── */
 
 .toggle-switch {
@@ -2539,7 +2555,7 @@ button.campo-flash-color {
     }
 
     :is(.registro-item, .header-profile-btn,
-        .btn-perfil-select, .btn-perfil-edit,
+        .btn-perfil-select.activo, .btn-perfil-edit,
         .registro-mes-header, .btn-mes-calendario,
         .calendario-titulo):hover {
         filter: var(--hover);
@@ -2559,7 +2575,8 @@ button.campo-flash-color {
         position: relative;
     }
 
-    .settings-list>button:hover:not(:disabled) {
+    .settings-list>button:hover:not(:disabled),
+    .btn-perfil-select:not(.activo):hover {
         background: var(--surface-row-hover);
     }
 }

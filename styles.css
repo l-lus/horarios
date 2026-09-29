@@ -830,7 +830,6 @@ button:disabled {
     border-bottom: 1px solid var(--border);
 }
 
-.settings-list>button:hover:not(:disabled),
 .settings-list>button:active:not(:disabled) {
     background: var(--surface-row-hover);
 }
@@ -1964,29 +1963,31 @@ body.config-onboarding #theme-toggle-config {
 .perfil-list-container {
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    background: var(--input-bg);
+    border-radius: var(--radius);
     max-height: 300px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 5px;
 }
 
 .btn-perfil-select {
-    background: var(--input-bg);
-    border: 1px solid var(--border);
+    background: transparent;
     color: var(--text-main);
-    padding: var(--space-lg);
+    padding: var(--space-lg) var(--space-md);
     text-align: left;
-    border-radius: var(--radius);
+    border-radius: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: var(--space-sm);
-    transition: border-color var(--dur-fast), background var(--dur-fast);
+    transition: background var(--dur-fast);
+}
+
+.perfil-list-container>.btn-perfil-select:not(:last-child) {
+    border-bottom: 1px solid var(--border);
 }
 
 .btn-perfil-select.activo {
-    border-color: var(--c-green);
     background: var(--c-green-bg);
     font-weight: var(--fw-bold);
     cursor: default;
@@ -2556,6 +2557,10 @@ button.campo-flash-color {
         filter: var(--hover);
         z-index: 2;
         position: relative;
+    }
+
+    .settings-list>button:hover:not(:disabled) {
+        background: var(--surface-row-hover);
     }
 }
 

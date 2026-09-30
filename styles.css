@@ -808,6 +808,19 @@ button:disabled {
     text-align: left;
 }
 
+/* Deshabilitado: mismo criterio que #gist-limite-sync.disabled (todo el contenido atenuado) */
+#modal-gist .settings-list>button>* {
+    transition: opacity var(--transition-ui);
+}
+
+#modal-gist .settings-list>button:disabled {
+    color: var(--text-muted);
+}
+
+#modal-gist .settings-list>button:disabled>* {
+    opacity: 0.35;
+}
+
 .settings-list-text {
     flex: 1;
 }

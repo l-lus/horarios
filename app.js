@@ -4477,7 +4477,7 @@
             const el = document.getElementById('gist-limites-resumen');
             if (!el) return;
             const tipo = _tipoSyncActual();
-            if (!tipo) { el.textContent = 'Activá la sincronización automática para usarlos'; return; }
+            if (!tipo) { el.textContent = 'Desactivado'; return; }
             const limite = _gistLimitesTemp ? _gistLimitesTemp[tipo] : GistSync.getSyncLimite(tipo);
             const desde = document.getElementById('gist-rango-desde')?.value || '--:--';
             const hasta = document.getElementById('gist-rango-hasta')?.value || '--:--';

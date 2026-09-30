@@ -55,6 +55,22 @@
     const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;
 
     // ====================================================================
+    // COLAPSABLES — shared helper (.collapsible + .expanded)
+    // animar=false fija el estado sin transición (p. ej. al cargar datos o abrir un modal).
+    // ====================================================================
+    function setColapsable(el, abierto, { animar = true } = {}) {
+        if (!el) return;
+        if (animar) {
+            el.classList.toggle('expanded', abierto);
+            return;
+        }
+        el.classList.add('sin-transicion');
+        el.classList.toggle('expanded', abierto);
+        void el.offsetHeight;
+        el.classList.remove('sin-transicion');
+    }
+
+    // ====================================================================
     // PWA INSTALLER MODULE
     // ====================================================================
     const PWAInstaller = (function () {
@@ -1912,13 +1928,7 @@
             const elRef = $('edit-referencia-compensatorio');
             if (elRef) {
                 const esCompensatorio = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'compensatorio';
-                const grupoRef = $('grupo-referencia-compensatorio');
-                if (grupoRef) {
-                    grupoRef.classList.add('sin-transicion');
-                    grupoRef.classList.toggle('expanded', esCompensatorio);
-                    void grupoRef.offsetHeight;
-                    grupoRef.classList.remove('sin-transicion');
-                }
+                setColapsable($('grupo-referencia-compensatorio'), esCompensatorio, { animar: false });
                 elRef.value = esCompensatorio ? (r.referenciaCompensatorio || '') : '';
             }
 
@@ -3390,7 +3400,7 @@
                 }
                 infoSection.appendChild(nombreEl);
                 infoSection.appendChild(Object.assign(document.createElement('div'), {
-                    className: 'btn-perfil-badge',
+                    className: 'btn-perfil-detalle',
                     textContent: countText
                 }));
 
@@ -4333,8 +4343,7 @@
                 const tipoSelect = document.getElementById('tipo-exportacion');
                 if (tipoSelect) tipoSelect.value = 'todo';
 
-                const camposRango = document.getElementById('campos-rango-exportar');
-                if (camposRango) camposRango.classList.remove('expanded');
+                setColapsable(document.getElementById('campos-rango-exportar'), false, { animar: false });
 
                 document.getElementById('export-fecha-desde').value = '';
                 document.getElementById('export-fecha-hasta').value = '';
@@ -4349,9 +4358,7 @@
 
         function toggleCamposRangoExport() {
             const tipo = document.getElementById('tipo-exportacion').value;
-            const camposRango = document.getElementById('campos-rango-exportar');
-
-            camposRango.classList.toggle('expanded', tipo === 'rango');
+            setColapsable(document.getElementById('campos-rango-exportar'), tipo === 'rango');
         }
 
         async function ejecutarExportacion() {
@@ -4488,13 +4495,12 @@
             el.textContent = `${limite === 0 ? 'Sin límite' : `${limite} por hora`} · ${desde} – ${hasta}`;
         }
 
-        function _gistSetPanel(btnId, abierto) {
+        function _gistSetPanel(btnId, abierto, animar = true) {
             const btn = document.getElementById(btnId);
             const panel = document.getElementById(btn?.getAttribute('aria-controls') || '');
             if (!btn || !panel) return;
             btn.setAttribute('aria-expanded', String(abierto));
-            panel.inert = !abierto;
-            panel.classList.toggle('expanded', abierto);
+            setColapsable(panel, abierto, { animar });
         }
 
         function toggleGistPanel(btnId) {
@@ -4526,12 +4532,8 @@
                 actualizarBotonGistMerge();
                 actualizarEstadoBotonesGist();
                 const _gistCompleto = GistSync.getToken() && (GistSync.getGistId() || '').length > 10;
-                const _panelesGist = document.querySelectorAll('#modal-gist .gist-panel');
-                _panelesGist.forEach(p => p.classList.add('sin-transicion'));
-                _gistSetPanel('btn-gist-panel-limites', false);
-                _gistSetPanel('btn-gist-panel-conexion', !_gistCompleto);
-                void document.getElementById('modal-gist').offsetHeight;
-                _panelesGist.forEach(p => p.classList.remove('sin-transicion'));
+                _gistSetPanel('btn-gist-panel-limites', false, false);
+                _gistSetPanel('btn-gist-panel-conexion', !_gistCompleto, false);
             });
             _gistLimitesTemp = null;
             _actualizarCampoLimite();
@@ -5542,8 +5544,7 @@
             const elRef = document.getElementById('edit-referencia-compensatorio');
             if (elRef) {
                 const esCompensatorio = tipoEspecial?.id === 'compensatorio';
-                const grupoRef = document.getElementById('grupo-referencia-compensatorio');
-                if (grupoRef) grupoRef.classList.toggle('expanded', esCompensatorio);
+                setColapsable(document.getElementById('grupo-referencia-compensatorio'), esCompensatorio);
                 if (!esCompensatorio) elRef.value = '';
             }
 
@@ -9360,7 +9361,7 @@
                     textContent: `${_formatoFechaHistorial(tramo.desde)}${esActual ? ' (actual)' : ''}`
                 }));
                 infoSection.appendChild(Object.assign(document.createElement('div'), {
-                    className: 'btn-perfil-badge',
+                    className: 'btn-perfil-detalle',
                     textContent: diasTexto
                 }));
 

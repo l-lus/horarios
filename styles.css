@@ -50,6 +50,7 @@
     --transition-anim: opacity var(--dur-anim) var(--ease-anim), transform var(--dur-anim) var(--ease-anim);
     --transition-collapse: grid-template-rows var(--dur-collapse) ease-out, opacity var(--dur-collapse) ease-out;
     --transition-ui: var(--dur-anim) ease;
+    --opacity-disabled: 0.35;
     --modal-overlay: rgba(0, 0, 0, 0.5);
     --touch-target: 48px;
     --input-height: 48px;
@@ -675,11 +676,15 @@ button:disabled {
 
 /* ─── COLAPSABLE ─────────────────────────────────────────────────────────────── */
 
+/* Cerrado: visibility:hidden (tras la animación) saca el contenido del orden de Tab
+   y del árbol de accesibilidad sin afectar el layout ni las mediciones en JS. */
 .collapsible {
+    --vis-delay: var(--dur-collapse);
     display: grid;
     grid-template-rows: 0fr;
     opacity: 0;
-    transition: var(--transition-collapse);
+    visibility: hidden;
+    transition: var(--transition-collapse), visibility 0s linear var(--vis-delay);
 }
 
 .collapsible.sin-transicion {
@@ -687,8 +692,10 @@ button:disabled {
 }
 
 .collapsible.expanded {
+    --vis-delay: 0s;
     grid-template-rows: 1fr;
     opacity: 1;
+    visibility: visible;
 }
 
 .collapsible-inner,
@@ -723,7 +730,7 @@ button:disabled {
 
 #gist-rango-horario.disabled,
 #gist-limite-sync.disabled {
-    opacity: 0.35;
+    opacity: var(--opacity-disabled);
     pointer-events: none;
 }
 
@@ -818,7 +825,7 @@ button:disabled {
 }
 
 #modal-gist .settings-list>button:disabled>* {
-    opacity: 0.35;
+    opacity: var(--opacity-disabled);
 }
 
 .settings-list-text {
@@ -1196,7 +1203,7 @@ button:disabled .toggle-switch {
 
 .registro-horas,
 .cal-popup-3l,
-.btn-perfil-badge {
+.btn-perfil-detalle {
     font-size: var(--text-sm);
     color: var(--text-muted);
 }
@@ -1812,7 +1819,7 @@ button:disabled .toggle-switch {
 /* ─── SECCIONES COLAPSABLES ──────────────────────────────────────────────────── */
 
 #botones-historico {
-    transition: var(--transition-collapse), padding var(--dur-anim) ease-out, margin var(--dur-anim) ease-out;
+    transition: var(--transition-collapse), padding var(--dur-anim) ease-out, margin var(--dur-anim) ease-out, visibility 0s linear var(--vis-delay);
     padding-top: 0;
     margin-bottom: 0;
 }

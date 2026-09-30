@@ -818,7 +818,7 @@ button:disabled {
     font-weight: var(--fw-semibold);
 }
 
-.gist-panel {
+.gist-panel-contenido {
     padding: var(--space-md);
 }
 

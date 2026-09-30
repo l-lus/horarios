@@ -4489,7 +4489,8 @@
             const panel = document.getElementById(btn?.getAttribute('aria-controls') || '');
             if (!btn || !panel) return;
             btn.setAttribute('aria-expanded', String(abierto));
-            panel.hidden = !abierto;
+            panel.inert = !abierto;
+            panel.classList.toggle('expanded', abierto);
         }
 
         function toggleGistPanel(btnId) {
@@ -4521,8 +4522,12 @@
                 actualizarBotonGistMerge();
                 actualizarEstadoBotonesGist();
                 const _gistCompleto = GistSync.getToken() && (GistSync.getGistId() || '').length > 10;
+                const _panelesGist = document.querySelectorAll('#modal-gist .gist-panel');
+                _panelesGist.forEach(p => p.classList.add('sin-transicion'));
                 _gistSetPanel('btn-gist-panel-limites', false);
                 _gistSetPanel('btn-gist-panel-conexion', !_gistCompleto);
+                void document.getElementById('modal-gist').offsetHeight;
+                _panelesGist.forEach(p => p.classList.remove('sin-transicion'));
             });
             _gistLimitesTemp = null;
             _actualizarCampoLimite();

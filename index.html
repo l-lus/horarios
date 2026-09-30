@@ -689,8 +689,8 @@
                                     </svg>
                                     <span class="settings-list-text">
                                         <span>Popup hover calendario (PC)</span>
-                                        <span class="settings-list-desc">El pop-up del calendario se abre
-                                            automáticamente al pasar el mouse sobre el día.</span>
+                                        <span class="settings-list-desc">Mostrá un resumen del día al pasar el
+                                            mouse, sin hacer clic</span>
                                     </span>
                                     <span class="toggle-switch" aria-hidden="true"></span>
                                 </button>
@@ -804,7 +804,7 @@
                                             todos los registros, en vez de definirlo por día</span>
                                     </span>
                                     <span class="toggle-switch" aria-hidden="true"></span>
-                                </button>
+                                </button>                            
                             </div>
                         </div>
                         <div class="config-actions">
@@ -1062,83 +1062,139 @@
                 </h3>
             </div>
             <div class="modal-panel-body custom-scroll">
-                <div class="form-group">
-                    <label for="gist-token">Personal Access Token</label>
-                    <div class="input-with-btn">
-                        <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxx" maxlength="256"
-                            autocomplete="off" />
-                        <button class="time-btn" id="btn-toggle-token" title="Mostrar/ocultar token">
-                            <svg class="icon">
-                                <use href="#icon-eye" />
-                            </svg>
-                        </button>
-                        <button class="time-btn" id="btn-crear-token" title="Crear token en GitHub">
-                            <svg class="icon">
-                                <use href="#icon-plus" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="gist-id">Gist ID</label>
-                    <div class="input-with-btn">
-                        <input type="text" id="gist-id" placeholder="Dejar vacío para crear uno nuevo" maxlength="40"
-                            autocomplete="off" />
-                        <button class="time-btn" id="btn-gist-abrir" title="Abrir en GitHub">
-                            <svg class="icon">
-                                <use href="#icon-external-link" />
-                            </svg>
-                        </button>
+                <div class="gist-estado" id="gist-estado">
+                    <svg class="icon">
+                        <use href="#icon-cloud" />
+                    </svg>
+                    <div>
+                        <div class="gist-estado-titulo" id="gist-estado-titulo">Sin configurar</div>
+                        <div class="settings-list-desc" id="gist-ultima-sync">Sin sincronizar</div>
                     </div>
                 </div>
 
-                <div class="config-actions">
-                    <label>Acciones</label>
-                    <div class="flex-row">
-                        <button class="btn-export flex-1" id="btn-gist-subir">
-                            <svg class="icon">
-                                <use href="#icon-cloud-upload" />
-                            </svg> Subir
-                        </button>
-                        <button class="btn-backup flex-1" id="btn-gist-bajar">
-                            <svg class="icon">
-                                <use href="#icon-cloud-download" />
-                            </svg> Bajar
-                        </button>
-                    </div>
+                <div class="gist-acciones">
+                    <button id="btn-gist-subir">
+                        <svg class="icon">
+                            <use href="#icon-cloud-upload" />
+                        </svg>
+                        <span>Subir</span>
+                    </button>
+                    <button id="btn-gist-bajar">
+                        <svg class="icon">
+                            <use href="#icon-cloud-download" />
+                        </svg>
+                        <span>Bajar</span>
+                    </button>
                 </div>
-                <div class="form-group form-group-mt-half">
+
+                <div class="config-actions">
                     <label>Automatización</label>
-                    <div class="flex-row">
-                        <button id="btn-toggle-gist-backup" class="flex-1">
-                            <span id="label-gist-backup">Sin automatizar</span>
-                            <span id="hint-gist-backup">—</span>
+                    <div class="settings-list">
+                        <button id="btn-toggle-gist-backup">
+                            <svg class="icon">
+                                <use href="#icon-cloud" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Sincronización automática</span>
+                                <span class="settings-list-desc" id="hint-gist-backup"></span>
+                                <span class="gist-valor" id="label-gist-backup">Sin automatizar</span>
+                            </span>
                         </button>
                         <button id="btn-toggle-gist-merge">
                             <svg class="icon" id="icon-gist-merge">
                                 <use href="#icon-replace-swap" />
                             </svg>
-                            <span id="hint-gist-merge">Reemplazar</span>
+                            <span class="settings-list-text">
+                                <span>Al bajar datos</span>
+                                <span class="settings-list-desc" id="desc-gist-merge"></span>
+                                <span class="gist-valor" id="hint-gist-merge">Reemplazar</span>
+                            </span>
                         </button>
-                    </div>
-                    <div id="gist-limite-sync">
-                        <div class="form-group">
-                            <label id="gist-limite-label">Límite por hora</label>
-                            <div class="input-number-group input-number-group--embed">
-                                <span id="gist-limite-valor" class="input-number-display">0</span>
-                                <button class="btn-increment">+</button>
-                                <button class="btn-increment">-</button>
+                        <button id="btn-gist-panel-limites" class="gist-panel-toggle" aria-expanded="false"
+                            aria-controls="gist-panel-limites">
+                            <svg class="icon">
+                                <use href="#icon-clock" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Límites y horario</span>
+                                <span class="settings-list-desc" id="gist-limites-resumen">—</span>
+                            </span>
+                            <svg class="icon icon-indicator">
+                                <use href="#icon-chevron-right" />
+                            </svg>
+                        </button>
+                        <div class="gist-panel" id="gist-panel-limites" hidden>
+                            <div id="gist-limite-sync">
+                                <div class="form-group">
+                                    <label id="gist-limite-label">Límite por hora</label>
+                                    <div class="input-number-group input-number-group--embed">
+                                        <span id="gist-limite-valor" class="input-number-display">0</span>
+                                        <button class="btn-increment">+</button>
+                                        <button class="btn-increment">-</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="gist-rango-horario">
+                                <label>Desde</label>
+                                <input type="text" id="gist-rango-desde" inputmode="numeric" maxlength="5"
+                                    aria-label="Desde" />
+                                <label>Hasta</label>
+                                <input type="text" id="gist-rango-hasta" inputmode="numeric" maxlength="5"
+                                    aria-label="Hasta" />
                             </div>
                         </div>
                     </div>
-                    <div id="gist-rango-horario">
-                        <label>Desde</label>
-                        <input type="text" id="gist-rango-desde" inputmode="numeric" maxlength="5" aria-label="Desde" />
-                        <label>Hasta</label>
-                        <input type="text" id="gist-rango-hasta" inputmode="numeric" maxlength="5" aria-label="Hasta" />
+                </div>
+
+                <div class="config-actions">
+                    <label>Conexión</label>
+                    <div class="settings-list">
+                        <button id="btn-gist-panel-conexion" class="gist-panel-toggle" aria-expanded="false"
+                            aria-controls="gist-panel-conexion">
+                            <svg class="icon">
+                                <use href="#icon-gist" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Token y Gist ID</span>
+                                <span class="settings-list-desc" id="gist-conexion-resumen">Sin configurar</span>
+                            </span>
+                            <svg class="icon icon-indicator">
+                                <use href="#icon-chevron-right" />
+                            </svg>
+                        </button>
+                        <div class="gist-panel" id="gist-panel-conexion" hidden>
+                            <div class="form-group">
+                                <label for="gist-token">Personal Access Token</label>
+                                <div class="input-with-btn">
+                                    <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxx" maxlength="256"
+                                        autocomplete="off" />
+                                    <button class="time-btn" id="btn-toggle-token" title="Mostrar/ocultar token">
+                                        <svg class="icon">
+                                            <use href="#icon-eye" />
+                                        </svg>
+                                    </button>
+                                    <button class="time-btn" id="btn-crear-token" title="Crear token en GitHub">
+                                        <svg class="icon">
+                                            <use href="#icon-plus" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="gist-id">Gist ID</label>
+                                <div class="input-with-btn">
+                                    <input type="text" id="gist-id" placeholder="Dejar vacío para crear uno nuevo"
+                                        maxlength="40" autocomplete="off" />
+                                    <button class="time-btn" id="btn-gist-abrir" title="Abrir en GitHub">
+                                        <svg class="icon">
+                                            <use href="#icon-external-link" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="config-hint-text" id="gist-ultima-sync">Sin sincronizar</div>
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">
@@ -1564,8 +1620,7 @@
                         </svg>
                         <span class="settings-list-text">
                             <span>Incluir banco de horas</span>
-                            <span class="settings-list-desc">Ajusta el aviso según las horas que debés o tenés a favor
-                                en la semana</span>
+                            <span class="settings-list-desc">Ajusta el aviso según las horas que debés o tenés a favor en la semana</span>
                         </span>
                         <span class="toggle-switch" aria-hidden="true"></span>
                     </button>
@@ -1575,8 +1630,7 @@
                         </svg>
                         <span class="settings-list-text">
                             <span>Solo el último día hábil</span>
-                            <span class="settings-list-desc">Aplica ese ajuste únicamente el último día hábil de la
-                                semana, no todos los días</span>
+                            <span class="settings-list-desc">Aplica ese ajuste únicamente el último día hábil de la semana, no todos los días</span>
                         </span>
                         <span class="toggle-switch" aria-hidden="true"></span>
                     </button>

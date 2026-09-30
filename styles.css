@@ -749,6 +749,93 @@ button:disabled {
 }
 
 
+/* ─── GIST: estado, acciones y paneles ───────────────────────────────────────── */
+
+#modal-gist .modal-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.gist-estado {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border-radius: var(--radius);
+    background: var(--c-active-bg);
+}
+
+.gist-estado .icon {
+    width: 1.8em;
+    height: 1.8em;
+    flex-shrink: 0;
+    color: var(--c-active);
+}
+
+.gist-estado--off {
+    background: var(--input-bg);
+}
+
+.gist-estado--off .icon {
+    color: var(--text-muted);
+}
+
+.gist-estado-titulo {
+    font-weight: var(--fw-bold);
+}
+
+.gist-acciones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+.gist-acciones button {
+    flex-direction: column;
+    padding: var(--space-xl) var(--space-md);
+    background: var(--input-bg);
+}
+
+.gist-acciones .icon {
+    width: 1.8em;
+    height: 1.8em;
+    color: var(--text-muted);
+}
+
+#modal-gist .settings-list>button {
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.settings-list-text {
+    flex: 1;
+}
+
+.gist-valor {
+    color: var(--c-active);
+    font-size: var(--text-sm);
+    font-weight: var(--fw-semibold);
+}
+
+.gist-panel {
+    padding: var(--space-md);
+}
+
+.gist-panel input,
+.gist-panel .time-btn,
+.gist-panel .input-number-group {
+    background: var(--bg-card);
+}
+
+.gist-panel-toggle .icon-indicator {
+    transition: transform var(--dur-fast);
+}
+
+.gist-panel-toggle[aria-expanded="true"] .icon-indicator {
+    transform: rotate(90deg);
+}
+
 #gist-merge-resumen {
     font-size: var(--text-sm);
     color: var(--text-muted);

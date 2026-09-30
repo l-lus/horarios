@@ -4459,6 +4459,42 @@
 
             const estadoBackup = _gistEstadoAutoSyncActual();
             _setBtnDisabled('btn-toggle-gist-merge', !(ambosCompletos && estadoBackup === 1));
+
+            const estadoEl = document.getElementById('gist-estado');
+            const tituloEl = document.getElementById('gist-estado-titulo');
+            const conexionEl = document.getElementById('gist-conexion-resumen');
+            estadoEl?.classList.toggle('gist-estado--off', !ambosCompletos);
+            if (tituloEl) tituloEl.textContent = ambosCompletos ? 'Conectado' : soloToken ? 'Falta el Gist ID' : 'Sin configurar';
+            if (conexionEl) {
+                conexionEl.textContent = ambosCompletos
+                    ? `Configurado · ${gistId.slice(0, 6)}…${gistId.slice(-4)}`
+                    : soloToken ? 'Token cargado · falta el Gist ID' : 'Ingresá tu token para empezar';
+            }
+            _actualizarResumenLimites();
+        }
+
+        function _actualizarResumenLimites() {
+            const el = document.getElementById('gist-limites-resumen');
+            if (!el) return;
+            const tipo = _tipoSyncActual();
+            if (!tipo) { el.textContent = 'Activá la sincronización automática para usarlos'; return; }
+            const limite = _gistLimitesTemp ? _gistLimitesTemp[tipo] : GistSync.getSyncLimite(tipo);
+            const desde = document.getElementById('gist-rango-desde')?.value || '--:--';
+            const hasta = document.getElementById('gist-rango-hasta')?.value || '--:--';
+            el.textContent = `${limite === 0 ? 'Sin límite' : `${limite} por hora`} · ${desde} – ${hasta}`;
+        }
+
+        function _gistSetPanel(btnId, abierto) {
+            const btn = document.getElementById(btnId);
+            const panel = document.getElementById(btn?.getAttribute('aria-controls') || '');
+            if (!btn || !panel) return;
+            btn.setAttribute('aria-expanded', String(abierto));
+            panel.hidden = !abierto;
+        }
+
+        function toggleGistPanel(btnId) {
+            const btn = document.getElementById(btnId);
+            _gistSetPanel(btnId, btn?.getAttribute('aria-expanded') !== 'true');
         }
 
         function abrirModalGist() {
@@ -4484,6 +4520,9 @@
                 actualizarBotonGistBackup();
                 actualizarBotonGistMerge();
                 actualizarEstadoBotonesGist();
+                const _gistCompleto = GistSync.getToken() && (GistSync.getGistId() || '').length > 10;
+                _gistSetPanel('btn-gist-panel-limites', false);
+                _gistSetPanel('btn-gist-panel-conexion', !_gistCompleto);
             });
             _gistLimitesTemp = null;
             _actualizarCampoLimite();
@@ -4723,6 +4762,8 @@
             const iconEl = document.getElementById('icon-gist-merge')?.querySelector('use');
             const esMerge = GistSync.getMergeBehavior() === 'merge';
             if (hint) hint.textContent = esMerge ? 'Combinar' : 'Reemplazar';
+            const desc = document.getElementById('desc-gist-merge');
+            if (desc) desc.textContent = esMerge ? ' · une Gist con tus datos locales' : ' · sustituye tus datos locales';
             if (iconEl) iconEl.setAttribute('href', esMerge ? '#icon-combine' : '#icon-replace-swap');
         }
 
@@ -4743,9 +4784,9 @@
             if (!btn) return;
 
             const configs = [
-                { texto: 'Sin automatizar', hint: '', activo: false },
-                { texto: 'Restaurar', hint: '', activo: true },
-                { texto: 'Respaldar', hint: '', activo: true }
+                { texto: 'Sin automatizar', hint: ' · solo sincronizás de forma manual', activo: false },
+                { texto: 'Restaurar', hint: ' · baja tus datos de Gist al abrir la app', activo: true },
+                { texto: 'Respaldar', hint: ' · sube tus datos a Gist al abrir la app', activo: true }
             ];
             const c = configs[estado];
             _setBtnActivo(btn.id, c.activo);
@@ -4784,6 +4825,7 @@
             if (!contenedor) return;
             if (!tipo) {
                 contenedor.classList.add('disabled');
+                _actualizarResumenLimites();
                 return;
             }
             const limite = _gistLimitesTemp ? _gistLimitesTemp[tipo] : GistSync.getSyncLimite(tipo);
@@ -4792,6 +4834,7 @@
             if (input) input.textContent = limite;
             if (label) label.textContent = tipo === 'bajar' ? 'Límite bajadas por hora (0 = sin límite)' : 'Límite subidas por hora (0 = sin límite)';
             contenedor.classList.remove('disabled');
+            _actualizarResumenLimites();
         }
 
         function cambiarLimiteSync(delta) {
@@ -4967,6 +5010,8 @@
             ejecutarExportacion,
             toggleCamposRangoExport,
             actualizarEstadoBotonesGist,
+            actualizarResumenLimites: _actualizarResumenLimites,
+            toggleGistPanel,
             actualizarBotonesHistorico,
             abrirModalGist,
             cerrarModalGist,
@@ -8286,6 +8331,7 @@
             setTimerAutoVista: (v) => { _timerAutoVista = v; },
             _getLabelFondo,
             _iniciarCicloStats,
+            _detenerCicloStats,
             _cicloStatsActivo,
             _prepararMostrarFaseAlRenderizar,
             _refrescarFormatoCortoStatsCache,
@@ -8326,6 +8372,7 @@
             actualizarBotonesHistorico, abrirModalGist, cerrarModalGist, guardarConfigGist,
             toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
             toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite,
+            actualizarResumenLimites, toggleGistPanel,
             detenerCambioLimite, gistSubir, gistBajar
         } = UIGistYRespaldo;
 
@@ -8358,7 +8405,7 @@
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
             actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
             alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
-            _getLabelFondo, _iniciarCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
+            _getLabelFondo, _iniciarCicloStats, _detenerCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
             _refrescarFormatoCortoStatsCache,
         } = UITarjetaFichaje;
 
@@ -9483,7 +9530,7 @@
             limpiarCampo, mostrarConfigOnboarding, mostrarExportar, mostrarFiltros, mostrarImportar, mostrarToast,
             mostrarconfig, navegarCalendario, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, obtenerOrdenCards, pegarHoraActual, poblarSelectoresTipos,
             resetearBoton, setFondoCard, setModoEstadisticas, setTiempoExpansionBotones, toggleBloqueoEdicion, toggleBloqueoEdicionGrupo,
-            toggleCamposRangoExport, toggleCredito, toggleFondoCard, toggleFormulario, toggleGistBackup, toggleGistMerge,
+            toggleCamposRangoExport, toggleCredito, toggleFondoCard, toggleFormulario, toggleGistBackup, toggleGistMerge, toggleGistPanel, actualizarResumenLimites,
             toggleHistorico, toggleHoverPopupCalendario, toggleIgnorarTiempoFuera, toggleLogicaCubierto, toggleModoLote, toggleObjetivoPorRegistro,
             togglePeriodoStats, togglePersistirTarjetas, toggleSeccionReporte, toggleStats, toggleTimerBreakMain, toggleVerToken,
             toggleVisibilidadCard, toggleVistaHistorico, vistaActual: D.vistaActual, refrescarConfigSiVisible
@@ -9824,6 +9871,8 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-gist-bajar')?.addEventListener('click', () => UILogic.gistBajar());
     $('btn-toggle-gist-backup')?.addEventListener('click', () => UILogic.toggleGistBackup());
     $('btn-toggle-gist-merge')?.addEventListener('click', () => UILogic.toggleGistMerge());
+    document.querySelectorAll('.gist-panel-toggle').forEach(b => b.addEventListener('click', () => UILogic.toggleGistPanel(b.id)));
+    ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => $(id)?.addEventListener('input', () => UILogic.actualizarResumenLimites()));
 
     const inputLimite = $('gist-limite-valor');
     if (inputLimite) {

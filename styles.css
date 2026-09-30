@@ -28,6 +28,7 @@
     --c-green: rgba(76, 172, 140, 0.8);
     --c-green-bg: rgba(96, 172, 148, 0.1);
     --c-active: var(--c-blue);
+    --c-active-bg: rgba(76, 114, 172, 0.1);
     --c-red: rgba(172, 90, 76, 0.8);
     --c-red-pulse: rgba(192, 93, 118, 0.4);
     --c-purple: rgba(129, 76, 172, 0.8);
@@ -666,9 +667,9 @@ button:disabled {
 }
 
 .btn-activo:not(.settings-list button, .drag-handle) {
-    background: var(--c-green-bg);
-    color: var(--c-green);
-    border-color: var(--c-green);
+    background: var(--c-active-bg);
+    color: var(--c-active);
+    border-color: var(--c-active);
     font-weight: var(--fw-bold);
 }
 
@@ -1415,9 +1416,9 @@ button:disabled .toggle-switch {
 }
 
 .btn-mes-calendario.activo {
-    border-color: var(--c-green);
-    background: var(--c-green-bg);
-    color: var(--c-green);
+    border-color: var(--c-active);
+    background: var(--c-active-bg);
+    color: var(--c-active);
 }
 
 .selector-meses-anio-header {
@@ -1853,7 +1854,7 @@ button:disabled .toggle-switch {
 
 body.config-onboarding .config-onboarding-banner {
     display: block;
-    background: var(--c-green-bg);
+    background: var(--c-active-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: var(--space-lg);
@@ -2090,9 +2091,9 @@ body.config-onboarding #theme-toggle-config {
 }
 
 .day-checkbox input:checked~span {
-    background: var(--c-green-bg);
-    color: var(--c-green);
-    border: 1px solid var(--c-green);
+    background: var(--c-active-bg);
+    color: var(--c-active);
+    border: 1px solid var(--c-active);
     font-weight: var(--fw-bold);
     transform: scale(1.1);
 }

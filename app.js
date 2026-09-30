@@ -3380,8 +3380,14 @@
                 infoSection.appendChild(Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre', textContent: p.nombre }));
                 const badge = Object.assign(document.createElement('div'), {
                     className: 'btn-perfil-badge',
-                    textContent: p.esActual ? `${countText} · Activo` : countText
+                    textContent: countText
                 });
+                if (p.esActual) {
+                    badge.append(' · ', Object.assign(document.createElement('span'), {
+                        className: 'btn-perfil-estado',
+                        textContent: 'Activo'
+                    }));
+                }
                 infoSection.appendChild(badge);
 
                 const editBtn = Object.assign(document.createElement('button'), {
@@ -9872,7 +9878,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260929';
+        const _v = '-v260926';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

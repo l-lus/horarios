@@ -2004,12 +2004,11 @@ body.config-onboarding #theme-toggle-config {
 }
 
 .btn-perfil-select.activo {
-    background: var(--c-green-bg);
     font-weight: var(--fw-bold);
     cursor: default;
 }
 
-.btn-perfil-select.activo .btn-perfil-badge {
+.btn-perfil-estado {
     color: var(--c-green);
 }
 
@@ -2555,7 +2554,7 @@ button.campo-flash-color {
     }
 
     :is(.registro-item, .header-profile-btn,
-        .btn-perfil-select.activo, .btn-perfil-edit,
+        .btn-perfil-edit,
         .registro-mes-header, .btn-mes-calendario,
         .calendario-titulo):hover {
         filter: var(--hover);
@@ -2576,7 +2575,7 @@ button.campo-flash-color {
     }
 
     .settings-list>button:hover:not(:disabled),
-    .btn-perfil-select:not(.activo):hover {
+    .btn-perfil-select:hover {
         background: var(--surface-row-hover);
     }
 }

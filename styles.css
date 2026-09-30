@@ -2109,7 +2109,14 @@ body.config-onboarding #theme-toggle-config {
 }
 
 .btn-perfil-estado {
+    flex-shrink: 0;
+    padding: 1px var(--space-sm);
+    background: var(--c-active-bg);
     color: var(--c-active);
+    border: 1px solid var(--c-active);
+    border-radius: var(--radius);
+    font-size: var(--text-sm);
+    font-weight: var(--fw-bold);
 }
 
 .btn-perfil-info {
@@ -2121,8 +2128,18 @@ body.config-onboarding #theme-toggle-config {
 }
 
 .btn-perfil-nombre {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
     font-size: var(--text-base);
     font-weight: var(--fw-semibold);
+}
+
+.btn-perfil-nombre-texto {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .btn-perfil-edit {

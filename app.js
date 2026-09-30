@@ -3377,18 +3377,22 @@
 
                 const countText = `${p.totalRegistros} registro${TimeUtils.pluralizar(p.totalRegistros)}`;
                 const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
-                infoSection.appendChild(Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre', textContent: p.nombre }));
-                const badge = Object.assign(document.createElement('div'), {
-                    className: 'btn-perfil-badge',
-                    textContent: countText
-                });
+                const nombreEl = Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre' });
+                nombreEl.appendChild(Object.assign(document.createElement('span'), {
+                    className: 'btn-perfil-nombre-texto',
+                    textContent: p.nombre
+                }));
                 if (p.esActual) {
-                    badge.append(' · ', Object.assign(document.createElement('span'), {
+                    nombreEl.appendChild(Object.assign(document.createElement('span'), {
                         className: 'btn-perfil-estado',
                         textContent: 'Activo'
                     }));
                 }
-                infoSection.appendChild(badge);
+                infoSection.appendChild(nombreEl);
+                infoSection.appendChild(Object.assign(document.createElement('div'), {
+                    className: 'btn-perfil-badge',
+                    textContent: countText
+                }));
 
                 const editBtn = Object.assign(document.createElement('button'), {
                     className: 'btn-perfil-edit',

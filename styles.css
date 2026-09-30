@@ -27,6 +27,7 @@
     --c-blue: rgba(76, 114, 172, 0.8);
     --c-green: rgba(76, 172, 140, 0.8);
     --c-green-bg: rgba(96, 172, 148, 0.1);
+    --c-active: var(--c-blue);
     --c-red: rgba(172, 90, 76, 0.8);
     --c-red-pulse: rgba(192, 93, 118, 0.4);
     --c-purple: rgba(129, 76, 172, 0.8);
@@ -840,15 +841,13 @@ button:disabled {
 
 .settings-list>button .icon:first-child,
 .drag-handle .icon:first-child {
-    color: var(--c-green);
-    opacity: 0.9;
+    color: var(--text-muted);
     flex-shrink: 0;
 }
 
 .settings-list .btn-delete,
 .settings-list .btn-delete .icon:first-child {
     color: var(--c-red);
-    opacity: 1;
 }
 
 /* ─── FILA CON DESCRIPCIÓN (estilo OneUI: título + subtítulo) ────────────────── */
@@ -894,7 +893,7 @@ button:disabled {
 }
 
 .btn-activo .toggle-switch {
-    background: var(--c-green);
+    background: var(--c-active);
 }
 
 .btn-activo .toggle-switch::after {
@@ -2009,7 +2008,7 @@ body.config-onboarding #theme-toggle-config {
 }
 
 .btn-perfil-estado {
-    color: var(--c-green);
+    color: var(--c-active);
 }
 
 .btn-perfil-info {

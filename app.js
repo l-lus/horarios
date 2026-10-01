@@ -9305,8 +9305,8 @@
 
             const el = $('config-total-feedback');
             if (el) {
-                if (horas === 0) el.textContent = `(Registro libre sin objetivos)`;
-                else el.textContent = `(Total semanal: ${TimeUtils.horasATexto(total, 'short')})`;
+                if (horas === 0) el.textContent = 'Registro libre sin objetivos';
+                else el.textContent = `Total semanal: ${TimeUtils.horasATexto(total, 'short')}`;
             }
 
             if (seleccionados > 0) {

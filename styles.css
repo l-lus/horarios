@@ -414,6 +414,33 @@ h2.mutacion-saliente.no-margin,
     cursor: not-allowed;
 }
 
+.input-number-group--pill {
+    flex-shrink: 0;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+}
+
+#modal-config .config-actions .input-number-group--pill button {
+    justify-content: center;
+    text-align: center;
+}
+
+.input-number-group--pill .btn-increment {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+}
+
+.input-number-group--pill .input-number-display {
+    flex: none;
+    min-width: 3.5rem;
+}
+
 .input-number-group--embed {
     background: var(--input-bg);
     border: 1px solid var(--border);
@@ -816,15 +843,15 @@ button:disabled {
 }
 
 /* Deshabilitado: mismo criterio que #gist-limite-sync.disabled (todo el contenido atenuado) */
-#modal-gist .settings-list>button>* {
+.settings-list>button>* {
     transition: opacity var(--transition-ui);
 }
 
-#modal-gist .settings-list>button:disabled {
+.settings-list>button:disabled {
     color: var(--text-muted);
 }
 
-#modal-gist .settings-list>button:disabled>* {
+.settings-list>button:disabled>* {
     opacity: var(--opacity-disabled);
 }
 
@@ -936,8 +963,38 @@ button:disabled {
     padding: var(--space-lg) var(--space-md);
 }
 
-.settings-list>button:not(:last-child) {
+.settings-list>button:not(:last-child),
+.settings-list>.settings-list-row:not(:last-child) {
     border-bottom: 1px solid var(--border);
+}
+
+.settings-list-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-lg) var(--space-md);
+}
+
+.settings-list-row>.settings-list-text,
+.settings-list-row-head>.settings-list-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-list-row--stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+}
+
+.settings-list-row-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.settings-list-row .week-selector {
+    margin-bottom: 0;
 }
 
 .settings-list>button:active:not(:disabled) {
@@ -949,6 +1006,8 @@ button:disabled {
 }
 
 .settings-list>button .icon:first-child,
+.settings-list-row .icon:first-child,
+.settings-list-row-head .icon:first-child,
 .drag-handle .icon:first-child {
     color: var(--text-muted);
     flex-shrink: 0;
@@ -1911,40 +1970,6 @@ button:disabled .toggle-switch {
     text-align: right;
     display: block;
     margin-top: var(--space-xs);
-}
-
-.config-total-feedback-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--space-xs);
-}
-
-.config-total-feedback-row .config-hint-text {
-    margin-top: 0;
-}
-
-.btn-historial-dias {
-    width: auto;
-    background: none;
-    border: none;
-    padding: 2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: color var(--transition-ui);
-}
-
-.btn-historial-dias .icon {
-    width: 16px;
-    height: 16px;
-}
-
-.btn-historial-dias:hover {
-    color: var(--text-main);
 }
 
 .empty-state {

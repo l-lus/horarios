@@ -4950,43 +4950,126 @@
                 svg.appendChild(use);
                 return svg;
             };
-            const _mkStrong = (text, cls) => Object.assign(document.createElement('strong'), { className: cls || '', textContent: String(text) });
-            const _mkRow = (...nodes) => {
-                const d = document.createElement('div');
-                nodes.forEach(n => d.appendChild(typeof n === 'string' ? document.createTextNode(n) : n));
-                return d;
+            const _el = (tag, cls, texto) => {
+                const e = document.createElement(tag);
+                if (cls) e.className = cls;
+                if (texto != null) e.textContent = String(texto);
+                return e;
+            };
+            const _plural = TimeUtils.pluralizar;
+            const _colapsable = (contenido) => {
+                const wrap = _el('div', 'collapsible');
+                const inner = _el('div', 'collapsible-inner');
+                inner.appendChild(contenido);
+                wrap.appendChild(inner);
+                return wrap;
+            };
+            const _fila = (label, valorEl, conBorde) => {
+                const fila = _el('div', 'gist-res-fila' + (conBorde ? ' con-borde' : ''));
+                fila.appendChild(_el('span', 'gist-res-label', label));
+                fila.appendChild(valorEl);
+                return fila;
             };
 
-            const bloqueFilas = document.createElement('div');
-            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-cloud'), ` En Gist `, _mkStrong(soloEnGist.length, 'text-green'), ` registro${TimeUtils.pluralizar(soloEnGist.length)} nuevo${TimeUtils.pluralizar(soloEnGist.length)}`));
-            const filaAmbos = _mkRow(_mkSvg('#icon-combine'), ` En ambos `, _mkStrong(enAmbos.length), ` registro${TimeUtils.pluralizar(enAmbos.length)} (por fecha`);
-            if (complementarios.length > 0) {
-                filaAmbos.appendChild(document.createTextNode(', '));
-                filaAmbos.appendChild(_mkStrong(complementarios.length, 'text-blue'));
-                filaAmbos.appendChild(document.createTextNode(' para completar'));
-            }
-            filaAmbos.appendChild(document.createTextNode(')'));
-            bloqueFilas.appendChild(filaAmbos);
-            bloqueFilas.appendChild(_mkRow(_mkSvg('#icon-save'), ` Local `, _mkStrong(soloLocal.length), ` registro${TimeUtils.pluralizar(soloLocal.length)} no subido${TimeUtils.pluralizar(soloLocal.length)}`));
-            resumenEl.appendChild(bloqueFilas);
+            const nLocal = enAmbos.length + soloLocal.length;
+            const nGist = registrosNormalizados.length;
+            const nNuevos = soloEnGist.length;
+            const nComp = complementarios.length;
 
-            const configEl = Object.assign(document.createElement('div'), {
-                id: '_gist-config-cambios',
-                textContent: configCambios.length > 0 ? `⚙ Reemplazar cambiará: ${configCambios.join(', ')}` : '⚙ Sin cambios de configuración'
+            resumenEl.dataset.modo = 'merge';
+
+            const seg = _el('div', 'gist-seg');
+            seg.setAttribute('role', 'radiogroup');
+            seg.setAttribute('aria-label', 'Cómo aplicar los datos del Gist');
+            const segBtns = [['merge', '#icon-combine', 'Combinar'], ['replace', '#icon-replace-swap', 'Reemplazar']].map(([modo, icono, texto]) => {
+                const btn = _el('button', 'gist-seg-btn');
+                btn.type = 'button';
+                btn.dataset.modo = modo;
+                btn.setAttribute('role', 'radio');
+                btn.appendChild(_mkSvg(icono));
+                btn.appendChild(document.createTextNode(texto));
+                btn.addEventListener('click', () => {
+                    if (resumenEl.dataset.modo === modo) return;
+                    resumenEl.dataset.modo = modo;
+                    pintar(true);
+                });
+                seg.appendChild(btn);
+                return btn;
             });
-            resumenEl.appendChild(configEl);
 
-            const footer = document.createElement('div');
-            footer.className = 'gist-resumen-footer';
-            let txtCombinar = `: agrega ${soloEnGist.length} nuevo(s)`;
-            if (complementarios.length > 0) txtCombinar += `, completa ${complementarios.length} registro(s)`;
-            txtCombinar += ', mantiene los locales';
-            footer.appendChild(_mkStrong('Combinar'));
-            footer.appendChild(document.createTextNode(txtCombinar));
-            footer.appendChild(document.createElement('br'));
-            footer.appendChild(_mkStrong('Reemplazar'));
-            footer.appendChild(document.createTextNode(`: usa los ${registrosNormalizados.length} registros del Gist`));
-            resumenEl.appendChild(footer);
+            const res = _el('div', 'gist-res');
+
+            const antesEl = _el('em');
+            const despuesEl = _el('span');
+            const deltaEl = _el('span');
+            const valorReg = _el('span', 'gist-res-valor');
+            valorReg.append(antesEl, despuesEl, deltaEl);
+            res.appendChild(_fila('Registros', valorReg, false));
+
+            let wrapComp = null;
+            if (nComp > 0) {
+                const valorComp = _el('span', 'gist-res-valor');
+                valorComp.append(_el('span', null, String(nComp)), _el('span', 'gist-delta is-info', 'datos faltantes'));
+                wrapComp = _colapsable(_fila('Se completan', valorComp, true));
+                res.appendChild(wrapComp);
+            }
+
+            let cfgValor = null;
+            if (configCambios.length > 0) {
+                cfgValor = _el('span', 'gist-res-valor');
+                res.appendChild(_fila('Configuración', cfgValor, true));
+            }
+
+            let wrapAlerta = null;
+            if (soloLocal.length > 0) {
+                const n = soloLocal.length;
+                const alerta = _el('div', 'gist-alerta');
+                alerta.appendChild(_mkSvg('#icon-alert-triangle'));
+                const txt = _el('span');
+                txt.appendChild(document.createTextNode('Se eliminan '));
+                txt.appendChild(_el('strong', null, `${n} registro${_plural(n)} local${_plural(n)}`));
+                txt.appendChild(document.createTextNode(` que no ${n === 1 ? 'está' : 'están'} en el Gist.`));
+                alerta.appendChild(txt);
+                wrapAlerta = _colapsable(alerta);
+                wrapAlerta.classList.add('gist-alerta-wrap');
+            }
+
+            resumenEl.append(seg, res);
+            if (wrapAlerta) resumenEl.appendChild(wrapAlerta);
+
+            function pintar(animar) {
+                const esMerge = resumenEl.dataset.modo === 'merge';
+                segBtns.forEach(b => {
+                    const activo = b.dataset.modo === resumenEl.dataset.modo;
+                    b.classList.toggle('is-on', activo);
+                    b.setAttribute('aria-checked', String(activo));
+                });
+
+                const despues = esMerge ? nLocal + nNuevos : nGist;
+                const delta = despues - nLocal;
+                antesEl.textContent = `${nLocal} →`;
+                despuesEl.textContent = String(despues);
+                deltaEl.className = 'gist-delta' + (delta > 0 ? ' is-mas' : delta < 0 ? ' is-menos' : '');
+                deltaEl.textContent = delta > 0 ? `+${delta}` : delta < 0 ? String(delta) : 'sin cambios';
+
+                if (cfgValor) {
+                    cfgValor.replaceChildren(esMerge ? _el('em', null, 'sin cambios') : document.createTextNode(configCambios.join(', ')));
+                }
+
+                setColapsable(wrapComp, esMerge, { animar });
+                setColapsable(wrapAlerta, !esMerge, { animar });
+
+                const btnAplicar = document.getElementById('btn-gist-merge-aplicar');
+                if (btnAplicar) {
+                    btnAplicar.classList.toggle('btn-edit', esMerge);
+                    btnAplicar.classList.toggle('btn-delete', !esMerge);
+                }
+                const txtAplicar = document.getElementById('txt-gist-merge-aplicar');
+                if (txtAplicar) txtAplicar.textContent = esMerge ? 'Aplicar combinación' : 'Reemplazar con el Gist';
+                const iconAplicar = document.getElementById('icon-gist-merge-aplicar');
+                if (iconAplicar) iconAplicar.setAttribute('href', esMerge ? '#icon-combine' : '#icon-replace-swap');
+            }
+            pintar(false);
         }
 
         async function gistBajar(modoAutomatico = false) {
@@ -9893,8 +9976,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btn-gist-guardar')?.addEventListener('click', () => UILogic.guardarConfigGist());
     $('btn-gist-volver')?.addEventListener('click', () => UILogic.cerrarModalGist());
 
-    $('btn-gist-merge-combinar')?.addEventListener('click', () => UILogic.gistMergeAplicar('merge'));
-    $('btn-gist-merge-reemplazar')?.addEventListener('click', () => UILogic.gistMergeAplicar('replace'));
+    $('btn-gist-merge-aplicar')?.addEventListener('click', () => UILogic.gistMergeAplicar($('gist-merge-resumen')?.dataset.modo === 'replace' ? 'replace' : 'merge'));
     $('btn-gist-merge-cancelar')?.addEventListener('click', () => UILogic.gistMergeCancelar());
 
     $('btn-toggle-credito')?.addEventListener('click', () => UILogic.toggleCredito());

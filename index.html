@@ -70,6 +70,10 @@
             <circle cx="12" cy="12" r="10" class="icon-line" stroke="currentColor"></circle>
             <polyline points="12 6 12 12 16 14" class="icon-line" stroke="currentColor"></polyline>
         </symbol>
+        <symbol id="icon-alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3 2 20h20zM12 10v4m0 3v.01" />
+        </symbol>
         <symbol id="icon-trash" viewBox="0 0 24 24">
             <polyline points="3 6 5 6 21 6" class="icon-line" stroke="currentColor"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" class="icon-line"
@@ -1270,12 +1274,15 @@
     <div class="modal" id="modal-gist-merge" role="dialog" aria-modal="true" aria-labelledby="modal-gist-merge-titulo">
         <div class="modal-content">
             <div class="modal-panel-header">
-                <h3 id="modal-gist-merge-titulo">
-                    <span class="modal-title-block">
+                <h3 id="modal-gist-merge-titulo" class="gist-merge-titulo">
+                    <span class="gist-merge-badge">
                         <svg class="icon">
                             <use href="#icon-cloud-download" />
                         </svg>
-                        Resumen de datos
+                    </span>
+                    <span class="gist-merge-titulo-txt">
+                        <span>Resumen de datos</span>
+                        <small>Elegí cómo aplicar los datos</small>
                     </span>
                 </h3>
             </div>
@@ -1283,28 +1290,18 @@
                 <div id="gist-merge-resumen"></div>
             </div>
             <div class="modal-panel-footer">
-                <div class="btn-group">
-                    <button class="btn-backup" id="btn-gist-merge-combinar">
-                        <svg class="icon">
-                            <use href="#icon-combine" />
-                        </svg>
-                        Combinar
-                    </button>
-                    <button class="btn-export" id="btn-gist-merge-reemplazar">
-                        <svg class="icon">
-                            <use href="#icon-replace-swap" />
-                        </svg>
-                        Reemplazar
-                    </button>
-                </div>
-                <div class="btn-group">
-                    <button class="btn-cancel" id="btn-gist-merge-cancelar">
-                        <svg class="icon">
-                            <use href="#icon-cancelar" />
-                        </svg>
-                        Cancelar
-                    </button>
-                </div>
+                <button class="btn-edit" id="btn-gist-merge-aplicar">
+                    <svg class="icon">
+                        <use id="icon-gist-merge-aplicar" href="#icon-combine" />
+                    </svg>
+                    <span id="txt-gist-merge-aplicar">Aplicar combinación</span>
+                </button>
+                <button class="btn-cancel gist-merge-cancelar" id="btn-gist-merge-cancelar">
+                    <svg class="icon">
+                        <use href="#icon-cancelar" />
+                    </svg>
+                    Cancelar
+                </button>
             </div>
         </div>
     </div>

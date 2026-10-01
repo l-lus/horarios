@@ -883,16 +883,192 @@ button:disabled {
     transform: rotate(90deg);
 }
 
-#gist-merge-resumen {
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-    line-height: 1.8;
+/* ─── GIST: modal "Resumen de datos" (selector + antes → después) ─────────── */
+
+#modal-gist-merge .modal-panel-header {
+    margin-bottom: var(--space-md);
 }
 
-.gist-resumen-footer {
+.gist-merge-titulo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: 0;
+}
+
+.gist-merge-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    background: var(--c-active-bg);
+    color: var(--c-active);
+}
+
+.gist-merge-titulo-txt {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.gist-merge-titulo-txt small {
     font-size: var(--text-sm);
+    font-weight: var(--fw-medium);
     color: var(--text-muted);
+    margin-top: 2px;
+}
+
+#gist-merge-resumen {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Selector Combinar / Reemplazar */
+.gist-seg {
+    margin-bottom: var(--space-md);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xs);
+    padding: var(--space-xs);
+    border-radius: 16px;
+    background: var(--input-bg);
+}
+
+.gist-seg-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    min-height: 42px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: var(--text-base);
+    font-weight: var(--fw-semibold);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.gist-seg-btn.is-on {
+    background: var(--bg-card);
+    color: var(--text-main);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Resultado antes → después */
+.gist-res {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.gist-res-fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    font-size: var(--text-sm);
+}
+
+.gist-res-fila.con-borde {
+    border-top: 1px solid var(--border);
+}
+
+.gist-alerta-wrap .gist-alerta {
     margin-top: var(--space-md);
+}
+
+.gist-res-label {
+    color: var(--text-muted);
+    flex: none;
+}
+
+.gist-res-valor {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.gist-res-valor em {
+    font-style: normal;
+    font-weight: var(--fw-medium);
+    color: var(--text-muted);
+}
+
+.gist-delta {
+    font-size: 0.72rem;
+    font-weight: var(--fw-bold);
+    padding: 1px var(--space-sm);
+    border-radius: 8px;
+    background: var(--input-bg);
+    color: var(--text-muted);
+}
+
+.gist-delta.is-mas {
+    background: var(--c-green-bg);
+    color: var(--c-green);
+}
+
+.gist-delta.is-menos {
+    background: color-mix(in srgb, var(--c-red) 16%, transparent);
+    color: var(--c-red);
+}
+
+.gist-delta.is-info {
+    background: var(--c-active-bg);
+    color: var(--c-blue);
+}
+
+.gist-alerta {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--c-red) 14%, transparent);
+    color: var(--text-main);
+    font-size: var(--text-sm);
+    line-height: 1.35;
+}
+
+.gist-alerta .icon {
+    flex: none;
+    color: var(--c-red);
+    margin-top: 1px;
+}
+
+/* Footer: confirmar + cancelar */
+#modal-gist-merge .modal-panel-footer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+}
+
+.gist-merge-cancelar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    min-height: var(--touch-target);
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
 }
 
 /* ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────── */

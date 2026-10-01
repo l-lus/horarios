@@ -306,7 +306,39 @@
             return `${d}/${m}/${anioCompleto ? y : y.slice(2)}`;
         }
 
+        // ¿La fecha cae en un día hábil? diasHabiles: array de días (0-6) o, en formato legacy, un número (1-7)
+        function esFechaHabil(fecha, diasHabiles) {
+            const diaSemana = parsearFechaLocal(fecha).getDay();
+            if (Array.isArray(diasHabiles)) return diasHabiles.includes(diaSemana);
+            return diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
+        }
+
+        // ¿`anterior` es exactamente el día previo a `fecha`?
+        function esDiaAnterior(fecha, anterior) {
+            const d = parsearFechaLocal(fecha);
+            d.setDate(d.getDate() - 1);
+            return formatearFechaLocal(d) === anterior;
+        }
+
+        // ['2025-01', '2025-02', '2024-12'] -> Map { '2025' => [...], '2024' => [...] }
+        function agruparMesesPorAnio(mesesOrdenados) {
+            const map = new Map();
+            mesesOrdenados.forEach(mesAnio => {
+                const anio = mesAnio.substring(0, 4);
+                if (!map.has(anio)) map.set(anio, []);
+                map.get(anio).push(mesAnio);
+            });
+            return map;
+        }
+
+        function nombreMesCapitalizado(mesAnio) {
+            const [, m] = mesAnio.split('-');
+            const nombre = nombreMesPorIndice(m - 1);
+            return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+        }
+
         return {
+            esFechaHabil, esDiaAnterior, agruparMesesPorAnio, nombreMesCapitalizado,
             validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
             obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
             horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
@@ -1418,8 +1450,43 @@
             return tipo ? { entrada: tipo.codigo, salida: tipo.codigo } : null;
         }
 
+        // Agrupa registros consecutivos (fechas contiguas, orden descendente) del mismo tipo especial
+        function agruparConsecutivos(registros) {
+            if (!registros || registros.length === 0) return [];
+            const idTipo = (r) => obtenerTipoPorCodigo(r.entrada, r.salida)?.id ?? null;
+
+            const resultado = [];
+            let i = 0;
+            while (i < registros.length) {
+                const actual = registros[i];
+                const tipoActual = idTipo(actual);
+                if (tipoActual === null) {
+                    resultado.push({ tipo: 'individual', registros: [actual] });
+                    i++; continue;
+                }
+
+                const grupo = [actual];
+                let j = i + 1;
+                while (j < registros.length) {
+                    const siguiente = registros[j];
+                    if (idTipo(siguiente) !== tipoActual) break;
+                    if (!TimeUtils.esDiaAnterior(grupo[grupo.length - 1].fecha, siguiente.fecha)) break;
+                    grupo.push(siguiente);
+                    j++;
+                }
+
+                resultado.push(grupo.length > 1
+                    ? { tipo: 'grupo', subtipo: tipoActual, registros: grupo }
+                    : { tipo: 'individual', registros: grupo }
+                );
+                i = j;
+            }
+            return resultado;
+        }
+
         return {
             TIPOS,
+            agruparConsecutivos,
             esRegistroEspecial,
             obtenerTipoPorCodigo,
             obtenerTipoPorId,
@@ -1446,11 +1513,14 @@
             cerrarImportar: () => { },
             descargarJSON: () => { },
             flashCampoTipo: () => { },
+            forzarVista: (vista, fn) => fn(),
             iniciarTimerAutoCierreBotones: () => { },
             limpiarError: () => { },
             mostrarError: () => { },
             mostrarToast: () => { },
             obtenerNombrePerfilSafe: () => '',
+            prepararMostrarFaseAlRenderizar: () => { },
+            refrescarConfigSiVisible: () => { },
             resetearBoton: () => { },
             restaurarBotonGuardarEdicion: () => { },
             setBloqueoEdicion: () => { },
@@ -1633,13 +1703,13 @@
 
         async function _guardarConCicloSiHoy(idOrIds, esHoy, fase = null) {
             const ejecutar = async () => {
-                if (esHoy && fase) UILogic._prepararMostrarFaseAlRenderizar(fase);
+                if (esHoy && fase) notify.prepararMostrarFaseAlRenderizar(fase);
                 const ok = await guardarYActualizar(idOrIds);
-                if (!ok && esHoy && fase) UILogic._prepararMostrarFaseAlRenderizar(null);
+                if (!ok && esHoy && fase) notify.prepararMostrarFaseAlRenderizar(null);
                 return ok;
             };
             return esHoy && vistaActual === 'semana'
-                ? UILogic._forzarVista('diaria', ejecutar)
+                ? notify.forzarVista('diaria', ejecutar)
                 : ejecutar();
         }
 
@@ -1749,7 +1819,7 @@
 
         function _sincronizarPushHoy() {
             const hoy = TimeUtils.obtenerFechaHoy();
-            const esDiaHabil = UILogic._esFechaHabil(hoy, diasHabilesEnFecha(hoy));
+            const esDiaHabil = TimeUtils.esFechaHabil(hoy, diasHabilesEnFecha(hoy));
             const abierto = esDiaHabil && registros.find(r => r.fecha === hoy && r.entrada && !r.salida);
             const habilitado = PushReminder.getHabilitado();
             const nuevoTarget = (habilitado && abierto)
@@ -1774,7 +1844,7 @@
             const { fin } = TimeUtils.obtenerSemanaRangoActual();
             let fecha = fin;
             for (let i = 0; i < 7; i++) {
-                if (UILogic._esFechaHabil(fecha, diasHabilesEnFecha(fecha))) {
+                if (TimeUtils.esFechaHabil(fecha, diasHabilesEnFecha(fecha))) {
                     const reg = registros.find(r => r.fecha === fecha);
                     const esEspecial = reg && TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
                     if (!esEspecial) return fecha;
@@ -1804,7 +1874,7 @@
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
             const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
             if (!saved) return;
-            if (esHoy && !s && UILogic._esFechaHabil(f, diasHabilesEnFecha(f))) {
+            if (esHoy && !s && TimeUtils.esFechaHabil(f, diasHabilesEnFecha(f))) {
                 const bufferSemanal = _bufferSemanalParaPush(f);
                 PushReminder.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
             }
@@ -2327,7 +2397,7 @@
                 notify.mostrarToast(mensajeExito, 'success');
                 notify.cerrarImportar();
                 $('file-import').value = '';
-                UILogic.refrescarConfigSiVisible?.();
+                notify.refrescarConfigSiVisible();
             }
         }
 
@@ -2745,6 +2815,100 @@
             configurarNotificaciones
         };
     })(SecurityAndUtils);
+
+    // ====================================================================
+    // SALDO SEMANAL MODULE — lógica de "cubierto por saldo" (pool de horas)
+    // ====================================================================
+    const SaldoSemanal = (function (D) {
+        function logicaCubiertoActiva() {
+            return !StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
+        }
+
+        function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
+            const lunesDate = TimeUtils.parsearFechaLocal(lunes);
+            lunesDate.setDate(lunesDate.getDate() + 6);
+            const domingo = TimeUtils.formatearFechaLocal(lunesDate);
+            const limite = domingo < hasta ? domingo : hasta;
+
+            const registrosSemana = D.registros().filter(r => r.fecha >= lunes && r.fecha <= limite);
+            const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
+
+            const EPS = 1e-6;
+            const pendientes = [];
+            let pool = 0, poolGenerado = 0, poolUsado = 0;
+
+            for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
+                const r = registrosMap.get(isoDate);
+                const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
+                const esRemoto = esEspecial && D.esTipoRemoto(r);
+                let deltaBruto = 0;
+                let montoCompensado = 0;
+                if (esRemoto) {
+                    deltaBruto = 0;
+                } else if (r && !esEspecial && r.salida) {
+                    const objetivo = TimeUtils.esFechaHabil(isoDate, D.diasHabilesEnFecha(isoDate)) ? D.objetivoDeRegistro(r) : 0;
+                    deltaBruto = r.total - objetivo;
+                    if (deltaBruto > EPS) montoCompensado = D.montoCompensadoDeReferencia(r, asignacionesPrecalculadas);
+                }
+                const deltaDisponible = deltaBruto - montoCompensado;
+
+                if (deltaBruto > EPS) poolGenerado += deltaBruto;
+                if (montoCompensado > EPS) poolUsado += montoCompensado;
+
+                if (deltaDisponible > EPS) pool += deltaDisponible;
+                else if (deltaDisponible < -EPS) pendientes.push({ fecha: isoDate, restante: -deltaDisponible });
+
+                for (const deuda of pendientes) {
+                    if (pool <= EPS) break;
+                    if (deuda.restante <= EPS) continue;
+                    const pago = Math.min(pool, deuda.restante);
+                    deuda.restante -= pago;
+                    pool -= pago;
+                    poolUsado += pago;
+                }
+            }
+
+            return { pendientes, poolGenerado, poolUsado };
+        }
+
+        function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
+            if (!logicaCubiertoActiva()) return false;
+            const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const { pendientes } = calcularPoolSemana(lunes, hoy, asignacionesPrecalculadas);
+            const EPS = 1e-6;
+            const deuda = pendientes.find(d => d.fecha === fecha);
+            return deuda ? deuda.restante <= EPS : false;
+        }
+
+        function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null) {
+            if (!logicaCubiertoActiva()) return null;
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const topeReal = hasta < hoy ? hasta : hoy;
+            if (desde > topeReal) return null;
+
+            const asignaciones = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
+            let lunes = TimeUtils.obtenerLunesSemanaISO(desde);
+            let poolGenerado = 0, poolUsado = 0;
+
+            while (lunes <= topeReal) {
+                const r = calcularPoolSemana(lunes, topeReal, asignaciones);
+                poolGenerado += r.poolGenerado;
+                poolUsado += r.poolUsado;
+                const siguienteLunes = TimeUtils.parsearFechaLocal(lunes);
+                siguienteLunes.setDate(siguienteLunes.getDate() + 7);
+                lunes = TimeUtils.formatearFechaLocal(siguienteLunes);
+            }
+
+            if (poolGenerado <= 1e-6) return null;
+            return {
+                porcentaje: Math.round((poolUsado / poolGenerado) * 1000) / 10,
+                horas: poolUsado
+            };
+        }
+
+        return { logicaCubiertoActiva, cubiertoPorSaldo, calcularAprovechamiento };
+    })(DataManagement);
 
     // ====================================================================
     //                     UI CORE MODULE (generic UI utilities)
@@ -3629,22 +3793,6 @@
     const UICalendario = (function (S, D, UICore) {
         const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO } = UICore;
 
-        function _agruparMesesPorAnio(mesesOrdenados) {
-            const map = new Map();
-            mesesOrdenados.forEach(mesAnio => {
-                const anio = mesAnio.substring(0, 4);
-                if (!map.has(anio)) map.set(anio, []);
-                map.get(anio).push(mesAnio);
-            });
-            return map;
-        }
-
-        function _nombreMesCapitalizado(mesAnio) {
-            const [, m] = mesAnio.split('-');
-            const nombre = TimeUtils.nombreMesPorIndice(m - 1);
-            return nombre.charAt(0).toUpperCase() + nombre.slice(1);
-        }
-
         function _cerrarSelectorMeses(idResaltar = null) {
             const grid = document.getElementById('calendario-grid');
             const selector = document.getElementById('calendario-selector-meses');
@@ -3679,7 +3827,7 @@
                 const anioActual = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
                 const mesActual = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
 
-                _agruparMesesPorAnio(mesesOrdenados).forEach((meses, anioStr) => {
+                TimeUtils.agruparMesesPorAnio(mesesOrdenados).forEach((meses, anioStr) => {
                     const separador = Object.assign(document.createElement('div'), {
                         className: 'selector-meses-anio-header',
                         textContent: anioStr
@@ -3691,7 +3839,7 @@
                         const anio = parseInt(aStr), mes = parseInt(mesStr) - 1;
                         const btn = Object.assign(document.createElement('button'), {
                             className: 'btn-mes-calendario',
-                            textContent: _nombreMesCapitalizado(mesAnio)
+                            textContent: TimeUtils.nombreMesCapitalizado(mesAnio)
                         });
                         if (anio === anioActual && mes === mesActual) btn.classList.add('activo');
                         btn.onclick = (e) => { e.stopPropagation(); _calendarioMes = { anio, mes }; _cerrarSelectorMeses(); };
@@ -3753,8 +3901,8 @@
                     return `dia-especial-${tipo ? tipo.color : 'purple'}`;
                 }
                 if (r.entrada && !r.salida) return 'dia-en-curso';
-                if (!UILogic._esFechaHabil(fecha, D.diasHabilesEnFecha(fecha)) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
-                return UILogic._cubiertoPorSaldo(fecha, asignacionesCompensatorio) ? 'dia-cubierto' : 'dia-incompleto';
+                if (!TimeUtils.esFechaHabil(fecha, D.diasHabilesEnFecha(fecha)) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
+                return SaldoSemanal.cubiertoPorSaldo(fecha, asignacionesCompensatorio) ? 'dia-cubierto' : 'dia-incompleto';
             };
 
             const diasNombre = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -3882,12 +4030,12 @@
             }
             let totalConDiff = totalStr, diffClase = '', cubiertoLineaHtml = '', compensadoLineaHtml = '';
             const objetivoReg = D.objetivoDeRegistro(reg);
-            if (objetivoReg > 0 && UILogic._esFechaHabil(reg.fecha, D.diasHabilesEnFecha(reg.fecha))) {
+            if (objetivoReg > 0 && TimeUtils.esFechaHabil(reg.fecha, D.diasHabilesEnFecha(reg.fecha))) {
                 const diffText = formatoDiferencia(totalHoras, objetivoReg);
                 if (horasGte(totalHoras, objetivoReg)) {
                     diffClase = 'cal-popup-info--green';
                     if (diffText) totalConDiff += ` (${diffText})`;
-                } else if (UILogic._cubiertoPorSaldo(reg.fecha, asignacionesCompensatorio)) {
+                } else if (SaldoSemanal.cubiertoPorSaldo(reg.fecha, asignacionesCompensatorio)) {
                     diffClase = 'cal-popup-info--gold';
                     if (diffText) totalConDiff += ` (${diffText})`;
                     cubiertoLineaHtml = `<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>`;
@@ -3930,7 +4078,7 @@
 
             const claveMes = reg.fecha.substring(0, 7);
             const registrosDelMes = D.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
-            const grupos = UILogic.agruparRegistrosConsecutivos(registrosDelMes);
+            const grupos = TiposRegistro.agruparConsecutivos(registrosDelMes);
             const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
 
             const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
@@ -4115,8 +4263,6 @@
             _cerrarPopupCalendarioHover,
             navegarCalendario,
             irHoyCalendario,
-            _agruparMesesPorAnio,
-            _nombreMesCapitalizado,
             getVistaHistoricoCalendario: () => _vistaHistoricoCalendario,
             setVistaHistoricoCalendario: (v) => { _vistaHistoricoCalendario = v; }
         };
@@ -5187,55 +5333,6 @@
             return grupos;
         }
 
-        function obtenerTipoRegistro(registro) {
-            if (!registro) return null;
-
-            const tipo = TiposRegistro.obtenerTipoPorCodigo(registro.entrada, registro.salida);
-            return tipo ? tipo.id : null;
-        }
-
-        function esFechaConsecutiva(fechaActual, fechaSiguiente) {
-            const actual = TimeUtils.parsearFechaLocal(fechaActual);
-            const siguiente = TimeUtils.parsearFechaLocal(fechaSiguiente);
-            actual.setDate(actual.getDate() - 1);
-            return TimeUtils.formatearFechaLocal(actual) === fechaSiguiente;
-        }
-
-        function agruparRegistrosConsecutivos(registros) {
-            if (!registros || registros.length === 0) return [];
-
-            const resultado = [];
-            let i = 0;
-
-            while (i < registros.length) {
-                const registroActual = registros[i];
-                const tipoActual = obtenerTipoRegistro(registroActual);
-
-                if (tipoActual === null) {
-                    resultado.push({ tipo: 'individual', registros: [registroActual] });
-                    i++; continue;
-                }
-
-                const grupo = [registroActual];
-                let j = i + 1;
-                while (j < registros.length) {
-                    const siguiente = registros[j];
-                    if (obtenerTipoRegistro(siguiente) !== tipoActual) break;
-                    if (!esFechaConsecutiva(grupo[grupo.length - 1].fecha, siguiente.fecha)) break;
-                    grupo.push(siguiente);
-                    j++;
-                }
-
-                resultado.push(grupo.length > 1
-                    ? { tipo: 'grupo', subtipo: tipoActual, registros: grupo }
-                    : { tipo: 'individual', registros: grupo }
-                );
-                i = j;
-            }
-
-            return resultado;
-        }
-
         function _crearChevron() {
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('class', 'icon chevron-mes chevron-mes-icon');
@@ -5317,12 +5414,12 @@
             } else if (r.entrada && r.salida) {
                 totalText = TimeUtils.horasATexto(r.total, 'short');
                 const objetivoReg = D.objetivoDeRegistro(r);
-                if (objetivoReg > 0 && UILogic._esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha))) {
+                if (objetivoReg > 0 && TimeUtils.esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha))) {
                     const diffText = formatoDiferencia(r.total, objetivoReg);
                     if (horasGte(r.total, objetivoReg)) {
                         totalClase = 'green-text';
                         if (diffText) totalText += ` (${diffText})`;
-                    } else if (UILogic._cubiertoPorSaldo(r.fecha, asignacionesCompensatorio)) {
+                    } else if (SaldoSemanal.cubiertoPorSaldo(r.fecha, asignacionesCompensatorio)) {
                         totalClase = 'gold-text';
                         if (diffText) totalText += ` (${diffText})`;
                         esCubierto = true;
@@ -5361,7 +5458,7 @@
         const _guardarExpandido = (storageKeyFn, id, abierto) => StorageHelper.setItem(storageKeyFn(id), String(abierto));
 
         function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asignacionesCompensatorio = null) {
-            const grupos = agruparRegistrosConsecutivos(registrosDelMes);
+            const grupos = TiposRegistro.agruparConsecutivos(registrosDelMes);
 
             const contenedorMesActual = document.createElement('div');
             contenedorMesActual.className = 'registro-mes-container';
@@ -5994,7 +6091,6 @@
         }
 
         return {
-            agruparRegistrosConsecutivos,
             actualizarListaRegistros,
             cerrarEdicion,
             setBloqueoEdicion,
@@ -6128,7 +6224,7 @@
                 ? D.calcularBufferPeriodo(opciones.desde, opciones.hasta, true, 0, asignacionesCompensatorio)
                 : null;
             const aprovechamientoSaldo = hayPeriodo
-                ? UILogic.calcularAprovechamientoSaldo(opciones.desde, opciones.hasta, asignacionesCompensatorio)
+                ? SaldoSemanal.calcularAprovechamiento(opciones.desde, opciones.hasta, asignacionesCompensatorio)
                 : null;
 
             return {
@@ -6309,7 +6405,7 @@
         function poblarSelectorSemanas() {
             const semanas = _obtenerSemanas();
             const lunesISO = TimeUtils.formatearFechaLocal(TimeUtils.obtenerLunes());
-            _poblarSelect('select-semana-stats', semanas, _formatearSemana, lunesISO, actualizarEstadisticasSemana, UILogic._agruparMesesPorAnio);
+            _poblarSelect('select-semana-stats', semanas, _formatearSemana, lunesISO, actualizarEstadisticasSemana, TimeUtils.agruparMesesPorAnio);
         }
 
         function calcularEstadisticasSemana(lunesISO) {
@@ -6375,7 +6471,7 @@
         function poblarSelectorMeses() {
             const meses = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
             const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
-            _poblarSelect('select-mes-stats', meses, UILogic._nombreMesCapitalizado, mesActual, actualizarEstadisticas, UILogic._agruparMesesPorAnio);
+            _poblarSelect('select-mes-stats', meses, TimeUtils.nombreMesCapitalizado, mesActual, actualizarEstadisticas, TimeUtils.agruparMesesPorAnio);
         }
 
         function _sumarHorasEfectivas(regs) {
@@ -7145,7 +7241,7 @@
             const hoy = TimeUtils.obtenerFechaHoy();
             const diaSemana = new Date().getDay();
             const hoyIndex = diaSemana === 0 ? 7 : diaSemana;
-            const esDiaHabil = _esFechaHabil(hoy, diasHabiles);
+            const esDiaHabil = TimeUtils.esFechaHabil(hoy, diasHabiles);
             let quedanDiasFuturos;
             if (Array.isArray(diasHabiles)) {
                 quedanDiasFuturos = false;
@@ -7156,99 +7252,6 @@
                 quedanDiasFuturos = hoyIndex < diasHabiles;
             }
             return { esDiaHabil, quedanDiasFuturos };
-        }
-
-        function _esFechaHabil(fecha, diasHabiles) {
-            const diaSemana = TimeUtils.parsearFechaLocal(fecha).getDay();
-            if (Array.isArray(diasHabiles)) return diasHabiles.includes(diaSemana);
-            return diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
-        }
-
-        function _logicaCubiertoActiva() {
-            return !StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
-        }
-
-        function _calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
-            const lunesDate = TimeUtils.parsearFechaLocal(lunes);
-            lunesDate.setDate(lunesDate.getDate() + 6);
-            const domingo = TimeUtils.formatearFechaLocal(lunesDate);
-            const limite = domingo < hasta ? domingo : hasta;
-
-            const registrosSemana = D.registros().filter(r => r.fecha >= lunes && r.fecha <= limite);
-            const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
-
-            const EPS = 1e-6;
-            const pendientes = [];
-            let pool = 0, poolGenerado = 0, poolUsado = 0;
-
-            for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
-                const r = registrosMap.get(isoDate);
-                const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-                const esRemoto = esEspecial && D.esTipoRemoto(r);
-                let deltaBruto = 0;
-                let montoCompensado = 0;
-                if (esRemoto) {
-                    deltaBruto = 0;
-                } else if (r && !esEspecial && r.salida) {
-                    const objetivo = _esFechaHabil(isoDate, D.diasHabilesEnFecha(isoDate)) ? D.objetivoDeRegistro(r) : 0;
-                    deltaBruto = r.total - objetivo;
-                    if (deltaBruto > EPS) montoCompensado = D.montoCompensadoDeReferencia(r, asignacionesPrecalculadas);
-                }
-                const deltaDisponible = deltaBruto - montoCompensado;
-
-                if (deltaBruto > EPS) poolGenerado += deltaBruto;
-                if (montoCompensado > EPS) poolUsado += montoCompensado;
-
-                if (deltaDisponible > EPS) pool += deltaDisponible;
-                else if (deltaDisponible < -EPS) pendientes.push({ fecha: isoDate, restante: -deltaDisponible });
-
-                for (const deuda of pendientes) {
-                    if (pool <= EPS) break;
-                    if (deuda.restante <= EPS) continue;
-                    const pago = Math.min(pool, deuda.restante);
-                    deuda.restante -= pago;
-                    pool -= pago;
-                    poolUsado += pago;
-                }
-            }
-
-            return { pendientes, poolGenerado, poolUsado };
-        }
-
-        function _cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
-            if (!_logicaCubiertoActiva()) return false;
-            const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
-            const hoy = TimeUtils.obtenerFechaHoy();
-            const { pendientes } = _calcularPoolSemana(lunes, hoy, asignacionesPrecalculadas);
-            const EPS = 1e-6;
-            const deuda = pendientes.find(d => d.fecha === fecha);
-            return deuda ? deuda.restante <= EPS : false;
-        }
-
-        function calcularAprovechamientoSaldo(desde, hasta, asignacionesPrecalculadas = null) {
-            if (!_logicaCubiertoActiva()) return null;
-            const hoy = TimeUtils.obtenerFechaHoy();
-            const topeReal = hasta < hoy ? hasta : hoy;
-            if (desde > topeReal) return null;
-
-            const asignaciones = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
-            let lunes = TimeUtils.obtenerLunesSemanaISO(desde);
-            let poolGenerado = 0, poolUsado = 0;
-
-            while (lunes <= topeReal) {
-                const r = _calcularPoolSemana(lunes, topeReal, asignaciones);
-                poolGenerado += r.poolGenerado;
-                poolUsado += r.poolUsado;
-                const siguienteLunes = TimeUtils.parsearFechaLocal(lunes);
-                siguienteLunes.setDate(siguienteLunes.getDate() + 7);
-                lunes = TimeUtils.formatearFechaLocal(siguienteLunes);
-            }
-
-            if (poolGenerado <= 1e-6) return null;
-            return {
-                porcentaje: Math.round((poolUsado / poolGenerado) * 1000) / 10,
-                horas: poolUsado
-            };
         }
 
         function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
@@ -7513,7 +7516,7 @@
 
             const horaSalida = _minutosAHoraWrap(minutosTotal);
 
-            const esLaborable = _esFechaHabil(reg.fecha, diasHabiles);
+            const esLaborable = TimeUtils.esFechaHabil(reg.fecha, diasHabiles);
             const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
 
             if (mostrarBuffer) {
@@ -7552,7 +7555,7 @@
             if (!regHoy || !regHoy.entrada) {
 
                 if (est.ayerAbierto) {
-                    const objetivoDiarioAyerAplica = _esFechaHabil(est.ayerStr, diasHabiles)
+                    const objetivoDiarioAyerAplica = TimeUtils.esFechaHabil(est.ayerStr, diasHabiles)
                         ? (est.regAyer ? D.objetivoDeRegistro(est.regAyer) : objetivoDiario)
                         : 0;
                     const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
@@ -7624,7 +7627,7 @@
                 } else {
                     const faltoTexto = _fraseCantidad(Math.abs(dif), 'Faltó', 'Faltaron');
 
-                    if (_logicaCubiertoActiva() && horasGte(bufferSemanalBase, 0)) {
+                    if (SaldoSemanal.logicaCubiertoActiva() && horasGte(bufferSemanalBase, 0)) {
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
                         estadoFondoColor = 'gold';
@@ -8395,9 +8398,6 @@
         return {
             setFondoCard,
             toggleFondoCard,
-            _esFechaHabil,
-            _cubiertoPorSaldo,
-            calcularAprovechamientoSaldo,
             calcularEstadoCard,
             derivarVistaSemana,
             derivarVistaHoy,
@@ -8452,7 +8452,7 @@
             abrirSelectorMesesCalendario, _cerrarSelectorMeses, _activarVistaCalendarioHistorico, _renderizarCalendario,
             toggleVistaHistorico, _popupCalendario, _popupCalendarioDiaSinRegistro,
             _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
-            navegarCalendario, irHoyCalendario, _agruparMesesPorAnio, _nombreMesCapitalizado,
+            navegarCalendario, irHoyCalendario,
             getVistaHistoricoCalendario, setVistaHistoricoCalendario
         } = UICalendario;
 
@@ -8467,7 +8467,7 @@
         } = UIGistYRespaldo;
 
         const {
-            agruparRegistrosConsecutivos, actualizarListaRegistros, cerrarEdicion,
+            actualizarListaRegistros, cerrarEdicion,
             setBloqueoEdicion, toggleBloqueoEdicion, toggleCredito, _actualizarHintEdicion,
             _initListenerAccionesLista, _initListenerToggleAnio, _initListenerToggleMes,
             actualizarHintGrupo, mostrarFiltros, cerrarFiltros, toggleHistorico,
@@ -8489,7 +8489,7 @@
         } = UIEstadisticas;
 
         const {
-            setFondoCard, toggleFondoCard, _esFechaHabil, _cubiertoPorSaldo, calcularAprovechamientoSaldo, calcularEstadoCard,
+            setFondoCard, toggleFondoCard, calcularEstadoCard,
             derivarVistaSemana, derivarVistaHoy, actualizarUI, alternarVista, _forzarVista,
             actualizarEstadoBotonTimerMain, toggleTimerBreakMain, toggleModoLote,
             ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
@@ -8978,7 +8978,8 @@
                 aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
                 descargarJSON, flashCampoTipo: _flashCampoTipo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
                 obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
-                setBloqueoEdicionGrupo, verificarBloqueoCredito
+                setBloqueoEdicionGrupo, verificarBloqueoCredito,
+                forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, refrescarConfigSiVisible
             });
             StorageHelper.configurarNotificaciones({ mostrarToast });
 
@@ -9301,7 +9302,7 @@
             actualizarBotonesHistorico();
 
             const hoy = TimeUtils.obtenerFechaHoy();
-            const hoyEsLaborable = _esFechaHabil(hoy, D.diasHabilesEnFecha(hoy));
+            const hoyEsLaborable = TimeUtils.esFechaHabil(hoy, D.diasHabilesEnFecha(hoy));
             if (D.vistaActual() === 'semana' && hoyEsLaborable) {
                 setTimerAutoVista(setTimeout(() => {
                     setTimerAutoVista(null);
@@ -9589,10 +9590,9 @@
 
         return {
             pressHoldHoras, pressHoldLimite, pressHoldObjetivoEdicion,
-            _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _cerrarPopupCalendarioHover, _cerrarSelectorMeses, _cicloStatsActivo, _cubiertoPorSaldo,
-            calcularAprovechamientoSaldo,
-            _esFechaHabil, _forzarVista, _iniciarCicloStats, _irAFicharConFecha, _nombreMesCapitalizado, _onclickCalendarioDia,
-            _popupCalendarioDiaSinRegistro, _popupCalendarioHover, _prepararMostrarFaseAlRenderizar, _renderSelectorStats, _renderizarCalendario, abrirEditorPerfil,
+            _activarVistaCalendarioHistorico, _cerrarPopupCalendarioHover, _cerrarSelectorMeses, _cicloStatsActivo,
+            _iniciarCicloStats, _irAFicharConFecha, _onclickCalendarioDia,
+            _popupCalendarioDiaSinRegistro, _popupCalendarioHover, _renderSelectorStats, _renderizarCalendario, abrirEditorPerfil,
             abrirEditorTramoDias, abrirGistEnBrowser, abrirModalAyuda, abrirModalGist, abrirModalHistorialDias, abrirModalReporteSecciones,
             abrirSelectorMesesCalendario, abrirSelectorPerfiles,
             actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
@@ -9603,7 +9603,7 @@
             actualizarEstadoBotonPushHabilitado, togglePushHabilitado,
             actualizarEstadoBotonNotificaciones,
             abrirModalNotificaciones, cerrarModalNotificaciones,
-            actualizarEstadoBotonesGist, actualizarFeedbackConfig, actualizarListaRegistros, actualizarUI, agruparRegistrosConsecutivos, alternarFechaActual,
+            actualizarEstadoBotonesGist, actualizarFeedbackConfig, actualizarListaRegistros, actualizarUI, alternarFechaActual,
             alternarTema, alternarVista, aplicarFeedbackCampos, aplicarHorasConfiguradasATodos, aplicarOrdenCards, aplicarVisibilidadCards,
             cambiarAnioStats, cambiarMesStats, cambiarSemanaStats, cerrarConfig, cerrarEdicion, cerrarEdicionGrupo,
             cerrarEditorPerfil, cerrarEditorTramoDias, cerrarExportar, cerrarImportar, cerrarModalAyuda, cerrarModalGist,

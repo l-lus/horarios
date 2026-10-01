@@ -973,6 +973,8 @@ button:disabled {
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-lg) var(--space-md);
+    font-size: var(--text-base);
+    font-weight: var(--fw-semibold);
 }
 
 .settings-list-row>.settings-list-text,
@@ -2001,6 +2003,10 @@ body.config-onboarding .config-onboarding-banner {
 
 body.config-onboarding .config-onboarding-hide {
     display: none;
+}
+
+body.config-onboarding .settings-list>.settings-list-row--stack {
+    border-bottom: none;
 }
 
 .icon-footer-empezar,

@@ -70,18 +70,6 @@
     }
 
     // ====================================================================
-    // ICONOS SVG — shared helper
-    // ====================================================================
-    function crearIcono(href, clase = 'icon') {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('class', clase);
-        const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-        use.setAttribute('href', href);
-        svg.appendChild(use);
-        return svg;
-    }
-
-    // ====================================================================
     // PWA INSTALLER MODULE
     // ====================================================================
     const PWAInstaller = (function () {
@@ -3358,7 +3346,7 @@
     //                     UI PROFILES MODULE
     // ====================================================================
     const UIPerfiles = (function (S, UICore) {
-        const { mostrarToast } = UICore;
+        const { mostrarToast, setIconoBtn } = UICore;
 
         let perfilEnEdicion = null;
 
@@ -3455,10 +3443,7 @@
                     && !document.documentElement.getAttribute('data-theme');
                 const toggleBtnModal = document.getElementById('theme-toggle-modal');
 
-                if (toggleBtnModal) {
-                    const icon = toggleBtnModal.querySelector('use');
-                    icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
-                }
+                if (toggleBtnModal) setIconoBtn(toggleBtnModal, esClaro ? '#icon-moon' : '#icon-sun');
             });
         }
 
@@ -4298,7 +4283,7 @@
     const UIGistYRespaldo = (function (S, D, GistSync, UICore) {
         const {
             mostrarToast, _setBtnDisabled, _setBtnActivo, _flashCampo, _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre,
-            descargarJSON, obtenerNombrePerfilSafe, _posicionarPopup, _registrarCierrePopup
+            descargarJSON, obtenerNombrePerfilSafe, _posicionarPopup, _registrarCierrePopup, setIconoBtn
         } = UICore;
 
         let _modalAbiertoDesdeLista = false;
@@ -4307,7 +4292,7 @@
             const btn = $(id);
             if (!btn) return;
             btn.lastChild.textContent = desdeLista ? ' Cerrar' : ' Volver';
-            btn.querySelector('use').setAttribute('href', desdeLista ? '#icon-cancelar' : '#icon-undo');
+            setIconoBtn(btn, desdeLista ? '#icon-cancelar' : '#icon-undo');
         }
 
         function _cerrarModalConfigHija(modalId) {
@@ -4607,19 +4592,19 @@
             if (tieneGist) {
                 newRespaldar.title = 'Subir a Gist';
                 newRespaldar.addEventListener('click', () => { autoCierre(); gistSubir(); });
-                newRespaldar.querySelector('use').setAttribute('href', '#icon-cloud-upload');
+                setIconoBtn(newRespaldar, '#icon-cloud-upload');
 
                 newRestaurar.title = 'Bajar de Gist';
                 newRestaurar.addEventListener('click', () => { autoCierre(); gistBajar(); });
-                newRestaurar.querySelector('use').setAttribute('href', '#icon-cloud-download');
+                setIconoBtn(newRestaurar, '#icon-cloud-download');
             } else {
                 newRespaldar.title = 'Respaldar';
                 newRespaldar.addEventListener('click', () => { autoCierre(); mostrarExportar(true); });
-                newRespaldar.querySelector('use').setAttribute('href', '#icon-download');
+                setIconoBtn(newRespaldar, '#icon-download');
 
                 newRestaurar.title = 'Restaurar';
                 newRestaurar.addEventListener('click', () => { autoCierre(); mostrarImportar(true); });
-                newRestaurar.querySelector('use').setAttribute('href', '#icon-upload');
+                setIconoBtn(newRestaurar, '#icon-upload');
             }
         }
 
@@ -4781,12 +4766,12 @@
 
         function actualizarBotonGistMerge() {
             const hint = document.getElementById('hint-gist-merge');
-            const iconEl = document.getElementById('icon-gist-merge')?.querySelector('use');
+            const iconEl = document.getElementById('icon-gist-merge');
             const esMerge = GistSync.getMergeBehavior() === 'merge';
             if (hint) hint.textContent = esMerge ? 'Combinar' : 'Reemplazar';
             const desc = document.getElementById('desc-gist-merge');
             if (desc) desc.textContent = esMerge ? ' · une Gist con tus datos locales' : ' · sustituye tus datos locales';
-            if (iconEl) iconEl.setAttribute('href', esMerge ? '#icon-combine' : '#icon-replace-swap');
+            if (iconEl) setIconoBtn(iconEl, esMerge ? '#icon-combine' : '#icon-replace-swap');
         }
 
         function toggleGistBackup() {
@@ -4989,7 +4974,7 @@
                 const btn = _el('button');
                 btn.type = 'button';
                 btn.dataset.modo = modo;
-                btn.appendChild(crearIcono(icono));
+                btn.innerHTML = `<svg class="icon"><use href="${icono}" /></svg>`;
                 btn.appendChild(document.createTextNode(texto));
                 btn.addEventListener('click', () => {
                     if (resumenEl.dataset.modo === modo) return;
@@ -5027,7 +5012,7 @@
             if (soloLocal.length > 0) {
                 const n = soloLocal.length;
                 const alerta = _el('div', 'gist-alerta');
-                alerta.appendChild(crearIcono('#icon-alert-triangle'));
+                alerta.innerHTML = '<svg class="icon"><use href="#icon-alert-triangle" /></svg>';
                 const txt = _el('span');
                 txt.appendChild(document.createTextNode('Se eliminan '));
                 txt.appendChild(_el('strong', null, `${n} registro${_plural(n)} local${_plural(n)}`));
@@ -5128,7 +5113,7 @@
     const UIHistorico = (function (S, D, UICore) {
         const {
             formatoDiferencia, mostrarToast, _setBtnActivo, debounce,
-            _actualizarOffsetsStickyMes, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante
+            _actualizarOffsetsStickyMes, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, setIconoBtn
         } = UICore;
 
         let edicionBloqueada = true;
@@ -5213,8 +5198,12 @@
         }
 
         function _crearChevron() {
-            const svg = crearIcono('#icon-chevron-down', 'icon chevron-mes chevron-mes-icon');
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('class', 'icon chevron-mes chevron-mes-icon');
             svg.setAttribute('viewBox', '0 0 24 24');
+            const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+            use.setAttribute('href', '#icon-chevron-down');
+            svg.appendChild(use);
             return svg;
         }
 
@@ -5557,8 +5546,7 @@
         function _setBloqueoEdicionGenerico(bloqueado, { btnLockId, inputIds, modalId, excluirBotones }) {
             const btnLock = $(btnLockId);
             if (btnLock) {
-                const icon = btnLock.querySelector('use');
-                icon.setAttribute('href', bloqueado ? '#icon-lock' : '#icon-lock-open');
+                setIconoBtn(btnLock, bloqueado ? '#icon-lock' : '#icon-lock-open');
                 btnLock.title = bloqueado ? "Desbloquear edición" : "Bloquear edición";
                 btnLock.classList.toggle('bloqueado', bloqueado);
             }
@@ -7977,7 +7965,6 @@
             const registroHoy = D.registros().find(r => r.fecha === hoy);
             const storageKey = _breakStorageKey();
             const isRunning = StorageHelper.getItem(storageKey) !== null;
-            const icon = btn.querySelector('use');
             const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
 
             if (!isRunning && (!registroHoy || diaCerrado)) {
@@ -7986,7 +7973,7 @@
                 Object.assign(btn, { disabled: false, title: isRunning ? 'Detener tiempo fuera' : 'Iniciar tiempo fuera' });
             }
 
-            icon.setAttribute('href', '#icon-exit');
+            setIconoBtn(btn, '#icon-exit');
             if (isRunning) {
                 btn.classList.add('running');
                 _actualizarCardTimerRunning(card, storageKey, sinAnimarTitulo);

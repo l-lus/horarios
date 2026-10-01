@@ -922,6 +922,7 @@ button:disabled {
 .settings-list {
     display: flex;
     flex-direction: column;
+    gap: 0;
     background: var(--input-bg);
     border-radius: var(--radius);
     overflow: hidden;

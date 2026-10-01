@@ -2839,18 +2839,35 @@
 
         function _crearPressHold(accionFn) {
             let timeout = null, intervalo = null;
-            return {
-                iniciar(arg) {
-                    accionFn(arg);
-                    timeout = setTimeout(() => {
-                        intervalo = setInterval(() => accionFn(arg), 100);
-                    }, 500);
-                },
-                detener() {
-                    if (timeout) { clearTimeout(timeout); timeout = null; }
-                    if (intervalo) { clearInterval(intervalo); intervalo = null; }
-                }
+            const iniciar = (arg) => {
+                accionFn(arg);
+                timeout = setTimeout(() => {
+                    intervalo = setInterval(() => accionFn(arg), 100);
+                }, 500);
             };
+            const detener = () => {
+                if (timeout) { clearTimeout(timeout); timeout = null; }
+                if (intervalo) { clearInterval(intervalo); intervalo = null; }
+            };
+            // Vincula un botón: mantenerlo apretado repite accionFn(arg)
+            const vincular = (btn, arg) => {
+                const start = (e) => {
+                    if (btn.disabled) return;
+                    if (e.type === 'touchstart') e.preventDefault();
+                    iniciar(arg);
+                };
+                const stop = (e) => {
+                    if (e && e.type === 'touchend') e.preventDefault();
+                    detener();
+                };
+                btn.addEventListener('mousedown', start);
+                btn.addEventListener('touchstart', start, { passive: false });
+                btn.addEventListener('mouseup', stop);
+                btn.addEventListener('mouseleave', stop);
+                btn.addEventListener('touchend', stop, { passive: false });
+                btn.addEventListener('touchcancel', stop);
+            };
+            return { iniciar, detener, vincular };
         }
 
         function _actualizarOffsetsStickyMes() {
@@ -2883,7 +2900,11 @@
         }
 
         function descargarJSON(data, nombreArchivo) {
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            descargarArchivo(JSON.stringify(data, null, 2), nombreArchivo, 'application/json');
+        }
+
+        function descargarArchivo(contenido, nombreArchivo, mime) {
+            const blob = new Blob([contenido], { type: mime });
             const url = URL.createObjectURL(blob);
             const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
             document.body.appendChild(a);
@@ -2930,7 +2951,7 @@
                 toastTimeout = setTimeout(() => {
                     toast.classList.remove('show');
                     toastTimeout = null;
-                    setTimeout(() => _procesarToastQueue(), 350);
+                    setTimeout(() => _procesarToastQueue(), DUR_ANIM() + 50);
                 }, duracionFinal);
             }, 10);
         }
@@ -2940,7 +2961,7 @@
             const toast = $('toast');
             if (!toast || !toast.classList.contains('show')) return;
             toast.classList.remove('show');
-            setTimeout(() => _procesarToastQueue(), 350);
+            setTimeout(() => _procesarToastQueue(), DUR_ANIM() + 50);
         }
 
         function _habilitarCierreToast() {
@@ -3147,7 +3168,7 @@
                 popup.style.top = `${top}px`;
                 popup.style.left = `${left}px`;
                 popup.style.visibility = '';
-                setTimeout(() => popup.classList.add('listo'), 350);
+                setTimeout(() => popup.classList.add('listo'), DUR_ANIM() + 50);
             });
         }
 
@@ -3312,6 +3333,7 @@
             limpiarError,
             obtenerNombrePerfilSafe,
             descargarJSON,
+            descargarArchivo,
             mostrarToast,
             _cerrarToastActual,
             _habilitarCierreToast,
@@ -3797,7 +3819,7 @@
 
         function toggleVistaHistorico() {
             _vistaHistoricoCalendario = !_vistaHistoricoCalendario;
-            try { StorageHelper.setItem(STORAGE_KEYS.VISTA_HISTORICO_CAL, _vistaHistoricoCalendario); } catch (e) { }
+            StorageHelper.setItem(STORAGE_KEYS.VISTA_HISTORICO_CAL, _vistaHistoricoCalendario);
 
             const lista = document.getElementById('lista-registros');
             const cal = document.getElementById('vista-calendario-historico');
@@ -4852,9 +4874,7 @@
             _actualizarCampoLimite();
         }
 
-        const _pressHoldLimite = _crearPressHold(delta => cambiarLimiteSync(delta));
-        function iniciarCambioLimite(delta) { _pressHoldLimite.iniciar(delta); }
-        function detenerCambioLimite() { _pressHoldLimite.detener(); }
+        const pressHoldLimite = _crearPressHold(delta => cambiarLimiteSync(delta));
 
         async function _gistConSpinner(btnId, mensajeError, accion) {
             const btn = document.getElementById(btnId);
@@ -4937,116 +4957,136 @@
             return cambios;
         }
 
-        function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios) {
-            resumenEl.innerHTML = '';
-            const _el = (tag, cls, texto) => {
-                const e = document.createElement(tag);
-                if (cls) e.className = cls;
-                if (texto != null) e.textContent = String(texto);
-                return e;
-            };
-            const _plural = TimeUtils.pluralizar;
-            const _colapsable = (contenido) => {
-                const wrap = _el('div', 'collapsible');
-                const inner = _el('div', 'collapsible-inner');
-                inner.appendChild(contenido);
-                wrap.appendChild(inner);
-                return wrap;
-            };
-            const _fila = (label, valorEl, conBorde) => {
-                const fila = _el('div', 'gist-res-fila' + (conBorde ? ' con-borde' : ''));
-                fila.appendChild(_el('span', 'gist-res-label', label));
-                fila.appendChild(valorEl);
-                return fila;
-            };
+        // ── Modal "Resumen de datos": selector Combinar/Reemplazar + antes → después ──
+        const _mkEl = (tag, cls, texto) => {
+            const e = document.createElement(tag);
+            if (cls) e.className = cls;
+            if (texto != null) e.textContent = String(texto);
+            return e;
+        };
 
-            const nLocal = enAmbos.length + soloLocal.length;
-            const nGist = registrosNormalizados.length;
-            const nNuevos = soloEnGist.length;
-            const nComp = complementarios.length;
+        const _mkColapsable = (contenido) => {
+            const wrap = _mkEl('div', 'collapsible');
+            const inner = _mkEl('div', 'collapsible-inner');
+            inner.appendChild(contenido);
+            wrap.appendChild(inner);
+            return wrap;
+        };
 
-            resumenEl.dataset.modo = 'merge';
-
-            const seg = _el('div', 'btn-group');
-            seg.setAttribute('role', 'group');
-            seg.setAttribute('aria-label', 'Cómo aplicar los datos del Gist');
-            const segBtns = [['merge', '#icon-combine', 'Combinar'], ['replace', '#icon-replace-swap', 'Reemplazar']].map(([modo, icono, texto]) => {
-                const btn = _el('button');
+        function _crearSelectorModoMerge(onCambio) {
+            const el = _mkEl('div', 'btn-group');
+            el.setAttribute('role', 'group');
+            el.setAttribute('aria-label', 'Cómo aplicar los datos del Gist');
+            const btns = [['merge', '#icon-combine', 'Combinar'], ['replace', '#icon-replace-swap', 'Reemplazar']].map(([modo, icono, texto]) => {
+                const btn = _mkEl('button');
                 btn.type = 'button';
                 btn.dataset.modo = modo;
                 btn.innerHTML = `<svg class="icon"><use href="${icono}" /></svg>`;
                 btn.appendChild(document.createTextNode(texto));
-                btn.addEventListener('click', () => {
-                    if (resumenEl.dataset.modo === modo) return;
-                    resumenEl.dataset.modo = modo;
-                    pintar(true);
-                });
-                seg.appendChild(btn);
+                btn.addEventListener('click', () => onCambio(modo));
+                el.appendChild(btn);
                 return btn;
             });
+            return {
+                el,
+                pintar(modo) {
+                    btns.forEach(b => {
+                        const activo = b.dataset.modo === modo;
+                        b.classList.toggle('btn-activo', activo);
+                        b.setAttribute('aria-pressed', String(activo));
+                    });
+                }
+            };
+        }
 
-            const res = _el('div', 'gist-res');
+        function _crearTarjetaResultadoMerge({ nLocal, nGist, nNuevos, nComp }, configCambios) {
+            const el = _mkEl('div', 'gist-res');
+            const fila = (label, valorEl, conBorde) => {
+                const f = _mkEl('div', 'gist-res-fila' + (conBorde ? ' con-borde' : ''));
+                f.append(_mkEl('span', 'gist-res-label', label), valorEl);
+                return f;
+            };
 
-            const antesEl = _el('em');
-            const despuesEl = _el('span');
-            const deltaEl = _el('span');
-            const valorReg = _el('span', 'gist-res-valor');
+            const antesEl = _mkEl('em');
+            const despuesEl = _mkEl('span');
+            const deltaEl = _mkEl('span');
+            const valorReg = _mkEl('span', 'gist-res-valor');
             valorReg.append(antesEl, despuesEl, deltaEl);
-            res.appendChild(_fila('Registros', valorReg, false));
+            el.appendChild(fila('Registros', valorReg, false));
 
             let wrapComp = null;
             if (nComp > 0) {
-                const valorComp = _el('span', 'gist-res-valor');
-                valorComp.append(_el('span', null, String(nComp)), _el('span', 'gist-delta is-info', 'datos faltantes'));
-                wrapComp = _colapsable(_fila('Se completan', valorComp, true));
-                res.appendChild(wrapComp);
+                const valorComp = _mkEl('span', 'gist-res-valor');
+                valorComp.append(_mkEl('span', null, nComp), _mkEl('span', 'gist-delta is-info', 'datos faltantes'));
+                wrapComp = _mkColapsable(fila('Se completan', valorComp, true));
+                el.appendChild(wrapComp);
             }
 
             let cfgValor = null;
             if (configCambios.length > 0) {
-                cfgValor = _el('span', 'gist-res-valor');
-                res.appendChild(_fila('Configuración', cfgValor, true));
+                cfgValor = _mkEl('span', 'gist-res-valor');
+                el.appendChild(fila('Configuración', cfgValor, true));
             }
 
-            let wrapAlerta = null;
-            if (soloLocal.length > 0) {
-                const n = soloLocal.length;
-                const alerta = _el('div', 'gist-alerta');
-                alerta.innerHTML = '<svg class="icon"><use href="#icon-alert-triangle" /></svg>';
-                const txt = _el('span');
-                txt.appendChild(document.createTextNode('Se eliminan '));
-                txt.appendChild(_el('strong', null, `${n} registro${_plural(n)} local${_plural(n)}`));
-                txt.appendChild(document.createTextNode(` que no ${n === 1 ? 'está' : 'están'} en el Gist.`));
-                alerta.appendChild(txt);
-                wrapAlerta = _colapsable(alerta);
-                wrapAlerta.classList.add('gist-alerta-wrap');
-            }
+            return {
+                el,
+                pintar(esMerge, animar) {
+                    const despues = esMerge ? nLocal + nNuevos : nGist;
+                    const delta = despues - nLocal;
+                    antesEl.textContent = `${nLocal} →`;
+                    despuesEl.textContent = String(despues);
+                    deltaEl.className = 'gist-delta' + (delta > 0 ? ' is-mas' : delta < 0 ? ' is-menos' : '');
+                    deltaEl.textContent = delta > 0 ? `+${delta}` : delta < 0 ? String(delta) : 'sin cambios';
+                    cfgValor?.replaceChildren(esMerge ? _mkEl('em', null, 'sin cambios') : document.createTextNode(configCambios.join(', ')));
+                    setColapsable(wrapComp, esMerge, { animar });
+                }
+            };
+        }
 
-            resumenEl.append(seg, res);
-            if (wrapAlerta) resumenEl.appendChild(wrapAlerta);
+        function _crearAlertaReemplazoMerge(nSoloLocal) {
+            if (nSoloLocal === 0) return null;
+            const alerta = _mkEl('div', 'gist-alerta');
+            alerta.innerHTML = '<svg class="icon"><use href="#icon-alert-triangle" /></svg>';
+            const txt = _mkEl('span');
+            txt.append(
+                'Se eliminan ',
+                _mkEl('strong', null, `${nSoloLocal} ${nSoloLocal === 1 ? 'registro local' : 'registros locales'}`),
+                ` que no ${nSoloLocal === 1 ? 'está' : 'están'} en el Gist.`
+            );
+            alerta.appendChild(txt);
+            const el = _mkColapsable(alerta);
+            el.classList.add('gist-alerta-wrap');
+            return { el, pintar: (esMerge, animar) => setColapsable(el, !esMerge, { animar }) };
+        }
+
+        function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios) {
+            const cantidades = {
+                nLocal: enAmbos.length + soloLocal.length,
+                nGist: registrosNormalizados.length,
+                nNuevos: soloEnGist.length,
+                nComp: complementarios.length
+            };
+            resumenEl.innerHTML = '';
+            resumenEl.dataset.modo = 'merge'; // siempre arranca en la opción no destructiva
+
+            const selector = _crearSelectorModoMerge(modo => {
+                if (resumenEl.dataset.modo === modo) return;
+                resumenEl.dataset.modo = modo;
+                pintar(true);
+            });
+            const tarjeta = _crearTarjetaResultadoMerge(cantidades, configCambios);
+            const alerta = _crearAlertaReemplazoMerge(soloLocal.length);
+            resumenEl.append(selector.el, tarjeta.el);
+            if (alerta) resumenEl.appendChild(alerta.el);
 
             function pintar(animar) {
-                const esMerge = resumenEl.dataset.modo === 'merge';
-                segBtns.forEach(b => {
-                    const activo = b.dataset.modo === resumenEl.dataset.modo;
-                    b.classList.toggle('btn-activo', activo);
-                    b.setAttribute('aria-pressed', String(activo));
-                });
+                const modo = resumenEl.dataset.modo;
+                const esMerge = modo === 'merge';
+                selector.pintar(modo);
+                tarjeta.pintar(esMerge, animar);
+                alerta?.pintar(esMerge, animar);
 
-                const despues = esMerge ? nLocal + nNuevos : nGist;
-                const delta = despues - nLocal;
-                antesEl.textContent = `${nLocal} →`;
-                despuesEl.textContent = String(despues);
-                deltaEl.className = 'gist-delta' + (delta > 0 ? ' is-mas' : delta < 0 ? ' is-menos' : '');
-                deltaEl.textContent = delta > 0 ? `+${delta}` : delta < 0 ? String(delta) : 'sin cambios';
-
-                if (cfgValor) {
-                    cfgValor.replaceChildren(esMerge ? _el('em', null, 'sin cambios') : document.createTextNode(configCambios.join(', ')));
-                }
-
-                setColapsable(wrapComp, esMerge, { animar });
-                setColapsable(wrapAlerta, !esMerge, { animar });
-
+                // Colores nativos: azul (btn-edit) al combinar, rojo (btn-delete) al reemplazar
                 const btnAplicar = document.getElementById('btn-gist-merge-aplicar');
                 if (btnAplicar) {
                     btnAplicar.classList.toggle('btn-edit', esMerge);
@@ -5100,8 +5140,7 @@
             toggleGistBackup,
             toggleGistMerge,
             cambiarLimiteSync,
-            iniciarCambioLimite,
-            detenerCambioLimite,
+            pressHoldLimite,
             gistSubir,
             gistBajar
         };
@@ -5319,6 +5358,8 @@
             return item;
         }
 
+        const _guardarExpandido = (storageKeyFn, id, abierto) => StorageHelper.setItem(storageKeyFn(id), String(abierto));
+
         function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asignacionesCompensatorio = null) {
             const grupos = agruparRegistrosConsecutivos(registrosDelMes);
 
@@ -5410,8 +5451,7 @@
             const detalle = Object.assign(document.createElement('div'), { className: 'registro-mes-detalle collapsible' });
             const innerAnio = Object.assign(document.createElement('div'), { className: 'detalle-inner' });
             detalle.appendChild(innerAnio);
-            let expandido = false;
-            try { expandido = StorageHelper.getItem(STORAGE_KEYS.ANIO_EXPANDIDO(anio)) === 'true'; } catch (e) { }
+            const expandido = StorageHelper.getBoolean(STORAGE_KEYS.ANIO_EXPANDIDO(anio));
             if (expandido) { detalle.classList.add('expanded'); chevron.classList.add('rotated'); }
 
             mesesDelAnio.forEach((registrosDelMes, claveMes) =>
@@ -5436,7 +5476,7 @@
                 if (det === preferido.det) return;
                 det.classList.remove('expanded');
                 header.querySelector('.chevron-mes')?.classList.remove('rotated');
-                try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'false'); } catch (e) { }
+                _guardarExpandido(STORAGE_KEYS.MES_EXPANDIDO, header.dataset.mesId, false);
             });
         }
 
@@ -5535,7 +5575,7 @@
 
 
         function cerrarEdicion() {
-            window.UILogic?.detenerCambioObjetivoEdicion();
+            window.UILogic?.pressHoldObjetivoEdicion.detener();
             ModalManager.cerrar('modal-editar', () => {
                 D.setEditandoId(null);
                 document.dispatchEvent(new Event('scroll'));
@@ -5580,7 +5620,7 @@
             [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
                 if (btn) btn.disabled = objetivoDeshabilitado;
             });
-            if (objetivoDeshabilitado) window.UILogic?.detenerCambioObjetivoEdicion();
+            if (objetivoDeshabilitado) window.UILogic?.pressHoldObjetivoEdicion.detener();
             if (elObjetivo) elObjetivo.classList.toggle('input-number-inerte', objetivoDeshabilitado);
             verificarBloqueoCredito();
         }
@@ -5653,7 +5693,7 @@
                 const anioId = headerAnio.dataset.anioId;
                 const abierto = detalleAnio.classList.toggle('expanded');
                 if (chevronAnio) chevronAnio.classList.toggle('rotated', abierto);
-                try { StorageHelper.setItem(STORAGE_KEYS.ANIO_EXPANDIDO(anioId), String(abierto)); } catch (e) { }
+                _guardarExpandido(STORAGE_KEYS.ANIO_EXPANDIDO, anioId, abierto);
             });
         }
 
@@ -5684,7 +5724,7 @@
                 if (detalle.classList.contains('expanded')) {
                     detalle.classList.remove('expanded');
                     chevronIcon.classList.remove('rotated');
-                    try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'false'); } catch (e) { }
+                    _guardarExpandido(STORAGE_KEYS.MES_EXPANDIDO, header.dataset.mesId, false);
                     return;
                 }
 
@@ -5702,9 +5742,7 @@
                     const oHeader = oc?.querySelector('.registro-mes-header');
                     if (och) och.classList.remove('rotated');
                     const id = oHeader?.dataset[datasetKey];
-                    if (id) {
-                        try { StorageHelper.setItem(storageKeyFn(id), 'false'); } catch (e) { }
-                    }
+                    if (id) _guardarExpandido(storageKeyFn, id, false);
                 };
 
                 otrosMesesAbiertos.forEach(otro => {
@@ -5715,7 +5753,7 @@
                 const _abrirDetalle = () => {
                     detalle.classList.add('expanded');
                     chevronIcon.classList.add('rotated');
-                    try { StorageHelper.setItem(STORAGE_KEYS.MES_EXPANDIDO(header.dataset.mesId), 'true'); } catch (e) { }
+                    _guardarExpandido(STORAGE_KEYS.MES_EXPANDIDO, header.dataset.mesId, true);
                     _scrollAlExpandir(contenedor, detalle);
                 };
 
@@ -5987,7 +6025,7 @@
         const {
             mostrarToast, _poblarSelect,
             _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante,
-            toggleSeccionGen, registrarSwipe, _animarFadeSwap
+            toggleSeccionGen, registrarSwipe, _animarFadeSwap, descargarArchivo
         } = UICore;
 
         let modoEstadisticas = 'mensual';
@@ -6312,7 +6350,7 @@
             const orden = ['mensual', 'anual', 'semanal'];
             const idx = orden.indexOf(modoEstadisticas);
             modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
-            try { StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas); } catch (e) { }
+            StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas);
 
             _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
                 selectMes.classList.add('hidden');
@@ -6734,13 +6772,7 @@
 </html>`;
 
             try {
-                const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = Object.assign(document.createElement('a'), { href: url, download: nombreArchivo });
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                descargarArchivo(html, nombreArchivo, 'text/html;charset=utf-8');
                 mostrarToast(esAnual ? 'Reporte anual generado' : 'Reporte generado', 'success');
             } catch (e) {
                 console.error('Error generando reporte:', e);
@@ -7909,15 +7941,16 @@
             _forzarVista(nuevaVista, () => actualizarUI());
         }
 
-        function pegarHoraActual(id) {
+        // Alterna un campo: si tiene valor lo limpia, si está vacío lo completa con obtenerValor()
+        function _alternarValorCampo(id, obtenerValor) {
             const input = $(id);
-            if (!input) return;
-            if (input.value.trim() !== '') {
-                input.value = '';
-            } else {
-                input.value = TimeUtils.obtenerHoraActual();
-            }
-            input.dispatchEvent(new Event('input'));
+            if (!input) return null;
+            input.value = input.value.trim() !== '' ? '' : obtenerValor();
+            return input;
+        }
+
+        function pegarHoraActual(id) {
+            _alternarValorCampo(id, TimeUtils.obtenerHoraActual)?.dispatchEvent(new Event('input'));
         }
 
         function limpiarCampo(id) {
@@ -8111,28 +8144,13 @@
             $('lote-fecha-hasta').value = '';
         }
 
-        async function _registrarEspecialHoy(tipo) {
-            const fechaHoy = UILogic.obtenerFechaHoy();
-            if (DataManagement.registros().find(r => r.fecha === fechaHoy)) {
-                mostrarToast('Ya existe un registro para hoy', 'warning'); _flashCampoTipo('warning', 'btn-agregar'); return;
+        async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
+            if (DataManagement.registros().find(r => r.fecha === fecha)) {
+                mostrarToast(mensajeDuplicado, 'warning'); _flashCampoTipo('warning', 'btn-agregar'); return;
             }
             try {
-                await DataManagement.registrarDiaEspecial(fechaHoy, tipo);
-                _limpiarCamposLote();
-                actualizarBotonLote();
-            } catch (e) { console.error('Error al registrar:', e); }
-        }
-
-        async function _registrarEspecialFecha(desde, tipo) {
-            if (DataManagement.registros().find(r => r.fecha === desde)) {
-                mostrarToast('Ya existe un registro para esa fecha', 'warning'); _flashCampoTipo('warning', 'btn-agregar'); return;
-            }
-            try {
-                await DataManagement.registrarDiaEspecial(desde, tipo);
-                UILogic.aplicarFeedbackCampos([
-                    { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
-                    { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
-                ]);
+                await DataManagement.registrarDiaEspecial(fecha, tipo);
+                alExito?.();
                 _limpiarCamposLote();
                 actualizarBotonLote();
             } catch (e) { console.error('Error al registrar:', e); }
@@ -8156,12 +8174,15 @@
                     mostrarToast('Revisá las fechas ingresadas', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
                 }
                 if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
-                await _registrarEspecialHoy(tipo); return;
+                await _registrarEspecial(UILogic.obtenerFechaHoy(), tipo, 'Ya existe un registro para hoy'); return;
             }
 
             if (desde && !hasta) {
                 if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
-                await _registrarEspecialFecha(desde, tipo); return;
+                await _registrarEspecial(desde, tipo, 'Ya existe un registro para esa fecha', () => UILogic.aplicarFeedbackCampos([
+                    { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
+                    { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
+                ])); return;
             }
 
             if (!desde && hasta) { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
@@ -8362,13 +8383,8 @@
         }
 
         function alternarFechaActual(id) {
-            const c = $(id);
+            const c = _alternarValorCampo(id, TimeUtils.obtenerFechaHoy);
             if (!c) return;
-            if (c.value.trim() !== '') {
-                c.value = '';
-            } else {
-                c.value = TimeUtils.obtenerFechaHoy();
-            }
 
             actualizarBotonLote();
             if (id === 'edit-grupo-desde' || id === 'edit-grupo-hasta') {
@@ -8445,9 +8461,9 @@
             ejecutarExportacion, toggleCamposRangoExport, actualizarEstadoBotonesGist,
             actualizarBotonesHistorico, abrirModalGist, cerrarModalGist, guardarConfigGist,
             toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
-            toggleGistBackup, toggleGistMerge, cambiarLimiteSync, iniciarCambioLimite,
+            toggleGistBackup, toggleGistMerge, cambiarLimiteSync, pressHoldLimite,
             actualizarResumenLimites, toggleGistPanel,
-            detenerCambioLimite, gistSubir, gistBajar
+            gistSubir, gistBajar
         } = UIGistYRespaldo;
 
         const {
@@ -8828,9 +8844,7 @@
                 const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
                 const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
 
-                try {
-                    StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
-                } catch (e) { }
+                StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
 
                 if (typeof aplicarOrdenCards === 'function') {
                     aplicarOrdenCards(nuevoOrden);
@@ -8865,7 +8879,7 @@
 
         function cerrarConfig() {
             if (document.body.classList.contains('config-onboarding')) {
-                setTimeout(() => document.body.classList.remove('config-onboarding'), 350);
+                setTimeout(() => document.body.classList.remove('config-onboarding'), DUR_ANIM() + 50);
                 StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
                 if (_resolverOnboarding) {
                     _resolverOnboarding();
@@ -9292,7 +9306,7 @@
                 setTimerAutoVista(setTimeout(() => {
                     setTimerAutoVista(null);
                     alternarVista();
-                    setTimeout(() => _iniciarCicloStats(), 350);
+                    setTimeout(() => _iniciarCicloStats(), DUR_ANIM() + 50);
                 }, 2500));
             }
 
@@ -9540,9 +9554,7 @@
             return nuevoValor;
         }
 
-        const _pressHoldHoras = _crearPressHold(incremento => cambiarHorasDiarias(incremento));
-        function iniciarCambioHoras(incremento) { _pressHoldHoras.iniciar(incremento); }
-        function detenerCambio() { _pressHoldHoras.detener(); }
+        const pressHoldHoras = _crearPressHold(incremento => cambiarHorasDiarias(incremento));
 
         function cambiarHorasDiarias(incremento) {
             const nuevoValor = _ajustarStepperHoras($('config-horas-diarias'), incremento);
@@ -9556,9 +9568,7 @@
             D.guardarYActualizar();
         }
 
-        const _pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
-        function iniciarCambioObjetivoEdicion(incremento) { _pressHoldObjetivoEdicion.iniciar(incremento); }
-        function detenerCambioObjetivoEdicion() { _pressHoldObjetivoEdicion.detener(); }
+        const pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
 
         function cambiarObjetivoEdicion(incremento) {
             const el = $('edit-objetivo');
@@ -9578,6 +9588,7 @@
         }
 
         return {
+            pressHoldHoras, pressHoldLimite, pressHoldObjetivoEdicion,
             _activarVistaCalendarioHistorico, _agruparMesesPorAnio, _cerrarPopupCalendarioHover, _cerrarSelectorMeses, _cicloStatsActivo, _cubiertoPorSaldo,
             calcularAprovechamientoSaldo,
             _esFechaHabil, _forzarVista, _iniciarCicloStats, _irAFicharConFecha, _nombreMesCapitalizado, _onclickCalendarioDia,
@@ -9597,10 +9608,10 @@
             cambiarAnioStats, cambiarMesStats, cambiarSemanaStats, cerrarConfig, cerrarEdicion, cerrarEdicionGrupo,
             cerrarEditorPerfil, cerrarEditorTramoDias, cerrarExportar, cerrarImportar, cerrarModalAyuda, cerrarModalGist,
             cerrarModalHistorialDias, cerrarModalReporteSecciones,
-            cerrarSelectorPerfiles, confirmarGenerarReporte, crearPerfilDesdeSelector, detenerCambio, detenerCambioLimite, detenerCambioObjetivoEdicion,
+            cerrarSelectorPerfiles, confirmarGenerarReporte, crearPerfilDesdeSelector, 
             ejecutarAccionRegistro, ejecutarExportacion, eliminarPerfilDesdeEditor, eliminarTramoDias, getFondoCard, getVistaHistoricoCalendario, gistBajar,
-            gistMergeAplicar, gistMergeCancelar, gistSubir, guardarConfigGist, guardarEdicionPerfil, guardarEdicionTramoDias, iniciarCambioHoras,
-            iniciarCambioLimite, iniciarCambioObjetivoEdicion, iniciarDragOrdenCards, iniciarTimerAutoCierreBotones, init, irHoyCalendario,
+            gistMergeAplicar, gistMergeCancelar, gistSubir, guardarConfigGist, guardarEdicionPerfil, guardarEdicionTramoDias, 
+            iniciarDragOrdenCards, iniciarTimerAutoCierreBotones, init, irHoyCalendario,
             limpiarCampo, mostrarConfigOnboarding, mostrarExportar, mostrarFiltros, mostrarImportar, mostrarToast,
             mostrarconfig, navegarCalendario, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, obtenerOrdenCards, pegarHoraActual, poblarSelectoresTipos,
             resetearBoton, setFondoCard, setModoEstadisticas, setTiempoExpansionBotones, toggleBloqueoEdicion, toggleBloqueoEdicionGrupo,
@@ -9708,7 +9719,7 @@
 
             if (confirmo) {
                 for (const feriado of pendientes) {
-                    try { await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { }
+                    try { await DataManagement.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { console.error('Error registrando feriado:', e); }
                 }
             }
         }
@@ -9780,24 +9791,6 @@ if ('serviceWorker' in navigator) {
 
 document.addEventListener('DOMContentLoaded', function () {
     const $ = id => document.getElementById(id);
-
-    const addHoldEvents = (btn, onStart, onStop) => {
-        const start = (e) => {
-            if (btn.disabled) return;
-            if (e.type === 'touchstart') e.preventDefault();
-            onStart();
-        };
-        const stop = (e) => {
-            if (e && e.type === 'touchend') e.preventDefault();
-            onStop();
-        };
-        btn.addEventListener('mousedown', start);
-        btn.addEventListener('touchstart', start, { passive: false });
-        btn.addEventListener('mouseup', stop);
-        btn.addEventListener('mouseleave', stop);
-        btn.addEventListener('touchend', stop, { passive: false });
-        btn.addEventListener('touchcancel', stop);
-    };
 
     $('btn-install')?.addEventListener('click', () => PWAInstaller.instalarApp());
     document.querySelector('.header-profile-btn')?.addEventListener('click', () => UILogic.abrirSelectorPerfiles());
@@ -9927,14 +9920,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (inputHoras) {
         const btnHorasInc = $('btn-horas-diarias-inc');
         const btnHorasDec = $('btn-horas-diarias-dec');
-        if (btnHorasInc) addHoldEvents(btnHorasInc, () => UILogic.iniciarCambioHoras(0.5), () => UILogic.detenerCambio());
-        if (btnHorasDec) addHoldEvents(btnHorasDec, () => UILogic.iniciarCambioHoras(-0.5), () => UILogic.detenerCambio());
+        if (btnHorasInc) UILogic.pressHoldHoras.vincular(btnHorasInc, 0.5);
+        if (btnHorasDec) UILogic.pressHoldHoras.vincular(btnHorasDec, -0.5);
     }
 
     const btnObjetivoInc = $('btn-edit-objetivo-inc');
     const btnObjetivoDec = $('btn-edit-objetivo-dec');
-    if (btnObjetivoInc) addHoldEvents(btnObjetivoInc, () => UILogic.iniciarCambioObjetivoEdicion(0.5), () => UILogic.detenerCambioObjetivoEdicion());
-    if (btnObjetivoDec) addHoldEvents(btnObjetivoDec, () => UILogic.iniciarCambioObjetivoEdicion(-0.5), () => UILogic.detenerCambioObjetivoEdicion());
+    if (btnObjetivoInc) UILogic.pressHoldObjetivoEdicion.vincular(btnObjetivoInc, 0.5);
+    if (btnObjetivoDec) UILogic.pressHoldObjetivoEdicion.vincular(btnObjetivoDec, -0.5);
 
     $('gist-token')?.addEventListener('input', () => UILogic.actualizarEstadoBotonesGist());
     $('gist-id')?.addEventListener('input', () => UILogic.actualizarEstadoBotonesGist());
@@ -9951,8 +9944,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const inputLimite = $('gist-limite-valor');
     if (inputLimite) {
         const btnsLimite = inputLimite.closest('.input-number-group')?.querySelectorAll('.btn-increment');
-        if (btnsLimite?.[0]) addHoldEvents(btnsLimite[0], () => UILogic.iniciarCambioLimite(1), () => UILogic.detenerCambioLimite());
-        if (btnsLimite?.[1]) addHoldEvents(btnsLimite[1], () => UILogic.iniciarCambioLimite(-1), () => UILogic.detenerCambioLimite());
+        if (btnsLimite?.[0]) UILogic.pressHoldLimite.vincular(btnsLimite[0], 1);
+        if (btnsLimite?.[1]) UILogic.pressHoldLimite.vincular(btnsLimite[1], -1);
     }
 
     $('btn-gist-guardar')?.addEventListener('click', () => UILogic.guardarConfigGist());

@@ -55,8 +55,7 @@
     const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;
 
     // ====================================================================
-    // COLAPSABLES — shared helper (.collapsible + .expanded)
-    // animar=false fija el estado sin transición (p. ej. al cargar datos o abrir un modal).
+    // COLAPSABLES — shared helper
     // ====================================================================
     function setColapsable(el, abierto, { animar = true } = {}) {
         if (!el) return;
@@ -821,7 +820,7 @@
     })();
 
     // ====================================================================
-    // THEME MANAGER (themes: light, dark, pink, green, blue)
+    // THEME MANAGER MODULE
     // ====================================================================
     const ThemeManager = (function () {
         const TEMAS = ['light', 'dark', 'pink', 'green', 'blue', 'lilac', 'crema'];

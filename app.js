@@ -70,6 +70,18 @@
     }
 
     // ====================================================================
+    // ICONOS SVG — shared helper
+    // ====================================================================
+    function crearIcono(href, clase = 'icon') {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', clase);
+        const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        use.setAttribute('href', href);
+        svg.appendChild(use);
+        return svg;
+    }
+
+    // ====================================================================
     // PWA INSTALLER MODULE
     // ====================================================================
     const PWAInstaller = (function () {
@@ -4942,14 +4954,6 @@
 
         function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios) {
             resumenEl.innerHTML = '';
-            const _mkSvg = (id) => {
-                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.setAttribute('class', 'icon');
-                const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-                use.setAttribute('href', id);
-                svg.appendChild(use);
-                return svg;
-            };
             const _el = (tag, cls, texto) => {
                 const e = document.createElement(tag);
                 if (cls) e.className = cls;
@@ -4978,15 +4982,14 @@
 
             resumenEl.dataset.modo = 'merge';
 
-            const seg = _el('div', 'gist-seg');
-            seg.setAttribute('role', 'radiogroup');
+            const seg = _el('div', 'btn-group');
+            seg.setAttribute('role', 'group');
             seg.setAttribute('aria-label', 'Cómo aplicar los datos del Gist');
             const segBtns = [['merge', '#icon-combine', 'Combinar'], ['replace', '#icon-replace-swap', 'Reemplazar']].map(([modo, icono, texto]) => {
-                const btn = _el('button', 'gist-seg-btn');
+                const btn = _el('button');
                 btn.type = 'button';
                 btn.dataset.modo = modo;
-                btn.setAttribute('role', 'radio');
-                btn.appendChild(_mkSvg(icono));
+                btn.appendChild(crearIcono(icono));
                 btn.appendChild(document.createTextNode(texto));
                 btn.addEventListener('click', () => {
                     if (resumenEl.dataset.modo === modo) return;
@@ -5024,7 +5027,7 @@
             if (soloLocal.length > 0) {
                 const n = soloLocal.length;
                 const alerta = _el('div', 'gist-alerta');
-                alerta.appendChild(_mkSvg('#icon-alert-triangle'));
+                alerta.appendChild(crearIcono('#icon-alert-triangle'));
                 const txt = _el('span');
                 txt.appendChild(document.createTextNode('Se eliminan '));
                 txt.appendChild(_el('strong', null, `${n} registro${_plural(n)} local${_plural(n)}`));
@@ -5041,8 +5044,8 @@
                 const esMerge = resumenEl.dataset.modo === 'merge';
                 segBtns.forEach(b => {
                     const activo = b.dataset.modo === resumenEl.dataset.modo;
-                    b.classList.toggle('is-on', activo);
-                    b.setAttribute('aria-checked', String(activo));
+                    b.classList.toggle('btn-activo', activo);
+                    b.setAttribute('aria-pressed', String(activo));
                 });
 
                 const despues = esMerge ? nLocal + nNuevos : nGist;
@@ -5064,10 +5067,6 @@
                     btnAplicar.classList.toggle('btn-edit', esMerge);
                     btnAplicar.classList.toggle('btn-delete', !esMerge);
                 }
-                const txtAplicar = document.getElementById('txt-gist-merge-aplicar');
-                if (txtAplicar) txtAplicar.textContent = esMerge ? 'Aplicar combinación' : 'Reemplazar con el Gist';
-                const iconAplicar = document.getElementById('icon-gist-merge-aplicar');
-                if (iconAplicar) iconAplicar.setAttribute('href', esMerge ? '#icon-combine' : '#icon-replace-swap');
             }
             pintar(false);
         }
@@ -5214,12 +5213,8 @@
         }
 
         function _crearChevron() {
-            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('class', 'icon chevron-mes chevron-mes-icon');
+            const svg = crearIcono('#icon-chevron-down', 'icon chevron-mes chevron-mes-icon');
             svg.setAttribute('viewBox', '0 0 24 24');
-            const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-            use.setAttribute('href', '#icon-chevron-down');
-            svg.appendChild(use);
             return svg;
         }
 

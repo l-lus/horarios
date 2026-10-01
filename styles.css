@@ -27,6 +27,7 @@
     --c-blue: rgba(76, 114, 172, 0.8);
     --c-green: rgba(76, 172, 140, 0.8);
     --c-green-bg: rgba(96, 172, 148, 0.1);
+    --c-red-bg: rgba(172, 90, 76, 0.1);
     --c-active: var(--c-blue);
     --c-active-bg: rgba(76, 114, 172, 0.1);
     --c-red: rgba(172, 90, 76, 0.8);
@@ -925,39 +926,8 @@ button:disabled {
     flex-direction: column;
 }
 
-/* Selector Combinar / Reemplazar */
-.gist-seg {
-    margin-bottom: var(--space-md);
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-xs);
-    padding: var(--space-xs);
-    border-radius: 16px;
-    background: var(--input-bg);
-}
-
-.gist-seg-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    min-height: 42px;
-    border: 0;
-    border-radius: 12px;
-    background: transparent;
-    color: var(--text-muted);
-    font-family: inherit;
-    font-size: var(--text-base);
-    font-weight: var(--fw-semibold);
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
-}
-
-.gist-seg-btn.is-on {
-    background: var(--bg-card);
-    color: var(--text-main);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+#gist-merge-resumen>.btn-group {
+    margin: 0 0 var(--space-md);
 }
 
 /* Resultado antes → después */
@@ -1021,7 +991,7 @@ button:disabled {
 }
 
 .gist-delta.is-menos {
-    background: color-mix(in srgb, var(--c-red) 16%, transparent);
+    background: var(--c-red-bg);
     color: var(--c-red);
 }
 
@@ -1036,7 +1006,7 @@ button:disabled {
     gap: var(--space-sm);
     padding: var(--space-md);
     border-radius: 14px;
-    background: color-mix(in srgb, var(--c-red) 14%, transparent);
+    background: var(--c-red-bg);
     color: var(--text-main);
     font-size: var(--text-sm);
     line-height: 1.35;
@@ -1049,28 +1019,6 @@ button:disabled {
 }
 
 /* Footer: confirmar + cancelar */
-#modal-gist-merge .modal-panel-footer {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    margin-top: var(--space-lg);
-}
-
-.gist-merge-cancelar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    min-height: var(--touch-target);
-    border: 0;
-    border-radius: 16px;
-    background: transparent;
-    color: var(--text-muted);
-    font-family: inherit;
-    font-weight: var(--fw-semibold);
-    cursor: pointer;
-}
-
 /* ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────── */
 
 .config-actions {
@@ -2255,14 +2203,6 @@ body.config-onboarding #theme-toggle-config {
 
 .hidden {
     display: none !important;
-}
-
-.text-green {
-    color: var(--c-green);
-}
-
-.text-blue {
-    color: var(--c-blue);
 }
 
 /* ─── PERFIL DE CABECERA / PERFILES ──────────────────────────────────────────── */

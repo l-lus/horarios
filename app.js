@@ -105,7 +105,6 @@
             deferredPrompt = null;
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             $('btn-install')?.addEventListener('click', () => instalarApp());
         }
@@ -3868,7 +3867,6 @@
             }
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             document.querySelector('.header-profile-btn')?.addEventListener('click', () => abrirSelectorPerfiles());
 
@@ -4163,13 +4161,20 @@
                 ${cubiertoLineaHtml}
                 ${compensadoLineaHtml}
                 <div class="cal-popup-3l">${S.escapeHtml(reg.entrada)} → ${S.escapeHtml(reg.salida)}</div>
-                ${tfStr ? `<div class="cal-popup-3l">${S.escapeHtml(tfStr)}</div>` : ''}`;
+                ${tfStr ? _cajaPopupHtml('#icon-exit', tfStr) : ''}`;
         }
 
         function _cerrarPopupCalendario() {
             if (!_popupCalendarioEl) return;
             _popupCalendarioEl.remove();
             _popupCalendarioEl = null;
+        }
+
+        function _cajaPopupHtml(icono, texto) {
+            return `<div class="cal-popup-caja">
+                <svg class="icon cal-popup-caja-icono"><use href="${icono}"/></svg>
+                <span class="cal-popup-caja-texto">${S.escapeHtml(texto)}</span>
+            </div>`;
         }
 
         function _formatearFechaLabelPopup(fecha) {
@@ -4195,11 +4200,7 @@
             const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
             const infoHtml = _buildInfoHtmlRegistro(reg);
             const notasTexto = reg.notas || (grupoDelRegistro && TiposRegistro.notaDeGrupo(grupoDelRegistro));
-            const comentarioHtml = notasTexto ? `
-                <div class="cal-popup-comentario">
-                    <svg class="icon icon-comentario"><use href="#icon-comment"/></svg>
-                    <span class="cal-popup-comentario-texto">${S.escapeHtml(notasTexto)}</span>
-                </div>` : '';
+            const comentarioHtml = notasTexto ? _cajaPopupHtml('#icon-comment', notasTexto) : '';
             const btnGrupoHtml = grupoDelRegistro ? `
                 <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
                     <svg class="icon"><use href="#icon-grid-group"/></svg>
@@ -4366,7 +4367,6 @@
             setTimeout(_flashDiaHoyCalendario, DUR_CALENDARIO() + 20);
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             $('calendario-titulo-mes')?.addEventListener('click', () => abrirSelectorMesesCalendario());
             document.querySelector('.btn-hoy-calendario')?.addEventListener('click', () => irHoyCalendario());
@@ -5391,7 +5391,6 @@
             });
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             document.querySelector('.config-actions .btn-gist')?.addEventListener('click', () => abrirModalGist());
             document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => mostrarImportar());
@@ -6293,7 +6292,6 @@
             });
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             document.querySelector('#card-historico .card-header-clickable')?.addEventListener('click', () => toggleHistorico());
             $('btn-vista-calendario')?.addEventListener('click', () => {
@@ -7273,7 +7271,6 @@
             });
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             document.querySelector('#card-estadisticas .card-header-clickable')?.addEventListener('click', () => toggleStats());
             $('select-mes-stats')?.addEventListener('change', () => cambiarMesStats());
@@ -8642,7 +8639,6 @@
             }
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             (function () {
                 const header = document.querySelector('.header');
@@ -8914,7 +8910,6 @@
             document.addEventListener('mouseup', endDrag);
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => togglePersistirTarjetas());
             $('btn-toggle-card-registrar')?.addEventListener('click', () => toggleVisibilidadCard('registrar'));
@@ -9057,7 +9052,6 @@
             _cerrarModalConPadre('modal-notificaciones');
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             $('btn-toggle-push-buffer')?.addEventListener('click', () => togglePushBuffer());
             $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => togglePushBufferUltimoDia());
@@ -9328,7 +9322,6 @@
             }
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             $('btn-toggle-ignorar-tf')?.addEventListener('click', () => toggleIgnorarTiempoFuera());
             $('btn-toggle-hover-popup')?.addEventListener('click', () => toggleHoverPopupCalendario());
@@ -9526,7 +9519,6 @@
             cerrarEditorTramoDias();
         }
 
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
         function bindEventos() {
             $('btn-historial-dias-habiles')?.addEventListener('click', () => abrirModalHistorialDias());
             document.querySelector('#modal-historial-dias .btn-cancel')?.addEventListener('click', () => cerrarModalHistorialDias());
@@ -10186,6 +10178,6 @@
 // UI HISTORY MODULE
 // UI STATISTICS MODULE
 // UI CLOCK-IN CARD MODULE
-// UI LOGIC MODULE (orchestrator: init, bootstrap, general config)
+// UI LOGIC MODULE
 // WELCOME MODULE
 // HOLIDAYS MODULE

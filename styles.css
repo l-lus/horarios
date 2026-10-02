@@ -1421,12 +1421,13 @@ button:disabled .toggle-switch {
 }
 
 .registro-comentario,
-.cal-popup-comentario {
+.cal-popup-caja {
     font-size: var(--text-sm);
     color: var(--text-muted);
 }
 
-.icon-comentario {
+.icon-comentario,
+.cal-popup-caja-icono {
     width: 13px;
     height: 13px;
     flex-shrink: 0;
@@ -1948,7 +1949,7 @@ button:disabled .toggle-switch {
     width: fit-content;
 }
 
-.cal-popup-comentario {
+.cal-popup-caja {
     display: flex;
     align-items: flex-start;
     gap: 0.35rem;
@@ -1961,11 +1962,11 @@ button:disabled .toggle-switch {
     line-height: 1.35;
 }
 
-.cal-popup-comentario .icon-comentario {
+.cal-popup-caja-icono {
     margin-top: 2px;
 }
 
-.cal-popup-comentario-texto {
+.cal-popup-caja-texto {
     flex: 1;
 }
 

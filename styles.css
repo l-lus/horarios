@@ -1399,6 +1399,40 @@ button:disabled .toggle-switch {
     font-weight: var(--fw-semibold);
     margin-bottom: var(--space-xs);
     color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.registro-fecha-texto {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.registro-comentario {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: var(--text-sm);
+    font-weight: var(--fw-normal);
+    color: var(--text-muted);
+    min-width: 0;
+    max-width: 65%;
+}
+
+.registro-comentario .icon-comentario {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.registro-comentario-texto {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .registro-horas,
@@ -1784,6 +1818,19 @@ button:disabled .toggle-switch {
     font-weight: var(--fw-bold);
 }
 
+.calendario-dia.tiene-comentario::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--c-white);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+}
+
 .calendario-dia.dia-sin-registro,
 .stat-value {
     color: var(--text-muted);
@@ -1895,6 +1942,33 @@ button:disabled .toggle-switch {
     border-radius: var(--radius);
     padding: 0.1rem 0.7rem;
     width: fit-content;
+}
+
+.cal-popup-comentario {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) / 2);
+    padding: 0.35rem 0.55rem;
+    margin-top: 0.15rem;
+    word-break: break-word;
+    line-height: 1.35;
+}
+
+.cal-popup-comentario .icon-comentario {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--text-muted);
+}
+
+.cal-popup-comentario-texto {
+    flex: 1;
 }
 
 .cal-popup-btn-edit {

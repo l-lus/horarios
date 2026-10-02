@@ -4035,6 +4035,7 @@
                     cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
                 }
                 if (reg) clases += ' cursor-pointer';
+                if (reg?.notas) clases += ' tiene-comentario';
                 cell.className = clases;
                 cell.textContent = dia;
 
@@ -4178,6 +4179,12 @@
 
             const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
             const infoHtml = _buildInfoHtmlRegistro(reg);
+            const notasTexto = reg.notas || (grupoDelRegistro?.registros?.find(r => r.notas)?.notas);
+            const comentarioHtml = notasTexto ? `
+                <div class="cal-popup-comentario" title="Comentario: ${S.escapeHtml(notasTexto)}">
+                    <svg class="icon icon-comentario"><use href="#icon-comment"/></svg>
+                    <span class="cal-popup-comentario-texto">${S.escapeHtml(notasTexto)}</span>
+                </div>` : '';
             const btnGrupoHtml = grupoDelRegistro ? `
                 <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
                     <svg class="icon"><use href="#icon-grid-group"/></svg>
@@ -4193,6 +4200,7 @@
                 html: `
                 <div class="cal-popup-fecha">${fechaLabel}</div>
                 ${infoHtml}
+                ${comentarioHtml}
                 <button class="cal-popup-btn-edit" id="_cal-popup-btn-edit">
                     <svg class="icon"><use href="#icon-edit"/></svg>
                     Editar
@@ -5491,13 +5499,38 @@
             return svg;
         }
 
-        function _crearInfoRegistro({ fechaText, horasText, totalText, totalClase = '', badgesExtra = [] }) {
+        function _crearInfoRegistro({ fechaText, horasText, totalText, totalClase = '', badgesExtra = [], comentarioText = '' }) {
             const info = document.createElement('div');
             info.className = 'registro-info';
 
             const fechaEl = document.createElement('div');
             fechaEl.className = 'registro-fecha';
-            fechaEl.textContent = fechaText;
+
+            const fechaTextoEl = document.createElement('span');
+            fechaTextoEl.className = 'registro-fecha-texto';
+            fechaTextoEl.textContent = fechaText;
+            fechaEl.appendChild(fechaTextoEl);
+
+            if (comentarioText) {
+                const comEl = document.createElement('span');
+                comEl.className = 'registro-comentario';
+                comEl.title = `Comentario: ${comentarioText}`;
+
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('class', 'icon icon-comentario');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                use.setAttribute('href', '#icon-comment');
+                svg.appendChild(use);
+
+                const txt = document.createElement('span');
+                txt.className = 'registro-comentario-texto';
+                txt.textContent = comentarioText;
+
+                comEl.appendChild(svg);
+                comEl.appendChild(txt);
+                fechaEl.appendChild(comEl);
+            }
 
             const horasEl = document.createElement('div');
             horasEl.className = 'registro-horas';
@@ -5598,7 +5631,14 @@
                 if (fechaCompensado) badgesExtra.push({ texto: `→ ${TimeUtils.fechaCorta(fechaCompensado)}`, clase: 'purple-text' });
             }
 
-            item.appendChild(_crearInfoRegistro({ fechaText, horasText, totalText, totalClase, badgesExtra }));
+            item.appendChild(_crearInfoRegistro({
+                fechaText,
+                horasText,
+                totalText,
+                totalClase,
+                badgesExtra,
+                comentarioText: r.notas || ''
+            }));
 
             return item;
         }
@@ -5806,7 +5846,17 @@
                 }
             }
 
-            header.appendChild(_crearInfoRegistro({ fechaText, horasText, totalText: 'Justificado', totalClase: colorClase, badgesExtra }));
+            const primerRegConNotas = grupo.registros.find(r => r.notas);
+            const comentarioGrupo = primerRegConNotas ? primerRegConNotas.notas : '';
+
+            header.appendChild(_crearInfoRegistro({
+                fechaText,
+                horasText,
+                totalText: 'Justificado',
+                totalClase: colorClase,
+                badgesExtra,
+                comentarioText: comentarioGrupo
+            }));
 
             header.dataset.accion = 'editar-grupo';
             header.dataset.grupoData = JSON.stringify({

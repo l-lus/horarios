@@ -447,9 +447,9 @@ h2.mutacion-saliente.no-margin,
     border: 1px solid var(--border);
     border-radius: var(--radius);
     height: var(--input-height);
-    padding-left: var(--space-md);
     gap: 0;
     transition: background var(--transition-ui);
+    overflow: hidden;
 }
 
 .input-number-group--embed:has(.btn-increment:disabled) {
@@ -458,7 +458,7 @@ h2.mutacion-saliente.no-margin,
 }
 
 .input-number-group--embed .input-number-display {
-    text-align: left;
+    text-align: center;
     flex: 1;
 }
 

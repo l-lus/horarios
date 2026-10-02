@@ -5387,9 +5387,10 @@
             document.querySelectorAll('.gist-panel-toggle').forEach(b => b.addEventListener('click', () => toggleGistPanel(b.id)));
             const inputLimite = $('gist-limite-valor');
             if (inputLimite) {
-                const btnsLimite = inputLimite.closest('.input-number-group')?.querySelectorAll('.btn-increment');
-                if (btnsLimite?.[0]) pressHoldLimite.vincular(btnsLimite[0], 1);
-                if (btnsLimite?.[1]) pressHoldLimite.vincular(btnsLimite[1], -1);
+                const btnDec = $('btn-gist-limite-dec') || inputLimite.closest('.input-number-group')?.querySelectorAll('.btn-increment')?.[0];
+                const btnInc = $('btn-gist-limite-inc') || inputLimite.closest('.input-number-group')?.querySelectorAll('.btn-increment')?.[1];
+                if (btnDec) pressHoldLimite.vincular(btnDec, -1);
+                if (btnInc) pressHoldLimite.vincular(btnInc, 1);
             }
 
             $('btn-gist-guardar')?.addEventListener('click', () => guardarConfigGist());

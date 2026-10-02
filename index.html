@@ -1220,9 +1220,11 @@
                                         <div class="form-group">
                                             <label id="gist-limite-label">Límite por hora</label>
                                             <div class="input-number-group input-number-group--embed">
+                                                <button id="btn-gist-limite-dec" class="btn-increment" type="button"
+                                                    title="Disminuir límite">-</button>
                                                 <span id="gist-limite-valor" class="input-number-display">0</span>
-                                                <button class="btn-increment">+</button>
-                                                <button class="btn-increment">-</button>
+                                                <button id="btn-gist-limite-inc" class="btn-increment" type="button"
+                                                    title="Incrementar límite">+</button>
                                             </div>
                                         </div>
                                     </div>
@@ -1391,11 +1393,11 @@
                     <div class="form-group">
                         <label>Objetivo</label>
                         <div class="input-number-group input-number-group--embed">
+                            <button type="button" class="btn-increment" id="btn-edit-objetivo-dec"
+                                title="Disminuir objetivo">-</button>
                             <span id="edit-objetivo" class="input-number-display" data-valor="0">0h</span>
                             <button type="button" class="btn-increment" id="btn-edit-objetivo-inc"
                                 title="Incrementar objetivo">+</button>
-                            <button type="button" class="btn-increment" id="btn-edit-objetivo-dec"
-                                title="Disminuir objetivo">-</button>
                         </div>
                     </div>
                 </div>

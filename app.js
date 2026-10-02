@@ -1800,7 +1800,11 @@
             const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
             HistoryManager.saveState(registros, `salida ${s} (${TimeUtils.fechaCorta(reg.fecha)})`);
             const saved = await _guardarConCicloSiHoy(reg.id, esHoy, 'salida');
-            if (!saved) return;
+            if (!saved) {
+                notify.resetearBoton(btn);
+                notify.flashCampoTipo('error', 'btn-agregar');
+                return;
+            }
             PushReminder.cancelarFinDeJornada(reg.fecha);
             if (!usaHoraActual) {
                 notify.aplicarFeedbackCampos([
@@ -1871,7 +1875,11 @@
             const detalleAccion = e && s ? `entrada ${e} y salida ${s}` : e ? `entrada ${e}` : `salida ${s}`;
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
             const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
-            if (!saved) return;
+            if (!saved) {
+                notify.resetearBoton(btn);
+                notify.flashCampoTipo('error', 'btn-agregar');
+                return;
+            }
             if (esHoy && !s && TimeUtils.esFechaHabil(f, diasHabilesEnFecha(f))) {
                 const bufferSemanal = _bufferSemanalParaPush(f);
                 PushReminder.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
@@ -3406,8 +3414,22 @@
             success: 'var(--c-green)', error: 'var(--c-red)', warning: 'var(--c-red)', info: 'var(--c-blue)'
         };
 
+        function _vibrarFichar(tipo) {
+            if (!('vibrate' in navigator)) return;
+            try {
+                if (tipo === 'success') {
+                    navigator.vibrate(40);
+                } else {
+                    navigator.vibrate([50, 60, 50]);
+                }
+            } catch (_) { }
+        }
+
         function _flashCampoTipo(tipo, ...ids) {
             _flashCampoConClase('campo-flash-color', ids, _COLOR_TOAST_POR_TIPO[tipo] || 'var(--text-main)');
+            if (ids.includes('btn-agregar')) {
+                _vibrarFichar(tipo);
+            }
         }
 
         const _slideAnimEstado = new WeakMap();

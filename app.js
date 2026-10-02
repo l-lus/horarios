@@ -93,9 +93,7 @@
             window.addEventListener('appinstalled', () => {
                 if (btnInstall) btnInstall.style.display = 'none';
                 deferredPrompt = null;
-                if (window.UILogic) {
-                    UILogic.mostrarToast('¡App instalada con éxito!', 'success');
-                }
+                UICore.mostrarToast('¡App instalada con éxito!', 'success');
             });
         }
 
@@ -107,7 +105,33 @@
             deferredPrompt = null;
         }
 
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            $('btn-install')?.addEventListener('click', () => instalarApp());
+        }
+
+        function registrarServiceWorker() {
+            if (!('serviceWorker' in navigator)) return;
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('SW registrado:', registration.scope);
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    UICore.mostrarToast('Se actualizará la versión al recargar', 'info');
+                                }
+                            });
+                        });
+                    })
+                    .catch(err => console.error('❌ Error SW:', err));
+            });
+        }
+
         return {
+            bindEventos,
+            registrarServiceWorker,
             init,
             instalarApp
         };
@@ -3511,7 +3535,39 @@
             _slideAnimEstado.set(el, { timeout, wrapper });
         }
 
+        function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'label-feedback--green') {
+            const activos = campos
+                .filter(c => c.mostrar)
+                .map(c => {
+                    const input = document.getElementById(c.id);
+                    const label = input?.closest('.form-group')?.querySelector('label');
+                    const textoOriginal = label ? label.textContent : c.fallback;
+                    return { label, textoOriginal };
+                });
+
+            const labels = activos.filter(a => a.label).map(a => a.label);
+
+            _animarMutacion(labels, () => {
+                activos.forEach(({ label }) => {
+                    if (!label) return;
+                    label.textContent = texto;
+                    label.classList.add(claseColor);
+                });
+            });
+
+            setTimeout(() => {
+                _animarMutacion(labels, () => {
+                    activos.forEach(({ label, textoOriginal }) => {
+                        if (!label) return;
+                        label.textContent = textoOriginal;
+                        label.classList.remove(claseColor);
+                    });
+                });
+            }, 2000);
+        }
+
         return {
+            aplicarFeedbackCampos,
             formatoDiferencia,
             registrarSwipe,
             debounce,
@@ -3618,7 +3674,7 @@
                     className: 'btn-perfil-edit',
                     innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
                     title: 'Editar perfil',
-                    onclick: (e) => { e.stopPropagation(); UILogic.abrirEditorPerfil(p.id); }
+                    onclick: (e) => { e.stopPropagation(); abrirEditorPerfil(p.id); }
                 });
 
                 container.onclick = () => { if (!p.esActual) window.PerfilManager.cambiarPerfil(p.id); };
@@ -3799,7 +3855,21 @@
             }
         }
 
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            document.querySelector('.header-profile-btn')?.addEventListener('click', () => abrirSelectorPerfiles());
+
+            document.querySelector('#modal-selector-perfiles .btn-cancel')?.addEventListener('click', () => cerrarSelectorPerfiles());
+            $('btn-crear-perfil')?.addEventListener('click', () => crearPerfilDesdeSelector());
+
+            document.querySelector('#modal-editar-perfil .btn-edit')?.addEventListener('click', () => guardarEdicionPerfil());
+            $('btn-eliminar-perfil-editor')?.addEventListener('click', () => eliminarPerfilDesdeEditor());
+            document.querySelector('#modal-editar-perfil .btn-cancel')?.addEventListener('click', () => cerrarEditorPerfil());
+
+        }
+
         return {
+            bindEventos,
             renderizarListaPerfiles,
             abrirSelectorPerfiles,
             crearPerfilDesdeSelector,
@@ -3970,13 +4040,13 @@
 
                 if (reg) {
                     cell.dataset.regId = reg.id;
-                    cell.addEventListener('click', (e) => UILogic._onclickCalendarioDia(e, reg.id));
-                    cell.addEventListener('mouseenter', (e) => UILogic._popupCalendarioHover(e, reg.id));
-                    cell.addEventListener('mouseleave', (e) => UILogic._cerrarPopupCalendarioHover(e));
+                    cell.addEventListener('click', (e) => _onclickCalendarioDia(e, reg.id));
+                    cell.addEventListener('mouseenter', (e) => _popupCalendarioHover(e, reg.id));
+                    cell.addEventListener('mouseleave', (e) => _cerrarPopupCalendarioHover(e));
                 } else if (clase === 'dia-sin-registro') {
                     cell.classList.add('cursor-pointer');
                     cell.dataset.fecha = fecha;
-                    cell.addEventListener('click', (e) => UILogic._popupCalendarioDiaSinRegistro(e, fecha));
+                    cell.addEventListener('click', (e) => _popupCalendarioDiaSinRegistro(e, fecha));
                 }
 
                 frag.appendChild(cell);
@@ -4192,8 +4262,8 @@
             });
             _popupCalendarioEl = popup;
 
-            popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => { cerrar(); UILogic._irAFicharConFecha(fecha, false); });
-            popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrar(); UILogic._irAFicharConFecha(fecha, true); });
+            popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => { cerrar(); UITarjetaFichaje._irAFicharConFecha(fecha, false); });
+            popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrar(); UITarjetaFichaje._irAFicharConFecha(fecha, true); });
         }
 
         function _popupCalendarioHover(event, registroId) {
@@ -4275,7 +4345,21 @@
             setTimeout(_flashDiaHoyCalendario, DUR_CALENDARIO() + 20);
         }
 
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            $('calendario-titulo-mes')?.addEventListener('click', () => abrirSelectorMesesCalendario());
+            document.querySelector('.btn-hoy-calendario')?.addEventListener('click', () => irHoyCalendario());
+            const navBotones = $('calendario-nav-botones');
+            if (navBotones) {
+                const navBtns = navBotones.querySelectorAll('button:not(.btn-hoy-calendario)');
+                if (navBtns[0]) navBtns[0].addEventListener('click', () => navegarCalendario(-1));
+                if (navBtns[1]) navBtns[1].addEventListener('click', () => navegarCalendario(1));
+            }
+
+        }
+
         return {
+            bindEventos,
             abrirSelectorMesesCalendario,
             _cerrarSelectorMeses,
             _activarVistaCalendarioHistorico,
@@ -4777,9 +4861,7 @@
             btnRestaurar.parentNode.replaceChild(newRestaurar, btnRestaurar);
 
             const autoCierre = () => {
-                if (window.UILogic && window.UILogic.iniciarTimerAutoCierreBotones) {
-                    window.UILogic.iniciarTimerAutoCierreBotones();
-                }
+                UIHistorico.iniciarTimerAutoCierreBotones();
             };
 
             if (tieneGist) {
@@ -4932,7 +5014,7 @@
             HistoryManager.saveState(D.registros(), modo === 'replace' ? 'reemplazar con Gist' : 'combinar con Gist');
 
             await D.guardarYActualizar();
-            UILogic.actualizarUI();
+            UITarjetaFichaje.actualizarUI();
             UILogic.refrescarConfigSiVisible?.();
 
             if (!modoAutomatico) _gistMergeCerrarOVolver();
@@ -5288,7 +5370,47 @@
             });
         }
 
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            document.querySelector('.config-actions .btn-gist')?.addEventListener('click', () => abrirModalGist());
+            document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => mostrarImportar());
+            document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => mostrarExportar());
+            $('gist-token')?.addEventListener('input', () => actualizarEstadoBotonesGist());
+            $('gist-id')?.addEventListener('input', () => actualizarEstadoBotonesGist());
+            $('btn-toggle-token')?.addEventListener('click', () => toggleVerToken());
+            $('btn-crear-token')?.addEventListener('click', () => window.open('https://github.com/settings/tokens/new?description=Horarios+sync&scopes=gist', '_blank', 'noopener,noreferrer'));
+            $('btn-gist-abrir')?.addEventListener('click', () => abrirGistEnBrowser());
+            $('btn-gist-subir')?.addEventListener('click', () => gistSubir());
+            $('btn-gist-bajar')?.addEventListener('click', () => gistBajar());
+            $('btn-toggle-gist-backup')?.addEventListener('click', () => toggleGistBackup());
+            $('btn-toggle-gist-merge')?.addEventListener('click', () => toggleGistMerge());
+            document.querySelectorAll('.gist-panel-toggle').forEach(b => b.addEventListener('click', () => toggleGistPanel(b.id)));
+            const inputLimite = $('gist-limite-valor');
+            if (inputLimite) {
+                const btnsLimite = inputLimite.closest('.input-number-group')?.querySelectorAll('.btn-increment');
+                if (btnsLimite?.[0]) pressHoldLimite.vincular(btnsLimite[0], 1);
+                if (btnsLimite?.[1]) pressHoldLimite.vincular(btnsLimite[1], -1);
+            }
+
+            $('btn-gist-guardar')?.addEventListener('click', () => guardarConfigGist());
+            $('btn-gist-volver')?.addEventListener('click', () => cerrarModalGist());
+
+            $('btn-gist-merge-aplicar')?.addEventListener('click', () => gistMergeAplicar($('gist-merge-resumen')?.dataset.modo === 'replace' ? 'replace' : 'merge'));
+            $('btn-gist-merge-cancelar')?.addEventListener('click', () => gistMergeCancelar());
+
+            $('btn-seleccionar-archivo')?.addEventListener('click', () => $('file-import').click());
+            $('btn-combinar')?.addEventListener('click', () => DataManagement.importarDatos('merge'));
+            $('btn-reemplazar')?.addEventListener('click', () => DataManagement.importarDatos('replace'));
+            $('btn-volver-importar')?.addEventListener('click', () => cerrarImportar());
+
+            document.querySelector('#modal-exportar .btn-export')?.addEventListener('click', () => ejecutarExportacion());
+            $('btn-volver-exportar')?.addEventListener('click', () => cerrarExportar());
+
+
+        }
+
         return {
+            bindEventos,
             mostrarImportar,
             cerrarImportar,
             mostrarExportar,
@@ -5549,7 +5671,7 @@
                     className: 'btn-backup empty-state__btn-restaurar',
                     innerHTML: '<svg class="icon"><use href="#icon-upload" /></svg> Restaurar desde archivo'
                 });
-                btn.addEventListener('click', () => UILogic.mostrarImportar(true));
+                btn.addEventListener('click', () => UIGistYRespaldo.mostrarImportar(true));
                 emptyDiv.appendChild(msg);
                 emptyDiv.appendChild(btn);
             } else {
@@ -5695,7 +5817,7 @@
 
 
         function cerrarEdicion() {
-            window.UILogic?.pressHoldObjetivoEdicion.detener();
+            UILogic.pressHoldObjetivoEdicion.detener();
             ModalManager.cerrar('modal-editar', () => {
                 D.setEditandoId(null);
                 document.dispatchEvent(new Event('scroll'));
@@ -5740,7 +5862,7 @@
             [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
                 if (btn) btn.disabled = objetivoDeshabilitado;
             });
-            if (objetivoDeshabilitado) window.UILogic?.pressHoldObjetivoEdicion.detener();
+            if (objetivoDeshabilitado) UILogic.pressHoldObjetivoEdicion.detener();
             if (elObjetivo) elObjetivo.classList.toggle('input-number-inerte', objetivoDeshabilitado);
             verificarBloqueoCredito();
         }
@@ -5998,7 +6120,7 @@
                     _setIconHistorico(icon, 'meses');
                     StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
                     tiempoExpansionBotones = null;
-                    UILogic._activarVistaCalendarioHistorico();
+                    UICalendario._activarVistaCalendarioHistorico();
 
                 } else if (!conBotones) {
                     botones.classList.add('expanded');
@@ -6113,7 +6235,33 @@
             });
         }
 
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            document.querySelector('#card-historico .card-header-clickable')?.addEventListener('click', () => toggleHistorico());
+            $('btn-vista-calendario')?.addEventListener('click', () => {
+                iniciarTimerAutoCierreBotones();
+                UICalendario.toggleVistaHistorico();
+            });
+            $('btn-filtro')?.addEventListener('click', (e) => mostrarFiltros(e));
+            $('btn-undo')?.addEventListener('click', () => D.undoAction());
+            $('btn-redo')?.addEventListener('click', () => D.redoAction());
+
+            $('btn-toggle-credito')?.addEventListener('click', () => toggleCredito());
+            $('btn-lock-toggle')?.addEventListener('click', () => toggleBloqueoEdicion());
+            $('btn-edit-referencia-compensatorio')?.addEventListener('click', () => DataManagement.pegarReferenciaAutomatica());
+            document.querySelector('#modal-editar .btn-edit')?.addEventListener('click', () => DataManagement.guardarEdicion());
+            document.querySelector('#modal-editar .btn-delete')?.addEventListener('click', () => DataManagement.eliminarRegistroActual());
+            document.querySelector('#modal-editar .btn-cancel')?.addEventListener('click', () => cerrarEdicion());
+
+            $('btn-lock-grupo-toggle')?.addEventListener('click', () => toggleBloqueoEdicionGrupo());
+            document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => DataManagement.guardarEdicionGrupo());
+            document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
+            document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => cerrarEdicionGrupo());
+
+        }
+
         return {
+            bindEventos,
             actualizarListaRegistros,
             cerrarEdicion,
             setBloqueoEdicion,
@@ -7067,7 +7215,25 @@
             });
         }
 
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            document.querySelector('#card-estadisticas .card-header-clickable')?.addEventListener('click', () => toggleStats());
+            $('select-mes-stats')?.addEventListener('change', () => cambiarMesStats());
+            $('select-anio-stats')?.addEventListener('change', () => cambiarAnioStats());
+            $('select-semana-stats')?.addEventListener('change', () => cambiarSemanaStats());
+            $('btn-toggle-periodo')?.addEventListener('click', () => togglePeriodoStats());
+            $('btn-reporte')?.addEventListener('click', () => abrirModalReporteSecciones());
+            $('reporte-secciones-lista')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('.btn-seccion-reporte');
+                if (btn) toggleSeccionReporte(btn);
+            });
+            $('btn-confirmar-reporte')?.addEventListener('click', () => confirmarGenerarReporte());
+            $('btn-volver-reporte-secciones')?.addEventListener('click', () => cerrarModalReporteSecciones());
+
+        }
+
         return {
+            bindEventos,
             _calcularEstadisticasRango,
             _renderizarStats,
             calcularEstadisticasMes,
@@ -7104,7 +7270,8 @@
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
-            _animarMutacion, _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn
+            _animarMutacion, _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn,
+            aplicarFeedbackCampos
         } = UICore;
 
         let modoLoteActivo = false;
@@ -7901,8 +8068,8 @@
             const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
 
             if (!soloReloj) {
-                const idNuevoLista = UILogic.getVistaHistoricoCalendario() ? null : idNuevo;
-                UILogic.actualizarListaRegistros(D.registros(), idNuevoLista, asignacionesCompensatorio);
+                const idNuevoLista = UICalendario.getVistaHistoricoCalendario() ? null : idNuevo;
+                UIHistorico.actualizarListaRegistros(D.registros(), idNuevoLista, asignacionesCompensatorio);
             }
 
             const est = calcularEstadoCard(asignacionesCompensatorio);
@@ -7914,15 +8081,15 @@
             if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo, est); }
             _renderCard(vista);
             _renderBarra(vista);
-            UILogic._renderSelectorStats();
+            UIEstadisticas._renderSelectorStats();
             actualizarEstadoBotonTimerMain(sinAnimarTitulo);
             if (modoLoteActivo) actualizarBotonLote();
-            if (UILogic.getVistaHistoricoCalendario()) {
+            if (UICalendario.getVistaHistoricoCalendario()) {
                 const selector = $('calendario-selector-meses');
                 if (selector && selector.style.display !== 'none') {
-                    UILogic._cerrarSelectorMeses(idNuevo);
+                    UICalendario._cerrarSelectorMeses(idNuevo);
                 } else {
-                    UILogic._renderizarCalendario(idNuevo, asignacionesCompensatorio);
+                    UICalendario._renderizarCalendario(idNuevo, asignacionesCompensatorio);
                 }
             }
 
@@ -8145,7 +8312,7 @@
             const aplicarCambiosNormal = () => {
                 modoLote.style.display = 'none';
                 modoNormal.style.display = 'block';
-                UILogic.resetearBoton(btn);
+                resetearBoton(btn);
                 actualizarEstadoBotonTimerMain();
             };
 
@@ -8199,12 +8366,12 @@
                     mostrarToast('Revisá las fechas ingresadas', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
                 }
                 if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
-                await _registrarEspecial(UILogic.obtenerFechaHoy(), tipo, 'Ya existe un registro para hoy'); return;
+                await _registrarEspecial(TimeUtils.obtenerFechaHoy(), tipo, 'Ya existe un registro para hoy'); return;
             }
 
             if (desde && !hasta) {
                 if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
-                await _registrarEspecial(desde, tipo, 'Ya existe un registro para esa fecha', () => UILogic.aplicarFeedbackCampos([
+                await _registrarEspecial(desde, tipo, 'Ya existe un registro para esa fecha', () => aplicarFeedbackCampos([
                     { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
                 ])); return;
@@ -8220,7 +8387,7 @@
             try {
                 if (tipo === 'normal') await DataManagement.borrarPeriodoDirecto(desde, hasta);
                 else await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
-                UILogic.aplicarFeedbackCampos(
+                aplicarFeedbackCampos(
                     [
                         { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                         { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
@@ -8417,7 +8584,71 @@
             }
         }
 
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            (function () {
+                const header = document.querySelector('.header');
+                const statsCard = $('stats-card');
+                if (!header || !statsCard) return;
+
+                let observer = null;
+
+                const crearObserver = () => {
+                    if (observer) observer.disconnect();
+                    const headerH = header.offsetHeight;
+                    observer = new IntersectionObserver(
+                        ([entry]) => {
+                            header.classList.toggle('scrolled', !entry.isIntersecting);
+                        },
+                        { rootMargin: `-${headerH}px 0px 0px 0px`, threshold: 0 }
+                    );
+                    observer.observe(statsCard);
+                };
+
+                crearObserver();
+                let resizeTimer = null;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(crearObserver, 200);
+                });
+            })();
+
+            $('stats-card')?.addEventListener('click', (e) => {
+                const enStatsNumber = e.target.closest('#stats-semana');
+                if (enStatsNumber && D.vistaActual() !== 'semana' && !_cicloStatsActivo()) {
+                    const ciclado = _iniciarCicloStats(true);
+                    if (ciclado) {
+                        e.stopPropagation();
+                        return;
+                    }
+                }
+                alternarVista();
+            });
+
+            $('btn-timer-main')?.addEventListener('click', () => toggleTimerBreakMain());
+            $('btn-agregar')?.addEventListener('click', () => ejecutarAccionRegistro());
+            $('icon-indicator-form')?.addEventListener('click', () => toggleFormulario());
+
+            $('btn-ir-modo-lote')?.addEventListener('click', () => toggleModoLote());
+            $('btn-pegar-entrada')?.addEventListener('click', () => pegarHoraActual('entrada'));
+            $('btn-pegar-salida')?.addEventListener('click', () => pegarHoraActual('salida'));
+
+            $('lote-tipo')?.addEventListener('change', () => actualizarBotonLote());
+            $('btn-ir-modo-normal')?.addEventListener('click', () => toggleModoLote());
+            $('btn-lote-desde')?.addEventListener('click', () => alternarFechaActual('lote-fecha-desde'));
+            $('btn-lote-hasta')?.addEventListener('click', () => alternarFechaActual('lote-fecha-hasta'));
+
+            $('btn-toggle-fondo')?.addEventListener('click', () => toggleFondoCard());
+            $('btn-edit-entrada')?.addEventListener('click', () => pegarHoraActual('edit-entrada'));
+            $('btn-edit-salida')?.addEventListener('click', () => pegarHoraActual('edit-salida'));
+            $('btn-edit-tf')?.addEventListener('click', () => limpiarCampo('edit-tiempo-fuera'));
+            $('btn-edit-notas')?.addEventListener('click', () => limpiarCampo('edit-notas'));
+            $('btn-grupo-desde')?.addEventListener('click', () => alternarFechaActual('edit-grupo-desde'));
+            $('btn-grupo-hasta')?.addEventListener('click', () => alternarFechaActual('edit-grupo-hasta'));
+        }
+
         return {
+            bindEventos,
             setFondoCard,
             toggleFondoCard,
             calcularEstadoCard,
@@ -8461,7 +8692,8 @@
             _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
             _posicionarPopup, _registrarCierrePopup, _flashCampo, _flashCampoTipo,
             _limpiarClonVisual, _finalizarSlidePendiente, _animarSlideElemento, toggleSeccionGen,
-            _animarFadeSwap, _animarMutacion
+            _animarFadeSwap, _animarMutacion,
+            aplicarFeedbackCampos
         } = UICore;
 
         const {
@@ -8933,15 +9165,15 @@
             const checkboxes = document.querySelectorAll('input[name="dia-habil"]');
             checkboxes.forEach(cb => {
                 cb.checked = diasActivos.includes(parseInt(cb.value));
-                cb.onchange = UILogic.actualizarFeedbackConfig;
+                cb.onchange = actualizarFeedbackConfig;
             });
 
-            UILogic.actualizarFeedbackConfig();
+            actualizarFeedbackConfig();
             actualizarEstadoBotonIgnorarTF();
-            UILogic.actualizarEstadoBotonAplicarHoras();
+            actualizarEstadoBotonAplicarHoras();
             actualizarEstadoBotonNotificaciones();
             const lbl = $('hint-fondo-label');
-            if (lbl) lbl.textContent = _getLabelFondo(UILogic.getFondoCard());
+            if (lbl) lbl.textContent = _getLabelFondo(getFondoCard());
         }
 
         function mostrarconfig() {
@@ -9083,7 +9315,7 @@
             bindEnter('edit-entrada', () => document.getElementById('edit-salida')?.focus());
             bindEnter('edit-salida', () => document.getElementById('edit-tiempo-fuera')?.focus());
             bindEnter('edit-tiempo-fuera', (el) => { el.blur(); const b = document.querySelector('#modal-editar .btn-edit'); if (b && !b.disabled) b.click(); });
-            bindEnter('nombre-nuevo-perfil-selector', (el) => { el.blur(); UILogic.crearPerfilDesdeSelector(); });
+            bindEnter('nombre-nuevo-perfil-selector', (el) => { el.blur(); crearPerfilDesdeSelector(); });
             bindEnter('nombre-perfil-editar', (el) => { el.blur(); const b = document.querySelector('#modal-editar-perfil .btn-edit'); if (b && !b.disabled) b.click(); });
         }
 
@@ -9111,23 +9343,23 @@
             const config = D.cargarConfiguracion();
             D.setVistaActual(config.vistaActual);
             D.setIgnorarTiempoFuera(config.ignorarTiempoFuera || false);
-            UILogic.actualizarEstadoBotonIgnorarTF();
-            UILogic.poblarSelectoresTipos();
-            UILogic.actualizarEstadoBotonHoverPopup();
-            UILogic.actualizarEstadoBotonLogicaCubierto();
-            UILogic.actualizarEstadoBotonObjetivoPorRegistro();
-            UILogic.actualizarEstadoBotonFormatoCortoStats();
-            UILogic._refrescarFormatoCortoStatsCache();
-            UILogic.actualizarEstadoBotonAplicarHoras();
-            UILogic.actualizarEstadoBotonPushBuffer();
-            UILogic.actualizarEstadoBotonPushHabilitado();
-            UILogic.actualizarEstadoBotonNotificaciones();
-            UILogic.actualizarSelectPushAnticipacion();
-            UILogic.aplicarVisibilidadCards();
-            UILogic.aplicarOrdenCards(UILogic.obtenerOrdenCards());
-            UILogic.iniciarDragOrdenCards();
-            UILogic.setFondoCard(config.fondoCard || 'golden-gate');
-            UILogic.setModoEstadisticas(config.modoEstadisticas || 'mensual');
+            actualizarEstadoBotonIgnorarTF();
+            poblarSelectoresTipos();
+            actualizarEstadoBotonHoverPopup();
+            actualizarEstadoBotonLogicaCubierto();
+            actualizarEstadoBotonObjetivoPorRegistro();
+            actualizarEstadoBotonFormatoCortoStats();
+            _refrescarFormatoCortoStatsCache();
+            actualizarEstadoBotonAplicarHoras();
+            actualizarEstadoBotonPushBuffer();
+            actualizarEstadoBotonPushHabilitado();
+            actualizarEstadoBotonNotificaciones();
+            actualizarSelectPushAnticipacion();
+            aplicarVisibilidadCards();
+            aplicarOrdenCards(obtenerOrdenCards());
+            iniciarDragOrdenCards();
+            setFondoCard(config.fondoCard || 'golden-gate');
+            setModoEstadisticas(config.modoEstadisticas || 'mensual');
 
             const perfilActual = PerfilManager.obtenerDatosPerfil();
             D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
@@ -9191,7 +9423,7 @@
                         if (icon) { icon.classList.remove('icon-rotate-neg90'); icon.classList.add('rotated'); }
                     } else {
                         const botones = $('botones-historico');
-                        if (botones) { botones.classList.add('expanded'); UILogic.setTiempoExpansionBotones(Date.now()); }
+                        if (botones) { botones.classList.add('expanded'); setTiempoExpansionBotones(Date.now()); }
                         if (icon) { icon.classList.remove('rotated'); icon.classList.add('icon-rotate-neg90'); }
                     }
                 }
@@ -9282,7 +9514,7 @@
             agregarListenersFecha(document.getElementById('lote-fecha-desde'));
             agregarListenersFecha(document.getElementById('lote-fecha-hasta'));
 
-            document.getElementById('tipo-exportacion')?.addEventListener('change', () => UILogic.toggleCamposRangoExport());
+            document.getElementById('tipo-exportacion')?.addEventListener('change', () => toggleCamposRangoExport());
 
             const fileInput = document.getElementById('file-import');
             if (fileInput) {
@@ -9369,37 +9601,6 @@
             }
         }
 
-        function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'label-feedback--green') {
-            const activos = campos
-                .filter(c => c.mostrar)
-                .map(c => {
-                    const input = document.getElementById(c.id);
-                    const label = input?.closest('.form-group')?.querySelector('label');
-                    const textoOriginal = label ? label.textContent : c.fallback;
-                    return { label, textoOriginal };
-                });
-
-            const labels = activos.filter(a => a.label).map(a => a.label);
-
-            _animarMutacion(labels, () => {
-                activos.forEach(({ label }) => {
-                    if (!label) return;
-                    label.textContent = texto;
-                    label.classList.add(claseColor);
-                });
-            });
-
-            setTimeout(() => {
-                _animarMutacion(labels, () => {
-                    activos.forEach(({ label, textoOriginal }) => {
-                        if (!label) return;
-                        label.textContent = textoOriginal;
-                        label.classList.remove(claseColor);
-                    });
-                });
-            }, 2000);
-        }
-
         function actualizarFeedbackConfig() {
             const checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
             const seleccionados = checkboxes.length;
@@ -9471,7 +9672,7 @@
                     className: 'btn-perfil-edit',
                     innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
                     title: 'Editar tramo',
-                    onclick: (e) => { e.stopPropagation(); UILogic.abrirEditorTramoDias(tramo.desde); }
+                    onclick: (e) => { e.stopPropagation(); abrirEditorTramoDias(tramo.desde); }
                 });
 
                 container.appendChild(infoSection);
@@ -9611,7 +9812,62 @@
             }
         }
 
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            $('btn-toggle-ignorar-tf')?.addEventListener('click', () => toggleIgnorarTiempoFuera());
+            $('btn-toggle-hover-popup')?.addEventListener('click', () => toggleHoverPopupCalendario());
+            $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
+            $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
+            $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
+            $('btn-toggle-push-buffer')?.addEventListener('click', () => togglePushBuffer());
+            $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => togglePushBufferUltimoDia());
+            $('btn-toggle-push-habilitado')?.addEventListener('click', () => togglePushHabilitado());
+            $('config-push-anticipacion')?.addEventListener('change', (e) => cambiarPushAnticipacion(e.target.value));
+            $('btn-toggle-notification')?.addEventListener('click', () => abrirModalNotificaciones());
+            document.querySelector('#modal-notificaciones .btn-cancel')?.addEventListener('click', () => cerrarModalNotificaciones());
+            $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());
+            $('btn-historial-dias-habiles')?.addEventListener('click', () => abrirModalHistorialDias());
+            $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => togglePersistirTarjetas());
+            $('btn-toggle-card-registrar')?.addEventListener('click', () => toggleVisibilidadCard('registrar'));
+            $('btn-toggle-card-estadisticas')?.addEventListener('click', () => toggleVisibilidadCard('estadisticas'));
+            $('btn-toggle-card-historico')?.addEventListener('click', () => toggleVisibilidadCard('historico'));
+            document.getElementById('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
+            document.getElementById('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
+            document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => cerrarModalAyuda());
+            document.querySelector('#modal-historial-dias .btn-cancel')?.addEventListener('click', () => cerrarModalHistorialDias());
+            document.querySelector('#modal-editar-tramo-dias .btn-edit')?.addEventListener('click', () => guardarEdicionTramoDias());
+            $('btn-eliminar-tramo-dias')?.addEventListener('click', () => eliminarTramoDias());
+            document.querySelector('#modal-editar-tramo-dias .btn-cancel')?.addEventListener('click', () => cerrarEditorTramoDias());
+            document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('.ayuda-indice-item');
+                if (!btn) return;
+                document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
+            document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => cerrarConfig());
+
+            const inputHoras = $('config-horas-diarias');
+            if (inputHoras) {
+                const btnHorasInc = $('btn-horas-diarias-inc');
+                const btnHorasDec = $('btn-horas-diarias-dec');
+                if (btnHorasInc) pressHoldHoras.vincular(btnHorasInc, 0.5);
+                if (btnHorasDec) pressHoldHoras.vincular(btnHorasDec, -0.5);
+            }
+
+            const btnObjetivoInc = $('btn-edit-objetivo-inc');
+            const btnObjetivoDec = $('btn-edit-objetivo-dec');
+            if (btnObjetivoInc) pressHoldObjetivoEdicion.vincular(btnObjetivoInc, 0.5);
+            if (btnObjetivoDec) pressHoldObjetivoEdicion.vincular(btnObjetivoDec, -0.5);
+
+            ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => $(id)?.addEventListener('input', () => actualizarResumenLimites()));
+
+            document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => mostrarconfig());
+            $('theme-toggle-modal')?.addEventListener('click', () => alternarTema());
+            $('theme-toggle-config')?.addEventListener('click', () => alternarTema());
+        }
+
         return {
+            bindEventos,
             pressHoldHoras, pressHoldLimite, pressHoldObjetivoEdicion,
             _activarVistaCalendarioHistorico, _cerrarPopupCalendarioHover, _cerrarSelectorMeses, _cicloStatsActivo,
             _iniciarCicloStats, _irAFicharConFecha, _onclickCalendarioDia,
@@ -9662,7 +9918,7 @@
             }
 
             await new Promise(r => setTimeout(r, 1000));
-            await window.UILogic?.mostrarConfigOnboarding();
+            await UILogic.mostrarConfigOnboarding();
         }
 
         return { chequearYMostrar };
@@ -9769,19 +10025,54 @@
             if (!PushReminder.autoHabilitarPendiente()) return;
 
             PushReminder.autoHabilitar();
-            window.DataManagement?.sincronizarPushHoy?.();
-            window.UILogic?.actualizarEstadoBotonNotificaciones();
-            window.UILogic?.mostrarToast(
+            DataManagement.sincronizarPushHoy();
+            UILogic.actualizarEstadoBotonNotificaciones();
+            UICore.mostrarToast(
                 'Se habilitaron las notificaciones de salida, podés deshabilitarlas desde Ajustes o tocando este aviso',
                 'info', 6000, null,
-                () => window.UILogic?.abrirModalNotificaciones()
+                () => UILogic.abrirModalNotificaciones()
             );
         }
 
         return { chequearYAvisar };
     })();
 
+    // ====================================================================
+    // MAIN — arranque de la aplicación
+    // ====================================================================
+    PWAInstaller.registrarServiceWorker();
     UILogic.init();
+
+    document.addEventListener('DOMContentLoaded', function () {
+        PWAInstaller.bindEventos();
+        UIPerfiles.bindEventos();
+        UICalendario.bindEventos();
+        UIGistYRespaldo.bindEventos();
+        UIHistorico.bindEventos();
+        UIEstadisticas.bindEventos();
+        UITarjetaFichaje.bindEventos();
+        UILogic.bindEventos();
+
+        (function _bindLayoutConsistency() {
+            const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
+            const _v = '-v261001';
+            const _full = _t + _v;
+            let _el = document.querySelector('.version-text');
+            if (!_el) {
+                _el = document.createElement('span');
+                _el.className = 'version-text';
+                const _h3 = document.querySelector('.modal-panel-header h3');
+                if (_h3) _h3.appendChild(_el);
+            }
+            if (!_el.parentNode) return;
+            _el.textContent = _full;
+            const _fix = () => { if ((_el.textContent || '') !== _full) _el.textContent = _full; };
+            new MutationObserver(_fix).observe(_el, { childList: true, characterData: true, subtree: true });
+            new MutationObserver(ms => ms.forEach(m => {
+                if ([...m.removedNodes].includes(_el)) { _el.textContent = _full; m.target.appendChild(_el); }
+            })).observe(_el.parentNode, { childList: true });
+        })();
+    });
 
     (async () => {
         await BienvenidaModal.chequearYMostrar();
@@ -9789,247 +10080,6 @@
         setTimeout(() => AvisoPush.chequearYAvisar(), 3000);
     })();
 })();
-
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then(registration => {
-                console.log('SW registrado:', registration.scope);
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            if (window.UILogic) UILogic.mostrarToast('Se actualizará la versión al recargar', 'info');
-                        }
-                    });
-                });
-            })
-            .catch(err => console.error('❌ Error SW:', err));
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    const $ = id => document.getElementById(id);
-
-    $('btn-install')?.addEventListener('click', () => PWAInstaller.instalarApp());
-    document.querySelector('.header-profile-btn')?.addEventListener('click', () => UILogic.abrirSelectorPerfiles());
-
-    (function () {
-        const header = document.querySelector('.header');
-        const statsCard = $('stats-card');
-        if (!header || !statsCard) return;
-
-        let observer = null;
-
-        const crearObserver = () => {
-            if (observer) observer.disconnect();
-            const headerH = header.offsetHeight;
-            observer = new IntersectionObserver(
-                ([entry]) => {
-                    header.classList.toggle('scrolled', !entry.isIntersecting);
-                },
-                { rootMargin: `-${headerH}px 0px 0px 0px`, threshold: 0 }
-            );
-            observer.observe(statsCard);
-        };
-
-        crearObserver();
-        let resizeTimer = null;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(crearObserver, 200);
-        });
-    })();
-
-    $('stats-card')?.addEventListener('click', (e) => {
-        const enStatsNumber = e.target.closest('#stats-semana');
-        if (enStatsNumber && UILogic.vistaActual() !== 'semana' && !UILogic._cicloStatsActivo()) {
-            const ciclado = UILogic._iniciarCicloStats(true);
-            if (ciclado) {
-                e.stopPropagation();
-                return;
-            }
-        }
-        UILogic.alternarVista();
-    });
-
-    $('btn-timer-main')?.addEventListener('click', () => UILogic.toggleTimerBreakMain());
-    $('btn-agregar')?.addEventListener('click', () => UILogic.ejecutarAccionRegistro());
-    $('icon-indicator-form')?.addEventListener('click', () => UILogic.toggleFormulario());
-
-    $('btn-ir-modo-lote')?.addEventListener('click', () => UILogic.toggleModoLote());
-    $('btn-pegar-entrada')?.addEventListener('click', () => UILogic.pegarHoraActual('entrada'));
-    $('btn-pegar-salida')?.addEventListener('click', () => UILogic.pegarHoraActual('salida'));
-
-    $('lote-tipo')?.addEventListener('change', () => UILogic.actualizarBotonLote());
-    $('btn-ir-modo-normal')?.addEventListener('click', () => UILogic.toggleModoLote());
-    $('btn-lote-desde')?.addEventListener('click', () => UILogic.alternarFechaActual('lote-fecha-desde'));
-    $('btn-lote-hasta')?.addEventListener('click', () => UILogic.alternarFechaActual('lote-fecha-hasta'));
-
-    document.querySelector('#card-estadisticas .card-header-clickable')?.addEventListener('click', () => UILogic.toggleStats());
-    $('select-mes-stats')?.addEventListener('change', () => UILogic.cambiarMesStats());
-    $('select-anio-stats')?.addEventListener('change', () => UILogic.cambiarAnioStats());
-    $('select-semana-stats')?.addEventListener('change', () => UILogic.cambiarSemanaStats());
-    $('btn-toggle-periodo')?.addEventListener('click', () => UILogic.togglePeriodoStats());
-    $('btn-reporte')?.addEventListener('click', () => UILogic.abrirModalReporteSecciones());
-    $('reporte-secciones-lista')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-seccion-reporte');
-        if (btn) UILogic.toggleSeccionReporte(btn);
-    });
-    $('btn-confirmar-reporte')?.addEventListener('click', () => UILogic.confirmarGenerarReporte());
-    $('btn-volver-reporte-secciones')?.addEventListener('click', () => UILogic.cerrarModalReporteSecciones());
-
-    document.querySelector('#card-historico .card-header-clickable')?.addEventListener('click', () => UILogic.toggleHistorico());
-    $('btn-vista-calendario')?.addEventListener('click', () => {
-        if (window.UILogic && window.UILogic.iniciarTimerAutoCierreBotones) {
-            window.UILogic.iniciarTimerAutoCierreBotones();
-        }
-        UILogic.toggleVistaHistorico();
-    });
-    $('btn-filtro')?.addEventListener('click', (e) => UILogic.mostrarFiltros(e));
-    $('btn-undo')?.addEventListener('click', () => HistoryManager.undo());
-    $('btn-redo')?.addEventListener('click', () => HistoryManager.redo());
-
-    $('calendario-titulo-mes')?.addEventListener('click', () => UILogic.abrirSelectorMesesCalendario());
-    document.querySelector('.btn-hoy-calendario')?.addEventListener('click', () => UILogic.irHoyCalendario());
-    const navBotones = $('calendario-nav-botones');
-    if (navBotones) {
-        const navBtns = navBotones.querySelectorAll('button:not(.btn-hoy-calendario)');
-        if (navBtns[0]) navBtns[0].addEventListener('click', () => UILogic.navegarCalendario(-1));
-        if (navBtns[1]) navBtns[1].addEventListener('click', () => UILogic.navegarCalendario(1));
-    }
-
-    $('btn-toggle-fondo')?.addEventListener('click', () => UILogic.toggleFondoCard());
-    $('btn-toggle-ignorar-tf')?.addEventListener('click', () => UILogic.toggleIgnorarTiempoFuera());
-    $('btn-toggle-hover-popup')?.addEventListener('click', () => UILogic.toggleHoverPopupCalendario());
-    $('btn-toggle-logica-cubierto')?.addEventListener('click', () => UILogic.toggleLogicaCubierto());
-    $('btn-toggle-objetivo-registro')?.addEventListener('click', () => UILogic.toggleObjetivoPorRegistro());
-    $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => UILogic.toggleFormatoCortoStats());
-    $('btn-toggle-push-buffer')?.addEventListener('click', () => UILogic.togglePushBuffer());
-    $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => UILogic.togglePushBufferUltimoDia());
-    $('btn-toggle-push-habilitado')?.addEventListener('click', () => UILogic.togglePushHabilitado());
-    $('config-push-anticipacion')?.addEventListener('change', (e) => UILogic.cambiarPushAnticipacion(e.target.value));
-    $('btn-toggle-notification')?.addEventListener('click', () => UILogic.abrirModalNotificaciones());
-    document.querySelector('#modal-notificaciones .btn-cancel')?.addEventListener('click', () => UILogic.cerrarModalNotificaciones());
-    $('btn-aplicar-horas-todos')?.addEventListener('click', () => UILogic.aplicarHorasConfiguradasATodos());
-    $('btn-historial-dias-habiles')?.addEventListener('click', () => UILogic.abrirModalHistorialDias());
-    $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => UILogic.togglePersistirTarjetas());
-    $('btn-toggle-card-registrar')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('registrar'));
-    $('btn-toggle-card-estadisticas')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('estadisticas'));
-    $('btn-toggle-card-historico')?.addEventListener('click', () => UILogic.toggleVisibilidadCard('historico'));
-    document.getElementById('btn-ayuda-perfiles')?.addEventListener('click', () => UILogic.abrirModalAyuda());
-    document.getElementById('btn-ayuda-config')?.addEventListener('click', () => UILogic.abrirModalAyuda());
-    document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => UILogic.cerrarModalAyuda());
-    document.querySelector('#modal-historial-dias .btn-cancel')?.addEventListener('click', () => UILogic.cerrarModalHistorialDias());
-    document.querySelector('#modal-editar-tramo-dias .btn-edit')?.addEventListener('click', () => UILogic.guardarEdicionTramoDias());
-    $('btn-eliminar-tramo-dias')?.addEventListener('click', () => UILogic.eliminarTramoDias());
-    document.querySelector('#modal-editar-tramo-dias .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEditorTramoDias());
-    document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.ayuda-indice-item');
-        if (!btn) return;
-        document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    document.querySelector('.config-actions .btn-gist')?.addEventListener('click', () => UILogic.abrirModalGist());
-    document.querySelector('.config-actions .btn-backup')?.addEventListener('click', () => UILogic.mostrarImportar());
-    document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => UILogic.mostrarExportar());
-    document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
-    document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => UILogic.cerrarConfig());
-
-    const inputHoras = $('config-horas-diarias');
-    if (inputHoras) {
-        const btnHorasInc = $('btn-horas-diarias-inc');
-        const btnHorasDec = $('btn-horas-diarias-dec');
-        if (btnHorasInc) UILogic.pressHoldHoras.vincular(btnHorasInc, 0.5);
-        if (btnHorasDec) UILogic.pressHoldHoras.vincular(btnHorasDec, -0.5);
-    }
-
-    const btnObjetivoInc = $('btn-edit-objetivo-inc');
-    const btnObjetivoDec = $('btn-edit-objetivo-dec');
-    if (btnObjetivoInc) UILogic.pressHoldObjetivoEdicion.vincular(btnObjetivoInc, 0.5);
-    if (btnObjetivoDec) UILogic.pressHoldObjetivoEdicion.vincular(btnObjetivoDec, -0.5);
-
-    $('gist-token')?.addEventListener('input', () => UILogic.actualizarEstadoBotonesGist());
-    $('gist-id')?.addEventListener('input', () => UILogic.actualizarEstadoBotonesGist());
-    $('btn-toggle-token')?.addEventListener('click', () => UILogic.toggleVerToken());
-    $('btn-crear-token')?.addEventListener('click', () => window.open('https://github.com/settings/tokens/new?description=Horarios+sync&scopes=gist', '_blank', 'noopener,noreferrer'));
-    $('btn-gist-abrir')?.addEventListener('click', () => UILogic.abrirGistEnBrowser());
-    $('btn-gist-subir')?.addEventListener('click', () => UILogic.gistSubir());
-    $('btn-gist-bajar')?.addEventListener('click', () => UILogic.gistBajar());
-    $('btn-toggle-gist-backup')?.addEventListener('click', () => UILogic.toggleGistBackup());
-    $('btn-toggle-gist-merge')?.addEventListener('click', () => UILogic.toggleGistMerge());
-    document.querySelectorAll('.gist-panel-toggle').forEach(b => b.addEventListener('click', () => UILogic.toggleGistPanel(b.id)));
-    ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => $(id)?.addEventListener('input', () => UILogic.actualizarResumenLimites()));
-
-    const inputLimite = $('gist-limite-valor');
-    if (inputLimite) {
-        const btnsLimite = inputLimite.closest('.input-number-group')?.querySelectorAll('.btn-increment');
-        if (btnsLimite?.[0]) UILogic.pressHoldLimite.vincular(btnsLimite[0], 1);
-        if (btnsLimite?.[1]) UILogic.pressHoldLimite.vincular(btnsLimite[1], -1);
-    }
-
-    $('btn-gist-guardar')?.addEventListener('click', () => UILogic.guardarConfigGist());
-    $('btn-gist-volver')?.addEventListener('click', () => UILogic.cerrarModalGist());
-
-    $('btn-gist-merge-aplicar')?.addEventListener('click', () => UILogic.gistMergeAplicar($('gist-merge-resumen')?.dataset.modo === 'replace' ? 'replace' : 'merge'));
-    $('btn-gist-merge-cancelar')?.addEventListener('click', () => UILogic.gistMergeCancelar());
-
-    $('btn-toggle-credito')?.addEventListener('click', () => UILogic.toggleCredito());
-    $('btn-lock-toggle')?.addEventListener('click', () => UILogic.toggleBloqueoEdicion());
-    $('btn-edit-entrada')?.addEventListener('click', () => UILogic.pegarHoraActual('edit-entrada'));
-    $('btn-edit-referencia-compensatorio')?.addEventListener('click', () => DataManagement.pegarReferenciaAutomatica());
-    $('btn-edit-salida')?.addEventListener('click', () => UILogic.pegarHoraActual('edit-salida'));
-    $('btn-edit-tf')?.addEventListener('click', () => UILogic.limpiarCampo('edit-tiempo-fuera'));
-    $('btn-edit-notas')?.addEventListener('click', () => UILogic.limpiarCampo('edit-notas'));
-    document.querySelector('#modal-editar .btn-edit')?.addEventListener('click', () => DataManagement.guardarEdicion());
-    document.querySelector('#modal-editar .btn-delete')?.addEventListener('click', () => DataManagement.eliminarRegistroActual());
-    document.querySelector('#modal-editar .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicion());
-
-    $('btn-seleccionar-archivo')?.addEventListener('click', () => $('file-import').click());
-    $('btn-combinar')?.addEventListener('click', () => DataManagement.importarDatos('merge'));
-    $('btn-reemplazar')?.addEventListener('click', () => DataManagement.importarDatos('replace'));
-    $('btn-volver-importar')?.addEventListener('click', () => UILogic.cerrarImportar());
-
-    document.querySelector('#modal-exportar .btn-export')?.addEventListener('click', () => UILogic.ejecutarExportacion());
-    $('btn-volver-exportar')?.addEventListener('click', () => UILogic.cerrarExportar());
-
-
-    document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => UILogic.mostrarconfig());
-    $('theme-toggle-modal')?.addEventListener('click', () => UILogic.alternarTema());
-    $('theme-toggle-config')?.addEventListener('click', () => UILogic.alternarTema());
-    document.querySelector('#modal-selector-perfiles .btn-cancel')?.addEventListener('click', () => UILogic.cerrarSelectorPerfiles());
-    $('btn-crear-perfil')?.addEventListener('click', () => UILogic.crearPerfilDesdeSelector());
-
-    document.querySelector('#modal-editar-perfil .btn-edit')?.addEventListener('click', () => UILogic.guardarEdicionPerfil());
-    $('btn-eliminar-perfil-editor')?.addEventListener('click', () => UILogic.eliminarPerfilDesdeEditor());
-    document.querySelector('#modal-editar-perfil .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEditorPerfil());
-
-    $('btn-lock-grupo-toggle')?.addEventListener('click', () => UILogic.toggleBloqueoEdicionGrupo());
-    $('btn-grupo-desde')?.addEventListener('click', () => UILogic.alternarFechaActual('edit-grupo-desde'));
-    $('btn-grupo-hasta')?.addEventListener('click', () => UILogic.alternarFechaActual('edit-grupo-hasta'));
-    document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => DataManagement.guardarEdicionGrupo());
-    document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
-    document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => UILogic.cerrarEdicionGrupo());
-
-    (function _bindLayoutConsistency() {
-        const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v261001';
-        const _full = _t + _v;
-        let _el = document.querySelector('.version-text');
-        if (!_el) {
-            _el = document.createElement('span');
-            _el.className = 'version-text';
-            const _h3 = document.querySelector('.modal-panel-header h3');
-            if (_h3) _h3.appendChild(_el);
-        }
-        if (!_el.parentNode) return;
-        _el.textContent = _full;
-        const _fix = () => { if ((_el.textContent || '') !== _full) _el.textContent = _full; };
-        new MutationObserver(_fix).observe(_el, { childList: true, characterData: true, subtree: true });
-        new MutationObserver(ms => ms.forEach(m => {
-            if ([...m.removedNodes].includes(_el)) { _el.textContent = _full; m.target.appendChild(_el); }
-        })).observe(_el.parentNode, { childList: true });
-    })();
-});
 
 // MODULES:
 

@@ -491,7 +491,7 @@
         function puedeHabilitarse() {
             if (!_soportaPush()) return false;
             if (Notification.permission === 'denied') return false;
-            const registros = window.DataManagement?.registros?.() || [];
+            const registros = DataManagement.registros() || [];
             const regulares = registros.filter(r => !TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida));
             return regulares.length > UMBRAL_REGISTROS_ACTIVACION;
         }
@@ -5015,7 +5015,7 @@
 
             await D.guardarYActualizar();
             UITarjetaFichaje.actualizarUI();
-            UILogic.refrescarConfigSiVisible?.();
+            UIConfig.refrescarConfigSiVisible();
 
             if (!modoAutomatico) _gistMergeCerrarOVolver();
             const lastSyncEl = document.getElementById('gist-ultima-sync');
@@ -5408,6 +5408,8 @@
             $('btn-volver-exportar')?.addEventListener('click', () => cerrarExportar());
 
 
+
+            ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => $(id)?.addEventListener('input', () => _actualizarResumenLimites()));
         }
 
         return {
@@ -5818,7 +5820,7 @@
 
 
         function cerrarEdicion() {
-            UILogic.pressHoldObjetivoEdicion.detener();
+            UIConfig.pressHoldObjetivoEdicion.detener();
             ModalManager.cerrar('modal-editar', () => {
                 D.setEditandoId(null);
                 document.dispatchEvent(new Event('scroll'));
@@ -5863,7 +5865,7 @@
             [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
                 if (btn) btn.disabled = objetivoDeshabilitado;
             });
-            if (objetivoDeshabilitado) UILogic.pressHoldObjetivoEdicion.detener();
+            if (objetivoDeshabilitado) UIConfig.pressHoldObjetivoEdicion.detener();
             if (elObjetivo) elObjetivo.classList.toggle('input-number-inerte', objetivoDeshabilitado);
             verificarBloqueoCredito();
         }
@@ -8682,287 +8684,14 @@
         };
     })(DataManagement);
 
-    const UILogic = (function (S, D, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje) {
+    // ====================================================================
+    // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
+    // ====================================================================
+    const UICardsLayout = (function (UICore) {
 
         const {
-            formatoDiferencia, registrarSwipe, debounce, _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre,
-            _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
-            mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON,
-            mostrarToast, _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion,
-            _getCSSdur, DUR_ANIM, DUR_CALENDARIO, _crearToggleConfig, _setBtnActivo,
-            _crearOpcion, _poblarSelect, setIconoBtn, _setBtnDisabled,
-            _posicionarPopup, _registrarCierrePopup, _flashCampo, _flashCampoTipo,
-            _limpiarClonVisual, _finalizarSlidePendiente, _animarSlideElemento, toggleSeccionGen,
-            _animarFadeSwap, _animarMutacion,
-            aplicarFeedbackCampos
+            mostrarToast, _crearToggleConfig, _setBtnActivo
         } = UICore;
-
-        const {
-            renderizarListaPerfiles, abrirSelectorPerfiles, crearPerfilDesdeSelector,
-            cerrarSelectorPerfiles, abrirEditorPerfil, cerrarEditorPerfil,
-            guardarEdicionPerfil, eliminarPerfilDesdeEditor
-        } = UIPerfiles;
-
-        const {
-            abrirSelectorMesesCalendario, _cerrarSelectorMeses, _activarVistaCalendarioHistorico, _renderizarCalendario,
-            toggleVistaHistorico, _popupCalendario, _popupCalendarioDiaSinRegistro,
-            _popupCalendarioHover, _onclickCalendarioDia, _cerrarPopupCalendarioHover,
-            navegarCalendario, irHoyCalendario,
-            getVistaHistoricoCalendario, setVistaHistoricoCalendario
-        } = UICalendario;
-
-        const {
-            mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar,
-            ejecutarExportacion, toggleCamposRangoExport, actualizarEstadoBotonesGist,
-            actualizarBotonesHistorico, abrirModalGist, cerrarModalGist, guardarConfigGist,
-            toggleVerToken, abrirGistEnBrowser, gistMergeCancelar, gistMergeAplicar,
-            toggleGistBackup, toggleGistMerge, cambiarLimiteSync, pressHoldLimite,
-            actualizarResumenLimites, toggleGistPanel,
-            gistSubir, gistBajar
-        } = UIGistYRespaldo;
-
-        const {
-            actualizarListaRegistros, cerrarEdicion,
-            setBloqueoEdicion, toggleBloqueoEdicion, toggleCredito, _actualizarHintEdicion,
-            _initListenerAccionesLista, _initListenerToggleAnio, _initListenerToggleMes,
-            actualizarHintGrupo, mostrarFiltros, cerrarFiltros, toggleHistorico,
-            iniciarTimerAutoCierreBotones, cancelarTimerAutoCierreBotones,
-            verificarBloqueoCredito, setBloqueoEdicionGrupo, toggleBloqueoEdicionGrupo,
-            cerrarEdicionGrupo, setTiempoExpansionBotones
-        } = UIHistorico;
-
-        const {
-            _calcularEstadisticasRango, _renderizarStats, calcularEstadisticasMes,
-            actualizarEstadisticas, _renderSelectorStats, calcularEstadisticasAnio,
-            poblarSelectorAnios, actualizarEstadisticasAnio, poblarSelectorSemanas,
-            calcularEstadisticasSemana, actualizarEstadisticasSemana, cambiarMesStats,
-            cambiarSemanaStats, cambiarAnioStats, togglePeriodoStats, poblarSelectorMeses,
-            generarReporte, abrirModalReporteSecciones, cerrarModalReporteSecciones,
-            toggleSeccionReporte, confirmarGenerarReporte,
-            _popupStat, _onclickStatItem, _bindStatItemPopups, toggleStats,
-            setModoEstadisticas
-        } = UIEstadisticas;
-
-        const {
-            setFondoCard, toggleFondoCard, calcularEstadoCard,
-            derivarVistaSemana, derivarVistaHoy, actualizarUI, alternarVista, _forzarVista,
-            actualizarEstadoBotonTimerMain, toggleTimerBreakMain, toggleModoLote,
-            ejecutarAccionRegistro, registrarLoteDesdeCard, poblarSelectoresTipos,
-            actualizarBotonLote, toggleFormulario, _irAFicharConFecha, _scrollACardFichar,
-            alternarFechaActual, pegarHoraActual, limpiarCampo, getFondoCard, setTimerAutoVista,
-            _getLabelFondo, _iniciarCicloStats, _detenerCicloStats, _cicloStatsActivo, _prepararMostrarFaseAlRenderizar,
-            _refrescarFormatoCortoStatsCache,
-        } = UITarjetaFichaje;
-
-        function alternarTema() {
-            const temaActual = ThemeManager.temaGuardado();
-            const temaSiguiente = ThemeManager.siguienteTema(temaActual);
-            StorageHelper.setItem(STORAGE_KEYS.TEMA_OSCURO, temaSiguiente);
-            ThemeManager.aplicarTema(temaSiguiente);
-        }
-
-        const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
-            _crearToggleConfig({
-                getVal: () => D.getIgnorarTiempoFuera(),
-                setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
-                btnId: 'btn-toggle-ignorar-tf',
-                mensajeOn: 'No se descuenta el tiempo fuera en los registros',
-                mensajeOff: 'Se descuenta el tiempo fuera en los registros',
-                onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
-            });
-
-        const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
-            _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
-                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
-                btnId: 'btn-toggle-hover-popup',
-                mensajeOn: 'Se muestra popup automático en calendario',
-                mensajeOff: 'No se muestra popup automático en calendario',
-            });
-
-        const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLogicaCubierto } =
-            _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
-                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
-                btnId: 'btn-toggle-logica-cubierto',
-                mensajeOn: 'Los registros no cubren el faltante con el banco de horas',
-                mensajeOff: 'Los registros cubren el faltante con el banco de horas disponible',
-                onAfterToggle: () => { actualizarUI(); }
-            });
-
-        const { toggle: toggleObjetivoPorRegistro, actualizarEstado: actualizarEstadoBotonObjetivoPorRegistro } =
-            _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
-                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
-                btnId: 'btn-toggle-objetivo-registro',
-                mensajeOn: 'Las horas objetivo cambian dinámicamente según el valor global configurado',
-                mensajeOff: 'Las horas objetivo son independientes en cada registro',
-                onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); }
-            });
-
-        const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBotonFormatoCortoStats } =
-            _crearToggleConfig({
-                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false),
-                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.FORMATO_CORTO_STATS, v),
-                btnId: 'btn-toggle-formato-corto-stats',
-                mensajeOn: 'La tarjeta de estadísticas usa formato corto (5h 9m)',
-                mensajeOff: 'La tarjeta de estadísticas usa formato dictado (5 horas 9 minutos)',
-                onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
-            });
-
-        function actualizarEstadoBotonAplicarHoras() {
-            const modoGlobal = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
-            _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
-        }
-
-        function _actualizarDisponibilidadBotonesPush() {
-            const habilitado = PushReminder.getHabilitado();
-            const usaBufferSemanal = PushReminder.getUsarBufferSemanal();
-            _setBtnDisabled('btn-toggle-push-buffer', !habilitado);
-            _setBtnDisabled('btn-toggle-push-buffer-ultimo-dia', !habilitado || !usaBufferSemanal);
-        }
-
-        function actualizarEstadoBotonNotificaciones() {
-            _setBtnActivo('btn-toggle-notification', PushReminder.getHabilitado());
-        }
-
-        const _sincronizarPushHoyDebounced = debounce(() => D.sincronizarPushHoy(), 400);
-
-        const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuffer } =
-            _crearToggleConfig({
-                getVal: () => PushReminder.getUsarBufferSemanal(),
-                setVal: (v) => PushReminder.setUsarBufferSemanal(v),
-                btnId: 'btn-toggle-push-buffer',
-                mensajeOn: 'El banco de horas se aplica en las notificaciones',
-                mensajeOff: 'El banco de horas no se aplica en las notificaciones',
-                onAfterToggle: () => {
-                    actualizarEstadoBotonPushBufferUltimoDia();
-                    _actualizarDisponibilidadBotonesPush();
-                    _sincronizarPushHoyDebounced();
-                },
-            });
-
-        const { toggle: togglePushBufferUltimoDia, actualizarEstado: actualizarEstadoBotonPushBufferUltimoDia } =
-            _crearToggleConfig({
-                getVal: () => PushReminder.getBufferSoloUltimoDia(),
-                setVal: (v) => PushReminder.setBufferSoloUltimoDia(v),
-                btnId: 'btn-toggle-push-buffer-ultimo-dia',
-                mensajeOn: 'El banco de horas se aplica el último día hábil de la semana en las notificaciones',
-                mensajeOff: 'El banco de horas se aplica todos los días en las notificaciones',
-                onAfterToggle: () => _sincronizarPushHoyDebounced(),
-            });
-
-        const { toggle: togglePushHabilitado, actualizarEstado: actualizarEstadoBotonPushHabilitado } =
-            _crearToggleConfig({
-                getVal: () => PushReminder.getHabilitado(),
-                setVal: (v) => PushReminder.setHabilitado(v),
-                btnId: 'btn-toggle-push-habilitado',
-                mensajeOn: 'Notificaciones de horario cumplido activadas',
-                mensajeOff: 'Notificaciones de horario cumplido desactivadas',
-                puedeActivar: () => PushReminder.puedeHabilitarse(),
-                onAfterToggle: () => {
-                    _actualizarDisponibilidadBotonesPush();
-                    actualizarEstadoBotonNotificaciones();
-                    _sincronizarPushHoyDebounced();
-                },
-            });
-
-        function actualizarSelectPushAnticipacion() {
-            const select = $('config-push-anticipacion');
-            if (select) select.value = String(PushReminder.getAnticipacionMin());
-        }
-
-        function cambiarPushAnticipacion(minutos) {
-            PushReminder.setAnticipacionMin(minutos);
-            _sincronizarPushHoyDebounced();
-        }
-
-        let _permisoNotifStatus = null;
-        async function _suscribirCambiosPermisoNotificaciones() {
-            if (_permisoNotifStatus || !navigator.permissions?.query) return;
-            try {
-                _permisoNotifStatus = await navigator.permissions.query({ name: 'notifications' });
-                _permisoNotifStatus.onchange = () => actualizarEstadoPermisoNotificaciones();
-            } catch {
-            }
-        }
-
-        function actualizarEstadoPermisoNotificaciones() {
-            const el = $('push-permiso-estado');
-            if (!el) return;
-            el.innerHTML = '';
-
-            if (!('Notification' in window)) return;
-
-            const permiso = Notification.permission;
-            let claseColor, texto;
-            if (permiso === 'granted') {
-                claseColor = 'positivo';
-                texto = 'Permisos de notificaciones aceptados';
-            } else if (permiso === 'denied') {
-                claseColor = 'negativo';
-                texto = 'Permisos de notificaciones bloqueados en el navegador';
-            } else {
-                claseColor = 'neutral';
-                texto = 'Todavía no se pidió permiso al navegador';
-            }
-
-            const punto = document.createElement('span');
-            punto.className = `buffer-semanal-punto ${claseColor}`;
-            const span = document.createElement('span');
-            span.className = `buffer-semanal-texto ${claseColor}`;
-            span.textContent = texto;
-            span.insertBefore(punto, span.firstChild);
-            el.appendChild(span);
-        }
-
-        function abrirModalNotificaciones() {
-            _abrirModalConPadre('modal-notificaciones', () => {
-                actualizarEstadoBotonPushHabilitado();
-                actualizarEstadoBotonPushBuffer();
-                actualizarEstadoBotonPushBufferUltimoDia();
-                _actualizarDisponibilidadBotonesPush();
-                actualizarEstadoBotonNotificaciones();
-                actualizarSelectPushAnticipacion();
-                actualizarEstadoPermisoNotificaciones();
-            });
-        }
-
-        function cerrarModalNotificaciones() {
-            _cerrarModalConPadre('modal-notificaciones');
-        }
-
-        async function aplicarHorasConfiguradasATodos() {
-            const btn = $('btn-aplicar-horas-todos');
-            if (btn && btn.disabled) return;
-
-            const horas = D.horasDiarias();
-            const totalRegistros = D.registros().length;
-            if (totalRegistros === 0) {
-                mostrarToast('No hay registros para actualizar', 'info');
-                return;
-            }
-
-            const confirmado = await ModalManager.confirmar(
-                `Se va a reemplazar el objetivo horario de ${totalRegistros} registro${TimeUtils.pluralizar(totalRegistros)} existente${TimeUtils.pluralizar(totalRegistros)} por ${TimeUtils.horasATexto(horas, 'short')}.`,
-                'Aplicar',
-                '#icon-aplicar-horas'
-            );
-            if (!confirmado) return;
-
-            const { aplicados, creditosRecalculados } = D.aplicarHorasATodosLosRegistros();
-            const guardado = await D.guardarYActualizar();
-            if (guardado) {
-                actualizarUI();
-                let mensaje = aplicados > 0
-                    ? `Objetivo actualizado en ${aplicados} registro${TimeUtils.pluralizar(aplicados)}`
-                    : 'Los registros ya tenían este objetivo';
-                if (creditosRecalculados > 0) {
-                    mensaje += ` (${creditosRecalculados} con Salida Temprana recalculada)`;
-                }
-                mostrarToast(mensaje, 'success');
-            }
-        }
 
         const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
             _crearToggleConfig({
@@ -9130,6 +8859,287 @@
             document.addEventListener('mouseup', endDrag);
         }
 
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => togglePersistirTarjetas());
+            $('btn-toggle-card-registrar')?.addEventListener('click', () => toggleVisibilidadCard('registrar'));
+            $('btn-toggle-card-estadisticas')?.addEventListener('click', () => toggleVisibilidadCard('estadisticas'));
+            $('btn-toggle-card-historico')?.addEventListener('click', () => toggleVisibilidadCard('historico'));
+        }
+
+        return {
+            actualizarEstadoBotonPersistir, aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards,
+            iniciarDragOrdenCards, bindEventos
+        };
+
+    })(UICore);
+
+    // ====================================================================
+    // UI NOTIFICATIONS MODULE (push y permisos de notificaciones)
+    // ====================================================================
+    const UINotificaciones = (function (D, UICore) {
+
+        const {
+            debounce, _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnActivo,
+            _setBtnDisabled
+        } = UICore;
+
+        function _actualizarDisponibilidadBotonesPush() {
+            const habilitado = PushReminder.getHabilitado();
+            const usaBufferSemanal = PushReminder.getUsarBufferSemanal();
+            _setBtnDisabled('btn-toggle-push-buffer', !habilitado);
+            _setBtnDisabled('btn-toggle-push-buffer-ultimo-dia', !habilitado || !usaBufferSemanal);
+        }
+
+        function actualizarEstadoBotonNotificaciones() {
+            _setBtnActivo('btn-toggle-notification', PushReminder.getHabilitado());
+        }
+
+        const _sincronizarPushHoyDebounced = debounce(() => D.sincronizarPushHoy(), 400);
+
+        const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuffer } =
+            _crearToggleConfig({
+                getVal: () => PushReminder.getUsarBufferSemanal(),
+                setVal: (v) => PushReminder.setUsarBufferSemanal(v),
+                btnId: 'btn-toggle-push-buffer',
+                mensajeOn: 'El banco de horas se aplica en las notificaciones',
+                mensajeOff: 'El banco de horas no se aplica en las notificaciones',
+                onAfterToggle: () => {
+                    actualizarEstadoBotonPushBufferUltimoDia();
+                    _actualizarDisponibilidadBotonesPush();
+                    _sincronizarPushHoyDebounced();
+                },
+            });
+
+        const { toggle: togglePushBufferUltimoDia, actualizarEstado: actualizarEstadoBotonPushBufferUltimoDia } =
+            _crearToggleConfig({
+                getVal: () => PushReminder.getBufferSoloUltimoDia(),
+                setVal: (v) => PushReminder.setBufferSoloUltimoDia(v),
+                btnId: 'btn-toggle-push-buffer-ultimo-dia',
+                mensajeOn: 'El banco de horas se aplica el último día hábil de la semana en las notificaciones',
+                mensajeOff: 'El banco de horas se aplica todos los días en las notificaciones',
+                onAfterToggle: () => _sincronizarPushHoyDebounced(),
+            });
+
+        const { toggle: togglePushHabilitado, actualizarEstado: actualizarEstadoBotonPushHabilitado } =
+            _crearToggleConfig({
+                getVal: () => PushReminder.getHabilitado(),
+                setVal: (v) => PushReminder.setHabilitado(v),
+                btnId: 'btn-toggle-push-habilitado',
+                mensajeOn: 'Notificaciones de horario cumplido activadas',
+                mensajeOff: 'Notificaciones de horario cumplido desactivadas',
+                puedeActivar: () => PushReminder.puedeHabilitarse(),
+                onAfterToggle: () => {
+                    _actualizarDisponibilidadBotonesPush();
+                    actualizarEstadoBotonNotificaciones();
+                    _sincronizarPushHoyDebounced();
+                },
+            });
+
+        function actualizarSelectPushAnticipacion() {
+            const select = $('config-push-anticipacion');
+            if (select) select.value = String(PushReminder.getAnticipacionMin());
+        }
+
+        function cambiarPushAnticipacion(minutos) {
+            PushReminder.setAnticipacionMin(minutos);
+            _sincronizarPushHoyDebounced();
+        }
+
+        let _permisoNotifStatus = null;
+
+        async function _suscribirCambiosPermisoNotificaciones() {
+            if (_permisoNotifStatus || !navigator.permissions?.query) return;
+            try {
+                _permisoNotifStatus = await navigator.permissions.query({ name: 'notifications' });
+                _permisoNotifStatus.onchange = () => actualizarEstadoPermisoNotificaciones();
+            } catch {
+            }
+        }
+
+        function actualizarEstadoPermisoNotificaciones() {
+            const el = $('push-permiso-estado');
+            if (!el) return;
+            el.innerHTML = '';
+
+            if (!('Notification' in window)) return;
+
+            const permiso = Notification.permission;
+            let claseColor, texto;
+            if (permiso === 'granted') {
+                claseColor = 'positivo';
+                texto = 'Permisos de notificaciones aceptados';
+            } else if (permiso === 'denied') {
+                claseColor = 'negativo';
+                texto = 'Permisos de notificaciones bloqueados en el navegador';
+            } else {
+                claseColor = 'neutral';
+                texto = 'Todavía no se pidió permiso al navegador';
+            }
+
+            const punto = document.createElement('span');
+            punto.className = `buffer-semanal-punto ${claseColor}`;
+            const span = document.createElement('span');
+            span.className = `buffer-semanal-texto ${claseColor}`;
+            span.textContent = texto;
+            span.insertBefore(punto, span.firstChild);
+            el.appendChild(span);
+        }
+
+        function abrirModalNotificaciones() {
+            _abrirModalConPadre('modal-notificaciones', () => {
+                actualizarEstadoBotonPushHabilitado();
+                actualizarEstadoBotonPushBuffer();
+                actualizarEstadoBotonPushBufferUltimoDia();
+                _actualizarDisponibilidadBotonesPush();
+                actualizarEstadoBotonNotificaciones();
+                actualizarSelectPushAnticipacion();
+                actualizarEstadoPermisoNotificaciones();
+            });
+        }
+
+        function cerrarModalNotificaciones() {
+            _cerrarModalConPadre('modal-notificaciones');
+        }
+
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            $('btn-toggle-push-buffer')?.addEventListener('click', () => togglePushBuffer());
+            $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => togglePushBufferUltimoDia());
+            $('btn-toggle-push-habilitado')?.addEventListener('click', () => togglePushHabilitado());
+            $('config-push-anticipacion')?.addEventListener('change', (e) => cambiarPushAnticipacion(e.target.value));
+            $('btn-toggle-notification')?.addEventListener('click', () => abrirModalNotificaciones());
+            document.querySelector('#modal-notificaciones .btn-cancel')?.addEventListener('click', () => cerrarModalNotificaciones());
+        }
+
+        return {
+            actualizarEstadoBotonNotificaciones, actualizarEstadoBotonPushBuffer,
+            actualizarEstadoBotonPushHabilitado, actualizarSelectPushAnticipacion,
+            _suscribirCambiosPermisoNotificaciones, abrirModalNotificaciones, cerrarModalNotificaciones,
+            bindEventos
+        };
+
+    })(DataManagement, UICore);
+
+    // ====================================================================
+    // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
+    // ====================================================================
+    const UIConfig = (function (D, UICore, UIHistorico, UITarjetaFichaje, UICardsLayout, UINotificaciones) {
+
+        const {
+            _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, DUR_ANIM,
+            _crearToggleConfig, _setBtnDisabled
+        } = UICore;
+
+        const {
+            verificarBloqueoCredito
+        } = UIHistorico;
+
+        const {
+            actualizarUI, getFondoCard, _getLabelFondo, _refrescarFormatoCortoStatsCache
+        } = UITarjetaFichaje;
+
+        const {
+            actualizarEstadoBotonPersistir
+        } = UICardsLayout;
+
+        const {
+            actualizarEstadoBotonNotificaciones
+        } = UINotificaciones;
+
+        function alternarTema() {
+            const temaActual = ThemeManager.temaGuardado();
+            const temaSiguiente = ThemeManager.siguienteTema(temaActual);
+            StorageHelper.setItem(STORAGE_KEYS.TEMA_OSCURO, temaSiguiente);
+            ThemeManager.aplicarTema(temaSiguiente);
+        }
+
+        const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
+            _crearToggleConfig({
+                getVal: () => D.getIgnorarTiempoFuera(),
+                setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
+                btnId: 'btn-toggle-ignorar-tf',
+                mensajeOn: 'No se descuenta el tiempo fuera en los registros',
+                mensajeOff: 'Se descuenta el tiempo fuera en los registros',
+                onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
+            });
+
+        const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
+                btnId: 'btn-toggle-hover-popup',
+                mensajeOn: 'Se muestra popup automático en calendario',
+                mensajeOff: 'No se muestra popup automático en calendario',
+            });
+
+        const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLogicaCubierto } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
+                btnId: 'btn-toggle-logica-cubierto',
+                mensajeOn: 'Los registros no cubren el faltante con el banco de horas',
+                mensajeOff: 'Los registros cubren el faltante con el banco de horas disponible',
+                onAfterToggle: () => { actualizarUI(); }
+            });
+
+        const { toggle: toggleObjetivoPorRegistro, actualizarEstado: actualizarEstadoBotonObjetivoPorRegistro } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
+                btnId: 'btn-toggle-objetivo-registro',
+                mensajeOn: 'Las horas objetivo cambian dinámicamente según el valor global configurado',
+                mensajeOff: 'Las horas objetivo son independientes en cada registro',
+                onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); }
+            });
+
+        const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBotonFormatoCortoStats } =
+            _crearToggleConfig({
+                getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false),
+                setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.FORMATO_CORTO_STATS, v),
+                btnId: 'btn-toggle-formato-corto-stats',
+                mensajeOn: 'La tarjeta de estadísticas usa formato corto (5h 9m)',
+                mensajeOff: 'La tarjeta de estadísticas usa formato dictado (5 horas 9 minutos)',
+                onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
+            });
+
+        function actualizarEstadoBotonAplicarHoras() {
+            const modoGlobal = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+            _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
+        }
+
+        async function aplicarHorasConfiguradasATodos() {
+            const btn = $('btn-aplicar-horas-todos');
+            if (btn && btn.disabled) return;
+
+            const horas = D.horasDiarias();
+            const totalRegistros = D.registros().length;
+            if (totalRegistros === 0) {
+                mostrarToast('No hay registros para actualizar', 'info');
+                return;
+            }
+
+            const confirmado = await ModalManager.confirmar(
+                `Se va a reemplazar el objetivo horario de ${totalRegistros} registro${TimeUtils.pluralizar(totalRegistros)} existente${TimeUtils.pluralizar(totalRegistros)} por ${TimeUtils.horasATexto(horas, 'short')}.`,
+                'Aplicar',
+                '#icon-aplicar-horas'
+            );
+            if (!confirmado) return;
+
+            const { aplicados, creditosRecalculados } = D.aplicarHorasATodosLosRegistros();
+            const guardado = await D.guardarYActualizar();
+            if (guardado) {
+                actualizarUI();
+                let mensaje = aplicados > 0
+                    ? `Objetivo actualizado en ${aplicados} registro${TimeUtils.pluralizar(aplicados)}`
+                    : 'Los registros ya tenían este objetivo';
+                if (creditosRecalculados > 0) {
+                    mensaje += ` (${creditosRecalculados} con Salida Temprana recalculada)`;
+                }
+                mostrarToast(mensaje, 'success');
+            }
+        }
+
         let _resolverOnboarding = null;
 
         function cerrarConfig() {
@@ -9193,41 +9203,354 @@
             return new Promise(resolve => { _resolverOnboarding = resolve; });
         }
 
+        function actualizarFeedbackConfig() {
+            const checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+            const seleccionados = checkboxes.length;
+            const horas = parseFloat($('config-horas-diarias').dataset.valor) || 0;
+            const total = seleccionados * horas;
+
+            const el = $('config-total-feedback');
+            if (el) {
+                if (horas === 0) el.textContent = 'Registro libre sin objetivos';
+                else el.textContent = `Total semanal: ${TimeUtils.horasATexto(total, 'short')}`;
+            }
+
+            if (seleccionados > 0) {
+                const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
+                const diasVigentes = [...D.diasHabiles()].sort((a, b) => a - b);
+                const huboCambio = nuevosDias.length !== diasVigentes.length
+                    || nuevosDias.some((d, i) => d !== diasVigentes[i]);
+                if (huboCambio) D.registrarCambioDiasHabiles(nuevosDias);
+                const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
+                if (esDefault) StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
+                D.guardarYActualizar();
+            }
+            if (typeof actualizarEstadoBotonPersistir === 'function') {
+                actualizarEstadoBotonPersistir();
+            }
+        }
+
+        function _ajustarStepperHoras(el, incremento) {
+            let valorActual = parseFloat(el.dataset.valor);
+            if (isNaN(valorActual)) valorActual = D.horasDiarias();
+            const nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
+            if (isNaN(nuevoValor)) return nuevoValor;
+            el.dataset.valor = nuevoValor;
+            el.textContent = TimeUtils.horasATexto(nuevoValor, 'short');
+            return nuevoValor;
+        }
+
+        const pressHoldHoras = _crearPressHold(incremento => cambiarHorasDiarias(incremento));
+
+        function cambiarHorasDiarias(incremento) {
+            const nuevoValor = _ajustarStepperHoras($('config-horas-diarias'), incremento);
+            if (isNaN(nuevoValor)) return;
+
+            actualizarFeedbackConfig();
+            D.setHorasDiarias(nuevoValor);
+
+            const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
+            if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
+            D.guardarYActualizar();
+        }
+
+        const pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
+
+        function cambiarObjetivoEdicion(incremento) {
+            const el = $('edit-objetivo');
+            if (!el) return;
+            _ajustarStepperHoras(el, incremento);
+            verificarBloqueoCredito();
+        }
+
+        function formatearInput(e) {
+            let v = e.target.value.replace(/\D/g, '');
+            if (v.length > 4) v = v.substring(0, 4);
+            if (v.length > 2) {
+                e.target.value = v.substring(0, 2) + ':' + v.substring(2);
+            } else {
+                e.target.value = v;
+            }
+        }
+
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            $('btn-toggle-ignorar-tf')?.addEventListener('click', () => toggleIgnorarTiempoFuera());
+            $('btn-toggle-hover-popup')?.addEventListener('click', () => toggleHoverPopupCalendario());
+            $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
+            $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
+            $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
+            $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());
+            document.getElementById('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
+            document.getElementById('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
+            document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => cerrarModalAyuda());
+            document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('.ayuda-indice-item');
+                if (!btn) return;
+                document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
+            document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => cerrarConfig());
+            const inputHoras = $('config-horas-diarias');
+            if (inputHoras) {
+                const btnHorasInc = $('btn-horas-diarias-inc');
+                const btnHorasDec = $('btn-horas-diarias-dec');
+                if (btnHorasInc) pressHoldHoras.vincular(btnHorasInc, 0.5);
+                if (btnHorasDec) pressHoldHoras.vincular(btnHorasDec, -0.5);
+            }
+            const btnObjetivoInc = $('btn-edit-objetivo-inc');
+            const btnObjetivoDec = $('btn-edit-objetivo-dec');
+            if (btnObjetivoInc) pressHoldObjetivoEdicion.vincular(btnObjetivoInc, 0.5);
+            if (btnObjetivoDec) pressHoldObjetivoEdicion.vincular(btnObjetivoDec, -0.5);
+            document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => mostrarconfig());
+            $('theme-toggle-modal')?.addEventListener('click', () => alternarTema());
+            $('theme-toggle-config')?.addEventListener('click', () => alternarTema());
+        }
+
+        return {
+            actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
+            actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
+            actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+            cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding,
+            pressHoldObjetivoEdicion, formatearInput, bindEventos
+        };
+
+    })(DataManagement, UICore, UIHistorico, UITarjetaFichaje, UICardsLayout, UINotificaciones);
+
+    // ====================================================================
+    // UI WORKDAY HISTORY MODULE (historial de días hábiles y horas)
+    // ====================================================================
+    const UIHistorialDias = (function (D, UICore, UIConfig) {
+
+        const {
+            _abrirModalConPadre, _cerrarModalConPadre, mostrarToast
+        } = UICore;
+
+        const {
+            _precargarCamposConfig
+        } = UIConfig;
+
+        let _tramoEnEdicionDesde = null;
+
+        function _formatoFechaHistorial(iso) {
+            if (iso === '0001-01-01') return 'Desde siempre';
+            return `Desde ${TimeUtils.fechaCorta(iso)}`;
+        }
+
+        function _obtenerTramosOrdenados() {
+            const historial = D.historialDiasHabiles();
+            return Array.isArray(historial) && historial.length > 0
+                ? [...historial].sort((a, b) => a.desde.localeCompare(b.desde))
+                : [{ desde: '0001-01-01', dias: D.diasHabiles() }];
+        }
+
+        function _renderizarListaHistorialDias() {
+            const lista = $('lista-historial-dias');
+            if (!lista) return;
+            const hoy = TimeUtils.obtenerFechaHoy();
+            const tramos = _obtenerTramosOrdenados();
+            const vigenteReal = tramos.filter(t => t.desde <= hoy).slice(-1)[0] || tramos[0];
+
+            lista.innerHTML = '';
+            [...tramos].reverse().forEach(tramo => {
+                const esActual = tramo === vigenteReal;
+
+                const container = Object.assign(document.createElement('div'), {
+                    className: `btn-perfil-select${esActual ? ' activo' : ''}`
+                });
+
+                const diasTexto = [...tramo.dias].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', ');
+                const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
+                infoSection.appendChild(Object.assign(document.createElement('div'), {
+                    className: 'btn-perfil-nombre',
+                    textContent: `${_formatoFechaHistorial(tramo.desde)}${esActual ? ' (actual)' : ''}`
+                }));
+                infoSection.appendChild(Object.assign(document.createElement('div'), {
+                    className: 'btn-perfil-detalle',
+                    textContent: diasTexto
+                }));
+
+                const editBtn = Object.assign(document.createElement('button'), {
+                    className: 'btn-perfil-edit',
+                    innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
+                    title: 'Editar tramo',
+                    onclick: (e) => { e.stopPropagation(); abrirEditorTramoDias(tramo.desde); }
+                });
+
+                container.appendChild(infoSection);
+                container.appendChild(editBtn);
+                lista.appendChild(container);
+            });
+        }
+
+        function abrirModalHistorialDias() {
+            _abrirModalConPadre('modal-historial-dias', _renderizarListaHistorialDias);
+        }
+
+        function cerrarModalHistorialDias() {
+            _cerrarModalConPadre('modal-historial-dias', (padre) => {
+                if (padre === 'modal-config') _precargarCamposConfig();
+            });
+        }
+
+        function abrirEditorTramoDias(desdeOriginal) {
+            const tramos = _obtenerTramosOrdenados();
+            const tramo = tramos.find(t => t.desde === desdeOriginal);
+            if (!tramo) { mostrarToast('Tramo no encontrado', 'error'); return; }
+
+            _tramoEnEdicionDesde = desdeOriginal;
+
+            const inputDesde = $('editar-tramo-desde');
+            if (inputDesde) {
+                inputDesde.value = desdeOriginal === '0001-01-01' ? '' : desdeOriginal;
+                inputDesde.disabled = (desdeOriginal === '0001-01-01');
+            }
+
+            document.querySelectorAll('input[name="dia-habil-tramo"]').forEach(cb => {
+                cb.checked = tramo.dias.includes(parseInt(cb.value));
+            });
+
+            const btnEliminar = $('btn-eliminar-tramo-dias');
+            if (btnEliminar) btnEliminar.disabled = (tramos.length <= 1 || tramos[0].desde === desdeOriginal);
+
+            ModalManager.alternar('modal-historial-dias', 'modal-editar-tramo-dias');
+        }
+
+        function cerrarEditorTramoDias() {
+            _tramoEnEdicionDesde = null;
+            ModalManager.alternar('modal-editar-tramo-dias', 'modal-historial-dias', null, _renderizarListaHistorialDias);
+        }
+
+        async function guardarEdicionTramoDias() {
+            if (!_tramoEnEdicionDesde) return;
+
+            const esSentinela = _tramoEnEdicionDesde === '0001-01-01';
+            const inputDesde = $('editar-tramo-desde');
+            const nuevaFecha = esSentinela ? '0001-01-01' : (inputDesde?.value || '');
+            const checkboxes = document.querySelectorAll('input[name="dia-habil-tramo"]:checked');
+            const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
+
+            if (!esSentinela && !TimeUtils.validarFecha(nuevaFecha)) {
+                mostrarToast('Ingresá una fecha válida', 'error'); return;
+            }
+            if (nuevosDias.length === 0) {
+                mostrarToast('Seleccioná al menos un día', 'error'); return;
+            }
+
+            const tramos = _obtenerTramosOrdenados();
+            const otros = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
+            if (otros.some(t => t.desde === nuevaFecha)) {
+                mostrarToast('Ya existe un tramo con esa fecha', 'error'); return;
+            }
+
+            const nuevoHistorial = D.sanitizarHistorialDiasHabiles([...otros, { desde: nuevaFecha, dias: nuevosDias }]);
+            D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: nuevosDias }]);
+
+            const guardado = await D.guardarYActualizar();
+            if (!guardado) return;
+
+            mostrarToast('Tramo actualizado', 'success');
+            cerrarEditorTramoDias();
+        }
+
+        async function eliminarTramoDias() {
+            if (!_tramoEnEdicionDesde) return;
+            const tramos = _obtenerTramosOrdenados();
+            if (tramos.length <= 1) return;
+            if (tramos[0].desde === _tramoEnEdicionDesde) return;
+            if (!await ModalManager.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
+
+            const restantes = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
+            const nuevoHistorial = D.sanitizarHistorialDiasHabiles(restantes);
+            D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
+
+            const guardado = await D.guardarYActualizar();
+            if (!guardado) return;
+
+            mostrarToast('Tramo eliminado', 'success');
+            cerrarEditorTramoDias();
+        }
+
+        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
+        function bindEventos() {
+            $('btn-historial-dias-habiles')?.addEventListener('click', () => abrirModalHistorialDias());
+            document.querySelector('#modal-historial-dias .btn-cancel')?.addEventListener('click', () => cerrarModalHistorialDias());
+            document.querySelector('#modal-editar-tramo-dias .btn-edit')?.addEventListener('click', () => guardarEdicionTramoDias());
+            $('btn-eliminar-tramo-dias')?.addEventListener('click', () => eliminarTramoDias());
+            document.querySelector('#modal-editar-tramo-dias .btn-cancel')?.addEventListener('click', () => cerrarEditorTramoDias());
+        }
+
+        return {
+            cerrarModalHistorialDias, cerrarEditorTramoDias, bindEventos
+        };
+
+    })(DataManagement, UICore, UIConfig);
+
+
+    const UILogic = (function (S, D, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje, UICardsLayout, UINotificaciones, UIConfig) {
+
+        const {
+            registrarSwipe, debounce, _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
+            mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON, mostrarToast,
+            _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion, DUR_ANIM, _flashCampoTipo,
+            aplicarFeedbackCampos
+        } = UICore;
+
+        const {
+            crearPerfilDesdeSelector, cerrarSelectorPerfiles, cerrarEditorPerfil
+        } = UIPerfiles;
+
+        const {
+            _cerrarSelectorMeses, toggleVistaHistorico, setVistaHistoricoCalendario
+        } = UICalendario;
+
+        const {
+            mostrarImportar, cerrarImportar, cerrarExportar, toggleCamposRangoExport,
+            actualizarBotonesHistorico, cerrarModalGist, gistMergeCancelar, gistSubir, gistBajar
+        } = UIGistYRespaldo;
+
+        const {
+            cerrarEdicion, setBloqueoEdicion, _actualizarHintEdicion, _initListenerAccionesLista,
+            _initListenerToggleAnio, _initListenerToggleMes, actualizarHintGrupo, cerrarFiltros,
+            iniciarTimerAutoCierreBotones, verificarBloqueoCredito, setBloqueoEdicionGrupo, cerrarEdicionGrupo,
+            setTiempoExpansionBotones
+        } = UIHistorico;
+
+        const {
+            cerrarModalReporteSecciones, _bindStatItemPopups, toggleStats, setModoEstadisticas
+        } = UIEstadisticas;
+
+        const {
+            setFondoCard, actualizarUI, alternarVista, _forzarVista, actualizarEstadoBotonTimerMain,
+            toggleModoLote, poblarSelectoresTipos, actualizarBotonLote, toggleFormulario, setTimerAutoVista,
+            _iniciarCicloStats, _detenerCicloStats, _prepararMostrarFaseAlRenderizar,
+            _refrescarFormatoCortoStatsCache
+        } = UITarjetaFichaje;
+
+        const {
+            aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards
+        } = UICardsLayout;
+
+        const {
+            actualizarEstadoBotonNotificaciones, actualizarEstadoBotonPushBuffer,
+            actualizarEstadoBotonPushHabilitado, actualizarSelectPushAnticipacion,
+            _suscribirCambiosPermisoNotificaciones, cerrarModalNotificaciones
+        } = UINotificaciones;
+
+        const {
+            actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
+            actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
+            actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+            cerrarModalAyuda, refrescarConfigSiVisible, formatearInput
+        } = UIConfig;
+
+        const {
+            cerrarModalHistorialDias, cerrarEditorTramoDias
+        } = UIHistorialDias;
 
         function _initGlobales() {
             PerfilManager.inicializar();
-            window.DataManagement = {
-                agregarRegistro: D.agregarRegistro,
-                exportarJSON: D.exportarJSON,
-                mostrarImportar: mostrarImportar,
-                importarDatos: D.importarDatos,
-                borrarTodoHistorial: D.borrarTodoHistorial,
-                editarRegistro: D.editarRegistro,
-                guardarEdicion: D.guardarEdicion,
-                pegarReferenciaAutomatica: D.pegarReferenciaAutomatica,
-                eliminarRegistroActual: D.eliminarRegistroActual,
-                undoAction: D.undoAction,
-                redoAction: D.redoAction,
-                aplicarFiltrosInmediato: D.aplicarFiltrosInmediato,
-                limpiarFiltros: D.limpiarFiltros,
-                registrarDiaEspecial: D.registrarDiaEspecial,
-                registros: D.registros,
-                diasHabiles: D.diasHabiles,
-                horasDiarias: D.horasDiarias,
-                setDiasHabiles: D.setDiasHabiles,
-                setHorasDiarias: D.setHorasDiarias,
-                calcularHoras: D.calcularHoras,
-                registrarVacacionesDirecto: D.registrarVacacionesDirecto,
-                borrarPeriodoDirecto: D.borrarPeriodoDirecto,
-                editarGrupo: D.editarGrupo,
-                guardarEdicionGrupo: D.guardarEdicionGrupo,
-                eliminarGrupoActual: D.eliminarGrupoActual,
-                sincronizarPushHoy: D.sincronizarPushHoy
-            };
-            window.HistoryManager = { undo: D.undoAction, redo: D.redoAction };
-            window.PWAInstaller = { instalarApp: PWAInstaller.instalarApp };
             window.PerfilManager = PerfilManager;
-            window.UILogic = UILogic;
 
             D.configurarNotificaciones({
                 actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
@@ -9602,306 +9925,9 @@
             }
         }
 
-        function actualizarFeedbackConfig() {
-            const checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
-            const seleccionados = checkboxes.length;
-            const horas = parseFloat($('config-horas-diarias').dataset.valor) || 0;
-            const total = seleccionados * horas;
+        return { init };
 
-            const el = $('config-total-feedback');
-            if (el) {
-                if (horas === 0) el.textContent = 'Registro libre sin objetivos';
-                else el.textContent = `Total semanal: ${TimeUtils.horasATexto(total, 'short')}`;
-            }
-
-            if (seleccionados > 0) {
-                const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-                const diasVigentes = [...D.diasHabiles()].sort((a, b) => a - b);
-                const huboCambio = nuevosDias.length !== diasVigentes.length
-                    || nuevosDias.some((d, i) => d !== diasVigentes[i]);
-                if (huboCambio) D.registrarCambioDiasHabiles(nuevosDias);
-                const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
-                if (esDefault) StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
-                D.guardarYActualizar();
-            }
-            if (typeof actualizarEstadoBotonPersistir === 'function') {
-                actualizarEstadoBotonPersistir();
-            }
-        }
-
-        let _tramoEnEdicionDesde = null;
-
-        function _formatoFechaHistorial(iso) {
-            if (iso === '0001-01-01') return 'Desde siempre';
-            return `Desde ${TimeUtils.fechaCorta(iso)}`;
-        }
-
-        function _obtenerTramosOrdenados() {
-            const historial = D.historialDiasHabiles();
-            return Array.isArray(historial) && historial.length > 0
-                ? [...historial].sort((a, b) => a.desde.localeCompare(b.desde))
-                : [{ desde: '0001-01-01', dias: D.diasHabiles() }];
-        }
-
-        function _renderizarListaHistorialDias() {
-            const lista = $('lista-historial-dias');
-            if (!lista) return;
-            const hoy = TimeUtils.obtenerFechaHoy();
-            const tramos = _obtenerTramosOrdenados();
-            const vigenteReal = tramos.filter(t => t.desde <= hoy).slice(-1)[0] || tramos[0];
-
-            lista.innerHTML = '';
-            [...tramos].reverse().forEach(tramo => {
-                const esActual = tramo === vigenteReal;
-
-                const container = Object.assign(document.createElement('div'), {
-                    className: `btn-perfil-select${esActual ? ' activo' : ''}`
-                });
-
-                const diasTexto = [...tramo.dias].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', ');
-                const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
-                infoSection.appendChild(Object.assign(document.createElement('div'), {
-                    className: 'btn-perfil-nombre',
-                    textContent: `${_formatoFechaHistorial(tramo.desde)}${esActual ? ' (actual)' : ''}`
-                }));
-                infoSection.appendChild(Object.assign(document.createElement('div'), {
-                    className: 'btn-perfil-detalle',
-                    textContent: diasTexto
-                }));
-
-                const editBtn = Object.assign(document.createElement('button'), {
-                    className: 'btn-perfil-edit',
-                    innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
-                    title: 'Editar tramo',
-                    onclick: (e) => { e.stopPropagation(); abrirEditorTramoDias(tramo.desde); }
-                });
-
-                container.appendChild(infoSection);
-                container.appendChild(editBtn);
-                lista.appendChild(container);
-            });
-        }
-
-        function abrirModalHistorialDias() {
-            _abrirModalConPadre('modal-historial-dias', _renderizarListaHistorialDias);
-        }
-
-        function cerrarModalHistorialDias() {
-            _cerrarModalConPadre('modal-historial-dias', (padre) => {
-                if (padre === 'modal-config') _precargarCamposConfig();
-            });
-        }
-
-        function abrirEditorTramoDias(desdeOriginal) {
-            const tramos = _obtenerTramosOrdenados();
-            const tramo = tramos.find(t => t.desde === desdeOriginal);
-            if (!tramo) { mostrarToast('Tramo no encontrado', 'error'); return; }
-
-            _tramoEnEdicionDesde = desdeOriginal;
-
-            const inputDesde = $('editar-tramo-desde');
-            if (inputDesde) {
-                inputDesde.value = desdeOriginal === '0001-01-01' ? '' : desdeOriginal;
-                inputDesde.disabled = (desdeOriginal === '0001-01-01');
-            }
-
-            document.querySelectorAll('input[name="dia-habil-tramo"]').forEach(cb => {
-                cb.checked = tramo.dias.includes(parseInt(cb.value));
-            });
-
-            const btnEliminar = $('btn-eliminar-tramo-dias');
-            if (btnEliminar) btnEliminar.disabled = (tramos.length <= 1 || tramos[0].desde === desdeOriginal);
-
-            ModalManager.alternar('modal-historial-dias', 'modal-editar-tramo-dias');
-        }
-
-        function cerrarEditorTramoDias() {
-            _tramoEnEdicionDesde = null;
-            ModalManager.alternar('modal-editar-tramo-dias', 'modal-historial-dias', null, _renderizarListaHistorialDias);
-        }
-
-        async function guardarEdicionTramoDias() {
-            if (!_tramoEnEdicionDesde) return;
-
-            const esSentinela = _tramoEnEdicionDesde === '0001-01-01';
-            const inputDesde = $('editar-tramo-desde');
-            const nuevaFecha = esSentinela ? '0001-01-01' : (inputDesde?.value || '');
-            const checkboxes = document.querySelectorAll('input[name="dia-habil-tramo"]:checked');
-            const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-
-            if (!esSentinela && !TimeUtils.validarFecha(nuevaFecha)) {
-                mostrarToast('Ingresá una fecha válida', 'error'); return;
-            }
-            if (nuevosDias.length === 0) {
-                mostrarToast('Seleccioná al menos un día', 'error'); return;
-            }
-
-            const tramos = _obtenerTramosOrdenados();
-            const otros = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
-            if (otros.some(t => t.desde === nuevaFecha)) {
-                mostrarToast('Ya existe un tramo con esa fecha', 'error'); return;
-            }
-
-            const nuevoHistorial = D.sanitizarHistorialDiasHabiles([...otros, { desde: nuevaFecha, dias: nuevosDias }]);
-            D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: nuevosDias }]);
-
-            const guardado = await D.guardarYActualizar();
-            if (!guardado) return;
-
-            mostrarToast('Tramo actualizado', 'success');
-            cerrarEditorTramoDias();
-        }
-
-        async function eliminarTramoDias() {
-            if (!_tramoEnEdicionDesde) return;
-            const tramos = _obtenerTramosOrdenados();
-            if (tramos.length <= 1) return;
-            if (tramos[0].desde === _tramoEnEdicionDesde) return;
-            if (!await ModalManager.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
-
-            const restantes = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
-            const nuevoHistorial = D.sanitizarHistorialDiasHabiles(restantes);
-            D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
-
-            const guardado = await D.guardarYActualizar();
-            if (!guardado) return;
-
-            mostrarToast('Tramo eliminado', 'success');
-            cerrarEditorTramoDias();
-        }
-
-        function _ajustarStepperHoras(el, incremento) {
-            let valorActual = parseFloat(el.dataset.valor);
-            if (isNaN(valorActual)) valorActual = D.horasDiarias();
-            const nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
-            if (isNaN(nuevoValor)) return nuevoValor;
-            el.dataset.valor = nuevoValor;
-            el.textContent = TimeUtils.horasATexto(nuevoValor, 'short');
-            return nuevoValor;
-        }
-
-        const pressHoldHoras = _crearPressHold(incremento => cambiarHorasDiarias(incremento));
-
-        function cambiarHorasDiarias(incremento) {
-            const nuevoValor = _ajustarStepperHoras($('config-horas-diarias'), incremento);
-            if (isNaN(nuevoValor)) return;
-
-            actualizarFeedbackConfig();
-            D.setHorasDiarias(nuevoValor);
-
-            const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
-            if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
-            D.guardarYActualizar();
-        }
-
-        const pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
-
-        function cambiarObjetivoEdicion(incremento) {
-            const el = $('edit-objetivo');
-            if (!el) return;
-            _ajustarStepperHoras(el, incremento);
-            verificarBloqueoCredito();
-        }
-
-        function formatearInput(e) {
-            let v = e.target.value.replace(/\D/g, '');
-            if (v.length > 4) v = v.substring(0, 4);
-            if (v.length > 2) {
-                e.target.value = v.substring(0, 2) + ':' + v.substring(2);
-            } else {
-                e.target.value = v;
-            }
-        }
-
-        // Cableado de eventos del DOM propios de este módulo (se invoca una vez desde main)
-        function bindEventos() {
-            $('btn-toggle-ignorar-tf')?.addEventListener('click', () => toggleIgnorarTiempoFuera());
-            $('btn-toggle-hover-popup')?.addEventListener('click', () => toggleHoverPopupCalendario());
-            $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
-            $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
-            $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
-            $('btn-toggle-push-buffer')?.addEventListener('click', () => togglePushBuffer());
-            $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => togglePushBufferUltimoDia());
-            $('btn-toggle-push-habilitado')?.addEventListener('click', () => togglePushHabilitado());
-            $('config-push-anticipacion')?.addEventListener('change', (e) => cambiarPushAnticipacion(e.target.value));
-            $('btn-toggle-notification')?.addEventListener('click', () => abrirModalNotificaciones());
-            document.querySelector('#modal-notificaciones .btn-cancel')?.addEventListener('click', () => cerrarModalNotificaciones());
-            $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());
-            $('btn-historial-dias-habiles')?.addEventListener('click', () => abrirModalHistorialDias());
-            $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => togglePersistirTarjetas());
-            $('btn-toggle-card-registrar')?.addEventListener('click', () => toggleVisibilidadCard('registrar'));
-            $('btn-toggle-card-estadisticas')?.addEventListener('click', () => toggleVisibilidadCard('estadisticas'));
-            $('btn-toggle-card-historico')?.addEventListener('click', () => toggleVisibilidadCard('historico'));
-            document.getElementById('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
-            document.getElementById('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
-            document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => cerrarModalAyuda());
-            document.querySelector('#modal-historial-dias .btn-cancel')?.addEventListener('click', () => cerrarModalHistorialDias());
-            document.querySelector('#modal-editar-tramo-dias .btn-edit')?.addEventListener('click', () => guardarEdicionTramoDias());
-            $('btn-eliminar-tramo-dias')?.addEventListener('click', () => eliminarTramoDias());
-            document.querySelector('#modal-editar-tramo-dias .btn-cancel')?.addEventListener('click', () => cerrarEditorTramoDias());
-            document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
-                const btn = e.target.closest('.ayuda-indice-item');
-                if (!btn) return;
-                document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-            document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
-            document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => cerrarConfig());
-
-            const inputHoras = $('config-horas-diarias');
-            if (inputHoras) {
-                const btnHorasInc = $('btn-horas-diarias-inc');
-                const btnHorasDec = $('btn-horas-diarias-dec');
-                if (btnHorasInc) pressHoldHoras.vincular(btnHorasInc, 0.5);
-                if (btnHorasDec) pressHoldHoras.vincular(btnHorasDec, -0.5);
-            }
-
-            const btnObjetivoInc = $('btn-edit-objetivo-inc');
-            const btnObjetivoDec = $('btn-edit-objetivo-dec');
-            if (btnObjetivoInc) pressHoldObjetivoEdicion.vincular(btnObjetivoInc, 0.5);
-            if (btnObjetivoDec) pressHoldObjetivoEdicion.vincular(btnObjetivoDec, -0.5);
-
-            ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => $(id)?.addEventListener('input', () => actualizarResumenLimites()));
-
-            document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => mostrarconfig());
-            $('theme-toggle-modal')?.addEventListener('click', () => alternarTema());
-            $('theme-toggle-config')?.addEventListener('click', () => alternarTema());
-        }
-
-        return {
-            bindEventos,
-            pressHoldHoras, pressHoldLimite, pressHoldObjetivoEdicion,
-            _activarVistaCalendarioHistorico, _cerrarPopupCalendarioHover, _cerrarSelectorMeses, _cicloStatsActivo,
-            _iniciarCicloStats, _irAFicharConFecha, _onclickCalendarioDia,
-            _popupCalendarioDiaSinRegistro, _popupCalendarioHover, _renderSelectorStats, _renderizarCalendario, abrirEditorPerfil,
-            abrirEditorTramoDias, abrirGistEnBrowser, abrirModalAyuda, abrirModalGist, abrirModalHistorialDias, abrirModalReporteSecciones,
-            abrirSelectorMesesCalendario, abrirSelectorPerfiles,
-            actualizarBotonLote, actualizarEstadoBotonAplicarHoras, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-            actualizarEstadoBotonFormatoCortoStats, toggleFormatoCortoStats, _refrescarFormatoCortoStatsCache,
-            actualizarEstadoBotonPushBuffer, togglePushBuffer,
-            actualizarEstadoBotonPushBufferUltimoDia, togglePushBufferUltimoDia,
-            actualizarSelectPushAnticipacion, cambiarPushAnticipacion,
-            actualizarEstadoBotonPushHabilitado, togglePushHabilitado,
-            actualizarEstadoBotonNotificaciones,
-            abrirModalNotificaciones, cerrarModalNotificaciones,
-            actualizarEstadoBotonesGist, actualizarFeedbackConfig, actualizarListaRegistros, actualizarUI, alternarFechaActual,
-            alternarTema, alternarVista, aplicarFeedbackCampos, aplicarHorasConfiguradasATodos, aplicarOrdenCards, aplicarVisibilidadCards,
-            cambiarAnioStats, cambiarMesStats, cambiarSemanaStats, cerrarConfig, cerrarEdicion, cerrarEdicionGrupo,
-            cerrarEditorPerfil, cerrarEditorTramoDias, cerrarExportar, cerrarImportar, cerrarModalAyuda, cerrarModalGist,
-            cerrarModalHistorialDias, cerrarModalReporteSecciones,
-            cerrarSelectorPerfiles, confirmarGenerarReporte, crearPerfilDesdeSelector, 
-            ejecutarAccionRegistro, ejecutarExportacion, eliminarPerfilDesdeEditor, eliminarTramoDias, getFondoCard, getVistaHistoricoCalendario, gistBajar,
-            gistMergeAplicar, gistMergeCancelar, gistSubir, guardarConfigGist, guardarEdicionPerfil, guardarEdicionTramoDias, 
-            iniciarDragOrdenCards, iniciarTimerAutoCierreBotones, init, irHoyCalendario,
-            limpiarCampo, mostrarConfigOnboarding, mostrarExportar, mostrarFiltros, mostrarImportar, mostrarToast,
-            mostrarconfig, navegarCalendario, obtenerFechaHoy: TimeUtils.obtenerFechaHoy, obtenerOrdenCards, pegarHoraActual, poblarSelectoresTipos,
-            resetearBoton, setFondoCard, setModoEstadisticas, setTiempoExpansionBotones, toggleBloqueoEdicion, toggleBloqueoEdicionGrupo,
-            toggleCamposRangoExport, toggleCredito, toggleFondoCard, toggleFormulario, toggleGistBackup, toggleGistMerge, toggleGistPanel, actualizarResumenLimites,
-            toggleHistorico, toggleHoverPopupCalendario, toggleIgnorarTiempoFuera, toggleLogicaCubierto, toggleModoLote, toggleObjetivoPorRegistro,
-            togglePeriodoStats, togglePersistirTarjetas, toggleSeccionReporte, toggleStats, toggleTimerBreakMain, toggleVerToken,
-            toggleVisibilidadCard, toggleVistaHistorico, vistaActual: D.vistaActual, refrescarConfigSiVisible
-        };
-
-    })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje);
+    })(SecurityAndUtils, DataManagement, GistSync, UICore, UIPerfiles, UICalendario, UIGistYRespaldo, UIHistorico, UIEstadisticas, UITarjetaFichaje, UICardsLayout, UINotificaciones, UIConfig);
 
     // ====================================================================
     // WELCOME MODULE
@@ -9919,7 +9945,7 @@
             }
 
             await new Promise(r => setTimeout(r, 1000));
-            await UILogic.mostrarConfigOnboarding();
+            await UIConfig.mostrarConfigOnboarding();
         }
 
         return { chequearYMostrar };
@@ -10027,11 +10053,11 @@
 
             PushReminder.autoHabilitar();
             DataManagement.sincronizarPushHoy();
-            UILogic.actualizarEstadoBotonNotificaciones();
+            UINotificaciones.actualizarEstadoBotonNotificaciones();
             UICore.mostrarToast(
                 'Se habilitaron las notificaciones de salida, podés deshabilitarlas desde Ajustes o tocando este aviso',
                 'info', 6000, null,
-                () => UILogic.abrirModalNotificaciones()
+                () => UINotificaciones.abrirModalNotificaciones()
             );
         }
 
@@ -10052,7 +10078,10 @@
         UIHistorico.bindEventos();
         UIEstadisticas.bindEventos();
         UITarjetaFichaje.bindEventos();
-        UILogic.bindEventos();
+        UICardsLayout.bindEventos();
+        UINotificaciones.bindEventos();
+        UIConfig.bindEventos();
+        UIHistorialDias.bindEventos();
 
         (function _bindLayoutConsistency() {
             const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');

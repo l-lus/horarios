@@ -475,6 +475,11 @@
             const hayEleccion = [true, false].some(porPerfil => StorageHelper.getItem(STORAGE_KEYS.PUSH_HABILITADO, null, porPerfil) !== null);
             return !hayEleccion && puedeHabilitarse();
         }
+        function autoHabilitar() {
+            setHabilitado(true);
+            setUsarBufferSemanal(true);
+            setBufferSoloUltimoDia(true);
+        }
 
         function _guardarInfoActiva(fechaISO, targetTimeMs) {
             StorageHelper.setItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, JSON.stringify({ fechaISO, targetTimeMs }), true);
@@ -643,6 +648,7 @@
             programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
             getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
             getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, autoHabilitarPendiente,
+            autoHabilitar,
             getBufferSoloUltimoDia, calcularTarget: _calcularTarget,
             targetProgramadoParaHoy: () => obtenerInfoActiva()?.targetTimeMs ?? null,
             restablecer,
@@ -8982,7 +8988,8 @@
                 borrarPeriodoDirecto: D.borrarPeriodoDirecto,
                 editarGrupo: D.editarGrupo,
                 guardarEdicionGrupo: D.guardarEdicionGrupo,
-                eliminarGrupoActual: D.eliminarGrupoActual
+                eliminarGrupoActual: D.eliminarGrupoActual,
+                sincronizarPushHoy: D.sincronizarPushHoy
             };
             window.HistoryManager = { undo: D.undoAction, redo: D.redoAction };
             window.PWAInstaller = { instalarApp: PWAInstaller.instalarApp };
@@ -9761,7 +9768,8 @@
 
             if (!PushReminder.autoHabilitarPendiente()) return;
 
-            PushReminder.setHabilitado(true);
+            PushReminder.autoHabilitar();
+            window.DataManagement?.sincronizarPushHoy?.();
             window.UILogic?.actualizarEstadoBotonNotificaciones();
             window.UILogic?.mostrarToast(
                 'Se habilitaron las notificaciones de salida, podés deshabilitarlas desde Ajustes o tocando este aviso',

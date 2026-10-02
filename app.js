@@ -1512,9 +1512,22 @@
             return resultado;
         }
 
+        const notaDeGrupo = (grupo) => grupo.registros.find(r => r.notas)?.notas || '';
+
+        function mapaNotasPorRegistro(registros) {
+            const mapa = new Map();
+            agruparConsecutivos(registros).forEach(g => {
+                const notaGrupo = g.tipo === 'grupo' ? notaDeGrupo(g) : '';
+                g.registros.forEach(r => { if (r.notas || notaGrupo) mapa.set(r.id, r.notas || notaGrupo); });
+            });
+            return mapa;
+        }
+
         return {
             TIPOS,
             agruparConsecutivos,
+            notaDeGrupo,
+            mapaNotasPorRegistro,
             esRegistroEspecial,
             obtenerTipoPorCodigo,
             obtenerTipoPorId,
@@ -3987,6 +4000,8 @@
             const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
             const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
             const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
+            const claveMes = `${anio}-${TimeUtils._pad2(mes + 1)}`;
+            const notasDelMes = TiposRegistro.mapaNotasPorRegistro(todosLosRegistros.filter(r => r.fecha.startsWith(claveMes)));
             const claseDelDia = (fecha) => {
                 const r = regsPorFecha[fecha];
                 if (!r && filtroActivo && todosRegsPorFecha[fecha]) return 'dia-filtrado';
@@ -4035,7 +4050,7 @@
                     cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
                 }
                 if (reg) clases += ' cursor-pointer';
-                if (reg?.notas) clases += ' tiene-comentario';
+                if (reg && notasDelMes.has(reg.id)) clases += ' tiene-comentario';
                 cell.className = clases;
                 cell.textContent = dia;
 
@@ -4179,9 +4194,9 @@
 
             const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
             const infoHtml = _buildInfoHtmlRegistro(reg);
-            const notasTexto = reg.notas || (grupoDelRegistro?.registros?.find(r => r.notas)?.notas);
+            const notasTexto = reg.notas || (grupoDelRegistro && TiposRegistro.notaDeGrupo(grupoDelRegistro));
             const comentarioHtml = notasTexto ? `
-                <div class="cal-popup-comentario" title="Comentario: ${S.escapeHtml(notasTexto)}">
+                <div class="cal-popup-comentario">
                     <svg class="icon icon-comentario"><use href="#icon-comment"/></svg>
                     <span class="cal-popup-comentario-texto">${S.escapeHtml(notasTexto)}</span>
                 </div>` : '';
@@ -4191,9 +4206,7 @@
                     Editar grupo
                 </button>` : '';
 
-            if (grupoDelRegistro) window._calPopupGrupo = grupoDelRegistro;
-
-            const popup = _crearPopupFlotante({
+            const { popup, cerrar } = _crearPopupFlotante({
                 className: 'cal-popup',
                 id: '_cal-popup',
                 dataset: { registroId: reg.id },
@@ -4210,16 +4223,16 @@
                 selectorTrigger: '.calendario-dia',
                 esMismoTrigger: dia => dia.dataset.regId === reg.id,
                 alCerrar: () => { _popupCalendarioEl = null; }
-            }).popup;
+            });
             _popupCalendarioEl = popup;
 
             popup.querySelector('#_cal-popup-btn-edit')?.addEventListener('click', () => {
+                cerrar();
                 DataManagement.editarRegistro(reg.id);
-                document.getElementById('_cal-popup')?.remove();
             });
             popup.querySelector('#_cal-popup-btn-grupo')?.addEventListener('click', () => {
-                DataManagement.editarGrupo(window._calPopupGrupo);
-                document.getElementById('_cal-popup')?.remove();
+                cerrar();
+                DataManagement.editarGrupo(grupoDelRegistro);
             });
 
             popup.addEventListener('mouseenter', () => clearTimeout(_popupCalendarioHoverTimer));
@@ -5489,15 +5502,17 @@
             return grupos;
         }
 
-        function _crearChevron() {
+        function _crearIconoSvg(href, clase) {
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('class', 'icon chevron-mes chevron-mes-icon');
+            svg.setAttribute('class', `icon ${clase}`);
             svg.setAttribute('viewBox', '0 0 24 24');
             const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-            use.setAttribute('href', '#icon-chevron-down');
+            use.setAttribute('href', href);
             svg.appendChild(use);
             return svg;
         }
+
+        const _crearChevron = () => _crearIconoSvg('#icon-chevron-down', 'chevron-mes chevron-mes-icon');
 
         function _crearInfoRegistro({ fechaText, horasText, totalText, totalClase = '', badgesExtra = [], comentarioText = '' }) {
             const info = document.createElement('div');
@@ -5516,18 +5531,11 @@
                 comEl.className = 'registro-comentario';
                 comEl.title = `Comentario: ${comentarioText}`;
 
-                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.setAttribute('class', 'icon icon-comentario');
-                svg.setAttribute('viewBox', '0 0 24 24');
-                const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-                use.setAttribute('href', '#icon-comment');
-                svg.appendChild(use);
-
                 const txt = document.createElement('span');
                 txt.className = 'registro-comentario-texto';
                 txt.textContent = comentarioText;
 
-                comEl.appendChild(svg);
+                comEl.appendChild(_crearIconoSvg('#icon-comment', 'icon-comentario'));
                 comEl.appendChild(txt);
                 fechaEl.appendChild(comEl);
             }
@@ -5637,7 +5645,7 @@
                 totalText,
                 totalClase,
                 badgesExtra,
-                comentarioText: r.notas || ''
+                comentarioText: r.notas
             }));
 
             return item;
@@ -5846,16 +5854,13 @@
                 }
             }
 
-            const primerRegConNotas = grupo.registros.find(r => r.notas);
-            const comentarioGrupo = primerRegConNotas ? primerRegConNotas.notas : '';
-
             header.appendChild(_crearInfoRegistro({
                 fechaText,
                 horasText,
                 totalText: 'Justificado',
                 totalClase: colorClase,
                 badgesExtra,
-                comentarioText: comentarioGrupo
+                comentarioText: TiposRegistro.notaDeGrupo(grupo)
             }));
 
             header.dataset.accion = 'editar-grupo';

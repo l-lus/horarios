@@ -1826,8 +1826,8 @@ button:disabled .toggle-switch {
 .calendario-dia.tiene-comentario::after {
     content: '';
     position: absolute;
-    top: 5px;
-    right: 5px;
+    top: calc(6% - 2.5px);
+    right: calc(6% - 2.5px);
     width: 5px;
     height: 5px;
     border-radius: 50%;

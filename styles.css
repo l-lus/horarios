@@ -696,9 +696,9 @@ button:disabled {
 }
 
 .btn-activo:not(.settings-list button, .drag-handle) {
-    background: var(--c-active-bg);
-    color: var(--c-active);
-    border-color: var(--c-active);
+    background: var(--c-active);
+    color: var(--c-white);
+    border-color: transparent;
     font-weight: var(--fw-bold);
 }
 
@@ -861,8 +861,22 @@ button:disabled {
 }
 
 .gist-valor {
-    color: var(--c-active);
+    align-self: flex-start;
+    padding: 1px var(--space-sm);
+    background: var(--c-active);
+    color: var(--c-white);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
     font-size: var(--text-sm);
+    font-weight: var(--fw-bold);
+    transition: background var(--dur-fast) ease, color var(--dur-fast) ease,
+        border-color var(--dur-fast) ease;
+}
+
+#btn-toggle-gist-backup:not(.btn-activo) .gist-valor {
+    background: transparent;
+    color: var(--text-muted);
+    border-color: transparent;
     font-weight: var(--fw-semibold);
 }
 
@@ -2265,9 +2279,9 @@ body.config-onboarding #theme-toggle-config {
 .btn-perfil-estado {
     flex-shrink: 0;
     padding: 1px var(--space-sm);
-    background: var(--c-active-bg);
-    color: var(--c-active);
-    border: 1px solid var(--c-active);
+    background: var(--c-active);
+    color: var(--c-white);
+    border: 1px solid transparent;
     border-radius: var(--radius);
     font-size: var(--text-sm);
     font-weight: var(--fw-bold);
@@ -2359,14 +2373,17 @@ body.config-onboarding #theme-toggle-config {
     font-weight: var(--fw-semibold);
     color: var(--text-muted);
     transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+position: relative;
+    transition: background var(--dur-fast) ease, color var(--dur-fast) ease,
+        border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-pop);
 }
 
 .day-checkbox input:checked~span {
-    background: var(--c-active-bg);
-    color: var(--c-active);
-    border: 1px solid var(--c-active);
+    background: var(--c-active);
+    color: var(--c-white);
+    border-color: transparent;
     font-weight: var(--fw-bold);
-    transform: scale(1.1);
+    transform: scale(1.1); 
 }
 
 /* ─── ELEMENTOS ESPECÍFICOS ──────────────────────────────────────────────────── */

@@ -37,7 +37,6 @@
         PUSH_BUFFER_SOLO_ULTIMO_DIA: 'pushBufferSoloUltimoDia',
         PUSH_HABILITADO: 'pushHabilitado',
         PUSH_INFO_ACTIVA: 'pushInfoActiva',
-        PUSH_AVISO_COUNT: 'pushAvisoNuevaFuncionCount',
 
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
@@ -306,21 +305,18 @@
             return `${d}/${m}/${anioCompleto ? y : y.slice(2)}`;
         }
 
-        // ¿La fecha cae en un día hábil? diasHabiles: array de días (0-6) o, en formato legacy, un número (1-7)
         function esFechaHabil(fecha, diasHabiles) {
             const diaSemana = parsearFechaLocal(fecha).getDay();
             if (Array.isArray(diasHabiles)) return diasHabiles.includes(diaSemana);
             return diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
         }
 
-        // ¿`anterior` es exactamente el día previo a `fecha`?
         function esDiaAnterior(fecha, anterior) {
             const d = parsearFechaLocal(fecha);
             d.setDate(d.getDate() - 1);
             return formatearFechaLocal(d) === anterior;
         }
 
-        // ['2025-01', '2025-02', '2024-12'] -> Map { '2025' => [...], '2024' => [...] }
         function agruparMesesPorAnio(mesesOrdenados) {
             const map = new Map();
             mesesOrdenados.forEach(mesAnio => {
@@ -464,7 +460,7 @@
         function setHabilitado(valor) {
             StorageHelper.setItem(STORAGE_KEYS.PUSH_HABILITADO, !!valor, true);
         }
-        const UMBRAL_REGISTROS_ACTIVACION = 10;
+        const UMBRAL_REGISTROS_ACTIVACION = 15;
         function _soportaPush() {
             return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
         }
@@ -474,6 +470,10 @@
             const registros = window.DataManagement?.registros?.() || [];
             const regulares = registros.filter(r => !TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida));
             return regulares.length > UMBRAL_REGISTROS_ACTIVACION;
+        }
+        function autoHabilitarPendiente() {
+            const hayEleccion = [true, false].some(porPerfil => StorageHelper.getItem(STORAGE_KEYS.PUSH_HABILITADO, null, porPerfil) !== null);
+            return !hayEleccion && puedeHabilitarse();
         }
 
         function _guardarInfoActiva(fechaISO, targetTimeMs) {
@@ -632,8 +632,7 @@
                 STORAGE_KEYS.PUSH_ANTICIPACION_MIN,
                 STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL,
                 STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA,
-                STORAGE_KEYS.PUSH_INFO_ACTIVA,
-                STORAGE_KEYS.PUSH_AVISO_COUNT
+                STORAGE_KEYS.PUSH_INFO_ACTIVA
             ].forEach(k => {
                 StorageHelper.removeItem(k, true);
                 StorageHelper.removeItem(k, false);
@@ -643,7 +642,7 @@
         return {
             programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
             getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
-            getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse,
+            getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, autoHabilitarPendiente,
             getBufferSoloUltimoDia, calcularTarget: _calcularTarget,
             targetProgramadoParaHoy: () => obtenerInfoActiva()?.targetTimeMs ?? null,
             restablecer,
@@ -1450,7 +1449,6 @@
             return tipo ? { entrada: tipo.codigo, salida: tipo.codigo } : null;
         }
 
-        // Agrupa registros consecutivos (fechas contiguas, orden descendente) del mismo tipo especial
         function agruparConsecutivos(registros) {
             if (!registros || registros.length === 0) return [];
             const idTipo = (r) => obtenerTipoPorCodigo(r.entrada, r.salida)?.id ?? null;
@@ -2817,7 +2815,7 @@
     })(SecurityAndUtils);
 
     // ====================================================================
-    // SALDO SEMANAL MODULE — lógica de "cubierto por saldo" (pool de horas)
+    // SALDO SEMANAL MODULE — (pool de horas)
     // ====================================================================
     const SaldoSemanal = (function (D) {
         function logicaCubiertoActiva() {
@@ -3013,7 +3011,6 @@
                 if (timeout) { clearTimeout(timeout); timeout = null; }
                 if (intervalo) { clearInterval(intervalo); intervalo = null; }
             };
-            // Vincula un botón: mantenerlo apretado repite accionFn(arg)
             const vincular = (btn, arg) => {
                 const start = (e) => {
                     if (btn.disabled) return;
@@ -3737,7 +3734,7 @@
         function _limpiarClavesPerfil(pid) {
             ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
                 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS,
-                STORAGE_KEYS.PUSH_HABILITADO, STORAGE_KEYS.PUSH_ANTICIPACION_MIN, STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, STORAGE_KEYS.PUSH_INFO_ACTIVA, STORAGE_KEYS.PUSH_AVISO_COUNT
+                STORAGE_KEYS.PUSH_HABILITADO, STORAGE_KEYS.PUSH_ANTICIPACION_MIN, STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, STORAGE_KEYS.PUSH_INFO_ACTIVA
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
         }
 
@@ -5103,7 +5100,6 @@
             return cambios;
         }
 
-        // ── Modal "Resumen de datos": selector Combinar/Reemplazar + antes → después ──
         const _mkEl = (tag, cls, texto) => {
             const e = document.createElement(tag);
             if (cls) e.className = cls;
@@ -5213,7 +5209,7 @@
                 nComp: complementarios.length
             };
             resumenEl.innerHTML = '';
-            resumenEl.dataset.modo = 'merge'; // siempre arranca en la opción no destructiva
+            resumenEl.dataset.modo = 'merge';
 
             const selector = _crearSelectorModoMerge(modo => {
                 if (resumenEl.dataset.modo === modo) return;
@@ -5232,7 +5228,6 @@
                 tarjeta.pintar(esMerge, animar);
                 alerta?.pintar(esMerge, animar);
 
-                // Colores nativos: azul (btn-edit) al combinar, rojo (btn-delete) al reemplazar
                 const btnAplicar = document.getElementById('btn-gist-merge-aplicar');
                 if (btnAplicar) {
                     btnAplicar.classList.toggle('btn-edit', esMerge);
@@ -7944,7 +7939,6 @@
             _forzarVista(nuevaVista, () => actualizarUI());
         }
 
-        // Alterna un campo: si tiene valor lo limpia, si está vacío lo completa con obtenerValor()
         function _alternarValorCampo(id, obtenerValor) {
             const input = $(id);
             if (!input) return null;
@@ -9733,14 +9727,8 @@
     const AvisoPush = (function () {
         'use strict';
 
-        const MAX_AVISOS = 3;
-
         async function chequearYAvisar() {
-            if (PushReminder.getHabilitado()) return;
-            if (!PushReminder.puedeHabilitarse()) return;
-
-            const vistos = StorageHelper.getNumber(STORAGE_KEYS.PUSH_AVISO_COUNT, 0, true);
-            if (vistos >= MAX_AVISOS) return;
+            if (!PushReminder.autoHabilitarPendiente()) return;
 
             while (
                 document.querySelector('.modal.show') ||
@@ -9749,11 +9737,12 @@
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
 
-            if (PushReminder.getHabilitado()) return;
+            if (!PushReminder.autoHabilitarPendiente()) return;
 
-            StorageHelper.setItem(STORAGE_KEYS.PUSH_AVISO_COUNT, vistos + 1, true);
+            PushReminder.setHabilitado(true);
+            window.UILogic?.actualizarEstadoBotonNotificaciones();
             window.UILogic?.mostrarToast(
-                'Podés activar las notificaciones de salida desde Ajustes o tocando este aviso',
+                'Se habilitaron las notificaciones de salida, podés deshabilitarlas desde Ajustes o tocando este aviso',
                 'info', 6000, null,
                 () => window.UILogic?.abrirModalNotificaciones()
             );
@@ -9993,7 +9982,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v260930';
+        const _v = '-v261001';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

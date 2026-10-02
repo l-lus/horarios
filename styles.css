@@ -1977,7 +1977,7 @@ button:disabled .toggle-switch {
     white-space: nowrap;
 }
 
-.stat-popup-metric + .stat-popup-metric {
+.stat-popup-metric+.stat-popup-metric {
     margin-top: 0.3rem;
 }
 
@@ -2899,7 +2899,8 @@ button.campo-flash-color {
         align-items: start;
     }
 
-    #modal-config .modal-panel-footer .btn-cancel {
+    #modal-config .modal-panel-footer .btn-cancel,
+    #modal-ayuda .modal-panel-footer .btn-cancel {
         width: 50%;
         margin: 0 auto;
     }

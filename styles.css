@@ -45,6 +45,7 @@
     --dur-anim: 300ms;
     --dur-collapse: 300ms;
     --dur-calendario: 320ms;
+    --dur-valor: 150ms;
     --dur-pop: 0.35s;
     --dur-slow: 0.5s;
     --ease-anim: ease;
@@ -578,6 +579,21 @@ input.error {
 
 .input-number-display.input-number-inerte {
     color: var(--text-disabled);
+}
+
+/* Cambio de valor con desplazamiento vertical (ver _animarValor) */
+.valor-roll {
+    display: inline-grid;
+    overflow: hidden;
+    vertical-align: bottom;
+    padding: 0.1em 0;
+    margin: -0.1em 0;
+}
+
+.valor-roll-item {
+    grid-area: 1 / 1;
+    text-align: center;
+    white-space: nowrap;
 }
 
 /* ─── BOTONES ────────────────────────────────────────────────────────────────── */

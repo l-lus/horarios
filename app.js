@@ -3407,6 +3407,47 @@
             });
         }
 
+        // Animación de cambio de valor (steppers hoy; reutilizable para stats-number).
+        // dir > 0: el valor sube (sale hacia arriba, entra desde abajo); dir < 0: al revés; 0: sin animar.
+        const _valorAnimEstado = new WeakMap();
+
+        function _finalizarValorPendiente(el) {
+            const est = _valorAnimEstado.get(el);
+            if (!est) return;
+            clearTimeout(est.timeout);
+            est.anims.forEach(a => a.cancel());
+            _valorAnimEstado.delete(el);
+            if (el.querySelector(':scope > .valor-roll')) el.textContent = est.texto;
+        }
+
+        function _animarValor(el, texto, dir = 0) {
+            if (!el) return;
+            texto = String(texto);
+            const previo = _valorAnimEstado.get(el);
+            const actual = previo ? previo.texto : el.textContent;
+            _finalizarValorPendiente(el);
+            if (actual === texto) { if (el.textContent !== texto) el.textContent = texto; return; }
+
+            const dur = _getCSSdur('--dur-valor');
+            const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!dir || sinMovimiento || !dur || !el.offsetParent) { el.textContent = texto; return; }
+
+            const mk = t => { const s = document.createElement('span'); s.className = 'valor-roll-item'; s.textContent = t; return s; };
+            const saliente = mk(actual), entrante = mk(texto);
+            const roll = document.createElement('span');
+            roll.className = 'valor-roll';
+            roll.append(saliente, entrante);
+            el.replaceChildren(roll);
+
+            const opts = { duration: dur, easing: 'ease-out', fill: 'both' };
+            const sgn = dir > 0 ? 1 : -1;
+            const anims = [
+                saliente.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(${-70 * sgn}%)`, opacity: 0 }], opts),
+                entrante.animate([{ transform: `translateY(${70 * sgn}%)`, opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], opts)
+            ];
+            _valorAnimEstado.set(el, { texto, anims, timeout: setTimeout(() => _finalizarValorPendiente(el), dur) });
+        }
+
         function _animarFadeSwap(el, fn) {
             if (!el) { return Promise.resolve(fn()); }
             return _animarMutacion(el, fn);
@@ -3752,7 +3793,8 @@
             _animarSlideElemento,
             toggleSeccionGen,
             _animarFadeSwap,
-            _animarMutacion
+            _animarMutacion,
+            _animarValor
         };
     })(SecurityAndUtils, DataManagement);
 
@@ -4696,7 +4738,7 @@
     const UIGistYRespaldo = (function (S, D, GistSync, UICore) {
         const {
             mostrarToast, _setBtnDisabled, _setBtnActivo, _flashCampo, _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre,
-            descargarJSON, obtenerNombrePerfilSafe, _posicionarPopup, _registrarCierrePopup, setIconoBtn
+            descargarJSON, obtenerNombrePerfilSafe, _posicionarPopup, _registrarCierrePopup, setIconoBtn, _animarValor
         } = UICore;
 
         let _modalAbiertoDesdeLista = false;
@@ -5237,7 +5279,7 @@
             return estado === 1 ? 'bajar' : estado === 2 ? 'subir' : null;
         }
 
-        function _actualizarCampoLimite() {
+        function _actualizarCampoLimite(dir = 0) {
             const tipo = _tipoSyncActual();
             const contenedor = document.getElementById('gist-limite-sync');
             if (!contenedor) return;
@@ -5249,7 +5291,7 @@
             const limite = _gistLimitesTemp ? _gistLimitesTemp[tipo] : GistSync.getSyncLimite(tipo);
             const input = document.getElementById('gist-limite-valor');
             const label = document.getElementById('gist-limite-label');
-            if (input) input.textContent = limite;
+            if (input) _animarValor(input, limite, dir);
             if (label) label.textContent = tipo === 'bajar' ? 'Límite bajadas por hora (0 = sin límite)' : 'Límite subidas por hora (0 = sin límite)';
             contenedor.classList.remove('disabled');
             _actualizarResumenLimites();
@@ -5259,8 +5301,9 @@
             const tipo = _tipoSyncActual();
             if (!tipo) return;
             if (!_gistLimitesTemp) _gistLimitesTemp = { bajar: GistSync.getSyncLimite('bajar'), subir: GistSync.getSyncLimite('subir') };
-            _gistLimitesTemp[tipo] = Math.max(0, Math.min(99, _gistLimitesTemp[tipo] + delta));
-            _actualizarCampoLimite();
+            const previo = _gistLimitesTemp[tipo];
+            _gistLimitesTemp[tipo] = Math.max(0, Math.min(99, previo + delta));
+            _actualizarCampoLimite(Math.sign(_gistLimitesTemp[tipo] - previo));
         }
 
         const pressHoldLimite = _crearPressHold(delta => cambiarLimiteSync(delta));
@@ -9185,7 +9228,7 @@
 
         const {
             _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, DUR_ANIM,
-            _crearToggleConfig, _setBtnDisabled
+            _crearToggleConfig, _setBtnDisabled, _animarValor
         } = UICore;
 
         const {
@@ -9383,7 +9426,7 @@
             const nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
             if (isNaN(nuevoValor)) return nuevoValor;
             el.dataset.valor = nuevoValor;
-            el.textContent = TimeUtils.horasATexto(nuevoValor, 'short');
+            _animarValor(el, TimeUtils.horasATexto(nuevoValor, 'short'), Math.sign(nuevoValor - valorActual));
             return nuevoValor;
         }
 

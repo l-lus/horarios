@@ -1118,7 +1118,9 @@
                 const content = modal.querySelector('.modal-content');
                 const info = _triggerInfoPorModal[modal.id];
                 if (content && info) {
-                    content.style.transformOrigin = _calcularOrigen(info.trigger, info.coords, content);
+                    const origen = _calcularOrigen(info.trigger, info.coords, content);
+                    content.style.transformOrigin = origen;
+                    _origenesModal[modal.id] = origen;
                 }
             });
         }, { passive: true });
@@ -3526,6 +3528,7 @@
             const rect = el.getBoundingClientRect();
             const margin = 8;
             requestAnimationFrame(() => {
+                if (!popup.isConnected || popup.classList.contains('closing')) return;
                 const pw = popup.offsetWidth, ph = popup.offsetHeight;
                 let top = rect.bottom + 12;
                 let left = rect.left + (rect.width / 2) - (pw / 2);
@@ -3544,8 +3547,11 @@
 
                 popup.style.visibility = '';
                 requestAnimationFrame(() => {
+                    if (!popup.isConnected || popup.classList.contains('closing')) return;
                     popup.classList.add('show');
-                    setTimeout(() => popup.classList.add('listo'), 280);
+                    setTimeout(() => {
+                        if (!popup.classList.contains('closing')) popup.classList.add('listo');
+                    }, 280);
                 });
             });
         }
@@ -3572,6 +3578,7 @@
                 if (!popup.contains(e.target)) cerrar();
             };
             setTimeout(() => {
+                if (cerrado) return;
                 document.addEventListener('click', onClick, { capture: true, passive: true });
                 document.addEventListener('scroll', cerrar, { capture: true, passive: true });
             }, 10);

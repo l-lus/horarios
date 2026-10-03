@@ -12,6 +12,7 @@
         VISTA_ACTUAL: 'vistaActual',
         MODO_ESTADISTICAS: 'modoEstadisticas',
         HOVER_POPUP: 'hoverPopupCalendario',
+        REDUCIR_ANIMACIONES: 'reducirAnimaciones',
         FORMATO_CORTO_STATS: 'formatoCortoStats',
         DIAS_HABILES: 'diasHabiles',
         HISTORIAL_DIAS_HABILES: 'historialDiasHabiles',
@@ -67,6 +68,50 @@
         void el.offsetHeight;
         el.classList.remove('sin-transicion');
     }
+
+    // ====================================================================
+    // MOTION
+    // ====================================================================
+    const Motion = (function () {
+        const MODOS = ['auto', 'on', 'off'];
+        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        let modo = null;
+        let iniciado = false;
+
+        function _modo() {
+            if (modo === null) {
+                const guardado = StorageHelper.getItem(STORAGE_KEYS.REDUCIR_ANIMACIONES, 'auto');
+                modo = MODOS.includes(guardado) ? guardado : 'auto';
+            }
+            return modo;
+        }
+        function reducido() {
+            const m = _modo();
+            return m === 'on' || (m === 'auto' && mq.matches);
+        }
+        function _aplicar() {
+            document.documentElement.setAttribute('data-motion', reducido() ? 'reduce' : 'full');
+        }
+        function init() {
+            if (iniciado) return;
+            iniciado = true;
+            mq.addEventListener?.('change', _aplicar);
+            _aplicar();
+        }
+        function setModo(nuevo) {
+            if (!MODOS.includes(nuevo)) return;
+            modo = nuevo;
+            StorageHelper.setItem(STORAGE_KEYS.REDUCIR_ANIMACIONES, nuevo);
+            _aplicar();
+        }
+        function siguienteModo() {
+            setModo(MODOS[(MODOS.indexOf(_modo()) + 1) % MODOS.length]);
+        }
+        return {
+            init, reducido, setModo, siguienteModo, modo: _modo,
+            scrollBehavior: () => (reducido() ? 'auto' : 'smooth')
+        };
+    })();
 
     // ====================================================================
     // PWA INSTALLER MODULE
@@ -3358,7 +3403,7 @@
             const dur = duracion ?? DUR_ANIM();
 
             els.forEach(_finalizarMutacionPendiente);
-            if (els.length === 0) { return Promise.resolve(fn()); }
+            if (els.length === 0 || Motion.reducido()) { return Promise.resolve(fn()); }
 
             const fantasmasMap = [];
             els.forEach(el => {
@@ -3417,7 +3462,7 @@
             if (actual === texto) { if (el.textContent !== texto) el.textContent = texto; return; }
 
             const dur = _getCSSdur('--dur-valor');
-            const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const sinMovimiento = Motion.reducido();
             if (!dir || sinMovimiento || !dur || !el.offsetParent) { el.textContent = texto; return; }
 
             const mk = t => { const s = document.createElement('span'); s.className = 'valor-roll-item'; s.textContent = t; return s; };
@@ -3665,6 +3710,7 @@
             if (!el) { mutarFn(); return; }
 
             _finalizarSlidePendiente(el);
+            if (Motion.reducido()) { mutarFn(); return; }
 
             const rectViejo = el.getBoundingClientRect();
             const anchoViejo = rectViejo.width;
@@ -3924,7 +3970,7 @@
             renderizarListaPerfiles(true);
             requestAnimationFrame(() => {
                 const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
-                if (ultimo) { ultimo.classList.add('add-perfil'); ultimo.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+                if (ultimo) { ultimo.classList.add('add-perfil'); ultimo.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'nearest' }); }
             });
         }
 
@@ -6135,7 +6181,7 @@
                 const r1 = registros.length > 1 ? registros[1].getBoundingClientRect() : null;
                 const cortado0 = r0.top < margenHeader || r0.bottom > alturaVentana;
                 const cortado1 = r1 && (r1.top < margenHeader || r1.bottom > alturaVentana);
-                if (cortado0 || cortado1) contenedor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (cortado0 || cortado1) contenedor.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'start' });
             }, 310);
         }
 
@@ -8777,7 +8823,7 @@
             const headerH = headerEl ? headerEl.offsetHeight : 0;
             const margen = headerH + 8;
             if (rect.top >= margen && rect.bottom <= window.innerHeight) return;
-            window.scrollTo({ top: window.scrollY + rect.top - margen, behavior: 'smooth' });
+            window.scrollTo({ top: window.scrollY + rect.top - margen, behavior: Motion.scrollBehavior() });
         }
 
         function alternarFechaActual(id) {
@@ -9349,6 +9395,18 @@
             _cerrarModalConPadre('modal-ayuda');
         }
 
+        const _ETIQUETAS_ANIMACIONES = { auto: 'Auto', on: 'Sí', off: 'No' };
+
+        function actualizarHintAnimaciones() {
+            const lbl = $('hint-animaciones-label');
+            if (lbl) lbl.textContent = _ETIQUETAS_ANIMACIONES[Motion.modo()];
+        }
+
+        function toggleReducirAnimaciones() {
+            Motion.siguienteModo();
+            actualizarHintAnimaciones();
+        }
+
         function _precargarCamposConfig() {
             const elHoras = $('config-horas-diarias');
             elHoras.dataset.valor = D.horasDiarias();
@@ -9367,6 +9425,7 @@
             actualizarEstadoBotonNotificaciones();
             const lbl = $('hint-fondo-label');
             if (lbl) lbl.textContent = _getLabelFondo(getFondoCard());
+            actualizarHintAnimaciones();
         }
 
         function mostrarconfig() {
@@ -9458,6 +9517,7 @@
         function bindEventos() {
             $('btn-toggle-ignorar-tf')?.addEventListener('click', () => toggleIgnorarTiempoFuera());
             $('btn-toggle-hover-popup')?.addEventListener('click', () => toggleHoverPopupCalendario());
+            $('btn-toggle-animaciones')?.addEventListener('click', () => toggleReducirAnimaciones());
             $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
             $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
             $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
@@ -9468,7 +9528,7 @@
             document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
                 const btn = e.target.closest('.ayuda-indice-item');
                 if (!btn) return;
-                document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'start' });
             });
             document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
             document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => cerrarConfig());
@@ -9910,6 +9970,7 @@
         function _restaurarEstadoVisual() {
             const config = D.cargarConfiguracion();
             ThemeManager.aplicarTema(config.tema);
+            Motion.init();
 
             $('fecha').value = TimeUtils.obtenerFechaHoy();
 
@@ -10101,7 +10162,7 @@
                 const btn = $('btn-agregar');
                 if (btn && !btn.disabled) setTimeout(() => btn.click(), 300);
             } else if (accion === 'restante') {
-                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 300);
+                setTimeout(() => window.scrollTo({ top: 0, behavior: Motion.scrollBehavior() }), 300);
             }
         }
 

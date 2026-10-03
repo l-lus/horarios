@@ -1076,14 +1076,15 @@ button:disabled {
     text-align: left;
 }
 
-#modal-config .config-actions button>span:not(.toggle-switch, #hint-fondo-label),
+#modal-config .config-actions button>span:not(.toggle-switch, #hint-fondo-label, #hint-animaciones-label),
 .drag-handle>span:not(.toggle-switch),
 #modal-reporte-secciones .config-actions button>span:not(.toggle-switch),
 #modal-notificaciones .form-group button>span:not(.toggle-switch) {
     flex: 1;
 }
 
-#hint-fondo-label {
+#hint-fondo-label,
+#hint-animaciones-label {
     flex: none;
     margin-left: auto;
     color: var(--text-muted);
@@ -1601,13 +1602,10 @@ button:disabled .toggle-switch {
     transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease-out;
 }
 
-@media (prefers-reduced-motion: reduce) {
-
-    .modal-content,
-    .modal.show .modal-content {
-        transform: none !important;
-        transition: opacity 0.15s ease !important;
-    }
+:root[data-motion="reduce"] .modal-content,
+:root[data-motion="reduce"] .modal.show .modal-content {
+    transform: none !important;
+    transition: opacity 0.15s ease !important;
 }
 
 .modal-scrollable>.modal-content {
@@ -1950,17 +1948,14 @@ button:disabled .toggle-switch {
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out;
 }
 
-@media (prefers-reduced-motion: reduce) {
-
-    .cal-popup,
-    .stat-popup,
-    .filtro-popup,
-    .cal-popup.show,
-    .stat-popup.show,
-    .filtro-popup.show {
-        transform: none !important;
-        transition: opacity 0.15s ease !important;
-    }
+:root[data-motion="reduce"] .cal-popup,
+:root[data-motion="reduce"] .stat-popup,
+:root[data-motion="reduce"] .filtro-popup,
+:root[data-motion="reduce"] .cal-popup.show,
+:root[data-motion="reduce"] .stat-popup.show,
+:root[data-motion="reduce"] .filtro-popup.show {
+    transform: none !important;
+    transition: opacity 0.15s ease !important;
 }
 
 .cal-popup {
@@ -3106,4 +3101,41 @@ button.campo-flash-color {
         grid-row: 2;
         justify-self: start;
     }
+}
+
+/* ─── REDUCED MOTION ─────────────────────────────────────────────────────────── */
+/* Se activa con <html data-motion="reduce"> (ver Motion en app.js y flash.js):
+   sigue al sistema en modo automático o lo fuerza el ajuste "Reducir animaciones".
+   Modales y popups tienen su propio bloque más arriba (solo fade de opacidad).
+   Acá va el resto. Las duraciones bajan a 1ms y NO a 0 ni a "none": con 0 el
+   navegador no dispara transitionend/animationend, y el JS depende de ellos
+   (p. ej. _limpiarAlturaLista) y además lee estas variables con _getCSSdur()
+   para sus timers. Si se agrega una --dur-* nueva en :root, sumarla acá. */
+:root[data-motion="reduce"] {
+    --dur-fast: 1ms;
+    --dur-anim: 1ms;
+    --dur-collapse: 1ms;
+    --dur-calendario: 1ms;
+    --dur-valor: 1ms;
+    --dur-pop: 1ms;
+    --dur-slow: 1ms;
+}
+
+/* Overlay de los modales: mismo fade corto que .modal-content */
+:root[data-motion="reduce"] .modal {
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+/* Decorativas o llamadores de atención en bucle: se quitan. El estado sigue
+   comunicado por texto y color (badges, botón rojo del timer). */
+:root[data-motion="reduce"] .btn-register .icon,
+:root[data-motion="reduce"] .tf-badge,
+:root[data-motion="reduce"] .estado-badge--en-curso,
+:root[data-motion="reduce"] .timer-btn.running {
+    animation: none;
+}
+
+/* El brillo es un ::after visible de por sí: sin animación quedaría fijo */
+:root[data-motion="reduce"] .progress-fill.shimmer::after {
+    display: none;
 }

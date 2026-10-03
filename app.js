@@ -1048,6 +1048,81 @@
         let _enAlternanciaHaciaAdelante = false;
         let _enAlternanciaHaciaAtras = false;
 
+        let _ultimoTrigger = null;
+        let _ultimoClickCoords = null;
+        const _origenesModal = {};
+        const _triggerInfoPorModal = {};
+
+        window.addEventListener('pointerdown', (event) => {
+            if (event.target.classList.contains('modal')) return;
+            _ultimoClickCoords = { x: event.clientX, y: event.clientY };
+            _ultimoTrigger = event.target.closest('button, [role="button"], a, .card, .registro-item, .chip, tr, td, [data-modal], .btn-action, .icon-btn') || event.target;
+        }, true);
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                const active = document.activeElement;
+                if (active && active !== document.body && !active.classList.contains('modal')) {
+                    _ultimoTrigger = active;
+                    const r = active.getBoundingClientRect();
+                    _ultimoClickCoords = { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+                }
+            }
+        }, true);
+
+        function _calcularOrigen(triggerEl, coords, content) {
+            let origenX = window.innerWidth / 2;
+            let origenY = window.innerHeight / 2;
+
+            if (triggerEl && document.body.contains(triggerEl)) {
+                const tr = triggerEl.getBoundingClientRect();
+                if (tr.width > 0 || tr.height > 0) {
+                    origenX = tr.left + tr.width / 2;
+                    origenY = tr.top + tr.height / 2;
+                } else if (coords && (coords.x !== undefined)) {
+                    origenX = coords.x;
+                    origenY = coords.y;
+                }
+            } else if (coords && (coords.x !== undefined)) {
+                origenX = coords.x;
+                origenY = coords.y;
+            }
+
+            const w = content.offsetWidth || 450;
+            const h = content.offsetHeight || 350;
+            const left = (window.innerWidth - w) / 2;
+            const top = (window.innerHeight - h) / 2;
+
+            const relX = Math.round(origenX - left);
+            const relY = Math.round(origenY - top);
+            return `${relX}px ${relY}px`;
+        }
+
+        function _aplicarOrigenAnimacion(modal, modalId) {
+            const content = modal.querySelector('.modal-content');
+            if (!content) return;
+
+            if (_enAlternanciaHaciaAtras && _origenesModal[modalId]) {
+                content.style.transformOrigin = _origenesModal[modalId];
+                return;
+            }
+
+            const originStr = _calcularOrigen(_ultimoTrigger, _ultimoClickCoords, content);
+            content.style.transformOrigin = originStr;
+            _origenesModal[modalId] = originStr;
+            _triggerInfoPorModal[modalId] = { trigger: _ultimoTrigger, coords: _ultimoClickCoords };
+        }
+
+        window.addEventListener('resize', () => {
+            document.querySelectorAll('.modal.show').forEach(modal => {
+                const content = modal.querySelector('.modal-content');
+                const info = _triggerInfoPorModal[modal.id];
+                if (content && info) {
+                    content.style.transformOrigin = _calcularOrigen(info.trigger, info.coords, content);
+                }
+            });
+        }, { passive: true });
+
         function _getAccionVolver(modalId) {
             return _accionesVolver[modalId] || null;
         }
@@ -1096,6 +1171,9 @@
             const modal = document.getElementById(modalId);
             if (!modal) return;
 
+            if (callback) callback();
+
+            _aplicarOrigenAnimacion(modal, modalId);
             modal.classList.add('show');
             document.body.classList.add('modal-open');
 
@@ -1107,13 +1185,16 @@
                 modal.addEventListener('mousedown', _handleOverlayMousedown);
                 modal.addEventListener('click', handleOutsideClick);
             }, 100);
-
-            if (callback) callback();
         }
 
         function cerrar(modalId, callback = null) {
             const modal = document.getElementById(modalId);
             if (!modal) return;
+
+            const content = modal.querySelector('.modal-content');
+            if (content && _origenesModal[modalId]) {
+                content.style.transformOrigin = _origenesModal[modalId];
+            }
 
             const estabaAbierto = modal.classList.contains('show');
             modal.classList.remove('show');
@@ -1131,6 +1212,13 @@
             }
 
             if (callback) callback();
+
+            setTimeout(() => {
+                if (!modal.classList.contains('show')) {
+                    delete _origenesModal[modalId];
+                    delete _triggerInfoPorModal[modalId];
+                }
+            }, 350);
         }
 
         function alternar(modalIdCerrar, modalIdAbrir, callbackCerrar = null, callbackAbrir = null) {
@@ -1155,12 +1243,20 @@
 
         function cerrarTodos() {
             document.querySelectorAll('.modal.show').forEach(modal => {
+                const content = modal.querySelector('.modal-content');
+                if (content && _origenesModal[modal.id]) {
+                    content.style.transformOrigin = _origenesModal[modal.id];
+                }
                 modal.classList.remove('show');
                 modal.removeEventListener('mousedown', _handleOverlayMousedown);
                 modal.removeEventListener('click', handleOutsideClick);
             });
             Object.keys(_padres).forEach(k => delete _padres[k]);
             document.body.classList.remove('modal-open');
+            setTimeout(() => {
+                Object.keys(_origenesModal).forEach(k => delete _origenesModal[k]);
+                Object.keys(_triggerInfoPorModal).forEach(k => delete _triggerInfoPorModal[k]);
+            }, 350);
         }
 
         function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones = {}) {

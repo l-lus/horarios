@@ -3053,8 +3053,6 @@
             };
         }
 
-        // Clasificación única de un registro. Estados: especial | en-curso | sin-datos | neutro | cumplido | cubierto | incompleto
-        // 'neutro' = sin objetivo aplicable (día no hábil u objetivo 0); no muestra diferencia.
         function estadoDeRegistro(r, asignaciones = null) {
             const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
             if (tipo) {
@@ -3409,8 +3407,6 @@
             });
         }
 
-        // Animación de cambio de valor (steppers hoy; reutilizable para stats-number).
-        // dir > 0: el valor sube (sale hacia arriba, entra desde abajo); dir < 0: al revés; 0: sin animar.
         const _valorAnimEstado = new WeakMap();
 
         function _finalizarValorPendiente(el) {

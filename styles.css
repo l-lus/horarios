@@ -642,7 +642,6 @@ button:disabled {
 }
 
 :where(#btn-toggle-ignorar-tf,
-    #btn-toggle-fondo,
     #btn-toggle-gist-backup,
     #btn-toggle-gist-merge) {
     justify-content: center;
@@ -1060,11 +1059,21 @@ button:disabled {
     text-align: left;
 }
 
-#modal-config .config-actions button>span:not(.toggle-switch),
+#modal-config .config-actions button>span:not(.toggle-switch, #hint-fondo-label),
 .drag-handle>span:not(.toggle-switch),
 #modal-reporte-secciones .config-actions button>span:not(.toggle-switch),
 #modal-notificaciones .form-group button>span:not(.toggle-switch) {
     flex: 1;
+}
+
+#hint-fondo-label {
+    flex: none;
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: var(--text-base);
+    font-weight: var(--fw-normal);
+    text-align: right;
+    white-space: nowrap;
 }
 
 #modal-notificaciones .config-hint-text {

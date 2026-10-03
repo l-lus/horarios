@@ -2955,7 +2955,27 @@
             };
         }
 
-        return { logicaCubiertoActiva, cubiertoPorSaldo, calcularAprovechamiento };
+        // Clasificación única de un registro. Estados: especial | en-curso | sin-datos | neutro | cumplido | cubierto | incompleto
+        // 'neutro' = sin objetivo aplicable (día no hábil u objetivo 0); no muestra diferencia.
+        function estadoDeRegistro(r, asignaciones = null) {
+            const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+            if (tipo) {
+                return {
+                    estado: 'especial', tipo, diffText: '', fechaCompensado: null,
+                    fechaCompensada: tipo.id === 'compensatorio' ? D.fechaCompensadaPorRegistro(r, asignaciones) : null
+                };
+            }
+            const base = { tipo: null, diffText: '', fechaCompensada: null, fechaCompensado: D.fechaCompensadoDeRegistro(r, asignaciones) };
+            if (r.entrada && !r.salida) return { ...base, estado: 'en-curso' };
+            if (!r.entrada) return { ...base, estado: 'sin-datos' };
+            const objetivo = D.objetivoDeRegistro(r);
+            if (!(objetivo > 0 && TimeUtils.esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha)))) return { ...base, estado: 'neutro' };
+            const total = r.total || 0;
+            const estado = horasGte(total, objetivo) ? 'cumplido' : (cubiertoPorSaldo(r.fecha, asignaciones) ? 'cubierto' : 'incompleto');
+            return { ...base, estado, diffText: TimeUtils.formatoDiferencia(total, objetivo) };
+        }
+
+        return { logicaCubiertoActiva, cubiertoPorSaldo, calcularAprovechamiento, estadoDeRegistro };
     })(DataManagement);
 
     // ====================================================================
@@ -4004,13 +4024,12 @@
                 const r = regsPorFecha[fecha];
                 if (!r && filtroActivo && todosRegsPorFecha[fecha]) return 'dia-filtrado';
                 if (!r) return 'dia-sin-registro';
-                if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
-                    const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-                    return `dia-especial-${tipo ? tipo.color : 'purple'}`;
-                }
-                if (r.entrada && !r.salida) return 'dia-en-curso';
-                if (!TimeUtils.esFechaHabil(fecha, D.diasHabilesEnFecha(fecha)) || horasGte(r.total, D.objetivoDeRegistro(r))) return 'dia-normal';
-                return SaldoSemanal.cubiertoPorSaldo(fecha, asignacionesCompensatorio) ? 'dia-cubierto' : 'dia-incompleto';
+                const { estado, tipo } = SaldoSemanal.estadoDeRegistro(r, asignacionesCompensatorio);
+                if (estado === 'especial') return `dia-especial-${tipo.color}`;
+                if (estado === 'en-curso') return 'dia-en-curso';
+                if (estado === 'cubierto') return 'dia-cubierto';
+                if (estado === 'incompleto' || estado === 'sin-datos') return 'dia-incompleto';
+                return 'dia-normal';
             };
 
             const diasNombre = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -4110,53 +4129,32 @@
         let _popupCalendarioEl = null;
 
         function _buildInfoHtmlRegistro(reg) {
-            const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
-            const esEspecial = TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
-            if (esEspecial) {
-                const tipoConfig = TiposRegistro.obtenerTipoPorCodigo(reg.entrada, reg.salida);
-                const emoji = S.escapeHtml(tipoConfig?.emoji ?? '');
-                const label = tipoConfig ? S.escapeHtml(tipoConfig.label) : S.escapeHtml(reg.entrada);
-                const colorSafe = /^[a-z]+$/.test(tipoConfig?.color || '') ? tipoConfig.color : 'purple';
-                let fechaCompensadaHtml = '';
-                if (tipoConfig?.id === 'compensatorio') {
-                    const fechaCompensada = D.fechaCompensadaPorRegistro(reg, asignacionesCompensatorio);
-                    if (fechaCompensada) {
-                        fechaCompensadaHtml = ` <span class="cal-popup-badge cal-popup-badge--${colorSafe}">${S.escapeHtml(TimeUtils.fechaCorta(fechaCompensada))}</span>`;
-                    }
-                }
+            const est = SaldoSemanal.estadoDeRegistro(reg, D.calcularAsignacionesCompensatorio());
+            if (est.estado === 'especial') {
+                const { tipo } = est;
+                const emoji = S.escapeHtml(tipo.emoji ?? '');
+                const label = S.escapeHtml(tipo.label);
+                const colorSafe = /^[a-z]+$/.test(tipo.color || '') ? tipo.color : 'purple';
+                const fechaCompensadaHtml = est.fechaCompensada
+                    ? ` <span class="cal-popup-badge cal-popup-badge--${colorSafe}">${S.escapeHtml(TimeUtils.fechaCorta(est.fechaCompensada))}</span>`
+                    : '';
                 return `<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${emoji} ${label}</span>${fechaCompensadaHtml}`;
             }
-            if (reg.entrada && !reg.salida) {
+            if (est.estado === 'en-curso') {
                 const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
                 return `<div class="cal-popup-info cal-popup-info--blue">${esHoy ? 'En curso' : 'Incompleto'}</div>
                     <div class="cal-popup-3l">Entrada: ${S.escapeHtml(reg.entrada)}</div>`;
             }
-            const totalHoras = reg.total || 0;
-            const totalStr = TimeUtils.horasATexto(totalHoras, 'short');
             let tfStr = '';
             if (reg.tiempoFuera && reg.tiempoFuera !== '00:00') {
                 tfStr = `${TimeUtils.horasATexto(TimeUtils.horaAMinutos(reg.tiempoFuera) / 60, 'short')} fuera`;
             }
-            let totalConDiff = totalStr, diffClase = '', cubiertoLineaHtml = '', compensadoLineaHtml = '';
-            const objetivoReg = D.objetivoDeRegistro(reg);
-            if (objetivoReg > 0 && TimeUtils.esFechaHabil(reg.fecha, D.diasHabilesEnFecha(reg.fecha))) {
-                const diffText = formatoDiferencia(totalHoras, objetivoReg);
-                if (horasGte(totalHoras, objetivoReg)) {
-                    diffClase = 'cal-popup-info--green';
-                    if (diffText) totalConDiff += ` (${diffText})`;
-                } else if (SaldoSemanal.cubiertoPorSaldo(reg.fecha, asignacionesCompensatorio)) {
-                    diffClase = 'cal-popup-info--gold';
-                    if (diffText) totalConDiff += ` (${diffText})`;
-                    cubiertoLineaHtml = `<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>`;
-                } else {
-                    diffClase = 'cal-popup-info--red';
-                    if (diffText) totalConDiff += ` (${diffText})`;
-                }
-            }
-            const fechaCompensado = D.fechaCompensadoDeRegistro(reg, asignacionesCompensatorio);
-            if (fechaCompensado) {
-                compensadoLineaHtml = `<span class="cal-popup-badge cal-popup-badge--purple">→ ${S.escapeHtml(TimeUtils.fechaCorta(fechaCompensado))}</span>`;
-            }
+            const diffClase = { cumplido: 'cal-popup-info--green', cubierto: 'cal-popup-info--gold', incompleto: 'cal-popup-info--red' }[est.estado] || '';
+            const totalConDiff = TimeUtils.horasATexto(reg.total || 0, 'short') + (est.diffText ? ` (${est.diffText})` : '');
+            const cubiertoLineaHtml = est.estado === 'cubierto' ? `<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>` : '';
+            const compensadoLineaHtml = est.fechaCompensado
+                ? `<span class="cal-popup-badge cal-popup-badge--purple">→ ${S.escapeHtml(TimeUtils.fechaCorta(est.fechaCompensado))}</span>`
+                : '';
             return `<div class="cal-popup-info${diffClase ? ' ' + diffClase : ''}">${totalConDiff}</div>
                 ${cubiertoLineaHtml}
                 ${compensadoLineaHtml}
@@ -5577,7 +5575,8 @@
             item.dataset.registroId = r.id;
             item.dataset.accion = 'editar-registro';
 
-            const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
+            const est = SaldoSemanal.estadoDeRegistro(r, asignacionesCompensatorio);
+            const tipoEspecial = est.tipo;
 
             const etiqueta = tipoEspecial ? ` ${tipoEspecial.emoji} (${tipoEspecial.label})` : '';
             const fechaText = `${TimeUtils.obtenerNombreDia(r.fecha)} ${r.fecha.substring(8)}${etiqueta}`;
@@ -5592,51 +5591,28 @@
                 ? tipoEspecial.descripcion
                 : `${r.entrada || '-'} → ${r.salida || '-'}${tfText}${crText}`;
 
-            let totalText = 'Incompleto';
-            let totalClase = '';
-            let esCubierto = false;
-
+            let totalText, totalClase = '';
             if (tipoEspecial) {
                 totalText = 'Justificado';
                 totalClase = `${tipoEspecial.color}-text`;
-            } else if (r.entrada && r.salida) {
-                totalText = TimeUtils.horasATexto(r.total, 'short');
-                const objetivoReg = D.objetivoDeRegistro(r);
-                if (objetivoReg > 0 && TimeUtils.esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha))) {
-                    const diffText = formatoDiferencia(r.total, objetivoReg);
-                    if (horasGte(r.total, objetivoReg)) {
-                        totalClase = 'green-text';
-                        if (diffText) totalText += ` (${diffText})`;
-                    } else if (SaldoSemanal.cubiertoPorSaldo(r.fecha, asignacionesCompensatorio)) {
-                        totalClase = 'gold-text';
-                        if (diffText) totalText += ` (${diffText})`;
-                        esCubierto = true;
-                    } else {
-                        totalClase = 'red-text';
-                        if (diffText) totalText += ` (${diffText})`;
-                    }
-                }
-            } else if (r.entrada && !r.salida) {
+            } else if (est.estado === 'en-curso') {
                 totalText = r.fecha === hoy ? 'En curso . . .' : 'Incompleto';
                 totalClase = 'blue-text';
-            } else {
+            } else if (est.estado === 'sin-datos') {
                 totalText = 'Sin datos';
+            } else {
+                totalText = TimeUtils.horasATexto(r.total, 'short') + (est.diffText ? ` (${est.diffText})` : '');
+                totalClase = { cumplido: 'green-text', cubierto: 'gold-text', incompleto: 'red-text' }[est.estado] || '';
             }
 
             const badgesExtra = [];
-            if (esCubierto) badgesExtra.push({ texto: 'Cubierto', clase: 'gold-text' });
+            if (est.estado === 'cubierto') badgesExtra.push({ texto: 'Cubierto', clase: 'gold-text' });
             if (tipoEspecial?.id === 'compensatorio') {
-                const fechaCompensada = D.fechaCompensadaPorRegistro(r, asignacionesCompensatorio);
-                if (fechaCompensada) {
-                    badgesExtra.push({ texto: TimeUtils.fechaCorta(fechaCompensada), clase: `${tipoEspecial.color}-text` });
-                } else {
-                    badgesExtra.push({ texto: '⚠ Sin referencia', clase: 'red-text' });
-                }
+                badgesExtra.push(est.fechaCompensada
+                    ? { texto: TimeUtils.fechaCorta(est.fechaCompensada), clase: `${tipoEspecial.color}-text` }
+                    : { texto: '⚠ Sin referencia', clase: 'red-text' });
             }
-            if (!tipoEspecial) {
-                const fechaCompensado = D.fechaCompensadoDeRegistro(r, asignacionesCompensatorio);
-                if (fechaCompensado) badgesExtra.push({ texto: `→ ${TimeUtils.fechaCorta(fechaCompensado)}`, clase: 'purple-text' });
-            }
+            if (est.fechaCompensado) badgesExtra.push({ texto: `→ ${TimeUtils.fechaCorta(est.fechaCompensado)}`, clase: 'purple-text' });
 
             item.appendChild(_crearInfoRegistro({
                 fechaText,
@@ -10103,7 +10079,7 @@
             UINotificaciones.actualizarEstadoBotonNotificaciones();
             UICore.mostrarToast(
                 'Se habilitaron las notificaciones de salida, podés deshabilitarlas desde Ajustes o tocando este aviso',
-                'info', 8000, null,
+                'info', 6000, null,
                 () => UINotificaciones.abrirModalNotificaciones()
             );
         }

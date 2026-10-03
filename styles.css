@@ -1602,6 +1602,7 @@ button:disabled .toggle-switch {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .modal-content,
     .modal.show .modal-content {
         transform: none !important;
@@ -1950,6 +1951,7 @@ button:disabled .toggle-switch {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .cal-popup,
     .stat-popup,
     .filtro-popup,
@@ -2490,9 +2492,7 @@ body.config-onboarding #theme-toggle-config {
     font-weight: var(--fw-semibold);
     color: var(--text-muted);
     transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
-position: relative;
-    transition: background var(--dur-fast) ease, color var(--dur-fast) ease,
-        border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-pop);
+    position: relative;
 }
 
 .day-checkbox input:checked~span {
@@ -2500,7 +2500,7 @@ position: relative;
     color: var(--c-white);
     border-color: transparent;
     font-weight: var(--fw-bold);
-    transform: scale(1.1); 
+    transform: scale(1.1);
 }
 
 /* ─── ELEMENTOS ESPECÍFICOS ──────────────────────────────────────────────────── */

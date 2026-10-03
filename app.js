@@ -10103,7 +10103,7 @@
             UINotificaciones.actualizarEstadoBotonNotificaciones();
             UICore.mostrarToast(
                 'Se habilitaron las notificaciones de salida, podés deshabilitarlas desde Ajustes o tocando este aviso',
-                'info', 6000, null,
+                'info', 8000, null,
                 () => UINotificaciones.abrirModalNotificaciones()
             );
         }

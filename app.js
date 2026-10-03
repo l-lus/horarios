@@ -3412,7 +3412,7 @@
             return _animarMutacion(el, fn);
         }
 
-        function _crearToggleConfig({ getVal, setVal, btnId, mensajeOn, mensajeOff, onAfterToggle, puedeActivar }) {
+        function _crearToggleConfig({ getVal, setVal, btnId, onAfterToggle, puedeActivar }) {
             function actualizarEstado() {
                 const val = getVal();
                 _setBtnActivo(btnId, val);
@@ -3426,7 +3426,7 @@
                 }
                 setVal(nuevo);
                 actualizarEstado();
-                mostrarToast(nuevo ? mensajeOn : mensajeOff, 'info', 4000);
+                mostrarToast('Guardado', 'info', 4000);
                 onAfterToggle?.(nuevo);
             }
             return { toggle, actualizarEstado };
@@ -8865,8 +8865,6 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
                 btnId: 'btn-toggle-persistir-tarjetas',
-                mensajeOn: 'Se recuerda el estado de las tarjetas',
-                mensajeOff: 'No se recuerda el estado de las tarjetas',
             });
 
         function toggleVisibilidadCard(cual) {
@@ -8875,7 +8873,7 @@
             StorageHelper.setItem(key, nuevo, true);
             aplicarVisibilidadCard(cual, nuevo);
             _setBtnActivo('btn-toggle-card-' + cual, nuevo);
-            mostrarToast('Tarjeta ' + cual + (nuevo ? ' visible' : ' oculta'), 'info');
+            mostrarToast('Guardado', 'info');
         }
 
         function aplicarVisibilidadCard(cual, visible) {
@@ -9068,8 +9066,6 @@
                 getVal: () => PushReminder.getUsarBufferSemanal(),
                 setVal: (v) => PushReminder.setUsarBufferSemanal(v),
                 btnId: 'btn-toggle-push-buffer',
-                mensajeOn: 'El banco de horas se aplica en las notificaciones',
-                mensajeOff: 'El banco de horas no se aplica en las notificaciones',
                 onAfterToggle: () => {
                     actualizarEstadoBotonPushBufferUltimoDia();
                     _actualizarDisponibilidadBotonesPush();
@@ -9082,8 +9078,6 @@
                 getVal: () => PushReminder.getBufferSoloUltimoDia(),
                 setVal: (v) => PushReminder.setBufferSoloUltimoDia(v),
                 btnId: 'btn-toggle-push-buffer-ultimo-dia',
-                mensajeOn: 'El banco de horas se aplica el último día hábil de la semana en las notificaciones',
-                mensajeOff: 'El banco de horas se aplica todos los días en las notificaciones',
                 onAfterToggle: () => _sincronizarPushHoyDebounced(),
             });
 
@@ -9092,8 +9086,6 @@
                 getVal: () => PushReminder.getHabilitado(),
                 setVal: (v) => PushReminder.setHabilitado(v),
                 btnId: 'btn-toggle-push-habilitado',
-                mensajeOn: 'Notificaciones de horario cumplido activadas',
-                mensajeOff: 'Notificaciones de horario cumplido desactivadas',
                 puedeActivar: () => PushReminder.puedeHabilitarse(),
                 onAfterToggle: () => {
                     _actualizarDisponibilidadBotonesPush();
@@ -9224,8 +9216,6 @@
                 getVal: () => D.getIgnorarTiempoFuera(),
                 setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
                 btnId: 'btn-toggle-ignorar-tf',
-                mensajeOn: 'No se descuenta el tiempo fuera en los registros',
-                mensajeOff: 'Se descuenta el tiempo fuera en los registros',
                 onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
             });
 
@@ -9234,8 +9224,6 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.HOVER_POPUP, v),
                 btnId: 'btn-toggle-hover-popup',
-                mensajeOn: 'Se muestra popup automático en calendario',
-                mensajeOff: 'No se muestra popup automático en calendario',
             });
 
         const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLogicaCubierto } =
@@ -9243,8 +9231,6 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
                 btnId: 'btn-toggle-logica-cubierto',
-                mensajeOn: 'Los registros no cubren el faltante con el banco de horas',
-                mensajeOff: 'Los registros cubren el faltante con el banco de horas disponible',
                 onAfterToggle: () => { actualizarUI(); }
             });
 
@@ -9253,8 +9239,6 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
                 btnId: 'btn-toggle-objetivo-registro',
-                mensajeOn: 'Las horas objetivo cambian dinámicamente según el valor global configurado',
-                mensajeOff: 'Las horas objetivo son independientes en cada registro',
                 onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); }
             });
 
@@ -9263,8 +9247,6 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.FORMATO_CORTO_STATS, v),
                 btnId: 'btn-toggle-formato-corto-stats',
-                mensajeOn: 'La tarjeta de estadísticas usa formato corto (5h 9m)',
-                mensajeOff: 'La tarjeta de estadísticas usa formato dictado (5 horas 9 minutos)',
                 onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
             });
 

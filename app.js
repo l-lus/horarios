@@ -4073,8 +4073,8 @@
 
                 if (reg) {
                     cell.dataset.regId = reg.id;
-                    cell.addEventListener('click', (e) => _onclickCalendarioDia(e, reg.id));
-                    cell.addEventListener('mouseenter', (e) => _popupCalendarioHover(e, reg.id));
+                    cell.addEventListener('click', (e) => _onclickCalendarioDia(e, reg.id, asignacionesCompensatorio));
+                    cell.addEventListener('mouseenter', (e) => _popupCalendarioHover(e, reg.id, asignacionesCompensatorio));
                     cell.addEventListener('mouseleave', (e) => _cerrarPopupCalendarioHover(e));
                 } else if (clase === 'dia-sin-registro') {
                     cell.classList.add('cursor-pointer');
@@ -4128,8 +4128,8 @@
 
         let _popupCalendarioEl = null;
 
-        function _buildInfoHtmlRegistro(reg) {
-            const est = SaldoSemanal.estadoDeRegistro(reg, D.calcularAsignacionesCompensatorio());
+        function _buildInfoHtmlRegistro(reg, asignaciones = null) {
+            const est = SaldoSemanal.estadoDeRegistro(reg, asignaciones || D.calcularAsignacionesCompensatorio());
             if (est.estado === 'especial') {
                 const { tipo } = est;
                 const emoji = S.escapeHtml(tipo.emoji ?? '');
@@ -4182,7 +4182,7 @@
             return S.escapeHtml(`${diaSemana}, ${d.getDate()} de ${mes}`);
         }
 
-        function _popupCalendario(event, registroId) {
+        function _popupCalendario(event, registroId, asignaciones = null) {
             event.stopPropagation();
 
             _cerrarPopupCalendario();
@@ -4196,7 +4196,7 @@
             const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
 
             const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
-            const infoHtml = _buildInfoHtmlRegistro(reg);
+            const infoHtml = _buildInfoHtmlRegistro(reg, asignaciones);
             const notasTexto = reg.notas || (grupoDelRegistro && TiposRegistro.notaDeGrupo(grupoDelRegistro));
             const comentarioHtml = notasTexto ? _cajaPopupHtml('#icon-comment', notasTexto) : '';
             const btnGrupoHtml = grupoDelRegistro ? `
@@ -4286,7 +4286,7 @@
             popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrar(); UITarjetaFichaje._irAFicharConFecha(fecha, true); });
         }
 
-        function _popupCalendarioHover(event, registroId) {
+        function _popupCalendarioHover(event, registroId, asignaciones = null) {
             if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
             if (!window.matchMedia('(hover: hover)').matches) return;
             const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
@@ -4296,11 +4296,11 @@
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioHoverTimer = setTimeout(() => {
                 _popupCalendarioEsHover = true;
-                _popupCalendario(event, registroId);
+                _popupCalendario(event, registroId, asignaciones);
             }, 150);
         }
 
-        function _onclickCalendarioDia(event, registroId) {
+        function _onclickCalendarioDia(event, registroId, asignaciones = null) {
             const esDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
             const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
             const hoverActivo = esDesktop && stored === 'true';
@@ -4314,7 +4314,7 @@
                     _cerrarPopupCalendario();
                     return;
                 }
-                _popupCalendario(event, registroId);
+                _popupCalendario(event, registroId, asignaciones);
             }
         }
 

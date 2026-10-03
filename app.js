@@ -927,7 +927,6 @@
         function inicializar() {
             cargarPerfiles();
             actualizarSelector();
-            actualizarNombrePerfil();
             _inicializado = true;
         }
 
@@ -950,15 +949,6 @@
             const savedPerfiles = StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles);
             const savedActivo = StorageHelper.setItem(STORAGE_KEYS.PERFIL_ACTIVO, perfilActual);
             return savedPerfiles && savedActivo;
-        }
-
-        function actualizarNombrePerfil() {
-            const nombreInput = document.getElementById('nombre-perfil-actual');
-            if (nombreInput && perfiles[perfilActual]) nombreInput.value = perfiles[perfilActual].nombre;
-            const btnEliminar = document.getElementById('btn-eliminar-perfil-modal');
-            if (btnEliminar) {
-                btnEliminar.disabled = (perfilActual === 'default');
-            }
         }
 
         function guardarDatosPerfilActual() {
@@ -8510,7 +8500,6 @@
 
             const aplicarCambiosLote = () => {
                 modoNormal.style.display = 'none';
-                modoLote.classList.remove('fade-out');
                 modoLote.style.display = 'block';
 
                 $('lote-tipo').value = 'feriado';

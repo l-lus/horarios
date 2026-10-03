@@ -482,10 +482,6 @@ h2.mutacion-saliente.no-margin,
     padding-top: var(--space-lg);
 }
 
-.form-group-mt-half {
-    margin-top: var(--space-sm);
-}
-
 .form-group-mb-half {
     margin-bottom: var(--space-sm);
 }
@@ -866,6 +862,7 @@ button:disabled {
 
 .settings-list>button:disabled {
     color: var(--text-muted);
+    background: transparent;
 }
 
 .settings-list>button:disabled>* {
@@ -874,6 +871,10 @@ button:disabled {
 
 .settings-list-text {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding-right: var(--space-sm);
 }
 
 .gist-valor {
@@ -1167,10 +1168,6 @@ button:disabled {
     background: var(--surface-row-hover);
 }
 
-.settings-list>button:disabled {
-    background: transparent;
-}
-
 .settings-list>button .icon:first-child,
 .settings-list-row .icon:first-child,
 .settings-list-row-head .icon:first-child,
@@ -1185,13 +1182,6 @@ button:disabled {
 }
 
 /* ─── FILA CON DESCRIPCIÓN (estilo OneUI: título + subtítulo) ────────────────── */
-
-.settings-list-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    padding-right: var(--space-sm);
-}
 
 .settings-list-desc {
     font-size: var(--text-sm);
@@ -2329,7 +2319,6 @@ body.config-onboarding #theme-toggle-config {
 }
 
 
-.flex-row,
 .botones-historico-group {
     display: flex;
     gap: var(--space-sm);

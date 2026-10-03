@@ -373,7 +373,7 @@
     const PushReminder = (function () {
         const WORKER_URL = 'https://horarios-push.l-lus.workers.dev';
         const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
-        const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9';
+        const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9'; // que mira bobo, anda paya
         const MARGEN_CRON_MS = 60 * 1000;
 
         function _headersWorker() {
@@ -10108,7 +10108,7 @@
 
         (function _bindLayoutConsistency() {
             const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-            const _v = '-v261002';
+            const _v = '-v261003';
             const _full = _t + _v;
             let _el = document.querySelector('.version-text');
             if (!_el) {
@@ -10130,7 +10130,7 @@
     (async () => {
         await BienvenidaModal.chequearYMostrar();
         setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
-        setTimeout(() => AvisoPush.chequearYAvisar(), 3000);
+        setTimeout(() => AvisoPush.chequearYAvisar(), 2000);
     })();
 })();
 

@@ -1915,8 +1915,6 @@ button:disabled .toggle-switch {
     font-size: var(--text-sm);
 }
 
-/* ─── POPUP DEL CALENDARIO ───────────────────────────────────────────────────── */
-
 .cal-popup,
 .stat-popup,
 .filtro-popup {
@@ -1930,10 +1928,31 @@ button:disabled .toggle-switch {
     display: flex;
     flex-direction: column;
     pointer-events: none;
-    transform: translateY(24px) scale(0.96);
+    transform: scale(0.15);
     opacity: 0;
-    animation: calPopupIn var(--dur-pop) var(--ease-pop) forwards;
+    transform-origin: center center;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.16s ease-in;
     will-change: transform, opacity;
+}
+
+.cal-popup.show,
+.stat-popup.show,
+.filtro-popup.show {
+    transform: scale(1);
+    opacity: 1;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cal-popup,
+    .stat-popup,
+    .filtro-popup,
+    .cal-popup.show,
+    .stat-popup.show,
+    .filtro-popup.show {
+        transform: none !important;
+        transition: opacity 0.15s ease !important;
+    }
 }
 
 .cal-popup {

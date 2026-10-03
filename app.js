@@ -3494,18 +3494,37 @@
                 if (top < margin) top = margin;
                 popup.style.top = `${top}px`;
                 popup.style.left = `${left}px`;
+
+                const triggerCenterX = rect.left + rect.width / 2;
+                const triggerCenterY = rect.top + rect.height / 2;
+                const originX = Math.round(triggerCenterX - left);
+                const originY = Math.round(triggerCenterY - top);
+                popup.style.transformOrigin = `${originX}px ${originY}px`;
+
                 popup.style.visibility = '';
-                setTimeout(() => popup.classList.add('listo'), DUR_ANIM() + 50);
+                requestAnimationFrame(() => {
+                    popup.classList.add('show');
+                    setTimeout(() => popup.classList.add('listo'), 280);
+                });
             });
         }
 
         function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar) {
+            let cerrado = false;
             const cerrar = () => {
-                popup.remove();
-                if (alCerrar) alCerrar();
+                if (cerrado) return;
+                cerrado = true;
+                popup.classList.remove('show');
+                popup.classList.remove('listo');
+                popup.classList.add('closing');
                 document.removeEventListener('click', onClick, true);
                 document.removeEventListener('scroll', cerrar, true);
+                setTimeout(() => {
+                    popup.remove();
+                    if (alCerrar) alCerrar(popup);
+                }, 200);
             };
+            popup._cerrar = cerrar;
             const onClick = (e) => {
                 const trigger = e.target.closest(selectorTrigger);
                 if (trigger && esMismoTrigger(trigger)) return;
@@ -4260,8 +4279,10 @@
 
         function _cerrarPopupCalendario() {
             if (!_popupCalendarioEl) return;
-            _popupCalendarioEl.remove();
+            const el = _popupCalendarioEl;
             _popupCalendarioEl = null;
+            if (el._cerrar) el._cerrar();
+            else el.remove();
         }
 
         function _cajaPopupHtml(icono, texto) {
@@ -4317,7 +4338,7 @@
                 event,
                 selectorTrigger: '.calendario-dia',
                 esMismoTrigger: dia => dia.dataset.regId === reg.id,
-                alCerrar: () => { _popupCalendarioEl = null; }
+                alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
             });
             _popupCalendarioEl = popup;
 
@@ -4374,7 +4395,7 @@
                 event,
                 selectorTrigger: '.calendario-dia',
                 esMismoTrigger: dia => dia.dataset.fecha === fecha,
-                alCerrar: () => { _popupCalendarioEl = null; }
+                alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
             });
             _popupCalendarioEl = popup;
 
@@ -6174,7 +6195,13 @@
             const btnFiltro = document.getElementById('btn-filtro');
             if (!btnFiltro) return;
 
-            if (_popupFiltrosEl) { _popupFiltrosEl.remove(); _popupFiltrosEl = null; return; }
+            if (_popupFiltrosEl) {
+                const el = _popupFiltrosEl;
+                _popupFiltrosEl = null;
+                if (el._cerrar) el._cerrar();
+                else el.remove();
+                return;
+            }
 
             const tipos = TiposRegistro.obtenerTodosLosTipos();
             const opcionesTipo = tipos.map(t => `<option value="${t.id}">${t.emoji} ${t.labelPlural}</option>`).join('');
@@ -6206,7 +6233,7 @@
                 event: event && event.currentTarget ? event : { currentTarget: btnFiltro },
                 selectorTrigger: '#btn-filtro',
                 esMismoTrigger: () => true,
-                alCerrar: () => { _popupFiltrosEl = null; }
+                alCerrar: (p) => { if (_popupFiltrosEl === p) _popupFiltrosEl = null; }
             }).popup;
             _popupFiltrosEl = popup;
 
@@ -6224,7 +6251,12 @@
         }
 
         function cerrarFiltros() {
-            if (_popupFiltrosEl) { _popupFiltrosEl.remove(); _popupFiltrosEl = null; }
+            if (_popupFiltrosEl) {
+                const el = _popupFiltrosEl;
+                _popupFiltrosEl = null;
+                if (el._cerrar) el._cerrar();
+                else el.remove();
+            }
         }
 
         function _setIconHistorico(icon, estado) {
@@ -6736,7 +6768,12 @@
         function cambiarAnioStats() { _cambiarPeriodoStats('select-anio-stats', actualizarEstadisticasAnio); }
 
         function togglePeriodoStats(direccion = 1) {
-            if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
+            if (_popupStatEl) {
+                const el = _popupStatEl;
+                _popupStatEl = null;
+                if (el._cerrar) el._cerrar();
+                else el.remove();
+            }
             const selectMes = $('select-mes-stats');
             const selectAnio = $('select-anio-stats');
             const label = $('label-periodo-toggle');
@@ -7241,7 +7278,12 @@
 
         function _popupStat(event, statId) {
             event.stopPropagation();
-            if (_popupStatEl) { _popupStatEl.remove(); _popupStatEl = null; }
+            if (_popupStatEl) {
+                const el = _popupStatEl;
+                _popupStatEl = null;
+                if (el._cerrar) el._cerrar();
+                else el.remove();
+            }
 
             let info = DESCRIPCIONES_STATS[statId];
             if (statId === 'stat-saldo' && info) {
@@ -7303,7 +7345,7 @@
                 event,
                 selectorTrigger: '.stat-item',
                 esMismoTrigger: item => item.dataset.statId === statId,
-                alCerrar: () => { _popupStatEl = null; }
+                alCerrar: (p) => { if (_popupStatEl === p) _popupStatEl = null; }
             }).popup;
             _popupStatEl = popup;
         }
@@ -7313,8 +7355,10 @@
             const valueEl = item.querySelector('.stat-value');
             if (!valueEl || !valueEl.id) return;
             if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) {
-                _popupStatEl.remove();
+                const el = _popupStatEl;
                 _popupStatEl = null;
+                if (el._cerrar) el._cerrar();
+                else el.remove();
                 return;
             }
             item.dataset.statId = valueEl.id;

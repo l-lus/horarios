@@ -38,6 +38,7 @@
         PUSH_BUFFER_SOLO_ULTIMO_DIA: 'pushBufferSoloUltimoDia',
         PUSH_HABILITADO: 'pushHabilitado',
         PUSH_INFO_ACTIVA: 'pushInfoActiva',
+        PUSH_AVISOS_RESTANTES: 'pushAvisosRestantes',
 
         BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
         GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
@@ -529,6 +530,7 @@
             StorageHelper.setItem(STORAGE_KEYS.PUSH_HABILITADO, !!valor, true);
         }
         const UMBRAL_REGISTROS_ACTIVACION = 15;
+        const AVISOS_INICIALES = 3;
         function _soportaPush() {
             return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
         }
@@ -539,14 +541,17 @@
             const regulares = registros.filter(r => !TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida));
             return regulares.length > UMBRAL_REGISTROS_ACTIVACION;
         }
-        function autoHabilitarPendiente() {
-            const hayEleccion = [true, false].some(porPerfil => StorageHelper.getItem(STORAGE_KEYS.PUSH_HABILITADO, null, porPerfil) !== null);
-            return !hayEleccion && puedeHabilitarse();
+        function _getAvisosRestantes() {
+            return StorageHelper.getNumber(STORAGE_KEYS.PUSH_AVISOS_RESTANTES, AVISOS_INICIALES, true);
         }
-        function autoHabilitar() {
-            setHabilitado(true);
-            setUsarBufferSemanal(true);
-            setBufferSoloUltimoDia(true);
+        // Hay que avisar si el usuario nunca eligió (activar/desactivar), se cumplen las condiciones
+        // y todavía quedan avisos del contador (arranca en AVISOS_INICIALES, uno por recarga).
+        function avisoPendiente() {
+            const hayEleccion = [true, false].some(porPerfil => StorageHelper.getItem(STORAGE_KEYS.PUSH_HABILITADO, null, porPerfil) !== null);
+            return !hayEleccion && puedeHabilitarse() && _getAvisosRestantes() > 0;
+        }
+        function consumirAviso() {
+            StorageHelper.setItem(STORAGE_KEYS.PUSH_AVISOS_RESTANTES, Math.max(0, _getAvisosRestantes() - 1), true);
         }
 
         function _guardarInfoActiva(fechaISO, targetTimeMs) {
@@ -715,8 +720,7 @@
         return {
             programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
             getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
-            getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, autoHabilitarPendiente,
-            autoHabilitar,
+            getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, avisoPendiente, consumirAviso,
             getBufferSoloUltimoDia, calcularTarget: _calcularTarget,
             targetProgramadoParaHoy: () => obtenerInfoActiva()?.targetTimeMs ?? null,
             restablecer,
@@ -4045,7 +4049,7 @@
         function _limpiarClavesPerfil(pid) {
             ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
                 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS,
-                STORAGE_KEYS.PUSH_HABILITADO, STORAGE_KEYS.PUSH_ANTICIPACION_MIN, STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, STORAGE_KEYS.PUSH_INFO_ACTIVA
+                STORAGE_KEYS.PUSH_HABILITADO, STORAGE_KEYS.PUSH_ANTICIPACION_MIN, STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, STORAGE_KEYS.PUSH_INFO_ACTIVA, STORAGE_KEYS.PUSH_AVISOS_RESTANTES
             ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
         }
 
@@ -10283,7 +10287,7 @@
         'use strict';
 
         async function chequearYAvisar() {
-            if (!PushReminder.autoHabilitarPendiente()) return;
+            if (!PushReminder.avisoPendiente()) return;
 
             while (
                 document.querySelector('.modal.show') ||
@@ -10292,13 +10296,11 @@
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
 
-            if (!PushReminder.autoHabilitarPendiente()) return;
+            if (!PushReminder.avisoPendiente()) return;
 
-            PushReminder.autoHabilitar();
-            DataManagement.sincronizarPushHoy();
-            UINotificaciones.actualizarEstadoBotonNotificaciones();
+            PushReminder.consumirAviso();
             UICore.mostrarToast(
-                'Se habilitaron las notificaciones de salida, podés deshabilitarlas desde Ajustes o tocando este aviso',
+                'Podés habilitar las notificaciones de salida desde Ajustes o tocando este aviso',
                 'info', 6000, null,
                 () => UINotificaciones.abrirModalNotificaciones()
             );

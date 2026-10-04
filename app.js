@@ -3104,8 +3104,10 @@
             if (r.entrada && !r.salida) return { ...base, estado: 'en-curso' };
             if (!r.entrada) return { ...base, estado: 'sin-datos' };
             const objetivo = D.objetivoDeRegistro(r);
-            if (!(objetivo > 0 && TimeUtils.esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha)))) return { ...base, estado: 'neutro' };
             const total = r.total || 0;
+            if (!(objetivo > 0 && TimeUtils.esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha)))) {
+                return { ...base, estado: 'neutro' };
+            }
             const estado = horasGte(total, objetivo) ? 'cumplido' : (cubiertoPorSaldo(r.fecha, asignaciones) ? 'cubierto' : 'incompleto');
             return { ...base, estado, diffText: TimeUtils.formatoDiferencia(total, objetivo) };
         }
@@ -5803,7 +5805,7 @@
                 totalText = 'Sin datos';
             } else {
                 totalText = TimeUtils.horasATexto(r.total, 'short') + (est.diffText ? ` (${est.diffText})` : '');
-                totalClase = { cumplido: 'green-text', cubierto: 'gold-text', incompleto: 'red-text' }[est.estado] || '';
+                totalClase = { cumplido: 'green-text', cubierto: 'gold-text', incompleto: 'red-text', neutro: 'neutro-text' }[est.estado] || '';
             }
 
             const badgesExtra = [];

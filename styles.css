@@ -1448,6 +1448,11 @@ button:disabled .toggle-switch {
     padding: 0.1rem var(--space-lg);
 }
 
+.registro-total.neutro-text {
+    color: var(--text-muted);
+    padding: 0.1rem 0;
+}
+
 .registro-badges {
     display: flex;
     flex-wrap: wrap;

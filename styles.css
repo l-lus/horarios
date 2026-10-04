@@ -30,7 +30,7 @@
     --c-green-bg: rgba(96, 172, 148, 0.1);
     --c-red-bg: rgba(172, 90, 76, 0.1);
     --c-active: var(--c-blue);
-    --c-active-bg: rgba(76, 114, 172, 0.1);
+    --c-blue-bg: rgba(76, 114, 172, 0.1);
     --c-red: rgba(172, 90, 76, 0.8);
     --c-red-pulse: rgba(192, 93, 118, 0.4);
     --c-purple: rgba(129, 76, 172, 0.8);
@@ -810,14 +810,14 @@ button:disabled {
     gap: var(--space-md);
     padding: var(--space-lg);
     border-radius: var(--radius);
-    background: var(--c-active-bg);
+    background: var(--input-bg);
 }
 
 .gist-estado .icon {
     width: 1.8em;
     height: 1.8em;
     flex-shrink: 0;
-    color: var(--c-active);
+    color: var(--text-muted);
 }
 
 .gist-estado--off {
@@ -935,8 +935,6 @@ button:disabled {
     flex: none;
     display: grid;
     place-items: center;
-    background: var(--c-active-bg);
-    color: var(--c-active);
 }
 
 .gist-merge-titulo-txt {
@@ -1027,8 +1025,8 @@ button:disabled {
 }
 
 .gist-delta.is-info {
-    background: var(--c-active-bg);
-    color: var(--c-blue);
+    background: var(--c-blue-bg);
+    color: var(--text-muted);
 }
 
 .gist-alerta {
@@ -1788,8 +1786,8 @@ button:disabled .toggle-switch {
 
 .btn-mes-calendario.activo {
     border-color: var(--c-active);
-    background: var(--c-active-bg);
-    color: var(--c-active);
+    background: var(--c-blue);
+    color: var(--c-white);
 }
 
 .selector-meses-anio-header {
@@ -2241,7 +2239,7 @@ button:disabled .toggle-switch {
 
 body.config-onboarding .config-onboarding-banner {
     display: block;
-    background: var(--c-active-bg);
+    background: var(--input-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: var(--space-lg);

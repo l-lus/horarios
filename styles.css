@@ -46,7 +46,6 @@
     --dur-collapse: 300ms;
     --dur-calendario: 320ms;
     --dur-valor: 150ms;
-    --dur-pop: 0.35s;
     --dur-slow: 0.5s;
     --ease-anim: ease;
     --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -264,7 +263,8 @@ body {
 .modal-title-block,
 #calendario-nav-botones,
 .card-section-title,
-.stats-periodo-row {
+.stats-periodo-row,
+.settings-list-row-head {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -798,12 +798,6 @@ button:disabled {
 
 /* ─── GIST: estado, acciones y paneles ───────────────────────────────────────── */
 
-#modal-gist .modal-panel-body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-}
-
 .gist-estado {
     display: flex;
     align-items: center;
@@ -848,11 +842,6 @@ button:disabled {
     width: 1.8em;
     height: 1.8em;
     color: var(--text-muted);
-}
-
-#modal-gist .settings-list>button {
-    justify-content: flex-start;
-    text-align: left;
 }
 
 /* Deshabilitado: mismo criterio que #gist-limite-sync.disabled (todo el contenido atenuado) */
@@ -1050,7 +1039,8 @@ button:disabled {
 /* Footer: confirmar + cancelar */
 /* ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────── */
 
-.config-actions {
+.config-actions,
+#modal-gist .modal-panel-body {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -1058,14 +1048,12 @@ button:disabled {
 
 .config-actions>label {
     margin-bottom: -0.125rem;
-    font-size: var(--text-sm);
-    font-weight: var(--fw-semibold);
-    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     padding-left: var(--space-xs);
 }
 
+#modal-gist .settings-list>button,
 #modal-config .config-actions button,
 .drag-handle,
 #modal-reporte-secciones .config-actions button,
@@ -1143,7 +1131,6 @@ button:disabled {
 
 .settings-list-row>.settings-list-text,
 .settings-list-row-head>.settings-list-text {
-    flex: 1;
     min-width: 0;
 }
 
@@ -1151,12 +1138,6 @@ button:disabled {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-md);
-}
-
-.settings-list-row-head {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
 }
 
 .settings-list-row .week-selector {
@@ -1435,12 +1416,6 @@ button:disabled .toggle-switch {
     max-width: 65%;
 }
 
-.registro-comentario,
-.cal-popup-caja {
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-}
-
 .icon-comentario,
 .cal-popup-caja-icono {
     width: 13px;
@@ -1456,7 +1431,9 @@ button:disabled .toggle-switch {
 }
 
 .registro-horas,
+.registro-comentario,
 .cal-popup-3l,
+.cal-popup-caja,
 .btn-perfil-detalle {
     font-size: var(--text-sm);
     color: var(--text-muted);
@@ -1598,12 +1575,6 @@ button:disabled .toggle-switch {
     transform: scale(1);
     opacity: 1;
     transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease-out;
-}
-
-:root[data-motion="reduce"] .modal-content,
-:root[data-motion="reduce"] .modal.show .modal-content {
-    transform: none !important;
-    transition: opacity 0.15s ease !important;
 }
 
 .modal-scrollable>.modal-content {
@@ -1895,21 +1866,13 @@ button:disabled .toggle-switch {
 
 .calendario-nav button {
     background: none;
-    border: 1px solid transparent;
-    border-radius: var(--radius);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
     width: var(--touch-target);
     height: var(--touch-target);
     padding: var(--space-xs);
     padding-left: var(--space-lg);
     font-size: var(--text-base);
-    font-weight: var(--fw-semibold);
-    color: var(--text-main);
     text-transform: capitalize;
-    cursor: pointer;
     transition: filter var(--transition-ui);
 }
 
@@ -1944,16 +1907,6 @@ button:disabled .toggle-switch {
     transform: scale(1);
     opacity: 1;
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out;
-}
-
-:root[data-motion="reduce"] .cal-popup,
-:root[data-motion="reduce"] .stat-popup,
-:root[data-motion="reduce"] .filtro-popup,
-:root[data-motion="reduce"] .cal-popup.show,
-:root[data-motion="reduce"] .stat-popup.show,
-:root[data-motion="reduce"] .filtro-popup.show {
-    transform: none !important;
-    transition: opacity 0.15s ease !important;
 }
 
 .cal-popup {
@@ -3104,8 +3057,7 @@ button.campo-flash-color {
 /* ─── REDUCED MOTION ─────────────────────────────────────────────────────────── */
 /* Se activa con <html data-motion="reduce"> (ver Motion en app.js y flash.js):
    sigue al sistema en modo automático o lo fuerza el ajuste "Reducir animaciones".
-   Modales y popups tienen su propio bloque más arriba (solo fade de opacidad).
-   Acá va el resto. Las duraciones bajan a 1ms y NO a 0 ni a "none": con 0 el
+   Las duraciones bajan a 1ms y NO a 0 ni a "none": con 0 el
    navegador no dispara transitionend/animationend, y el JS depende de ellos
    (p. ej. _limpiarAlturaLista) y además lee estas variables con _getCSSdur()
    para sus timers. Si se agrega una --dur-* nueva en :root, sumarla acá. */
@@ -3115,8 +3067,15 @@ button.campo-flash-color {
     --dur-collapse: 1ms;
     --dur-calendario: 1ms;
     --dur-valor: 1ms;
-    --dur-pop: 1ms;
     --dur-slow: 1ms;
+}
+
+/* Modales y popups: sin escala, solo fade de opacidad. Esta regla va al final del
+   archivo y su especificidad (0,3,0) iguala o supera a .modal.show .modal-content
+   y a .X.show, así que no hace falta !important (el JS solo fija transform-origin). */
+:root[data-motion="reduce"] :is(.modal-content, .cal-popup, .stat-popup, .filtro-popup) {
+    transform: none;
+    transition: opacity 0.15s ease;
 }
 
 /* Overlay de los modales: mismo fade corto que .modal-content */

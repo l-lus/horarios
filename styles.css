@@ -421,7 +421,7 @@ h2.mutacion-saliente.no-margin,
     flex-shrink: 0;
     gap: 0;
     border: 1px solid var(--border);
-    border-radius: 999px;
+    border-radius: var(--radius);
 }
 
 #modal-config .config-actions .input-number-group--pill button {
@@ -441,7 +441,7 @@ h2.mutacion-saliente.no-margin,
 
 .input-number-group--pill .input-number-display {
     flex: none;
-    min-width: 3.5rem;
+    min-width: 4rem;
 }
 
 .input-number-group--embed {

@@ -417,7 +417,7 @@
     // PUSH REMINDER MODULE — notification via Cloudflare
     // ====================================================================
     const PushReminder = (function () {
-        const WORKER_URL = 'https://horarios-push.l-lus.workers.dev';
+        const WORKER_URL = 'https://horarios-push.lushibosca.workers.dev';
         const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
         const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9'; // que mira bobo, anda paya
         const MARGEN_CRON_MS = 60 * 1000;
@@ -9213,7 +9213,7 @@
                 texto = 'Permisos de notificaciones bloqueados en el navegador';
             } else if (!PushReminder.getHabilitado() && !PushReminder.puedeHabilitarse()) {
                 claseColor = 'neutral';
-                texto = 'Todavía no disponible, se habilita con el uso de la app';
+                texto = 'Usá la app para activar tus notificaciones en este perfil';
             } else if (permiso === 'granted') {
                 claseColor = 'positivo';
                 texto = 'Permisos de notificaciones aceptados';

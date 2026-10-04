@@ -6288,7 +6288,7 @@
             }
 
             const tipos = TiposRegistro.obtenerTodosLosTipos();
-            const opcionesTipo = tipos.map(t => `<option value="${t.id}">${t.emoji} ${t.labelPlural}</option>`).join('');
+            const opcionesTipo = tipos.map(t => `<option value="${S.escapeHtml(t.id)}">${S.escapeHtml(t.emoji)} ${S.escapeHtml(t.labelPlural)}</option>`).join('');
 
             const popup = _crearPopupFlotante({
                 className: 'filtro-popup',

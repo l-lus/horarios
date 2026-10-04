@@ -7,9 +7,11 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self';
          script-src 'self'; 
          style-src 'self';
-         img-src 'self' data: blob:; 
-         font-src 'self' data:; 
-         connect-src 'self' https://api.github.com https://horarios-push.lushibosca.workers.dev https://horarios-push.l-lus.workers.dev; 
+         img-src 'self'; 
+         font-src 'self'; 
+         connect-src 'self' https://api.github.com https://horarios-push.l-lus.workers.dev; 
+         worker-src 'self';
+         manifest-src 'self';
          object-src 'none'; 
          base-uri 'none'; 
          form-action 'none'; 

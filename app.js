@@ -3143,7 +3143,7 @@
             return TimeUtils.formatoDiferencia(tiempoTotal, objetivo);
         }
 
-        function registrarSwipe(el, callback, { minX = 50, maxY = 80, ignoreInputs = false } = {}) {
+        function registrarSwipe(el, callback, { minX = 50, maxY = 80 } = {}) {
             if (!el || el.dataset.swipeInit) return;
             el.dataset.swipeInit = '1';
             let _x = null, _y = null;
@@ -3151,7 +3151,6 @@
 
             el.addEventListener('touchstart', e => {
                 if (e.touches.length !== 1) return;
-                if (ignoreInputs && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
                 _x = e.touches[0].clientX;
                 _y = e.touches[0].clientY;
                 _direccionBloqueada = null;
@@ -9886,7 +9885,10 @@
         function _initSwipesYStats() {
             _habilitarCierreToast();
             registrarSwipe(document.getElementById('stats-card'), () => alternarVista());
-            registrarSwipe(document.getElementById('form-registro'), dir => toggleModoLote(dir), { ignoreInputs: true });
+            registrarSwipe(document.getElementById('form-registro'), dir => {
+                document.activeElement?.blur?.();
+                toggleModoLote(dir);
+            });
 
             const anchor = document.getElementById('stat-items-tipos-anchor');
             if (anchor) {

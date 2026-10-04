@@ -3503,7 +3503,6 @@
                 }
                 setVal(nuevo);
                 actualizarEstado();
-                mostrarToast('Guardado', 'info', 4000);
                 onAfterToggle?.(nuevo);
             }
             return { toggle, actualizarEstado };
@@ -8941,7 +8940,7 @@
     const UICardsLayout = (function (UICore) {
 
         const {
-            mostrarToast, _crearToggleConfig, _setBtnActivo
+            _crearToggleConfig, _setBtnActivo
         } = UICore;
 
         const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
@@ -8957,7 +8956,6 @@
             StorageHelper.setItem(key, nuevo, true);
             aplicarVisibilidadCard(cual, nuevo);
             _setBtnActivo('btn-toggle-card-' + cual, nuevo);
-            mostrarToast('Guardado', 'info');
         }
 
         function aplicarVisibilidadCard(cual, visible) {

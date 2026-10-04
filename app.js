@@ -9208,12 +9208,15 @@
 
             const permiso = Notification.permission;
             let claseColor, texto;
-            if (permiso === 'granted') {
-                claseColor = 'positivo';
-                texto = 'Permisos de notificaciones aceptados';
-            } else if (permiso === 'denied') {
+            if (permiso === 'denied') {
                 claseColor = 'negativo';
                 texto = 'Permisos de notificaciones bloqueados en el navegador';
+            } else if (!PushReminder.getHabilitado() && !PushReminder.puedeHabilitarse()) {
+                claseColor = 'neutral';
+                texto = 'Todavía no disponible, se habilita con el uso de la app';
+            } else if (permiso === 'granted') {
+                claseColor = 'positivo';
+                texto = 'Permisos de notificaciones aceptados';
             } else {
                 claseColor = 'neutral';
                 texto = 'Todavía no se pidió permiso al navegador';

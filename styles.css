@@ -36,7 +36,6 @@
     --c-active: var(--c-blue);
     --c-blue-bg: rgba(76, 114, 172, 0.1);
     --c-red: rgba(172, 90, 76, 0.8);
-    --c-red-pulse: rgba(192, 93, 118, 0.4);
     --c-purple: rgba(129, 76, 172, 0.8);
     --c-gold: rgba(172, 155, 76, 0.8);
     --c-orange: rgba(210, 120, 50, 0.8);
@@ -2183,7 +2182,11 @@ button:disabled .toggle-switch {
 .timer-btn.running {
     color: var(--c-red);
     border-color: var(--c-red);
-    animation: pulse 2s infinite;
+
+}
+
+.timer-btn.running:not(:disabled) {
+    animation: estadoBadgeParpadeo 3s ease-in-out infinite;
 }
 
 .toggle-hint,
@@ -2744,18 +2747,6 @@ body.config-onboarding #theme-toggle-config {
     }
 }
 
-@keyframes calPopupIn {
-    from {
-        opacity: 0;
-        transform: translateY(24px) scale(0.96);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
 @keyframes llamarAtencion {
     0% {
         transform: scale(1, 1);
@@ -2803,20 +2794,6 @@ body.config-onboarding #theme-toggle-config {
     to {
         opacity: 1;
         transform: scale(1);
-    }
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 var(--c-red-pulse);
-    }
-
-    70% {
-        box-shadow: 0 0 0 10px rgba(192, 93, 118, 0);
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(192, 93, 118, 0);
     }
 }
 
@@ -3073,12 +3050,7 @@ button.campo-flash-color {
 }
 
 /* ─── REDUCED MOTION ─────────────────────────────────────────────────────────── */
-/* Se activa con <html data-motion="reduce"> (ver Motion en app.js y flash.js):
-   sigue al sistema en modo automático o lo fuerza el ajuste "Reducir animaciones".
-   Las duraciones bajan a 1ms y NO a 0 ni a "none": con 0 el
-   navegador no dispara transitionend/animationend, y el JS depende de ellos
-   (p. ej. _limpiarAlturaLista) y además lee estas variables con _getCSSdur()
-   para sus timers. Si se agrega una --dur-* nueva en :root, sumarla acá. */
+
 :root[data-motion="reduce"] {
     --dur-fast: 1ms;
     --dur-anim: 1ms;
@@ -3088,9 +3060,6 @@ button.campo-flash-color {
     --dur-slow: 1ms;
 }
 
-/* Modales y popups: sin escala, solo fade de opacidad. Esta regla va al final del
-   archivo y su especificidad (0,3,0) iguala o supera a .modal.show .modal-content
-   y a .X.show, así que no hace falta !important (el JS solo fija transform-origin). */
 :root[data-motion="reduce"] :is(.modal-content, .cal-popup, .stat-popup, .filtro-popup) {
     transform: none;
     transition: opacity 0.15s ease;

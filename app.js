@@ -421,6 +421,34 @@
         const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
         const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9'; // que mira bobo, anda paya
         const MARGEN_CRON_MS = 60 * 1000;
+        const AVISO_FALLO_CADA_MS = 10 * 60 * 1000;
+        // Ante un 429, un 5xx o un error de red se reintenta solo: la ventana del
+        // rate limit del Worker es de 60s, así que un minuto de espera alcanza.
+        const REINTENTOS_MAX = 3;
+        const REINTENTO_ESPERA_MS = 60 * 1000;
+        // Cada programación (o cancelación de hoy) nueva invalida los reintentos
+        // pendientes de la anterior, para no reprogramar un aviso que ya no corresponde.
+        let _generacionProgramacion = 0;
+
+        let notify = { mostrarToast: () => { } };
+        function configurarNotificaciones(handlers) { notify = { ...notify, ...handlers }; }
+
+        const _ultimoAvisoFallo = {};
+        function _avisarFallo(accion, status) {
+            const motivo = status == null
+                ? (navigator.onLine === false ? 'sin conexión' : 'no se pudo contactar al servicio')
+                : status === 409 ? 'este dispositivo está vinculado a otra instalación'
+                    : status === 429 ? 'el servicio está recibiendo demasiados pedidos'
+                        : 'el servicio no está disponible ahora';
+            const clave = `${accion}|${motivo}`;
+            const ahora = Date.now();
+            if (ahora - (_ultimoAvisoFallo[clave] || 0) < AVISO_FALLO_CADA_MS) return;
+            _ultimoAvisoFallo[clave] = ahora;
+            const mensaje = accion === 'cancelar'
+                ? 'No se pudo cancelar el aviso de hoy (puede que igual te llegue)'
+                : 'No se pudo programar el aviso de fin de jornada';
+            notify.mostrarToast(mensaje, 'warning', 5000, motivo);
+        }
 
         function _headersWorker() {
             const headers = { 'Content-Type': 'application/json' };
@@ -652,18 +680,35 @@
             const anticipacionMin = getAnticipacionMin();
             const mensaje = _construirMensajeNotificacion(anticipacionMin, bufferSemanalHoras);
 
-            try {
-                const res = await _postWorker('/api/schedule', {
-                    id: _claveRecordatorio(fechaISO),
-                    ownerToken: _ownerToken(),
-                    subscription: sub.toJSON(),
-                    targetTime: targetMs,
-                    title: 'Horarios',
-                    message: mensaje
-                });
-                if (res.ok) _guardarInfoActiva(fechaISO, targetMs);
-            } catch (err) {
-                console.error('No se pudo programar el recordatorio:', err);
+            const generacion = ++_generacionProgramacion;
+            const payload = {
+                id: _claveRecordatorio(fechaISO),
+                ownerToken: _ownerToken(),
+                subscription: sub.toJSON(),
+                targetTime: targetMs,
+                title: 'Horarios',
+                message: mensaje
+            };
+
+            for (let intento = 0; ; intento++) {
+                let status = null;
+                try {
+                    const res = await _postWorker('/api/schedule', payload);
+                    if (res.ok) { _guardarInfoActiva(fechaISO, targetMs); return; }
+                    status = res.status;
+                } catch (err) {
+                    console.error('No se pudo programar el recordatorio:', err);
+                }
+
+                const reintentable = status == null || status === 429 || status >= 500;
+                if (!reintentable || intento >= REINTENTOS_MAX) {
+                    _avisarFallo('programar', status);
+                    return;
+                }
+                await new Promise(resolve => setTimeout(resolve, REINTENTO_ESPERA_MS));
+                // Durante la espera pudo cambiar todo: otra entrada, la salida, los avisos
+                // desactivados o el horario ya cumplido. En ese caso se abandona en silencio.
+                if (generacion !== _generacionProgramacion || !getHabilitado() || Date.now() >= targetMs) return;
             }
         }
 
@@ -685,6 +730,7 @@
             if (esPerfilActivo) limpiarNotificacionVisible();
 
             const esHoy = fechaISO === TimeUtils.obtenerFechaHoy();
+            if (esHoy && esPerfilActivo) _generacionProgramacion++;
             const activa = esHoy ? obtenerInfoActiva(perfilId) : null;
             if (esHoy) _borrarInfoActiva(perfilId);
 
@@ -700,7 +746,11 @@
             }
 
             _postWorker('/api/cancel', { id: _claveRecordatorio(fechaISO, perfilId), ownerToken: _ownerToken() }, true)
-                .catch(err => console.error('No se pudo cancelar el recordatorio:', err));
+                .then(res => { if (!res.ok) _avisarFallo('cancelar', res.status); })
+                .catch(err => {
+                    console.error('No se pudo cancelar el recordatorio:', err);
+                    _avisarFallo('cancelar', null);
+                });
         }
 
         function restablecer() {
@@ -718,6 +768,7 @@
         }
 
         return {
+            configurarNotificaciones,
             programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
             getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
             getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, avisoPendiente, consumirAviso,
@@ -9807,6 +9858,7 @@
                 forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, refrescarConfigSiVisible
             });
             StorageHelper.configurarNotificaciones({ mostrarToast });
+            PushReminder.configurarNotificaciones({ mostrarToast });
 
             ModalManager.registrarAccionVolver('modal-gist', cerrarModalGist);
             ModalManager.registrarAccionVolver('modal-gist-merge', gistMergeCancelar);
@@ -10333,7 +10385,7 @@
 
         (function _bindLayoutConsistency() {
             const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-            const _v = '-v261003';
+            const _v = '-v261006';
             const _full = _t + _v;
             let _el = document.querySelector('.version-text');
             if (!_el) {

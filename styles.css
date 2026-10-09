@@ -204,6 +204,25 @@ body[data-theme="black"] {
     --hover: brightness(1.25);
 }
 
+/* ─── TEMA MEDIANOCHE (azul marino con cian) ───────────────────────────── */
+html[data-theme="medianoche"] body,
+body[data-theme="medianoche"] {
+    --bg-body: #0b1120;
+    --bg-card: #131c2e;
+    --bg-header: #0b1120f6;
+    --text-main: #e2e8f0;
+    --text-muted: #94a3b8;
+    --text-disabled: #94a3b8a2;
+    --border: #1f2a40;
+    --input-bg: #1c2638;
+    --surface-row-hover: #26334a;
+    --toggle-track-off: #3b4a63;
+    --c-gray-btn: #1c2638;
+    --c-active: rgba(8, 145, 178, 0.9);
+    --shadow: 0 4px 20px rgba(2, 6, 23, 0.6), 0 0 0 1px rgba(34, 211, 238, 0.05);
+    --hover: brightness(1.2);
+}
+
 /* ─── RESET ─────────────────────────────────────────────────────────────────── */
 
 body.modal-open {

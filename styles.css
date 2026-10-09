@@ -185,6 +185,25 @@ body[data-theme="lilac"] {
     --hover: brightness(0.95);
 }
 
+/* ─── TEMA NEGRO CON NARANJA ───────────────────────────────────────────── */
+html[data-theme="black"] body,
+body[data-theme="black"] {
+    --bg-body: #000000;
+    --bg-card: #141210;
+    --bg-header: #000000f6;
+    --text-main: #ece6e1;
+    --text-muted: #b3a89f;
+    --text-disabled: #b3a89fa2;
+    --border: #2b2622;
+    --input-bg: #26211d;
+    --surface-row-hover: #352d27;
+    --toggle-track-off: #57493f;
+    --c-gray-btn: #26211d;
+    --c-active: rgba(235, 125, 40, 0.9);
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(235, 125, 40, 0.06);
+    --hover: brightness(1.25);
+}
+
 /* ─── RESET ─────────────────────────────────────────────────────────────────── */
 
 body.modal-open {

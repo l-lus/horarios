@@ -983,7 +983,7 @@
     // THEME MANAGER MODULE
     // ====================================================================
     const ThemeManager = (function () {
-        const TEMAS = ['light', 'dark', 'pink', 'green', 'blue', 'lilac', 'crema'];
+        const TEMAS = ['light', 'dark', 'black', 'pink', 'green', 'blue', 'lilac', 'crema'];
 
         function temaGuardado() {
             const raw = StorageHelper.getItem(STORAGE_KEYS.TEMA_OSCURO, null);

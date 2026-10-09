@@ -7411,6 +7411,12 @@
             'stat-compensaciones': { titulo: 'Salidas Tempranas', desc: 'Cantidad de jornadas en las que se registró un crédito por salida anticipada o asueto dentro del registro en curso.' },
         };
 
+        const AJUSTE_POR_STAT = {
+            'stat-dias-trabajados': 'config-row-dias-habiles',
+            'stat-tiempo-fuera-total': 'btn-toggle-ignorar-tf',
+            'stat-promedio-diario': 'config-row-horas-diarias',
+        };
+
         let _popupStatEl = null;
 
         function _popupStat(event, statId) {
@@ -7472,19 +7478,32 @@
                 };
             }
 
-            const popup = _crearPopupFlotante({
+            const ajusteId = AJUSTE_POR_STAT[statId];
+            const btnModificarHtml = ajusteId ? `
+                <button class="cal-popup-btn-edit" id="_stat-popup-btn-modificar">
+                    <svg class="icon"><use href="#icon-settings"/></svg>
+                    Modificar
+                </button>` : '';
+
+            const { popup, cerrar } = _crearPopupFlotante({
                 className: 'stat-popup',
                 id: '_stat-popup',
                 dataset: { statId },
                 html: `
                 <div class="stat-popup-titulo">${S.escapeHtml(info.titulo)}</div>
-                <div class="stat-popup-desc">${info.desc}</div>`,
+                <div class="stat-popup-desc">${info.desc}</div>
+                ${btnModificarHtml}`,
                 event,
                 selectorTrigger: '.stat-item',
                 esMismoTrigger: item => item.dataset.statId === statId,
                 alCerrar: (p) => { if (_popupStatEl === p) _popupStatEl = null; }
-            }).popup;
+            });
             _popupStatEl = popup;
+
+            popup.querySelector('#_stat-popup-btn-modificar')?.addEventListener('click', () => {
+                cerrar();
+                UIConfig.mostrarConfigEnAjuste(ajusteId);
+            });
         }
 
         function _onclickStatItem(event) {
@@ -8973,6 +8992,7 @@
             toggleFormulario,
             _irAFicharConFecha,
             _scrollACardFichar,
+            _FLASH_SCROLL_DELAY,
             alternarFechaActual,
             pegarHoraActual,
             limpiarCampo,
@@ -9323,7 +9343,7 @@
 
         const {
             _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, DUR_ANIM,
-            _crearToggleConfig, _setBtnDisabled, _animarValor
+            _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo
         } = UICore;
 
         const {
@@ -9331,7 +9351,7 @@
         } = UIHistorico;
 
         const {
-            actualizarUI, getFondoCard, _getLabelFondo, _refrescarFormatoCortoStatsCache
+            actualizarUI, getFondoCard, _getLabelFondo, _refrescarFormatoCortoStatsCache, _FLASH_SCROLL_DELAY
         } = UITarjetaFichaje;
 
         const {
@@ -9489,6 +9509,22 @@
             ModalManager.alternar('modal-selector-perfiles', 'modal-config', null, _precargarCamposConfig);
         }
 
+        // Abre ajustes, scrollea hasta la opción si queda fuera de vista y la resalta.
+        function mostrarConfigEnAjuste(id) {
+            ModalManager.abrir('modal-config', _precargarCamposConfig);
+            // Espera a que termine el pop-in del modal (0.28s) para medir sin la escala aplicada
+            setTimeout(() => {
+                const el = $(id);
+                const cuerpo = el?.closest('.modal-panel-body');
+                if (!el || !cuerpo) return;
+                const r = el.getBoundingClientRect();
+                const c = cuerpo.getBoundingClientRect();
+                const visible = r.top >= c.top && r.bottom <= c.bottom;
+                if (!visible) el.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'nearest' });
+                setTimeout(() => _flashCampo(id), visible ? 0 : _FLASH_SCROLL_DELAY);
+            }, 300);
+        }
+
         function refrescarConfigSiVisible() {
             if (document.getElementById('modal-config')?.classList.contains('show')) {
                 _precargarCamposConfig();
@@ -9609,7 +9645,7 @@
             actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
             actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
             actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonAplicarHoras, cerrarConfig,
-            cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding,
+            cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
             pressHoldObjetivoEdicion, formatearInput, bindEventos
         };
 

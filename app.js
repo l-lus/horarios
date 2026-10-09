@@ -983,7 +983,7 @@
     // THEME MANAGER MODULE
     // ====================================================================
     const ThemeManager = (function () {
-        const TEMAS = ['light', 'dark', 'black', 'pink', 'green', 'blue', 'lilac', 'crema', 'medianoche'];
+        const TEMAS = ['light', 'dark', 'medianoche', 'black', 'pink', 'green', 'blue', 'lilac', 'crema'];
 
         function temaGuardado() {
             const raw = StorageHelper.getItem(STORAGE_KEYS.TEMA_OSCURO, null);
@@ -10421,7 +10421,7 @@
 
         (function _bindLayoutConsistency() {
             const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-            const _v = '-v261006';
+            const _v = '-v261009';
             const _full = _t + _v;
             let _el = document.querySelector('.version-text');
             if (!_el) {

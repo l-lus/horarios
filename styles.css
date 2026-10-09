@@ -109,6 +109,7 @@ body[data-theme="pink"] {
     --surface-row-hover: #f6d8e6;
     --toggle-track-off: #e3b6cd;
     --c-gray-btn: #fbe7f0;
+    --c-active: rgba(194, 85, 127, 0.9);
     --shadow: 0 1px 4px rgba(172, 76, 130, 0.1), 0 0 0 1px rgba(172, 76, 130, 0.05);
     --hover: brightness(0.95);
 }
@@ -127,6 +128,7 @@ body[data-theme="crema"] {
     --surface-row-hover: #f0e2cb;
     --toggle-track-off: #ddc7a0;
     --c-gray-btn: #f7eee1;
+    --c-active: rgba(176, 106, 50, 0.9);
     --shadow: 0 1px 4px rgba(140, 100, 60, 0.1), 0 0 0 1px rgba(140, 100, 60, 0.05);
     --hover: brightness(0.95);
 }
@@ -145,6 +147,7 @@ body[data-theme="green"] {
     --surface-row-hover: #d8ecde;
     --toggle-track-off: #a8d2b4;
     --c-gray-btn: #e7f5eb;
+    --c-active: rgba(63, 143, 99, 0.9);
     --shadow: 0 1px 4px rgba(76, 152, 100, 0.1), 0 0 0 1px rgba(76, 152, 100, 0.05);
     --hover: brightness(0.95);
 }
@@ -181,6 +184,7 @@ body[data-theme="lilac"] {
     --surface-row-hover: #e5d9f3;
     --toggle-track-off: #c7ace3;
     --c-gray-btn: #f0e9fa;
+    --c-active: rgba(124, 92, 191, 0.9);
     --shadow: 0 1px 4px rgba(120, 80, 180, 0.1), 0 0 0 1px rgba(120, 80, 180, 0.05);
     --hover: brightness(0.95);
 }

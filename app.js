@@ -417,7 +417,7 @@
     // PUSH REMINDER MODULE — notification via Cloudflare
     // ====================================================================
     const PushReminder = (function () {
-        const WORKER_URL = 'https://horarios-push.l-lus.workers.dev';
+        const WORKER_URL = 'https://horarios-push.lushibosca.workers.dev';
         const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
         const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9'; // que mira bobo, anda paya
         const MARGEN_CRON_MS = 60 * 1000;
@@ -9627,10 +9627,8 @@
             ModalManager.alternar('modal-selector-perfiles', 'modal-config', null, _precargarCamposConfig);
         }
 
-        // Abre ajustes, scrollea hasta la opción si queda fuera de vista y la resalta.
         function mostrarConfigEnAjuste(id) {
             ModalManager.abrir('modal-config', _precargarCamposConfig);
-            // Espera a que termine el pop-in del modal (0.28s) para medir sin la escala aplicada
             setTimeout(() => {
                 const el = $(id);
                 const cuerpo = el?.closest('.modal-panel-body');
@@ -9640,7 +9638,7 @@
                 const visible = r.top >= c.top && r.bottom <= c.bottom;
                 if (!visible) el.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'nearest' });
                 setTimeout(() => _flashCampo(id), visible ? 0 : _FLASH_SCROLL_DELAY);
-            }, 300);
+            }, 500);
         }
 
         function refrescarConfigSiVisible() {

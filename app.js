@@ -422,12 +422,8 @@
         const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9'; // que mira bobo, anda paya
         const MARGEN_CRON_MS = 60 * 1000;
         const AVISO_FALLO_CADA_MS = 10 * 60 * 1000;
-        // Ante un 429, un 5xx o un error de red se reintenta solo: la ventana del
-        // rate limit del Worker es de 60s, así que un minuto de espera alcanza.
         const REINTENTOS_MAX = 3;
         const REINTENTO_ESPERA_MS = 60 * 1000;
-        // Cada programación (o cancelación de hoy) nueva invalida los reintentos
-        // pendientes de la anterior, para no reprogramar un aviso que ya no corresponde.
         let _generacionProgramacion = 0;
 
         let notify = { mostrarToast: () => { } };
@@ -572,8 +568,6 @@
         function _getAvisosRestantes() {
             return StorageHelper.getNumber(STORAGE_KEYS.PUSH_AVISOS_RESTANTES, AVISOS_INICIALES, true);
         }
-        // Hay que avisar si el usuario nunca eligió (activar/desactivar), se cumplen las condiciones
-        // y todavía quedan avisos del contador (arranca en AVISOS_INICIALES, uno por recarga).
         function avisoPendiente() {
             const hayEleccion = [true, false].some(porPerfil => StorageHelper.getItem(STORAGE_KEYS.PUSH_HABILITADO, null, porPerfil) !== null);
             return !hayEleccion && puedeHabilitarse() && _getAvisosRestantes() > 0;
@@ -706,8 +700,6 @@
                     return;
                 }
                 await new Promise(resolve => setTimeout(resolve, REINTENTO_ESPERA_MS));
-                // Durante la espera pudo cambiar todo: otra entrada, la salida, los avisos
-                // desactivados o el horario ya cumplido. En ese caso se abandona en silencio.
                 if (generacion !== _generacionProgramacion || !getHabilitado() || Date.now() >= targetMs) return;
             }
         }
@@ -2429,7 +2421,7 @@
 
             ordenarRegistros();
             HistoryManager.saveState(registros, `editar registro (${TimeUtils.fechaCorta(f)})`);
-            const saved = await guardarYActualizar(null, true);
+            const saved = await guardarYActualizar(r.id, true);
             notify.restaurarBotonGuardarEdicion(btnGuardar);
             if (saved) {
                 _sincronizarPushHoy();
@@ -3498,6 +3490,21 @@
             });
         }
 
+        function _crearFantasmaSiVisible(el) {
+            if (!el || Motion.reducido()) return null;
+            if (el.closest('.collapsible:not(.expanded)')) return null;
+            const r = el.getBoundingClientRect();
+            if (r.width <= 0 || r.height <= 0) return null;
+            if (r.bottom < 0 || r.top > window.innerHeight) return null;
+
+            const fantasma = _fantasmaDe(el);
+            fantasma.classList.remove('nuevo-registro-animacion', 'mutacion-entrante');
+            const limpiar = () => fantasma.remove();
+            fantasma.addEventListener('animationend', limpiar, { once: true });
+            setTimeout(limpiar, DUR_ANIM() + 150);
+            return fantasma;
+        }
+
         const _valorAnimEstado = new WeakMap();
 
         function _finalizarValorPendiente(el) {
@@ -3888,6 +3895,7 @@
             toggleSeccionGen,
             _animarFadeSwap,
             _animarMutacion,
+            _crearFantasmaSiVisible,
             _animarValor
         };
     })(SecurityAndUtils, DataManagement);
@@ -4168,7 +4176,7 @@
     //                     UI CALENDAR MODULE
     // ====================================================================
     const UICalendario = (function (S, D, UICore) {
-        const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO } = UICore;
+        const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible } = UICore;
 
         function _cerrarSelectorMeses(idResaltar = null) {
             const grid = document.getElementById('calendario-grid');
@@ -4337,6 +4345,14 @@
             }
 
             grid.classList.toggle('calendario-filtro-activo', filtroActivo);
+
+            if (idResaltar) {
+                const idsAnimados = (Array.isArray(idResaltar) ? idResaltar : [idResaltar]).map(String);
+                grid.querySelectorAll('.calendario-dia[data-reg-id]').forEach(celdaVieja => {
+                    if (idsAnimados.includes(celdaVieja.dataset.regId)) _crearFantasmaSiVisible(celdaVieja);
+                });
+            }
+
             grid.innerHTML = '';
             grid.appendChild(frag);
 
@@ -5718,7 +5734,8 @@
     const UIHistorico = (function (S, D, UICore) {
         const {
             formatoDiferencia, mostrarToast, _setBtnActivo, debounce,
-            _actualizarOffsetsStickyMes, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, setIconoBtn
+            _actualizarOffsetsStickyMes, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, setIconoBtn,
+            _crearFantasmaSiVisible, DUR_ANIM
         } = UICore;
 
         let edicionBloqueada = true;
@@ -6002,8 +6019,108 @@
             });
         }
 
+        const _MAX_BLOQUES_EXPANDIDOS = 12;
+
+        function _clavesItemLista(item) {
+            if (!item) return [];
+            if (item.dataset.registroId) return ['r:' + item.dataset.registroId];
+            if (item.dataset.accion === 'editar-grupo') {
+                try { return JSON.parse(item.dataset.grupoData).registros.map(id => 'r:' + id); } catch (e) { return []; }
+            }
+            return [];
+        }
+
+        function _clavesBloqueLista(el) {
+            if (el.classList.contains('registro-item')) return _clavesItemLista(el);
+            if (el.dataset.mesId) return ['m:' + el.dataset.mesId];
+            if (el.dataset.anioId) return ['a:' + el.dataset.anioId];
+            return [];
+        }
+
+        function _claveContenedorLista(cont) {
+            const header = cont.querySelector(':scope > .registro-mes-header');
+            return header ? (_clavesBloqueLista(header)[0] || null) : null;
+        }
+
+        function _expandirElemento(el, dur) {
+            el.style.contentVisibility = 'visible';
+            el.style.overflow = 'hidden';
+            const cs = getComputedStyle(el);
+            const final = {
+                height: cs.height,
+                paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom,
+                marginTop: cs.marginTop, marginBottom: cs.marginBottom,
+                borderTopWidth: cs.borderTopWidth, borderBottomWidth: cs.borderBottomWidth
+            };
+            const inicial = {
+                height: '0px',
+                paddingTop: '0px', paddingBottom: '0px',
+                marginTop: '0px', marginBottom: '0px',
+                borderTopWidth: '0px', borderBottomWidth: '0px'
+            };
+            const limpiar = () => { el.style.contentVisibility = ''; el.style.overflow = ''; };
+            const anim = el.animate([inicial, final], { duration: dur, easing: 'ease-out' });
+            anim.addEventListener('finish', limpiar, { once: true });
+            anim.addEventListener('cancel', limpiar, { once: true });
+        }
+
+        function _expandirBloquesNuevos(lista, clavesPrevias) {
+            const dur = DUR_ANIM();
+            const objetivos = new Set();
+            lista.querySelectorAll('.registro-item.nuevo-registro-animacion').forEach(item => {
+                if (_clavesItemLista(item).some(c => clavesPrevias.has(c))) return;
+                let objetivo = item;
+                for (let cont = item.closest('.registro-mes-container'); cont;
+                    cont = cont.parentElement ? cont.parentElement.closest('.registro-mes-container') : null) {
+                    const clave = _claveContenedorLista(cont);
+                    if (clave && !clavesPrevias.has(clave)) objetivo = cont;
+                }
+                if (objetivo.closest('.collapsible:not(.expanded)')) return;
+                objetivos.add(objetivo);
+            });
+            if (objetivos.size > _MAX_BLOQUES_EXPANDIDOS) return;
+            objetivos.forEach(el => _expandirElemento(el, dur));
+        }
+
+        function _prepararAnimacionLista(lista, idNuevo) {
+            const sinAnimacion = { reproducir() { } };
+            const ids = (idNuevo === null || idNuevo === undefined) ? [] : (Array.isArray(idNuevo) ? idNuevo : [idNuevo]);
+            if (ids.length === 0 || Motion.reducido() || !lista.offsetParent) return sinAnimacion;
+
+            const elementoPorId = new Map();
+            lista.querySelectorAll('.registro-item').forEach(item => {
+                _clavesItemLista(item).forEach(c => elementoPorId.set(c.slice(2), item));
+            });
+
+            const claves = ids.map(String);
+            const existentes = claves.filter(id => elementoPorId.has(id));
+            const hayNuevos = existentes.length < claves.length;
+
+            const vistos = new Set();
+            existentes.forEach(id => {
+                const el = elementoPorId.get(id);
+                if (vistos.has(el)) return;
+                vistos.add(el);
+                _crearFantasmaSiVisible(el);
+            });
+
+            let clavesPrevias = null;
+            if (hayNuevos) {
+                clavesPrevias = new Set();
+                lista.querySelectorAll('.registro-item, .registro-mes-header').forEach(el => {
+                    _clavesBloqueLista(el).forEach(c => clavesPrevias.add(c));
+                });
+            }
+            return {
+                reproducir() {
+                    if (clavesPrevias) _expandirBloquesNuevos(lista, clavesPrevias);
+                }
+            };
+        }
+
         function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalculadas = null) {
             const lista = $('lista-registros');
+            const animacionLista = _prepararAnimacionLista(lista, idNuevo);
             lista.innerHTML = '';
 
             const registrosAMostrar = D.obtenerRegistrosFiltrados();
@@ -6038,6 +6155,7 @@
             lista.appendChild(fragmento);
             _consolidarMesesAbiertos(lista, mesHoy);
             _actualizarOffsetsStickyMes();
+            animacionLista.reproducir();
         }
 
         function crearGrupoExpandible(grupo, idResaltar = null, asignacionesCompensatorio = null) {
@@ -10421,7 +10539,7 @@
 
         (function _bindLayoutConsistency() {
             const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-            const _v = '-v261009';
+            const _v = '-v261011';
             const _full = _t + _v;
             let _el = document.querySelector('.version-text');
             if (!_el) {

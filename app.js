@@ -9627,18 +9627,48 @@
             ModalManager.alternar('modal-selector-perfiles', 'modal-config', null, _precargarCamposConfig);
         }
 
+        function _esperarFinScroll(contenedor, { estable = 120, maximo = 1500 } = {}) {
+            return new Promise(resolve => {
+                let terminado = false;
+                const inicio = performance.now();
+                let ultimoTop = contenedor.scrollTop;
+                let desde = inicio;
+                const fin = () => {
+                    if (terminado) return;
+                    terminado = true;
+                    contenedor.removeEventListener('scrollend', fin);
+                    resolve();
+                };
+                contenedor.addEventListener('scrollend', fin, { once: true });
+                const revisar = (ahora) => {
+                    if (terminado) return;
+                    if (contenedor.scrollTop !== ultimoTop) {
+                        ultimoTop = contenedor.scrollTop;
+                        desde = ahora;
+                    }
+                    if (ahora - desde >= estable && ahora - inicio >= estable) return fin();
+                    if (ahora - inicio >= maximo) return fin();
+                    requestAnimationFrame(revisar);
+                };
+                requestAnimationFrame(revisar);
+            });
+        }
+
         function mostrarConfigEnAjuste(id) {
             ModalManager.abrir('modal-config', _precargarCamposConfig);
-            setTimeout(() => {
+            setTimeout(async () => {
                 const el = $(id);
                 const cuerpo = el?.closest('.modal-panel-body');
                 if (!el || !cuerpo) return;
                 const r = el.getBoundingClientRect();
                 const c = cuerpo.getBoundingClientRect();
                 const visible = r.top >= c.top && r.bottom <= c.bottom;
-                if (!visible) el.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'nearest' });
-                setTimeout(() => _flashCampo(id), visible ? 0 : _FLASH_SCROLL_DELAY);
-            }, 500);
+                if (!visible) {
+                    el.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'nearest' });
+                    await _esperarFinScroll(cuerpo);
+                }
+                _flashCampo(id);
+            }, 300);
         }
 
         function refrescarConfigSiVisible() {

@@ -2143,6 +2143,7 @@ button:disabled .toggle-switch {
     transform-origin: center;
     z-index: 3;
     position: relative;
+    animation: mutacionEntrada var(--dur-anim) ease-out;
 }
 
 .animated-card {

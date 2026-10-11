@@ -3728,6 +3728,51 @@
 
         function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
 
+        function _esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+        function _esperarFinScroll(objetivo = window, { estable = 120, maximo = 1500 } = {}) {
+            const esVentana = objetivo === window;
+            const origen = esVentana ? document : objetivo;
+            const posicion = () => (esVentana ? window.scrollY : objetivo.scrollTop);
+            return new Promise(resolve => {
+                let terminado = false;
+                const inicio = performance.now();
+                let ultimaPos = posicion();
+                let desde = inicio;
+                const fin = () => {
+                    if (terminado) return;
+                    terminado = true;
+                    origen.removeEventListener('scrollend', fin);
+                    resolve();
+                };
+                origen.addEventListener('scrollend', fin, { once: true });
+                const revisar = (ahora) => {
+                    if (terminado) return;
+                    const pos = posicion();
+                    if (pos !== ultimaPos) { ultimaPos = pos; desde = ahora; }
+                    if (ahora - desde >= estable && ahora - inicio >= estable) return fin();
+                    if (ahora - inicio >= maximo) return fin();
+                    requestAnimationFrame(revisar);
+                };
+                requestAnimationFrame(revisar);
+            });
+        }
+
+        function _scrollHastaVisible(el, { contenedor = null, margenSuperior = 0 } = {}) {
+            if (!el) return Promise.resolve();
+            const r = el.getBoundingClientRect();
+            const c = contenedor ? contenedor.getBoundingClientRect() : null;
+            const limiteSup = c ? c.top : margenSuperior;
+            const limiteInf = c ? c.bottom : window.innerHeight;
+            if (r.top >= limiteSup && r.bottom <= limiteInf) return Promise.resolve();
+
+            const behavior = Motion.scrollBehavior();
+            if (contenedor) el.scrollIntoView({ behavior, block: 'nearest' });
+            else window.scrollTo({ top: window.scrollY + r.top - margenSuperior, behavior });
+            if (Motion.reducido()) return Promise.resolve();
+            return _esperarFinScroll(contenedor || window);
+        }
+
         const _COLOR_TOAST_POR_TIPO = {
             success: 'var(--c-green)', error: 'var(--c-red)', warning: 'var(--c-red)', info: 'var(--c-blue)'
         };
@@ -3888,6 +3933,9 @@
             _abrirModalConPadre,
             _cerrarModalConPadre,
             _flashCampo,
+            _esperar,
+            _esperarFinScroll,
+            _scrollHastaVisible,
             _flashCampoTipo,
             _flashElemento,
             _finalizarSlidePendiente,
@@ -7716,7 +7764,7 @@
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
             _animarMutacion, _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn,
-            aplicarFeedbackCampos
+            aplicarFeedbackCampos, _esperar, _scrollHastaVisible
         } = UICore;
 
         let modoLoteActivo = false;
@@ -8969,53 +9017,41 @@
             }
         }
 
-        const _FLASH_SCROLL_DELAY = 500;
-
-        function _irAFicharConFecha(fecha, esEspecial) {
-            const tarjeta = $('card-registrar');
+        async function _irAFicharConFecha(fecha, esEspecial) {
             const formulario = $('form-registro');
-            const estaExpandido = formulario && formulario.classList.contains('expanded');
+            const estabaExpandido = !!(formulario && formulario.classList.contains('expanded'));
 
-            if (!estaExpandido) toggleFormulario();
+            if (!estabaExpandido) toggleFormulario();
 
-            _scrollACardFichar(tarjeta);
+            const scrollTerminado = _scrollACardFichar($('card-registrar'));
 
-            const retraso = estaExpandido ? 0 : DUR_ANIM() + 80;
+            if (!estabaExpandido) await _esperar(DUR_ANIM() + 80);
 
-            const aplicarFecha = () => {
-                if (esEspecial) {
-                    const desde = $('lote-fecha-desde');
-                    const hasta = $('lote-fecha-hasta');
-                    if (desde) desde.value = fecha;
-                    if (hasta) hasta.value = fecha;
-                    actualizarBotonLote();
-                    setTimeout(() => _flashCampo('lote-fecha-desde', 'lote-fecha-hasta', 'lote-tipo'), _FLASH_SCROLL_DELAY);
-                } else {
-                    const input = $('fecha');
-                    if (input) input.value = fecha;
-                    setTimeout(() => _flashCampo('fecha', 'entrada', 'salida'), _FLASH_SCROLL_DELAY);
-                }
-            };
+            if (!!esEspecial !== modoLoteActivo) {
+                toggleModoLote();
+                await _esperar(DUR_ANIM() + 50);
+            }
 
-            setTimeout(() => {
-                const necesitaCambiarModo = esEspecial ? !modoLoteActivo : modoLoteActivo;
-                if (necesitaCambiarModo) {
-                    toggleModoLote();
-                    setTimeout(aplicarFecha, DUR_ANIM() + 50);
-                } else {
-                    aplicarFecha();
-                }
-            }, retraso);
+            if (esEspecial) {
+                const desde = $('lote-fecha-desde');
+                const hasta = $('lote-fecha-hasta');
+                if (desde) desde.value = fecha;
+                if (hasta) hasta.value = fecha;
+                actualizarBotonLote();
+            } else {
+                const input = $('fecha');
+                if (input) input.value = fecha;
+            }
+
+            await scrollTerminado;
+            if (esEspecial) _flashCampo('lote-fecha-desde', 'lote-fecha-hasta', 'lote-tipo');
+            else _flashCampo('fecha', 'entrada', 'salida');
         }
 
         function _scrollACardFichar(el) {
-            if (!el) return;
-            const rect = el.getBoundingClientRect();
             const headerEl = document.querySelector('.header');
-            const headerH = headerEl ? headerEl.offsetHeight : 0;
-            const margen = headerH + 8;
-            if (rect.top >= margen && rect.bottom <= window.innerHeight) return;
-            window.scrollTo({ top: window.scrollY + rect.top - margen, behavior: Motion.scrollBehavior() });
+            const margen = (headerEl ? headerEl.offsetHeight : 0) + 8;
+            return _scrollHastaVisible(el, { margenSuperior: margen });
         }
 
         function alternarFechaActual(id) {
@@ -9110,7 +9146,6 @@
             toggleFormulario,
             _irAFicharConFecha,
             _scrollACardFichar,
-            _FLASH_SCROLL_DELAY,
             alternarFechaActual,
             pegarHoraActual,
             limpiarCampo,
@@ -9461,7 +9496,7 @@
 
         const {
             _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, DUR_ANIM,
-            _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo
+            _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible
         } = UICore;
 
         const {
@@ -9469,7 +9504,7 @@
         } = UIHistorico;
 
         const {
-            actualizarUI, getFondoCard, _getLabelFondo, _refrescarFormatoCortoStatsCache, _FLASH_SCROLL_DELAY
+            actualizarUI, getFondoCard, _getLabelFondo, _refrescarFormatoCortoStatsCache
         } = UITarjetaFichaje;
 
         const {
@@ -9627,48 +9662,15 @@
             ModalManager.alternar('modal-selector-perfiles', 'modal-config', null, _precargarCamposConfig);
         }
 
-        function _esperarFinScroll(contenedor, { estable = 120, maximo = 1500 } = {}) {
-            return new Promise(resolve => {
-                let terminado = false;
-                const inicio = performance.now();
-                let ultimoTop = contenedor.scrollTop;
-                let desde = inicio;
-                const fin = () => {
-                    if (terminado) return;
-                    terminado = true;
-                    contenedor.removeEventListener('scrollend', fin);
-                    resolve();
-                };
-                contenedor.addEventListener('scrollend', fin, { once: true });
-                const revisar = (ahora) => {
-                    if (terminado) return;
-                    if (contenedor.scrollTop !== ultimoTop) {
-                        ultimoTop = contenedor.scrollTop;
-                        desde = ahora;
-                    }
-                    if (ahora - desde >= estable && ahora - inicio >= estable) return fin();
-                    if (ahora - inicio >= maximo) return fin();
-                    requestAnimationFrame(revisar);
-                };
-                requestAnimationFrame(revisar);
-            });
-        }
-
         function mostrarConfigEnAjuste(id) {
             ModalManager.abrir('modal-config', _precargarCamposConfig);
             setTimeout(async () => {
                 const el = $(id);
                 const cuerpo = el?.closest('.modal-panel-body');
                 if (!el || !cuerpo) return;
-                const r = el.getBoundingClientRect();
-                const c = cuerpo.getBoundingClientRect();
-                const visible = r.top >= c.top && r.bottom <= c.bottom;
-                if (!visible) {
-                    el.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'nearest' });
-                    await _esperarFinScroll(cuerpo);
-                }
+                await _scrollHastaVisible(el, { contenedor: cuerpo });
                 _flashCampo(id);
-            }, 300);
+            }, 500);
         }
 
         function refrescarConfigSiVisible() {

@@ -3441,7 +3441,7 @@
         }
 
         function _animarMutacion(elementos, fn, duracion = null) {
-            const els = (Array.isArray(elementos) ? elementos : [elementos]).filter(Boolean);
+            const els = _aArray(elementos).filter(Boolean);
             const dur = duracion ?? DUR_ANIM();
 
             els.forEach(_finalizarMutacionPendiente);
@@ -3722,6 +3722,12 @@
 
         function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
 
+        // Normaliza "uno o varios" a array: null/undefined → [], un array → el mismo, otro valor → [valor].
+        function _aArray(valor) {
+            if (valor === null || valor === undefined) return [];
+            return Array.isArray(valor) ? valor : [valor];
+        }
+
         // Espera a que termine una animación del tema (--dur-anim) más un margen.
         function _esperarAnim(extra = 50) { return TimeUtils.esperar(DUR_ANIM() + extra); }
 
@@ -3944,6 +3950,7 @@
             _abrirModalConPadre,
             _cerrarModalConPadre,
             _flashCampo,
+            _aArray,
             _esperarAnim,
             _esperarFinScroll,
             _scrollHastaVisible,
@@ -4235,7 +4242,7 @@
     //                     UI CALENDAR MODULE
     // ====================================================================
     const UICalendario = (function (S, D, UICore) {
-        const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible } = UICore;
+        const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray } = UICore;
 
         function _cerrarSelectorMeses(idResaltar = null) {
             const grid = document.getElementById('calendario-grid');
@@ -4374,7 +4381,7 @@
                 const clase = claseDelDia(fecha);
                 const esHoy = anio === hoy.getFullYear() && mes === hoy.getMonth() && dia === hoy.getDate();
                 const reg = regsPorFecha[fecha];
-                const idsNuevos = idResaltar ? (Array.isArray(idResaltar) ? idResaltar : [idResaltar]) : [];
+                const idsNuevos = _aArray(idResaltar);
                 const esNuevo = reg && idsNuevos.includes(reg.id);
 
                 const cell = document.createElement('div');
@@ -4406,7 +4413,7 @@
             grid.classList.toggle('calendario-filtro-activo', filtroActivo);
 
             if (idResaltar) {
-                const idsAnimados = (Array.isArray(idResaltar) ? idResaltar : [idResaltar]).map(String);
+                const idsAnimados = _aArray(idResaltar).map(String);
                 grid.querySelectorAll('.calendario-dia[data-reg-id]').forEach(celdaVieja => {
                     if (idsAnimados.includes(celdaVieja.dataset.regId)) _crearFantasmaSiVisible(celdaVieja);
                 });
@@ -5794,7 +5801,7 @@
         const {
             formatoDiferencia, mostrarToast, _setBtnActivo, debounce,
             _actualizarOffsetsStickyMes, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, setIconoBtn,
-            _crearFantasmaSiVisible, DUR_ANIM
+            _crearFantasmaSiVisible, DUR_ANIM, _aArray
         } = UICore;
 
         let edicionBloqueada = true;
@@ -5895,7 +5902,7 @@
             const item = document.createElement('div');
 
             let className = r.fecha === hoy ? 'registro-item hoy' : 'registro-item';
-            const idsResaltar = idResaltar ? (Array.isArray(idResaltar) ? idResaltar : [idResaltar]) : [];
+            const idsResaltar = _aArray(idResaltar);
             const esNuevo = idsResaltar.includes(r.id);
             if (esNuevo) {
                 className += ' nuevo-registro-animacion';
@@ -6143,7 +6150,7 @@
 
         function _prepararAnimacionLista(lista, idNuevo) {
             const sinAnimacion = { reproducir() { } };
-            const ids = (idNuevo === null || idNuevo === undefined) ? [] : (Array.isArray(idNuevo) ? idNuevo : [idNuevo]);
+            const ids = _aArray(idNuevo);
             if (ids.length === 0 || Motion.reducido() || !lista.offsetParent) return sinAnimacion;
 
             const elementoPorId = new Map();
@@ -6230,7 +6237,7 @@
             let animarGrupo = false;
 
             if (idResaltar) {
-                const idsNuevos = Array.isArray(idResaltar) ? idResaltar : [idResaltar];
+                const idsNuevos = _aArray(idResaltar);
                 const contieneNuevo = grupo.registros.some(r => idsNuevos.includes(r.id));
                 if (contieneNuevo) {
                     animarGrupo = true;

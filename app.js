@@ -402,6 +402,8 @@
             return nombre.charAt(0).toUpperCase() + nombre.slice(1);
         }
 
+        function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
         return {
             esFechaHabil, esDiaAnterior, agruparMesesPorAnio, nombreMesCapitalizado,
             validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
@@ -409,7 +411,7 @@
             horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
             obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
             horasATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular, pluralizar,
-            generarRangoFechas, fechaCorta, segundosAMinutosRedondeado, _pad2
+            generarRangoFechas, fechaCorta, segundosAMinutosRedondeado, _pad2, esperar
         };
     })();
 
@@ -699,7 +701,7 @@
                     _avisarFallo('programar', status);
                     return;
                 }
-                await new Promise(resolve => setTimeout(resolve, REINTENTO_ESPERA_MS));
+                await TimeUtils.esperar(REINTENTO_ESPERA_MS);
                 if (generacion !== _generacionProgramacion || !getHabilitado() || Date.now() >= targetMs) return;
             }
         }
@@ -3353,7 +3355,7 @@
                 toastTimeout = setTimeout(() => {
                     toast.classList.remove('show');
                     toastTimeout = null;
-                    setTimeout(() => _procesarToastQueue(), DUR_ANIM() + 50);
+                    _esperarAnim().then(() => _procesarToastQueue());
                 }, duracionFinal);
             }, 10);
         }
@@ -3363,7 +3365,7 @@
             const toast = $('toast');
             if (!toast || !toast.classList.contains('show')) return;
             toast.classList.remove('show');
-            setTimeout(() => _procesarToastQueue(), DUR_ANIM() + 50);
+            _esperarAnim().then(() => _procesarToastQueue());
         }
 
         function _habilitarCierreToast() {
@@ -3493,7 +3495,7 @@
             fantasma.classList.remove('nuevo-registro-animacion', 'mutacion-entrante');
             const limpiar = () => fantasma.remove();
             fantasma.addEventListener('animationend', limpiar, { once: true });
-            setTimeout(limpiar, DUR_ANIM() + 150);
+            _esperarAnim(150).then(limpiar);
             return fantasma;
         }
 
@@ -3720,7 +3722,8 @@
 
         function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
 
-        function _esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+        // Espera a que termine una animación del tema (--dur-anim) más un margen.
+        function _esperarAnim(extra = 50) { return TimeUtils.esperar(DUR_ANIM() + extra); }
 
         // Resuelve cuando el objetivo (window o un contenedor con scroll) terminó de scrollear.
         // Usa 'scrollend' si existe y, como respaldo (o si el scroll nunca llega a producirse),
@@ -3941,7 +3944,7 @@
             _abrirModalConPadre,
             _cerrarModalConPadre,
             _flashCampo,
-            _esperar,
+            _esperarAnim,
             _esperarFinScroll,
             _scrollHastaVisible,
             _avisarFichaje,
@@ -7771,8 +7774,8 @@
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, _avisarFichaje, registrarSwipe, _animarFadeSwap,
-            _animarMutacion, _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn,
-            aplicarFeedbackCampos, _esperar, _scrollHastaVisible
+            _animarMutacion, _animarSlideElemento, toggleSeccionGen, _crearOpcion, setIconoBtn,
+            aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible
         } = UICore;
 
         let modoLoteActivo = false;
@@ -9033,11 +9036,11 @@
 
             const scrollTerminado = _scrollACardFichar($('card-registrar'));
 
-            if (!estabaExpandido) await _esperar(DUR_ANIM() + 80);
+            if (!estabaExpandido) await _esperarAnim(80);
 
             if (!!esEspecial !== modoLoteActivo) {
                 toggleModoLote();
-                await _esperar(DUR_ANIM() + 50);
+                await _esperarAnim();
             }
 
             if (esEspecial) {
@@ -9503,7 +9506,7 @@
     const UIConfig = (function (D, UICore, UIHistorico, UITarjetaFichaje, UICardsLayout, UINotificaciones) {
 
         const {
-            _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, DUR_ANIM,
+            _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, _esperarAnim,
             _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible
         } = UICore;
 
@@ -9610,7 +9613,7 @@
 
         function cerrarConfig() {
             if (document.body.classList.contains('config-onboarding')) {
-                setTimeout(() => document.body.classList.remove('config-onboarding'), DUR_ANIM() + 50);
+                _esperarAnim().then(() => document.body.classList.remove('config-onboarding'));
                 StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
                 if (_resolverOnboarding) {
                     _resolverOnboarding();
@@ -9981,7 +9984,7 @@
         const {
             registrarSwipe, debounce, _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
             mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON, mostrarToast,
-            _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion, DUR_ANIM, _avisarFichaje,
+            _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion, _esperarAnim, _avisarFichaje,
             aplicarFeedbackCampos
         } = UICore;
 
@@ -10380,7 +10383,7 @@
                 setTimerAutoVista(setTimeout(() => {
                     setTimerAutoVista(null);
                     alternarVista();
-                    setTimeout(() => _iniciarCicloStats(), DUR_ANIM() + 50);
+                    _esperarAnim().then(() => _iniciarCicloStats());
                 }, 2500));
             }
 
@@ -10438,7 +10441,7 @@
                 return;
             }
 
-            await new Promise(r => setTimeout(r, 1000));
+            await TimeUtils.esperar(1000);
             await UIConfig.mostrarConfigOnboarding();
         }
 
@@ -10502,7 +10505,7 @@
                 document.querySelector('.modal.show') ||
                 document.body.classList.contains('config-onboarding')
             ) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await TimeUtils.esperar(2000);
             }
 
             const nombreMes = TimeUtils.formatoTituloMes(prefijoMes).split(' ')[0];
@@ -10540,7 +10543,7 @@
                 document.querySelector('.modal.show') ||
                 document.body.classList.contains('config-onboarding')
             ) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await TimeUtils.esperar(2000);
             }
 
             if (!PushReminder.avisoPendiente()) return;

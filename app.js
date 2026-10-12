@@ -1727,12 +1727,12 @@
             actualizarHintGrupo: () => { },
             actualizarUI: () => { },
             aplicarFeedbackCampos: () => { },
+            avisarFichaje: () => { },
             cerrarEdicion: () => { },
             cerrarEdicionGrupo: () => { },
             cerrarFiltros: () => { },
             cerrarImportar: () => { },
             descargarJSON: () => { },
-            flashCampoTipo: () => { },
             forzarVista: (vista, fn) => fn(),
             iniciarTimerAutoCierreBotones: () => { },
             limpiarError: () => { },
@@ -1885,13 +1885,13 @@
             if (registroExistente) { notify.mostrarToast('Ya existe un registro para hoy', 'warning'); throw new Error('Registro ya existe'); }
 
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
-            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Tipo inválido'); }
+            if (!tipoConfig) { notify.avisarFichaje('Tipo inválido'); throw new Error('Tipo inválido'); }
 
             const entrada = tipoConfig.codigo;
             const salida = tipoConfig.codigo;
             const tipoTexto = `${tipoConfig.emoji} ${tipoConfig.label}`;
 
-            if (!_hayEspacioParaRegistros(1)) { notify.mostrarToast('Límite de registros alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite alcanzado'); }
+            if (!_hayEspacioParaRegistros(1)) { notify.avisarFichaje('Límite de registros alcanzado'); throw new Error('Límite alcanzado'); }
 
             const nuevo = _construirRegistro(fecha, entrada, salida);
             registros.push(nuevo);
@@ -1901,8 +1901,7 @@
             HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${TimeUtils.fechaCorta(fecha)})`);
             const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy);
             if (saved) {
-                notify.mostrarToast(`Registro agregado como ${tipoTexto}`, 'success');
-                notify.flashCampoTipo('success', 'btn-agregar');
+                notify.avisarFichaje(`Registro agregado como ${tipoTexto}`, 'success');
             }
             else { throw new Error('Error al guardar'); }
         }
@@ -2023,8 +2022,7 @@
             HistoryManager.saveState(registros, `salida ${s} (${TimeUtils.fechaCorta(reg.fecha)})`);
             const saved = await _guardarConCicloSiHoy(reg.id, esHoy, 'salida');
             if (!saved) {
-                notify.resetearBoton(btn);
-                notify.flashCampoTipo('error', 'btn-agregar');
+                notify.avisarFichaje(null, 'error', { btn });
                 return;
             }
             PushReminder.cancelarFinDeJornada(reg.fecha);
@@ -2034,8 +2032,7 @@
                     { id: 'salida', fallback: 'Salida', mostrar: true }
                 ]);
             }
-            notify.mostrarToast(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
-            notify.flashCampoTipo('success', 'btn-agregar');
+            notify.avisarFichaje(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
             notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('salida').value = '';
@@ -2088,7 +2085,7 @@
 
         async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
             if (!_hayEspacioParaRegistros(1)) {
-                notify.resetearBoton(btn); notify.mostrarToast('Límite alcanzado', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
+                notify.avisarFichaje('Límite alcanzado', 'error', { btn }); return;
             }
             const nuevo = _construirRegistro(f, e, s);
             registros.push(nuevo);
@@ -2098,8 +2095,7 @@
             HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
             const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
             if (!saved) {
-                notify.resetearBoton(btn);
-                notify.flashCampoTipo('error', 'btn-agregar');
+                notify.avisarFichaje(null, 'error', { btn });
                 return;
             }
             if (esHoy && !s && TimeUtils.esFechaHabil(f, diasHabilesEnFecha(f))) {
@@ -2113,15 +2109,14 @@
                     { id: 'salida', fallback: 'Salida', mostrar: salidaManual }
                 ]);
             }
-            notify.mostrarToast(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
-            notify.flashCampoTipo('success', 'btn-agregar');
+            notify.avisarFichaje(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
             notify.resetearBoton(btn);
             $('fecha').value = TimeUtils.obtenerFechaHoy();
             $('entrada').value = ''; $('salida').value = '';
         }
 
         async function agregarRegistro() {
-            if (!validarFormulario()) { notify.mostrarToast('Verificá los campos', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
+            if (!validarFormulario()) { notify.avisarFichaje('Verificá los campos'); return; }
 
             const btn = $('btn-agregar');
             btn.disabled = true;
@@ -2131,8 +2126,8 @@
             let s = S.sanitizeString($('salida').value.trim(), 5);
 
             if (_fechaFuturaInvalida(f, e, s)) {
-                notify.resetearBoton(btn); notify.mostrarError('fecha', null);
-                notify.mostrarToast('Fecha futura no permitida en registro regular', 'warning'); notify.flashCampoTipo('warning', 'btn-agregar'); return;
+                notify.mostrarError('fecha', null);
+                notify.avisarFichaje('Fecha futura no permitida en registro regular', 'warning', { btn }); return;
             }
 
             if (!e) {
@@ -2153,8 +2148,8 @@
             }
 
             if (!e && s) {
-                if (registroExistente?.salida) { notify.resetearBoton(btn); notify.mostrarToast('Ya existe un registro completo para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
-                if (!registroExistente?.entrada) { notify.resetearBoton(btn); notify.mostrarToast('Debés fichar una entrada primero', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return; }
+                if (registroExistente?.salida) { notify.avisarFichaje('Ya existe un registro completo para esta fecha', 'error', { btn }); return; }
+                if (!registroExistente?.entrada) { notify.avisarFichaje('Debés fichar una entrada primero', 'error', { btn }); return; }
             }
 
             if (registroExistente?.entrada && !registroExistente.salida && !e && s) {
@@ -2162,9 +2157,8 @@
             }
 
             if (registroExistente) {
-                notify.resetearBoton(btn);
                 if (usaHoraActual) $('entrada').value = '';
-                notify.mostrarToast('Ya existe un registro para esta fecha', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); return;
+                notify.avisarFichaje('Ya existe un registro para esta fecha', 'error', { btn }); return;
             }
 
             await _crearNuevoRegistro(f, e, s, usaHoraActual, btn);
@@ -2742,16 +2736,16 @@
 
         async function registrarVacacionesDirecto(desde, hasta, tipo) {
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
-            if (!tipoConfig) { notify.mostrarToast('Tipo inválido', 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Tipo inválido'); }
+            if (!tipoConfig) { notify.avisarFichaje('Tipo inválido'); throw new Error('Tipo inválido'); }
             const entrada = tipoConfig.codigo;
             const salida = tipoConfig.codigo;
 
             const fechasARegistrar = TimeUtils.generarRangoFechas(desde, hasta);
 
-            if (fechasARegistrar.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) { notify.mostrarToast(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación.`, 'error', 4000); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite de días excedido'); }
+            if (fechasARegistrar.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) { notify.avisarFichaje(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación.`, 'error', { duracion: 4000 }); throw new Error('Límite de días excedido'); }
 
             const nuevosRegistros = fechasARegistrar.filter(f => !registros.some(r => r.fecha === f));
-            if (nuevosRegistros.length === 0) { notify.mostrarToast('Todas las fechas ya están registradas', 'warning'); notify.flashCampoTipo('warning', 'btn-agregar'); throw new Error('Sin fechas nuevas'); }
+            if (nuevosRegistros.length === 0) { notify.avisarFichaje('Todas las fechas ya están registradas', 'warning'); throw new Error('Sin fechas nuevas'); }
 
             const idsNuevosParaAnimar = [];
             nuevosRegistros.forEach(fecha => {
@@ -2765,8 +2759,7 @@
             HistoryManager.saveState(registros, `agregar ${tipoConfig.label} (${nuevosRegistros.length} día${TimeUtils.pluralizar(nuevosRegistros.length)})`);
             const saved = await _guardarConCicloSiHoy(idsNuevosParaAnimar, incluyeHoy);
             if (saved) {
-                notify.mostrarToast(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
-                notify.flashCampoTipo('success', 'btn-agregar');
+                notify.avisarFichaje(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -2789,16 +2782,15 @@
                 if (r.fecha < desde || r.fecha > hasta) return false;
                 return !TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
             });
-            if (registrosAEliminar.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) { notify.mostrarToast(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} registros por operación. Encontrados: ${registrosAEliminar.length}`, 'error'); notify.flashCampoTipo('error', 'btn-agregar'); throw new Error('Límite excedido'); }
-            if (registrosAEliminar.length === 0) { notify.mostrarToast('No hay registros de jornadas en ese período', 'info'); notify.flashCampoTipo('info', 'btn-agregar'); throw new Error('Sin registros'); }
+            if (registrosAEliminar.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) { notify.avisarFichaje(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} registros por operación. Encontrados: ${registrosAEliminar.length}`); throw new Error('Límite excedido'); }
+            if (registrosAEliminar.length === 0) { notify.avisarFichaje('No hay registros de jornadas en ese período', 'info'); throw new Error('Sin registros'); }
 
             registros = registros.filter(r => !registrosAEliminar.includes(r));
             _sincronizarPushHoy();
             HistoryManager.saveState(registros, `eliminar período (${registrosAEliminar.length} registro${TimeUtils.pluralizar(registrosAEliminar.length)})`);
             const saved = await guardarYActualizar();
             if (saved) {
-                notify.mostrarToast(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
-                notify.flashCampoTipo('success', 'btn-agregar');
+                notify.avisarFichaje(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
             } else { throw new Error('Error al guardar'); }
         }
 
@@ -3730,6 +3722,9 @@
 
         function _esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
+        // Resuelve cuando el objetivo (window o un contenedor con scroll) terminó de scrollear.
+        // Usa 'scrollend' si existe y, como respaldo (o si el scroll nunca llega a producirse),
+        // detecta que la posición dejó de cambiar. Tiene un tope para no esperar indefinidamente.
         function _esperarFinScroll(objetivo = window, { estable = 120, maximo = 1500 } = {}) {
             const esVentana = objetivo === window;
             const origen = esVentana ? document : objetivo;
@@ -3758,6 +3753,10 @@
             });
         }
 
+        // Scrollea hasta que `el` quede visible (si ya lo está no hace nada) y devuelve una
+        // promesa que resuelve cuando el scroll terminó. Sin `contenedor` scrollea la ventana
+        // dejando `margenSuperior` libre (p. ej. por el header fijo); con `contenedor` scrollea
+        // ese elemento (p. ej. el cuerpo de un modal).
         function _scrollHastaVisible(el, { contenedor = null, margenSuperior = 0 } = {}) {
             if (!el) return Promise.resolve();
             const r = el.getBoundingClientRect();
@@ -3793,6 +3792,15 @@
             if (ids.includes('btn-agregar')) {
                 _vibrarFichar(tipo);
             }
+        }
+
+        // Feedback del botón de fichar: toast + flash del botón con el mismo tipo
+        // ('error' | 'warning' | 'info' | 'success'). `msg` null omite el toast; con `btn`
+        // se lo restaura primero (para cuando el rechazo ocurre con el botón ya deshabilitado).
+        function _avisarFichaje(msg, tipo = 'error', { btn = null, duracion } = {}) {
+            if (btn) resetearBoton(btn);
+            if (msg) mostrarToast(msg, tipo, duracion);
+            _flashCampoTipo(tipo, 'btn-agregar');
         }
 
         const _slideAnimEstado = new WeakMap();
@@ -3936,7 +3944,7 @@
             _esperar,
             _esperarFinScroll,
             _scrollHastaVisible,
-            _flashCampoTipo,
+            _avisarFichaje,
             _flashElemento,
             _finalizarSlidePendiente,
             _animarSlideElemento,
@@ -7762,7 +7770,7 @@
     const UITarjetaFichaje = (function (D) {
         const {
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
-            _setBtnActivo, _setBtnDisabled, _flashCampo, _flashCampoTipo, registrarSwipe, _animarFadeSwap,
+            _setBtnActivo, _setBtnDisabled, _flashCampo, _avisarFichaje, registrarSwipe, _animarFadeSwap,
             _animarMutacion, _animarSlideElemento, toggleSeccionGen, DUR_ANIM, _crearOpcion, setIconoBtn,
             aplicarFeedbackCampos, _esperar, _scrollHastaVisible
         } = UICore;
@@ -8830,7 +8838,7 @@
 
         async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
             if (DataManagement.registros().find(r => r.fecha === fecha)) {
-                mostrarToast(mensajeDuplicado, 'warning'); _flashCampoTipo('warning', 'btn-agregar'); return;
+                _avisarFichaje(mensajeDuplicado, 'warning'); return;
             }
             try {
                 await DataManagement.registrarDiaEspecial(fecha, tipo);
@@ -8847,7 +8855,7 @@
 
             if ((inputDesde.value === '' && inputDesde.validity && !inputDesde.validity.valid) ||
                 (inputHasta.value === '' && inputHasta.validity && !inputHasta.validity.valid)) {
-                mostrarToast('Fecha inválida', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
+                _avisarFichaje('Fecha inválida'); return;
             }
 
             const desde = inputDesde.value;
@@ -8855,25 +8863,25 @@
 
             if (!desde && !hasta) {
                 if (!inputDesde.checkValidity() || !inputHasta.checkValidity()) {
-                    mostrarToast('Revisá las fechas ingresadas', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
+                    _avisarFichaje('Revisá las fechas ingresadas'); return;
                 }
-                if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
+                if (tipo === 'normal') { _avisarFichaje('Completá ambos campos', 'info'); return; }
                 await _registrarEspecial(TimeUtils.obtenerFechaHoy(), tipo, 'Ya existe un registro para hoy'); return;
             }
 
             if (desde && !hasta) {
-                if (tipo === 'normal') { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
+                if (tipo === 'normal') { _avisarFichaje('Completá ambos campos', 'info'); return; }
                 await _registrarEspecial(desde, tipo, 'Ya existe un registro para esa fecha', () => aplicarFeedbackCampos([
                     { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
                     { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
                 ])); return;
             }
 
-            if (!desde && hasta) { mostrarToast('Completá ambos campos', 'info'); _flashCampoTipo('info', 'btn-agregar'); return; }
-            if (desde > hasta) { mostrarToast('La fecha inicial debe ser inferior a la final', 'error'); _flashCampoTipo('error', 'btn-agregar'); return; }
+            if (!desde && hasta) { _avisarFichaje('Completá ambos campos', 'info'); return; }
+            if (desde > hasta) { _avisarFichaje('La fecha inicial debe ser inferior a la final'); return; }
 
             if (tipo !== 'normal' && !TiposRegistro.obtenerCodigosPorTipo(tipo)) {
-                mostrarToast('Tipo de registro inválido', 'error'); _flashCampoTipo('error', 'btn-agregar'); return;
+                _avisarFichaje('Tipo de registro inválido'); return;
             }
 
             try {
@@ -9973,7 +9981,7 @@
         const {
             registrarSwipe, debounce, _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
             mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON, mostrarToast,
-            _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion, DUR_ANIM, _flashCampoTipo,
+            _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion, DUR_ANIM, _avisarFichaje,
             aplicarFeedbackCampos
         } = UICore;
 
@@ -10036,7 +10044,7 @@
             D.configurarNotificaciones({
                 actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
                 aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
-                descargarJSON, flashCampoTipo: _flashCampoTipo, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+                descargarJSON, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
                 obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
                 setBloqueoEdicionGrupo, verificarBloqueoCredito,
                 forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, refrescarConfigSiVisible

@@ -999,7 +999,21 @@
                 const icon = document.getElementById(id)?.querySelector('use');
                 if (icon) icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
             });
+            sincronizarBarraDelSistema();
         }
+
+        function sincronizarBarraDelSistema() {
+            const color = getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
+            if (!/^#[0-9a-f]{3,8}$/i.test(color)) return;
+            let meta = document.querySelector('meta[name="theme-color"]');
+            if (!meta) {
+                meta = document.createElement('meta');
+                meta.name = 'theme-color';
+                document.head.appendChild(meta);
+            }
+            meta.setAttribute('content', color);
+        }
+
 
         function siguienteTema(temaActual) {
             const idx = TEMAS.indexOf(temaActual);
@@ -10587,7 +10601,7 @@
 
         (function _bindLayoutConsistency() {
             const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-            const _v = '-v261011';
+            const _v = '-v261012';
             const _full = _t + _v;
             let _el = document.querySelector('.version-text');
             if (!_el) {

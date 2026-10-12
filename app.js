@@ -1773,6 +1773,10 @@
             return window.PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
         }
 
+        function registroPorFecha(fecha) { return registros.find(r => r.fecha === fecha); }
+        function registroPorId(id) { return registros.find(r => r.id === id); }
+        function existeRegistroEnFecha(fecha) { return registros.some(r => r.fecha === fecha); }
+
         function _hayEspacioParaRegistros(cantidadAAgregar = 1) {
             return (registros.length + cantidadAAgregar) <= S.SECURITY_LIMITS.MAX_REGISTROS;
         }
@@ -1883,7 +1887,7 @@
         }
 
         async function registrarDiaEspecial(fecha, tipo) {
-            const registroExistente = registros.find(r => r.fecha === fecha);
+            const registroExistente = registroPorFecha(fecha);
             if (registroExistente) { notify.mostrarToast('Ya existe un registro para hoy', 'warning'); throw new Error('Registro ya existe'); }
 
             const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
@@ -2068,7 +2072,7 @@
             let fecha = fin;
             for (let i = 0; i < 7; i++) {
                 if (TimeUtils.esFechaHabil(fecha, diasHabilesEnFecha(fecha))) {
-                    const reg = registros.find(r => r.fecha === fecha);
+                    const reg = registroPorFecha(fecha);
                     const esEspecial = reg && TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
                     if (!esEspecial) return fecha;
                 }
@@ -2134,10 +2138,10 @@
 
             if (!e) {
                 const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(TimeUtils.obtenerFechaHoy(), registros);
-                if (ayerAbierto && !registros.find(r => r.fecha === f)) { f = ayer; $('fecha').value = f; }
+                if (ayerAbierto && !existeRegistroEnFecha(f)) { f = ayer; $('fecha').value = f; }
             }
 
-            let registroExistente = registros.find(r => r.fecha === f);
+            let registroExistente = registroPorFecha(f);
 
             if (!e && !s) {
                 const horaActual = TimeUtils.obtenerHoraActual();
@@ -2171,7 +2175,7 @@
                 const modal = $('modal-editar');
                 const btnEliminar = modal.querySelector('.btn-delete');
                 btnEliminar.disabled = true;
-                const registroABorrar = registros.find(r => r.id === editandoId);
+                const registroABorrar = registroPorId(editandoId);
                 const hoy = TimeUtils.obtenerFechaHoy();
 
                 if (registroABorrar && registroABorrar.fecha === hoy) {
@@ -2201,7 +2205,7 @@
 
         function editarRegistro(id) {
             if (editandoId !== null) return;
-            const r = registros.find(x => x.id === id);
+            const r = registroPorId(id);
             if (!r) return;
 
             editandoId = id;
@@ -2315,7 +2319,7 @@
         }
 
         async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {
-            const reg = registros.find(r => r.id === editandoId);
+            const reg = registroPorId(editandoId);
             if (reg?.fecha === TimeUtils.obtenerFechaHoy()) {
                 const perfilId = _obtenerPerfilIdActual();
                 StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
@@ -2330,7 +2334,7 @@
         }
 
         async function guardarEdicion() {
-            const r = registros.find(x => x.id === editandoId);
+            const r = registroPorId(editandoId);
             if (!r) return;
             const btnGuardar = $('modal-editar').querySelector('.btn-edit');
             btnGuardar.disabled = true;
@@ -2539,13 +2543,13 @@
             const nuevos = registrosImportados.filter(imp => !fechasExistentes.has(imp.fecha));
             const complementarios = registrosImportados.filter(imp => {
                 if (!fechasExistentes.has(imp.fecha)) return false;
-                const local = registros.find(r => r.fecha === imp.fecha);
+                const local = registroPorFecha(imp.fecha);
                 return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
             });
             if (nuevos.length === 0 && complementarios.length === 0) { notify.mostrarToast('No hay días nuevos ni datos para completar', 'info'); return; }
             if (!_hayEspacioParaRegistros(nuevos.length)) { notify.mostrarToast(`Límite alcanzado. Solo se pueden agregar ${S.SECURITY_LIMITS.MAX_REGISTROS - registros.length} registros más`, 'error'); return; }
             complementarios.forEach(imp => {
-                const local = registros.find(r => r.fecha === imp.fecha);
+                const local = registroPorFecha(imp.fecha);
                 if (!local) return;
                 if (!local.salida && imp.salida) local.salida = imp.salida;
                 if (!local.tiempoFuera && imp.tiempoFuera) local.tiempoFuera = imp.tiempoFuera;
@@ -2746,7 +2750,7 @@
 
             if (fechasARegistrar.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) { notify.avisarFichaje(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación.`, 'error', { duracion: 4000 }); throw new Error('Límite de días excedido'); }
 
-            const nuevosRegistros = fechasARegistrar.filter(f => !registros.some(r => r.fecha === f));
+            const nuevosRegistros = fechasARegistrar.filter(f => !existeRegistroEnFecha(f));
             if (nuevosRegistros.length === 0) { notify.avisarFichaje('Todas las fechas ya están registradas', 'warning'); throw new Error('Sin fechas nuevas'); }
 
             const idsNuevosParaAnimar = [];
@@ -3004,6 +3008,7 @@
         return {
             registros: () => registros, horasSemanales: () => (horasDiarias * diasHabiles.length), diasHabiles: () => diasHabiles,
             horasDiarias: () => horasDiarias, setDiasHabiles: (v) => diasHabiles = v, setHorasDiarias: (v) => horasDiarias = v,
+            registroPorFecha, registroPorId, existeRegistroEnFecha,
             historialDiasHabiles: () => historialDiasHabiles,
             setHistorialDiasHabiles: (v) => {
                 historialDiasHabiles = Array.isArray(v) ? v : [];
@@ -3486,7 +3491,7 @@
 
         function _crearFantasmaSiVisible(el) {
             if (!el || Motion.reducido()) return null;
-            if (el.closest('.collapsible:not(.expanded)')) return null;
+            if (_estaColapsado(el)) return null;
             const r = el.getBoundingClientRect();
             if (r.width <= 0 || r.height <= 0) return null;
             if (r.bottom < 0 || r.top > window.innerHeight) return null;
@@ -3722,18 +3727,19 @@
 
         function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
 
-        // Normaliza "uno o varios" a array: null/undefined → [], un array → el mismo, otro valor → [valor].
         function _aArray(valor) {
             if (valor === null || valor === undefined) return [];
             return Array.isArray(valor) ? valor : [valor];
         }
 
-        // Espera a que termine una animación del tema (--dur-anim) más un margen.
+        function _estaColapsado(el) { return !!el.closest('.collapsible:not(.expanded)'); }
+
+        function _scrollA(el, block = 'nearest') {
+            if (el) el.scrollIntoView({ behavior: Motion.scrollBehavior(), block });
+        }
+
         function _esperarAnim(extra = 50) { return TimeUtils.esperar(DUR_ANIM() + extra); }
 
-        // Resuelve cuando el objetivo (window o un contenedor con scroll) terminó de scrollear.
-        // Usa 'scrollend' si existe y, como respaldo (o si el scroll nunca llega a producirse),
-        // detecta que la posición dejó de cambiar. Tiene un tope para no esperar indefinidamente.
         function _esperarFinScroll(objetivo = window, { estable = 120, maximo = 1500 } = {}) {
             const esVentana = objetivo === window;
             const origen = esVentana ? document : objetivo;
@@ -3762,10 +3768,6 @@
             });
         }
 
-        // Scrollea hasta que `el` quede visible (si ya lo está no hace nada) y devuelve una
-        // promesa que resuelve cuando el scroll terminó. Sin `contenedor` scrollea la ventana
-        // dejando `margenSuperior` libre (p. ej. por el header fijo); con `contenedor` scrollea
-        // ese elemento (p. ej. el cuerpo de un modal).
         function _scrollHastaVisible(el, { contenedor = null, margenSuperior = 0 } = {}) {
             if (!el) return Promise.resolve();
             const r = el.getBoundingClientRect();
@@ -3774,9 +3776,8 @@
             const limiteInf = c ? c.bottom : window.innerHeight;
             if (r.top >= limiteSup && r.bottom <= limiteInf) return Promise.resolve();
 
-            const behavior = Motion.scrollBehavior();
-            if (contenedor) el.scrollIntoView({ behavior, block: 'nearest' });
-            else window.scrollTo({ top: window.scrollY + r.top - margenSuperior, behavior });
+            if (contenedor) _scrollA(el, 'nearest');
+            else window.scrollTo({ top: window.scrollY + r.top - margenSuperior, behavior: Motion.scrollBehavior() });
             if (Motion.reducido()) return Promise.resolve();
             return _esperarFinScroll(contenedor || window);
         }
@@ -3803,9 +3804,6 @@
             }
         }
 
-        // Feedback del botón de fichar: toast + flash del botón con el mismo tipo
-        // ('error' | 'warning' | 'info' | 'success'). `msg` null omite el toast; con `btn`
-        // se lo restaura primero (para cuando el rechazo ocurre con el botón ya deshabilitado).
         function _avisarFichaje(msg, tipo = 'error', { btn = null, duracion } = {}) {
             if (btn) resetearBoton(btn);
             if (msg) mostrarToast(msg, tipo, duracion);
@@ -3951,6 +3949,8 @@
             _cerrarModalConPadre,
             _flashCampo,
             _aArray,
+            _estaColapsado,
+            _scrollA,
             _esperarAnim,
             _esperarFinScroll,
             _scrollHastaVisible,
@@ -3970,7 +3970,7 @@
     //                     UI PROFILES MODULE
     // ====================================================================
     const UIPerfiles = (function (S, UICore) {
-        const { mostrarToast, setIconoBtn } = UICore;
+        const { mostrarToast, setIconoBtn, _scrollA } = UICore;
 
         let perfilEnEdicion = null;
 
@@ -4099,7 +4099,7 @@
             renderizarListaPerfiles(true);
             requestAnimationFrame(() => {
                 const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
-                if (ultimo) { ultimo.classList.add('add-perfil'); ultimo.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'nearest' }); }
+                if (ultimo) { ultimo.classList.add('add-perfil'); _scrollA(ultimo); }
             });
         }
 
@@ -4522,7 +4522,7 @@
 
             _cerrarPopupCalendario();
 
-            const reg = D.registros().find(r => r.id === registroId);
+            const reg = D.registroPorId(registroId);
             if (!reg) return;
 
             const claveMes = reg.fecha.substring(0, 7);
@@ -5801,7 +5801,7 @@
         const {
             formatoDiferencia, mostrarToast, _setBtnActivo, debounce,
             _actualizarOffsetsStickyMes, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, setIconoBtn,
-            _crearFantasmaSiVisible, DUR_ANIM, _aArray
+            _crearFantasmaSiVisible, DUR_ANIM, _aArray, _estaColapsado, _scrollA
         } = UICore;
 
         let edicionBloqueada = true;
@@ -6141,7 +6141,7 @@
                     const clave = _claveContenedorLista(cont);
                     if (clave && !clavesPrevias.has(clave)) objetivo = cont;
                 }
-                if (objetivo.closest('.collapsible:not(.expanded)')) return;
+                if (_estaColapsado(objetivo)) return;
                 objetivos.add(objetivo);
             });
             if (objetivos.size > _MAX_BLOQUES_EXPANDIDOS) return;
@@ -6420,7 +6420,7 @@
                 const r1 = registros.length > 1 ? registros[1].getBoundingClientRect() : null;
                 const cortado0 = r0.top < margenHeader || r0.bottom > alturaVentana;
                 const cortado1 = r1 && (r1.top < margenHeader || r1.bottom > alturaVentana);
-                if (cortado0 || cortado1) contenedor.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'start' });
+                if (cortado0 || cortado1) _scrollA(contenedor, 'start');
             }, 310);
         }
 
@@ -8698,7 +8698,7 @@
             if (modoLoteActivo) { btn.disabled = true; return; }
 
             const hoy = TimeUtils.obtenerFechaHoy();
-            const registroHoy = D.registros().find(r => r.fecha === hoy);
+            const registroHoy = D.registroPorFecha(hoy);
             const storageKey = _breakStorageKey();
             const isRunning = StorageHelper.getItem(storageKey) !== null;
             const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
@@ -8778,7 +8778,7 @@
         async function toggleTimerBreakMain() {
             const storageKey = _breakStorageKey();
             const storedStart = StorageHelper.getItem(storageKey);
-            const registroHoy = D.registros().find(r => r.fecha === TimeUtils.obtenerFechaHoy());
+            const registroHoy = D.registroPorFecha(TimeUtils.obtenerFechaHoy());
 
             if (!storedStart && !registroHoy) { mostrarToast('Debés crear un registro para hoy primero', 'warning'); return; }
 
@@ -8847,7 +8847,7 @@
         }
 
         async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
-            if (DataManagement.registros().find(r => r.fecha === fecha)) {
+            if (D.existeRegistroEnFecha(fecha)) {
                 _avisarFichaje(mensajeDuplicado, 'warning'); return;
             }
             try {
@@ -8978,7 +8978,7 @@
                 if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Completar rango');
 
                 const hoy = TimeUtils.obtenerFechaHoy();
-                const existeHoy = DataManagement.registros().find(r => r.fecha === hoy);
+                const existeHoy = D.existeRegistroEnFecha(hoy);
                 return existeHoy
                     ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
                     : _pintarBotonLote(btn, btnTexto, 'Fichar');
@@ -8988,7 +8988,7 @@
             if (!TimeUtils.validarFecha(desde)) return _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida');
             if (desde && !hasta) {
                 if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
-                const existe = DataManagement.registros().find(r => r.fecha === desde);
+                const existe = D.existeRegistroEnFecha(desde);
                 return existe
                     ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
                     : _pintarBotonLote(btn, btnTexto, 'Fichar');
@@ -9514,7 +9514,7 @@
 
         const {
             _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, _esperarAnim,
-            _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible
+            _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible, _scrollA
         } = UICore;
 
         const {
@@ -9787,7 +9787,7 @@
             document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
                 const btn = e.target.closest('.ayuda-indice-item');
                 if (!btn) return;
-                document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: Motion.scrollBehavior(), block: 'start' });
+                _scrollA(document.getElementById(btn.dataset.target), 'start');
             });
             document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => DataManagement.borrarTodoHistorial());
             document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => cerrarConfig());
@@ -10498,7 +10498,7 @@
             if (!candidatos.length) return;
 
             const procesados = _cargarProcesados();
-            const yaExisteRegistro = fecha => DataManagement.registros().some(r => r.fecha === fecha);
+            const yaExisteRegistro = fecha => DataManagement.existeRegistroEnFecha(fecha);
 
             const pendientes = candidatos.filter(f => {
                 if (procesados.has(f.fecha)) return false;

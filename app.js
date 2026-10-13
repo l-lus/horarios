@@ -320,17 +320,16 @@
             return { horas: h, minutos: m, esNegativo: totalHoras < 0 };
         }
 
+        function partesATexto(horas, minutos, modo = 'long', ref = { horas, minutos }) {
+            const corto = modo === 'short', partes = [];
+            if (ref.horas > 0) partes.push(corto ? `${horas}h` : `${horas} hora${pluralizar(ref.horas)}`);
+            if (ref.minutos > 0 || !partes.length) partes.push(corto ? `${minutos}m` : `${minutos} minuto${pluralizar(ref.minutos)}`);
+            return partes.join(' ');
+        }
+
         function horasATexto(totalHoras, modo = 'long') {
             const { horas, minutos, esNegativo } = descomponerHorasDecimales(totalHoras);
-            const signo = esNegativo ? '-' : '';
-            if (modo === 'short') {
-                return horas > 0 ? `${signo}${horas}h${minutos > 0 ? ' ' + minutos + 'm' : ''}` : `${signo}${minutos}m`;
-            }
-            let partes = [];
-            if (horas > 0) partes.push(`${horas} ${horas === 1 ? 'hora' : 'horas'}`);
-            if (minutos > 0) partes.push(`${minutos} ${minutos === 1 ? 'minuto' : 'minutos'}`);
-            if (horas === 0 && minutos === 0) partes.push('0 minutos');
-            return signo + partes.join(' ');
+            return (esNegativo ? '-' : '') + partesATexto(horas, minutos, modo);
         }
 
         function _esCantidadSingular(textoHoras) {
@@ -410,7 +409,7 @@
             obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
             horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
             obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
-            horasATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular, pluralizar,
+            horasATexto, partesATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular, pluralizar,
             generarRangoFechas, fechaCorta, segundosAMinutosRedondeado, _pad2, esperar
         };
     })();
@@ -3415,6 +3414,9 @@
             if (!raw) return 300;
             return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
         }
+        function _durSiAnima(varName, el = null) {
+            return (Motion.reducido() || (el && !el.offsetParent)) ? 0 : _getCSSdur(varName);
+        }
         const DUR_ANIM = () => _getCSSdur('--dur-anim');
         const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
 
@@ -3571,11 +3573,11 @@
             _conteoEstado.delete(el);
         }
 
-        function _animarConteo(el, texto, { duracion = _getCSSdur('--dur-conteo') } = {}) {
+        function _animarConteo(el, texto, { duracion = _durSiAnima('--dur-conteo', el) } = {}) {
             if (!el) return false;
             _cancelarConteo(el);
             const textoFinal = texto(1);
-            if (Motion.reducido() || duracion <= 1 || !el.offsetParent) {
+            if (duracion <= 1) {
                 el.textContent = textoFinal;
                 return false;
             }
@@ -3986,7 +3988,7 @@
             _habilitarCierreToast,
             resetearBoton,
             restaurarBotonGuardarEdicion,
-            _getCSSdur,
+            _durSiAnima,
             DUR_ANIM,
             DUR_CALENDARIO,
             _crearToggleConfig,
@@ -7839,7 +7841,7 @@
             _setBtnActivo, _setBtnDisabled, _flashCampo, _avisarFichaje, registrarSwipe, _animarFadeSwap,
             _animarMutacion, _animarSlideElemento, toggleSeccionGen, _crearOpcion, setIconoBtn,
             aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible,
-            _animarConteo, _conteoEnCurso, _cancelarConteo, _getCSSdur
+            _animarConteo, _conteoEnCurso, _cancelarConteo, _durSiAnima
         } = UICore;
 
         let modoLoteActivo = false;
@@ -8580,14 +8582,12 @@
             const el = $('progress-bar');
             if (!el) return;
             const card = $('stats-card');
-            if (desdeCero && card && !Motion.reducido()) {
-                const dur = _getCSSdur('--dur-conteo');
-                if (dur > 1) {
-                    card.classList.add('conteo-inicial');
-                    el.style.width = '0%';
-                    void el.offsetWidth;
-                    TimeUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
-                }
+            const dur = desdeCero && card ? _durSiAnima('--dur-conteo') : 0;
+            if (dur > 1) {
+                card.classList.add('conteo-inicial');
+                el.style.width = '0%';
+                void el.offsetWidth;
+                TimeUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
             }
             el.style.width = `${vista.anchoBarra}%`;
             const esDiaria = D.vistaActual() !== 'semana';
@@ -8655,14 +8655,8 @@
             const valor = D.vistaActual() === 'semana' ? est.totalSemana : est.tiempoHoy;
             if (!(valor > 0)) return null;
             const { horas, minutos } = TimeUtils.descomponerHorasDecimales(valor);
-            const corto = _modoTextoStats() === 'short';
-            const unidad = (n, final, sing, plur, abrev) => corto ? `${n}${abrev}` : `${n} ${final === 1 ? sing : plur}`;
-            const texto = e => {
-                const partes = [];
-                if (horas > 0) partes.push(unidad(Math.round(horas * e), horas, 'hora', 'horas', 'h'));
-                if (minutos > 0) partes.push(unidad(Math.round(minutos * e), minutos, 'minuto', 'minutos', 'm'));
-                return partes.length ? partes.join(' ') : _horasTextoStats(0);
-            };
+            const modo = _modoTextoStats();
+            const texto = e => TimeUtils.partesATexto(Math.round(horas * e), Math.round(minutos * e), modo, { horas, minutos });
             if (texto(1) !== vista.stats) return null;
             return { texto };
         }

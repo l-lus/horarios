@@ -3557,6 +3557,45 @@
             _valorAnimEstado.set(el, { texto, anims, timeout: setTimeout(() => _finalizarValorPendiente(el), dur) });
         }
 
+        const _conteoEstado = new WeakMap();
+
+        function _conteoEnCurso(el) {
+            const est = _conteoEstado.get(el);
+            return est ? est.textoFinal : null;
+        }
+
+        function _cancelarConteo(el) {
+            const est = _conteoEstado.get(el);
+            if (!est) return;
+            est.cancelado = true;
+            _conteoEstado.delete(el);
+        }
+
+        function _animarConteo(el, texto, { duracion = _getCSSdur('--dur-conteo') } = {}) {
+            if (!el) return false;
+            _cancelarConteo(el);
+            const textoFinal = texto(1);
+            if (Motion.reducido() || duracion <= 1 || !el.offsetParent) {
+                el.textContent = textoFinal;
+                return false;
+            }
+            const estado = { textoFinal, cancelado: false };
+            _conteoEstado.set(el, estado);
+            let ultimo = texto(0);
+            el.textContent = ultimo;
+            const inicio = performance.now();
+            const paso = ahora => {
+                if (estado.cancelado) return;
+                if (el.textContent !== ultimo) { _cancelarConteo(el); return; }
+                const t = Math.min(1, Math.max(0, (ahora - inicio) / duracion));
+                const actual = t >= 1 ? textoFinal : texto(1 - Math.pow(1 - t, 3));
+                if (actual !== ultimo) { el.textContent = actual; ultimo = actual; }
+                if (t < 1) requestAnimationFrame(paso); else _conteoEstado.delete(el);
+            };
+            requestAnimationFrame(paso);
+            return true;
+        }
+
         function _animarFadeSwap(el, fn) {
             if (!el) { return Promise.resolve(fn()); }
             return _animarMutacion(el, fn);
@@ -3976,7 +4015,10 @@
             _animarFadeSwap,
             _animarMutacion,
             _crearFantasmaSiVisible,
-            _animarValor
+            _animarValor,
+            _animarConteo,
+            _conteoEnCurso,
+            _cancelarConteo
         };
     })(SecurityAndUtils, DataManagement);
 
@@ -7796,7 +7838,8 @@
             formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
             _setBtnActivo, _setBtnDisabled, _flashCampo, _avisarFichaje, registrarSwipe, _animarFadeSwap,
             _animarMutacion, _animarSlideElemento, toggleSeccionGen, _crearOpcion, setIconoBtn,
-            aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible
+            aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible,
+            _animarConteo, _conteoEnCurso, _cancelarConteo, _getCSSdur
         } = UICore;
 
         let modoLoteActivo = false;
@@ -8499,7 +8542,7 @@
             return true;
         }
 
-        function _renderStats(vista, est) {
+        function _renderStats(vista, est, conteo = null) {
             const el = $('stats-semana');
             if (!el) return;
 
@@ -8522,13 +8565,30 @@
             }
 
             if (!_cicloStatsInterval) {
-                el.textContent = vista.stats;
+                if (conteo) {
+                    _animarConteo(el, conteo.texto);
+                } else if (_conteoEnCurso(el) === vista.stats) {
+                    return;
+                } else {
+                    _cancelarConteo(el);
+                    el.textContent = vista.stats;
+                }
             }
         }
 
-        function _renderBarra(vista) {
+        function _renderBarra(vista, desdeCero = false) {
             const el = $('progress-bar');
             if (!el) return;
+            const card = $('stats-card');
+            if (desdeCero && card && !Motion.reducido()) {
+                const dur = _getCSSdur('--dur-conteo');
+                if (dur > 1) {
+                    card.classList.add('conteo-inicial');
+                    el.style.width = '0%';
+                    void el.offsetWidth;
+                    TimeUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
+                }
+            }
             el.style.width = `${vista.anchoBarra}%`;
             const esDiaria = D.vistaActual() !== 'semana';
             const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
@@ -8589,7 +8649,18 @@
             _animarMutacion(els, renderFn);
         }
 
-        function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false) {
+        function _planConteoInicial(vista, est) {
+            const reg = est.regHoy;
+            if (!reg || !reg.entrada || est.tipoEspecialHoy) return null;
+            const valor = D.vistaActual() === 'semana' ? est.totalSemana : est.tiempoHoy;
+            if (!(valor > 0)) return null;
+            const { horas, minutos } = TimeUtils.descomponerHorasDecimales(valor);
+            const texto = e => _horasTextoStats(Math.round(horas * e) + Math.round(minutos * e) / 60);
+            if (texto(1) !== vista.stats) return null;
+            return { texto };
+        }
+
+        function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false, conteoInicial = false) {
             const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
 
             if (!soloReloj) {
@@ -8602,10 +8673,12 @@
                 ? derivarVistaSemana(est)
                 : derivarVistaHoy(est);
 
+            const conteo = conteoInicial ? _planConteoInicial(vista, est) : null;
+
             const timerFueraCorriendo = StorageHelper.getItem(_breakStorageKey()) !== null;
             if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo, est); }
             _renderCard(vista);
-            _renderBarra(vista);
+            _renderBarra(vista, !!conteo);
             UIEstadisticas._renderSelectorStats();
             actualizarEstadoBotonTimerMain(sinAnimarTitulo);
             if (modoLoteActivo) actualizarBotonLote();
@@ -8620,7 +8693,7 @@
 
             const debeAnimar = !_suprimirAnimacionInterna && (animarCard || (idNuevo !== null && !soloReloj));
             const renderResto = () => {
-                _renderStats(vista, est);
+                _renderStats(vista, est, conteo);
                 _renderMensaje(vista);
                 _renderHint(vista);
                 _renderBuffer(est);
@@ -10394,7 +10467,7 @@
 
             PWAInstaller.init();
             _suscribirCambiosPermisoNotificaciones();
-            actualizarUI(null, false, false, true);
+            actualizarUI(null, false, false, true, true);
             _iniciarCicloStats();
             actualizarBotonesHistorico();
 

@@ -8655,7 +8655,14 @@
             const valor = D.vistaActual() === 'semana' ? est.totalSemana : est.tiempoHoy;
             if (!(valor > 0)) return null;
             const { horas, minutos } = TimeUtils.descomponerHorasDecimales(valor);
-            const texto = e => _horasTextoStats(Math.round(horas * e) + Math.round(minutos * e) / 60);
+            const corto = _modoTextoStats() === 'short';
+            const unidad = (n, final, sing, plur, abrev) => corto ? `${n}${abrev}` : `${n} ${final === 1 ? sing : plur}`;
+            const texto = e => {
+                const partes = [];
+                if (horas > 0) partes.push(unidad(Math.round(horas * e), horas, 'hora', 'horas', 'h'));
+                if (minutos > 0) partes.push(unidad(Math.round(minutos * e), minutos, 'minuto', 'minutos', 'm'));
+                return partes.length ? partes.join(' ') : _horasTextoStats(0);
+            };
             if (texto(1) !== vista.stats) return null;
             return { texto };
         }

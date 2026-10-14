@@ -2886,7 +2886,8 @@
 
         function _excedenteDeRegistro(r) {
             if (!r || !r.entrada || !r.salida || TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return 0;
-            const excedente = r.total - objetivoDeRegistro(r);
+            const objetivo = TimeUtils.esFechaHabil(r.fecha, diasHabilesEnFecha(r.fecha)) ? objetivoDeRegistro(r) : 0;
+            const excedente = r.total - objetivo;
             return excedente > 0 ? excedente : 0;
         }
 

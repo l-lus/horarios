@@ -8650,9 +8650,12 @@
         }
 
         function _planConteoInicial(vista, est) {
-            const reg = est.regHoy;
-            if (!reg || !reg.entrada || est.tipoEspecialHoy) return null;
-            const valor = D.vistaActual() === 'semana' ? est.totalSemana : est.tiempoHoy;
+            const esSemana = D.vistaActual() === 'semana';
+            if (!esSemana) {
+                const reg = est.regHoy;
+                if (!reg || !reg.entrada || est.tipoEspecialHoy) return null;
+            }
+            const valor = esSemana ? est.totalSemana : est.tiempoHoy;
             if (!(valor > 0)) return null;
             const { horas, minutos } = TimeUtils.descomponerHorasDecimales(valor);
             const modo = _modoTextoStats();
@@ -10675,7 +10678,7 @@
 
         (function _bindLayoutConsistency() {
             const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-            const _v = '-v261012';
+            const _v = '-v261014';
             const _full = _t + _v;
             let _el = document.querySelector('.version-text');
             if (!_el) {

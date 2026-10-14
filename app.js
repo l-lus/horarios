@@ -8395,7 +8395,7 @@
                 } else {
                     const faltoTexto = _fraseCantidad(Math.abs(dif), 'Faltó', 'Faltaron');
 
-                    if (SaldoSemanal.logicaCubiertoActiva() && horasGte(bufferSemanalBase, 0)) {
+                    if (SaldoSemanal.cubiertoPorSaldo(est.hoy)) {
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
                         estadoFondoColor = 'gold';

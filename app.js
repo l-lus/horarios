@@ -3044,10 +3044,11 @@
             fechaCompensadoDeRegistro: _fechaCompensadoDeRegistro,
             montoCompensadoDeReferencia: _montoCompensadoDeReferencia,
             calcularAsignacionesCompensatorio: _calcularAsignacionesCompensatorio,
-            recalcularTotalesEnMemoria: function () {
+            recalcularTotalesEnMemoria: function (recalcularCreditos = false) {
                 registros.forEach(r => {
                     if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
-                        _recalcularHorasSiValido(r);
+                        if (recalcularCreditos && r.credito) _recalcularCreditoRegistro(r, objetivoDeRegistro(r));
+                        else _recalcularHorasSiValido(r);
                     }
                 });
             },
@@ -6924,18 +6925,7 @@
                 regularidadEntrada: '--:--', regularidadJornada: '--:--',
                 bufferPeriodo: null, aprovechamientoSaldo: null
             };
-            if (registrosValidos.length === 0) return vacios;
-
-            const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
-            const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
-            const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
-
-            const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
             const totalHoras = _sumarHorasEfectivas(registrosRango);
-            const promDiario = totalHorasTrabajadas / registrosValidos.length;
-
-            const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
-
             const horasDiariasObj = D.horasDiarias();
             const hayPeriodo = horasDiariasObj > 0 && opciones.desde && opciones.hasta;
             const asignacionesCompensatorio = hayPeriodo ? D.calcularAsignacionesCompensatorio() : null;
@@ -6945,6 +6935,25 @@
             const aprovechamientoSaldo = hayPeriodo
                 ? SaldoSemanal.calcularAprovechamiento(opciones.desde, opciones.hasta, asignacionesCompensatorio)
                 : null;
+
+            if (registrosValidos.length === 0) {
+                if (registrosRango.length === 0) return vacios;
+                return {
+                    ...vacios,
+                    tiempoFueraTotal: tiempoFueraTotalMinutos > 0 ? TimeUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short') : '--:--',
+                    tiempoTotal: totalHoras > 0 ? TimeUtils.horasATexto(totalHoras, 'short') : '--:--',
+                    bufferPeriodo, aprovechamientoSaldo
+                };
+            }
+
+            const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
+            const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
+            const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
+
+            const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
+            const promDiario = totalHorasTrabajadas / registrosValidos.length;
+
+            const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
 
             return {
                 entradaPromedio: TimeUtils.minutosAHora(promedioEntrada),
@@ -9645,7 +9654,7 @@
                 getVal: () => D.getIgnorarTiempoFuera(),
                 setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
                 btnId: 'btn-toggle-ignorar-tf',
-                onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
+                onAfterToggle: () => { D.recalcularTotalesEnMemoria(true); D.guardarYActualizar(); },
             });
 
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =

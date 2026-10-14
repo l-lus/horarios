@@ -1142,7 +1142,14 @@
         }
 
         let _navegandoHaciaAtras = false;
-        let _ignorandoPopstate = false;
+        let _popstatesAIgnorar = 0;
+        let _resetPopstatesTimeout = null;
+
+        function _ignorarProximoPopstate() {
+            _popstatesAIgnorar++;
+            clearTimeout(_resetPopstatesTimeout);
+            _resetPopstatesTimeout = setTimeout(() => { _popstatesAIgnorar = 0; }, 500);
+        }
         let _enAlternanciaHaciaAdelante = false;
         let _enAlternanciaHaciaAtras = false;
 
@@ -1234,8 +1241,8 @@
         }
 
         window.addEventListener('popstate', (event) => {
-            if (_ignorandoPopstate) {
-                _ignorandoPopstate = false;
+            if (_popstatesAIgnorar > 0) {
+                _popstatesAIgnorar--;
                 return;
             }
 
@@ -1307,7 +1314,7 @@
             modal.removeEventListener('click', handleOutsideClick);
 
             if (estabaAbierto && !_navegandoHaciaAtras && !_enAlternanciaHaciaAdelante) {
-                _ignorandoPopstate = true;
+                _ignorarProximoPopstate();
                 history.back();
             }
 

@@ -1872,6 +1872,10 @@
                     notify.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
                 }
 
+                const deltaRegistros = fechasNuevas.length - idsDelGrupo.size;
+                if (deltaRegistros > 0 && !_hayEspacioParaRegistros(deltaRegistros)) {
+                    notify.mostrarToast('Límite de registros alcanzado', 'error'); return;
+                }
                 const notaPrevia = TiposRegistro.notaDeGrupo(grupoEnEdicion) || null;
                 const objetivoPorFecha = new Map(grupoEnEdicion.registros.map(r => [r.fecha, r.objetivoHoras]));
                 registros = registros.filter(r => !idsDelGrupo.has(r.id));
@@ -2782,6 +2786,7 @@
 
             const nuevosRegistros = fechasARegistrar.filter(f => !existeRegistroEnFecha(f));
             if (nuevosRegistros.length === 0) { notify.avisarFichaje('Todas las fechas ya están registradas', 'warning'); throw new Error('Sin fechas nuevas'); }
+            if (!_hayEspacioParaRegistros(nuevosRegistros.length)) { notify.avisarFichaje('Límite de registros alcanzado', 'error'); throw new Error('Límite alcanzado'); }
 
             const idsNuevosParaAnimar = [];
             nuevosRegistros.forEach(fecha => {

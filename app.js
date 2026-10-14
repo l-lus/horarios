@@ -626,7 +626,7 @@
             }
         }
 
-        function _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
+        function _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
             if (!entradaHHMM || !objetivoHoras) return null;
             const [h, m] = entradaHHMM.split(':').map(Number);
             if (Number.isNaN(h) || Number.isNaN(m)) return null;
@@ -638,7 +638,8 @@
             const anticipacionMin = getAnticipacionMin();
             const target = new Date();
             target.setHours(h, m, 0, 0);
-            target.setTime(target.getTime() + objetivoAjustado * 60 * 60 * 1000 - anticipacionMin * 60 * 1000 - MARGEN_CRON_MS);
+            const extraMs = Number.isFinite(minutosTiempoFuera) ? minutosTiempoFuera * 60 * 1000 : 0;
+            target.setTime(target.getTime() + objetivoAjustado * 60 * 60 * 1000 + extraMs - anticipacionMin * 60 * 1000 - MARGEN_CRON_MS);
             return target.getTime();
         }
 
@@ -664,9 +665,9 @@
             }
         }
 
-        async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
+        async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
             if (!getHabilitado()) return;
-            const targetMs = _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras);
+            const targetMs = _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras, minutosTiempoFuera);
             if (targetMs == null) return;
 
             const sub = await _asegurarSuscripcion();
@@ -2062,14 +2063,15 @@
             const esDiaHabil = TimeUtils.esFechaHabil(hoy, diasHabilesEnFecha(hoy));
             const abierto = esDiaHabil && registros.find(r => r.fecha === hoy && r.entrada && !r.salida);
             const habilitado = PushReminder.getHabilitado();
+            const minutosTF = abierto && !ignorarTiempoFuera && abierto.tiempoFuera ? TimeUtils.horaAMinutos(abierto.tiempoFuera) : 0;
             const nuevoTarget = (habilitado && abierto)
-                ? PushReminder.calcularTarget(abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy))
+                ? PushReminder.calcularTarget(abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy), minutosTF)
                 : null;
             const targetActual = PushReminder.targetProgramadoParaHoy();
             if (nuevoTarget === targetActual) return;
 
             if (abierto && nuevoTarget != null) {
-                PushReminder.programarFinDeJornada(abierto.fecha, abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy));
+                PushReminder.programarFinDeJornada(abierto.fecha, abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy), minutosTF);
             } else if (targetActual != null) {
                 PushReminder.cancelarFinDeJornada(hoy);
             }
@@ -8874,6 +8876,7 @@
             HistoryManager.saveState(D.registros(), `tiempo fuera +${minutos}min (${TimeUtils.fechaCorta(registroHoy.fecha)})`);
             StorageHelper.removeItem(storageKey);
             await D.guardarYActualizar(registroHoy.id);
+            D.sincronizarPushHoy();
             const ignorarTF = D.getIgnorarTiempoFuera();
             const diaTexto = registroHoy.fecha === TimeUtils.obtenerFechaHoy() ? 'hoy' : 'ayer';
             const mensajeToast = ignorarTF
@@ -9654,7 +9657,7 @@
                 getVal: () => D.getIgnorarTiempoFuera(),
                 setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
                 btnId: 'btn-toggle-ignorar-tf',
-                onAfterToggle: () => { D.recalcularTotalesEnMemoria(true); D.guardarYActualizar(); },
+                onAfterToggle: () => { D.recalcularTotalesEnMemoria(true); D.guardarYActualizar(); D.sincronizarPushHoy(); },
             });
 
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =

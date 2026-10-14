@@ -2191,7 +2191,7 @@
                 const registroABorrar = registroPorId(editandoId);
                 const hoy = TimeUtils.obtenerFechaHoy();
 
-                if (registroABorrar && registroABorrar.fecha === hoy) {
+                if (registroABorrar && registroABorrar === registroParaTiempoFuera(hoy)) {
                     const perfilId = _obtenerPerfilIdActual();
                     const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
                     if (StorageHelper.getItem(storageKey)) {
@@ -2676,6 +2676,13 @@
             return { ayerStr, regAyer, ayerAbierto };
         }
 
+        function registroParaTiempoFuera(fechaHoy = TimeUtils.obtenerFechaHoy()) {
+            const regHoy = registroPorFecha(fechaHoy) ?? null;
+            if (regHoy?.entrada) return regHoy;
+            const { regAyer, ayerAbierto } = detectarAyerAbierto(fechaHoy, registros);
+            return ayerAbierto ? regAyer : regHoy;
+        }
+
         function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutosBreakActivo = 0, asignacionesPrecalculadas = null) {
             const hoy = TimeUtils.obtenerFechaHoy();
             const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);
@@ -3045,7 +3052,7 @@
             editandoId: () => editandoId, setEditandoId: (id) => editandoId = id, vistaActual: () => vistaActual, setVistaActual: (v) => vistaActual = v,
             cargarConfiguracion, calcularHoras, normalizarRegistrosImportados, guardarYActualizar,
             agregarRegistro, eliminarRegistroActual, editarRegistro, guardarEdicion, pegarReferenciaAutomatica, borrarTodoHistorial, exportarJSON, importarDatos,
-            calcularBufferPeriodo, detectarAyerAbierto, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
+            calcularBufferPeriodo, detectarAyerAbierto, registroParaTiempoFuera, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
             registrarVacacionesDirecto, borrarPeriodoDirecto, registrarDiaEspecial, editarGrupo, guardarEdicionGrupo,
             eliminarGrupoActual, setGrupoEnEdicion: (val) => grupoEnEdicion = val,
             sincronizarPushHoy: _sincronizarPushHoy,
@@ -8445,7 +8452,7 @@
         function _actualizarTiempoFueraConsolidado(el, est) {
             if (!el) return;
 
-            const regHoy = est?.regHoy;
+            const regHoy = (est?.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est?.regHoy;
             const mostrar = !!regHoy && D.vistaActual() !== 'semana'
                 && StorageHelper.getItem(_breakStorageKey()) === null
                 && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
@@ -8788,8 +8795,7 @@
 
             if (modoLoteActivo) { btn.disabled = true; return; }
 
-            const hoy = TimeUtils.obtenerFechaHoy();
-            const registroHoy = D.registroPorFecha(hoy);
+            const registroHoy = D.registroParaTiempoFuera();
             const storageKey = _breakStorageKey();
             const isRunning = StorageHelper.getItem(storageKey) !== null;
             const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
@@ -8858,18 +8864,19 @@
             StorageHelper.removeItem(storageKey);
             await D.guardarYActualizar(registroHoy.id);
             const ignorarTF = D.getIgnorarTiempoFuera();
+            const diaTexto = registroHoy.fecha === TimeUtils.obtenerFechaHoy() ? 'hoy' : 'ayer';
             const mensajeToast = ignorarTF
                 ? (minutos === 1
                     ? 'Se registró 1 minuto de tiempo fuera (cálculo ignorado)'
                     : `Se registraron ${minutos} minutos de tiempo fuera (cálculo ignorado)`)
-                : (minutos === 1 ? 'Se descontó 1 minuto al registro de hoy' : `Se descontaron ${minutos} minutos al registro de hoy`);
+                : (minutos === 1 ? `Se descontó 1 minuto al registro de ${diaTexto}` : `Se descontaron ${minutos} minutos al registro de ${diaTexto}`);
             mostrarToast(mensajeToast, ignorarTF ? 'info' : 'success');
         }
 
         async function toggleTimerBreakMain() {
             const storageKey = _breakStorageKey();
             const storedStart = StorageHelper.getItem(storageKey);
-            const registroHoy = D.registroPorFecha(TimeUtils.obtenerFechaHoy());
+            const registroHoy = D.registroParaTiempoFuera();
 
             if (!storedStart && !registroHoy) { mostrarToast('Debés crear un registro para hoy primero', 'warning'); return; }
 

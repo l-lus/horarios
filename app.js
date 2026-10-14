@@ -2710,7 +2710,7 @@
                     hechas += r.total;
                     hechas -= _montoCompensadoDeReferencia(r, asignacionesCompensatorio);
                 }
-                if (esRemoto) hechas += objetivoDia;
+                if (esRemoto && esDiaHabil && diaTerminado) hechas += objetivoDia;
 
                 if (incluirActivoEnVivo && !diaTerminado && esDiaHabil && !esEspecial && r && r === regActivo) {
                     const t = calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);

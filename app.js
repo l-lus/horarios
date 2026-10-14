@@ -5020,9 +5020,6 @@
                 ModalManager.cerrar(modalId);
                 return;
             }
-            if (!document.body.classList.contains('config-onboarding')) {
-                ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
-            }
             ModalManager.alternar(modalId, 'modal-config');
         }
 
@@ -5363,11 +5360,7 @@
         function cerrarModalGist() {
             _gistAutoSyncTemp = null;
             _gistLimitesTemp = null;
-            _cerrarModalConPadre('modal-gist', (padre) => {
-                if (padre === 'modal-config' && !document.body.classList.contains('config-onboarding')) {
-                    ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
-                }
-            });
+            _cerrarModalConPadre('modal-gist');
             actualizarBotonesHistorico();
         }
 
@@ -5810,7 +5803,8 @@
                     const configCambios = _calcularConfigCambios(data);
                     const resumenEl = document.getElementById('gist-merge-resumen');
                     if (resumenEl) _buildResumenMerge(resumenEl, diff, registrosNormalizados, configCambios);
-                    ModalManager.alternar('modal-gist', 'modal-gist-merge');
+                    if (_gistMergeDesdeModal) ModalManager.alternar('modal-gist', 'modal-gist-merge');
+                    else ModalManager.abrir('modal-gist-merge');
                 }
             });
         }

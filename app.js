@@ -2878,13 +2878,15 @@
 
         function registrarCambioDiasHabiles(nuevosDias) {
             const hoy = TimeUtils.obtenerFechaHoy();
-            if (!Array.isArray(historialDiasHabiles)) historialDiasHabiles = [];
-            const idx = historialDiasHabiles.findIndex(t => t.desde === hoy);
-            if (idx >= 0) {
-                historialDiasHabiles[idx] = { desde: hoy, dias: nuevosDias };
+            const sinHistorial = !Array.isArray(historialDiasHabiles) || historialDiasHabiles.length === 0;
+            const soloTramoBase = !sinHistorial && historialDiasHabiles.length === 1 && historialDiasHabiles[0].desde === '0001-01-01';
+            if (sinHistorial || (soloTramoBase && registros.length === 0)) {
+                historialDiasHabiles = [{ desde: '0001-01-01', dias: nuevosDias }];
             } else {
-                historialDiasHabiles.push({ desde: hoy, dias: nuevosDias });
-                historialDiasHabiles.sort((a, b) => a.desde.localeCompare(b.desde));
+                const idx = historialDiasHabiles.findIndex(t => t.desde === hoy);
+                if (idx >= 0) historialDiasHabiles[idx] = { desde: hoy, dias: nuevosDias };
+                else historialDiasHabiles.push({ desde: hoy, dias: nuevosDias });
+                historialDiasHabiles = _sanitizarHistorialDiasHabiles(historialDiasHabiles) || [{ desde: '0001-01-01', dias: nuevosDias }];
             }
             diasHabiles = nuevosDias;
         }
@@ -9833,7 +9835,13 @@
         }
 
         function actualizarFeedbackConfig() {
-            const checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+            let checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+            if (checkboxes.length === 0) {
+                const vigentes = D.diasHabiles();
+                document.querySelectorAll('input[name="dia-habil"]').forEach(cb => { cb.checked = vigentes.includes(parseInt(cb.value)); });
+                mostrarToast('Seleccioná al menos un día', 'error');
+                checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+            }
             const seleccionados = checkboxes.length;
             const horas = parseFloat($('config-horas-diarias').dataset.valor) || 0;
             const total = seleccionados * horas;
@@ -9876,12 +9884,10 @@
             const nuevoValor = _ajustarStepperHoras($('config-horas-diarias'), incremento);
             if (isNaN(nuevoValor)) return;
 
-            actualizarFeedbackConfig();
             D.setHorasDiarias(nuevoValor);
-
             const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
             if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
-            D.guardarYActualizar();
+            actualizarFeedbackConfig();
             _reprogramarPushDebounced();
         }
 

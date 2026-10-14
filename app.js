@@ -5008,17 +5008,26 @@
             setIconoBtn(btn, desdeLista ? '#icon-cancelar' : '#icon-undo');
         }
 
+        function _abrirModalConfigHija(modalId, desdeLista, callback) {
+            _modalAbiertoDesdeLista = desdeLista;
+            if (desdeLista) ModalManager.abrir(modalId, callback);
+            else ModalManager.alternar('modal-config', modalId, null, callback);
+        }
+
         function _cerrarModalConfigHija(modalId) {
-            if (!_modalAbiertoDesdeLista && !document.body.classList.contains('config-onboarding')) {
+            if (_modalAbiertoDesdeLista) {
+                _modalAbiertoDesdeLista = false;
+                ModalManager.cerrar(modalId);
+                return;
+            }
+            if (!document.body.classList.contains('config-onboarding')) {
                 ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
             }
-            ModalManager.alternar(modalId, _modalAbiertoDesdeLista ? null : 'modal-config');
-            _modalAbiertoDesdeLista = false;
+            ModalManager.alternar(modalId, 'modal-config');
         }
 
         function mostrarImportar(desdeLista = false) {
-            _modalAbiertoDesdeLista = desdeLista;
-            ModalManager.alternar(desdeLista ? null : 'modal-config', 'modal-importar', null, () => {
+            _abrirModalConfigHija('modal-importar', desdeLista, () => {
                 $('file-import').value = '';
 
                 const nombreEl = document.getElementById('nombre-archivo-seleccionado');
@@ -5047,8 +5056,7 @@
         }
 
         function mostrarExportar(desdeLista = false) {
-            _modalAbiertoDesdeLista = desdeLista;
-            ModalManager.alternar(desdeLista ? null : 'modal-config', 'modal-exportar', null, () => {
+            _abrirModalConfigHija('modal-exportar', desdeLista, () => {
                 const tipoSelect = document.getElementById('tipo-exportacion');
                 if (tipoSelect) tipoSelect.value = 'todo';
 

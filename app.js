@@ -2149,9 +2149,10 @@
                 notify.avisarFichaje('Fecha futura no permitida en registro regular', 'warning', { btn }); return;
             }
 
-            if (!e) {
-                const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(TimeUtils.obtenerFechaHoy(), registros);
-                if (ayerAbierto && !existeRegistroEnFecha(f)) { f = ayer; $('fecha').value = f; }
+            const hoy = TimeUtils.obtenerFechaHoy();
+            if (!e && f === hoy) {
+                const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(hoy, registros);
+                if (ayerAbierto && !existeRegistroEnFecha(hoy)) { f = ayer; $('fecha').value = f; }
             }
 
             let registroExistente = registroPorFecha(f);

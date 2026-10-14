@@ -1872,9 +1872,16 @@
                     notify.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
                 }
 
+                const notaPrevia = TiposRegistro.notaDeGrupo(grupoEnEdicion) || null;
+                const objetivoPorFecha = new Map(grupoEnEdicion.registros.map(r => [r.fecha, r.objetivoHoras]));
                 registros = registros.filter(r => !idsDelGrupo.has(r.id));
                 const { entrada, salida } = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
-                const nuevosRegistros = fechasNuevas.map(fechaISO => _construirRegistro(fechaISO, entrada, salida));
+                const nuevosRegistros = fechasNuevas.map((fechaISO, idx) => {
+                    const reg = _construirRegistro(fechaISO, entrada, salida);
+                    if (_esObjetivoValido(objetivoPorFecha.get(fechaISO))) reg.objetivoHoras = objetivoPorFecha.get(fechaISO);
+                    if (idx === 0 && notaPrevia) reg.notas = notaPrevia;
+                    return reg;
+                });
                 registros.push(...nuevosRegistros);
                 ordenarRegistros();
                 _sincronizarPushHoy();

@@ -2065,13 +2065,13 @@
             const habilitado = PushReminder.getHabilitado();
             const minutosTF = abierto && !ignorarTiempoFuera && abierto.tiempoFuera ? TimeUtils.horaAMinutos(abierto.tiempoFuera) : 0;
             const nuevoTarget = (habilitado && abierto)
-                ? PushReminder.calcularTarget(abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy), minutosTF)
+                ? PushReminder.calcularTarget(abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF)
                 : null;
             const targetActual = PushReminder.targetProgramadoParaHoy();
             if (nuevoTarget === targetActual) return;
 
             if (abierto && nuevoTarget != null) {
-                PushReminder.programarFinDeJornada(abierto.fecha, abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy), minutosTF);
+                PushReminder.programarFinDeJornada(abierto.fecha, abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF);
             } else if (targetActual != null) {
                 PushReminder.cancelarFinDeJornada(hoy);
             }
@@ -9626,8 +9626,10 @@
 
         const {
             _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, _esperarAnim,
-            _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible, _scrollA
+            _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible, _scrollA, debounce
         } = UICore;
+
+        const _reprogramarPushDebounced = debounce(() => D.sincronizarPushHoy(), 400);
 
         const {
             verificarBloqueoCredito
@@ -9680,7 +9682,7 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
                 btnId: 'btn-toggle-objetivo-registro',
-                onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); }
+                onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); _reprogramarPushDebounced(); }
             });
 
         const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBotonFormatoCortoStats } =
@@ -9718,6 +9720,7 @@
             const guardado = await D.guardarYActualizar();
             if (guardado) {
                 actualizarUI();
+                _reprogramarPushDebounced();
                 let mensaje = aplicados > 0
                     ? `Objetivo actualizado en ${aplicados} registro${TimeUtils.pluralizar(aplicados)}`
                     : 'Los registros ya tenían este objetivo';
@@ -9836,6 +9839,7 @@
                 const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
                 if (esDefault) StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
                 D.guardarYActualizar();
+                if (huboCambio) _reprogramarPushDebounced();
             }
             if (typeof actualizarEstadoBotonPersistir === 'function') {
                 actualizarEstadoBotonPersistir();
@@ -9864,6 +9868,7 @@
             const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
             if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
             D.guardarYActualizar();
+            _reprogramarPushDebounced();
         }
 
         const pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));

@@ -30,6 +30,16 @@ Los hallazgos son inconsistencias entre rutas de código, defensa en profundidad
 | GIST-1/2/3 | Chequeos de la ruta Gist más débiles que los de la importación de archivo | Baja | 3 chequeos |
 | SW-3/4 | Robustez del service worker (fallback y push `null`) | Baja | pocas líneas |
 
+## Estado de implementación (2026-10-16)
+
+Se revisó cada ítem contra el código antes de aplicarlo.
+
+- **Aplicados:** SW-1, SW-2, APP-1, REP-1, FLASH-1, GIST-3 (solo la confirmación cuando falta el hash) y el tamaño del ícono en el manifest. `CACHE_NAME` subido.
+- **APP-3, resuelto en el origen:** en lugar de escapar cada sink, `horasDiarias` se valida al cargar el perfil (número entre 0 y 24, si no 7), con el mismo criterio que la importación. Era el único valor de esa lista que podía llegar sin validar; `horaSalida`, `horaBuf` y `totalConDiff` salen siempre de cálculos numéricos.
+- **Diferidos por bajo valor** (ver la tabla "Diferido o descartado"): APP-2, el doble escape de `titulo` (APP-3), GIST-1, GIST-2, mover `_hashNoCoincide` fuera de `data` (GIST-3), SW-3, SW-4, el `JSON.parse` opcional y la validación del tema en `flash.js`.
+- **Prefijo de `localStorage`:** no hace falta. Servicios (`gestion_servicios_*`) e IDR (`IDR_*`, `SGI_*`, `RCK_*`) no comparten claves con Horarios.
+- **Pendiente fuera de este repo:** si Horarios también se publica en `lushibosca.github.io`, comparte origen con IDR, y el `activate` de `idr/sw.js` borra todas las cachés que no son suyas. Hay que aplicarle el mismo filtro de SW-1.
+
 ## Controles verificados (sin cambios necesarios)
 
 | Control | Evidencia |
@@ -53,7 +63,7 @@ Cada ítem tiene un checkbox de estado para usar durante la auditoría.
 
 ### Fase 1 — Alto valor, bajo costo
 
-#### [ ] SW-1 · `activate` borra cachés ajenas
+#### [x] SW-1 · `activate` borra cachés ajenas
 - **Dónde:** `sw.js`, evento `activate` (línea 36).
 - **Problema:** el filtro es `name !== CACHE_NAME`. Con varias apps en el mismo origen, cada actualización de Horarios borra las cachés de las otras apps, y cualquier otra app con el mismo patrón borra la de Horarios (se rompe el modo offline).
 - **Fix:**
@@ -62,7 +72,7 @@ Cada ítem tiene un checkbox de estado para usar durante la auditoría.
   ```
 - **Verificar:** crear a mano una caché `otra-app-v1` en DevTools → Application → Cache Storage, cambiar `CACHE_NAME`, recargar y confirmar que `otra-app-v1` sigue ahí. Revisar el `sw.js` de las otras apps con el mismo criterio.
 
-#### [ ] SW-2 · `install` puede cachear archivos desactualizados
+#### [x] SW-2 · `install` puede cachear archivos desactualizados
 - **Dónde:** `sw.js`, `cache.addAll(urlsToCache)` (línea 21).
 - **Problema:** `addAll` pasa por la caché HTTP del navegador. GitHub Pages responde con `max-age=600`, así que si un celular actualiza dentro de los 10 minutos posteriores a un deploy, la caché nueva puede quedar con el `app.js` anterior. Un parche de seguridad podría no llegar.
 - **Fix:**
@@ -71,7 +81,7 @@ Cada ítem tiene un checkbox de estado para usar durante la auditoría.
   ```
 - **Verificar:** desplegar un cambio visible, subir `CACHE_NAME` y actualizar de inmediato desde un celular con la PWA instalada.
 
-#### [ ] APP-1 · Eliminar `?accion=entrada|salida|restante`
+#### [x] APP-1 · Eliminar `?accion=entrada|salida|restante`
 - **Dónde:** `app.js`, llamada en 10414 y función `_manejarAccionDeShortcut` (10417-10431).
 - **Problema:** hace `click()` sobre Fichar al abrir `…/?accion=entrada`. `manifest.json` no define `shortcuts`, así que no hay ningún acceso directo legítimo que lo use: el único camino es una URL armada a mano. Cualquier link puede crear un fichaje (hay undo, por eso la severidad es baja).
 - **Fix:** borrar la función y su llamada. Si se quiere conservar la funcionalidad: declarar `shortcuts` en el manifest y pedir confirmación (o un toast con "Deshacer") antes de fichar.
@@ -94,7 +104,7 @@ Cada ítem tiene un checkbox de estado para usar durante la auditoría.
 
 ### Fase 2 — Defensa en profundidad
 
-#### [ ] REP-1 · CSP en el reporte HTML descargable
+#### [x] REP-1 · CSP en el reporte HTML descargable
 - **Dónde:** template de `generarReporte`, `<head>` en ~7503-7506; descarga en 7528.
 - **Problema:** el reporte se abre desde disco y queda fuera de la política de la app. Hoy el escape es consistente (se revisaron todas las filas), así que es un cinturón adicional.
 - **Fix:** agregar en el `<head>`:
@@ -103,7 +113,7 @@ Cada ítem tiene un checkbox de estado para usar durante la auditoría.
   ```
 - **Verificar:** generar un reporte, abrirlo y comprobar en consola que no hay violaciones de CSP (solo usa estilos inline).
 
-#### [ ] FLASH-1 · Anti-clickjacking más robusto
+#### [x] FLASH-1 · Anti-clickjacking más robusto
 - **Dónde:** `flash.js`, líneas 3-6.
 - **Contexto:** `frame-ancestors` en `<meta>` es ignorado por la especificación, y `flash.js` ya implementa un frame-buster. Está bien pensado.
 - **Problema:** solo oculta la página si la navegación del `top` lanza excepción. Si en cambio queda bloqueada sin excepción (iframe con `sandbox` sin `allow-top-navigation`), la app queda visible dentro del marco.
@@ -126,7 +136,7 @@ Cada ítem tiene un checkbox de estado para usar durante la auditoría.
 - **Problema:** no se revisa `file.truncated` ni el tamaño; la importación de archivo sí aplica `MAX_JSON_SIZE`.
 - **Fix:** `if (file.truncated || file.content.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) throw new Error('El Gist es demasiado grande para leerse completo')`.
 
-#### [ ] GIST-3 · Confirmación cuando falta el hash
+#### [x] GIST-3 · Confirmación cuando falta el hash
 - **Dónde:** `_validarDatosGist` (5522-5540) vs `_validarDatosImport` (2529-2535).
 - **Problema:** la importación de archivo pide confirmación si el archivo no trae hash; el Gist lo acepta en silencio. Además, `_hashNoCoincide` viaja como propiedad dentro de los propios datos y está en la lista de claves permitidas (5526).
 - **Fix:** replicar la confirmación y devolver el resultado del hash por separado en vez de mutar `data`.
@@ -160,7 +170,7 @@ Cada ítem tiene un checkbox de estado para usar durante la auditoría.
 
 - [ ] `app.js:6094`: agregar `S.reviverJSONSeguro` al `JSON.parse` (el de 6389 ya lo tiene).
 - [ ] `flash.js`: validar `temaOscuro` contra la misma lista que `ThemeManager.TEMAS`. Hoy, ante un valor inválido, `flash.js` pone `data-theme` con basura y deja tema claro mientras `ThemeManager` cae a `dark`, lo que produce un parpadeo.
-- [ ] `manifest.json`: `icon-1024.png` declara `sizes: "512x512"`; corregir a `1024x1024`.
+- [x] `manifest.json`: `icon-1024.png` declara `sizes: "512x512"`; corregir a `1024x1024`.
 
 ## Condicional: prefijar claves de `localStorage`
 
@@ -188,6 +198,15 @@ La app más débil del dominio define el riesgo de todas. Un XSS en cualquiera e
 | Validar todo `localStorage` al cargar (`perfiles` 1032, historial 1474, bootstrap 10191-10205) | Solo el propio código escribe ahí; el escape en los sinks (APP-3) cubre el riesgo real. Se vuelve relevante si aparece otra app escribiendo en esas claves |
 | Allowlist de tags y atributos en `_sanitizarSVG` | Los fondos son estáticos y propios (`fondos.js`) |
 | Opciones extra del fetch a Gist (`AbortController`, `cache: 'no-store'`, `credentials: 'omit'`, `redirect: 'error'`) | Mejoran la experiencia, no la seguridad |
+| APP-2 · `sanitizeNotas` en la importación | No hay exportación a CSV ni Excel, así que la inyección de fórmulas es hipotética. Aplicar si se agrega una exportación tabular |
+| APP-3 · doble escape de `titulo` | Solo se nota con un label que tenga `&` o `<`; es un detalle visual |
+| GIST-1 · `MAX_REGISTROS` antes de normalizar | Normalizar unos miles de registros no tiene costo; solo aporta coherencia |
+| GIST-2 · Gist truncado | La API corta los archivos a ~1 MB y 1000 registros quedan muy por debajo; un contenido truncado ya falla en `JSON.parse` |
+| GIST-3 · `_hashNoCoincide` dentro de `data` | Cosmético: un Gist manipulado solo puede usarlo para mostrar un aviso de más, nunca para saltearse uno |
+| SW-3 · fallback del fetch | `index.html` siempre está precacheado; el caso casi no ocurre |
+| SW-4 · push con `null` | El Worker valida `title` y siempre manda un objeto |
+| `JSON.parse` sin reviver (`dataset.grupoData`) | El dato lo escribe el propio código y solo se usan los IDs |
+| Validar `temaOscuro` en `flash.js` | Es un parpadeo cuando el storage está corrupto; UX, no seguridad |
 | Chequeo `file.type === 'application/json'` (2572) | Puede rechazar archivos válidos según el sistema operativo; no es un control de seguridad |
 
 ## Riesgos conocidos que se mantienen

@@ -5631,6 +5631,9 @@
             if (data._hashNoCoincide) {
                 const continuar = await ModalManager.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
                 if (!continuar) return null;
+            } else if (!data.hash) {
+                const continuar = await ModalManager.confirmar('Este Gist no tiene verificación de integridad. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
+                if (!continuar) return null;
             }
             if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
                 mostrarToast(`Gist de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
@@ -7614,6 +7617,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>Reporte de horas — ${S.escapeHtml(periodoLabel)}</title>
 <style>${REPORTE_ESTILOS}</style>
 </head>
@@ -10345,7 +10349,8 @@
 
             const perfilActual = PerfilManager.obtenerDatosPerfil();
             D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
-            D.setHorasDiarias(perfilActual.horasDiarias !== undefined ? perfilActual.horasDiarias : 7);
+            const hdPerfil = parseFloat(perfilActual.horasDiarias);
+            D.setHorasDiarias(Number.isFinite(hdPerfil) && hdPerfil >= 0 && hdPerfil <= 24 ? hdPerfil : 7);
             const historialGuardado = D.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
             D.setHistorialDiasHabiles(
                 historialGuardado && historialGuardado.length > 0
@@ -10565,23 +10570,6 @@
 
             _actualizarOffsetsStickyMes();
             window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
-
-            _manejarAccionDeShortcut();
-        }
-
-        function _manejarAccionDeShortcut() {
-            const params = new URLSearchParams(location.search);
-            const accion = params.get('accion');
-            if (!accion) return;
-
-            history.replaceState(null, '', location.pathname + location.hash);
-
-            if (accion === 'entrada' || accion === 'salida') {
-                const btn = $('btn-agregar');
-                if (btn && !btn.disabled) setTimeout(() => btn.click(), 300);
-            } else if (accion === 'restante') {
-                setTimeout(() => window.scrollTo({ top: 0, behavior: Motion.scrollBehavior() }), 300);
-            }
         }
 
         return { init };

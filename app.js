@@ -426,6 +426,7 @@
         const REINTENTOS_MAX = 3;
         const REINTENTO_ESPERA_MS = 60 * 1000;
         let _generacionProgramacion = 0;
+        let _generacionCancelada = 0;
 
         let notify = { mostrarToast: () => { } };
         function configurarNotificaciones(handlers) { notify = { ...notify, ...handlers }; }
@@ -670,13 +671,13 @@
             const targetMs = _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras, minutosTiempoFuera);
             if (targetMs == null) return;
 
+            const generacion = ++_generacionProgramacion;
             const sub = await _asegurarSuscripcion();
-            if (!sub) return;
+            if (!sub || generacion !== _generacionProgramacion || !getHabilitado()) return;
 
             const anticipacionMin = getAnticipacionMin();
             const mensaje = _construirMensajeNotificacion(anticipacionMin, bufferSemanalHoras);
 
-            const generacion = ++_generacionProgramacion;
             const payload = {
                 id: _claveRecordatorio(fechaISO),
                 ownerToken: _ownerToken(),
@@ -690,7 +691,15 @@
                 let status = null;
                 try {
                     const res = await _postWorker('/api/schedule', payload);
-                    if (res.ok) { _guardarInfoActiva(fechaISO, targetMs); return; }
+                    if (res.ok) {
+                        if (generacion === _generacionProgramacion) {
+                            _guardarInfoActiva(fechaISO, targetMs);
+                        } else if (_generacionCancelada > generacion && _generacionCancelada === _generacionProgramacion) {
+                            // Se canceló mientras este schedule estaba en vuelo: el cancel pudo llegar antes
+                            _postWorker('/api/cancel', { id: payload.id, ownerToken: payload.ownerToken }, true).catch(() => { /* noop */ });
+                        }
+                        return;
+                    }
                     status = res.status;
                 } catch (err) {
                     console.error('No se pudo programar el recordatorio:', err);
@@ -724,11 +733,13 @@
             if (esPerfilActivo) limpiarNotificacionVisible();
 
             const esHoy = fechaISO === TimeUtils.obtenerFechaHoy();
-            if (esHoy && esPerfilActivo) _generacionProgramacion++;
+            if (esHoy && esPerfilActivo) _generacionCancelada = ++_generacionProgramacion;
             const activa = esHoy ? obtenerInfoActiva(perfilId) : null;
             if (esHoy) _borrarInfoActiva(perfilId);
 
-            if (esHoy && !activa) {
+            // Sin info local igual se cancela: el Worker pudo guardar el aviso aunque la
+            // respuesta del schedule nunca se procesó (app cerrada o congelada al fichar)
+            if (!activa && !getHabilitado()) {
                 return;
             }
 
@@ -740,10 +751,10 @@
             }
 
             _postWorker('/api/cancel', { id: _claveRecordatorio(fechaISO, perfilId), ownerToken: _ownerToken() }, true)
-                .then(res => { if (!res.ok) _avisarFallo('cancelar', res.status); })
+                .then(res => { if (!res.ok && activa) _avisarFallo('cancelar', res.status); })
                 .catch(err => {
                     console.error('No se pudo cancelar el recordatorio:', err);
-                    _avisarFallo('cancelar', null);
+                    if (activa) _avisarFallo('cancelar', null);
                 });
         }
 

@@ -418,7 +418,7 @@
     // PUSH REMINDER MODULE — notification via Cloudflare
     // ====================================================================
     const PushReminder = (function () {
-        const WORKER_URL = 'https://horarios-push.lushibosca.workers.dev';
+        const WORKER_URL = 'https://horarios-push.l-lus.workers.dev';
         const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
         const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9'; // que mira bobo, anda paya
         const MARGEN_CRON_MS = 60 * 1000;
@@ -772,8 +772,46 @@
             });
         }
 
+        // Estadísticas de uso anónimas. Usa un id propio, distinto de pushInstallId,
+        // para que no se pueda cruzar con los recordatorios. Como mucho un ping
+        // cada USO_INTERVALO_MS por dispositivo: alcanza para contar usuarios
+        // activos y sesiones sin gastar cupo del Worker.
+        const USO_INTERVALO_MS = 30 * 60 * 1000;
+
+        function _idEstadisticas() {
+            const KEY = 'statsId';
+            const existente = StorageHelper.getItem(KEY, null);
+            if (existente) return existente;
+            const nuevo = crypto.randomUUID ? crypto.randomUUID() : null;
+            if (nuevo) StorageHelper.setItem(KEY, nuevo);
+            return nuevo;
+        }
+
+        async function _versionApp() {
+            try {
+                const claves = await caches.keys();
+                return claves.find(k => k.startsWith('horarios-')) || 'desconocida';
+            } catch {
+                return 'desconocida';
+            }
+        }
+
+        async function registrarUso() {
+            if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
+            const KEY = 'statsUltimoPing';
+            const ahora = Date.now();
+            if (ahora - Number(StorageHelper.getItem(KEY, 0)) < USO_INTERVALO_MS) return;
+            const id = _idEstadisticas();
+            if (!id) return;
+            StorageHelper.setItem(KEY, String(ahora));
+            const pwa = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            try {
+                await _postWorker('/api/hola', { id, modo: pwa ? 'pwa' : 'navegador', version: await _versionApp() });
+            } catch { /* sin estadística esta vez, no afecta a la app */ }
+        }
+
         return {
-            configurarNotificaciones,
+            configurarNotificaciones, registrarUso,
             programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
             getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
             getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, avisoPendiente, consumirAviso,
@@ -10772,6 +10810,8 @@
         await BienvenidaModal.chequearYMostrar();
         setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
         setTimeout(() => AvisoPush.chequearYAvisar(), 2000);
+        setTimeout(() => PushReminder.registrarUso(), 3000);
+        document.addEventListener('visibilitychange', () => PushReminder.registrarUso());
     })();
 })();
 

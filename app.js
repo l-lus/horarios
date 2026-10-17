@@ -418,7 +418,7 @@
     // PUSH REMINDER MODULE — notification via Cloudflare
     // ====================================================================
     const PushReminder = (function () {
-        const WORKER_URL = 'https://horarios-push.lushibosca.workers.dev';
+        const WORKER_URL = 'https://horarios-push.l-lus.workers.dev';
         const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
         const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9'; // que mira bobo, anda paya
         const MARGEN_CRON_MS = 60 * 1000;
@@ -426,6 +426,7 @@
         const REINTENTOS_MAX = 3;
         const REINTENTO_ESPERA_MS = 60 * 1000;
         let _generacionProgramacion = 0;
+        let _generacionCancelada = 0;
 
         let notify = { mostrarToast: () => { } };
         function configurarNotificaciones(handlers) { notify = { ...notify, ...handlers }; }
@@ -626,7 +627,7 @@
             }
         }
 
-        function _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
+        function _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
             if (!entradaHHMM || !objetivoHoras) return null;
             const [h, m] = entradaHHMM.split(':').map(Number);
             if (Number.isNaN(h) || Number.isNaN(m)) return null;
@@ -638,7 +639,8 @@
             const anticipacionMin = getAnticipacionMin();
             const target = new Date();
             target.setHours(h, m, 0, 0);
-            target.setTime(target.getTime() + objetivoAjustado * 60 * 60 * 1000 - anticipacionMin * 60 * 1000 - MARGEN_CRON_MS);
+            const extraMs = Number.isFinite(minutosTiempoFuera) ? minutosTiempoFuera * 60 * 1000 : 0;
+            target.setTime(target.getTime() + objetivoAjustado * 60 * 60 * 1000 + extraMs - anticipacionMin * 60 * 1000 - MARGEN_CRON_MS);
             return target.getTime();
         }
 
@@ -664,18 +666,18 @@
             }
         }
 
-        async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0) {
+        async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
             if (!getHabilitado()) return;
-            const targetMs = _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras);
+            const targetMs = _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras, minutosTiempoFuera);
             if (targetMs == null) return;
 
+            const generacion = ++_generacionProgramacion;
             const sub = await _asegurarSuscripcion();
-            if (!sub) return;
+            if (!sub || generacion !== _generacionProgramacion || !getHabilitado()) return;
 
             const anticipacionMin = getAnticipacionMin();
             const mensaje = _construirMensajeNotificacion(anticipacionMin, bufferSemanalHoras);
 
-            const generacion = ++_generacionProgramacion;
             const payload = {
                 id: _claveRecordatorio(fechaISO),
                 ownerToken: _ownerToken(),
@@ -689,7 +691,15 @@
                 let status = null;
                 try {
                     const res = await _postWorker('/api/schedule', payload);
-                    if (res.ok) { _guardarInfoActiva(fechaISO, targetMs); return; }
+                    if (res.ok) {
+                        if (generacion === _generacionProgramacion) {
+                            _guardarInfoActiva(fechaISO, targetMs);
+                        } else if (_generacionCancelada > generacion && _generacionCancelada === _generacionProgramacion) {
+                            // Se canceló mientras este schedule estaba en vuelo: el cancel pudo llegar antes
+                            _postWorker('/api/cancel', { id: payload.id, ownerToken: payload.ownerToken }, true).catch(() => { /* noop */ });
+                        }
+                        return;
+                    }
                     status = res.status;
                 } catch (err) {
                     console.error('No se pudo programar el recordatorio:', err);
@@ -723,11 +733,13 @@
             if (esPerfilActivo) limpiarNotificacionVisible();
 
             const esHoy = fechaISO === TimeUtils.obtenerFechaHoy();
-            if (esHoy && esPerfilActivo) _generacionProgramacion++;
+            if (esHoy && esPerfilActivo) _generacionCancelada = ++_generacionProgramacion;
             const activa = esHoy ? obtenerInfoActiva(perfilId) : null;
             if (esHoy) _borrarInfoActiva(perfilId);
 
-            if (esHoy && !activa) {
+            // Sin info local igual se cancela: el Worker pudo guardar el aviso aunque la
+            // respuesta del schedule nunca se procesó (app cerrada o congelada al fichar)
+            if (!activa && !getHabilitado()) {
                 return;
             }
 
@@ -739,10 +751,10 @@
             }
 
             _postWorker('/api/cancel', { id: _claveRecordatorio(fechaISO, perfilId), ownerToken: _ownerToken() }, true)
-                .then(res => { if (!res.ok) _avisarFallo('cancelar', res.status); })
+                .then(res => { if (!res.ok && activa) _avisarFallo('cancelar', res.status); })
                 .catch(err => {
                     console.error('No se pudo cancelar el recordatorio:', err);
-                    _avisarFallo('cancelar', null);
+                    if (activa) _avisarFallo('cancelar', null);
                 });
         }
 
@@ -760,8 +772,46 @@
             });
         }
 
+        // Estadísticas de uso anónimas. Usa un id propio, distinto de pushInstallId,
+        // para que no se pueda cruzar con los recordatorios. Como mucho un ping
+        // cada USO_INTERVALO_MS por dispositivo: alcanza para contar usuarios
+        // activos y sesiones sin gastar cupo del Worker.
+        const USO_INTERVALO_MS = 30 * 60 * 1000;
+
+        function _idEstadisticas() {
+            const KEY = 'statsId';
+            const existente = StorageHelper.getItem(KEY, null);
+            if (existente) return existente;
+            const nuevo = crypto.randomUUID ? crypto.randomUUID() : null;
+            if (nuevo) StorageHelper.setItem(KEY, nuevo);
+            return nuevo;
+        }
+
+        async function _versionApp() {
+            try {
+                const claves = await caches.keys();
+                return claves.find(k => k.startsWith('horarios-')) || 'desconocida';
+            } catch {
+                return 'desconocida';
+            }
+        }
+
+        async function registrarUso() {
+            if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
+            const KEY = 'statsUltimoPing';
+            const ahora = Date.now();
+            if (ahora - Number(StorageHelper.getItem(KEY, 0)) < USO_INTERVALO_MS) return;
+            const id = _idEstadisticas();
+            if (!id) return;
+            StorageHelper.setItem(KEY, String(ahora));
+            const pwa = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            try {
+                await _postWorker('/api/hola', { id, modo: pwa ? 'pwa' : 'navegador', version: await _versionApp() });
+            } catch { /* sin estadística esta vez, no afecta a la app */ }
+        }
+
         return {
-            configurarNotificaciones,
+            configurarNotificaciones, registrarUso,
             programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
             getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
             getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, avisoPendiente, consumirAviso,
@@ -1141,7 +1191,14 @@
         }
 
         let _navegandoHaciaAtras = false;
-        let _ignorandoPopstate = false;
+        let _popstatesAIgnorar = 0;
+        let _resetPopstatesTimeout = null;
+
+        function _ignorarProximoPopstate() {
+            _popstatesAIgnorar++;
+            clearTimeout(_resetPopstatesTimeout);
+            _resetPopstatesTimeout = setTimeout(() => { _popstatesAIgnorar = 0; }, 500);
+        }
         let _enAlternanciaHaciaAdelante = false;
         let _enAlternanciaHaciaAtras = false;
 
@@ -1233,8 +1290,8 @@
         }
 
         window.addEventListener('popstate', (event) => {
-            if (_ignorandoPopstate) {
-                _ignorandoPopstate = false;
+            if (_popstatesAIgnorar > 0) {
+                _popstatesAIgnorar--;
                 return;
             }
 
@@ -1306,7 +1363,7 @@
             modal.removeEventListener('click', handleOutsideClick);
 
             if (estabaAbierto && !_navegandoHaciaAtras && !_enAlternanciaHaciaAdelante) {
-                _ignorandoPopstate = true;
+                _ignorarProximoPopstate();
                 history.back();
             }
 
@@ -1871,9 +1928,20 @@
                     notify.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
                 }
 
+                const deltaRegistros = fechasNuevas.length - idsDelGrupo.size;
+                if (deltaRegistros > 0 && !_hayEspacioParaRegistros(deltaRegistros)) {
+                    notify.mostrarToast('Límite de registros alcanzado', 'error'); return;
+                }
+                const notaPrevia = TiposRegistro.notaDeGrupo(grupoEnEdicion) || null;
+                const objetivoPorFecha = new Map(grupoEnEdicion.registros.map(r => [r.fecha, r.objetivoHoras]));
                 registros = registros.filter(r => !idsDelGrupo.has(r.id));
                 const { entrada, salida } = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
-                const nuevosRegistros = fechasNuevas.map(fechaISO => _construirRegistro(fechaISO, entrada, salida));
+                const nuevosRegistros = fechasNuevas.map((fechaISO, idx) => {
+                    const reg = _construirRegistro(fechaISO, entrada, salida);
+                    if (_esObjetivoValido(objetivoPorFecha.get(fechaISO))) reg.objetivoHoras = objetivoPorFecha.get(fechaISO);
+                    if (idx === 0 && notaPrevia) reg.notas = notaPrevia;
+                    return reg;
+                });
                 registros.push(...nuevosRegistros);
                 ordenarRegistros();
                 _sincronizarPushHoy();
@@ -2062,14 +2130,15 @@
             const esDiaHabil = TimeUtils.esFechaHabil(hoy, diasHabilesEnFecha(hoy));
             const abierto = esDiaHabil && registros.find(r => r.fecha === hoy && r.entrada && !r.salida);
             const habilitado = PushReminder.getHabilitado();
+            const minutosTF = abierto && !ignorarTiempoFuera && abierto.tiempoFuera ? TimeUtils.horaAMinutos(abierto.tiempoFuera) : 0;
             const nuevoTarget = (habilitado && abierto)
-                ? PushReminder.calcularTarget(abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy))
+                ? PushReminder.calcularTarget(abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF)
                 : null;
             const targetActual = PushReminder.targetProgramadoParaHoy();
             if (nuevoTarget === targetActual) return;
 
             if (abierto && nuevoTarget != null) {
-                PushReminder.programarFinDeJornada(abierto.fecha, abierto.entrada, abierto.objetivoHoras, _bufferSemanalParaPush(hoy));
+                PushReminder.programarFinDeJornada(abierto.fecha, abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF);
             } else if (targetActual != null) {
                 PushReminder.cancelarFinDeJornada(hoy);
             }
@@ -2149,9 +2218,10 @@
                 notify.avisarFichaje('Fecha futura no permitida en registro regular', 'warning', { btn }); return;
             }
 
-            if (!e) {
-                const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(TimeUtils.obtenerFechaHoy(), registros);
-                if (ayerAbierto && !existeRegistroEnFecha(f)) { f = ayer; $('fecha').value = f; }
+            const hoy = TimeUtils.obtenerFechaHoy();
+            if (!e && f === hoy) {
+                const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(hoy, registros);
+                if (ayerAbierto && !existeRegistroEnFecha(hoy)) { f = ayer; $('fecha').value = f; }
             }
 
             let registroExistente = registroPorFecha(f);
@@ -2191,7 +2261,7 @@
                 const registroABorrar = registroPorId(editandoId);
                 const hoy = TimeUtils.obtenerFechaHoy();
 
-                if (registroABorrar && registroABorrar.fecha === hoy) {
+                if (registroABorrar && registroABorrar === registroParaTiempoFuera(hoy)) {
                     const perfilId = _obtenerPerfilIdActual();
                     const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
                     if (StorageHelper.getItem(storageKey)) {
@@ -2676,6 +2746,13 @@
             return { ayerStr, regAyer, ayerAbierto };
         }
 
+        function registroParaTiempoFuera(fechaHoy = TimeUtils.obtenerFechaHoy()) {
+            const regHoy = registroPorFecha(fechaHoy) ?? null;
+            if (regHoy?.entrada) return regHoy;
+            const { regAyer, ayerAbierto } = detectarAyerAbierto(fechaHoy, registros);
+            return ayerAbierto ? regAyer : regHoy;
+        }
+
         function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutosBreakActivo = 0, asignacionesPrecalculadas = null) {
             const hoy = TimeUtils.obtenerFechaHoy();
             const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);
@@ -2703,7 +2780,7 @@
                     hechas += r.total;
                     hechas -= _montoCompensadoDeReferencia(r, asignacionesCompensatorio);
                 }
-                if (esRemoto) hechas += objetivoDia;
+                if (esRemoto && esDiaHabil && diaTerminado) hechas += objetivoDia;
 
                 if (incluirActivoEnVivo && !diaTerminado && esDiaHabil && !esEspecial && r && r === regActivo) {
                     const t = calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
@@ -2765,6 +2842,7 @@
 
             const nuevosRegistros = fechasARegistrar.filter(f => !existeRegistroEnFecha(f));
             if (nuevosRegistros.length === 0) { notify.avisarFichaje('Todas las fechas ya están registradas', 'warning'); throw new Error('Sin fechas nuevas'); }
+            if (!_hayEspacioParaRegistros(nuevosRegistros.length)) { notify.avisarFichaje('Límite de registros alcanzado', 'error'); throw new Error('Límite alcanzado'); }
 
             const idsNuevosParaAnimar = [];
             nuevosRegistros.forEach(fecha => {
@@ -2856,13 +2934,15 @@
 
         function registrarCambioDiasHabiles(nuevosDias) {
             const hoy = TimeUtils.obtenerFechaHoy();
-            if (!Array.isArray(historialDiasHabiles)) historialDiasHabiles = [];
-            const idx = historialDiasHabiles.findIndex(t => t.desde === hoy);
-            if (idx >= 0) {
-                historialDiasHabiles[idx] = { desde: hoy, dias: nuevosDias };
+            const sinHistorial = !Array.isArray(historialDiasHabiles) || historialDiasHabiles.length === 0;
+            const soloTramoBase = !sinHistorial && historialDiasHabiles.length === 1 && historialDiasHabiles[0].desde === '0001-01-01';
+            if (sinHistorial || (soloTramoBase && registros.length === 0)) {
+                historialDiasHabiles = [{ desde: '0001-01-01', dias: nuevosDias }];
             } else {
-                historialDiasHabiles.push({ desde: hoy, dias: nuevosDias });
-                historialDiasHabiles.sort((a, b) => a.desde.localeCompare(b.desde));
+                const idx = historialDiasHabiles.findIndex(t => t.desde === hoy);
+                if (idx >= 0) historialDiasHabiles[idx] = { desde: hoy, dias: nuevosDias };
+                else historialDiasHabiles.push({ desde: hoy, dias: nuevosDias });
+                historialDiasHabiles = _sanitizarHistorialDiasHabiles(historialDiasHabiles) || [{ desde: '0001-01-01', dias: nuevosDias }];
             }
             diasHabiles = nuevosDias;
         }
@@ -2879,7 +2959,8 @@
 
         function _excedenteDeRegistro(r) {
             if (!r || !r.entrada || !r.salida || TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return 0;
-            const excedente = r.total - objetivoDeRegistro(r);
+            const objetivo = TimeUtils.esFechaHabil(r.fecha, diasHabilesEnFecha(r.fecha)) ? objetivoDeRegistro(r) : 0;
+            const excedente = r.total - objetivo;
             return excedente > 0 ? excedente : 0;
         }
 
@@ -3035,17 +3116,18 @@
             fechaCompensadoDeRegistro: _fechaCompensadoDeRegistro,
             montoCompensadoDeReferencia: _montoCompensadoDeReferencia,
             calcularAsignacionesCompensatorio: _calcularAsignacionesCompensatorio,
-            recalcularTotalesEnMemoria: function () {
+            recalcularTotalesEnMemoria: function (recalcularCreditos = false) {
                 registros.forEach(r => {
                     if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
-                        _recalcularHorasSiValido(r);
+                        if (recalcularCreditos && r.credito) _recalcularCreditoRegistro(r, objetivoDeRegistro(r));
+                        else _recalcularHorasSiValido(r);
                     }
                 });
             },
             editandoId: () => editandoId, setEditandoId: (id) => editandoId = id, vistaActual: () => vistaActual, setVistaActual: (v) => vistaActual = v,
             cargarConfiguracion, calcularHoras, normalizarRegistrosImportados, guardarYActualizar,
             agregarRegistro, eliminarRegistroActual, editarRegistro, guardarEdicion, pegarReferenciaAutomatica, borrarTodoHistorial, exportarJSON, importarDatos,
-            calcularBufferPeriodo, detectarAyerAbierto, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
+            calcularBufferPeriodo, detectarAyerAbierto, registroParaTiempoFuera, aplicarFiltrosInmediato, limpiarFiltros, obtenerRegistrosFiltrados,
             registrarVacacionesDirecto, borrarPeriodoDirecto, registrarDiaEspecial, editarGrupo, guardarEdicionGrupo,
             eliminarGrupoActual, setGrupoEnEdicion: (val) => grupoEnEdicion = val,
             sincronizarPushHoy: _sincronizarPushHoy,
@@ -3075,7 +3157,19 @@
 
             const EPS = 1e-6;
             const pendientes = [];
+            const excedentes = [];
             let pool = 0, poolGenerado = 0, poolUsado = 0;
+
+            const atribuirPago = (monto) => {
+                for (const ex of excedentes) {
+                    if (monto <= EPS) break;
+                    const disponible = ex.generado - ex.usado;
+                    if (disponible <= EPS) continue;
+                    const parte = Math.min(disponible, monto);
+                    ex.usado += parte;
+                    monto -= parte;
+                }
+            };
 
             for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
                 const r = registrosMap.get(isoDate);
@@ -3092,7 +3186,10 @@
                 }
                 const deltaDisponible = deltaBruto - montoCompensado;
 
-                if (deltaBruto > EPS) poolGenerado += deltaBruto;
+                if (deltaBruto > EPS) {
+                    poolGenerado += deltaBruto;
+                    excedentes.push({ fecha: isoDate, generado: deltaBruto, usado: Math.min(Math.max(montoCompensado, 0), deltaBruto) });
+                }
                 if (montoCompensado > EPS) poolUsado += montoCompensado;
 
                 if (deltaDisponible > EPS) pool += deltaDisponible;
@@ -3105,10 +3202,11 @@
                     deuda.restante -= pago;
                     pool -= pago;
                     poolUsado += pago;
+                    atribuirPago(pago);
                 }
             }
 
-            return { pendientes, poolGenerado, poolUsado };
+            return { pendientes, excedentes, poolGenerado, poolUsado };
         }
 
         function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
@@ -3129,21 +3227,25 @@
 
             const asignaciones = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
             let lunes = TimeUtils.obtenerLunesSemanaISO(desde);
-            let poolGenerado = 0, poolUsado = 0;
+            let generado = 0, usado = 0;
 
             while (lunes <= topeReal) {
-                const r = calcularPoolSemana(lunes, topeReal, asignaciones);
-                poolGenerado += r.poolGenerado;
-                poolUsado += r.poolUsado;
+                const { excedentes } = calcularPoolSemana(lunes, hoy, asignaciones);
+                for (const ex of excedentes) {
+                    if (ex.fecha < desde || ex.fecha > topeReal) continue;
+                    generado += ex.generado;
+                    usado += ex.usado;
+                }
                 const siguienteLunes = TimeUtils.parsearFechaLocal(lunes);
                 siguienteLunes.setDate(siguienteLunes.getDate() + 7);
                 lunes = TimeUtils.formatearFechaLocal(siguienteLunes);
             }
 
-            if (poolGenerado <= 1e-6) return null;
+            if (generado <= 1e-6) return null;
             return {
-                porcentaje: Math.round((poolUsado / poolGenerado) * 1000) / 10,
-                horas: poolUsado
+                porcentaje: Math.round((usado / generado) * 1000) / 10,
+                horas: usado,
+                generado
             };
         }
 
@@ -4984,17 +5086,23 @@
             setIconoBtn(btn, desdeLista ? '#icon-cancelar' : '#icon-undo');
         }
 
+        function _abrirModalConfigHija(modalId, desdeLista, callback) {
+            _modalAbiertoDesdeLista = desdeLista;
+            if (desdeLista) ModalManager.abrir(modalId, callback);
+            else ModalManager.alternar('modal-config', modalId, null, callback);
+        }
+
         function _cerrarModalConfigHija(modalId) {
-            if (!_modalAbiertoDesdeLista && !document.body.classList.contains('config-onboarding')) {
-                ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
+            if (_modalAbiertoDesdeLista) {
+                _modalAbiertoDesdeLista = false;
+                ModalManager.cerrar(modalId);
+                return;
             }
-            ModalManager.alternar(modalId, _modalAbiertoDesdeLista ? null : 'modal-config');
-            _modalAbiertoDesdeLista = false;
+            ModalManager.alternar(modalId, 'modal-config');
         }
 
         function mostrarImportar(desdeLista = false) {
-            _modalAbiertoDesdeLista = desdeLista;
-            ModalManager.alternar(desdeLista ? null : 'modal-config', 'modal-importar', null, () => {
+            _abrirModalConfigHija('modal-importar', desdeLista, () => {
                 $('file-import').value = '';
 
                 const nombreEl = document.getElementById('nombre-archivo-seleccionado');
@@ -5023,8 +5131,7 @@
         }
 
         function mostrarExportar(desdeLista = false) {
-            _modalAbiertoDesdeLista = desdeLista;
-            ModalManager.alternar(desdeLista ? null : 'modal-config', 'modal-exportar', null, () => {
+            _abrirModalConfigHija('modal-exportar', desdeLista, () => {
                 const tipoSelect = document.getElementById('tipo-exportacion');
                 if (tipoSelect) tipoSelect.value = 'todo';
 
@@ -5331,11 +5438,7 @@
         function cerrarModalGist() {
             _gistAutoSyncTemp = null;
             _gistLimitesTemp = null;
-            _cerrarModalConPadre('modal-gist', (padre) => {
-                if (padre === 'modal-config' && !document.body.classList.contains('config-onboarding')) {
-                    ModalManager.setPadre('modal-config', 'modal-selector-perfiles');
-                }
-            });
+            _cerrarModalConPadre('modal-gist');
             actualizarBotonesHistorico();
         }
 
@@ -5586,6 +5689,9 @@
             if (data._hashNoCoincide) {
                 const continuar = await ModalManager.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
                 if (!continuar) return null;
+            } else if (!data.hash) {
+                const continuar = await ModalManager.confirmar('Este Gist no tiene verificación de integridad. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
+                if (!continuar) return null;
             }
             if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
                 mostrarToast(`Gist de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
@@ -5778,7 +5884,8 @@
                     const configCambios = _calcularConfigCambios(data);
                     const resumenEl = document.getElementById('gist-merge-resumen');
                     if (resumenEl) _buildResumenMerge(resumenEl, diff, registrosNormalizados, configCambios);
-                    ModalManager.alternar('modal-gist', 'modal-gist-merge');
+                    if (_gistMergeDesdeModal) ModalManager.alternar('modal-gist', 'modal-gist-merge');
+                    else ModalManager.abrir('modal-gist-merge');
                 }
             });
         }
@@ -6915,18 +7022,7 @@
                 regularidadEntrada: '--:--', regularidadJornada: '--:--',
                 bufferPeriodo: null, aprovechamientoSaldo: null
             };
-            if (registrosValidos.length === 0) return vacios;
-
-            const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
-            const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
-            const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
-
-            const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
             const totalHoras = _sumarHorasEfectivas(registrosRango);
-            const promDiario = totalHorasTrabajadas / registrosValidos.length;
-
-            const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
-
             const horasDiariasObj = D.horasDiarias();
             const hayPeriodo = horasDiariasObj > 0 && opciones.desde && opciones.hasta;
             const asignacionesCompensatorio = hayPeriodo ? D.calcularAsignacionesCompensatorio() : null;
@@ -6936,6 +7032,25 @@
             const aprovechamientoSaldo = hayPeriodo
                 ? SaldoSemanal.calcularAprovechamiento(opciones.desde, opciones.hasta, asignacionesCompensatorio)
                 : null;
+
+            if (registrosValidos.length === 0) {
+                if (registrosRango.length === 0) return vacios;
+                return {
+                    ...vacios,
+                    tiempoFueraTotal: tiempoFueraTotalMinutos > 0 ? TimeUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short') : '--:--',
+                    tiempoTotal: totalHoras > 0 ? TimeUtils.horasATexto(totalHoras, 'short') : '--:--',
+                    bufferPeriodo, aprovechamientoSaldo
+                };
+            }
+
+            const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
+            const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
+            const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
+
+            const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
+            const promDiario = totalHorasTrabajadas / registrosValidos.length;
+
+            const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
 
             return {
                 entradaPromedio: TimeUtils.minutosAHora(promedioEntrada),
@@ -7560,6 +7675,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>Reporte de horas — ${S.escapeHtml(periodoLabel)}</title>
 <style>${REPORTE_ESTILOS}</style>
 </head>
@@ -7676,8 +7792,7 @@
 
                 const stats = _ultimosStatsRenderizados;
                 if (stats && stats.aprovechamientoSaldo) {
-                    const { horas: horasUtil } = stats.aprovechamientoSaldo;
-                    const saldoGenerado = (stats.bufferPeriodo || 0) + horasUtil;
+                    const { horas: horasUtil, generado: saldoGenerado } = stats.aprovechamientoSaldo;
                     descExtra += `<hr class="stat-popup-sep">`
                         + `<div class="stat-popup-metric"><span>Generado</span><strong>${S.escapeHtml(TimeUtils.horasATexto(saldoGenerado, 'short'))}</strong></div>`
                         + `<div class="stat-popup-metric"><span>Utilizado</span><strong>${S.escapeHtml(TimeUtils.horasATexto(horasUtil, 'short'))}</strong></div>`;
@@ -8387,7 +8502,7 @@
                 } else {
                     const faltoTexto = _fraseCantidad(Math.abs(dif), 'Faltó', 'Faltaron');
 
-                    if (SaldoSemanal.logicaCubiertoActiva() && horasGte(bufferSemanalBase, 0)) {
+                    if (SaldoSemanal.cubiertoPorSaldo(est.hoy)) {
                         colorBarra = 'gold'; colorBorde = 'gold';
                         estadoFondo = 'especial';
                         estadoFondoColor = 'gold';
@@ -8445,7 +8560,7 @@
         function _actualizarTiempoFueraConsolidado(el, est) {
             if (!el) return;
 
-            const regHoy = est?.regHoy;
+            const regHoy = (est?.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est?.regHoy;
             const mostrar = !!regHoy && D.vistaActual() !== 'semana'
                 && StorageHelper.getItem(_breakStorageKey()) === null
                 && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
@@ -8650,9 +8765,12 @@
         }
 
         function _planConteoInicial(vista, est) {
-            const reg = est.regHoy;
-            if (!reg || !reg.entrada || est.tipoEspecialHoy) return null;
-            const valor = D.vistaActual() === 'semana' ? est.totalSemana : est.tiempoHoy;
+            const esSemana = D.vistaActual() === 'semana';
+            if (!esSemana) {
+                const reg = est.regHoy;
+                if (!reg || !reg.entrada || est.tipoEspecialHoy) return null;
+            }
+            const valor = esSemana ? est.totalSemana : est.tiempoHoy;
             if (!(valor > 0)) return null;
             const { horas, minutos } = TimeUtils.descomponerHorasDecimales(valor);
             const modo = _modoTextoStats();
@@ -8785,8 +8903,7 @@
 
             if (modoLoteActivo) { btn.disabled = true; return; }
 
-            const hoy = TimeUtils.obtenerFechaHoy();
-            const registroHoy = D.registroPorFecha(hoy);
+            const registroHoy = D.registroParaTiempoFuera();
             const storageKey = _breakStorageKey();
             const isRunning = StorageHelper.getItem(storageKey) !== null;
             const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
@@ -8854,19 +8971,21 @@
             HistoryManager.saveState(D.registros(), `tiempo fuera +${minutos}min (${TimeUtils.fechaCorta(registroHoy.fecha)})`);
             StorageHelper.removeItem(storageKey);
             await D.guardarYActualizar(registroHoy.id);
+            D.sincronizarPushHoy();
             const ignorarTF = D.getIgnorarTiempoFuera();
+            const diaTexto = registroHoy.fecha === TimeUtils.obtenerFechaHoy() ? 'hoy' : 'ayer';
             const mensajeToast = ignorarTF
                 ? (minutos === 1
                     ? 'Se registró 1 minuto de tiempo fuera (cálculo ignorado)'
                     : `Se registraron ${minutos} minutos de tiempo fuera (cálculo ignorado)`)
-                : (minutos === 1 ? 'Se descontó 1 minuto al registro de hoy' : `Se descontaron ${minutos} minutos al registro de hoy`);
+                : (minutos === 1 ? `Se descontó 1 minuto al registro de ${diaTexto}` : `Se descontaron ${minutos} minutos al registro de ${diaTexto}`);
             mostrarToast(mensajeToast, ignorarTF ? 'info' : 'success');
         }
 
         async function toggleTimerBreakMain() {
             const storageKey = _breakStorageKey();
             const storedStart = StorageHelper.getItem(storageKey);
-            const registroHoy = D.registroPorFecha(TimeUtils.obtenerFechaHoy());
+            const registroHoy = D.registroParaTiempoFuera();
 
             if (!storedStart && !registroHoy) { mostrarToast('Debés crear un registro para hoy primero', 'warning'); return; }
 
@@ -9602,8 +9721,10 @@
 
         const {
             _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, _esperarAnim,
-            _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible, _scrollA
+            _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible, _scrollA, debounce
         } = UICore;
+
+        const _reprogramarPushDebounced = debounce(() => D.sincronizarPushHoy(), 400);
 
         const {
             verificarBloqueoCredito
@@ -9633,7 +9754,7 @@
                 getVal: () => D.getIgnorarTiempoFuera(),
                 setVal: (v) => { D.setIgnorarTiempoFuera(v); StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
                 btnId: 'btn-toggle-ignorar-tf',
-                onAfterToggle: () => { D.recalcularTotalesEnMemoria(); actualizarUI(); },
+                onAfterToggle: () => { D.recalcularTotalesEnMemoria(true); D.guardarYActualizar(); D.sincronizarPushHoy(); },
             });
 
         const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
@@ -9656,7 +9777,7 @@
                 getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
                 setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
                 btnId: 'btn-toggle-objetivo-registro',
-                onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); }
+                onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); _reprogramarPushDebounced(); }
             });
 
         const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBotonFormatoCortoStats } =
@@ -9694,6 +9815,7 @@
             const guardado = await D.guardarYActualizar();
             if (guardado) {
                 actualizarUI();
+                _reprogramarPushDebounced();
                 let mensaje = aplicados > 0
                     ? `Objetivo actualizado en ${aplicados} registro${TimeUtils.pluralizar(aplicados)}`
                     : 'Los registros ya tenían este objetivo';
@@ -9792,7 +9914,13 @@
         }
 
         function actualizarFeedbackConfig() {
-            const checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+            let checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+            if (checkboxes.length === 0) {
+                const vigentes = D.diasHabiles();
+                document.querySelectorAll('input[name="dia-habil"]').forEach(cb => { cb.checked = vigentes.includes(parseInt(cb.value)); });
+                mostrarToast('Seleccioná al menos un día', 'error');
+                checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+            }
             const seleccionados = checkboxes.length;
             const horas = parseFloat($('config-horas-diarias').dataset.valor) || 0;
             const total = seleccionados * horas;
@@ -9812,6 +9940,7 @@
                 const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
                 if (esDefault) StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
                 D.guardarYActualizar();
+                if (huboCambio) _reprogramarPushDebounced();
             }
             if (typeof actualizarEstadoBotonPersistir === 'function') {
                 actualizarEstadoBotonPersistir();
@@ -9834,12 +9963,11 @@
             const nuevoValor = _ajustarStepperHoras($('config-horas-diarias'), incremento);
             if (isNaN(nuevoValor)) return;
 
-            actualizarFeedbackConfig();
             D.setHorasDiarias(nuevoValor);
-
             const esDefault = window.PerfilManager && PerfilManager.esPerfilDefault();
             if (esDefault) StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
-            D.guardarYActualizar();
+            actualizarFeedbackConfig();
+            _reprogramarPushDebounced();
         }
 
         const pressHoldObjetivoEdicion = _crearPressHold(incremento => cambiarObjetivoEdicion(incremento));
@@ -10278,7 +10406,8 @@
 
             const perfilActual = PerfilManager.obtenerDatosPerfil();
             D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
-            D.setHorasDiarias(perfilActual.horasDiarias !== undefined ? perfilActual.horasDiarias : 7);
+            const hdPerfil = parseFloat(perfilActual.horasDiarias);
+            D.setHorasDiarias(Number.isFinite(hdPerfil) && hdPerfil >= 0 && hdPerfil <= 24 ? hdPerfil : 7);
             const historialGuardado = D.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
             D.setHistorialDiasHabiles(
                 historialGuardado && historialGuardado.length > 0
@@ -10498,23 +10627,6 @@
 
             _actualizarOffsetsStickyMes();
             window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
-
-            _manejarAccionDeShortcut();
-        }
-
-        function _manejarAccionDeShortcut() {
-            const params = new URLSearchParams(location.search);
-            const accion = params.get('accion');
-            if (!accion) return;
-
-            history.replaceState(null, '', location.pathname + location.hash);
-
-            if (accion === 'entrada' || accion === 'salida') {
-                const btn = $('btn-agregar');
-                if (btn && !btn.disabled) setTimeout(() => btn.click(), 300);
-            } else if (accion === 'restante') {
-                setTimeout(() => window.scrollTo({ top: 0, behavior: Motion.scrollBehavior() }), 300);
-            }
         }
 
         return { init };
@@ -10675,7 +10787,7 @@
 
         (function _bindLayoutConsistency() {
             const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-            const _v = '-v261012';
+            const _v = '-v261017';
             const _full = _t + _v;
             let _el = document.querySelector('.version-text');
             if (!_el) {
@@ -10698,6 +10810,8 @@
         await BienvenidaModal.chequearYMostrar();
         setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
         setTimeout(() => AvisoPush.chequearYAvisar(), 2000);
+        setTimeout(() => PushReminder.registrarUso(), 3000);
+        document.addEventListener('visibilitychange', () => PushReminder.registrarUso());
     })();
 })();
 

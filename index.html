@@ -10,7 +10,7 @@
          style-src 'self';
          img-src 'self'; 
          font-src 'self'; 
-         connect-src 'self' https://api.github.com https://horarios-push.l-lus.workers.dev; 
+         connect-src 'self' https://api.github.com https://horarios-push.lushibosca.workers.dev; 
          worker-src 'self';
          manifest-src 'self';
          object-src 'none'; 
@@ -995,6 +995,8 @@
                             Gist</button>
                         <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-instalar">- Instalar la
                             app</button>
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-analitica">-
+                            Analítica</button>
                     </nav>
 
                     <div class="ayuda-secciones">
@@ -1160,9 +1162,9 @@
 
                         <section class="ayuda-seccion" id="ayuda-sec-datos">
                             <h4>Dónde se guardan tus datos</h4>
-                            <p>Todo se guarda localmente en tu dispositivo, en el almacenamiento del navegador
-                                (localStorage). Si borrás el historial del navegador, los datos se perderán; por eso
-                                conviene hacer backups o usar GitHub Gist.</p>
+                            <p>Tus registros, perfiles y ajustes se guardan localmente en tu dispositivo, en el
+                                almacenamiento del navegador (localStorage). Si borrás el historial del navegador, los
+                                datos se perderán; por eso conviene hacer backups o usar GitHub Gist.</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-respaldo">
@@ -1224,6 +1226,17 @@
                             <h4>Instalar la app</h4>
                             <p>Si tu navegador lo permite, aparece el botón "Instalar aplicación" en la parte superior
                                 para agregar la app a tu dispositivo y abrirla como cualquier otra.</p>
+                        </section>
+
+                        <section class="ayuda-seccion" id="ayuda-sec-analitica">
+                            <h4>Analítica</h4>
+                            <p>Para conocer cuántas personas usan la app, al abrirla (como máximo una vez cada 30
+                                minutos) se envía una métrica de uso anónima a través de Cloudflare: un identificador
+                                aleatorio propio que se guarda hasheado y no tiene relación con tus horarios ni con las
+                                notificaciones, si se abrió instalada como app o desde el navegador, la versión en
+                                caché, el sistema operativo, el navegador y el país.</p>
+                            <p>Tus registros, horarios, perfiles y configuraciones nunca se incluyen ni salen de tu
+                                dispositivo.</p>
                         </section>
                     </div>
                 </div>

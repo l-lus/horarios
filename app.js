@@ -3119,7 +3119,19 @@
 
             const EPS = 1e-6;
             const pendientes = [];
+            const excedentes = [];
             let pool = 0, poolGenerado = 0, poolUsado = 0;
+
+            const atribuirPago = (monto) => {
+                for (const ex of excedentes) {
+                    if (monto <= EPS) break;
+                    const disponible = ex.generado - ex.usado;
+                    if (disponible <= EPS) continue;
+                    const parte = Math.min(disponible, monto);
+                    ex.usado += parte;
+                    monto -= parte;
+                }
+            };
 
             for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
                 const r = registrosMap.get(isoDate);
@@ -3136,7 +3148,10 @@
                 }
                 const deltaDisponible = deltaBruto - montoCompensado;
 
-                if (deltaBruto > EPS) poolGenerado += deltaBruto;
+                if (deltaBruto > EPS) {
+                    poolGenerado += deltaBruto;
+                    excedentes.push({ fecha: isoDate, generado: deltaBruto, usado: Math.min(Math.max(montoCompensado, 0), deltaBruto) });
+                }
                 if (montoCompensado > EPS) poolUsado += montoCompensado;
 
                 if (deltaDisponible > EPS) pool += deltaDisponible;
@@ -3149,10 +3164,11 @@
                     deuda.restante -= pago;
                     pool -= pago;
                     poolUsado += pago;
+                    atribuirPago(pago);
                 }
             }
 
-            return { pendientes, poolGenerado, poolUsado };
+            return { pendientes, excedentes, poolGenerado, poolUsado };
         }
 
         function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
@@ -3173,21 +3189,25 @@
 
             const asignaciones = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
             let lunes = TimeUtils.obtenerLunesSemanaISO(desde);
-            let poolGenerado = 0, poolUsado = 0;
+            let generado = 0, usado = 0;
 
             while (lunes <= topeReal) {
-                const r = calcularPoolSemana(lunes, topeReal, asignaciones);
-                poolGenerado += r.poolGenerado;
-                poolUsado += r.poolUsado;
+                const { excedentes } = calcularPoolSemana(lunes, hoy, asignaciones);
+                for (const ex of excedentes) {
+                    if (ex.fecha < desde || ex.fecha > topeReal) continue;
+                    generado += ex.generado;
+                    usado += ex.usado;
+                }
                 const siguienteLunes = TimeUtils.parsearFechaLocal(lunes);
                 siguienteLunes.setDate(siguienteLunes.getDate() + 7);
                 lunes = TimeUtils.formatearFechaLocal(siguienteLunes);
             }
 
-            if (poolGenerado <= 1e-6) return null;
+            if (generado <= 1e-6) return null;
             return {
-                porcentaje: Math.round((poolUsado / poolGenerado) * 1000) / 10,
-                horas: poolUsado
+                porcentaje: Math.round((usado / generado) * 1000) / 10,
+                horas: usado,
+                generado
             };
         }
 
@@ -7734,8 +7754,7 @@
 
                 const stats = _ultimosStatsRenderizados;
                 if (stats && stats.aprovechamientoSaldo) {
-                    const { horas: horasUtil } = stats.aprovechamientoSaldo;
-                    const saldoGenerado = (stats.bufferPeriodo || 0) + horasUtil;
+                    const { horas: horasUtil, generado: saldoGenerado } = stats.aprovechamientoSaldo;
                     descExtra += `<hr class="stat-popup-sep">`
                         + `<div class="stat-popup-metric"><span>Generado</span><strong>${S.escapeHtml(TimeUtils.horasATexto(saldoGenerado, 'short'))}</strong></div>`
                         + `<div class="stat-popup-metric"><span>Utilizado</span><strong>${S.escapeHtml(TimeUtils.horasATexto(horasUtil, 'short'))}</strong></div>`;
@@ -10730,7 +10749,7 @@
 
         (function _bindLayoutConsistency() {
             const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-            const _v = '-v261014';
+            const _v = '-v261017';
             const _full = _t + _v;
             let _el = document.querySelector('.version-text');
             if (!_el) {

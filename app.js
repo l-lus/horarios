@@ -4547,6 +4547,7 @@
                 const cell = document.createElement('div');
                 let clases = `calendario-dia ${clase}`;
                 if (esHoy) clases += ' hoy';
+                if (clase === 'dia-sin-registro' && !TimeUtils.esFechaHabil(fecha, D.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
                 if (esNuevo) {
                     clases += ' nuevo-registro-animacion';
                     cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
@@ -4569,6 +4570,34 @@
 
                 frag.appendChild(cell);
             }
+
+            const { inicio: semIni, fin: semFin } = TimeUtils.obtenerSemanaRangoActual();
+            const esLaborable = (f) => TimeUtils.esFechaHabil(f, D.diasHabilesEnFecha(f));
+            const fechaDeDia = (d) => TimeUtils.formatearFechaLocal(new Date(anio, mes, d));
+            const segmentosSemana = [];
+            for (let d = 1; d <= ultimoDia.getDate(); d++) {
+                const f = fechaStr(anio, mes, d);
+                if (f < semIni || f > semFin || !esLaborable(f)) continue;
+                const idx = offsetInicio + d - 1;
+                const fila = 2 + Math.floor(idx / 7);
+                const col = 1 + (idx % 7);
+                const ultimo = segmentosSemana[segmentosSemana.length - 1];
+                if (ultimo && ultimo.fila === fila && ultimo.hasta === col - 1) {
+                    ultimo.hasta = col;
+                    ultimo.diaFin = d;
+                } else {
+                    segmentosSemana.push({ fila, desde: col, hasta: col, diaIni: d, diaFin: d });
+                }
+            }
+            segmentosSemana.forEach(seg => {
+                const banda = document.createElement('div');
+                banda.className = 'calendario-semana-actual';
+                if (seg.desde === 1 && esLaborable(fechaDeDia(seg.diaIni - 1))) banda.classList.add('abierta-izq');
+                if (seg.hasta === 7 && esLaborable(fechaDeDia(seg.diaFin + 1))) banda.classList.add('abierta-der');
+                banda.setAttribute('aria-hidden', 'true');
+                banda.style.gridArea = `${seg.fila} / ${seg.desde} / ${seg.fila + 1} / ${seg.hasta + 1}`;
+                frag.appendChild(banda);
+            });
 
             grid.classList.toggle('calendario-filtro-activo', filtroActivo);
 

@@ -1539,6 +1539,11 @@ button:disabled .toggle-switch {
     overflow: visible;
 }
 
+/* Días no laborables sin registro (según los días laborales vigentes en cada fecha) */
+.calendario-dia.dia-sin-registro.no-laborable {
+    opacity: 0.5;
+}
+
 /* ─── COLORES COMPARTIDOS ────────────────────────────────────────────────────── */
 
 .registro-total.green-text,
@@ -1826,11 +1831,33 @@ button:disabled .toggle-switch {
 }
 
 .calendario-grid {
+    position: relative;
+    isolation: isolate;
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: var(--space-xs);
     margin-top: var(--space-md);
     grid-template-rows: auto repeat(6, 1fr);
+}
+
+/* Banda de la semana actual: absoluta dentro de la fila de la grilla, detrás de las celdas */
+.calendario-semana-actual {
+    position: absolute;
+    inset: -2px -6px;
+    border-radius: 50px;
+    background: var(--input-bg);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.calendario-semana-actual.abierta-izq {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.calendario-semana-actual.abierta-der {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .calendario-dia-nombre {
@@ -1885,6 +1912,20 @@ button:disabled .toggle-switch {
 .calendario-dia.dia-sin-registro,
 .stat-value {
     color: var(--text-muted);
+}
+
+.stat-label {
+    color: var(--text-muted);
+}
+
+.stat-value {
+    color: var(--text-main);
+    font-size: var(--text-base);
+    font-variant-numeric: tabular-nums;
+}
+
+.stats-number {
+    font-variant-numeric: tabular-nums;
 }
 
 .stat-value.saldo-positivo {
@@ -2985,6 +3026,18 @@ button.campo-flash-color {
     .settings-list>button:hover:not(:disabled),
     .btn-perfil-select:hover {
         background: var(--surface-row-hover);
+    }
+}
+
+/* ─── MÓVIL (max-width: 600px): los modales pueden ocupar todo el alto ─────── */
+
+@media (max-width: 600px) {
+    .modal {
+        padding: max(var(--space-xs), env(safe-area-inset-top)) max(var(--space-xs), env(safe-area-inset-right)) max(var(--space-xs), env(safe-area-inset-bottom)) max(var(--space-xs), env(safe-area-inset-left));
+    }
+
+    .modal-scrollable>.modal-content {
+        max-height: 100%;
     }
 }
 

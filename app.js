@@ -4784,6 +4784,7 @@
             });
         }
 
+        // ── Popup de la semana: long press en móvil, click secundario en PC ──────────
         const LONG_PRESS_MS = 500;
         const LONG_PRESS_TOLERANCIA_PX = 10;
         let _ultimoToqueTs = 0;
@@ -4887,6 +4888,11 @@
             clearTimeout(_popupCalendarioHoverTimer);
             _popupCalendarioEsHover = false;
             _cerrarPopupCalendario();
+            
+            const ancla = celda.isConnected
+                ? celda
+                : document.querySelector(`#calendario-grid .calendario-dia[data-dia="${fecha}"]`);
+            if (!ancla) return;
 
             const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
             const { popup } = _crearPopupFlotante({
@@ -4894,9 +4900,9 @@
                 id: '_cal-popup',
                 dataset: { semana: lunes },
                 html: _htmlPopupSemana(lunes),
-                event: { currentTarget: celda },
+                event: { currentTarget: ancla },
                 selectorTrigger: '.calendario-dia',
-                esMismoTrigger: dia => dia === celda,
+                esMismoTrigger: dia => dia.dataset.dia === fecha,
                 alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
             });
             _popupCalendarioEl = popup;

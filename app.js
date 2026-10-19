@@ -373,6 +373,18 @@
             return `${d}/${m}/${anioCompleto ? y : y.slice(2)}`;
         }
 
+        function formatearRangoSemana(lunesISO) {
+            const lunes = parsearFechaLocal(lunesISO);
+            const domingo = new Date(lunes);
+            domingo.setDate(lunes.getDate() + 6);
+            const dL = lunes.getDate();
+            const dD = domingo.getDate();
+            const mL = nombreMesPorIndice(lunes.getMonth());
+            const mD = nombreMesPorIndice(domingo.getMonth());
+            if (lunes.getMonth() === domingo.getMonth()) return `${dL} al ${dD} de ${mD}`;
+            return `${dL} ${mL} al ${dD} ${mD}`;
+        }
+
         function esFechaHabil(fecha, diasHabiles) {
             const diaSemana = parsearFechaLocal(fecha).getDay();
             if (Array.isArray(diasHabiles)) return diasHabiles.includes(diaSemana);
@@ -409,7 +421,7 @@
             obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
             horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
             obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
-            horasATexto, partesATexto, formatoDiferencia, formatoTituloMes, _esCantidadSingular, pluralizar,
+            horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, _esCantidadSingular, pluralizar,
             generarRangoFechas, fechaCorta, segundosAMinutosRedondeado, _pad2, esperar
         };
     })();
@@ -772,10 +784,6 @@
             });
         }
 
-        // Estadísticas de uso anónimas. Usa un id propio, distinto de pushInstallId,
-        // para que no se pueda cruzar con los recordatorios. Como mucho un ping
-        // cada USO_INTERVALO_MS por dispositivo: alcanza para contar usuarios
-        // activos y sesiones sin gastar cupo del Worker.
         const USO_INTERVALO_MS = 30 * 60 * 1000;
 
         function _idEstadisticas() {
@@ -3269,7 +3277,12 @@
             return { ...base, estado, diffText: TimeUtils.formatoDiferencia(total, objetivo) };
         }
 
-        return { logicaCubiertoActiva, cubiertoPorSaldo, calcularAprovechamiento, estadoDeRegistro };
+        function colorDeEstado(est) {
+            if (est.estado === 'especial') return est.tipo.color;
+            return { 'en-curso': 'blue', cumplido: 'green', cubierto: 'gold', incompleto: 'red' }[est.estado] || 'neutro';
+        }
+
+        return { logicaCubiertoActiva, cubiertoPorSaldo, calcularAprovechamiento, estadoDeRegistro, colorDeEstado };
     })(DataManagement);
 
     // ====================================================================
@@ -4491,6 +4504,7 @@
             } else {
                 registrarSwipe(grid, dir => navegarCalendario(dir));
             }
+            _registrarLongPressSemana(grid);
 
             const hoy = new Date();
             const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
@@ -4556,6 +4570,7 @@
                 if (reg && notasDelMes.has(reg.id)) clases += ' tiene-comentario';
                 cell.className = clases;
                 cell.textContent = dia;
+                cell.dataset.dia = fecha;
 
                 if (reg) {
                     cell.dataset.regId = reg.id;
@@ -4767,6 +4782,124 @@
                     }, 500);
                 }
             });
+        }
+
+        const LONG_PRESS_MS = 500;
+        const LONG_PRESS_TOLERANCIA_PX = 10;
+        let _ultimoToqueTs = 0;
+        let _longPressDisparadoTs = 0;
+
+        function _registrarLongPressSemana(grid) {
+            if (!grid || grid.dataset.semanaInit) return;
+            grid.dataset.semanaInit = '1';
+            let timer = null, x0 = 0, y0 = 0;
+            const cancelar = () => { clearTimeout(timer); timer = null; };
+
+            grid.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse') return;
+                const celda = e.target.closest('.calendario-dia[data-dia]');
+                if (!celda) return;
+                _ultimoToqueTs = performance.now();
+                x0 = e.clientX; y0 = e.clientY;
+                cancelar();
+                timer = setTimeout(() => {
+                    timer = null;
+                    _longPressDisparadoTs = performance.now();
+                    const puedeVibrar = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
+                    if (puedeVibrar && 'vibrate' in navigator) { try { navigator.vibrate(15); } catch (_) { } }
+                    _popupSemana(celda);
+                }, LONG_PRESS_MS);
+            }, { passive: true });
+
+            grid.addEventListener('pointermove', (e) => {
+                if (timer && Math.hypot(e.clientX - x0, e.clientY - y0) > LONG_PRESS_TOLERANCIA_PX) cancelar();
+            }, { passive: true });
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach(tipo => grid.addEventListener(tipo, cancelar, { passive: true }));
+
+            grid.addEventListener('contextmenu', (e) => {
+                const celda = e.target.closest('.calendario-dia[data-dia]');
+                if (!celda) return;
+                e.preventDefault();
+                if (performance.now() - _ultimoToqueTs < 1500) return;
+                _popupSemana(celda);
+            });
+
+            grid.addEventListener('click', (e) => {
+                if (performance.now() - _longPressDisparadoTs < 600) { e.stopPropagation(); e.preventDefault(); }
+            }, true);
+        }
+
+        function _filaSemana(r, asignaciones) {
+            const est = SaldoSemanal.estadoDeRegistro(r, asignaciones);
+            const color = SaldoSemanal.colorDeEstado(est);
+            const colorSafe = /^[a-z]+$/.test(color || '') ? color : 'neutro';
+            const diaTxt = `${TimeUtils.obtenerNombreDia(r.fecha).slice(0, 3)} ${parseInt(r.fecha.substring(8), 10)}`;
+            let medio = '', totalHtml = '', diffHtml = '';
+            if (est.estado === 'especial') {
+                medio = `${est.tipo.emoji ?? ''} ${est.tipo.label}`.trim();
+            } else if (est.estado === 'en-curso') {
+                medio = `${r.entrada} → …`;
+                totalHtml = `<span class="cal-semana-hs cal-popup-info--blue">${r.fecha === TimeUtils.obtenerFechaHoy() ? 'En curso' : 'Incompleto'}</span>`;
+            } else if (est.estado === 'sin-datos') {
+                medio = '-';
+            } else {
+                medio = `${r.entrada} → ${r.salida}`;
+                totalHtml = `<span class="cal-semana-hs">${TimeUtils.horasATexto(r.total || 0, 'short')}</span>`;
+                if (est.diffText) diffHtml = `<span class="cal-semana-diff cal-popup-info--${colorSafe}">${est.diffText}</span>`;
+            }
+            return `<span class="cal-semana-punto cal-semana-punto--${colorSafe}"></span>
+                <span class="cal-semana-dia">${S.escapeHtml(diaTxt)}</span>
+                <span class="cal-popup-3l">${S.escapeHtml(medio)}</span>
+                ${totalHtml || '<span></span>'}
+                ${diffHtml || '<span></span>'}`;
+        }
+
+        function _htmlPopupSemana(lunes) {
+            const d = TimeUtils.parsearFechaLocal(lunes);
+            d.setDate(d.getDate() + 6);
+            const domingo = TimeUtils.formatearFechaLocal(d);
+            const asignaciones = D.calcularAsignacionesCompensatorio();
+            const registros = D.registros()
+                .filter(r => r.fecha >= lunes && r.fecha <= domingo)
+                .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+            const titulo = `<div class="cal-popup-fecha">${S.escapeHtml(TimeUtils.formatearRangoSemana(lunes))}</div>`;
+            if (!registros.length) return `${titulo}<div class="cal-popup-sin-reg">Sin registros</div>`;
+
+            const total = registros.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0);
+            const buffer = D.calcularBufferPeriodo(lunes, domingo, false, 0, asignaciones);
+            const bufferTxt = TimeUtils.formatoDiferencia(buffer, 0);
+            const chip = bufferTxt
+                ? `<span class="registro-total ${buffer > 0 ? 'green-text' : 'red-text'}">${bufferTxt}</span>`
+                : '';
+            const filas = registros.map(r => _filaSemana(r, asignaciones)).join('');
+            return `${titulo}
+                <div class="cal-semana-total">
+                    <span class="cal-popup-info">${TimeUtils.horasATexto(total, 'short')}</span>
+                    ${chip}
+                </div>
+                <div class="cal-semana-lista">${filas}</div>`;
+        }
+
+        function _popupSemana(celda) {
+            const fecha = celda?.dataset.dia;
+            if (!fecha) return;
+            clearTimeout(_popupCalendarioHoverTimer);
+            _popupCalendarioEsHover = false;
+            _cerrarPopupCalendario();
+
+            const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
+            const { popup } = _crearPopupFlotante({
+                className: 'cal-popup cal-popup-semana',
+                id: '_cal-popup',
+                dataset: { semana: lunes },
+                html: _htmlPopupSemana(lunes),
+                event: { currentTarget: celda },
+                selectorTrigger: '.calendario-dia',
+                esMismoTrigger: dia => dia === celda,
+                alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
+            });
+            _popupCalendarioEl = popup;
         }
 
         let _popupCalendarioEsHover = false;
@@ -7242,24 +7375,10 @@
             return Array.from(semanas.keys()).sort().reverse();
         }
 
-        function _formatearSemana(lunesISO) {
-            const lunes = new Date(lunesISO + 'T00:00:00');
-            const domingo = new Date(lunes);
-            domingo.setDate(lunes.getDate() + 6);
-            const dL = lunes.getDate();
-            const dD = domingo.getDate();
-            const mL = TimeUtils.nombreMesPorIndice(lunes.getMonth());
-            const mD = TimeUtils.nombreMesPorIndice(domingo.getMonth());
-            if (lunes.getMonth() === domingo.getMonth()) {
-                return `${dL} al ${dD} de ${mD}`;
-            }
-            return `${dL} ${mL} al ${dD} ${mD}`;
-        }
-
         function poblarSelectorSemanas() {
             const semanas = _obtenerSemanas();
             const lunesISO = TimeUtils.formatearFechaLocal(TimeUtils.obtenerLunes());
-            _poblarSelect('select-semana-stats', semanas, _formatearSemana, lunesISO, actualizarEstadisticasSemana, TimeUtils.agruparMesesPorAnio);
+            _poblarSelect('select-semana-stats', semanas, TimeUtils.formatearRangoSemana, lunesISO, actualizarEstadisticasSemana, TimeUtils.agruparMesesPorAnio);
         }
 
         function calcularEstadisticasSemana(lunesISO) {

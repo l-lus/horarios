@@ -9686,7 +9686,10 @@
             let arrastrando = false;
             let el = null;
             let pointerId = null;
+            let targetCaptura = null;
             let inicio = null;
+            let ultimoY = 0;
+            let esScrollManual = false;
             let tragarClic = false;
 
             function terminar(confirmar) {
@@ -9695,26 +9698,61 @@
                 window.removeEventListener('pointermove', alMoverPuntero);
                 window.removeEventListener('pointerup', alSoltar);
                 window.removeEventListener('pointercancel', alCancelar);
+                window.removeEventListener('touchmove', onTouchMove);
+                window.removeEventListener('touchend', onTouchEnd);
                 const arrastrado = arrastrando ? el : null;
                 arrastrando = false;
+                esScrollManual = false;
                 el = null;
                 if (arrastrado) {
-                    arrastrado.style.touchAction = '';
+                    if (targetCaptura) {
+                        try { targetCaptura.releasePointerCapture(pointerId); } catch (_) { }
+                    }
                     try { capturar(arrastrado).releasePointerCapture(pointerId); } catch (_) { }
                     tragarClic = true;
                     setTimeout(() => { tragarClic = false; }, 120);
                     alTerminar(arrastrado, confirmar);
                 }
                 pointerId = null;
+                targetCaptura = null;
+            }
+
+            function onTouchMove(e) {
+                if (arrastrando) {
+                    e.preventDefault();
+                }
+            }
+
+            function onTouchEnd() {
+                if (arrastrando) {
+                    terminar(true);
+                }
             }
 
             function alMoverPuntero(e) {
                 if (e.pointerId !== pointerId) return;
                 if (!arrastrando) {
-                    if (timer && Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 8) terminar(false);
+                    const dist = Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y);
+                    if (timer && dist > 8) {
+                        clearTimeout(timer);
+                        timer = null;
+                        esScrollManual = true;
+                    }
+                    if (esScrollManual && e.pointerType === 'touch') {
+                        const deltaY = ultimoY - e.clientY;
+                        window.scrollBy(0, deltaY);
+                        ultimoY = e.clientY;
+                    }
                     return;
                 }
                 e.preventDefault();
+
+                // Auto-scroll en móviles si se arrastra cerca de los bordes
+                if (e.pointerType === 'touch') {
+                    if (e.clientY < 70) window.scrollBy(0, -7);
+                    else if (e.clientY > window.innerHeight - 70) window.scrollBy(0, 7);
+                }
+
                 alMover(e, el);
             }
 
@@ -9723,7 +9761,11 @@
             }
 
             function alCancelar(e) {
-                if (e.pointerId === pointerId) terminar(false);
+                if (e.pointerId === pointerId) {
+                    // En móviles, no cancelar si ya se inició el arrastre
+                    if (arrastrando) return;
+                    terminar(false);
+                }
             }
 
             raiz.addEventListener('click', (e) => {
@@ -9745,11 +9787,17 @@
                 if (!elegido) return;
                 el = elegido;
                 pointerId = e.pointerId;
+                targetCaptura = e.target;
                 inicio = { x: e.clientX, y: e.clientY };
+                ultimoY = e.clientY;
+                esScrollManual = false;
+
                 timer = setTimeout(() => {
                     timer = null;
                     arrastrando = true;
-                    el.style.touchAction = 'none';
+                    if (targetCaptura) {
+                        try { targetCaptura.setPointerCapture(pointerId); } catch (_) { }
+                    }
                     try { capturar(el).setPointerCapture(pointerId); } catch (_) { }
                     if (typeof navigator !== 'undefined' && navigator.vibrate) {
                         try { navigator.vibrate(35); } catch (_) { }
@@ -9758,7 +9806,9 @@
                 }, PULSACION_LARGA_MS);
 
                 window.addEventListener('pointermove', alMoverPuntero, { passive: false });
+                window.addEventListener('touchmove', onTouchMove, { passive: false });
                 window.addEventListener('pointerup', alSoltar);
+                window.addEventListener('touchend', onTouchEnd);
                 window.addEventListener('pointercancel', alCancelar);
             });
 

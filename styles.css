@@ -2233,9 +2233,16 @@ button:disabled .toggle-switch {
     align-items: center;
     width: 100%;
     position: relative;
-    touch-action: pan-y;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
     user-select: none;
     transition: transform var(--transition-ui);
+}
+
+.card-header-clickable * {
+    touch-action: none;
+    -webkit-touch-callout: none;
 }
 
 .chevron {
@@ -2577,15 +2584,24 @@ body.config-onboarding #theme-toggle-config {
     justify-content: center;
     align-items: center;
     position: relative;
-    touch-action: pan-y;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
     user-select: none;
     cursor: pointer;
 }
 
-#btn-timer-main {
+.card-registrar-header * {
+    touch-action: none;
+    -webkit-touch-callout: none;
+}
+
+#btn-timer-main,
+#btn-timer-main * {
     padding: var(--space-sm);
     position: absolute;
     left: 0;
+    touch-action: manipulation;
     transition: opacity var(--transition-ui), visibility var(--transition-ui);
 }
 

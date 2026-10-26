@@ -1,4 +1,4 @@
-const CACHE_NAME = 'horarios-v261025.2234-cache';
+const CACHE_NAME = 'horarios-v261025.2301-cache';
 const urlsToCache = [
   './',
   './index.html',
@@ -6,7 +6,11 @@ const urlsToCache = [
   './assets/icons/icon.svg',
   './assets/icons/icon-192.png',
   './assets/icons/badge-96.png',
-  './assets/styles/styles.css',
+  './assets/styles/tokens.css',
+  './assets/styles/base.css',
+  './assets/styles/cards-views.css',
+  './assets/styles/modals-features.css',
+  './assets/styles/responsive-motion.css',
   './src/core/flash.js',
   './src/core/constants.js',
   './src/core/dom.js',

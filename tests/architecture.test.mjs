@@ -128,3 +128,34 @@ test('Service Worker (sw.js): Todos los módulos de src/ están en urlsToCache y
     const missingFromSw = srcFiles.filter(f => !cachedNormalized.has(f));
     assert.deepEqual(missingFromSw, [], `Módulos de src/ faltantes en sw.js urlsToCache:\n${missingFromSw.join('\n')}`);
 });
+
+test('Arquitectura CSS: Las 5 capas de assets/styles/ se cargan en orden de cascada en index.html y están en sw.js', () => {
+    const expectedCssOrder = [
+        'assets/styles/tokens.css',
+        'assets/styles/base.css',
+        'assets/styles/cards-views.css',
+        'assets/styles/modals-features.css',
+        'assets/styles/responsive-motion.css'
+    ];
+
+    const cssFilesOnDisk = fs.readdirSync('assets/styles')
+        .filter(f => f.endsWith('.css'))
+        .map(f => `assets/styles/${f}`)
+        .sort();
+    assert.deepEqual(cssFilesOnDisk, [...expectedCssOrder].sort(), 'Los archivos en assets/styles/ deben coincidir exactamente con las 5 capas definidas');
+
+    const html = fs.readFileSync('index.html', 'utf8');
+    const linkRegex = /<link\s+rel="stylesheet"\s+href="\.\/([^"]+)"/g;
+    const htmlLinks = [];
+    let m;
+    while ((m = linkRegex.exec(html)) !== null) {
+        htmlLinks.push(m[1]);
+    }
+    assert.deepEqual(htmlLinks, expectedCssOrder, 'index.html debe cargar las 5 hojas CSS en el orden exacto de cascada');
+
+    const swContent = fs.readFileSync('sw.js', 'utf8');
+    for (const cssPath of expectedCssOrder) {
+        assert.ok(swContent.includes(`./${cssPath}`), `Falta ./${cssPath} en sw.js urlsToCache`);
+    }
+});
+

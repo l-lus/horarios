@@ -25,8 +25,12 @@ horarios/
 ├── LICENSE                     # Licencia MIT
 ├── assets/                     # Recursos estáticos (sin lógica de negocio)
 │   ├── manifest.json           # Web App Manifest (PWA)
-│   ├── styles/
-│   │   └── styles.css          # Hoja de estilos única (variables CSS, temas, layout, componentes)
+│   ├── styles/                 # Hojas de estilo divididas en 5 capas de cascada
+│   │   ├── tokens.css          # 1. Variables (:root), modo oscuro y 6 temas de color
+│   │   ├── base.css            # 2. Reset, layout, .card, forms, botones, modales base y toast
+│   │   ├── cards-views.css     # 3. Fichaje/timer, estadísticas/progreso, histórico y calendario/popups
+│   │   ├── modals-features.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
+│   │   └── responsive-motion.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
 ├── src/                        # Código fuente en ES Modules (47 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)

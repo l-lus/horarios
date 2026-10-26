@@ -8,7 +8,7 @@
  *       { fecha: '2028-05-01', nombre: 'Día del Trabajador' },
  *   ],
  */
-window.FERIADOS_AR = {
+export const FERIADOS_AR = {
     2026: [
         { fecha: '2026-01-01', nombre: 'Año Nuevo' },
         { fecha: '2026-02-16', nombre: 'Carnaval' },

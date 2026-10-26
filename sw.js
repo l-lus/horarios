@@ -1,4 +1,5 @@
-const CACHE_NAME = 'horarios-v261025.2301-cache';
+const CACHE_PREFIX = 'horarios-';
+const CACHE_NAME = `${CACHE_PREFIX}v261025.2321-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -81,14 +82,14 @@ self.addEventListener('activate', event => {
       .then(cacheNames => Promise.all(
         cacheNames
           // Solo cachés propias: el origen de GitHub Pages es compartido con otras apps
-          .filter(name => name.startsWith('horarios-') && name !== CACHE_NAME)
+          .filter(name => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
           .map(name => caches.delete(name))
       ))
       .then(() => self.clients.claim())
   );
 });
 
-// Fetch — cache-first, fallback a network
+// Fetch — cache-first aislado en CACHE_NAME, fallback a network
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
@@ -98,8 +99,10 @@ self.addEventListener('fetch', event => {
   // Limitar al scope del Service Worker para no cachear otros proyectos en el mismo origen de GitHub Pages
   if (!url.pathname.startsWith(self.registration.scope.replace(location.origin, ''))) return;
 
+  const matchOpts = { cacheName: CACHE_NAME, ignoreSearch: true };
+
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true })
+    caches.match(event.request, matchOpts)
       .then(cached => {
         if (cached) return cached;
 
@@ -116,9 +119,9 @@ self.addEventListener('fetch', event => {
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
             return networkResponse;
           })
-          .catch(() => {
+          .catch(async () => {
             if (event.request.mode === 'navigate') {
-              return caches.match('./index.html', { ignoreSearch: true }) || caches.match('./', { ignoreSearch: true });
+              return (await caches.match('./index.html', matchOpts)) || caches.match('./', matchOpts);
             }
           });
       })

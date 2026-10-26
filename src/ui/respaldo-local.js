@@ -3,7 +3,7 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestorHistorial } from '../services/gestor-historial.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { UIBase } from './ui-base.js';
+import { UIBase } from './base.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 const D = GestionDatos;
 
@@ -182,7 +182,7 @@ async function exportarRango(desde, hasta, esMes = false) {
 }
 
 
-export const UIRespaldoLocal = {
+export const RespaldoLocal = {
     mostrarImportar,
     cerrarImportar,
     mostrarExportar,

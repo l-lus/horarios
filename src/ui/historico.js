@@ -1,4 +1,4 @@
-import { UIHistoricoEdicion } from './ui-historico-edicion.js';
+import { HistoricoEdicion } from './historico-edicion.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -8,9 +8,9 @@ import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UIBase } from './ui-base.js';
-import { UICalendario } from './ui-calendario.js';
-import { UIRespaldoLocal } from './ui-respaldo-local.js';
+import { UIBase } from './base.js';
+import { Calendario } from './calendario.js';
+import { RespaldoLocal } from './respaldo-local.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 const D = GestionDatos;
 
@@ -23,22 +23,22 @@ const {
     _crearFantasmaSiVisible, DUR_ANIM, _aArray, _estaColapsado, _scrollA
 } = UIBase;
 
-const cerrarEdicion = (...args) => UIHistoricoEdicion.cerrarEdicion(...args);
-const setBloqueoEdicion = (...args) => UIHistoricoEdicion.setBloqueoEdicion(...args);
-const toggleBloqueoEdicion = (...args) => UIHistoricoEdicion.toggleBloqueoEdicion(...args);
-const toggleCredito = (...args) => UIHistoricoEdicion.toggleCredito(...args);
-const _actualizarHintEdicion = (...args) => UIHistoricoEdicion._actualizarHintEdicion(...args);
-const actualizarHintGrupo = (...args) => UIHistoricoEdicion.actualizarHintGrupo(...args);
-const mostrarFiltros = (...args) => UIHistoricoEdicion.mostrarFiltros(...args);
-const cerrarFiltros = (...args) => UIHistoricoEdicion.cerrarFiltros(...args);
-const toggleHistorico = (...args) => UIHistoricoEdicion.toggleHistorico(...args);
-const iniciarTimerAutoCierreBotones = (...args) => UIHistoricoEdicion.iniciarTimerAutoCierreBotones(...args);
-const cancelarTimerAutoCierreBotones = (...args) => UIHistoricoEdicion.cancelarTimerAutoCierreBotones(...args);
-const verificarBloqueoCredito = (...args) => UIHistoricoEdicion.verificarBloqueoCredito(...args);
-const setBloqueoEdicionGrupo = (...args) => UIHistoricoEdicion.setBloqueoEdicionGrupo(...args);
-const toggleBloqueoEdicionGrupo = (...args) => UIHistoricoEdicion.toggleBloqueoEdicionGrupo(...args);
-const cerrarEdicionGrupo = (...args) => UIHistoricoEdicion.cerrarEdicionGrupo(...args);
-const setTiempoExpansionBotones = (...args) => UIHistoricoEdicion.setTiempoExpansionBotones(...args);
+const cerrarEdicion = (...args) => HistoricoEdicion.cerrarEdicion(...args);
+const setBloqueoEdicion = (...args) => HistoricoEdicion.setBloqueoEdicion(...args);
+const toggleBloqueoEdicion = (...args) => HistoricoEdicion.toggleBloqueoEdicion(...args);
+const toggleCredito = (...args) => HistoricoEdicion.toggleCredito(...args);
+const _actualizarHintEdicion = (...args) => HistoricoEdicion._actualizarHintEdicion(...args);
+const actualizarHintGrupo = (...args) => HistoricoEdicion.actualizarHintGrupo(...args);
+const mostrarFiltros = (...args) => HistoricoEdicion.mostrarFiltros(...args);
+const cerrarFiltros = (...args) => HistoricoEdicion.cerrarFiltros(...args);
+const toggleHistorico = (...args) => HistoricoEdicion.toggleHistorico(...args);
+const iniciarTimerAutoCierreBotones = (...args) => HistoricoEdicion.iniciarTimerAutoCierreBotones(...args);
+const cancelarTimerAutoCierreBotones = (...args) => HistoricoEdicion.cancelarTimerAutoCierreBotones(...args);
+const verificarBloqueoCredito = (...args) => HistoricoEdicion.verificarBloqueoCredito(...args);
+const setBloqueoEdicionGrupo = (...args) => HistoricoEdicion.setBloqueoEdicionGrupo(...args);
+const toggleBloqueoEdicionGrupo = (...args) => HistoricoEdicion.toggleBloqueoEdicionGrupo(...args);
+const cerrarEdicionGrupo = (...args) => HistoricoEdicion.cerrarEdicionGrupo(...args);
+const setTiempoExpansionBotones = (...args) => HistoricoEdicion.setTiempoExpansionBotones(...args);
 function agruparRegistrosPorMes(registros) {
     if (!Array.isArray(registros)) {
         console.warn('agruparRegistrosPorMes: entrada inválida');
@@ -262,7 +262,7 @@ function _renderEmptyStateLista(lista) {
             className: 'btn-backup empty-state__btn-restaurar',
             innerHTML: '<svg class="icon"><use href="#icon-upload" /></svg> Restaurar desde archivo'
         });
-        btn.addEventListener('click', () => UIRespaldoLocal.mostrarImportar(true));
+        btn.addEventListener('click', () => RespaldoLocal.mostrarImportar(true));
         emptyDiv.appendChild(msg);
         emptyDiv.appendChild(btn);
     } else {
@@ -623,7 +623,7 @@ function bindEventos() {
     document.querySelector('#card-historico .card-header-clickable')?.addEventListener('click', () => toggleHistorico());
     $('btn-vista-calendario')?.addEventListener('click', () => {
         iniciarTimerAutoCierreBotones();
-        UICalendario.toggleVistaHistorico();
+        Calendario.toggleVistaHistorico();
     });
     $('btn-filtro')?.addEventListener('click', (e) => mostrarFiltros(e));
     $('btn-undo')?.addEventListener('click', () => D.undoAction());
@@ -643,7 +643,7 @@ function bindEventos() {
 
 }
 
-export const UIHistorico = {
+export const Historico = {
     bindEventos,
     actualizarListaRegistros,
     cerrarEdicion,

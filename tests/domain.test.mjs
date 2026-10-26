@@ -105,7 +105,7 @@ test('EstadoApp.calcularHoras y Compensatorios: cálculo de jornada, cruce de me
     assert.equal(asignaciones[0].excedente, 2);
 });
 
-test('Integración: Arranque completo de UILogica.init() sin errores de ejecución', async () => {
+test('Integración: Arranque completo de OrquestadorUI.init() sin errores de ejecución', async () => {
     const noop = () => { };
     const fakeEl = () => ({
         style: { setProperty: noop, removeProperty: noop },
@@ -180,9 +180,9 @@ test('Integración: Arranque completo de UILogica.init() sin errores de ejecuci�
     globalThis.setTimeout = (...args) => origSetTimeout(...args).unref();
 
     try {
-        const { UILogica } = await import('../src/ui/ui-logica.js');
+        const { OrquestadorUI } = await import('../src/ui/orquestador.js');
         await assert.doesNotReject(async () => {
-            await UILogica.init();
+            await OrquestadorUI.init();
         });
     } finally {
         globalThis.setInterval = origSetInterval;

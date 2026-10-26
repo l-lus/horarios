@@ -5,7 +5,7 @@ import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
-import { UIBase } from './ui-base.js';
+import { UIBase } from './base.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 
 // ====================================================================
@@ -265,7 +265,7 @@ function bindEventos() {
 
 }
 
-export const UIPerfiles = {
+export const Perfiles = {
     bindEventos,
     renderizarListaPerfiles,
     abrirSelectorPerfiles,

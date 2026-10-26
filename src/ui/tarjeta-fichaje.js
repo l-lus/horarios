@@ -12,10 +12,10 @@ import { GestorHistorial } from '../services/gestor-historial.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UIBase } from './ui-base.js';
-import { UICalendario } from './ui-calendario.js';
-import { UIHistorico } from './ui-historico.js';
-import { UIEstadisticas } from './ui-estadisticas.js';
+import { UIBase } from './base.js';
+import { Calendario } from './calendario.js';
+import { Historico } from './historico.js';
+import { Estadisticas } from './estadisticas.js';
 const D = GestionDatos;
 
 // ====================================================================
@@ -675,8 +675,8 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
     const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
 
     if (!soloReloj) {
-        const idNuevoLista = UICalendario.getVistaHistoricoCalendario() ? null : idNuevo;
-        UIHistorico.actualizarListaRegistros(D.registros(), idNuevoLista, asignacionesCompensatorio);
+        const idNuevoLista = Calendario.getVistaHistoricoCalendario() ? null : idNuevo;
+        Historico.actualizarListaRegistros(D.registros(), idNuevoLista, asignacionesCompensatorio);
     }
 
     const est = calcularEstadoCard(asignacionesCompensatorio);
@@ -690,15 +690,15 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
     if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo, est); }
     _renderCard(vista);
     _renderBarra(vista, !!conteo);
-    UIEstadisticas._renderSelectorStats();
+    Estadisticas._renderSelectorStats();
     actualizarEstadoBotonTimerMain(sinAnimarTitulo);
     if (TarjetaLote.getModoLoteActivo()) actualizarBotonLote();
-    if (UICalendario.getVistaHistoricoCalendario()) {
+    if (Calendario.getVistaHistoricoCalendario()) {
         const selector = $('calendario-selector-meses');
         if (selector && selector.style.display !== 'none') {
-            UICalendario._cerrarSelectorMeses(idNuevo);
+            Calendario._cerrarSelectorMeses(idNuevo);
         } else {
-            UICalendario._renderizarCalendario(idNuevo, asignacionesCompensatorio);
+            Calendario._renderizarCalendario(idNuevo, asignacionesCompensatorio);
         }
     }
 
@@ -805,7 +805,7 @@ function bindEventos() {
     $('btn-grupo-hasta')?.addEventListener('click', () => alternarFechaActual('edit-grupo-hasta'));
 }
 
-export const UITarjetaFichaje = {
+export const TarjetaFichaje = {
     bindEventos,
     setFondoCard,
     toggleFondoCard,

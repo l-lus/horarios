@@ -285,7 +285,7 @@ function _animarSlideElemento(el, delta, mutarFn) {
     _slideAnimEstado.set(el, { timeout, wrapper });
 }
 
-export const UIAnimaciones = {
+export const Animaciones = {
     _durSiAnima,
     DUR_ANIM,
     DUR_CALENDARIO,

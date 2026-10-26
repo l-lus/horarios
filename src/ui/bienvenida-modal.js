@@ -2,7 +2,7 @@ import { STORAGE_KEYS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { UIConfig } from './ui-config.js';
+import { Configuracion } from './configuracion.js';
 
 // ====================================================================
 // WELCOME MODULE
@@ -17,7 +17,7 @@ async function chequearYMostrar() {
     }
 
     await TiempoUtils.esperar(1000);
-    await UIConfig.mostrarConfigOnboarding();
+    await Configuracion.mostrarConfigOnboarding();
 }
 
 export const BienvenidaModal = { chequearYMostrar };

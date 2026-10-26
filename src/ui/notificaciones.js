@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
-import { UIBase } from './ui-base.js';
+import { UIBase } from './base.js';
 import { GestionDatos as D } from '../services/gestion-datos.js';
 
 // ====================================================================
@@ -135,7 +135,7 @@ function bindEventos() {
     document.querySelector('#modal-notificaciones .btn-cancel')?.addEventListener('click', () => cerrarModalNotificaciones());
 }
 
-export const UINotificaciones = {
+export const Notificaciones = {
     actualizarEstadoBotonNotificaciones, actualizarEstadoBotonPushBuffer,
     actualizarEstadoBotonPushHabilitado, actualizarSelectPushAnticipacion,
     _suscribirCambiosPermisoNotificaciones, abrirModalNotificaciones, cerrarModalNotificaciones,

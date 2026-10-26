@@ -4,7 +4,7 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { UIBase } from './ui-base.js';
+import { UIBase } from './base.js';
 const D = GestionDatos;
 
 // ====================================================================

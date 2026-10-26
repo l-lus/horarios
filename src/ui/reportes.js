@@ -6,7 +6,7 @@ import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UIBase } from './ui-base.js';
+import { UIBase } from './base.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 const D = GestionDatos;
 
@@ -478,7 +478,7 @@ function confirmarGenerarReporte() {
 }
 
 
-export const UIReportes = {
+export const Reportes = {
     configurarStatsProvider,
     _sumarHorasEfectivas,
     generarReporte,

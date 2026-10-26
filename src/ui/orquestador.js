@@ -10,18 +10,18 @@ import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestorHistorial } from '../services/gestor-historial.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { UIBase } from './ui-base.js';
-import { UIPerfiles } from './ui-perfiles.js';
-import { UICalendario } from './ui-calendario.js';
+import { UIBase } from './base.js';
+import { Perfiles } from './perfiles.js';
+import { Calendario } from './calendario.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
-import { UIGistYRespaldo } from './ui-gist-respaldo.js';
-import { UIHistorico } from './ui-historico.js';
-import { UIEstadisticas } from './ui-estadisticas.js';
-import { UITarjetaFichaje } from './ui-tarjeta-fichaje.js';
-import { UIOrdenTarjetas } from './ui-orden-tarjetas.js';
-import { UINotificaciones } from './ui-notificaciones.js';
-import { UIConfig } from './ui-config.js';
-import { UIHistorialDias } from './ui-historial-dias.js';
+import { GistRespaldo } from './gist-respaldo.js';
+import { Historico } from './historico.js';
+import { Estadisticas } from './estadisticas.js';
+import { TarjetaFichaje } from './tarjeta-fichaje.js';
+import { OrdenTarjetas } from './orden-tarjetas.js';
+import { Notificaciones } from './notificaciones.js';
+import { Configuracion } from './configuracion.js';
+import { HistorialDias } from './historial-dias.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { GestionDatos as D } from '../services/gestion-datos.js';
 
@@ -34,55 +34,55 @@ const {
 
 const {
     crearPerfilDesdeSelector, cerrarSelectorPerfiles, cerrarEditorPerfil
-} = UIPerfiles;
+} = Perfiles;
 
 const {
     _cerrarSelectorMeses, toggleVistaHistorico, setVistaHistoricoCalendario
-} = UICalendario;
+} = Calendario;
 
 const {
     mostrarImportar, cerrarImportar, cerrarExportar, toggleCamposRangoExport,
     actualizarBotonesHistorico, cerrarModalGist, gistMergeCancelar, gistSubir, gistBajar
-} = UIGistYRespaldo;
+} = GistRespaldo;
 
 const {
     cerrarEdicion, setBloqueoEdicion, _actualizarHintEdicion, _initListenerAccionesLista,
     _initListenerToggleAnio, _initListenerToggleMes, actualizarHintGrupo, cerrarFiltros,
     iniciarTimerAutoCierreBotones, verificarBloqueoCredito, setBloqueoEdicionGrupo, cerrarEdicionGrupo,
     setTiempoExpansionBotones
-} = UIHistorico;
+} = Historico;
 
 const {
     cerrarModalReporteSecciones, _bindStatItemPopups, toggleStats, setModoEstadisticas
-} = UIEstadisticas;
+} = Estadisticas;
 
 const {
     setFondoCard, actualizarUI, alternarVista, _forzarVista, actualizarEstadoBotonTimerMain,
     toggleModoLote, poblarSelectoresTipos, actualizarBotonLote, toggleFormulario, setTimerAutoVista,
     _iniciarCicloStats, _detenerCicloStats, _prepararMostrarFaseAlRenderizar,
     _refrescarFormatoCortoStatsCache
-} = UITarjetaFichaje;
+} = TarjetaFichaje;
 
 const {
     aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards, iniciarDragTarjetas
-} = UIOrdenTarjetas;
+} = OrdenTarjetas;
 
 const {
     actualizarEstadoBotonNotificaciones, actualizarEstadoBotonPushBuffer,
     actualizarEstadoBotonPushHabilitado, actualizarSelectPushAnticipacion,
     _suscribirCambiosPermisoNotificaciones, cerrarModalNotificaciones
-} = UINotificaciones;
+} = Notificaciones;
 
 const {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
     actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonAplicarHoras, cerrarConfig,
     cerrarModalAyuda, refrescarConfigSiVisible, formatearInput
-} = UIConfig;
+} = Configuracion;
 
 const {
     cerrarModalHistorialDias, cerrarEditorTramoDias
-} = UIHistorialDias;
+} = HistorialDias;
 
 function _initGlobales() {
     GestorPerfiles.inicializar();
@@ -454,4 +454,4 @@ async function init() {
     window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
 }
 
-export const UILogica = { init };
+export const OrquestadorUI = { init };

@@ -1,15 +1,15 @@
-import { UIRespaldoLocal } from './ui-respaldo-local.js';
+import { RespaldoLocal } from './respaldo-local.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestorHistorial } from '../services/gestor-historial.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { UIBase } from './ui-base.js';
+import { UIBase } from './base.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
-import { UIHistoricoEdicion } from './ui-historico-edicion.js';
-import { UITarjetaFichaje } from './ui-tarjeta-fichaje.js';
-import { UIConfig } from './ui-config.js';
+import { HistoricoEdicion } from './historico-edicion.js';
+import { TarjetaFichaje } from './tarjeta-fichaje.js';
+import { Configuracion } from './configuracion.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 const D = GestionDatos;
 
@@ -21,7 +21,7 @@ const {
     descargarJSON, obtenerNombrePerfilSafe, _posicionarPopup, _registrarCierrePopup, setIconoBtn, _animarValor
 } = UIBase;
 
-const { mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport } = UIRespaldoLocal;
+const { mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport } = RespaldoLocal;
 let _gistAutoSyncTemp = null;
 let _gistLimitesTemp = null;
 let _gistMergeDesdeModal = false;
@@ -160,7 +160,7 @@ function actualizarBotonesHistorico() {
     btnRestaurar.parentNode.replaceChild(newRestaurar, btnRestaurar);
 
     const autoCierre = () => {
-        UIHistoricoEdicion.iniciarTimerAutoCierreBotones();
+        HistoricoEdicion.iniciarTimerAutoCierreBotones();
     };
 
     if (tieneGist) {
@@ -300,8 +300,8 @@ async function gistMergeAplicar(modo, modoAutomatico = false) {
     GestorHistorial.saveState(D.registros(), modo === 'replace' ? 'reemplazar con Gist' : 'combinar con Gist');
 
     await D.guardarYActualizar();
-    UITarjetaFichaje.actualizarUI();
-    UIConfig.refrescarConfigSiVisible();
+    TarjetaFichaje.actualizarUI();
+    Configuracion.refrescarConfigSiVisible();
 
     if (!modoAutomatico) _gistMergeCerrarOVolver();
     const lastSyncEl = document.getElementById('gist-ultima-sync');
@@ -694,7 +694,7 @@ function bindEventos() {
     ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => $(id)?.addEventListener('input', () => _actualizarResumenLimites()));
 }
 
-export const UIGistYRespaldo = {
+export const GistRespaldo = {
     bindEventos,
     mostrarImportar,
     cerrarImportar,

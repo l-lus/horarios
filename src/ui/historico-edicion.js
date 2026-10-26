@@ -5,9 +5,9 @@ import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { UIBase } from './ui-base.js';
-import { UICalendario } from './ui-calendario.js';
-import { UIConfig } from './ui-config.js';
+import { UIBase } from './base.js';
+import { Calendario } from './calendario.js';
+import { Configuracion } from './configuracion.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 const D = GestionDatos;
 
@@ -28,7 +28,7 @@ let tiempoExpansionBotones = null;
 let timerAutoCierreBotones = null;
 
 function cerrarEdicion() {
-    UIConfig.pressHoldObjetivoEdicion.detener();
+    Configuracion.pressHoldObjetivoEdicion.detener();
     GestorModales.cerrar('modal-editar', () => {
         D.setEditandoId(null);
         document.dispatchEvent(new Event('scroll'));
@@ -73,7 +73,7 @@ function setBloqueoEdicion(bloqueado) {
     [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
         if (btn) btn.disabled = objetivoDeshabilitado;
     });
-    if (objetivoDeshabilitado) UIConfig.pressHoldObjetivoEdicion.detener();
+    if (objetivoDeshabilitado) Configuracion.pressHoldObjetivoEdicion.detener();
     if (elObjetivo) elObjetivo.classList.toggle('input-number-inerte', objetivoDeshabilitado);
     verificarBloqueoCredito();
 }
@@ -239,7 +239,7 @@ function toggleHistorico() {
             _setIconHistorico(icon, 'meses');
             Almacenamiento.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
             tiempoExpansionBotones = null;
-            UICalendario._activarVistaCalendarioHistorico();
+            Calendario._activarVistaCalendarioHistorico();
 
         } else if (!conBotones) {
             botones.classList.add('expanded');
@@ -355,7 +355,7 @@ function cerrarEdicionGrupo() {
 }
 
 
-export const UIHistoricoEdicion = {
+export const HistoricoEdicion = {
     cerrarEdicion,
     setBloqueoEdicion,
     toggleBloqueoEdicion,

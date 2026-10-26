@@ -7,10 +7,10 @@ import { GestorTemas } from './gestor-temas.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { UIBase } from './ui-base.js';
+import { UIBase } from './base.js';
 import { TarjetaFondos } from './tarjeta-fondos.js';
-import { UIOrdenTarjetas } from './ui-orden-tarjetas.js';
-import { UINotificaciones } from './ui-notificaciones.js';
+import { OrdenTarjetas } from './orden-tarjetas.js';
+import { Notificaciones } from './notificaciones.js';
 import { EventosApp } from '../core/eventos.js';
 const D = GestionDatos;
 
@@ -29,8 +29,8 @@ const actualizarUI = (...args) => D._notify().actualizarUI(...args);
 const getFondoCard = (...args) => TarjetaFondos.getFondoCard(...args);
 const _getLabelFondo = (...args) => TarjetaFondos._getLabelFondo(...args);
 const _refrescarFormatoCortoStatsCache = () => EventosApp.emit('config:formato-corto-stats');
-const actualizarEstadoBotonPersistir = (...args) => UIOrdenTarjetas.actualizarEstadoBotonPersistir(...args);
-const actualizarEstadoBotonNotificaciones = (...args) => UINotificaciones.actualizarEstadoBotonNotificaciones(...args);
+const actualizarEstadoBotonPersistir = (...args) => OrdenTarjetas.actualizarEstadoBotonPersistir(...args);
+const actualizarEstadoBotonNotificaciones = (...args) => Notificaciones.actualizarEstadoBotonNotificaciones(...args);
 
 function alternarTema() {
     const temaActual = GestorTemas.temaGuardado();
@@ -320,7 +320,7 @@ function bindEventos() {
     $('theme-toggle-config')?.addEventListener('click', () => alternarTema());
 }
 
-export const UIConfig = {
+export const Configuracion = {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
     actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonAplicarHoras, cerrarConfig,

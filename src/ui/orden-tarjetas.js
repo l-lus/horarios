@@ -2,7 +2,7 @@ import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { UIBase } from './ui-base.js';
+import { UIBase } from './base.js';
 
 // ====================================================================
 // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
@@ -551,7 +551,7 @@ function bindEventos() {
     $('btn-toggle-card-historico')?.addEventListener('click', () => toggleVisibilidadCard('historico'));
 }
 
-export const UIOrdenTarjetas = {
+export const OrdenTarjetas = {
     actualizarEstadoBotonPersistir, aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards,
     iniciarDragOrdenCards, iniciarDragTarjetas, bindEventos
 };

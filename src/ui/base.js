@@ -1,4 +1,4 @@
-import { UIAnimaciones } from './ui-animaciones.js';
+import { Animaciones } from './animaciones.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -246,7 +246,7 @@ function restaurarBotonGuardarEdicion(btnGuardar) {
     btnGuardar.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> Guardar';
 }
 
-const { _durSiAnima, DUR_ANIM, DUR_CALENDARIO, _aArray, _estaColapsado, _esperarAnim, _finalizarSlidePendiente, _animarSlideElemento, _animarFadeSwap, _animarMutacion, _crearFantasmaSiVisible, _animarValor, _animarConteo, _conteoEnCurso, _cancelarConteo } = UIAnimaciones;
+const { _durSiAnima, DUR_ANIM, DUR_CALENDARIO, _aArray, _estaColapsado, _esperarAnim, _finalizarSlidePendiente, _animarSlideElemento, _animarFadeSwap, _animarMutacion, _crearFantasmaSiVisible, _animarValor, _animarConteo, _conteoEnCurso, _cancelarConteo } = Animaciones;
 function _crearToggleConfig({ getVal, setVal, btnId, onAfterToggle, puedeActivar }) {
     function actualizarEstado() {
         const val = getVal();

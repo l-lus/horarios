@@ -54,7 +54,7 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 ```text
 ┌──────────────────────────────────────────────────────────┐
 │                      src/main.js                         │
-│        (Bootstrap: inicializa UILogica y InstaladorPWA)    │
+│        (Bootstrap: inicializa OrquestadorUI y InstaladorPWA)    │
 └────────────────────────────┬─────────────────────────────┘
                              │ importa
                              ▼
@@ -89,7 +89,7 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 | `src/core/` | `1` | Helpers de infraestructura base (`TiempoUtils`, `SeguridadYUtils`, `Almacenamiento`, `EventosApp`, `dom.js`, `movimiento.js`, `constantes.js`, `tema-inicial.js`). | Solo otros módulos de `src/core/` o `src/data/`. | No importa nada de `src/services/` ni `src/ui/`. |
 | `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Compensatorios`, `FiltrosYPeriodos`, `SaldoSemanal`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`, `InstaladorPWA`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. Toda comunicación hacia la UI pasa por `EstadoApp._notify()` o `EventosApp`. |
 | `src/ui/` | `3` | Lectura de inputs, renderizado de tablas/tarjetas/calendario, modales, temas y animaciones. | `src/ui/` (sin ciclos), `src/services/`, `src/core/`, `src/data/`. | No escribe directamente en `localStorage` para datos de registros (usa `GestionDatos` o `Almacenamiento`). |
-| `src/main.js` | `4` | Arranque en `DOMContentLoaded`. | `UILogica`, `InstaladorPWA`, `UsoTracker`, `FeriadosAR`. | No contiene lógica de negocio ni handlers extensos. |
+| `src/main.js` | `4` | Arranque en `DOMContentLoaded`. | `OrquestadorUI`, `InstaladorPWA`, `UsoTracker`, `FeriadosAR`. | No contiene lógica de negocio ni handlers extensos. |
 
 ---
 
@@ -138,27 +138,27 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 
 | Archivo | Export | Responsabilidad |
 |---|---|---|
-| [`src/ui/ui-logica.js`](../src/ui/ui-logica.js) | `UILogica` | Coordinador principal de UI: inicializa todos los submódulos visuales, listeners globales y conecta las notificaciones de `GestionDatos`. |
-| [`src/ui/ui-base.js`](../src/ui/ui-base.js) | `UIBase` | Helpers DOM base (toasts, errores de campos, popups flotantes, swipes táctiles, descarga de archivos y helpers de botones). |
-| [`src/ui/ui-animaciones.js`](../src/ui/ui-animaciones.js) | `UIAnimaciones` | Transiciones suaves de altura, fade/swap de elementos, mutación animada de textos y scroll asistido. |
+| [`src/ui/orquestador.js`](../src/ui/orquestador.js) | `OrquestadorUI` | Coordinador principal de UI: inicializa todos los submódulos visuales, listeners globales y conecta las notificaciones de `GestionDatos`. |
+| [`src/ui/base.js`](../src/ui/base.js) | `UIBase` | Helpers DOM base (toasts, errores de campos, popups flotantes, swipes táctiles, descarga de archivos y helpers de botones). |
+| [`src/ui/animaciones.js`](../src/ui/animaciones.js) | `Animaciones` | Transiciones suaves de altura, fade/swap de elementos, mutación animada de textos y scroll asistido. |
 | [`src/ui/gestor-temas.js`](../src/ui/gestor-temas.js) | `GestorTemas` | Cambio de tema claro/oscuro y sincronización de `meta[name="theme-color"]`. |
 | [`src/ui/gestor-modales.js`](../src/ui/gestor-modales.js) | `GestorModales` | Apertura/cierre de modales accesibles, historial de navegación entre modales y diálogos de confirmación (`confirmar`). |
-| [`src/ui/ui-tarjeta-fichaje.js`](../src/ui/ui-tarjeta-fichaje.js) | `UITarjetaFichaje` | Tarjeta principal de fichaje del día/semana (barra de progreso, hints de salida estimada, ciclo de textos y actualización general). |
+| [`src/ui/tarjeta-fichaje.js`](../src/ui/tarjeta-fichaje.js) | `TarjetaFichaje` | Tarjeta principal de fichaje del día/semana (barra de progreso, hints de salida estimada, ciclo de textos y actualización general). |
 | [`src/ui/tarjeta-tiempo-fuera.js`](../src/ui/tarjeta-tiempo-fuera.js) | `TarjetaTiempoFuera` | Cronómetro en vivo de tiempo fuera (pausa/almuerzo) en la tarjeta principal. |
 | [`src/ui/tarjeta-lote.js`](../src/ui/tarjeta-lote.js) | `TarjetaLote` | Modo de carga por lote (múltiples días/licencias desde la tarjeta principal) y helpers de inputs de hora/fecha. |
 | [`src/ui/tarjeta-fondos.js`](../src/ui/tarjeta-fondos.js) | `TarjetaFondos` | Selector, sanitización segura con `DOMParser` y renderizado de fondos SVG en la tarjeta de fichaje. |
-| [`src/ui/ui-calendario.js`](../src/ui/ui-calendario.js) | `UICalendario` | Vista de calendario mensual interactivo en el historial, selector de meses/años y popups de detalle diario. |
-| [`src/ui/ui-historico.js`](../src/ui/ui-historico.js) | `UIHistorico` | Renderizado de la lista histórica agrupada por año/mes/semana, grupos de licencias y acciones por fila. |
-| [`src/ui/ui-historico-edicion.js`](../src/ui/ui-historico-edicion.js) | `UIHistoricoEdicion` | Modales de edición individual y de grupo, candado de bloqueo de edición y popup de filtros. |
-| [`src/ui/ui-estadisticas.js`](../src/ui/ui-estadisticas.js) | `UIEstadisticas` | Tarjeta de estadísticas (semanal, mensual, anual), cálculo de métricas y popups explicativos de cada indicador. |
-| [`src/ui/ui-reportes.js`](../src/ui/ui-reportes.js) | `UIReportes` | Generación y descarga de reportes HTML autocontenidos con CSP propia y selector de secciones. |
-| [`src/ui/ui-config.js`](../src/ui/ui-config.js) | `UIConfig` | Modal de configuración (jornada laboral, días hábiles, toggles de cálculo, selector de fondo y modal de ayuda). |
-| [`src/ui/ui-historial-dias.js`](../src/ui/ui-historial-dias.js) | `UIHistorialDias` | Modal para administrar tramos históricos de días hábiles cuando cambia la jornada laboral del usuario. |
-| [`src/ui/ui-perfiles.js`](../src/ui/ui-perfiles.js) | `UIPerfiles` | Selector de perfil activo y modal de creación/edición/eliminación de perfiles. |
-| [`src/ui/ui-gist-respaldo.js`](../src/ui/ui-gist-respaldo.js) | `UIGistYRespaldo` | Configuración de token/ID de GitHub Gist, sincronización manual/automática y resolución de conflictos. |
-| [`src/ui/ui-respaldo-local.js`](../src/ui/ui-respaldo-local.js) | `UIRespaldoLocal` | Modales y flujo de exportación (completa, mensual o por rango) e importación de archivos `.json` locales. |
-| [`src/ui/ui-orden-tarjetas.js`](../src/ui/ui-orden-tarjetas.js) | `UIOrdenTarjetas` | Visibilidad de tarjetas principales y reordenamiento drag-and-drop. |
-| [`src/ui/ui-notificaciones.js`](../src/ui/ui-notificaciones.js) | `UINotificaciones` | Modal y controles de configuración de avisos Web Push (anticipación, uso de saldo semanal). |
+| [`src/ui/calendario.js`](../src/ui/calendario.js) | `Calendario` | Vista de calendario mensual interactivo en el historial, selector de meses/años y popups de detalle diario. |
+| [`src/ui/historico.js`](../src/ui/historico.js) | `Historico` | Renderizado de la lista histórica agrupada por año/mes/semana, grupos de licencias y acciones por fila. |
+| [`src/ui/historico-edicion.js`](../src/ui/historico-edicion.js) | `HistoricoEdicion` | Modales de edición individual y de grupo, candado de bloqueo de edición y popup de filtros. |
+| [`src/ui/estadisticas.js`](../src/ui/estadisticas.js) | `Estadisticas` | Tarjeta de estadísticas (semanal, mensual, anual), cálculo de métricas y popups explicativos de cada indicador. |
+| [`src/ui/reportes.js`](../src/ui/reportes.js) | `Reportes` | Generación y descarga de reportes HTML autocontenidos con CSP propia y selector de secciones. |
+| [`src/ui/configuracion.js`](../src/ui/configuracion.js) | `Configuracion` | Modal de configuración (jornada laboral, días hábiles, toggles de cálculo, selector de fondo y modal de ayuda). |
+| [`src/ui/historial-dias.js`](../src/ui/historial-dias.js) | `HistorialDias` | Modal para administrar tramos históricos de días hábiles cuando cambia la jornada laboral del usuario. |
+| [`src/ui/perfiles.js`](../src/ui/perfiles.js) | `Perfiles` | Selector de perfil activo y modal de creación/edición/eliminación de perfiles. |
+| [`src/ui/gist-respaldo.js`](../src/ui/gist-respaldo.js) | `GistRespaldo` | Configuración de token/ID de GitHub Gist, sincronización manual/automática y resolución de conflictos. |
+| [`src/ui/respaldo-local.js`](../src/ui/respaldo-local.js) | `RespaldoLocal` | Modales y flujo de exportación (completa, mensual o por rango) e importación de archivos `.json` locales. |
+| [`src/ui/orden-tarjetas.js`](../src/ui/orden-tarjetas.js) | `OrdenTarjetas` | Visibilidad de tarjetas principales y reordenamiento drag-and-drop. |
+| [`src/ui/notificaciones.js`](../src/ui/notificaciones.js) | `Notificaciones` | Modal y controles de configuración de avisos Web Push (anticipación, uso de saldo semanal). |
 | [`src/ui/bienvenida-modal.js`](../src/ui/bienvenida-modal.js) | `BienvenidaModal` | Onboarding inicial para configurar horas diarias y días hábiles en el primer uso. |
 | [`src/ui/aviso-push.js`](../src/ui/aviso-push.js) | `AvisoPush` | Banner sugerido para activar notificaciones de fin de jornada luego de alcanzar el umbral de uso. |
 
@@ -185,11 +185,11 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 
 ### Caso D: Lee inputs del usuario, modifica el DOM, abre un modal o dibuja en pantalla
 - **¿Interactúa con elementos HTML, eventos de click/teclado o muestra alertas?** → Va en `src/ui/`.
-  - Si extiende una vista existente y el archivo tiene **menos de 500 líneas**, agregalo en el módulo correspondiente (`ui-calendario.js`, `ui-config.js`, etc.).
+  - Si extiende una vista existente y el archivo tiene **menos de 500 líneas**, agregalo en el módulo correspondiente (`calendario.js`, `configuracion.js`, etc.).
   - Si la funcionalidad supera **~250–300 líneas** o tiene un ciclo de vida propio, creá un archivo dedicado en `src/ui/` con prefijo semántico:
     - Subcomponentes de la tarjeta principal: `src/ui/card-<nombre>.js`
     - Vistas o paneles generales: `src/ui/ui-<nombre>.js`
-  - **Regla anti-ciclos en `src/ui/`:** Un submódulo hijo (`tarjeta-tiempo-fuera.js`, `ui-reportes.js`, `ui-respaldo-local.js`) **no debe importar** a su módulo padre (`ui-tarjeta-fichaje.js`, `ui-estadisticas.js`, `ui-gist-respaldo.js`). Si necesita notificar un cambio hacia arriba, usá `EventosApp.emit(...)` o inyectá un callback desde el padre.
+  - **Regla anti-ciclos en `src/ui/`:** Un submódulo hijo (`tarjeta-tiempo-fuera.js`, `reportes.js`, `respaldo-local.js`) **no debe importar** a su módulo padre (`tarjeta-fichaje.js`, `estadisticas.js`, `gist-respaldo.js`). Si necesita notificar un cambio hacia arriba, usá `EventosApp.emit(...)` o inyectá un callback desde el padre.
 
 ### Checklist obligatorio al crear o renombrar un archivo `.js`
 

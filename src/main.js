@@ -1,17 +1,17 @@
 import { InstaladorPWA } from './services/instalador-pwa.js';
 import { RecordatorioPush } from './services/recordatorio-push.js';
 import { FeriadosAR } from './services/feriados-ar.js';
-import { UIPerfiles } from './ui/ui-perfiles.js';
-import { UICalendario } from './ui/ui-calendario.js';
-import { UIGistYRespaldo } from './ui/ui-gist-respaldo.js';
-import { UIHistorico } from './ui/ui-historico.js';
-import { UIEstadisticas } from './ui/ui-estadisticas.js';
-import { UITarjetaFichaje } from './ui/ui-tarjeta-fichaje.js';
-import { UIOrdenTarjetas } from './ui/ui-orden-tarjetas.js';
-import { UINotificaciones } from './ui/ui-notificaciones.js';
-import { UIConfig } from './ui/ui-config.js';
-import { UIHistorialDias } from './ui/ui-historial-dias.js';
-import { UILogica } from './ui/ui-logica.js';
+import { Perfiles } from './ui/perfiles.js';
+import { Calendario } from './ui/calendario.js';
+import { GistRespaldo } from './ui/gist-respaldo.js';
+import { Historico } from './ui/historico.js';
+import { Estadisticas } from './ui/estadisticas.js';
+import { TarjetaFichaje } from './ui/tarjeta-fichaje.js';
+import { OrdenTarjetas } from './ui/orden-tarjetas.js';
+import { Notificaciones } from './ui/notificaciones.js';
+import { Configuracion } from './ui/configuracion.js';
+import { HistorialDias } from './ui/historial-dias.js';
+import { OrquestadorUI } from './ui/orquestador.js';
 import { BienvenidaModal } from './ui/bienvenida-modal.js';
 import { AvisoPush } from './ui/aviso-push.js';
 
@@ -19,20 +19,20 @@ import { AvisoPush } from './ui/aviso-push.js';
 // MAIN — arranque de la aplicación
 // ====================================================================
 InstaladorPWA.registrarServiceWorker();
-UILogica.init();
+OrquestadorUI.init();
 
 function _iniciarEventosDOM() {
     InstaladorPWA.bindEventos();
-    UIPerfiles.bindEventos();
-    UICalendario.bindEventos();
-    UIGistYRespaldo.bindEventos();
-    UIHistorico.bindEventos();
-    UIEstadisticas.bindEventos();
-    UITarjetaFichaje.bindEventos();
-    UIOrdenTarjetas.bindEventos();
-    UINotificaciones.bindEventos();
-    UIConfig.bindEventos();
-    UIHistorialDias.bindEventos();
+    Perfiles.bindEventos();
+    Calendario.bindEventos();
+    GistRespaldo.bindEventos();
+    Historico.bindEventos();
+    Estadisticas.bindEventos();
+    TarjetaFichaje.bindEventos();
+    OrdenTarjetas.bindEventos();
+    Notificaciones.bindEventos();
+    Configuracion.bindEventos();
+    HistorialDias.bindEventos();
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');

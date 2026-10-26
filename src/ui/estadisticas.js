@@ -1,4 +1,4 @@
-import { UIReportes } from './ui-reportes.js';
+import { Reportes } from './reportes.js';
 import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -6,8 +6,8 @@ import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UIBase } from './ui-base.js';
-import { UIConfig } from './ui-config.js';
+import { UIBase } from './base.js';
+import { Configuracion } from './configuracion.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { GestionDatos as D } from '../services/gestion-datos.js';
 
@@ -369,13 +369,13 @@ function poblarSelectorMeses() {
     _poblarSelect('select-mes-stats', meses, TiempoUtils.nombreMesCapitalizado, mesActual, actualizarEstadisticas, TiempoUtils.agruparMesesPorAnio);
 }
 
-const _sumarHorasEfectivas = (...args) => UIReportes._sumarHorasEfectivas(...args);
-const generarReporte = (...args) => UIReportes.generarReporte(...args);
-const abrirModalReporteSecciones = (...args) => UIReportes.abrirModalReporteSecciones(...args);
-const cerrarModalReporteSecciones = (...args) => UIReportes.cerrarModalReporteSecciones(...args);
-const toggleSeccionReporte = (...args) => UIReportes.toggleSeccionReporte(...args);
-const confirmarGenerarReporte = (...args) => UIReportes.confirmarGenerarReporte(...args);
-UIReportes.configurarStatsProvider({
+const _sumarHorasEfectivas = (...args) => Reportes._sumarHorasEfectivas(...args);
+const generarReporte = (...args) => Reportes.generarReporte(...args);
+const abrirModalReporteSecciones = (...args) => Reportes.abrirModalReporteSecciones(...args);
+const cerrarModalReporteSecciones = (...args) => Reportes.cerrarModalReporteSecciones(...args);
+const toggleSeccionReporte = (...args) => Reportes.toggleSeccionReporte(...args);
+const confirmarGenerarReporte = (...args) => Reportes.confirmarGenerarReporte(...args);
+Reportes.configurarStatsProvider({
     calcularEstadisticasAnio,
     calcularEstadisticasMes,
     getModoEstadisticas: () => modoEstadisticas
@@ -483,7 +483,7 @@ function _popupStat(event, statId) {
 
     popup.querySelector('#_stat-popup-btn-modificar')?.addEventListener('click', () => {
         cerrar();
-        UIConfig.mostrarConfigEnAjuste(ajusteId);
+        Configuracion.mostrarConfigEnAjuste(ajusteId);
     });
 }
 
@@ -540,7 +540,7 @@ function bindEventos() {
 
 }
 
-export const UIEstadisticas = {
+export const Estadisticas = {
     bindEventos,
     _calcularEstadisticasRango,
     _renderizarStats,

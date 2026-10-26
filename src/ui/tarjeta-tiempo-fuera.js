@@ -6,7 +6,7 @@ import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorHistorial } from '../services/gestor-historial.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos as D } from '../services/gestion-datos.js';
-import { UIBase } from './ui-base.js';
+import { UIBase } from './base.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 
 // ====================================================================

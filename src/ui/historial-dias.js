@@ -1,8 +1,8 @@
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
-import { UIBase } from './ui-base.js';
-import { UIConfig } from './ui-config.js';
+import { UIBase } from './base.js';
+import { Configuracion } from './configuracion.js';
 import { GestionDatos as D } from '../services/gestion-datos.js';
 
 // ====================================================================
@@ -12,7 +12,7 @@ const {
     _abrirModalConPadre, _cerrarModalConPadre, mostrarToast
 } = UIBase;
 
-const _precargarCamposConfig = (...args) => UIConfig._precargarCamposConfig(...args);
+const _precargarCamposConfig = (...args) => Configuracion._precargarCamposConfig(...args);
 
 let _tramoEnEdicionDesde = null;
 
@@ -163,6 +163,6 @@ function bindEventos() {
     document.querySelector('#modal-editar-tramo-dias .btn-cancel')?.addEventListener('click', () => cerrarEditorTramoDias());
 }
 
-export const UIHistorialDias = {
+export const HistorialDias = {
     cerrarModalHistorialDias, cerrarEditorTramoDias, bindEventos
 };

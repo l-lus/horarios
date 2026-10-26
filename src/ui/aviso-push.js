@@ -1,7 +1,7 @@
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
-import { UIBase } from './ui-base.js';
-import { UINotificaciones } from './ui-notificaciones.js';
+import { UIBase } from './base.js';
+import { Notificaciones } from './notificaciones.js';
 
 // ====================================================================
 // AVISO PUSH — recordatorio discreto de la función de notificaciones
@@ -22,7 +22,7 @@ async function chequearYAvisar() {
     UIBase.mostrarToast(
         'Podés habilitar las notificaciones de salida desde Ajustes o tocando este aviso',
         'info', 6000, null,
-        () => UINotificaciones.abrirModalNotificaciones()
+        () => Notificaciones.abrirModalNotificaciones()
     );
 }
 

@@ -1,5 +1,5 @@
-import { STORAGE_KEYS } from '../core/constants.js';
-import { StorageHelper } from '../core/storage.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
 
 // ====================================================================
 // THEME MANAGER MODULE
@@ -7,7 +7,7 @@ import { StorageHelper } from '../core/storage.js';
 const TEMAS = ['light', 'dark', 'medianoche', 'pink', 'green', 'blue', 'lilac', 'crema'];
 
 function temaGuardado() {
-    const raw = StorageHelper.getItem(STORAGE_KEYS.TEMA_OSCURO, null);
+    const raw = Almacenamiento.getItem(STORAGE_KEYS.TEMA_OSCURO, null);
     if (raw === null) return 'dark';
     if (raw === 'true') return 'dark';
     if (raw === 'false') return 'light';
@@ -47,4 +47,4 @@ function siguienteTema(temaActual) {
     return TEMAS[(idx + 1) % TEMAS.length];
 }
 
-export const ThemeManager = { TEMAS, temaGuardado, aplicarTema, siguienteTema };
+export const GestorTemas = { TEMAS, temaGuardado, aplicarTema, siguienteTema };

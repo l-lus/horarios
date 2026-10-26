@@ -1,5 +1,5 @@
-import { STORAGE_KEYS } from './constants.js';
-import { StorageHelper } from './storage.js';
+import { STORAGE_KEYS } from './constantes.js';
+import { Almacenamiento } from './almacenamiento.js';
 
 // ====================================================================
 // MOTION
@@ -11,7 +11,7 @@ let iniciado = false;
 
 function _modo() {
     if (modo === null) {
-        const guardado = StorageHelper.getItem(STORAGE_KEYS.REDUCIR_ANIMACIONES, 'auto');
+        const guardado = Almacenamiento.getItem(STORAGE_KEYS.REDUCIR_ANIMACIONES, 'auto');
         modo = MODOS.includes(guardado) ? guardado : 'auto';
     }
     return modo;
@@ -32,13 +32,13 @@ function init() {
 function setModo(nuevo) {
     if (!MODOS.includes(nuevo)) return;
     modo = nuevo;
-    StorageHelper.setItem(STORAGE_KEYS.REDUCIR_ANIMACIONES, nuevo);
+    Almacenamiento.setItem(STORAGE_KEYS.REDUCIR_ANIMACIONES, nuevo);
     _aplicar();
 }
 function siguienteModo() {
     setModo(MODOS[(MODOS.indexOf(_modo()) + 1) % MODOS.length]);
 }
-export const Motion = {
+export const Movimiento = {
     init, reducido, setModo, siguienteModo, modo: _modo,
     scrollBehavior: () => (reducido() ? 'auto' : 'smooth')
 };

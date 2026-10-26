@@ -1,4 +1,4 @@
-import { TimeUtils } from '../core/time-utils.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
 
 // ====================================================================
 // RECORD TYPES MODULE
@@ -152,7 +152,7 @@ function agruparConsecutivos(registros) {
         while (j < registros.length) {
             const siguiente = registros[j];
             if (idTipo(siguiente) !== tipoActual) break;
-            if (!TimeUtils.esDiaAnterior(grupo[grupo.length - 1].fecha, siguiente.fecha)) break;
+            if (!TiempoUtils.esDiaAnterior(grupo[grupo.length - 1].fecha, siguiente.fecha)) break;
             grupo.push(siguiente);
             j++;
         }

@@ -1,8 +1,8 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { FONDOS_SVG } from '../data/fondos.js';
-import { StorageHelper } from '../core/storage.js';
-import { DataManagement as D } from '../services/data-management.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestionDatos as D } from '../services/gestion-datos.js';
 
 // ====================================================================
 //           UI CARD BACKGROUNDS & PROGRESS BAR COLOR MODULE
@@ -36,7 +36,7 @@ function toggleFondoCard() {
     const ids = [...(FONDOS_SVG || []).map(f => f.id), 'ninguno'];
     const idx = ids.indexOf(_fondoCard);
     _fondoCard = ids[(idx + 1) % ids.length];
-    StorageHelper.setItem(STORAGE_KEYS.FONDO_CARD, _fondoCard, true);
+    Almacenamiento.setItem(STORAGE_KEYS.FONDO_CARD, _fondoCard, true);
     const btn = $('hint-fondo-label');
     if (btn) btn.textContent = _getLabelFondo(_fondoCard);
     const bg = $('stats-card-bg');
@@ -156,7 +156,7 @@ function actualizarFondoCard(estado, colorOverride = null) {
 }
 
 
-export const CardFondos = {
+export const TarjetaFondos = {
     setProgressBarColor,
     getFondoCard: () => _fondoCard,
     setFondoCard,

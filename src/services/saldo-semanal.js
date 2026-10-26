@@ -1,20 +1,20 @@
-import { STORAGE_KEYS, horasGte } from '../core/constants.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
+import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from './tipos-registro.js';
-import { DataManagement as D } from './data-management.js';
+import { GestionDatos as D } from './gestion-datos.js';
 
 // ====================================================================
 // SALDO SEMANAL MODULE — (pool de horas)
 // ====================================================================
 function logicaCubiertoActiva() {
-    return !StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
+    return !Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
 }
 
 function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
-    const lunesDate = TimeUtils.parsearFechaLocal(lunes);
+    const lunesDate = TiempoUtils.parsearFechaLocal(lunes);
     lunesDate.setDate(lunesDate.getDate() + 6);
-    const domingo = TimeUtils.formatearFechaLocal(lunesDate);
+    const domingo = TiempoUtils.formatearFechaLocal(lunesDate);
     const limite = domingo < hasta ? domingo : hasta;
 
     const registrosSemana = D.registros().filter(r => r.fecha >= lunes && r.fecha <= limite);
@@ -36,7 +36,7 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
         }
     };
 
-    for (const isoDate of TimeUtils.generarRangoFechas(lunes, limite)) {
+    for (const isoDate of TiempoUtils.generarRangoFechas(lunes, limite)) {
         const r = registrosMap.get(isoDate);
         const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
         const esRemoto = esEspecial && D.esTipoRemoto(r);
@@ -45,7 +45,7 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
         if (esRemoto) {
             deltaBruto = 0;
         } else if (r && !esEspecial && r.salida) {
-            const objetivo = TimeUtils.esFechaHabil(isoDate, D.diasHabilesEnFecha(isoDate)) ? D.objetivoDeRegistro(r) : 0;
+            const objetivo = TiempoUtils.esFechaHabil(isoDate, D.diasHabilesEnFecha(isoDate)) ? D.objetivoDeRegistro(r) : 0;
             deltaBruto = r.total - objetivo;
             if (deltaBruto > EPS) montoCompensado = D.montoCompensadoDeReferencia(r, asignacionesPrecalculadas);
         }
@@ -76,8 +76,8 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
 
 function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
     if (!logicaCubiertoActiva()) return false;
-    const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
-    const hoy = TimeUtils.obtenerFechaHoy();
+    const lunes = TiempoUtils.obtenerLunesSemanaISO(fecha);
+    const hoy = TiempoUtils.obtenerFechaHoy();
     const { pendientes } = calcularPoolSemana(lunes, hoy, asignacionesPrecalculadas);
     const EPS = 1e-6;
     const deuda = pendientes.find(d => d.fecha === fecha);
@@ -86,12 +86,12 @@ function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
 
 function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null) {
     if (!logicaCubiertoActiva()) return null;
-    const hoy = TimeUtils.obtenerFechaHoy();
+    const hoy = TiempoUtils.obtenerFechaHoy();
     const topeReal = hasta < hoy ? hasta : hoy;
     if (desde > topeReal) return null;
 
     const asignaciones = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
-    let lunes = TimeUtils.obtenerLunesSemanaISO(desde);
+    let lunes = TiempoUtils.obtenerLunesSemanaISO(desde);
     let generado = 0, usado = 0;
 
     while (lunes <= topeReal) {
@@ -101,9 +101,9 @@ function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null)
             generado += ex.generado;
             usado += ex.usado;
         }
-        const siguienteLunes = TimeUtils.parsearFechaLocal(lunes);
+        const siguienteLunes = TiempoUtils.parsearFechaLocal(lunes);
         siguienteLunes.setDate(siguienteLunes.getDate() + 7);
-        lunes = TimeUtils.formatearFechaLocal(siguienteLunes);
+        lunes = TiempoUtils.formatearFechaLocal(siguienteLunes);
     }
 
     if (generado <= 1e-6) return null;
@@ -127,11 +127,11 @@ function estadoDeRegistro(r, asignaciones = null) {
     if (!r.entrada) return { ...base, estado: 'sin-datos' };
     const objetivo = D.objetivoDeRegistro(r);
     const total = r.total || 0;
-    if (!(objetivo > 0 && TimeUtils.esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha)))) {
+    if (!(objetivo > 0 && TiempoUtils.esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha)))) {
         return { ...base, estado: 'neutro' };
     }
     const estado = horasGte(total, objetivo) ? 'cumplido' : (cubiertoPorSaldo(r.fecha, asignaciones) ? 'cubierto' : 'incompleto');
-    return { ...base, estado, diffText: TimeUtils.formatoDiferencia(total, objetivo) };
+    return { ...base, estado, diffText: TiempoUtils.formatoDiferencia(total, objetivo) };
 }
 
 function colorDeEstado(est) {

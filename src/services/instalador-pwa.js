@@ -1,5 +1,5 @@
 import { $ } from '../core/dom.js';
-import { AppState } from './app-state.js';
+import { EstadoApp } from './estado-app.js';
 
 // ====================================================================
 // PWA INSTALLER MODULE
@@ -25,7 +25,7 @@ function init() {
     window.addEventListener('appinstalled', () => {
         if (btnInstall) btnInstall.style.display = 'none';
         deferredPrompt = null;
-        AppState._notify().mostrarToast('¡App instalada con éxito!', 'success');
+        EstadoApp._notify().mostrarToast('¡App instalada con éxito!', 'success');
     });
 }
 
@@ -51,7 +51,7 @@ function registrarServiceWorker() {
                     const newWorker = registration.installing;
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            AppState._notify().mostrarToast('Se actualizará la versión al recargar', 'info');
+                            EstadoApp._notify().mostrarToast('Se actualizará la versión al recargar', 'info');
                         }
                     });
                 });
@@ -65,7 +65,7 @@ function registrarServiceWorker() {
     }
 }
 
-export const PWAInstaller = {
+export const InstaladorPWA = {
     bindEventos,
     registrarServiceWorker,
     init,

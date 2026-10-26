@@ -1,13 +1,13 @@
 import { UIAnimaciones } from './ui-animaciones.js';
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { Motion } from '../core/motion.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { PerfilManager } from '../services/perfil-manager.js';
-import { ModalManager } from './modal-manager.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-import { DataManagement as D } from '../services/data-management.js';
+import { Movimiento } from '../core/movimiento.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorPerfiles } from '../services/gestor-perfiles.js';
+import { GestorModales } from './gestor-modales.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+import { GestionDatos as D } from '../services/gestion-datos.js';
 
 // ====================================================================
 //                     UI CORE MODULE (generic UI utilities)
@@ -24,8 +24,8 @@ function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
         else icon.classList.remove('rotated');
     }
 
-    if (StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true)) {
-        StorageHelper.setItem(storageKey, isExpanded);
+    if (Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true)) {
+        Almacenamiento.setItem(storageKey, isExpanded);
     }
     if (isExpanded && callback) callback();
 }
@@ -38,7 +38,7 @@ let _toastAccionActual = null;
 const MAX_TOAST_QUEUE = 4;
 
 function formatoDiferencia(tiempoTotal, objetivo = D.horasDiarias()) {
-    return TimeUtils.formatoDiferencia(tiempoTotal, objetivo);
+    return TiempoUtils.formatoDiferencia(tiempoTotal, objetivo);
 }
 
 function registrarSwipe(el, callback, { minX = 50, maxY = 80 } = {}) {
@@ -154,7 +154,7 @@ function limpiarError(inputId, errorId) {
 
 function obtenerNombrePerfilSafe() {
     let nombre = 'Backup';
-    if (PerfilManager) nombre = PerfilManager.obtenerDatosPerfil().nombre;
+    if (GestorPerfiles) nombre = GestorPerfiles.obtenerDatosPerfil().nombre;
     return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
 }
 
@@ -394,14 +394,14 @@ function _abrirModalConPadre(modalId, setupFn = null) {
     const modalAbierto = document.querySelector('.modal.show');
     const padre = modalAbierto ? modalAbierto.id : null;
     if (setupFn) setupFn();
-    if (padre) ModalManager.alternar(padre, modalId);
-    else ModalManager.abrir(modalId);
+    if (padre) GestorModales.alternar(padre, modalId);
+    else GestorModales.abrir(modalId);
 }
 
 function _cerrarModalConPadre(modalId, callbackAbrirPadre = null) {
-    const padre = ModalManager.getPadre(modalId);
-    if (padre) ModalManager.alternar(modalId, padre, null, callbackAbrirPadre ? () => callbackAbrirPadre(padre) : null);
-    else ModalManager.cerrar(modalId);
+    const padre = GestorModales.getPadre(modalId);
+    if (padre) GestorModales.alternar(modalId, padre, null, callbackAbrirPadre ? () => callbackAbrirPadre(padre) : null);
+    else GestorModales.cerrar(modalId);
 }
 
 function _flashElemento(el, clase, colorVar = null) {
@@ -427,7 +427,7 @@ function _flashCampoConClase(clase, ids, colorVar = null) {
 function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
 
 function _scrollA(el, block = 'nearest') {
-    if (el) el.scrollIntoView({ behavior: Motion.scrollBehavior(), block });
+    if (el) el.scrollIntoView({ behavior: Movimiento.scrollBehavior(), block });
 }
 function _esperarFinScroll(objetivo = window, { estable = 120, maximo = 1500 } = {}) {
     const esVentana = objetivo === window;
@@ -466,8 +466,8 @@ function _scrollHastaVisible(el, { contenedor = null, margenSuperior = 0 } = {})
     if (r.top >= limiteSup && r.bottom <= limiteInf) return Promise.resolve();
 
     if (contenedor) _scrollA(el, 'nearest');
-    else window.scrollTo({ top: window.scrollY + r.top - margenSuperior, behavior: Motion.scrollBehavior() });
-    if (Motion.reducido()) return Promise.resolve();
+    else window.scrollTo({ top: window.scrollY + r.top - margenSuperior, behavior: Movimiento.scrollBehavior() });
+    if (Movimiento.reducido()) return Promise.resolve();
     return _esperarFinScroll(contenedor || window);
 }
 
@@ -530,7 +530,7 @@ function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'lab
     }, 2000);
 }
 
-export const UICore = {
+export const UIBase = {
     aplicarFeedbackCampos,
     formatoDiferencia,
     registrarSwipe,

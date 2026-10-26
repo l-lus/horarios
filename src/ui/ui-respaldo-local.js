@@ -1,11 +1,11 @@
 import { $, setColapsable } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { ModalManager } from './modal-manager.js';
-import { HistoryManager } from '../services/history-manager.js';
-import { DataManagement } from '../services/data-management.js';
-import { UICore } from './ui-core.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-const D = DataManagement;
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { GestorModales } from './gestor-modales.js';
+import { GestorHistorial } from '../services/gestor-historial.js';
+import { GestionDatos } from '../services/gestion-datos.js';
+import { UIBase } from './ui-base.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+const D = GestionDatos;
 
 // ====================================================================
 //                     UI LOCAL BACKUP MODULE (Import / Export JSON)
@@ -13,7 +13,7 @@ const D = DataManagement;
 const {
     mostrarToast, _setBtnDisabled, _setBtnActivo, _flashCampo,
     descargarJSON, obtenerNombrePerfilSafe, setIconoBtn
-} = UICore;
+} = UIBase;
 
 let _modalAbiertoDesdeLista = false;
 
@@ -26,17 +26,17 @@ function _actualizarBotonVolver(id, desdeLista) {
 
 function _abrirModalConfigHija(modalId, desdeLista, callback) {
     _modalAbiertoDesdeLista = desdeLista;
-    if (desdeLista) ModalManager.abrir(modalId, callback);
-    else ModalManager.alternar('modal-config', modalId, null, callback);
+    if (desdeLista) GestorModales.abrir(modalId, callback);
+    else GestorModales.alternar('modal-config', modalId, null, callback);
 }
 
 function _cerrarModalConfigHija(modalId) {
     if (_modalAbiertoDesdeLista) {
         _modalAbiertoDesdeLista = false;
-        ModalManager.cerrar(modalId);
+        GestorModales.cerrar(modalId);
         return;
     }
-    ModalManager.alternar(modalId, 'modal-config');
+    GestorModales.alternar(modalId, 'modal-config');
 }
 
 function mostrarImportar(desdeLista = false) {
@@ -103,7 +103,7 @@ async function ejecutarExportacion() {
             cerrarExportar();
 
         } else if (tipo === 'mes-actual') {
-            const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
+            const mesActual = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
             await exportarRango(mesActual, mesActual, true);
 
         } else if (tipo === 'rango') {
@@ -116,7 +116,7 @@ async function ejecutarExportacion() {
                 return;
             }
 
-            if (!TimeUtils.validarFecha(desde) || !TimeUtils.validarFecha(hasta)) {
+            if (!TiempoUtils.validarFecha(desde) || !TiempoUtils.validarFecha(hasta)) {
                 mostrarToast('Fechas inválidas', 'error');
                 btn.disabled = false;
                 return;
@@ -154,7 +154,7 @@ async function exportarRango(desde, hasta, esMes = false) {
     const registrosFiltrados = _filtrarRegistrosRango(desde, hasta, esMes);
     if (registrosFiltrados.length === 0) { mostrarToast('No hay registros en ese rango', 'warning'); return; }
 
-    const fechaLocal = TimeUtils.fechaLocalISOFull();
+    const fechaLocal = TiempoUtils.fechaLocalISOFull();
     const fechaHoy = fechaLocal.substring(0, 10);
 
     const data = {

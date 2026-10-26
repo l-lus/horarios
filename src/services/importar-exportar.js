@@ -1,13 +1,13 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { Motion } from '../core/motion.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { PerfilManager } from './perfil-manager.js';
-import { HistoryManager } from './history-manager.js';
+import { Movimiento } from '../core/movimiento.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorPerfiles } from './gestor-perfiles.js';
+import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-import { AppState as D } from './app-state.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+import { EstadoApp as D } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
 
 // ====================================================================
@@ -23,9 +23,9 @@ const KEYS_CONFIG_EXPORTABLE = [
 function obtenerConfigExportable() {
     return {
         [STORAGE_KEYS.IGNORAR_TF]: D.getIgnorarTiempoFuera(),
-        [STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]: StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
-        [STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]: StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
-        [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Motion.modo()
+        [STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
+        [STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
+        [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Movimiento.modo()
     };
 }
 
@@ -58,20 +58,20 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
     }
     const historialImportado = Compensatorios._sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
     D._setHistorialDiasHabilesRaw(historialImportado || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
-    D.setDiasHabiles(Compensatorios.diasHabilesEnFecha(TimeUtils.obtenerFechaHoy()));
+    D.setDiasHabiles(Compensatorios.diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
 
     if (typeof data[STORAGE_KEYS.IGNORAR_TF] === 'boolean') {
         D.setIgnorarTiempoFuera(data[STORAGE_KEYS.IGNORAR_TF]);
-        StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, data[STORAGE_KEYS.IGNORAR_TF], true);
+        Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, data[STORAGE_KEYS.IGNORAR_TF], true);
     }
     if (typeof data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] === 'boolean') {
-        StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO], true);
+        Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO], true);
     }
     if (typeof data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] === 'boolean') {
-        StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO], true);
+        Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO], true);
     }
     if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES])) {
-        Motion.setModo(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]);
+        Movimiento.setModo(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]);
     }
 
     if (Array.isArray(registrosParaRecalcular)) {
@@ -97,28 +97,28 @@ function calcularCambiosConfigImport(data) {
         cambios.push('tiempo fuera');
     }
     if (typeof data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] === 'boolean' &&
-        data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] !== StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true)) {
+        data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] !== Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true)) {
         cambios.push('banco de horas');
     }
     if (typeof data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] === 'boolean' &&
-        data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] !== StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) {
+        data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] !== Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) {
         cambios.push('objetivo diario global');
     }
     if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]) &&
-        data[STORAGE_KEYS.REDUCIR_ANIMACIONES] !== Motion.modo()) {
+        data[STORAGE_KEYS.REDUCIR_ANIMACIONES] !== Movimiento.modo()) {
         cambios.push('animaciones');
     }
     return cambios;
 }
 
 function normalizarRegistrosImportados(rawList, calcularHorasFn) {
-    const validarHora = (h) => TimeUtils.validarHora(h) ? S.sanitizeString(h, 5) : null;
-    const hoy = TimeUtils.obtenerFechaHoy();
+    const validarHora = (h) => TiempoUtils.validarHora(h) ? S.sanitizeString(h, 5) : null;
+    const hoy = TiempoUtils.obtenerFechaHoy();
     const descartadosFuturos = rawList.filter(r =>
         S.validarRegistroSeguro(r) && r.fecha > hoy && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
     ).length;
     if (descartadosFuturos > 0)
-        D._notify().mostrarToast(`${descartadosFuturos} registro${TimeUtils.pluralizar(descartadosFuturos)} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${TimeUtils.pluralizar(descartadosFuturos)}`, 'warning');
+        D._notify().mostrarToast(`${descartadosFuturos} registro${TiempoUtils.pluralizar(descartadosFuturos)} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${TiempoUtils.pluralizar(descartadosFuturos)}`, 'warning');
     const normalizados = rawList
         .filter(r => S.validarRegistroSeguro(r))
         .filter(r => {
@@ -137,7 +137,7 @@ function normalizarRegistrosImportados(rawList, calcularHorasFn) {
             objetivoHoras: (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras))
                 ? Math.max(0, Math.min(24, r.objetivoHoras))
                 : undefined,
-            referenciaCompensatorio: (typeof r.referenciaCompensatorio === 'string' && TimeUtils.validarFecha(r.referenciaCompensatorio))
+            referenciaCompensatorio: (typeof r.referenciaCompensatorio === 'string' && TiempoUtils.validarFecha(r.referenciaCompensatorio))
                 ? r.referenciaCompensatorio
                 : undefined,
         }));
@@ -153,12 +153,12 @@ async function exportarJSON() {
     const data = {
         registros: D.registros(), diasHabiles: D.diasHabiles(), horasDiarias: D.horasDiarias(), historialDiasHabiles: D.historialDiasHabiles(),
         ...obtenerConfigExportable(),
-        fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION,
+        fecha: TiempoUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION,
         hash: await S.calcularHashSHA256(D.registros()), timestamp: Date.now()
     };
     try {
         const nombreSafe = D._notify().obtenerNombrePerfilSafe();
-        const fechaHoy = TimeUtils.fechaLocalISOFull().slice(0, 10);
+        const fechaHoy = TiempoUtils.fechaLocalISOFull().slice(0, 10);
         D._notify().descargarJSON(data, `Horarios_${nombreSafe}_${fechaHoy}.json`);
         D._notify().mostrarToast('Datos exportados', 'success');
         D._notify().cerrarTodosModales();
@@ -211,7 +211,7 @@ function _aplicarMergeImport(registrosImportados) {
     });
     D._setRegistros(D.registros().concat(nuevos));
     const partes = [];
-    const p = (n, sustantivo, adjetivo) => `${n} ${sustantivo}${TimeUtils.pluralizar(n)} ${adjetivo}${TimeUtils.pluralizar(n)}`;
+    const p = (n, sustantivo, adjetivo) => `${n} ${sustantivo}${TiempoUtils.pluralizar(n)} ${adjetivo}${TiempoUtils.pluralizar(n)}`;
     if (nuevos.length > 0) partes.push(p(nuevos.length, 'día', 'nuevo'));
     if (complementarios.length > 0) partes.push(p(complementarios.length, 'registro', 'completado'));
     finalizarImportacionAndSave(`Combinado: ${partes.join(', ')}`, 'combinar datos importados');
@@ -258,13 +258,13 @@ async function finalizarImportacionAndSave(mensajeExito, descripcion = null) {
     D._ordenarRegistros();
     Compensatorios.migrarObjetivoHorasFaltante();
     D.sincronizarPushHoy();
-    HistoryManager.saveState(D.registros(), descripcion || mensajeExito);
+    GestorHistorial.saveState(D.registros(), descripcion || mensajeExito);
     if (await D.guardarYActualizar()) {
-        const esPerfilDefault = PerfilManager && PerfilManager.esPerfilDefault();
+        const esPerfilDefault = GestorPerfiles && GestorPerfiles.esPerfilDefault();
         if (esPerfilDefault) {
-            StorageHelper.setItem(STORAGE_KEYS.DIAS_HABILES, D.diasHabiles());
-            StorageHelper.setItem(STORAGE_KEYS.HORAS_DIARIAS, D.horasDiarias());
-            StorageHelper.setItem(STORAGE_KEYS.HISTORIAL_DIAS_HABILES, D.historialDiasHabiles());
+            Almacenamiento.setItem(STORAGE_KEYS.DIAS_HABILES, D.diasHabiles());
+            Almacenamiento.setItem(STORAGE_KEYS.HORAS_DIARIAS, D.horasDiarias());
+            Almacenamiento.setItem(STORAGE_KEYS.HISTORIAL_DIAS_HABILES, D.historialDiasHabiles());
         }
         D._notify().mostrarToast(mensajeExito, 'success');
         D._notify().cerrarImportar();
@@ -273,7 +273,7 @@ async function finalizarImportacionAndSave(mensajeExito, descripcion = null) {
     }
 }
 
-export const ImportExportData = {
+export const ImportarExportar = {
     KEYS_CONFIG_EXPORTABLE,
     obtenerConfigExportable,
     validarCamposConfigImport,

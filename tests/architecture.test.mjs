@@ -133,9 +133,9 @@ test('Arquitectura CSS: Las 5 capas de assets/styles/ se cargan en orden de casc
     const expectedCssOrder = [
         'assets/styles/tokens.css',
         'assets/styles/base.css',
-        'assets/styles/cards-views.css',
-        'assets/styles/modals-features.css',
-        'assets/styles/responsive-motion.css'
+        'assets/styles/tarjetas-vistas.css',
+        'assets/styles/modales-funciones.css',
+        'assets/styles/responsivo-movimiento.css'
     ];
 
     const cssFilesOnDisk = fs.readdirSync('assets/styles')

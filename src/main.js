@@ -1,5 +1,5 @@
-import { PWAInstaller } from './services/pwa-installer.js';
-import { PushReminder } from './services/push-reminder.js';
+import { InstaladorPWA } from './services/instalador-pwa.js';
+import { RecordatorioPush } from './services/recordatorio-push.js';
 import { FeriadosAR } from './services/feriados-ar.js';
 import { UIPerfiles } from './ui/ui-perfiles.js';
 import { UICalendario } from './ui/ui-calendario.js';
@@ -7,29 +7,29 @@ import { UIGistYRespaldo } from './ui/ui-gist-respaldo.js';
 import { UIHistorico } from './ui/ui-historico.js';
 import { UIEstadisticas } from './ui/ui-estadisticas.js';
 import { UITarjetaFichaje } from './ui/ui-tarjeta-fichaje.js';
-import { UICardsLayout } from './ui/ui-cards-layout.js';
+import { UIOrdenTarjetas } from './ui/ui-orden-tarjetas.js';
 import { UINotificaciones } from './ui/ui-notificaciones.js';
 import { UIConfig } from './ui/ui-config.js';
 import { UIHistorialDias } from './ui/ui-historial-dias.js';
-import { UILogic } from './ui/ui-logic.js';
+import { UILogica } from './ui/ui-logica.js';
 import { BienvenidaModal } from './ui/bienvenida-modal.js';
 import { AvisoPush } from './ui/aviso-push.js';
 
 // ====================================================================
 // MAIN — arranque de la aplicación
 // ====================================================================
-PWAInstaller.registrarServiceWorker();
-UILogic.init();
+InstaladorPWA.registrarServiceWorker();
+UILogica.init();
 
 function _iniciarEventosDOM() {
-    PWAInstaller.bindEventos();
+    InstaladorPWA.bindEventos();
     UIPerfiles.bindEventos();
     UICalendario.bindEventos();
     UIGistYRespaldo.bindEventos();
     UIHistorico.bindEventos();
     UIEstadisticas.bindEventos();
     UITarjetaFichaje.bindEventos();
-    UICardsLayout.bindEventos();
+    UIOrdenTarjetas.bindEventos();
     UINotificaciones.bindEventos();
     UIConfig.bindEventos();
     UIHistorialDias.bindEventos();
@@ -65,6 +65,6 @@ if (document.readyState === 'loading') {
     await BienvenidaModal.chequearYMostrar();
     setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
     setTimeout(() => AvisoPush.chequearYAvisar(), 2000);
-    setTimeout(() => PushReminder.registrarUso(), 3000);
-    document.addEventListener('visibilitychange', () => PushReminder.registrarUso());
+    setTimeout(() => RecordatorioPush.registrarUso(), 3000);
+    document.addEventListener('visibilitychange', () => RecordatorioPush.registrarUso());
 })();

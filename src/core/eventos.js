@@ -44,7 +44,7 @@ function call(action, ...args) {
     return undefined;
 }
 
-export const AppEvents = {
+export const EventosApp = {
     on,
     off,
     emit,

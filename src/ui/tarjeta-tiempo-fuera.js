@@ -1,18 +1,18 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { PerfilManager } from '../services/perfil-manager.js';
-import { HistoryManager } from '../services/history-manager.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorPerfiles } from '../services/gestor-perfiles.js';
+import { GestorHistorial } from '../services/gestor-historial.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { DataManagement as D } from '../services/data-management.js';
-import { UICore } from './ui-core.js';
-import { CardLote } from './card-lote.js';
+import { GestionDatos as D } from '../services/gestion-datos.js';
+import { UIBase } from './ui-base.js';
+import { TarjetaLote } from './tarjeta-lote.js';
 
 // ====================================================================
 //                     UI CARD BREAK TIMER MODULE
 // ====================================================================
-const { mostrarToast, _setBtnActivo, _setBtnDisabled, _flashCampo, _avisarFichaje, setIconoBtn } = UICore;
+const { mostrarToast, _setBtnActivo, _setBtnDisabled, _flashCampo, _avisarFichaje, setIconoBtn } = UIBase;
 let _renderTituloAnimadoFn = (titulo, nuevoHTML, cb) => {
     if (titulo) { titulo.innerHTML = nuevoHTML; titulo.dataset.firma = nuevoHTML; }
     if (cb) cb();
@@ -22,13 +22,13 @@ function configurarRenderTitulo(fn) {
 }
 
 function _breakStorageKey() {
-    const perfilId = PerfilManager ? PerfilManager.obtenerPerfilActual() : 'default';
+    const perfilId = GestorPerfiles ? GestorPerfiles.obtenerPerfilActual() : 'default';
     return STORAGE_KEYS.BREAK_TIME(perfilId);
 }
 
 function _minutosBreakActivo() {
     if (D.getIgnorarTiempoFuera()) return 0;
-    const inicioBreak = StorageHelper.getItem(_breakStorageKey());
+    const inicioBreak = Almacenamiento.getItem(_breakStorageKey());
     if (!inicioBreak) return 0;
     const mins = Math.floor((Date.now() - parseInt(inicioBreak)) / 60000);
     return mins > 0 ? mins : 0;
@@ -36,11 +36,11 @@ function _minutosBreakActivo() {
 
 function _minutosAHoraWrap(totalMinutos) {
     const normalizado = ((totalMinutos % 1440) + 1440) % 1440;
-    return TimeUtils.minutosAHora(normalizado);
+    return TiempoUtils.minutosAHora(normalizado);
 }
 
 function _formatearMinutosCorto(totalMinutos) {
-    return TimeUtils.horasATexto(totalMinutos / 60, 'short');
+    return TiempoUtils.horasATexto(totalMinutos / 60, 'short');
 }
 
 const TF_LABEL_ID = 'tiempo-fuera-label';
@@ -72,7 +72,7 @@ function _quitarLabelTF(contenedor) {
     if (label) label.remove();
 }
 
-const sumarMinutosAHora = TimeUtils.sumarMinutosAHora;
+const sumarMinutosAHora = TiempoUtils.sumarMinutosAHora;
 
 function _actualizarCardTimerRunning(card, storageKey, sinAnimar = false) {
     if (!card) return;
@@ -83,7 +83,7 @@ function _actualizarCardTimerRunning(card, storageKey, sinAnimar = false) {
     const icono = vistaActual === 'semana'
         ? '<svg class="icon"><use href="#icon-calendar-simple"/></svg>'
         : '<svg class="icon"><use href="#icon-clock"/></svg>';
-    const contexto = vistaActual === 'semana' ? 'Esta Semana' : TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy());
+    const contexto = vistaActual === 'semana' ? 'Esta Semana' : TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy());
     const nuevoHTML = `${icono} ${contexto}<span class="tf-badge">Tiempo fuera</span>`;
     const agregarContador = () => {
         _obtenerOCrearLabelTF(titulo);
@@ -103,11 +103,11 @@ function actualizarEstadoBotonTimerMain(sinAnimarTitulo = false) {
     const card = $('stats-card');
     if (!btn) return;
 
-    if (CardLote.getModoLoteActivo()) { btn.disabled = true; return; }
+    if (TarjetaLote.getModoLoteActivo()) { btn.disabled = true; return; }
 
     const registroHoy = D.registroParaTiempoFuera();
     const storageKey = _breakStorageKey();
-    const isRunning = StorageHelper.getItem(storageKey) !== null;
+    const isRunning = Almacenamiento.getItem(storageKey) !== null;
     const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
 
     if (!isRunning && (!registroHoy || diaCerrado)) {
@@ -136,7 +136,7 @@ function _iniciarContadorBreak(storageKey) {
         const el = titulo ? titulo.querySelector('#' + TF_LABEL_ID) : null;
 
         if (!el) { _detenerContadorBreak(); return; }
-        const start = parseInt(StorageHelper.getItem(storageKey));
+        const start = parseInt(Almacenamiento.getItem(storageKey));
         if (isNaN(start)) { el.textContent = ''; _detenerContadorBreak(); return; }
         const mins = Math.floor((Date.now() - start) / 60000);
         el.textContent = _formatearMinutosCorto(mins);
@@ -156,26 +156,26 @@ async function _detenerTimerBreak(registroHoy, storageKey, storedStart) {
     const totalSeg = Math.floor((Date.now() - parseInt(storedStart)) / 1000);
 
     if (totalSeg < 30) {
-        StorageHelper.removeItem(storageKey);
+        Almacenamiento.removeItem(storageKey);
         mostrarToast('Tiempo muy corto, no se registró', 'info');
         D._notify().actualizarUI(); return;
     }
     if (!registroHoy) {
-        StorageHelper.removeItem(storageKey);
+        Almacenamiento.removeItem(storageKey);
         mostrarToast('No hay registro para hoy, tiempo fuera descartado', 'warning');
         D._notify().actualizarUI(); return;
     }
 
-    const minutos = TimeUtils.segundosAMinutosRedondeado(totalSeg);
-    registroHoy.tiempoFuera = TimeUtils.sumarMinutosAHora(registroHoy.tiempoFuera || '00:00', minutos);
+    const minutos = TiempoUtils.segundosAMinutosRedondeado(totalSeg);
+    registroHoy.tiempoFuera = TiempoUtils.sumarMinutosAHora(registroHoy.tiempoFuera || '00:00', minutos);
     const t = D.calcularHoras(registroHoy.entrada, registroHoy.salida, registroHoy.tiempoFuera);
     registroHoy.horas = t?.horas || 0; registroHoy.minutos = t?.minutos || 0; registroHoy.total = t?.total || 0;
-    HistoryManager.saveState(D.registros(), `tiempo fuera +${minutos}min (${TimeUtils.fechaCorta(registroHoy.fecha)})`);
-    StorageHelper.removeItem(storageKey);
+    GestorHistorial.saveState(D.registros(), `tiempo fuera +${minutos}min (${TiempoUtils.fechaCorta(registroHoy.fecha)})`);
+    Almacenamiento.removeItem(storageKey);
     await D.guardarYActualizar(registroHoy.id);
     D.sincronizarPushHoy();
     const ignorarTF = D.getIgnorarTiempoFuera();
-    const diaTexto = registroHoy.fecha === TimeUtils.obtenerFechaHoy() ? 'hoy' : 'ayer';
+    const diaTexto = registroHoy.fecha === TiempoUtils.obtenerFechaHoy() ? 'hoy' : 'ayer';
     const mensajeToast = ignorarTF
         ? (minutos === 1
             ? 'Se registró 1 minuto de tiempo fuera (cálculo ignorado)'
@@ -186,13 +186,13 @@ async function _detenerTimerBreak(registroHoy, storageKey, storedStart) {
 
 async function toggleTimerBreakMain() {
     const storageKey = _breakStorageKey();
-    const storedStart = StorageHelper.getItem(storageKey);
+    const storedStart = Almacenamiento.getItem(storageKey);
     const registroHoy = D.registroParaTiempoFuera();
 
     if (!storedStart && !registroHoy) { mostrarToast('Debés crear un registro para hoy primero', 'warning'); return; }
 
     if (!storedStart) {
-        StorageHelper.setItem(storageKey, Date.now());
+        Almacenamiento.setItem(storageKey, Date.now());
         mostrarToast('Tiempo fuera iniciado', 'info');
     } else {
         await _detenerTimerBreak(registroHoy, storageKey, storedStart);
@@ -200,7 +200,7 @@ async function toggleTimerBreakMain() {
     actualizarEstadoBotonTimerMain();
 }
 
-export const CardTimerBreak = {
+export const TarjetaTiempoFuera = {
     configurarRenderTitulo,
     _breakStorageKey,
     _minutosBreakActivo,

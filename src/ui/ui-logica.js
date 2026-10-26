@@ -1,36 +1,36 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { Motion } from '../core/motion.js';
-import { PWAInstaller } from '../services/pwa-installer.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { PushReminder } from '../services/push-reminder.js';
-import { StorageHelper } from '../core/storage.js';
-import { ThemeManager } from './theme-manager.js';
-import { PerfilManager } from '../services/perfil-manager.js';
-import { ModalManager } from './modal-manager.js';
-import { HistoryManager } from '../services/history-manager.js';
+import { Movimiento } from '../core/movimiento.js';
+import { InstaladorPWA } from '../services/instalador-pwa.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { RecordatorioPush } from '../services/recordatorio-push.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorTemas } from './gestor-temas.js';
+import { GestorPerfiles } from '../services/gestor-perfiles.js';
+import { GestorModales } from './gestor-modales.js';
+import { GestorHistorial } from '../services/gestor-historial.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { UICore } from './ui-core.js';
+import { UIBase } from './ui-base.js';
 import { UIPerfiles } from './ui-perfiles.js';
 import { UICalendario } from './ui-calendario.js';
-import { GistSync } from '../services/gist-sync.js';
+import { SincronizacionGist } from '../services/sincronizacion-gist.js';
 import { UIGistYRespaldo } from './ui-gist-respaldo.js';
 import { UIHistorico } from './ui-historico.js';
 import { UIEstadisticas } from './ui-estadisticas.js';
 import { UITarjetaFichaje } from './ui-tarjeta-fichaje.js';
-import { UICardsLayout } from './ui-cards-layout.js';
+import { UIOrdenTarjetas } from './ui-orden-tarjetas.js';
 import { UINotificaciones } from './ui-notificaciones.js';
 import { UIConfig } from './ui-config.js';
 import { UIHistorialDias } from './ui-historial-dias.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-import { DataManagement as D } from '../services/data-management.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+import { GestionDatos as D } from '../services/gestion-datos.js';
 
 const {
     registrarSwipe, debounce, _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
     mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON, mostrarToast,
     _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion, _esperarAnim, _avisarFichaje,
     aplicarFeedbackCampos
-} = UICore;
+} = UIBase;
 
 const {
     crearPerfilDesdeSelector, cerrarSelectorPerfiles, cerrarEditorPerfil
@@ -65,7 +65,7 @@ const {
 
 const {
     aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards, iniciarDragTarjetas
-} = UICardsLayout;
+} = UIOrdenTarjetas;
 
 const {
     actualizarEstadoBotonNotificaciones, actualizarEstadoBotonPushBuffer,
@@ -85,36 +85,36 @@ const {
 } = UIHistorialDias;
 
 function _initGlobales() {
-    PerfilManager.inicializar();
+    GestorPerfiles.inicializar();
     
     D.configurarNotificaciones({
-        abrirModal: ModalManager.abrir,
+        abrirModal: GestorModales.abrir,
         actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
         aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
-        cerrarTodosModales: ModalManager.cerrarTodos,
-        confirmarModal: ModalManager.confirmar,
+        cerrarTodosModales: GestorModales.cerrarTodos,
+        confirmarModal: GestorModales.confirmar,
         descargarJSON, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
         obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
-        setBloqueoEdicionGrupo, temaGuardado: ThemeManager.temaGuardado, verificarBloqueoCredito,
+        setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado, verificarBloqueoCredito,
         forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, refrescarConfigSiVisible
     });
-    StorageHelper.configurarNotificaciones({ mostrarToast });
-    PushReminder.configurarNotificaciones({ mostrarToast });
+    Almacenamiento.configurarNotificaciones({ mostrarToast });
+    RecordatorioPush.configurarNotificaciones({ mostrarToast });
 
-    ModalManager.registrarAccionVolver('modal-gist', cerrarModalGist);
-    ModalManager.registrarAccionVolver('modal-gist-merge', gistMergeCancelar);
-    ModalManager.registrarAccionVolver('modal-config', cerrarConfig);
-    ModalManager.registrarAccionVolver('modal-selector-perfiles', cerrarSelectorPerfiles);
-    ModalManager.registrarAccionVolver('modal-editar', cerrarEdicion);
-    ModalManager.registrarAccionVolver('modal-importar', cerrarImportar);
-    ModalManager.registrarAccionVolver('modal-exportar', cerrarExportar);
-    ModalManager.registrarAccionVolver('modal-editar-perfil', cerrarEditorPerfil);
-    ModalManager.registrarAccionVolver('modal-editar-grupo', cerrarEdicionGrupo);
-    ModalManager.registrarAccionVolver('modal-reporte-secciones', cerrarModalReporteSecciones);
-    ModalManager.registrarAccionVolver('modal-ayuda', cerrarModalAyuda);
-    ModalManager.registrarAccionVolver('modal-historial-dias', cerrarModalHistorialDias);
-    ModalManager.registrarAccionVolver('modal-notificaciones', cerrarModalNotificaciones);
-    ModalManager.registrarAccionVolver('modal-editar-tramo-dias', cerrarEditorTramoDias);
+    GestorModales.registrarAccionVolver('modal-gist', cerrarModalGist);
+    GestorModales.registrarAccionVolver('modal-gist-merge', gistMergeCancelar);
+    GestorModales.registrarAccionVolver('modal-config', cerrarConfig);
+    GestorModales.registrarAccionVolver('modal-selector-perfiles', cerrarSelectorPerfiles);
+    GestorModales.registrarAccionVolver('modal-editar', cerrarEdicion);
+    GestorModales.registrarAccionVolver('modal-importar', cerrarImportar);
+    GestorModales.registrarAccionVolver('modal-exportar', cerrarExportar);
+    GestorModales.registrarAccionVolver('modal-editar-perfil', cerrarEditorPerfil);
+    GestorModales.registrarAccionVolver('modal-editar-grupo', cerrarEdicionGrupo);
+    GestorModales.registrarAccionVolver('modal-reporte-secciones', cerrarModalReporteSecciones);
+    GestorModales.registrarAccionVolver('modal-ayuda', cerrarModalAyuda);
+    GestorModales.registrarAccionVolver('modal-historial-dias', cerrarModalHistorialDias);
+    GestorModales.registrarAccionVolver('modal-notificaciones', cerrarModalNotificaciones);
+    GestorModales.registrarAccionVolver('modal-editar-tramo-dias', cerrarEditorTramoDias);
 }
 
 function _initListenersFormulario() {
@@ -228,7 +228,7 @@ function _initDatosYConfig() {
     setFondoCard(config.fondoCard || 'golden-gate');
     setModoEstadisticas(config.modoEstadisticas || 'mensual');
 
-    const perfilActual = PerfilManager.obtenerDatosPerfil();
+    const perfilActual = GestorPerfiles.obtenerDatosPerfil();
     D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
     const hdPerfil = parseFloat(perfilActual.horasDiarias);
     D.setHorasDiarias(Number.isFinite(hdPerfil) && hdPerfil >= 0 && hdPerfil <= 24 ? hdPerfil : 7);
@@ -240,50 +240,50 @@ function _initDatosYConfig() {
     );
     D.registros().splice(0, D.registros().length, ...(perfilActual.registros || []));
 
-    const historialCargado = HistoryManager.loadFromLocalStorage();
+    const historialCargado = GestorHistorial.loadFromLocalStorage();
     if (historialCargado) {
-        const estadoActual = HistoryManager.getCurrentState();
+        const estadoActual = GestorHistorial.getCurrentState();
         if (estadoActual !== null && estadoActual !== undefined) {
             D.registros().splice(0, D.registros().length, ...estadoActual);
         } else {
             console.warn('Historial corrupto, descartado. Usando registros del perfil.');
-            HistoryManager.clear();
+            GestorHistorial.clear();
         }
     }
     D.recalcularTotalesEnMemoria();
     if (!historialCargado) {
-        HistoryManager.saveState(D.registros());
+        GestorHistorial.saveState(D.registros());
     }
 
     const migrados = D.migrarObjetivoHorasFaltante();
     if (migrados > 0) {
         console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${D.horasDiarias()}h).`);
-        HistoryManager.parchearRegistrosEnHistorial(r => {
+        GestorHistorial.parchearRegistrosEnHistorial(r => {
             if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
                 r.objetivoHoras = D.horasDiarias();
                 return true;
             }
             return false;
         });
-        if (PerfilManager) PerfilManager.guardarDatosPerfilActual();
+        if (GestorPerfiles) GestorPerfiles.guardarDatosPerfilActual();
     }
 
-    HistoryManager.updateButtons();
+    GestorHistorial.updateButtons();
 }
 
 function _restaurarEstadoVisual() {
     const config = D.cargarConfiguracion();
-    ThemeManager.aplicarTema(config.tema);
-    Motion.init();
+    GestorTemas.aplicarTema(config.tema);
+    Movimiento.init();
 
-    $('fecha').value = TimeUtils.obtenerFechaHoy();
+    $('fecha').value = TiempoUtils.obtenerFechaHoy();
 
     try {
-        const persistir = StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true);
-        if (persistir && StorageHelper.getBoolean(STORAGE_KEYS.FORMULARIO_EXPANDIDO)) toggleFormulario();
-        if (persistir && StorageHelper.getBoolean(STORAGE_KEYS.STATS_EXPANDIDO)) toggleStats();
+        const persistir = Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true);
+        if (persistir && Almacenamiento.getBoolean(STORAGE_KEYS.FORMULARIO_EXPANDIDO)) toggleFormulario();
+        if (persistir && Almacenamiento.getBoolean(STORAGE_KEYS.STATS_EXPANDIDO)) toggleStats();
 
-        const estadoHistorico = persistir ? StorageHelper.getItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'cerrado') : 'cerrado';
+        const estadoHistorico = persistir ? Almacenamiento.getItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'cerrado') : 'cerrado';
         if (estadoHistorico === 'meses' || estadoHistorico === 'completo') {
             const contenido = $('contenido-historico');
             const icon = $('icon-indicator-historico');
@@ -297,7 +297,7 @@ function _restaurarEstadoVisual() {
             }
         }
 
-        const usarCalendario = StorageHelper.getBoolean(STORAGE_KEYS.VISTA_HISTORICO_CAL, true);
+        const usarCalendario = Almacenamiento.getBoolean(STORAGE_KEYS.VISTA_HISTORICO_CAL, true);
         if (usarCalendario) {
             if ($('contenido-historico')?.classList.contains('expanded')) {
                 setVistaHistoricoCalendario(false);
@@ -312,13 +312,13 @@ function _restaurarEstadoVisual() {
 }
 
 function _initAutoSync() {
-    const _tieneCredenciales = GistSync.getToken() && GistSync.esGistIdValido(GistSync.getGistId());
+    const _tieneCredenciales = SincronizacionGist.getToken() && SincronizacionGist.esGistIdValido(SincronizacionGist.getGistId());
     if (!_tieneCredenciales) return;
-    const estado = GistSync.getAutoSync();
-    if (estado === 1 && GistSync.dentroDelRangoHorario() && !GistSync.superaLimite('bajar')) {
-        setTimeout(async () => { await gistBajar(true); GistSync.marcarSync('bajar'); }, 2000);
-    } else if (estado === 2 && GistSync.dentroDelRangoHorario() && !GistSync.superaLimite('subir')) {
-        setTimeout(async () => { await gistSubir(); GistSync.marcarSync('subir'); }, 2000);
+    const estado = SincronizacionGist.getAutoSync();
+    if (estado === 1 && SincronizacionGist.dentroDelRangoHorario() && !SincronizacionGist.superaLimite('bajar')) {
+        setTimeout(async () => { await gistBajar(true); SincronizacionGist.marcarSync('bajar'); }, 2000);
+    } else if (estado === 2 && SincronizacionGist.dentroDelRangoHorario() && !SincronizacionGist.superaLimite('subir')) {
+        setTimeout(async () => { await gistSubir(); SincronizacionGist.marcarSync('subir'); }, 2000);
     }
 }
 
@@ -353,7 +353,7 @@ function _initListenerEscape() {
         const modal = document.querySelector('.modal.show');
         if (!modal) return;
         e.preventDefault();
-        ModalManager.ejecutarAccionCierre(modal.id);
+        GestorModales.ejecutarAccionCierre(modal.id);
     });
 }
 
@@ -407,7 +407,7 @@ function _initListenersOtros() {
 
 async function init() {
     if (typeof Storage === 'undefined') { alert('Tu navegador no soporta localStorage.'); return; }
-    StorageHelper.migrarClavesLegadas();
+    Almacenamiento.migrarClavesLegadas();
 
     _initGlobales();
     _initListenersFormulario();
@@ -420,14 +420,14 @@ async function init() {
     const btnEliminarPerfil = $('btn-eliminar-perfil-editor');
     if (btnEliminarPerfil) btnEliminarPerfil.disabled = true;
 
-    PWAInstaller.init();
+    InstaladorPWA.init();
     _suscribirCambiosPermisoNotificaciones();
     actualizarUI(null, false, false, true, true);
     _iniciarCicloStats();
     actualizarBotonesHistorico();
 
-    const hoy = TimeUtils.obtenerFechaHoy();
-    const hoyEsLaborable = TimeUtils.esFechaHabil(hoy, D.diasHabilesEnFecha(hoy));
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    const hoyEsLaborable = TiempoUtils.esFechaHabil(hoy, D.diasHabilesEnFecha(hoy));
     if (D.vistaActual() === 'semana' && hoyEsLaborable) {
         setTimerAutoVista(setTimeout(() => {
             setTimerAutoVista(null);
@@ -454,4 +454,4 @@ async function init() {
     window.addEventListener('resize', actualizarOffsetsStickyMesDebounced);
 }
 
-export const UILogic = { init };
+export const UILogica = { init };

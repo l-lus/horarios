@@ -1,19 +1,19 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { DataManagement } from '../services/data-management.js';
+import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UICore } from './ui-core.js';
-import { CardLote } from './card-lote.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-const D = DataManagement;
+import { UIBase } from './ui-base.js';
+import { TarjetaLote } from './tarjeta-lote.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+const D = GestionDatos;
 
 // ====================================================================
 //                     UI CALENDAR MODULE
 // ====================================================================
-const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray } = UICore;
+const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray } = UIBase;
 
 function _cerrarSelectorMeses(idResaltar = null) {
     const grid = document.getElementById('calendario-grid');
@@ -49,7 +49,7 @@ function abrirSelectorMesesCalendario() {
         const anioActual = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
         const mesActual = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
 
-        TimeUtils.agruparMesesPorAnio(mesesOrdenados).forEach((meses, anioStr) => {
+        TiempoUtils.agruparMesesPorAnio(mesesOrdenados).forEach((meses, anioStr) => {
             const separador = Object.assign(document.createElement('div'), {
                 className: 'selector-meses-anio-header',
                 textContent: anioStr
@@ -61,7 +61,7 @@ function abrirSelectorMesesCalendario() {
                 const anio = parseInt(aStr), mes = parseInt(mesStr) - 1;
                 const btn = Object.assign(document.createElement('button'), {
                     className: 'btn-mes-calendario',
-                    textContent: TimeUtils.nombreMesCapitalizado(mesAnio)
+                    textContent: TiempoUtils.nombreMesCapitalizado(mesAnio)
                 });
                 if (anio === anioActual && mes === mesActual) btn.classList.add('activo');
                 btn.onclick = (e) => { e.stopPropagation(); _calendarioMes = { anio, mes }; _cerrarSelectorMeses(); };
@@ -107,15 +107,15 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     const hoy = new Date();
     const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
     const mes = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
-    if (titulo) titulo.textContent = `${TimeUtils.nombreMesPorIndice(mes)} ${anio}`;
-    const fechaStr = (y, m, d) => `${y}-${TimeUtils._pad2(m + 1)}-${TimeUtils._pad2(d)}`;
+    if (titulo) titulo.textContent = `${TiempoUtils.nombreMesPorIndice(mes)} ${anio}`;
+    const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
     const registrosFiltrados = D.obtenerRegistrosFiltrados();
     const todosLosRegistros = D.registros();
     const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
     const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
     const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
     const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
-    const claveMes = `${anio}-${TimeUtils._pad2(mes + 1)}`;
+    const claveMes = `${anio}-${TiempoUtils._pad2(mes + 1)}`;
     const notasDelMes = TiposRegistro.mapaNotasPorRegistro(todosLosRegistros.filter(r => r.fecha.startsWith(claveMes)));
     const claseDelDia = (fecha) => {
         const r = regsPorFecha[fecha];
@@ -159,7 +159,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
         const cell = document.createElement('div');
         let clases = `calendario-dia ${clase}`;
         if (esHoy) clases += ' hoy';
-        if (clase === 'dia-sin-registro' && !TimeUtils.esFechaHabil(fecha, D.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
+        if (clase === 'dia-sin-registro' && !TiempoUtils.esFechaHabil(fecha, D.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
         if (esNuevo) {
             clases += ' nuevo-registro-animacion';
             cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
@@ -184,9 +184,9 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
         frag.appendChild(cell);
     }
 
-    const { inicio: semIni, fin: semFin } = TimeUtils.obtenerSemanaRangoActual();
-    const esLaborable = (f) => TimeUtils.esFechaHabil(f, D.diasHabilesEnFecha(f));
-    const fechaDeDia = (d) => TimeUtils.formatearFechaLocal(new Date(anio, mes, d));
+    const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
+    const esLaborable = (f) => TiempoUtils.esFechaHabil(f, D.diasHabilesEnFecha(f));
+    const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
     const segmentosSemana = [];
     for (let d = 1; d <= ultimoDia.getDate(); d++) {
         const f = fechaStr(anio, mes, d);
@@ -230,7 +230,7 @@ let _vistaHistoricoCalendario = false;
 
 function toggleVistaHistorico() {
     _vistaHistoricoCalendario = !_vistaHistoricoCalendario;
-    StorageHelper.setItem(STORAGE_KEYS.VISTA_HISTORICO_CAL, _vistaHistoricoCalendario);
+    Almacenamiento.setItem(STORAGE_KEYS.VISTA_HISTORICO_CAL, _vistaHistoricoCalendario);
 
     const lista = document.getElementById('lista-registros');
     const cal = document.getElementById('vista-calendario-historico');
@@ -271,24 +271,24 @@ function _buildInfoHtmlRegistro(reg, asignaciones = null) {
         const label = S.escapeHtml(tipo.label);
         const colorSafe = /^[a-z]+$/.test(tipo.color || '') ? tipo.color : 'purple';
         const fechaCompensadaHtml = est.fechaCompensada
-            ? ` <span class="cal-popup-badge cal-popup-badge--${colorSafe}">${S.escapeHtml(TimeUtils.fechaCorta(est.fechaCompensada))}</span>`
+            ? ` <span class="cal-popup-badge cal-popup-badge--${colorSafe}">${S.escapeHtml(TiempoUtils.fechaCorta(est.fechaCompensada))}</span>`
             : '';
         return `<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${emoji} ${label}</span>${fechaCompensadaHtml}`;
     }
     if (est.estado === 'en-curso') {
-        const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
+        const esHoy = reg.fecha === TiempoUtils.obtenerFechaHoy();
         return `<div class="cal-popup-info cal-popup-info--blue">${esHoy ? 'En curso' : 'Incompleto'}</div>
             <div class="cal-popup-3l">Entrada: ${S.escapeHtml(reg.entrada)}</div>`;
     }
     let tfStr = '';
     if (reg.tiempoFuera && reg.tiempoFuera !== '00:00') {
-        tfStr = `${TimeUtils.horasATexto(TimeUtils.horaAMinutos(reg.tiempoFuera) / 60, 'short')} fuera`;
+        tfStr = `${TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(reg.tiempoFuera) / 60, 'short')} fuera`;
     }
     const diffClase = { cumplido: 'cal-popup-info--green', cubierto: 'cal-popup-info--gold', incompleto: 'cal-popup-info--red' }[est.estado] || '';
-    const totalConDiff = TimeUtils.horasATexto(reg.total || 0, 'short') + (est.diffText ? ` (${est.diffText})` : '');
+    const totalConDiff = TiempoUtils.horasATexto(reg.total || 0, 'short') + (est.diffText ? ` (${est.diffText})` : '');
     const cubiertoLineaHtml = est.estado === 'cubierto' ? `<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>` : '';
     const compensadoLineaHtml = est.fechaCompensado
-        ? `<span class="cal-popup-badge cal-popup-badge--purple">→ ${S.escapeHtml(TimeUtils.fechaCorta(est.fechaCompensado))}</span>`
+        ? `<span class="cal-popup-badge cal-popup-badge--purple">→ ${S.escapeHtml(TiempoUtils.fechaCorta(est.fechaCompensado))}</span>`
         : '';
     return `<div class="cal-popup-info${diffClase ? ' ' + diffClase : ''}">${totalConDiff}</div>
         ${cubiertoLineaHtml}
@@ -314,8 +314,8 @@ function _cajaPopupHtml(icono, texto) {
 
 function _formatearFechaLabelPopup(fecha) {
     const d = new Date(fecha + 'T12:00:00');
-    const diaSemana = TimeUtils.obtenerNombreDia(fecha).toLowerCase();
-    const mes = TimeUtils.nombreMesPorIndice(d.getMonth());
+    const diaSemana = TiempoUtils.obtenerNombreDia(fecha).toLowerCase();
+    const mes = TiempoUtils.nombreMesPorIndice(d.getMonth());
     return S.escapeHtml(`${diaSemana}, ${d.getDate()} de ${mes}`);
 }
 
@@ -364,11 +364,11 @@ function _popupCalendario(event, registroId, asignaciones = null) {
 
     popup.querySelector('#_cal-popup-btn-edit')?.addEventListener('click', () => {
         cerrar();
-        DataManagement.editarRegistro(reg.id);
+        GestionDatos.editarRegistro(reg.id);
     });
     popup.querySelector('#_cal-popup-btn-grupo')?.addEventListener('click', () => {
         cerrar();
-        DataManagement.editarGrupo(grupoDelRegistro);
+        GestionDatos.editarGrupo(grupoDelRegistro);
     });
 
     popup.addEventListener('mouseenter', () => clearTimeout(_popupCalendarioHoverTimer));
@@ -432,18 +432,18 @@ function _filaSemana(r, asignaciones) {
     const est = SaldoSemanal.estadoDeRegistro(r, asignaciones);
     const color = SaldoSemanal.colorDeEstado(est);
     const colorSafe = /^[a-z]+$/.test(color || '') ? color : 'neutro';
-    const diaTxt = `${TimeUtils.obtenerNombreDia(r.fecha).slice(0, 3)} ${parseInt(r.fecha.substring(8), 10)}`;
+    const diaTxt = `${TiempoUtils.obtenerNombreDia(r.fecha).slice(0, 3)} ${parseInt(r.fecha.substring(8), 10)}`;
     let medio = '', totalHtml = '', diffHtml = '';
     if (est.estado === 'especial') {
         medio = `${est.tipo.emoji ?? ''} ${est.tipo.label}`.trim();
     } else if (est.estado === 'en-curso') {
         medio = `${r.entrada} → …`;
-        totalHtml = `<span class="cal-semana-hs cal-popup-info--blue">${r.fecha === TimeUtils.obtenerFechaHoy() ? 'En curso' : 'Incompleto'}</span>`;
+        totalHtml = `<span class="cal-semana-hs cal-popup-info--blue">${r.fecha === TiempoUtils.obtenerFechaHoy() ? 'En curso' : 'Incompleto'}</span>`;
     } else if (est.estado === 'sin-datos') {
         medio = '-';
     } else {
         medio = `${r.entrada} → ${r.salida}`;
-        totalHtml = `<span class="cal-semana-hs">${TimeUtils.horasATexto(r.total || 0, 'short')}</span>`;
+        totalHtml = `<span class="cal-semana-hs">${TiempoUtils.horasATexto(r.total || 0, 'short')}</span>`;
         if (est.diffText) diffHtml = `<span class="cal-semana-diff cal-popup-info--${colorSafe}">${est.diffText}</span>`;
     }
     return `<span class="cal-semana-punto cal-semana-punto--${colorSafe}"></span>
@@ -454,27 +454,27 @@ function _filaSemana(r, asignaciones) {
 }
 
 function _htmlPopupSemana(lunes) {
-    const d = TimeUtils.parsearFechaLocal(lunes);
+    const d = TiempoUtils.parsearFechaLocal(lunes);
     d.setDate(d.getDate() + 6);
-    const domingo = TimeUtils.formatearFechaLocal(d);
+    const domingo = TiempoUtils.formatearFechaLocal(d);
     const asignaciones = D.calcularAsignacionesCompensatorio();
     const registros = D.registros()
         .filter(r => r.fecha >= lunes && r.fecha <= domingo)
         .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-    const titulo = `<div class="cal-popup-fecha">${S.escapeHtml(TimeUtils.formatearRangoSemana(lunes))}</div>`;
+    const titulo = `<div class="cal-popup-fecha">${S.escapeHtml(TiempoUtils.formatearRangoSemana(lunes))}</div>`;
     if (!registros.length) return `${titulo}<div class="cal-popup-sin-reg">Sin registros</div>`;
 
     const total = registros.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0);
     const buffer = D.calcularBufferPeriodo(lunes, domingo, false, 0, asignaciones);
-    const bufferTxt = TimeUtils.formatoDiferencia(buffer, 0);
+    const bufferTxt = TiempoUtils.formatoDiferencia(buffer, 0);
     const chip = bufferTxt
         ? `<span class="registro-total ${buffer > 0 ? 'green-text' : 'red-text'}">${bufferTxt}</span>`
         : '';
     const filas = registros.map(r => _filaSemana(r, asignaciones)).join('');
     return `${titulo}
         <div class="cal-semana-total">
-            <span class="cal-popup-info">${TimeUtils.horasATexto(total, 'short')}</span>
+            <span class="cal-popup-info">${TiempoUtils.horasATexto(total, 'short')}</span>
             ${chip}
         </div>
         <div class="cal-semana-lista">${filas}</div>`;
@@ -492,7 +492,7 @@ function _popupSemana(celda) {
         : document.querySelector(`#calendario-grid .calendario-dia[data-dia="${fecha}"]`);
     if (!ancla) return;
 
-    const lunes = TimeUtils.obtenerLunesSemanaISO(fecha);
+    const lunes = TiempoUtils.obtenerLunesSemanaISO(fecha);
     const { popup } = _crearPopupFlotante({
         className: 'cal-popup cal-popup-semana',
         id: '_cal-popup',
@@ -518,7 +518,7 @@ function _popupCalendarioDiaSinRegistro(event, fecha) {
     _cerrarPopupCalendario();
     if (mismaFecha) return;
 
-    const esFechaFutura = fecha > TimeUtils.obtenerFechaHoy();
+    const esFechaFutura = fecha > TiempoUtils.obtenerFechaHoy();
     const fechaLabel = _formatearFechaLabelPopup(fecha);
 
     const { popup, cerrar } = _crearPopupFlotante({
@@ -543,14 +543,14 @@ function _popupCalendarioDiaSinRegistro(event, fecha) {
     });
     _popupCalendarioEl = popup;
 
-    popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => { cerrar(); CardLote._irAFicharConFecha(fecha, false); });
-    popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrar(); CardLote._irAFicharConFecha(fecha, true); });
+    popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => { cerrar(); TarjetaLote._irAFicharConFecha(fecha, false); });
+    popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrar(); TarjetaLote._irAFicharConFecha(fecha, true); });
 }
 
 function _popupCalendarioHover(event, registroId, asignaciones = null) {
     if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
     if (!window.matchMedia('(hover: hover)').matches) return;
-    const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
+    const stored = Almacenamiento.getItem(STORAGE_KEYS.HOVER_POPUP, null);
     if (stored !== 'true') return;
     if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
     if (_popupCalendarioEl && !_popupCalendarioEsHover) return;
@@ -563,13 +563,13 @@ function _popupCalendarioHover(event, registroId, asignaciones = null) {
 
 function _onclickCalendarioDia(event, registroId, asignaciones = null) {
     const esDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    const stored = StorageHelper.getItem(STORAGE_KEYS.HOVER_POPUP, null);
+    const stored = Almacenamiento.getItem(STORAGE_KEYS.HOVER_POPUP, null);
     const hoverActivo = esDesktop && stored === 'true';
 
     if (hoverActivo) {
         _cerrarPopupCalendario();
         clearTimeout(_popupCalendarioHoverTimer);
-        DataManagement.editarRegistro(registroId);
+        GestionDatos.editarRegistro(registroId);
     } else {
         if (_popupCalendarioEl?.dataset.registroId === registroId) {
             _cerrarPopupCalendario();

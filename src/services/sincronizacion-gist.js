@@ -1,8 +1,8 @@
-import { STORAGE_KEYS } from '../core/constants.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { PerfilManager } from './perfil-manager.js';
-import { SecurityAndUtils as S } from '../core/security.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorPerfiles } from './gestor-perfiles.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
 
 // ====================================================================
 //                     GIST SYNC MODULE
@@ -14,20 +14,20 @@ const RANGO_HORARIO_DEFAULT = { desde: '21:00', hasta: '00:00' };
 function esGistIdValido(id) { return id && GIST_ID_REGEX.test(id.trim()); }
 
 function _conPerfil(fn) {
-    if (!PerfilManager) return;
-    const perfil = PerfilManager.obtenerDatosPerfil();
-    if (perfil) { fn(perfil); PerfilManager.guardarPerfiles(); }
+    if (!GestorPerfiles) return;
+    const perfil = GestorPerfiles.obtenerDatosPerfil();
+    if (perfil) { fn(perfil); GestorPerfiles.guardarPerfiles(); }
 }
 
-function getToken() { return StorageHelper.getItem(STORAGE_KEYS.GIST_TOKEN, ''); }
+function getToken() { return Almacenamiento.getItem(STORAGE_KEYS.GIST_TOKEN, ''); }
 
-function getGistId() { return PerfilManager?.obtenerDatosPerfil()?.gistId || ''; }
-function getLastSync() { return PerfilManager?.obtenerDatosPerfil()?.gistLastSync || null; }
-function getMergeBehavior() { return PerfilManager?.obtenerDatosPerfil()?.gistMergeBehavior || 'replace'; }
+function getGistId() { return GestorPerfiles?.obtenerDatosPerfil()?.gistId || ''; }
+function getLastSync() { return GestorPerfiles?.obtenerDatosPerfil()?.gistLastSync || null; }
+function getMergeBehavior() { return GestorPerfiles?.obtenerDatosPerfil()?.gistMergeBehavior || 'replace'; }
 function setMergeBehavior(valor) { _conPerfil(perfil => { perfil.gistMergeBehavior = valor; }); }
 
 function getAutoSync() {
-    const val = PerfilManager?.obtenerDatosPerfil()?.gistAutoSync;
+    const val = GestorPerfiles?.obtenerDatosPerfil()?.gistAutoSync;
     if (val === 1 || val === 2) return val;
     if (val === true) return 1;
     return 0;
@@ -35,7 +35,7 @@ function getAutoSync() {
 function setAutoSync(valor) { _conPerfil(perfil => { perfil.gistAutoSync = valor; }); }
 
 function getRangoHorario() {
-    const perfil = PerfilManager?.obtenerDatosPerfil();
+    const perfil = GestorPerfiles?.obtenerDatosPerfil();
     return {
         desde: perfil?.gistRangoDesde || RANGO_HORARIO_DEFAULT.desde,
         hasta: perfil?.gistRangoHasta || RANGO_HORARIO_DEFAULT.hasta
@@ -44,7 +44,7 @@ function getRangoHorario() {
 function setRangoHorario(desde, hasta) { _conPerfil(perfil => { perfil.gistRangoDesde = desde; perfil.gistRangoHasta = hasta; }); }
 
 function _claveHoraActual() {
-    return TimeUtils.fechaLocalISOFull().slice(0, 13);
+    return TiempoUtils.fechaLocalISOFull().slice(0, 13);
 }
 
 function _clavesSyncCount(tipo) {
@@ -52,7 +52,7 @@ function _clavesSyncCount(tipo) {
 }
 
 function getSyncCount(tipo) {
-    const perfil = PerfilManager?.obtenerDatosPerfil();
+    const perfil = GestorPerfiles?.obtenerDatosPerfil();
     const { key, keyFecha } = _clavesSyncCount(tipo);
     if (!perfil?.[keyFecha] || perfil[keyFecha] !== _claveHoraActual()) return 0;
     return perfil?.[key] || 0;
@@ -71,13 +71,13 @@ function marcarSync(tipo) {
 
 function getSyncLimite(tipo) {
     const defValue = tipo === 'bajar' ? 2 : (tipo === 'subir' ? 1 : 2);
-    return StorageHelper.getNumber(STORAGE_KEYS.GIST_LIMITE(tipo), defValue);
+    return Almacenamiento.getNumber(STORAGE_KEYS.GIST_LIMITE(tipo), defValue);
 }
 
 function setSyncLimite(tipo, valor) {
     const anteriorLimite = getSyncLimite(tipo);
-    StorageHelper.setItem(STORAGE_KEYS.GIST_LIMITE(tipo), valor);
-    if (anteriorLimite === 0 && valor > 0 && PerfilManager) {
+    Almacenamiento.setItem(STORAGE_KEYS.GIST_LIMITE(tipo), valor);
+    if (anteriorLimite === 0 && valor > 0 && GestorPerfiles) {
         const { key, keyFecha } = _clavesSyncCount(tipo);
         _conPerfil(perfil => {
             perfil[key] = 0;
@@ -94,13 +94,13 @@ function superaLimite(tipo) {
 
 function dentroDelRangoHorario() {
     const { desde, hasta } = getRangoHorario();
-    const horaActual = TimeUtils.obtenerHoraActual();
+    const horaActual = TiempoUtils.obtenerHoraActual();
     return desde <= hasta ? (horaActual >= desde && horaActual <= hasta) : (horaActual >= desde || horaActual <= hasta);
 }
 
 function saveCredentials(token, gistId) {
-    if (token) StorageHelper.setItem(STORAGE_KEYS.GIST_TOKEN, S.sanitizeString(token.trim(), 256));
-    else StorageHelper.removeItem(STORAGE_KEYS.GIST_TOKEN);
+    if (token) Almacenamiento.setItem(STORAGE_KEYS.GIST_TOKEN, S.sanitizeString(token.trim(), 256));
+    else Almacenamiento.removeItem(STORAGE_KEYS.GIST_TOKEN);
 
     _conPerfil(perfil => {
         if (gistId && esGistIdValido(gistId)) perfil.gistId = gistId.trim();
@@ -144,7 +144,7 @@ async function subir(registros, diasHabiles, horasDiarias, historialDiasHabiles,
     if (!token) throw new Error('Falta el token de GitHub');
 
     const hash = await S.calcularHashSHA256(registros);
-    const data = { registros, diasHabiles, horasDiarias, historialDiasHabiles, ...configExtra, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
+    const data = { registros, diasHabiles, horasDiarias, historialDiasHabiles, ...configExtra, fecha: TiempoUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
     const gistId = getGistId();
     const gistIdValido = esGistIdValido(gistId);
     const url = gistIdValido ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
@@ -176,4 +176,4 @@ async function bajar() {
     return data;
 }
 
-export const GistSync = { getToken, getGistId, getLastSync, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, getSyncCount, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, subir, bajar };
+export const SincronizacionGist = { getToken, getGistId, getLastSync, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, getSyncCount, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, subir, bajar };

@@ -1,5 +1,5 @@
-import { TimeUtils } from '../core/time-utils.js';
-import { SecurityAndUtils as S } from '../core/security.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { TiposRegistro } from './tipos-registro.js';
 
 // ====================================================================
@@ -86,13 +86,13 @@ function _hayEspacioParaRegistros(cantidadAAgregar = 1) {
 }
 
 function _fechaFuturaInvalida(fecha, entrada, salida) {
-    return fecha > TimeUtils.obtenerFechaHoy() && !TiposRegistro.esRegistroEspecial(entrada, salida);
+    return fecha > TiempoUtils.obtenerFechaHoy() && !TiposRegistro.esRegistroEspecial(entrada, salida);
 }
 
 function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
     const tfEfectivo = ignorarTiempoFuera ? null : tf;
-    const tfMinutos = tfEfectivo ? TimeUtils.horaAMinutos(tfEfectivo) : 0;
-    const crMinutos = cr ? TimeUtils.horaAMinutos(cr) : 0;
+    const tfMinutos = tfEfectivo ? TiempoUtils.horaAMinutos(tfEfectivo) : 0;
+    const crMinutos = cr ? TiempoUtils.horaAMinutos(cr) : 0;
 
     if (!esCalculoTemporal) {
         const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(e, s);
@@ -169,7 +169,7 @@ async function _guardarConCicloSiHoy(idOrIds, esHoy, fase = null) {
         : ejecutar();
 }
 
-export const AppState = {
+export const EstadoApp = {
     configurarNotificaciones,
     _notify: () => notify,
     setPerfilHooks,

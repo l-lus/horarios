@@ -1,22 +1,22 @@
-import { CardFondos } from './card-fondos.js';
-import { CardTimerBreak } from './card-timer-break.js';
-import { CardLote } from './card-lote.js';
-import { STORAGE_KEYS, horasGte, horasEq } from '../core/constants.js';
+import { TarjetaFondos } from './tarjeta-fondos.js';
+import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
+import { TarjetaLote } from './tarjeta-lote.js';
+import { STORAGE_KEYS, horasGte, horasEq } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { AppEvents } from '../core/events.js';
+import { EventosApp } from '../core/eventos.js';
 import { FONDOS_SVG } from '../data/fondos.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { PerfilManager } from '../services/perfil-manager.js';
-import { HistoryManager } from '../services/history-manager.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorPerfiles } from '../services/gestor-perfiles.js';
+import { GestorHistorial } from '../services/gestor-historial.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { DataManagement } from '../services/data-management.js';
+import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UICore } from './ui-core.js';
+import { UIBase } from './ui-base.js';
 import { UICalendario } from './ui-calendario.js';
 import { UIHistorico } from './ui-historico.js';
 import { UIEstadisticas } from './ui-estadisticas.js';
-const D = DataManagement;
+const D = GestionDatos;
 
 // ====================================================================
 //                     UI CLOCK-IN CARD MODULE
@@ -27,37 +27,37 @@ const {
     _animarMutacion, _animarSlideElemento, toggleSeccionGen, _crearOpcion, setIconoBtn,
     aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible,
     _animarConteo, _conteoEnCurso, _cancelarConteo, _durSiAnima
-} = UICore;
+} = UIBase;
 
-const { setProgressBarColor, getFondoCard, setFondoCard, toggleFondoCard, _getLabelFondo, actualizarFondoCard } = CardFondos;
-const _breakStorageKey = (...args) => CardTimerBreak._breakStorageKey(...args);
-const _minutosBreakActivo = (...args) => CardTimerBreak._minutosBreakActivo(...args);
-const _minutosAHoraWrap = (...args) => CardTimerBreak._minutosAHoraWrap(...args);
-const _formatearMinutosCorto = (...args) => CardTimerBreak._formatearMinutosCorto(...args);
-const _obtenerOCrearLabelTF = (...args) => CardTimerBreak._obtenerOCrearLabelTF(...args);
-const _quitarLabelTF = (...args) => CardTimerBreak._quitarLabelTF(...args);
-const _actualizarCardTimerRunning = (...args) => CardTimerBreak._actualizarCardTimerRunning(...args);
-const actualizarEstadoBotonTimerMain = (...args) => CardTimerBreak.actualizarEstadoBotonTimerMain(...args);
-const toggleTimerBreakMain = (...args) => CardTimerBreak.toggleTimerBreakMain(...args);
-const pegarHoraActual = (...args) => CardLote.pegarHoraActual(...args);
-const limpiarCampo = (...args) => CardLote.limpiarCampo(...args);
-const toggleModoLote = (...args) => CardLote.toggleModoLote(...args);
-const ejecutarAccionRegistro = (...args) => CardLote.ejecutarAccionRegistro(...args);
-const registrarLoteDesdeCard = (...args) => CardLote.registrarLoteDesdeCard(...args);
-const poblarSelectoresTipos = (...args) => CardLote.poblarSelectoresTipos(...args);
-const actualizarBotonLote = (...args) => CardLote.actualizarBotonLote(...args);
-const toggleFormulario = (...args) => CardLote.toggleFormulario(...args);
-const _irAFicharConFecha = (...args) => CardLote._irAFicharConFecha(...args);
-const _scrollACardFichar = (...args) => CardLote._scrollACardFichar(...args);
-const alternarFechaActual = (...args) => CardLote.alternarFechaActual(...args);
+const { setProgressBarColor, getFondoCard, setFondoCard, toggleFondoCard, _getLabelFondo, actualizarFondoCard } = TarjetaFondos;
+const _breakStorageKey = (...args) => TarjetaTiempoFuera._breakStorageKey(...args);
+const _minutosBreakActivo = (...args) => TarjetaTiempoFuera._minutosBreakActivo(...args);
+const _minutosAHoraWrap = (...args) => TarjetaTiempoFuera._minutosAHoraWrap(...args);
+const _formatearMinutosCorto = (...args) => TarjetaTiempoFuera._formatearMinutosCorto(...args);
+const _obtenerOCrearLabelTF = (...args) => TarjetaTiempoFuera._obtenerOCrearLabelTF(...args);
+const _quitarLabelTF = (...args) => TarjetaTiempoFuera._quitarLabelTF(...args);
+const _actualizarCardTimerRunning = (...args) => TarjetaTiempoFuera._actualizarCardTimerRunning(...args);
+const actualizarEstadoBotonTimerMain = (...args) => TarjetaTiempoFuera.actualizarEstadoBotonTimerMain(...args);
+const toggleTimerBreakMain = (...args) => TarjetaTiempoFuera.toggleTimerBreakMain(...args);
+const pegarHoraActual = (...args) => TarjetaLote.pegarHoraActual(...args);
+const limpiarCampo = (...args) => TarjetaLote.limpiarCampo(...args);
+const toggleModoLote = (...args) => TarjetaLote.toggleModoLote(...args);
+const ejecutarAccionRegistro = (...args) => TarjetaLote.ejecutarAccionRegistro(...args);
+const registrarLoteDesdeCard = (...args) => TarjetaLote.registrarLoteDesdeCard(...args);
+const poblarSelectoresTipos = (...args) => TarjetaLote.poblarSelectoresTipos(...args);
+const actualizarBotonLote = (...args) => TarjetaLote.actualizarBotonLote(...args);
+const toggleFormulario = (...args) => TarjetaLote.toggleFormulario(...args);
+const _irAFicharConFecha = (...args) => TarjetaLote._irAFicharConFecha(...args);
+const _scrollACardFichar = (...args) => TarjetaLote._scrollACardFichar(...args);
+const alternarFechaActual = (...args) => TarjetaLote.alternarFechaActual(...args);
 let _timerAutoVista = null;
 let _suprimirAnimacionInterna = false;
 
 function _estadoDiasHabiles(diasHabiles) {
-    const hoy = TimeUtils.obtenerFechaHoy();
+    const hoy = TiempoUtils.obtenerFechaHoy();
     const diaSemana = new Date().getDay();
     const hoyIndex = diaSemana === 0 ? 7 : diaSemana;
-    const esDiaHabil = TimeUtils.esFechaHabil(hoy, diasHabiles);
+    const esDiaHabil = TiempoUtils.esFechaHabil(hoy, diasHabiles);
     let quedanDiasFuturos;
     if (Array.isArray(diasHabiles)) {
         quedanDiasFuturos = false;
@@ -72,8 +72,8 @@ function _estadoDiasHabiles(diasHabiles) {
 
 function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
     if (!Array.isArray(diasHabiles) || diasHabiles.length === 0 || horasDiarias <= 0) return false;
-    const fechasLaborables = TimeUtils.generarRangoFechas(ini, fn)
-        .filter(f => D.diasHabilesEnFecha(f).includes(TimeUtils.parsearFechaLocal(f).getDay()));
+    const fechasLaborables = TiempoUtils.generarRangoFechas(ini, fn)
+        .filter(f => D.diasHabilesEnFecha(f).includes(TiempoUtils.parsearFechaLocal(f).getDay()));
     if (fechasLaborables.length === 0) return false;
     return fechasLaborables.every(fecha => {
         const r = registros.find(x => x.fecha === fecha);
@@ -84,8 +84,8 @@ function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
 }
 
 function calcularEstadoCard(asignacionesPrecalculadas = null) {
-    const hoy = TimeUtils.obtenerFechaHoy();
-    const { inicio: ini, fin: fn } = TimeUtils.obtenerSemanaRangoActual();
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    const { inicio: ini, fin: fn } = TiempoUtils.obtenerSemanaRangoActual();
     const registros = D.registros();
     const horasDiarias = D.horasDiarias();
     const horasSemanales = D.horasSemanales();
@@ -106,7 +106,7 @@ function calcularEstadoCard(asignacionesPrecalculadas = null) {
     const regActivo = (ayerAbierto && !regHoy?.entrada) ? regAyer
         : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
     if (regActivo) {
-        const t = D.calcularHoras(regActivo.entrada, TimeUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
+        const t = D.calcularHoras(regActivo.entrada, TiempoUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
         tiempoHoy = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
     } else if (!tipoEspecialHoy && regHoy?.salida) {
         tiempoHoy = regHoy.total;
@@ -130,8 +130,8 @@ function calcularEstadoCard(asignacionesPrecalculadas = null) {
         registros.filter(r => r.fecha >= ini && r.fecha <= fn).map(r => [r.fecha, r])
     );
     let objetivoSemana = 0;
-    for (const isoDate of TimeUtils.generarRangoFechas(ini, fn)) {
-        if (!D.diasHabilesEnFecha(isoDate).includes(TimeUtils.parsearFechaLocal(isoDate).getDay())) continue;
+    for (const isoDate of TiempoUtils.generarRangoFechas(ini, fn)) {
+        if (!D.diasHabilesEnFecha(isoDate).includes(TiempoUtils.parsearFechaLocal(isoDate).getDay())) continue;
         const rDia = registrosSemanaCompletaPorFecha.get(isoDate);
         if (!rDia) { objetivoSemana += horasDiarias; continue; }
         const tipoDia = TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida);
@@ -164,20 +164,20 @@ function _estaCumplido(valor, objetivo) {
 let _formatoCortoStatsCache = false;
 
 function _refrescarFormatoCortoStatsCache() {
-    _formatoCortoStatsCache = StorageHelper.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false);
+    _formatoCortoStatsCache = Almacenamiento.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false);
 }
-AppEvents.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
+EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
 
 function _modoTextoStats() {
     return _formatoCortoStatsCache ? 'short' : 'long';
 }
 
 function _horasTextoStats(horasDecimales) {
-    return TimeUtils.horasATexto(horasDecimales, _modoTextoStats());
+    return TiempoUtils.horasATexto(horasDecimales, _modoTextoStats());
 }
 
 function _cantidadHoras(horasDecimales) {
-    const { horas, minutos } = TimeUtils.descomponerHorasDecimales(horasDecimales);
+    const { horas, minutos } = TiempoUtils.descomponerHorasDecimales(horasDecimales);
     const texto = _horasTextoStats(horasDecimales);
     const singular = horas === 1 || (horas === 0 && minutos === 1);
     return { texto, singular };
@@ -272,17 +272,17 @@ function derivarVistaSemana(est) {
 }
 
 function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHabiles) {
-    let minutosTotal = TimeUtils.horaAMinutos(reg.entrada) + (objetivoDiario * 60);
+    let minutosTotal = TiempoUtils.horaAMinutos(reg.entrada) + (objetivoDiario * 60);
 
     if (reg.tiempoFuera && !D.getIgnorarTiempoFuera()) {
-        minutosTotal += TimeUtils.horaAMinutos(reg.tiempoFuera);
+        minutosTotal += TiempoUtils.horaAMinutos(reg.tiempoFuera);
     }
 
     minutosTotal += _minutosBreakActivo();
 
     const horaSalida = _minutosAHoraWrap(minutosTotal);
 
-    const esLaborable = TimeUtils.esFechaHabil(reg.fecha, diasHabiles);
+    const esLaborable = TiempoUtils.esFechaHabil(reg.fecha, diasHabiles);
     const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
 
     if (mostrarBuffer) {
@@ -321,7 +321,7 @@ function derivarVistaHoy(est) {
     if (!regHoy || !regHoy.entrada) {
 
         if (est.ayerAbierto) {
-            const objetivoDiarioAyerAplica = TimeUtils.esFechaHabil(est.ayerStr, diasHabiles)
+            const objetivoDiarioAyerAplica = TiempoUtils.esFechaHabil(est.ayerStr, diasHabiles)
                 ? (est.regAyer ? D.objetivoDeRegistro(est.regAyer) : objetivoDiario)
                 : 0;
             const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
@@ -329,7 +329,7 @@ function derivarVistaHoy(est) {
             const colorBarra = objetivoDiarioAyerAplica === 0 ? 'blue' : (cumplido ? 'green' : 'blue');
             const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase, 'En curso (cruce de medianoche)');
 
-            const nombreDiaAyer = TimeUtils.obtenerNombreDia(est.ayerStr);
+            const nombreDiaAyer = TiempoUtils.obtenerNombreDia(est.ayerStr);
             const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
 
             return {
@@ -343,7 +343,7 @@ function derivarVistaHoy(est) {
         }
 
         return {
-            titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
+            titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
             stats: esDiaHabil ? '🎒' : '🌞',
             mensaje: esDiaHabil
                 ? (horasDiarias === 0 ? '' : 'Esperando registro...')
@@ -356,12 +356,12 @@ function derivarVistaHoy(est) {
     }
 
     const avisoAyerHint = est.ayerAbierto
-        ? { hint: `⚠️ Ayer (${TimeUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false }
+        ? { hint: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false }
         : null;
 
     if (tipoEspecialHoy) {
         return _conAvisoAyer({
-            titulo: _tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy())),
+            titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
             stats: `${tipoEspecialHoy.emoji} ${tipoEspecialHoy.label}`,
             mensaje: `¡${tipoEspecialHoy.descripcion}!`,
             mostrarMensaje: true,
@@ -418,7 +418,7 @@ function derivarVistaHoy(est) {
     const colorFinal = estadoFondoColor || (estadoFondo === 'finalizado_fail' ? 'red' : 'green');
 
     return _conAvisoAyer({
-        titulo: `${_tituloDia(TimeUtils.obtenerNombreDia(TimeUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal)}`,
+        titulo: `${_tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal)}`,
         stats: _horasTextoStats(tiempoHoy),
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: prog,
@@ -440,7 +440,7 @@ function _renderTituloAnimado(el, nuevoHTML, aplicarExtra) {
     if (_suprimirAnimacionInterna) { aplicarCambio(); return; }
     _animarMutacion(el, aplicarCambio);
 }
-CardTimerBreak.configurarRenderTitulo(_renderTituloAnimado);
+TarjetaTiempoFuera.configurarRenderTitulo(_renderTituloAnimado);
 
 function _renderTitulo(vista, sinAnimar = false, est = null) {
     const el = $('stats-titulo');
@@ -454,12 +454,12 @@ function _actualizarTiempoFueraConsolidado(el, est) {
 
     const regHoy = (est?.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est?.regHoy;
     const mostrar = !!regHoy && D.vistaActual() !== 'semana'
-        && StorageHelper.getItem(_breakStorageKey()) === null
+        && Almacenamiento.getItem(_breakStorageKey()) === null
         && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
 
     if (!mostrar) { _quitarLabelTF(el); return; }
 
-    const minutos = TimeUtils.horaAMinutos(regHoy.tiempoFuera);
+    const minutos = TiempoUtils.horaAMinutos(regHoy.tiempoFuera);
     if (!minutos) { _quitarLabelTF(el); return; }
 
     const label = _obtenerOCrearLabelTF(el);
@@ -494,7 +494,7 @@ function _fasesCiclo() {
     return [
         _cicloStatsValorHoras,
         `Entrada ${_cicloStatsEntrada}`,
-        _cicloStatsTiempoFuera ? `Tiempo fuera ${_formatearMinutosCorto(TimeUtils.horaAMinutos(_cicloStatsTiempoFuera))}` : null,
+        _cicloStatsTiempoFuera ? `Tiempo fuera ${_formatearMinutosCorto(TiempoUtils.horaAMinutos(_cicloStatsTiempoFuera))}` : null,
         _cicloStatsSalida ? `Salida ${_cicloStatsSalida}` : null,
     ].filter(Boolean);
 }
@@ -594,7 +594,7 @@ function _renderBarra(vista, desdeCero = false) {
         card.classList.add('conteo-inicial');
         el.style.width = '0%';
         void el.offsetWidth;
-        TimeUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
+        TiempoUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
     }
     el.style.width = `${vista.anchoBarra}%`;
     const esDiaria = D.vistaActual() !== 'semana';
@@ -664,9 +664,9 @@ function _planConteoInicial(vista, est) {
     }
     const valor = esSemana ? est.totalSemana : est.tiempoHoy;
     if (!(valor > 0)) return null;
-    const { horas, minutos } = TimeUtils.descomponerHorasDecimales(valor);
+    const { horas, minutos } = TiempoUtils.descomponerHorasDecimales(valor);
     const modo = _modoTextoStats();
-    const texto = e => TimeUtils.partesATexto(Math.round(horas * e), Math.round(minutos * e), modo, { horas, minutos });
+    const texto = e => TiempoUtils.partesATexto(Math.round(horas * e), Math.round(minutos * e), modo, { horas, minutos });
     if (texto(1) !== vista.stats) return null;
     return { texto };
 }
@@ -686,13 +686,13 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
 
     const conteo = conteoInicial ? _planConteoInicial(vista, est) : null;
 
-    const timerFueraCorriendo = StorageHelper.getItem(_breakStorageKey()) !== null;
+    const timerFueraCorriendo = Almacenamiento.getItem(_breakStorageKey()) !== null;
     if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo, est); }
     _renderCard(vista);
     _renderBarra(vista, !!conteo);
     UIEstadisticas._renderSelectorStats();
     actualizarEstadoBotonTimerMain(sinAnimarTitulo);
-    if (CardLote.getModoLoteActivo()) actualizarBotonLote();
+    if (TarjetaLote.getModoLoteActivo()) actualizarBotonLote();
     if (UICalendario.getVistaHistoricoCalendario()) {
         const selector = $('calendario-selector-meses');
         if (selector && selector.style.display !== 'none') {
@@ -724,7 +724,7 @@ function _forzarVista(nuevaVista, renderFn) {
     if (card) card.classList.add('cambiando-vista');
     return _animarFadeSwap(content, async () => {
         D.setVistaActual(nuevaVista);
-        StorageHelper.setItem(STORAGE_KEYS.VISTA_ACTUAL, nuevaVista);
+        Almacenamiento.setItem(STORAGE_KEYS.VISTA_ACTUAL, nuevaVista);
         _detenerCicloStats();
         _suprimirAnimacionInterna = true;
         let resultado;

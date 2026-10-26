@@ -1,27 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TimeUtils } from '../src/core/time-utils.js';
-import { SecurityAndUtils } from '../src/core/security.js';
-import { AppEvents } from '../src/core/events.js';
+import { TiempoUtils } from '../src/core/tiempo-utils.js';
+import { SeguridadYUtils } from '../src/core/seguridad.js';
+import { EventosApp } from '../src/core/eventos.js';
 import { TiposRegistro } from '../src/services/tipos-registro.js';
-import { AppState } from '../src/services/app-state.js';
+import { EstadoApp } from '../src/services/estado-app.js';
 import { Compensatorios } from '../src/services/compensatorios.js';
 
-test('TimeUtils: conversión HH:MM <-> minutos y cruces de medianoche', () => {
-    assert.equal(TimeUtils.horaAMinutos('08:30'), 510);
-    assert.equal(TimeUtils.minutosAHora(510), '08:30');
-    assert.equal(TimeUtils.sumarMinutosAHora('08:45', 30), '09:15');
-    assert.equal(TimeUtils.validarFecha('2026-10-25'), true);
-    assert.equal(TimeUtils.validarFecha('2026-02-30'), false);
-    assert.equal(TimeUtils.validarHora('23:59'), true);
-    assert.equal(TimeUtils.validarHora('24:00'), false);
+test('TiempoUtils: conversión HH:MM <-> minutos y cruces de medianoche', () => {
+    assert.equal(TiempoUtils.horaAMinutos('08:30'), 510);
+    assert.equal(TiempoUtils.minutosAHora(510), '08:30');
+    assert.equal(TiempoUtils.sumarMinutosAHora('08:45', 30), '09:15');
+    assert.equal(TiempoUtils.validarFecha('2026-10-25'), true);
+    assert.equal(TiempoUtils.validarFecha('2026-02-30'), false);
+    assert.equal(TiempoUtils.validarHora('23:59'), true);
+    assert.equal(TiempoUtils.validarHora('24:00'), false);
 });
 
-test('SecurityAndUtils: escapeHtml, validarRegistroSeguro y calcularHashSHA256', async () => {
-    assert.equal(SecurityAndUtils.escapeHtml('<script>"alert(1)"</script>'), '&lt;script&gt;&quot;alert(1)&quot;&lt;/script&gt;');
+test('SeguridadYUtils: escapeHtml, validarRegistroSeguro y calcularHashSHA256', async () => {
+    assert.equal(SeguridadYUtils.escapeHtml('<script>"alert(1)"</script>'), '&lt;script&gt;&quot;alert(1)&quot;&lt;/script&gt;');
 
     const regValido = {
-        id: SecurityAndUtils.generarIDSeguro(),
+        id: SeguridadYUtils.generarIDSeguro(),
         fecha: '2026-10-20',
         entrada: '09:00',
         salida: '16:00',
@@ -31,43 +31,43 @@ test('SecurityAndUtils: escapeHtml, validarRegistroSeguro y calcularHashSHA256',
         total: 6.5,
         objetivoHoras: 7
     };
-    assert.equal(SecurityAndUtils.validarRegistroSeguro(regValido), true);
-    assert.equal(SecurityAndUtils.validarRegistroSeguro({ ...regValido, propiedadExtra: 'maliciosa' }), false);
+    assert.equal(SeguridadYUtils.validarRegistroSeguro(regValido), true);
+    assert.equal(SeguridadYUtils.validarRegistroSeguro({ ...regValido, propiedadExtra: 'maliciosa' }), false);
 
-    const hash = await SecurityAndUtils.calcularHashSHA256([regValido]);
+    const hash = await SeguridadYUtils.calcularHashSHA256([regValido]);
     assert.equal(typeof hash, 'string');
     assert.equal(hash.length, 64);
 });
 
-test('AppEvents: suscripción, desuscripción y registro de handlers', () => {
+test('EventosApp: suscripción, desuscripción y registro de handlers', () => {
     let recibido = null;
-    const off = AppEvents.on('test:evento', (payload) => { recibido = payload; });
-    AppEvents.emit('test:evento', { ok: 42 });
+    const off = EventosApp.on('test:evento', (payload) => { recibido = payload; });
+    EventosApp.emit('test:evento', { ok: 42 });
     assert.deepEqual(recibido, { ok: 42 });
 
     off();
-    AppEvents.emit('test:evento', { ok: 99 });
+    EventosApp.emit('test:evento', { ok: 99 });
     assert.deepEqual(recibido, { ok: 42 });
 
-    AppEvents.register('test:sumar', (a, b) => a + b);
-    assert.equal(AppEvents.call('test:sumar', 10, 15), 25);
+    EventosApp.register('test:sumar', (a, b) => a + b);
+    assert.equal(EventosApp.call('test:sumar', 10, 15), 25);
 });
 
-test('AppState.calcularHoras y Compensatorios: cálculo de jornada, cruce de medianoche y asignación de compensatorios', () => {
-    AppState.setHorasDiarias(7);
-    AppState.setDiasHabiles([1, 2, 3, 4, 5]);
-    AppState.setIgnorarTiempoFuera(false);
+test('EstadoApp.calcularHoras y Compensatorios: cálculo de jornada, cruce de medianoche y asignación de compensatorios', () => {
+    EstadoApp.setHorasDiarias(7);
+    EstadoApp.setDiasHabiles([1, 2, 3, 4, 5]);
+    EstadoApp.setIgnorarTiempoFuera(false);
 
     // Jornada normal con tiempo fuera
-    const normal = AppState.calcularHoras('08:00', '15:30', '00:30');
+    const normal = EstadoApp.calcularHoras('08:00', '15:30', '00:30');
     assert.deepEqual(normal, { horas: 7, minutos: 0, total: 7 });
 
     // Cruce de medianoche (22:00 a 02:00 = 4h)
-    const nocturno = AppState.calcularHoras('22:00', '02:00', null);
+    const nocturno = EstadoApp.calcularHoras('22:00', '02:00', null);
     assert.deepEqual(nocturno, { horas: 4, minutos: 0, total: 4 });
 
     // Día especial (feriado)
-    const feriado = AppState.calcularHoras('00:00', '00:00', null);
+    const feriado = EstadoApp.calcularHoras('00:00', '00:00', null);
     assert.equal(feriado.total, 7);
     assert.equal(feriado.esFeriado, true);
 
@@ -97,7 +97,7 @@ test('AppState.calcularHoras y Compensatorios: cálculo de jornada, cruce de med
             objetivoHoras: 7
         }
     ];
-    AppState._setRegistros(lista);
+    EstadoApp._setRegistros(lista);
     const asignaciones = Compensatorios._calcularAsignacionesCompensatorio(lista);
     assert.equal(asignaciones.length, 1);
     assert.equal(asignaciones[0].compensatorioId, 'reg-comp-1');
@@ -105,7 +105,7 @@ test('AppState.calcularHoras y Compensatorios: cálculo de jornada, cruce de med
     assert.equal(asignaciones[0].excedente, 2);
 });
 
-test('Integración: Arranque completo de UILogic.init() sin errores de ejecución', async () => {
+test('Integración: Arranque completo de UILogica.init() sin errores de ejecución', async () => {
     const noop = () => { };
     const fakeEl = () => ({
         style: { setProperty: noop, removeProperty: noop },
@@ -180,9 +180,9 @@ test('Integración: Arranque completo de UILogic.init() sin errores de ejecució
     globalThis.setTimeout = (...args) => origSetTimeout(...args).unref();
 
     try {
-        const { UILogic } = await import('../src/ui/ui-logic.js');
+        const { UILogica } = await import('../src/ui/ui-logica.js');
         await assert.doesNotReject(async () => {
-            await UILogic.init();
+            await UILogica.init();
         });
     } finally {
         globalThis.setInterval = origSetInterval;
@@ -190,20 +190,20 @@ test('Integración: Arranque completo de UILogic.init() sin errores de ejecució
     }
 });
 
-test('ImportExportData: exportación, validación y restauración de flags de configuración', async () => {
-    const { ImportExportData } = await import('../src/services/import-export-data.js');
-    const { StorageHelper } = await import('../src/core/storage.js');
-    const { Motion } = await import('../src/core/motion.js');
-    const { STORAGE_KEYS } = await import('../src/core/constants.js');
+test('ImportarExportar: exportación, validación y restauración de flags de configuración', async () => {
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { Movimiento } = await import('../src/core/movimiento.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
 
-    AppState.setIgnorarTiempoFuera(false);
-    StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, false, true);
-    StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
-    StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
-    Motion.setModo('auto');
+    EstadoApp.setIgnorarTiempoFuera(false);
+    Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, false, true);
+    Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
+    Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+    Movimiento.setModo('auto');
 
     // Simular un registro importado inicialmente con ignorarTiempoFuera = false (descarga 30m de tiempo fuera -> 7.5h)
-    const registros = ImportExportData.normalizarRegistrosImportados([
+    const registros = ImportarExportar.normalizarRegistrosImportados([
         {
             id: 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d',
             fecha: '2026-10-20',
@@ -214,7 +214,7 @@ test('ImportExportData: exportación, validación y restauración de flags de co
             minutos: 0,
             total: 8
         }
-    ], AppState.calcularHoras);
+    ], EstadoApp.calcularHoras);
     assert.equal(registros[0].total, 7.5);
 
     const backupData = {
@@ -227,25 +227,25 @@ test('ImportExportData: exportación, validación y restauración de flags de co
         reducirAnimaciones: 'on'
     };
 
-    assert.equal(ImportExportData.validarCamposConfigImport(backupData), true);
-    assert.equal(ImportExportData.validarCamposConfigImport({ ...backupData, reducirAnimaciones: 'invalido' }), false);
-    assert.equal(ImportExportData.validarCamposConfigImport({ ...backupData, ignorarTiempoFuera: 'si' }), false);
+    assert.equal(ImportarExportar.validarCamposConfigImport(backupData), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...backupData, reducirAnimaciones: 'invalido' }), false);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...backupData, ignorarTiempoFuera: 'si' }), false);
 
-    const cambios = ImportExportData.calcularCambiosConfigImport(backupData);
+    const cambios = ImportarExportar.calcularCambiosConfigImport(backupData);
     assert.ok(cambios.includes('tiempo fuera'));
     assert.ok(cambios.includes('banco de horas'));
     assert.ok(cambios.includes('objetivo diario global'));
     assert.ok(cambios.includes('animaciones'));
 
     // Al aplicar la configuración importada en modo replace, debe recalcular el registro con ignorarTiempoFuera = true (-> 8h)
-    ImportExportData.aplicarConfigImportada(backupData, registros);
-    assert.equal(AppState.getIgnorarTiempoFuera(), true);
-    assert.equal(StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true), true);
-    assert.equal(StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true), true);
-    assert.equal(Motion.modo(), 'on');
+    ImportarExportar.aplicarConfigImportada(backupData, registros);
+    assert.equal(EstadoApp.getIgnorarTiempoFuera(), true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true), true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true), true);
+    assert.equal(Movimiento.modo(), 'on');
     assert.equal(registros[0].total, 8);
 
-    const exportado = ImportExportData.obtenerConfigExportable();
+    const exportado = ImportarExportar.obtenerConfigExportable();
     assert.deepEqual(exportado, {
         ignorarTiempoFuera: true,
         ignorarLogicaCubierto: true,
@@ -254,9 +254,9 @@ test('ImportExportData: exportación, validación y restauración de flags de co
     });
 });
 
-test('StorageHelper: prefijo horarios_ (APP_STORAGE_PREFIX) y migración automática de claves legadas sin tocar otras apps', async () => {
-    const { StorageHelper } = await import('../src/core/storage.js');
-    const { APP_STORAGE_PREFIX, STORAGE_KEYS } = await import('../src/core/constants.js');
+test('Almacenamiento: prefijo horarios_ (APP_STORAGE_PREFIX) y migración automática de claves legadas sin tocar otras apps', async () => {
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { APP_STORAGE_PREFIX, STORAGE_KEYS } = await import('../src/core/constantes.js');
 
     const rawStore = new Map();
     globalThis.localStorage = {
@@ -287,21 +287,21 @@ test('StorageHelper: prefijo horarios_ (APP_STORAGE_PREFIX) y migración automá
     rawStore.set('IDR_usuario', 'luis');
 
     // 2. Ejecutar migración automática
-    const migradas = StorageHelper.migrarClavesLegadas();
+    const migradas = Almacenamiento.migrarClavesLegadas();
     assert.equal(migradas, 9);
 
     // 3. Verificar que todas las claves legadas de Horarios pasaron al prefijo horarios_ y las viejas se eliminaron
     assert.equal(rawStore.has('perfiles'), false);
     assert.equal(rawStore.get(`${APP_STORAGE_PREFIX}perfiles`), perfilesLegados);
     assert.equal(rawStore.has('temaOscuro'), false);
-    assert.equal(StorageHelper.getItem(STORAGE_KEYS.TEMA_OSCURO), 'dark');
-    assert.equal(StorageHelper.getItem(STORAGE_KEYS.PUSH_INSTALL_ID), 'uuid-instalacion-123');
-    assert.equal(StorageHelper.getItem(STORAGE_KEYS.PUSH_OWNER_TOKEN), 'a'.repeat(64));
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.TEMA_OSCURO), 'dark');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.PUSH_INSTALL_ID), 'uuid-instalacion-123');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.PUSH_OWNER_TOKEN), 'a'.repeat(64));
     assert.equal(rawStore.get(`${APP_STORAGE_PREFIX}ignorarTiempoFuera_default`), 'true');
     assert.equal(rawStore.get(`${APP_STORAGE_PREFIX}history_perfil_custom1`), '{"history":[],"currentIndex":-1}');
-    assert.equal(StorageHelper.getBoolean(STORAGE_KEYS.MES_EXPANDIDO('2026-10')), true);
-    assert.equal(StorageHelper.getBoolean(STORAGE_KEYS.ANIO_EXPANDIDO('2026')), false);
-    assert.equal(StorageHelper.getNumber(STORAGE_KEYS.GIST_LIMITE('subir')), 15);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.MES_EXPANDIDO('2026-10')), true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.ANIO_EXPANDIDO('2026')), false);
+    assert.equal(Almacenamiento.getNumber(STORAGE_KEYS.GIST_LIMITE('subir')), 15);
 
     // 4. Verificar que las claves de otras apps del mismo origen quedaron intactas
     assert.equal(rawStore.get('gestion_servicios_config'), '{"activo":true}');

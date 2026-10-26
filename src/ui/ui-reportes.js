@@ -1,19 +1,19 @@
-import { STORAGE_KEYS, horasGte } from '../core/constants.js';
+import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { ModalManager } from './modal-manager.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { DataManagement } from '../services/data-management.js';
+import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UICore } from './ui-core.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-const D = DataManagement;
+import { UIBase } from './ui-base.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+const D = GestionDatos;
 
 // ====================================================================
 //                     UI REPORTS MODULE (HTML Report Generator)
 // ====================================================================
-const { mostrarToast, descargarArchivo } = UICore;
+const { mostrarToast, descargarArchivo } = UIBase;
 
 let _statsProvider = {
     calcularEstadisticasAnio: () => ({}),
@@ -80,11 +80,11 @@ function _seccionDetalleAnual(registrosPeriodo) {
                 .filter(Boolean)
         ];
 
-        const nombreMes = S.escapeHtml(TimeUtils.formatoTituloMes(claveMes).split(' ')[0]);
+        const nombreMes = S.escapeHtml(TiempoUtils.formatoTituloMes(claveMes).split(' ')[0]);
         return `
         <tr>
             <td class="col-mes">${nombreMes}</td>
-            <td class="col-horas">${S.escapeHtml(TimeUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short'))}</td>
+            <td class="col-horas">${S.escapeHtml(TiempoUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short'))}</td>
             <td class="col-notas">${S.escapeHtml(notas.join(', '))}</td>
         </tr>`;
     }).join('');
@@ -105,8 +105,8 @@ function _seccionDetalleDiario(registrosPeriodo) {
     const ordenados = [...registrosPeriodo].sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
     const filas = ordenados.map(r => {
         const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-        const fecha = S.escapeHtml(TimeUtils.fechaCorta(r.fecha, true));
-        const dia = S.escapeHtml(TimeUtils.obtenerNombreDia(r.fecha));
+        const fecha = S.escapeHtml(TiempoUtils.fechaCorta(r.fecha, true));
+        const dia = S.escapeHtml(TiempoUtils.obtenerNombreDia(r.fecha));
 
         if (tipoEspecial) {
             return `
@@ -121,9 +121,9 @@ function _seccionDetalleDiario(registrosPeriodo) {
 
         const entrada = S.escapeHtml(r.entrada || '--:--');
         const salida = S.escapeHtml(r.salida || '--:--');
-        const total = r.salida ? S.escapeHtml(TimeUtils.horasATexto(r.total, 'short')) : 'Incompleto';
+        const total = r.salida ? S.escapeHtml(TiempoUtils.horasATexto(r.total, 'short')) : 'Incompleto';
         const tiempoFuera = (r.tiempoFuera && r.tiempoFuera !== '00:00')
-            ? `${S.escapeHtml(TimeUtils.horasATexto(TimeUtils.horaAMinutos(r.tiempoFuera) / 60, 'short'))} fuera`
+            ? `${S.escapeHtml(TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(r.tiempoFuera) / 60, 'short'))} fuera`
             : '';
         const salidaTemprano = (r.credito && r.credito !== '00:00') ? ' <span class="tag tag-info">Salida temprana</span>' : '';
         const cumplido = r.salida ? horasGte(r.total, D.objetivoDeRegistro(r)) : null;
@@ -154,7 +154,7 @@ function _seccionDetalleDiario(registrosPeriodo) {
 function _agruparRegistrosPorSemana(registros) {
     const semanas = new Map();
     registros.forEach(r => {
-        const lunes = TimeUtils.obtenerLunesSemanaISO(r.fecha);
+        const lunes = TiempoUtils.obtenerLunesSemanaISO(r.fecha);
         if (!semanas.has(lunes)) {
             const base = { trabajados: [] };
             TiposRegistro.obtenerTodosLosTipos().forEach(t => { base[TiposRegistro.claveStat(t)] = []; });
@@ -271,7 +271,7 @@ function _seccionResumenGeneral(stats) {
     const bufferOk = stats.bufferPeriodo === null || stats.bufferPeriodo >= 0;
     const tarjetas = [
         { label: 'Total horas', valor: stats.tiempoTotal },
-        { label: 'Banco de horas', valor: stats.bufferPeriodo !== null ? TimeUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A', clase: `valor-saldo-${bufferOk ? 'pos' : 'neg'}` },
+        { label: 'Banco de horas', valor: stats.bufferPeriodo !== null ? TiempoUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A', clase: `valor-saldo-${bufferOk ? 'pos' : 'neg'}` },
         { label: 'Jornadas', valor: stats.diasTrabajados, esConteo: true },
         { label: 'Promedio diario', valor: stats.promedioDiario },
         { label: 'Entrada promedio', valor: stats.entradaPromedio },
@@ -299,8 +299,8 @@ function _seccionResumenGeneral(stats) {
 function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
     if (!mesSeleccionado) return '';
     const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
-    const primerDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
-    const ultimaDiaMes = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
+    const primerDiaMes = TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
+    const ultimaDiaMes = TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
 
     const semanas = _agruparRegistrosPorSemana(registrosPeriodo);
     const semanasOrdenadas = [...semanas.entries()].sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
@@ -312,10 +312,10 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
         let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
         if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + D.objetivoDeRegistro(r), 0);
 
-        const fechaLunes = TimeUtils.parsearFechaLocal(lunesOriginal);
+        const fechaLunes = TiempoUtils.parsearFechaLocal(lunesOriginal);
         const fechaDomingo = new Date(fechaLunes);
         fechaDomingo.setDate(fechaLunes.getDate() + 6);
-        const domingo = TimeUtils.formatearFechaLocal(fechaDomingo);
+        const domingo = TiempoUtils.formatearFechaLocal(fechaDomingo);
 
         let lunes = lunesOriginal, fechaFin = domingo, esIncompleta = false, continuaEn = '';
 
@@ -323,13 +323,13 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
             fechaFin = ultimaDiaMes;
             esIncompleta = true;
             const mesSig = mesActual === 12 ? 1 : mesActual + 1;
-            continuaEn = `continúa en ${TimeUtils.nombreMesPorIndice(mesSig - 1)}`;
+            continuaEn = `continúa en ${TiempoUtils.nombreMesPorIndice(mesSig - 1)}`;
         }
         if (lunes < primerDiaMes) {
             lunes = primerDiaMes;
             esIncompleta = true;
             const mesAnt = mesActual === 1 ? 12 : mesActual - 1;
-            continuaEn = `viene de ${TimeUtils.nombreMesPorIndice(mesAnt - 1)}`;
+            continuaEn = `viene de ${TiempoUtils.nombreMesPorIndice(mesAnt - 1)}`;
         }
 
         const notasExtras = TiposRegistro.obtenerTodosLosTipos()
@@ -342,12 +342,12 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
 
         if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
 
-        const rango = `${TimeUtils.fechaCorta(lunes, true)} – ${TimeUtils.fechaCorta(fechaFin, true)}${esIncompleta ? ' *' : ''}`;
+        const rango = `${TiempoUtils.fechaCorta(lunes, true)} – ${TiempoUtils.fechaCorta(fechaFin, true)}${esIncompleta ? ' *' : ''}`;
         return `
         <tr>
             <td class="col-semana">Semana ${index + 1}</td>
             <td class="col-rango">${S.escapeHtml(rango)}</td>
-            <td class="col-total">${S.escapeHtml(TimeUtils.horasATexto(totalSemanal, 'short'))}</td>
+            <td class="col-total">${S.escapeHtml(TiempoUtils.horasATexto(totalSemanal, 'short'))}</td>
             <td class="col-notas">${notasExtras.length ? S.escapeHtml(notasExtras.join(', ')) : '—'}</td>
         </tr>`;
     }).join('');
@@ -368,15 +368,15 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
 }
 
 function _seccionConfiguracion() {
-    const objetivoTexto = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)
+    const objetivoTexto = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)
         ? '' : ' (objetivo estampado por registro)';
-    const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+    const ignorarTF = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
     const tiempoFueraTexto = ignorarTF ? 'No se descuenta del total' : 'Se descuenta del total';
     return `
 <section class="seccion">
     <h2>⚙️ Ajustes aplicados</h2>
     <p class="config-linea"><b>Horas diarias:</b> ${S.escapeHtml(String(D.horasDiarias()))}${S.escapeHtml(objetivoTexto)}</p>
-    <p class="config-linea"><b>Días hábiles:</b> ${S.escapeHtml(D.diasHabiles().map(d => TimeUtils.nombreDiaPorIndice(d)).join(', '))}</p>
+    <p class="config-linea"><b>Días hábiles:</b> ${S.escapeHtml(D.diasHabiles().map(d => TiempoUtils.nombreDiaPorIndice(d)).join(', '))}</p>
     <p class="config-linea"><b>Horas semanales:</b> ${S.escapeHtml(String(D.horasSemanales()))}</p>
     <p class="config-linea"><b>Tiempo fuera:</b> ${S.escapeHtml(tiempoFueraTexto)}</p>
 </section>`;
@@ -452,11 +452,11 @@ function _renderSeccionesReporte() {
 
 function abrirModalReporteSecciones() {
     _renderSeccionesReporte();
-    ModalManager.abrir('modal-reporte-secciones');
+    GestorModales.abrir('modal-reporte-secciones');
 }
 
 function cerrarModalReporteSecciones() {
-    ModalManager.cerrar('modal-reporte-secciones');
+    GestorModales.cerrar('modal-reporte-secciones');
 }
 
 function toggleSeccionReporte(boton) {

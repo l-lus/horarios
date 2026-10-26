@@ -1,27 +1,27 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { Motion } from '../core/motion.js';
-import { StorageHelper } from '../core/storage.js';
-import { UICore } from './ui-core.js';
+import { Movimiento } from '../core/movimiento.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { UIBase } from './ui-base.js';
 
 // ====================================================================
 // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
 // ====================================================================
 const {
     _crearToggleConfig, _setBtnActivo
-} = UICore;
+} = UIBase;
 
 const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
     _crearToggleConfig({
-        getVal: () => StorageHelper.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
-        setVal: (v) => StorageHelper.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
+        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
+        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
         btnId: 'btn-toggle-persistir-tarjetas',
     });
 
 function toggleVisibilidadCard(cual) {
     const key = STORAGE_KEYS.CARD_VISIBLE(cual);
-    const nuevo = !StorageHelper.getBoolean(key, true, true);
-    StorageHelper.setItem(key, nuevo, true);
+    const nuevo = !Almacenamiento.getBoolean(key, true, true);
+    Almacenamiento.setItem(key, nuevo, true);
     aplicarVisibilidadCard(cual, nuevo);
     _setBtnActivo('btn-toggle-card-' + cual, nuevo);
 }
@@ -33,14 +33,14 @@ function aplicarVisibilidadCard(cual, visible) {
 
 function aplicarVisibilidadCards() {
     ['registrar', 'estadisticas', 'historico'].forEach(cual => {
-        const visible = StorageHelper.getBoolean(STORAGE_KEYS.CARD_VISIBLE(cual), true, true);
+        const visible = Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(cual), true, true);
         aplicarVisibilidadCard(cual, visible);
         _setBtnActivo('btn-toggle-card-' + cual, visible);
     });
 }
 
 function obtenerOrdenCards() {
-    const guardado = StorageHelper.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true);
+    const guardado = Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true);
     const validos = ['registrar', 'estadisticas', 'historico'];
     if (Array.isArray(guardado) && guardado.length === 3 && validos.every(v => guardado.includes(v))) {
         return guardado;
@@ -106,7 +106,7 @@ function uiAnimarReubicacion(obtener, clave, cambiar, { encima = null } = {}) {
     const antes = new Map();
     for (const el of obtener()) antes.set(clave(el), el.getBoundingClientRect());
     cambiar();
-    if (antes.size === 0 || (typeof Motion !== 'undefined' && Motion.reducido())) return [];
+    if (antes.size === 0 || (typeof Movimiento !== 'undefined' && Movimiento.reducido())) return [];
     const animables = [];
     for (const el of obtener()) {
         const r0 = antes.get(clave(el));
@@ -393,7 +393,7 @@ function iniciarDragTarjetas() {
                 validos.forEach(c => {
                     if (!nuevoOrden.includes(c)) nuevoOrden.push(c);
                 });
-                StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
+                Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
                 aplicarOrdenCards(nuevoOrden);
             } else if (ordenInicial) {
                 uiAnimarReubicacion(
@@ -401,7 +401,7 @@ function iniciarDragTarjetas() {
                     c => c.id,
                     () => aplicarOrdenCards(ordenInicial)
                 );
-                StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenInicial, true);
+                Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenInicial, true);
             }
             cardArrastrada = null;
             ordenInicial = null;
@@ -440,7 +440,7 @@ function iniciarDragTarjetas() {
                 () => aplicarOrdenCards(nuevoOrden),
                 { encima: card }
             );
-            StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
+            Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
             header.focus();
         });
     });
@@ -513,7 +513,7 @@ function iniciarDragOrdenCards() {
         const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
         const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
 
-        StorageHelper.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
+        Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
 
         if (typeof aplicarOrdenCards === 'function') {
             aplicarOrdenCards(nuevoOrden);
@@ -551,7 +551,7 @@ function bindEventos() {
     $('btn-toggle-card-historico')?.addEventListener('click', () => toggleVisibilidadCard('historico'));
 }
 
-export const UICardsLayout = {
+export const UIOrdenTarjetas = {
     actualizarEstadoBotonPersistir, aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards,
     iniciarDragOrdenCards, iniciarDragTarjetas, bindEventos
 };

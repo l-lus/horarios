@@ -1,6 +1,6 @@
-import { STORAGE_KEYS } from '../core/constants.js';
-import { StorageHelper } from '../core/storage.js';
-import { AppState } from './app-state.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { EstadoApp } from './estado-app.js';
 
 // ====================================================================
 // PROFILE MANAGER MODULE
@@ -21,10 +21,10 @@ function cargarPerfiles() {
         'default': { nombre: 'Principal', registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 }
     };
 
-    perfiles = StorageHelper.getObject(STORAGE_KEYS.PERFILES, defaultPerfil);
+    perfiles = Almacenamiento.getObject(STORAGE_KEYS.PERFILES, defaultPerfil);
     if (!perfiles['default']) perfiles['default'] = defaultPerfil['default'];
 
-    perfilActual = StorageHelper.getItem(STORAGE_KEYS.PERFIL_ACTIVO, 'default');
+    perfilActual = Almacenamiento.getItem(STORAGE_KEYS.PERFIL_ACTIVO, 'default');
     if (!perfiles[perfilActual]) {
         const availableIds = Object.keys(perfiles);
         perfilActual = availableIds.length > 0 ? availableIds[0] : 'default';
@@ -32,8 +32,8 @@ function cargarPerfiles() {
 }
 
 function guardarPerfiles() {
-    const savedPerfiles = StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles);
-    const savedActivo = StorageHelper.setItem(STORAGE_KEYS.PERFIL_ACTIVO, perfilActual);
+    const savedPerfiles = Almacenamiento.setItem(STORAGE_KEYS.PERFILES, perfiles);
+    const savedActivo = Almacenamiento.setItem(STORAGE_KEYS.PERFIL_ACTIVO, perfilActual);
     return savedPerfiles && savedActivo;
 }
 
@@ -41,10 +41,10 @@ function guardarDatosPerfilActual() {
     const actual = perfiles[perfilActual];
     perfiles[perfilActual] = {
         nombre: actual.nombre,
-        registros: [...AppState.registros()],
-        diasHabiles: AppState.diasHabiles(),
-        horasDiarias: AppState.horasDiarias(),
-        historialDiasHabiles: AppState.historialDiasHabiles(),
+        registros: [...EstadoApp.registros()],
+        diasHabiles: EstadoApp.diasHabiles(),
+        horasDiarias: EstadoApp.horasDiarias(),
+        historialDiasHabiles: EstadoApp.historialDiasHabiles(),
         ...(actual.gistId && { gistId: actual.gistId }),
         ...(actual.gistLastSync && { gistLastSync: actual.gistLastSync }),
         ...(actual.gistAutoSync != null && { gistAutoSync: actual.gistAutoSync }),
@@ -83,7 +83,7 @@ function cambiarPerfil(nuevoId) {
     if (!nuevoId || nuevoId === perfilActual) return;
     guardarDatosPerfilActual();
     perfilActual = nuevoId;
-    if (StorageHelper.setItem(STORAGE_KEYS.PERFIL_ACTIVO, perfilActual)) {
+    if (Almacenamiento.setItem(STORAGE_KEYS.PERFIL_ACTIVO, perfilActual)) {
         location.reload();
     }
 }
@@ -98,10 +98,10 @@ function perfilKey(base) {
     return base + '_' + perfilActual;
 }
 
-StorageHelper.setProfileKeyResolver(perfilKey);
-AppState.setPerfilHooks({ obtenerPerfilActual, guardarDatosPerfilActual });
+Almacenamiento.setProfileKeyResolver(perfilKey);
+EstadoApp.setPerfilHooks({ obtenerPerfilActual, guardarDatosPerfilActual });
 
-export const PerfilManager = {
+export const GestorPerfiles = {
     inicializar, estaInicializado, cambiarPerfil, guardarDatosPerfilActual,
     obtenerPerfilActual, esPerfilDefault, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
     guardarPerfiles, perfilKey, MAX_PERFILES

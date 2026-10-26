@@ -1,15 +1,15 @@
 import { UIReportes } from './ui-reportes.js';
-import { STORAGE_KEYS, horasGte } from '../core/constants.js';
+import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { ModalManager } from './modal-manager.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UICore } from './ui-core.js';
+import { UIBase } from './ui-base.js';
 import { UIConfig } from './ui-config.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-import { DataManagement as D } from '../services/data-management.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+import { GestionDatos as D } from '../services/gestion-datos.js';
 
 // ====================================================================
 //                     UI STATISTICS MODULE
@@ -18,7 +18,7 @@ const {
     mostrarToast, _poblarSelect,
     _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante,
     toggleSeccionGen, registrarSwipe, _animarFadeSwap, descargarArchivo
-} = UICore;
+} = UIBase;
 
 let modoEstadisticas = 'mensual';
 let _ultimosStatsRenderizados = null;
@@ -50,7 +50,7 @@ function _calcularRegularidadRango(registrosValidos, regularidadPorMes) {
         meses.forEach(mes => {
             const regs = registrosValidos.filter(r => r.fecha.startsWith(mes));
             if (regs.length < 2) return;
-            const dE = desviacionEstandar(regs.map(r => TimeUtils.horaAMinutos(r.entrada)));
+            const dE = desviacionEstandar(regs.map(r => TiempoUtils.horaAMinutos(r.entrada)));
             const dJ = desviacionEstandar(regs.map(r => Math.round(r.total * 60)));
             if (dE !== null) desE.push(dE);
             if (dJ !== null) desJ.push(dJ);
@@ -62,7 +62,7 @@ function _calcularRegularidadRango(registrosValidos, regularidadPorMes) {
         };
     }
     return {
-        regEntrada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)))),
+        regEntrada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => TiempoUtils.horaAMinutos(r.entrada)))),
         regJornada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => Math.round(r.total * 60))))
     };
 }
@@ -85,7 +85,7 @@ function _calcularEstadisticasRango(registrosRango, opciones = {}) {
     let tiempoFueraTotalMinutos = 0;
     registrosRango.forEach(r => {
         if (r.tiempoFuera && r.tiempoFuera !== '00:00') {
-            tiempoFueraTotalMinutos += TimeUtils.horaAMinutos(r.tiempoFuera);
+            tiempoFueraTotalMinutos += TiempoUtils.horaAMinutos(r.tiempoFuera);
         }
     });
 
@@ -116,15 +116,15 @@ function _calcularEstadisticasRango(registrosRango, opciones = {}) {
         if (registrosRango.length === 0) return vacios;
         return {
             ...vacios,
-            tiempoFueraTotal: tiempoFueraTotalMinutos > 0 ? TimeUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short') : '--:--',
-            tiempoTotal: totalHoras > 0 ? TimeUtils.horasATexto(totalHoras, 'short') : '--:--',
+            tiempoFueraTotal: tiempoFueraTotalMinutos > 0 ? TiempoUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short') : '--:--',
+            tiempoTotal: totalHoras > 0 ? TiempoUtils.horasATexto(totalHoras, 'short') : '--:--',
             bufferPeriodo, aprovechamientoSaldo
         };
     }
 
     const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
-    const promedioEntrada = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.entrada)));
-    const promedioSalida = avgMin(registrosValidos.map(r => TimeUtils.horaAMinutos(r.salida)));
+    const promedioEntrada = avgMin(registrosValidos.map(r => TiempoUtils.horaAMinutos(r.entrada)));
+    const promedioSalida = avgMin(registrosValidos.map(r => TiempoUtils.horaAMinutos(r.salida)));
 
     const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
     const promDiario = totalHorasTrabajadas / registrosValidos.length;
@@ -132,12 +132,12 @@ function _calcularEstadisticasRango(registrosRango, opciones = {}) {
     const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
 
     return {
-        entradaPromedio: TimeUtils.minutosAHora(promedioEntrada),
-        salidaPromedio: TimeUtils.minutosAHora(promedioSalida),
+        entradaPromedio: TiempoUtils.minutosAHora(promedioEntrada),
+        salidaPromedio: TiempoUtils.minutosAHora(promedioSalida),
         diasTrabajados: registrosValidos.length,
-        promedioDiario: TimeUtils.horasATexto(promDiario, 'short'),
-        tiempoFueraTotal: TimeUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short'),
-        tiempoTotal: TimeUtils.horasATexto(totalHoras, 'short'),
+        promedioDiario: TiempoUtils.horasATexto(promDiario, 'short'),
+        tiempoFueraTotal: TiempoUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short'),
+        tiempoTotal: TiempoUtils.horasATexto(totalHoras, 'short'),
         ...conteosPorTipo, compensaciones,
         regularidadEntrada: regEntrada,
         regularidadJornada: regJornada,
@@ -188,7 +188,7 @@ function _renderizarStats(stats, opciones = {}) {
         } else {
             itemSaldo.style.display = '';
             const b = stats.bufferPeriodo;
-            elSaldo.textContent = b === 0 ? '0h' : TimeUtils.horasATexto(b, 'short');
+            elSaldo.textContent = b === 0 ? '0h' : TiempoUtils.horasATexto(b, 'short');
             elSaldo.classList.remove('saldo-positivo', 'saldo-negativo', 'saldo-neutro');
             elSaldo.classList.add(b > 0 ? 'saldo-positivo' : b < 0 ? 'saldo-negativo' : 'saldo-neutro');
         }
@@ -210,8 +210,8 @@ function calcularEstadisticasMes(mesAnio = null, registrosPeriodo = null) {
         const [a, m] = r.fecha.split('-').map(Number);
         return a === añoActual && m === mesActual + 1;
     });
-    const ultimoDia = TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
-    const fechaDesde = _fechaDesdeEfectiva(registros, TimeUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1)));
+    const ultimoDia = TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
+    const fechaDesde = _fechaDesdeEfectiva(registros, TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1)));
     return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: fechaDesde, hasta: ultimoDia });
 }
 
@@ -222,7 +222,7 @@ function actualizarEstadisticas(mesAnio = null) {
         const [año, mes] = mesAnio.split('-').map(Number);
         const tieneRegs = D.registros().some(r => { const [a, m] = r.fecha.split('-').map(Number); return a === año && m === mes; });
         if (!tieneRegs) {
-            mesAnio = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
+            mesAnio = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
             if (selectMes) selectMes.value = mesAnio;
         }
     }
@@ -285,8 +285,8 @@ function _obtenerSemanas() {
     const semanas = new Map();
     D.registros().forEach(r => {
         const d = new Date(r.fecha + 'T00:00:00');
-        const lunes = TimeUtils.obtenerLunes(d);
-        const key = TimeUtils.formatearFechaLocal(lunes);
+        const lunes = TiempoUtils.obtenerLunes(d);
+        const key = TiempoUtils.formatearFechaLocal(lunes);
         if (!semanas.has(key)) semanas.set(key, lunes);
     });
     return Array.from(semanas.keys()).sort().reverse();
@@ -294,8 +294,8 @@ function _obtenerSemanas() {
 
 function poblarSelectorSemanas() {
     const semanas = _obtenerSemanas();
-    const lunesISO = TimeUtils.formatearFechaLocal(TimeUtils.obtenerLunes());
-    _poblarSelect('select-semana-stats', semanas, TimeUtils.formatearRangoSemana, lunesISO, actualizarEstadisticasSemana, TimeUtils.agruparMesesPorAnio);
+    const lunesISO = TiempoUtils.formatearFechaLocal(TiempoUtils.obtenerLunes());
+    _poblarSelect('select-semana-stats', semanas, TiempoUtils.formatearRangoSemana, lunesISO, actualizarEstadisticasSemana, TiempoUtils.agruparMesesPorAnio);
 }
 
 function calcularEstadisticasSemana(lunesISO) {
@@ -303,7 +303,7 @@ function calcularEstadisticasSemana(lunesISO) {
     const lunes = new Date(lunesISO + 'T00:00:00');
     const domingo = new Date(lunes);
     domingo.setDate(lunes.getDate() + 6);
-    const hasta = TimeUtils.formatearFechaLocal(domingo);
+    const hasta = TiempoUtils.formatearFechaLocal(domingo);
     const registros = D.registros().filter(r => r.fecha >= lunesISO && r.fecha <= hasta);
     return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: lunesISO, hasta });
 }
@@ -341,7 +341,7 @@ function togglePeriodoStats(direccion = 1) {
     const orden = ['mensual', 'anual', 'semanal'];
     const idx = orden.indexOf(modoEstadisticas);
     modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
-    StorageHelper.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas);
+    Almacenamiento.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas);
 
     _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
         selectMes.classList.add('hidden');
@@ -365,8 +365,8 @@ function togglePeriodoStats(direccion = 1) {
 
 function poblarSelectorMeses() {
     const meses = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
-    const mesActual = TimeUtils.formatearFechaLocal(new Date()).slice(0, 7);
-    _poblarSelect('select-mes-stats', meses, TimeUtils.nombreMesCapitalizado, mesActual, actualizarEstadisticas, TimeUtils.agruparMesesPorAnio);
+    const mesActual = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
+    _poblarSelect('select-mes-stats', meses, TiempoUtils.nombreMesCapitalizado, mesActual, actualizarEstadisticas, TiempoUtils.agruparMesesPorAnio);
 }
 
 const _sumarHorasEfectivas = (...args) => UIReportes._sumarHorasEfectivas(...args);
@@ -418,8 +418,8 @@ function _popupStat(event, statId) {
         if (stats && stats.aprovechamientoSaldo) {
             const { horas: horasUtil, generado: saldoGenerado } = stats.aprovechamientoSaldo;
             descExtra += `<hr class="stat-popup-sep">`
-                + `<div class="stat-popup-metric"><span>Generado</span><strong>${S.escapeHtml(TimeUtils.horasATexto(saldoGenerado, 'short'))}</strong></div>`
-                + `<div class="stat-popup-metric"><span>Utilizado</span><strong>${S.escapeHtml(TimeUtils.horasATexto(horasUtil, 'short'))}</strong></div>`;
+                + `<div class="stat-popup-metric"><span>Generado</span><strong>${S.escapeHtml(TiempoUtils.horasATexto(saldoGenerado, 'short'))}</strong></div>`
+                + `<div class="stat-popup-metric"><span>Utilizado</span><strong>${S.escapeHtml(TiempoUtils.horasATexto(horasUtil, 'short'))}</strong></div>`;
         }
 
         const modoTexto = modoEstadisticas === 'anual'
@@ -434,11 +434,11 @@ function _popupStat(event, statId) {
         if (descExtra) info = { titulo: info.titulo, desc: `${info.desc}${descExtra}` };
     }
     if (statId === 'stat-dias-trabajados' && info) {
-        const diasTexto = [...D.diasHabiles()].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', ');
+        const diasTexto = [...D.diasHabiles()].sort((a, b) => a - b).map(d => TiempoUtils.nombreDiaPorIndice(d)).join(', ');
         info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Días hábiles: ${diasTexto}.</strong>` };
     }
     if (statId === 'stat-tiempo-fuera-total' && info) {
-        const ignorarTF = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+        const ignorarTF = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
         const modoTexto = ignorarTF
             ? 'Actualmente NO SE RESTA el tiempo fuera del tiempo total.'
             : 'Actualmente SE RESTA el tiempo fuera del tiempo total.';

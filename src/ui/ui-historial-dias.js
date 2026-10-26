@@ -1,16 +1,16 @@
 import { $ } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { ModalManager } from './modal-manager.js';
-import { UICore } from './ui-core.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { GestorModales } from './gestor-modales.js';
+import { UIBase } from './ui-base.js';
 import { UIConfig } from './ui-config.js';
-import { DataManagement as D } from '../services/data-management.js';
+import { GestionDatos as D } from '../services/gestion-datos.js';
 
 // ====================================================================
 // UI WORKDAY HISTORY MODULE (historial de días hábiles y horas)
 // ====================================================================
 const {
     _abrirModalConPadre, _cerrarModalConPadre, mostrarToast
-} = UICore;
+} = UIBase;
 
 const _precargarCamposConfig = (...args) => UIConfig._precargarCamposConfig(...args);
 
@@ -18,7 +18,7 @@ let _tramoEnEdicionDesde = null;
 
 function _formatoFechaHistorial(iso) {
     if (iso === '0001-01-01') return 'Desde siempre';
-    return `Desde ${TimeUtils.fechaCorta(iso)}`;
+    return `Desde ${TiempoUtils.fechaCorta(iso)}`;
 }
 
 function _obtenerTramosOrdenados() {
@@ -31,7 +31,7 @@ function _obtenerTramosOrdenados() {
 function _renderizarListaHistorialDias() {
     const lista = $('lista-historial-dias');
     if (!lista) return;
-    const hoy = TimeUtils.obtenerFechaHoy();
+    const hoy = TiempoUtils.obtenerFechaHoy();
     const tramos = _obtenerTramosOrdenados();
     const vigenteReal = tramos.filter(t => t.desde <= hoy).slice(-1)[0] || tramos[0];
 
@@ -43,7 +43,7 @@ function _renderizarListaHistorialDias() {
             className: `btn-perfil-select${esActual ? ' activo' : ''}`
         });
 
-        const diasTexto = [...tramo.dias].sort((a, b) => a - b).map(d => TimeUtils.nombreDiaPorIndice(d)).join(', ');
+        const diasTexto = [...tramo.dias].sort((a, b) => a - b).map(d => TiempoUtils.nombreDiaPorIndice(d)).join(', ');
         const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
         infoSection.appendChild(Object.assign(document.createElement('div'), {
             className: 'btn-perfil-nombre',
@@ -97,12 +97,12 @@ function abrirEditorTramoDias(desdeOriginal) {
     const btnEliminar = $('btn-eliminar-tramo-dias');
     if (btnEliminar) btnEliminar.disabled = (tramos.length <= 1 || tramos[0].desde === desdeOriginal);
 
-    ModalManager.alternar('modal-historial-dias', 'modal-editar-tramo-dias');
+    GestorModales.alternar('modal-historial-dias', 'modal-editar-tramo-dias');
 }
 
 function cerrarEditorTramoDias() {
     _tramoEnEdicionDesde = null;
-    ModalManager.alternar('modal-editar-tramo-dias', 'modal-historial-dias', null, _renderizarListaHistorialDias);
+    GestorModales.alternar('modal-editar-tramo-dias', 'modal-historial-dias', null, _renderizarListaHistorialDias);
 }
 
 async function guardarEdicionTramoDias() {
@@ -114,7 +114,7 @@ async function guardarEdicionTramoDias() {
     const checkboxes = document.querySelectorAll('input[name="dia-habil-tramo"]:checked');
     const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
 
-    if (!esSentinela && !TimeUtils.validarFecha(nuevaFecha)) {
+    if (!esSentinela && !TiempoUtils.validarFecha(nuevaFecha)) {
         mostrarToast('Ingresá una fecha válida', 'error'); return;
     }
     if (nuevosDias.length === 0) {
@@ -142,7 +142,7 @@ async function eliminarTramoDias() {
     const tramos = _obtenerTramosOrdenados();
     if (tramos.length <= 1) return;
     if (tramos[0].desde === _tramoEnEdicionDesde) return;
-    if (!await ModalManager.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
+    if (!await GestorModales.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
 
     const restantes = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
     const nuevoHistorial = D.sanitizarHistorialDiasHabiles(restantes);

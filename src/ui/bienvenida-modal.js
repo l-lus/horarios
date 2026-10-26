@@ -1,22 +1,22 @@
-import { STORAGE_KEYS } from '../core/constants.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { DataManagement } from '../services/data-management.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestionDatos } from '../services/gestion-datos.js';
 import { UIConfig } from './ui-config.js';
 
 // ====================================================================
 // WELCOME MODULE
 // ====================================================================
 async function chequearYMostrar() {
-    const yaVista = StorageHelper.getBoolean(STORAGE_KEYS.BIENVENIDA_VISTA, false, true);
+    const yaVista = Almacenamiento.getBoolean(STORAGE_KEYS.BIENVENIDA_VISTA, false, true);
     if (yaVista) return;
 
-    if (DataManagement.registros().length > 0) {
-        StorageHelper.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
+    if (GestionDatos.registros().length > 0) {
+        Almacenamiento.setItem(STORAGE_KEYS.BIENVENIDA_VISTA, true, true);
         return;
     }
 
-    await TimeUtils.esperar(1000);
+    await TiempoUtils.esperar(1000);
     await UIConfig.mostrarConfigOnboarding();
 }
 

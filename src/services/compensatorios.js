@@ -1,11 +1,11 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { HistoryManager } from './history-manager.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-import { AppState as D } from './app-state.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+import { EstadoApp as D } from './estado-app.js';
 
 // ====================================================================
 //      COMPENSATORY DAYS & WORKDAY HISTORY CALCULATIONS MODULE
@@ -17,7 +17,7 @@ function _esObjetivoValido(v) {
 function _sanitizarHistorialDiasHabiles(historial) {
     if (!Array.isArray(historial)) return null;
     const limpio = historial
-        .filter(t => t && typeof t.desde === 'string' && (t.desde === '0001-01-01' || TimeUtils.validarFecha(t.desde)) && Array.isArray(t.dias))
+        .filter(t => t && typeof t.desde === 'string' && (t.desde === '0001-01-01' || TiempoUtils.validarFecha(t.desde)) && Array.isArray(t.dias))
         .map(t => ({ desde: t.desde, dias: t.dias.filter(d => Number.isInteger(d) && d >= 0 && d <= 6) }))
         .filter(t => t.dias.length > 0);
     limpio.sort((a, b) => a.desde.localeCompare(b.desde));
@@ -56,7 +56,7 @@ function diasHabilesEnFecha(iso) {
 }
 
 function registrarCambioDiasHabiles(nuevosDias) {
-    const hoy = TimeUtils.obtenerFechaHoy();
+    const hoy = TiempoUtils.obtenerFechaHoy();
     let hist = D.historialDiasHabiles();
     const sinHistorial = !Array.isArray(hist) || hist.length === 0;
     const soloTramoBase = !sinHistorial && hist.length === 1 && hist[0].desde === '0001-01-01';
@@ -73,7 +73,7 @@ function registrarCambioDiasHabiles(nuevosDias) {
 }
 
 function objetivoDeRegistro(registro) {
-    if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return D.horasDiarias();
+    if (Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return D.horasDiarias();
     const v = registro?.objetivoHoras;
     return _esObjetivoValido(v) ? v : D.horasDiarias();
 }
@@ -84,7 +84,7 @@ function esTipoRemoto(registro) {
 
 function _excedenteDeRegistro(r) {
     if (!r || !r.entrada || !r.salida || TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return 0;
-    const objetivo = TimeUtils.esFechaHabil(r.fecha, diasHabilesEnFecha(r.fecha)) ? objetivoDeRegistro(r) : 0;
+    const objetivo = TiempoUtils.esFechaHabil(r.fecha, diasHabilesEnFecha(r.fecha)) ? objetivoDeRegistro(r) : 0;
     const excedente = r.total - objetivo;
     return excedente > 0 ? excedente : 0;
 }
@@ -121,9 +121,9 @@ function _calcularAsignacionesCompensatorio(listaRegistros = D.registros()) {
     }
 
     const fechaLimiteDesde = (fechaRef) => {
-        const d = TimeUtils.parsearFechaLocal(fechaRef);
+        const d = TiempoUtils.parsearFechaLocal(fechaRef);
         d.setDate(d.getDate() - LIMITE_DIAS_COMPENSATORIO);
-        return TimeUtils.formatearFechaLocal(d);
+        return TiempoUtils.formatearFechaLocal(d);
     };
     for (const r of compensatorios) {
         if (asignaciones.has(r.id)) continue;
@@ -179,7 +179,7 @@ function horasEfectivasDeRegistro(registro) {
 }
 
 function objetivoEdicionEnVivo() {
-    if (StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return D.horasDiarias();
+    if (Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return D.horasDiarias();
     const v = parseFloat($('edit-objetivo')?.dataset.valor);
     return _esObjetivoValido(v) ? v : D.horasDiarias();
 }
@@ -201,8 +201,8 @@ function _recalcularCreditoRegistro(r, nuevoObjetivo) {
     const diferencia = nuevoObjetivo - crudo.total;
     let nuevoCredito = null;
     if (diferencia > 0.01) {
-        const { horas: h, minutos: m } = TimeUtils.descomponerHorasDecimales(diferencia);
-        nuevoCredito = TimeUtils.minutosAHora(h * 60 + m);
+        const { horas: h, minutos: m } = TiempoUtils.descomponerHorasDecimales(diferencia);
+        nuevoCredito = TiempoUtils.minutosAHora(h * 60 + m);
     }
     r.credito = nuevoCredito;
     D._aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera, r.credito);
@@ -220,7 +220,7 @@ function aplicarHorasATodosLosRegistros() {
             if (_recalcularCreditoRegistro(r, D.horasDiarias())) creditosRecalculados++;
         }
     });
-    if (aplicados > 0) HistoryManager.saveState(D.registros(), `aplicar horas a todos (${aplicados} registro${TimeUtils.pluralizar(aplicados)})`);
+    if (aplicados > 0) GestorHistorial.saveState(D.registros(), `aplicar horas a todos (${aplicados} registro${TiempoUtils.pluralizar(aplicados)})`);
     return { aplicados, creditosRecalculados };
 }
 

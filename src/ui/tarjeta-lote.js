@@ -1,11 +1,11 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { DataManagement } from '../services/data-management.js';
-import { UICore } from './ui-core.js';
-const D = DataManagement;
+import { GestionDatos } from '../services/gestion-datos.js';
+import { UIBase } from './ui-base.js';
+const D = GestionDatos;
 
 // ====================================================================
 //           UI CARD BATCH / FORM & INPUT HELPERS MODULE
@@ -14,7 +14,7 @@ const {
     mostrarToast, resetearBoton, _setBtnDisabled, _flashCampo, _avisarFichaje,
     _animarFadeSwap, _animarSlideElemento, toggleSeccionGen, _crearOpcion,
     setIconoBtn, aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible
-} = UICore;
+} = UIBase;
 const actualizarEstadoBotonTimerMain = (...args) => D._notify().actualizarEstadoBotonTimerMain(...args);
 
 let modoLoteActivo = false;
@@ -27,7 +27,7 @@ function _alternarValorCampo(id, obtenerValor) {
 }
 
 function pegarHoraActual(id) {
-    _alternarValorCampo(id, TimeUtils.obtenerHoraActual)?.dispatchEvent(new Event('input'));
+    _alternarValorCampo(id, TiempoUtils.obtenerHoraActual)?.dispatchEvent(new Event('input'));
 }
 
 function limpiarCampo(id) {
@@ -84,7 +84,7 @@ async function ejecutarAccionRegistro() {
     if (modoLoteActivo) {
         await registrarLoteDesdeCard();
     } else {
-        await DataManagement.agregarRegistro();
+        await GestionDatos.agregarRegistro();
     }
 }
 
@@ -98,7 +98,7 @@ async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
         _avisarFichaje(mensajeDuplicado, 'warning'); return;
     }
     try {
-        await DataManagement.registrarDiaEspecial(fecha, tipo);
+        await GestionDatos.registrarDiaEspecial(fecha, tipo);
         alExito?.();
         _limpiarCamposLote();
         actualizarBotonLote();
@@ -123,7 +123,7 @@ async function registrarLoteDesdeCard() {
             _avisarFichaje('Revisá las fechas ingresadas'); return;
         }
         if (tipo === 'normal') { _avisarFichaje('Completá ambos campos', 'info'); return; }
-        await _registrarEspecial(TimeUtils.obtenerFechaHoy(), tipo, 'Ya existe un registro para hoy'); return;
+        await _registrarEspecial(TiempoUtils.obtenerFechaHoy(), tipo, 'Ya existe un registro para hoy'); return;
     }
 
     if (desde && !hasta) {
@@ -142,8 +142,8 @@ async function registrarLoteDesdeCard() {
     }
 
     try {
-        if (tipo === 'normal') await DataManagement.borrarPeriodoDirecto(desde, hasta);
-        else await DataManagement.registrarVacacionesDirecto(desde, hasta, tipo);
+        if (tipo === 'normal') await GestionDatos.borrarPeriodoDirecto(desde, hasta);
+        else await GestionDatos.registrarVacacionesDirecto(desde, hasta, tipo);
         aplicarFeedbackCampos(
             [
                 { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
@@ -188,7 +188,7 @@ function _setBtnError(btn, btnTexto, mensaje) {
 }
 
 function _actualizarBtnNormal(btn, btnTexto, desde, hasta) {
-    const n = DataManagement.registros().filter(r =>
+    const n = GestionDatos.registros().filter(r =>
         r.fecha >= desde && r.fecha <= hasta && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
     ).length;
     n > 0
@@ -200,11 +200,11 @@ function _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales) 
     const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(tipo);
     if (!codigosTipo) return _pintarBotonLote(btn, btnTexto, 'Fichar');
 
-    const yaRegistrados = DataManagement.registros().filter(r =>
+    const yaRegistrados = GestionDatos.registros().filter(r =>
         r.fecha >= desde && r.fecha <= hasta &&
         r.entrada === codigosTipo.entrada && r.salida === codigosTipo.salida
     ).length;
-    const diasOcupados = DataManagement.registros().filter(r => r.fecha >= desde && r.fecha <= hasta).length;
+    const diasOcupados = GestionDatos.registros().filter(r => r.fecha >= desde && r.fecha <= hasta).length;
     const disponibles = diasTotales - diasOcupados;
     const sobreescribirOtros = diasOcupados - yaRegistrados;
 
@@ -224,7 +224,7 @@ function actualizarBotonLote() {
     if (!desde && !hasta) {
         if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Completar rango');
 
-        const hoy = TimeUtils.obtenerFechaHoy();
+        const hoy = TiempoUtils.obtenerFechaHoy();
         const existeHoy = D.existeRegistroEnFecha(hoy);
         return existeHoy
             ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
@@ -232,7 +232,7 @@ function actualizarBotonLote() {
     }
 
     if (!desde && hasta) return _setBtnError(btn, btnTexto, 'Rango incompleto');
-    if (!TimeUtils.validarFecha(desde)) return _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida');
+    if (!TiempoUtils.validarFecha(desde)) return _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida');
     if (desde && !hasta) {
         if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
         const existe = D.existeRegistroEnFecha(desde);
@@ -241,10 +241,10 @@ function actualizarBotonLote() {
             : _pintarBotonLote(btn, btnTexto, 'Fichar');
     }
 
-    if (!TimeUtils.validarFecha(hasta)) return _setBtnError(btn, btnTexto, 'Fecha Final Inválida');
+    if (!TiempoUtils.validarFecha(hasta)) return _setBtnError(btn, btnTexto, 'Fecha Final Inválida');
     if (desde > hasta) return _setBtnError(btn, btnTexto, 'Rango Inválido');
 
-    const diasTotales = Math.ceil(Math.abs(TimeUtils.parsearFechaLocal(hasta) - TimeUtils.parsearFechaLocal(desde)) / 864e5) + 1;
+    const diasTotales = Math.ceil(Math.abs(TiempoUtils.parsearFechaLocal(hasta) - TiempoUtils.parsearFechaLocal(desde)) / 864e5) + 1;
 
     return tipo === 'normal'
         ? _actualizarBtnNormal(btn, btnTexto, desde, hasta)
@@ -260,7 +260,7 @@ function toggleFormulario() {
     if (estabaExpandido) {
         $('entrada').value = '';
         $('salida').value = '';
-        $('fecha').value = TimeUtils.obtenerFechaHoy();
+        $('fecha').value = TiempoUtils.obtenerFechaHoy();
 
         const loteDesde = $('lote-fecha-desde');
         const loteHasta = $('lote-fecha-hasta');
@@ -320,7 +320,7 @@ function _scrollACardFichar(el) {
 }
 
 function alternarFechaActual(id) {
-    const c = _alternarValorCampo(id, TimeUtils.obtenerFechaHoy);
+    const c = _alternarValorCampo(id, TiempoUtils.obtenerFechaHoy);
     if (!c) return;
 
     actualizarBotonLote();
@@ -329,7 +329,7 @@ function alternarFechaActual(id) {
     }
 }
 
-export const CardLote = {
+export const TarjetaLote = {
     getModoLoteActivo: () => modoLoteActivo,
     pegarHoraActual,
     limpiarCampo,

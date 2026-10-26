@@ -1,7 +1,7 @@
 import { $ } from '../core/dom.js';
-import { PushReminder } from '../services/push-reminder.js';
-import { UICore } from './ui-core.js';
-import { DataManagement as D } from '../services/data-management.js';
+import { RecordatorioPush } from '../services/recordatorio-push.js';
+import { UIBase } from './ui-base.js';
+import { GestionDatos as D } from '../services/gestion-datos.js';
 
 // ====================================================================
 // UI NOTIFICATIONS MODULE (push y permisos de notificaciones)
@@ -9,25 +9,25 @@ import { DataManagement as D } from '../services/data-management.js';
 const {
     debounce, _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnActivo,
     _setBtnDisabled
-} = UICore;
+} = UIBase;
 
 function _actualizarDisponibilidadBotonesPush() {
-    const habilitado = PushReminder.getHabilitado();
-    const usaBufferSemanal = PushReminder.getUsarBufferSemanal();
+    const habilitado = RecordatorioPush.getHabilitado();
+    const usaBufferSemanal = RecordatorioPush.getUsarBufferSemanal();
     _setBtnDisabled('btn-toggle-push-buffer', !habilitado);
     _setBtnDisabled('btn-toggle-push-buffer-ultimo-dia', !habilitado || !usaBufferSemanal);
 }
 
 function actualizarEstadoBotonNotificaciones() {
-    _setBtnActivo('btn-toggle-notification', PushReminder.getHabilitado());
+    _setBtnActivo('btn-toggle-notification', RecordatorioPush.getHabilitado());
 }
 
 const _sincronizarPushHoyDebounced = debounce(() => D.sincronizarPushHoy(), 400);
 
 const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuffer } =
     _crearToggleConfig({
-        getVal: () => PushReminder.getUsarBufferSemanal(),
-        setVal: (v) => PushReminder.setUsarBufferSemanal(v),
+        getVal: () => RecordatorioPush.getUsarBufferSemanal(),
+        setVal: (v) => RecordatorioPush.setUsarBufferSemanal(v),
         btnId: 'btn-toggle-push-buffer',
         onAfterToggle: () => {
             actualizarEstadoBotonPushBufferUltimoDia();
@@ -38,18 +38,18 @@ const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuf
 
 const { toggle: togglePushBufferUltimoDia, actualizarEstado: actualizarEstadoBotonPushBufferUltimoDia } =
     _crearToggleConfig({
-        getVal: () => PushReminder.getBufferSoloUltimoDia(),
-        setVal: (v) => PushReminder.setBufferSoloUltimoDia(v),
+        getVal: () => RecordatorioPush.getBufferSoloUltimoDia(),
+        setVal: (v) => RecordatorioPush.setBufferSoloUltimoDia(v),
         btnId: 'btn-toggle-push-buffer-ultimo-dia',
         onAfterToggle: () => _sincronizarPushHoyDebounced(),
     });
 
 const { toggle: togglePushHabilitado, actualizarEstado: actualizarEstadoBotonPushHabilitado } =
     _crearToggleConfig({
-        getVal: () => PushReminder.getHabilitado(),
-        setVal: (v) => PushReminder.setHabilitado(v),
+        getVal: () => RecordatorioPush.getHabilitado(),
+        setVal: (v) => RecordatorioPush.setHabilitado(v),
         btnId: 'btn-toggle-push-habilitado',
-        puedeActivar: () => PushReminder.puedeHabilitarse(),
+        puedeActivar: () => RecordatorioPush.puedeHabilitarse(),
         onAfterToggle: () => {
             _actualizarDisponibilidadBotonesPush();
             actualizarEstadoBotonNotificaciones();
@@ -59,11 +59,11 @@ const { toggle: togglePushHabilitado, actualizarEstado: actualizarEstadoBotonPus
 
 function actualizarSelectPushAnticipacion() {
     const select = $('config-push-anticipacion');
-    if (select) select.value = String(PushReminder.getAnticipacionMin());
+    if (select) select.value = String(RecordatorioPush.getAnticipacionMin());
 }
 
 function cambiarPushAnticipacion(minutos) {
-    PushReminder.setAnticipacionMin(minutos);
+    RecordatorioPush.setAnticipacionMin(minutos);
     _sincronizarPushHoyDebounced();
 }
 
@@ -90,7 +90,7 @@ function actualizarEstadoPermisoNotificaciones() {
     if (permiso === 'denied') {
         claseColor = 'negativo';
         texto = 'Permisos de notificaciones bloqueados en el navegador';
-    } else if (!PushReminder.getHabilitado() && !PushReminder.puedeHabilitarse()) {
+    } else if (!RecordatorioPush.getHabilitado() && !RecordatorioPush.puedeHabilitarse()) {
         claseColor = 'neutral';
         texto = 'Usá la app para activar tus notificaciones en este perfil';
     } else if (permiso === 'granted') {

@@ -1,5 +1,5 @@
 // ====================================================================
-// TIME AND DATE UTILITIES MODULE (TimeUtils)
+// TIME AND DATE UTILITIES MODULE (TiempoUtils)
 // ====================================================================
 const REGEX_PATTERNS = {
     FECHA: /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/,
@@ -228,7 +228,7 @@ function nombreMesCapitalizado(mesAnio) {
 
 function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-export const TimeUtils = {
+export const TiempoUtils = {
     esFechaHabil, esDiaAnterior, agruparMesesPorAnio, nombreMesCapitalizado,
     validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
     obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,

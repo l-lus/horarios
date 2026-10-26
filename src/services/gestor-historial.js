@@ -1,6 +1,6 @@
-import { STORAGE_KEYS } from '../core/constants.js';
-import { SecurityAndUtils } from '../core/security.js';
-import { StorageHelper } from '../core/storage.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
+import { SeguridadYUtils } from '../core/seguridad.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
 
 // ====================================================================
 // HISTORY MANAGER MODULE
@@ -13,7 +13,7 @@ function deepClone(obj) {
     if (obj === null || obj === undefined) return obj;
     try { return structuredClone(obj); }
     catch (e) {
-        return JSON.parse(JSON.stringify(obj), SecurityAndUtils.reviverJSONSeguro);
+        return JSON.parse(JSON.stringify(obj), SeguridadYUtils.reviverJSONSeguro);
     }
 }
 
@@ -64,11 +64,11 @@ function updateButtons() {
 
 function saveToLocalStorage() {
     const historyData = { history: _stack, currentIndex: currentIndex, timestamp: Date.now() };
-    StorageHelper.setItem(STORAGE_KEYS.HISTORY, historyData, true);
+    Almacenamiento.setItem(STORAGE_KEYS.HISTORY, historyData, true);
 }
 
 function loadFromLocalStorage() {
-    const historyData = StorageHelper.getObject(STORAGE_KEYS.HISTORY, null, true);
+    const historyData = Almacenamiento.getObject(STORAGE_KEYS.HISTORY, null, true);
     if (historyData) {
         const ahora = Date.now();
         const tiempoTranscurrido = ahora - (historyData.timestamp || 0);
@@ -80,7 +80,7 @@ function loadFromLocalStorage() {
             currentIndex = historyData.currentIndex !== undefined ? historyData.currentIndex : -1;
             return _stack.length > 0 && currentIndex >= 0;
         } else {
-            StorageHelper.removeItem(STORAGE_KEYS.HISTORY, true);
+            Almacenamiento.removeItem(STORAGE_KEYS.HISTORY, true);
         }
     }
     _stack = [];
@@ -89,7 +89,7 @@ function loadFromLocalStorage() {
     return false;
 }
 
-function clearStorage() { StorageHelper.removeItem(STORAGE_KEYS.HISTORY, true); }
+function clearStorage() { Almacenamiento.removeItem(STORAGE_KEYS.HISTORY, true); }
 
 function clear() {
     _stack = [];
@@ -117,7 +117,7 @@ function parchearRegistrosEnHistorial(parchadorFn) {
     return totalParcheado;
 }
 
-export const HistoryManager = {
+export const GestorHistorial = {
     saveState, undo, redo, canUndo, canRedo, updateButtons, clear,
     saveToLocalStorage, loadFromLocalStorage, getCurrentState, parchearRegistrosEnHistorial
 };

@@ -1,16 +1,16 @@
 import { Compensatorios } from './compensatorios.js';
-import { ImportExportData } from './import-export-data.js';
-import { FiltrosYPeriodosService } from './filtros-periodos-service.js';
-import { AppState } from './app-state.js';
-import { STORAGE_KEYS } from '../core/constants.js';
+import { ImportarExportar } from './importar-exportar.js';
+import { FiltrosYPeriodos } from './filtros-periodos.js';
+import { EstadoApp } from './estado-app.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { PushReminder } from './push-reminder.js';
-import { StorageHelper } from '../core/storage.js';
-import { PerfilManager } from './perfil-manager.js';
-import { HistoryManager } from './history-manager.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { RecordatorioPush } from './recordatorio-push.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorPerfiles } from './gestor-perfiles.js';
+import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
-import { SecurityAndUtils as S } from '../core/security.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
 
 // ====================================================================
 // DATA MANAGEMENT MODULE
@@ -20,7 +20,7 @@ const {
     _hayEspacioParaRegistros, _fechaFuturaInvalida, calcularHoras,
     _aplicarCalculoHoras, _recalcularHorasSiValido, _construirRegistro,
     guardarYActualizar, _guardarConCicloSiHoy
-} = AppState;
+} = EstadoApp;
 
 const {
     _esObjetivoValido, _sanitizarHistorialDiasHabiles, diasHabilesEnFecha,
@@ -36,35 +36,35 @@ const {
     KEYS_CONFIG_EXPORTABLE, obtenerConfigExportable, validarCamposConfigImport,
     aplicarConfigImportada, calcularCambiosConfigImport,
     normalizarRegistrosImportados, exportarJSON, importarDatos
-} = ImportExportData;
+} = ImportarExportar;
 
 const {
     editarGrupo, guardarEdicionGrupo, eliminarGrupoActual, registrarDiaEspecial,
     detenerYRegistrarTimer, detectarAyerAbierto, registroParaTiempoFuera,
     calcularBufferPeriodo, limpiarFiltros, aplicarFiltrosInmediato,
     obtenerRegistrosFiltrados, registrarVacacionesDirecto, borrarPeriodoDirecto
-} = FiltrosYPeriodosService;
+} = FiltrosYPeriodos;
 
 function cargarConfiguracion() {
-    const perfilData = PerfilManager ? PerfilManager.obtenerDatosPerfil() : null;
+    const perfilData = GestorPerfiles ? GestorPerfiles.obtenerDatosPerfil() : null;
     return {
         diasHabiles: (perfilData && Array.isArray(perfilData.diasHabiles))
             ? perfilData.diasHabiles
-            : StorageHelper.getObject(STORAGE_KEYS.DIAS_HABILES, [1, 2, 3, 4, 5]),
+            : Almacenamiento.getObject(STORAGE_KEYS.DIAS_HABILES, [1, 2, 3, 4, 5]),
         horasDiarias: (perfilData && perfilData.horasDiarias !== undefined)
             ? perfilData.horasDiarias
-            : StorageHelper.getNumber(STORAGE_KEYS.HORAS_DIARIAS, 7),
-        tema: AppState._notify().temaGuardado(),
-        vistaActual: StorageHelper.getItem(STORAGE_KEYS.VISTA_ACTUAL, 'diaria'),
-        ignorarTiempoFuera: StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true),
-        modoEstadisticas: StorageHelper.getItem(STORAGE_KEYS.MODO_ESTADISTICAS, 'mensual'),
-        fondoCard: StorageHelper.getItem(STORAGE_KEYS.FONDO_CARD, 'golden-gate', true)
+            : Almacenamiento.getNumber(STORAGE_KEYS.HORAS_DIARIAS, 7),
+        tema: EstadoApp._notify().temaGuardado(),
+        vistaActual: Almacenamiento.getItem(STORAGE_KEYS.VISTA_ACTUAL, 'diaria'),
+        ignorarTiempoFuera: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true),
+        modoEstadisticas: Almacenamiento.getItem(STORAGE_KEYS.MODO_ESTADISTICAS, 'mensual'),
+        fondoCard: Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, 'golden-gate', true)
     };
 }
 
 function validarFormulario() {
     let valido = true;
-    const notify = AppState._notify();
+    const notify = EstadoApp._notify();
     const fecha = S.sanitizeString($('fecha').value, 10);
     const entrada = S.sanitizeString($('entrada').value.trim(), 5);
     const salida = S.sanitizeString($('salida').value.trim(), 5);
@@ -73,9 +73,9 @@ function validarFormulario() {
     notify.limpiarError('entrada', null);
     notify.limpiarError('salida', null);
 
-    if (!fecha || !TimeUtils.validarFecha(fecha)) { notify.mostrarError('fecha', null); valido = false; }
-    if (entrada && !TimeUtils.validarHora(entrada)) { notify.mostrarError('entrada', null); valido = false; }
-    if (salida && !TimeUtils.validarHora(salida)) { notify.mostrarError('salida', null); valido = false; }
+    if (!fecha || !TiempoUtils.validarFecha(fecha)) { notify.mostrarError('fecha', null); valido = false; }
+    if (entrada && !TiempoUtils.validarHora(entrada)) { notify.mostrarError('entrada', null); valido = false; }
+    if (salida && !TiempoUtils.validarHora(salida)) { notify.mostrarError('salida', null); valido = false; }
     return valido;
 }
 
@@ -89,19 +89,19 @@ function _mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s) {
 }
 
 async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
-    const notify = AppState._notify();
+    const notify = EstadoApp._notify();
     const timerDetenido = detenerYRegistrarTimer(reg);
     reg.salida = s;
     _aplicarCalculoHoras(reg, reg.entrada, s, reg.tiempoFuera || null);
 
-    const esHoy = reg.fecha === TimeUtils.obtenerFechaHoy();
-    HistoryManager.saveState(AppState.registros(), `salida ${s} (${TimeUtils.fechaCorta(reg.fecha)})`);
+    const esHoy = reg.fecha === TiempoUtils.obtenerFechaHoy();
+    GestorHistorial.saveState(EstadoApp.registros(), `salida ${s} (${TiempoUtils.fechaCorta(reg.fecha)})`);
     const saved = await _guardarConCicloSiHoy(reg.id, esHoy, 'salida');
     if (!saved) {
         notify.avisarFichaje(null, 'error', { btn });
         return;
     }
-    PushReminder.cancelarFinDeJornada(reg.fecha);
+    RecordatorioPush.cancelarFinDeJornada(reg.fecha);
     if (!usaHoraActual) {
         notify.aplicarFeedbackCampos([
             { id: 'entrada', fallback: 'Entrada', mostrar: false },
@@ -110,78 +110,78 @@ async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     }
     notify.avisarFichaje(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
     notify.resetearBoton(btn);
-    $('fecha').value = TimeUtils.obtenerFechaHoy();
+    $('fecha').value = TiempoUtils.obtenerFechaHoy();
     $('salida').value = '';
 }
 
 function _sincronizarPushHoy() {
-    const hoy = TimeUtils.obtenerFechaHoy();
-    const esDiaHabil = TimeUtils.esFechaHabil(hoy, diasHabilesEnFecha(hoy));
-    const abierto = esDiaHabil && AppState.registros().find(r => r.fecha === hoy && r.entrada && !r.salida);
-    const habilitado = PushReminder.getHabilitado();
-    const minutosTF = abierto && !AppState.getIgnorarTiempoFuera() && abierto.tiempoFuera ? TimeUtils.horaAMinutos(abierto.tiempoFuera) : 0;
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    const esDiaHabil = TiempoUtils.esFechaHabil(hoy, diasHabilesEnFecha(hoy));
+    const abierto = esDiaHabil && EstadoApp.registros().find(r => r.fecha === hoy && r.entrada && !r.salida);
+    const habilitado = RecordatorioPush.getHabilitado();
+    const minutosTF = abierto && !EstadoApp.getIgnorarTiempoFuera() && abierto.tiempoFuera ? TiempoUtils.horaAMinutos(abierto.tiempoFuera) : 0;
     const nuevoTarget = (habilitado && abierto)
-        ? PushReminder.calcularTarget(abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF)
+        ? RecordatorioPush.calcularTarget(abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF)
         : null;
-    const targetActual = PushReminder.targetProgramadoParaHoy();
+    const targetActual = RecordatorioPush.targetProgramadoParaHoy();
     if (nuevoTarget === targetActual) return;
 
     if (abierto && nuevoTarget != null) {
-        PushReminder.programarFinDeJornada(abierto.fecha, abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF);
+        RecordatorioPush.programarFinDeJornada(abierto.fecha, abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF);
     } else if (targetActual != null) {
-        PushReminder.cancelarFinDeJornada(hoy);
+        RecordatorioPush.cancelarFinDeJornada(hoy);
     }
 }
 
-AppState.setSincronizarPushHoyHook(_sincronizarPushHoy);
+EstadoApp.setSincronizarPushHoyHook(_sincronizarPushHoy);
 
 function _bufferSemanalActual() {
-    const { inicio: iniSemana } = TimeUtils.obtenerSemanaRangoActual();
-    return calcularBufferPeriodo(iniSemana, TimeUtils.obtenerFechaHoy(), false, 0, _calcularAsignacionesCompensatorio());
+    const { inicio: iniSemana } = TiempoUtils.obtenerSemanaRangoActual();
+    return calcularBufferPeriodo(iniSemana, TiempoUtils.obtenerFechaHoy(), false, 0, _calcularAsignacionesCompensatorio());
 }
 
 function _ultimoDiaHabilEfectivoSemana() {
-    const { fin } = TimeUtils.obtenerSemanaRangoActual();
+    const { fin } = TiempoUtils.obtenerSemanaRangoActual();
     let fecha = fin;
     for (let i = 0; i < 7; i++) {
-        if (TimeUtils.esFechaHabil(fecha, diasHabilesEnFecha(fecha))) {
+        if (TiempoUtils.esFechaHabil(fecha, diasHabilesEnFecha(fecha))) {
             const reg = registroPorFecha(fecha);
             const esEspecial = reg && TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
             if (!esEspecial) return fecha;
         }
-        const d = TimeUtils.parsearFechaLocal(fecha);
+        const d = TiempoUtils.parsearFechaLocal(fecha);
         d.setDate(d.getDate() - 1);
-        fecha = TimeUtils.formatearFechaLocal(d);
+        fecha = TiempoUtils.formatearFechaLocal(d);
     }
     return null;
 }
 
 function _bufferSemanalParaPush(fecha) {
     const buffer = _bufferSemanalActual();
-    if (!PushReminder.getUsarBufferSemanal() || !PushReminder.getBufferSoloUltimoDia()) return buffer;
+    if (!RecordatorioPush.getUsarBufferSemanal() || !RecordatorioPush.getBufferSoloUltimoDia()) return buffer;
     return fecha === _ultimoDiaHabilEfectivoSemana() ? buffer : 0;
 }
 
 async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
-    const notify = AppState._notify();
+    const notify = EstadoApp._notify();
     if (!_hayEspacioParaRegistros(1)) {
         notify.avisarFichaje('Límite alcanzado', 'error', { btn }); return;
     }
     const nuevo = _construirRegistro(f, e, s);
-    const registros = AppState.registros();
+    const registros = EstadoApp.registros();
     registros.push(nuevo);
     ordenarRegistros();
-    const esHoy = e && f === TimeUtils.obtenerFechaHoy();
+    const esHoy = e && f === TiempoUtils.obtenerFechaHoy();
     const detalleAccion = e && s ? `entrada ${e} y salida ${s}` : e ? `entrada ${e}` : `salida ${s}`;
-    HistoryManager.saveState(registros, `${detalleAccion} (${TimeUtils.fechaCorta(f)})`);
+    GestorHistorial.saveState(registros, `${detalleAccion} (${TiempoUtils.fechaCorta(f)})`);
     const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
     if (!saved) {
         notify.avisarFichaje(null, 'error', { btn });
         return;
     }
-    if (esHoy && !s && TimeUtils.esFechaHabil(f, diasHabilesEnFecha(f))) {
+    if (esHoy && !s && TiempoUtils.esFechaHabil(f, diasHabilesEnFecha(f))) {
         const bufferSemanal = _bufferSemanalParaPush(f);
-        PushReminder.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
+        RecordatorioPush.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
     }
     const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
     if (entradaManual || salidaManual) {
@@ -192,12 +192,12 @@ async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
     }
     notify.avisarFichaje(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
     notify.resetearBoton(btn);
-    $('fecha').value = TimeUtils.obtenerFechaHoy();
+    $('fecha').value = TiempoUtils.obtenerFechaHoy();
     $('entrada').value = ''; $('salida').value = '';
 }
 
 async function agregarRegistro() {
-    const notify = AppState._notify();
+    const notify = EstadoApp._notify();
     if (!validarFormulario()) { notify.avisarFichaje('Verificá los campos'); return; }
 
     const btn = $('btn-agregar');
@@ -212,16 +212,16 @@ async function agregarRegistro() {
         notify.avisarFichaje('Fecha futura no permitida en registro regular', 'warning', { btn }); return;
     }
 
-    const hoy = TimeUtils.obtenerFechaHoy();
+    const hoy = TiempoUtils.obtenerFechaHoy();
     if (!e && f === hoy) {
-        const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(hoy, AppState.registros());
+        const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(hoy, EstadoApp.registros());
         if (ayerAbierto && !existeRegistroEnFecha(hoy)) { f = ayer; $('fecha').value = f; }
     }
 
     const registroExistente = registroPorFecha(f);
 
     if (!e && !s) {
-        const horaActual = TimeUtils.obtenerHoraActual();
+        const horaActual = TiempoUtils.obtenerHoraActual();
         if (registroExistente?.entrada && !registroExistente.salida) {
             s = horaActual; $('salida').value = s;
         } else {
@@ -248,27 +248,27 @@ async function agregarRegistro() {
 }
 
 async function eliminarRegistroActual() {
-    const editandoId = AppState.editandoId();
+    const editandoId = EstadoApp.editandoId();
     if (editandoId) {
-        const notify = AppState._notify();
+        const notify = EstadoApp._notify();
         const modal = $('modal-editar');
         const btnEliminar = modal.querySelector('.btn-delete');
         btnEliminar.disabled = true;
         const registroABorrar = registroPorId(editandoId);
-        const hoy = TimeUtils.obtenerFechaHoy();
+        const hoy = TiempoUtils.obtenerFechaHoy();
 
         if (registroABorrar && registroABorrar === registroParaTiempoFuera(hoy)) {
-            const perfilId = AppState.obtenerPerfilIdActual();
+            const perfilId = EstadoApp.obtenerPerfilIdActual();
             const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
-            if (StorageHelper.getItem(storageKey)) {
-                StorageHelper.removeItem(storageKey);
+            if (Almacenamiento.getItem(storageKey)) {
+                Almacenamiento.removeItem(storageKey);
                 notify.mostrarToast('Timer detenido al borrar el registro', 'info');
             }
         }
 
-        AppState._setRegistros(AppState.registros().filter(r => r.id !== editandoId));
+        EstadoApp._setRegistros(EstadoApp.registros().filter(r => r.id !== editandoId));
         _sincronizarPushHoy();
-        HistoryManager.saveState(AppState.registros(), `eliminar registro${registroABorrar ? ` (${TimeUtils.fechaCorta(registroABorrar.fecha)})` : ''}`);
+        GestorHistorial.saveState(EstadoApp.registros(), `eliminar registro${registroABorrar ? ` (${TiempoUtils.fechaCorta(registroABorrar.fecha)})` : ''}`);
 
         const saved = await guardarYActualizar();
         btnEliminar.disabled = false;
@@ -283,13 +283,13 @@ async function eliminarRegistroActual() {
 }
 
 function editarRegistro(id) {
-    if (AppState.editandoId() !== null) return;
+    if (EstadoApp.editandoId() !== null) return;
     const r = registroPorId(id);
     if (!r) return;
 
-    const notify = AppState._notify();
-    const horasDiarias = AppState.horasDiarias();
-    AppState.setEditandoId(id);
+    const notify = EstadoApp._notify();
+    const horasDiarias = EstadoApp.horasDiarias();
+    EstadoApp.setEditandoId(id);
     $('edit-fecha').value = r.fecha;
     $('edit-entrada').value = r.entrada || '';
     $('edit-salida').value = r.salida || '';
@@ -300,7 +300,7 @@ function editarRegistro(id) {
     const elObjetivo = $('edit-objetivo');
     if (elObjetivo) {
         elObjetivo.dataset.valor = objetivoActual;
-        elObjetivo.textContent = TimeUtils.horasATexto(objetivoActual, 'short');
+        elObjetivo.textContent = TiempoUtils.horasATexto(objetivoActual, 'short');
     }
 
     const elRef = $('edit-referencia-compensatorio');
@@ -331,7 +331,7 @@ function editarRegistro(id) {
 }
 
 function pegarReferenciaAutomatica() {
-    const editandoId = AppState.editandoId();
+    const editandoId = EstadoApp.editandoId();
     const elRef = $('edit-referencia-compensatorio');
     if (!elRef || editandoId === null) return;
 
@@ -341,7 +341,7 @@ function pegarReferenciaAutomatica() {
         const f = S.sanitizeString($('edit-fecha').value, 10);
         const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
         const s = S.sanitizeString($('edit-salida').value.trim(), 5);
-        const listaSinManual = AppState.registros().map(x => x.id === editandoId
+        const listaSinManual = EstadoApp.registros().map(x => x.id === editandoId
             ? { ...x, fecha: f, entrada: e || null, salida: s || null, referenciaCompensatorio: undefined }
             : x);
         const asignaciones = _calcularAsignacionesCompensatorio(listaSinManual);
@@ -355,27 +355,27 @@ function _validarCamposEdicion(f, e, s, tf) {
     if (_fechaFuturaInvalida(f, e, s))
         return { msg: 'Fecha futura no permitida en registro regular', tipo: 'warning' };
 
-    if (!TimeUtils.validarFecha(f))
+    if (!TiempoUtils.validarFecha(f))
         return { msg: 'Fecha inválida', tipo: 'error' };
-    if (e && !TimeUtils.validarHora(e))
+    if (e && !TiempoUtils.validarHora(e))
         return { msg: 'Hora de entrada inválida', tipo: 'error' };
-    if (s && !TimeUtils.validarHora(s))
+    if (s && !TiempoUtils.validarHora(s))
         return { msg: 'Hora de salida inválida', tipo: 'error' };
-    if (tf && !TimeUtils.validarHora(tf))
+    if (tf && !TiempoUtils.validarHora(tf))
         return { msg: 'Tiempo fuera inválido', tipo: 'error' };
     if (!e && s)
         return { msg: 'Debés fichar una entrada', tipo: 'error' };
 
-    const editandoId = AppState.editandoId();
-    if (AppState.registros().some(reg => reg.fecha === f && reg.id !== editandoId))
+    const editandoId = EstadoApp.editandoId();
+    if (EstadoApp.registros().some(reg => reg.fecha === f && reg.id !== editandoId))
         return { msg: 'Ya existe otro registro para esa fecha', tipo: 'error' };
 
     if (e && tf) {
-        const minutosEntrada = TimeUtils.horaAMinutos(e);
-        const minutosFuera = TimeUtils.horaAMinutos(tf);
+        const minutosEntrada = TiempoUtils.horaAMinutos(e);
+        const minutosFuera = TiempoUtils.horaAMinutos(tf);
         const minutosLimite = s
-            ? TimeUtils.horaAMinutos(s)
-            : TimeUtils.horaAMinutos(TimeUtils.obtenerHoraActual());
+            ? TiempoUtils.horaAMinutos(s)
+            : TiempoUtils.horaAMinutos(TiempoUtils.obtenerHoraActual());
         let tiempoTranscurrido = minutosLimite - minutosEntrada;
         if (tiempoTranscurrido < 0) tiempoTranscurrido += 24 * 60;
         if (minutosFuera > tiempoTranscurrido)
@@ -390,40 +390,40 @@ function _validarCamposEdicion(f, e, s, tf) {
     return null;
 }
 
-function _calcularCredito(e, s, tf, objetivo = AppState.horasDiarias()) {
+function _calcularCredito(e, s, tf, objetivo = EstadoApp.horasDiarias()) {
     const btn = document.getElementById('btn-toggle-credito');
     if (!btn || btn.dataset.activo !== 'true') return null;
     const calc = calcularHoras(e, s, tf, null);
     if (!calc) return null;
     const diferencia = objetivo - calc.total;
     if (diferencia <= 0.01) return null;
-    const { horas: h, minutos: m } = TimeUtils.descomponerHorasDecimales(diferencia);
-    return TimeUtils.minutosAHora(h * 60 + m);
+    const { horas: h, minutos: m } = TiempoUtils.descomponerHorasDecimales(diferencia);
+    return TiempoUtils.minutosAHora(h * 60 + m);
 }
 
 async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {
-    const editandoId = AppState.editandoId();
-    const notify = AppState._notify();
+    const editandoId = EstadoApp.editandoId();
+    const notify = EstadoApp._notify();
     const reg = registroPorId(editandoId);
-    if (reg?.fecha === TimeUtils.obtenerFechaHoy()) {
-        const perfilId = AppState.obtenerPerfilIdActual();
-        StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
+    if (reg?.fecha === TiempoUtils.obtenerFechaHoy()) {
+        const perfilId = EstadoApp.obtenerPerfilIdActual();
+        Almacenamiento.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
         notify.actualizarEstadoBotonTimerMain();
     }
-    AppState._setRegistros(AppState.registros().filter(r => r.id !== editandoId));
+    EstadoApp._setRegistros(EstadoApp.registros().filter(r => r.id !== editandoId));
     _sincronizarPushHoy();
-    HistoryManager.saveState(AppState.registros(), `eliminar registro vacío${reg ? ` (${TimeUtils.fechaCorta(reg.fecha)})` : ''}`);
+    GestorHistorial.saveState(EstadoApp.registros(), `eliminar registro vacío${reg ? ` (${TiempoUtils.fechaCorta(reg.fecha)})` : ''}`);
     const saved = await guardarYActualizar();
     notify.restaurarBotonGuardarEdicion(btnGuardar);
     if (saved) { notify.mostrarToast('Registro eliminado (vacío)', 'info'); notify.cerrarEdicion(); }
 }
 
 async function guardarEdicion() {
-    const editandoId = AppState.editandoId();
+    const editandoId = EstadoApp.editandoId();
     const r = registroPorId(editandoId);
     if (!r) return;
-    const notify = AppState._notify();
-    const horasDiarias = AppState.horasDiarias();
+    const notify = EstadoApp._notify();
+    const horasDiarias = EstadoApp.horasDiarias();
     const btnGuardar = $('modal-editar').querySelector('.btn-edit');
     btnGuardar.disabled = true;
 
@@ -431,7 +431,7 @@ async function guardarEdicion() {
     const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
     const s = S.sanitizeString($('edit-salida').value.trim(), 5);
     let tf = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5) || null;
-    tf = tf ? TimeUtils.normalizarMinutosSueltos(tf) : tf;
+    tf = tf ? TiempoUtils.normalizarMinutosSueltos(tf) : tf;
     let notas = S.sanitizeString($('edit-notas').value.trim(), S.SECURITY_LIMITS.MAX_NOTAS_LENGTH);
     if (notas) notas = S.sanitizeNotas(notas, true) || null;
     if (notas === '') notas = null;
@@ -444,7 +444,7 @@ async function guardarEdicion() {
     let referenciaCompensatorioNueva;
     if (esCompensatorioNuevo) {
         const refInput = S.sanitizeString($('edit-referencia-compensatorio')?.value || '', 10);
-        referenciaCompensatorioNueva = TimeUtils.validarFecha(refInput) ? refInput : undefined;
+        referenciaCompensatorioNueva = TiempoUtils.validarFecha(refInput) ? refInput : undefined;
 
         if (referenciaCompensatorioNueva) {
             if (referenciaCompensatorioNueva > f) {
@@ -456,10 +456,10 @@ async function guardarEdicion() {
             const yaUsadoPorOtro = asignacionesActuales.find(a => a.compensatorioId !== r.id && a.referenciaFecha === referenciaCompensatorioNueva);
             if (yaUsadoPorOtro) {
                 notify.restaurarBotonGuardarEdicion(btnGuardar);
-                notify.mostrarToast(`Ese día ya está asignado al compensatorio del ${TimeUtils.fechaCorta(yaUsadoPorOtro.compensatorioFecha)}`, 'error');
+                notify.mostrarToast(`Ese día ya está asignado al compensatorio del ${TiempoUtils.fechaCorta(yaUsadoPorOtro.compensatorioFecha)}`, 'error');
                 return;
             }
-            const listaSimulada = AppState.registros().map(x => x.id === r.id
+            const listaSimulada = EstadoApp.registros().map(x => x.id === r.id
                 ? { ...x, fecha: f, entrada: e || null, salida: s || null, referenciaCompensatorio: referenciaCompensatorioNueva }
                 : x);
             const asigTest = _calcularAsignacionesCompensatorio(listaSimulada);
@@ -507,7 +507,7 @@ async function guardarEdicion() {
     _aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera, r.credito);
 
     ordenarRegistros();
-    HistoryManager.saveState(AppState.registros(), `editar registro (${TimeUtils.fechaCorta(f)})`);
+    GestorHistorial.saveState(EstadoApp.registros(), `editar registro (${TiempoUtils.fechaCorta(f)})`);
     const saved = await guardarYActualizar(r.id, true);
     notify.restaurarBotonGuardarEdicion(btnGuardar);
     if (saved) {
@@ -518,37 +518,37 @@ async function guardarEdicion() {
 }
 
 async function borrarTodoHistorial() {
-    const registros = AppState.registros();
+    const registros = EstadoApp.registros();
     const totalRegistros = registros.length;
-    const confirmar = await AppState._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${totalRegistros} registro${TimeUtils.pluralizar(totalRegistros)} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
+    const confirmar = await EstadoApp._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
     if (!confirmar) return;
 
-    AppState.setDiasHabiles([1, 2, 3, 4, 5]);
-    AppState.setHorasDiarias(7);
-    AppState._setHistorialDiasHabilesRaw([]);
+    EstadoApp.setDiasHabiles([1, 2, 3, 4, 5]);
+    EstadoApp.setHorasDiarias(7);
+    EstadoApp._setHistorialDiasHabilesRaw([]);
     registros.splice(0, registros.length);
-    AppState.setIgnorarTiempoFuera(false);
-    PushReminder.restablecer();
+    EstadoApp.setIgnorarTiempoFuera(false);
+    RecordatorioPush.restablecer();
 
-    const perfilId = AppState.obtenerPerfilIdActual();
-    StorageHelper.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
+    const perfilId = EstadoApp.obtenerPerfilIdActual();
+    Almacenamiento.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
     const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
-    keys.forEach(k => StorageHelper.removeItem(k, true));
+    keys.forEach(k => Almacenamiento.removeItem(k, true));
 
-    if (PerfilManager) {
-        const perfil = PerfilManager.obtenerDatosPerfil();
+    if (GestorPerfiles) {
+        const perfil = GestorPerfiles.obtenerDatosPerfil();
         if (perfil) {
             ['gistLastSync', 'gistAutoSync', 'gistRangoDesde', 'gistRangoHasta', 'gistSyncFecha_subir', 'gistSyncCount_subir', 'gistSyncFecha_bajar', 'gistSyncCount_bajar', 'gistMergeBehavior'].forEach(k => delete perfil[k]);
         }
     }
 
-    HistoryManager.saveState(registros, `restablecer perfil (${totalRegistros} registro${TimeUtils.pluralizar(totalRegistros)})`);
+    GestorHistorial.saveState(registros, `restablecer perfil (${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)})`);
     if (await guardarYActualizar()) location.reload();
 }
 
 function _aplicarEstadoHistorial(resultado, mensaje) {
     if (!resultado?.estado) return;
-    const registros = AppState.registros();
+    const registros = EstadoApp.registros();
     registros.splice(0, registros.length, ...resultado.estado);
     registros.forEach(r => {
         if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
@@ -557,32 +557,32 @@ function _aplicarEstadoHistorial(resultado, mensaje) {
     });
     _sincronizarPushHoy();
     guardarYActualizar(null, true);
-    const notify = AppState._notify();
+    const notify = EstadoApp._notify();
     notify.mostrarToast(mensaje, 'info', undefined, resultado.descripcion);
     notify.iniciarTimerAutoCierreBotones();
 }
 
-export const DataManagement = {
-    registros: AppState.registros,
-    horasSemanales: AppState.horasSemanales,
-    diasHabiles: AppState.diasHabiles,
-    horasDiarias: AppState.horasDiarias,
-    setDiasHabiles: AppState.setDiasHabiles,
-    setHorasDiarias: AppState.setHorasDiarias,
+export const GestionDatos = {
+    registros: EstadoApp.registros,
+    horasSemanales: EstadoApp.horasSemanales,
+    diasHabiles: EstadoApp.diasHabiles,
+    horasDiarias: EstadoApp.horasDiarias,
+    setDiasHabiles: EstadoApp.setDiasHabiles,
+    setHorasDiarias: EstadoApp.setHorasDiarias,
     registroPorFecha,
     registroPorId,
     existeRegistroEnFecha,
-    historialDiasHabiles: AppState.historialDiasHabiles,
+    historialDiasHabiles: EstadoApp.historialDiasHabiles,
     setHistorialDiasHabiles: (v) => {
         const arr = Array.isArray(v) ? v : [];
-        AppState._setHistorialDiasHabilesRaw(arr);
-        if (arr.length > 0) AppState.setDiasHabiles(diasHabilesEnFecha(TimeUtils.obtenerFechaHoy()));
+        EstadoApp._setHistorialDiasHabilesRaw(arr);
+        if (arr.length > 0) EstadoApp.setDiasHabiles(diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
     },
     diasHabilesEnFecha,
     registrarCambioDiasHabiles,
     sanitizarHistorialDiasHabiles: _sanitizarHistorialDiasHabiles,
-    getIgnorarTiempoFuera: AppState.getIgnorarTiempoFuera,
-    setIgnorarTiempoFuera: AppState.setIgnorarTiempoFuera,
+    getIgnorarTiempoFuera: EstadoApp.getIgnorarTiempoFuera,
+    setIgnorarTiempoFuera: EstadoApp.setIgnorarTiempoFuera,
     objetivoDeRegistro,
     objetivoEdicionEnVivo,
     migrarObjetivoHorasFaltante,
@@ -595,17 +595,17 @@ export const DataManagement = {
     montoCompensadoDeReferencia: _montoCompensadoDeReferencia,
     calcularAsignacionesCompensatorio: _calcularAsignacionesCompensatorio,
     recalcularTotalesEnMemoria: function (recalcularCreditos = false) {
-        AppState.registros().forEach(r => {
+        EstadoApp.registros().forEach(r => {
             if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
                 if (recalcularCreditos && r.credito) _recalcularCreditoRegistro(r, objetivoDeRegistro(r));
                 else _recalcularHorasSiValido(r);
             }
         });
     },
-    editandoId: AppState.editandoId,
-    setEditandoId: AppState.setEditandoId,
-    vistaActual: AppState.vistaActual,
-    setVistaActual: AppState.setVistaActual,
+    editandoId: EstadoApp.editandoId,
+    setEditandoId: EstadoApp.setEditandoId,
+    vistaActual: EstadoApp.vistaActual,
+    setVistaActual: EstadoApp.setVistaActual,
     cargarConfiguracion,
     KEYS_CONFIG_EXPORTABLE,
     obtenerConfigExportable,
@@ -635,15 +635,15 @@ export const DataManagement = {
     editarGrupo,
     guardarEdicionGrupo,
     eliminarGrupoActual,
-    setGrupoEnEdicion: AppState.setGrupoEnEdicion,
+    setGrupoEnEdicion: EstadoApp.setGrupoEnEdicion,
     sincronizarPushHoy: _sincronizarPushHoy,
     bufferSemanalParaPush: _bufferSemanalParaPush,
-    undoAction: function () { _aplicarEstadoHistorial(HistoryManager.undo(), 'Deshecho'); },
-    redoAction: function () { _aplicarEstadoHistorial(HistoryManager.redo(), 'Rehecho'); },
-    configurarNotificaciones: AppState.configurarNotificaciones,
-    _notify: AppState._notify,
-    _setRegistros: AppState._setRegistros,
-    _setHistorialDiasHabilesRaw: AppState._setHistorialDiasHabilesRaw,
+    undoAction: function () { _aplicarEstadoHistorial(GestorHistorial.undo(), 'Deshecho'); },
+    redoAction: function () { _aplicarEstadoHistorial(GestorHistorial.redo(), 'Rehecho'); },
+    configurarNotificaciones: EstadoApp.configurarNotificaciones,
+    _notify: EstadoApp._notify,
+    _setRegistros: EstadoApp._setRegistros,
+    _setHistorialDiasHabilesRaw: EstadoApp._setHistorialDiasHabilesRaw,
     _ordenarRegistros: ordenarRegistros,
     _hayEspacioParaRegistros,
     _aplicarCalculoHoras,

@@ -1,18 +1,18 @@
 import { UIHistoricoEdicion } from './ui-historico-edicion.js';
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
-import { Motion } from '../core/motion.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { ModalManager } from './modal-manager.js';
+import { Movimiento } from '../core/movimiento.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { DataManagement } from '../services/data-management.js';
+import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UICore } from './ui-core.js';
+import { UIBase } from './ui-base.js';
 import { UICalendario } from './ui-calendario.js';
 import { UIRespaldoLocal } from './ui-respaldo-local.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-const D = DataManagement;
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+const D = GestionDatos;
 
 // ====================================================================
 //                     UI HISTORY MODULE
@@ -21,7 +21,7 @@ const {
     formatoDiferencia, mostrarToast, _setBtnActivo, debounce,
     _actualizarOffsetsStickyMes, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, setIconoBtn,
     _crearFantasmaSiVisible, DUR_ANIM, _aArray, _estaColapsado, _scrollA
-} = UICore;
+} = UIBase;
 
 const cerrarEdicion = (...args) => UIHistoricoEdicion.cerrarEdicion(...args);
 const setBloqueoEdicion = (...args) => UIHistoricoEdicion.setBloqueoEdicion(...args);
@@ -126,7 +126,7 @@ function _crearInfoRegistro({ fechaText, horasText, totalText, totalClase = '', 
     return info;
 }
 
-function crearItemRegistroIndividual(r, idResaltar = null, hoy = TimeUtils.obtenerFechaHoy(), asignacionesCompensatorio = null) {
+function crearItemRegistroIndividual(r, idResaltar = null, hoy = TiempoUtils.obtenerFechaHoy(), asignacionesCompensatorio = null) {
     const item = document.createElement('div');
 
     let className = r.fecha === hoy ? 'registro-item hoy' : 'registro-item';
@@ -144,11 +144,11 @@ function crearItemRegistroIndividual(r, idResaltar = null, hoy = TimeUtils.obten
     const tipoEspecial = est.tipo;
 
     const etiqueta = tipoEspecial ? ` ${tipoEspecial.emoji} (${tipoEspecial.label})` : '';
-    const fechaText = `${TimeUtils.obtenerNombreDia(r.fecha)} ${r.fecha.substring(8)}${etiqueta}`;
+    const fechaText = `${TiempoUtils.obtenerNombreDia(r.fecha)} ${r.fecha.substring(8)}${etiqueta}`;
 
     const tfText = (() => {
         if (!r.tiempoFuera || r.tiempoFuera === '' || r.tiempoFuera === '00:00') return '';
-        const tfStr = TimeUtils.horasATexto(TimeUtils.horaAMinutos(r.tiempoFuera) / 60, 'short');
+        const tfStr = TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(r.tiempoFuera) / 60, 'short');
         return ` (${tfStr} Fuera)`;
     })();
     const crText = r.credito && r.credito !== '00:00' ? ' (Salida Temprana)' : '';
@@ -166,7 +166,7 @@ function crearItemRegistroIndividual(r, idResaltar = null, hoy = TimeUtils.obten
     } else if (est.estado === 'sin-datos') {
         totalText = 'Sin datos';
     } else {
-        totalText = TimeUtils.horasATexto(r.total, 'short') + (est.diffText ? ` (${est.diffText})` : '');
+        totalText = TiempoUtils.horasATexto(r.total, 'short') + (est.diffText ? ` (${est.diffText})` : '');
         totalClase = { cumplido: 'green-text', cubierto: 'gold-text', incompleto: 'red-text', neutro: 'neutro-text' }[est.estado] || '';
     }
 
@@ -174,10 +174,10 @@ function crearItemRegistroIndividual(r, idResaltar = null, hoy = TimeUtils.obten
     if (est.estado === 'cubierto') badgesExtra.push({ texto: 'Cubierto', clase: 'gold-text' });
     if (tipoEspecial?.id === 'compensatorio') {
         badgesExtra.push(est.fechaCompensada
-            ? { texto: TimeUtils.fechaCorta(est.fechaCompensada), clase: `${tipoEspecial.color}-text` }
+            ? { texto: TiempoUtils.fechaCorta(est.fechaCompensada), clase: `${tipoEspecial.color}-text` }
             : { texto: '⚠ Sin referencia', clase: 'red-text' });
     }
-    if (est.fechaCompensado) badgesExtra.push({ texto: `→ ${TimeUtils.fechaCorta(est.fechaCompensado)}`, clase: 'purple-text' });
+    if (est.fechaCompensado) badgesExtra.push({ texto: `→ ${TiempoUtils.fechaCorta(est.fechaCompensado)}`, clase: 'purple-text' });
 
     item.appendChild(_crearInfoRegistro({
         fechaText,
@@ -191,7 +191,7 @@ function crearItemRegistroIndividual(r, idResaltar = null, hoy = TimeUtils.obten
     return item;
 }
 
-const _guardarExpandido = (storageKeyFn, id, abierto) => StorageHelper.setItem(storageKeyFn(id), String(abierto));
+const _guardarExpandido = (storageKeyFn, id, abierto) => Almacenamiento.setItem(storageKeyFn(id), String(abierto));
 
 function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asignacionesCompensatorio = null) {
     const grupos = TiposRegistro.agruparConsecutivos(registrosDelMes);
@@ -207,7 +207,7 @@ function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asi
 
     const chevron = _crearChevron();
     headerMes.appendChild(chevron);
-    headerMes.appendChild(document.createTextNode(' ' + TimeUtils.formatoTituloMes(claveMes)));
+    headerMes.appendChild(document.createTextNode(' ' + TiempoUtils.formatoTituloMes(claveMes)));
 
     const detalleMesActual = document.createElement('div');
     detalleMesActual.className = 'registro-mes-detalle collapsible';
@@ -217,7 +217,7 @@ function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asi
 
     let debeEstarExpandido = false;
     try {
-        const estadoGuardado = StorageHelper.getItem(STORAGE_KEYS.MES_EXPANDIDO(claveMes));
+        const estadoGuardado = Almacenamiento.getItem(STORAGE_KEYS.MES_EXPANDIDO(claveMes));
         debeEstarExpandido = estadoGuardado !== null ? estadoGuardado === 'true' : claveMes === mesHoy;
     } catch (e) {
         debeEstarExpandido = claveMes === mesHoy;
@@ -232,7 +232,7 @@ function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asi
     grupos.forEach(grupo => {
         const esGrupo = grupo.tipo === 'grupo';
         const r = esGrupo ? grupo.registros[grupo.registros.length - 1] : grupo.registros[0];
-        const semanaActual = TimeUtils.obtenerLunesSemanaISO(r.fecha);
+        const semanaActual = TiempoUtils.obtenerLunesSemanaISO(r.fecha);
 
         if (semanaAnterior && semanaActual !== semanaAnterior) {
             const sep = document.createElement('div');
@@ -284,7 +284,7 @@ function _crearContenedorAnio(anio, mesesDelAnio, idNuevo, mesHoy, hoy, asignaci
     const detalle = Object.assign(document.createElement('div'), { className: 'registro-mes-detalle collapsible' });
     const innerAnio = Object.assign(document.createElement('div'), { className: 'detalle-inner' });
     detalle.appendChild(innerAnio);
-    const expandido = StorageHelper.getBoolean(STORAGE_KEYS.ANIO_EXPANDIDO(anio));
+    const expandido = Almacenamiento.getBoolean(STORAGE_KEYS.ANIO_EXPANDIDO(anio));
     if (expandido) { detalle.classList.add('expanded'); chevron.classList.add('rotated'); }
 
     mesesDelAnio.forEach((registrosDelMes, claveMes) =>
@@ -379,7 +379,7 @@ function _expandirBloquesNuevos(lista, clavesPrevias) {
 function _prepararAnimacionLista(lista, idNuevo) {
     const sinAnimacion = { reproducir() { } };
     const ids = _aArray(idNuevo);
-    if (ids.length === 0 || Motion.reducido() || !lista.offsetParent) return sinAnimacion;
+    if (ids.length === 0 || Movimiento.reducido() || !lista.offsetParent) return sinAnimacion;
 
     const elementoPorId = new Map();
     lista.querySelectorAll('.registro-item').forEach(item => {
@@ -420,7 +420,7 @@ function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalc
     const registrosAMostrar = D.obtenerRegistrosFiltrados();
     if (registrosAMostrar.length === 0) { _renderEmptyStateLista(lista); return; }
 
-    const hoy = TimeUtils.obtenerFechaHoy();
+    const hoy = TiempoUtils.obtenerFechaHoy();
     const mesHoy = hoy.substring(0, 7);
     const anioHoy = hoy.substring(0, 4);
     const gruposPorMes = agruparRegistrosPorMes(registrosAMostrar);
@@ -491,7 +491,7 @@ function crearGrupoExpandible(grupo, idResaltar = null, asignacionesCompensatori
     if (tipoConfig?.id === 'compensatorio') {
         const fechasCompensadas = [...new Set(grupo.registros.map(r => D.fechaCompensadaPorRegistro(r, asignacionesCompensatorio)).filter(Boolean))];
         if (fechasCompensadas.length === 1) {
-            badgesExtra.push({ texto: TimeUtils.fechaCorta(fechasCompensadas[0]), clase: colorClase });
+            badgesExtra.push({ texto: TiempoUtils.fechaCorta(fechasCompensadas[0]), clase: colorClase });
         }
     }
 
@@ -631,14 +631,14 @@ function bindEventos() {
 
     $('btn-toggle-credito')?.addEventListener('click', () => toggleCredito());
     $('btn-lock-toggle')?.addEventListener('click', () => toggleBloqueoEdicion());
-    $('btn-edit-referencia-compensatorio')?.addEventListener('click', () => DataManagement.pegarReferenciaAutomatica());
-    document.querySelector('#modal-editar .btn-edit')?.addEventListener('click', () => DataManagement.guardarEdicion());
-    document.querySelector('#modal-editar .btn-delete')?.addEventListener('click', () => DataManagement.eliminarRegistroActual());
+    $('btn-edit-referencia-compensatorio')?.addEventListener('click', () => GestionDatos.pegarReferenciaAutomatica());
+    document.querySelector('#modal-editar .btn-edit')?.addEventListener('click', () => GestionDatos.guardarEdicion());
+    document.querySelector('#modal-editar .btn-delete')?.addEventListener('click', () => GestionDatos.eliminarRegistroActual());
     document.querySelector('#modal-editar .btn-cancel')?.addEventListener('click', () => cerrarEdicion());
 
     $('btn-lock-grupo-toggle')?.addEventListener('click', () => toggleBloqueoEdicionGrupo());
-    document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => DataManagement.guardarEdicionGrupo());
-    document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => DataManagement.eliminarGrupoActual());
+    document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => GestionDatos.guardarEdicionGrupo());
+    document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => GestionDatos.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => cerrarEdicionGrupo());
 
 }

@@ -1,15 +1,15 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { StorageHelper } from '../core/storage.js';
-import { ModalManager } from './modal-manager.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { DataManagement } from '../services/data-management.js';
-import { UICore } from './ui-core.js';
+import { GestionDatos } from '../services/gestion-datos.js';
+import { UIBase } from './ui-base.js';
 import { UICalendario } from './ui-calendario.js';
 import { UIConfig } from './ui-config.js';
-import { SecurityAndUtils as S } from '../core/security.js';
-const D = DataManagement;
+import { SeguridadYUtils as S } from '../core/seguridad.js';
+const D = GestionDatos;
 
 // ====================================================================
 //           UI HISTORY EDIT, FILTERS & HEADER ACTIONS MODULE
@@ -18,7 +18,7 @@ const {
     mostrarToast, _setBtnActivo, _actualizarOffsetsStickyMes,
     _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante,
     setIconoBtn, toggleSeccionGen
-} = UICore;
+} = UIBase;
 
 let edicionBloqueada = true;
 
@@ -29,7 +29,7 @@ let timerAutoCierreBotones = null;
 
 function cerrarEdicion() {
     UIConfig.pressHoldObjetivoEdicion.detener();
-    ModalManager.cerrar('modal-editar', () => {
+    GestorModales.cerrar('modal-editar', () => {
         D.setEditandoId(null);
         document.dispatchEvent(new Event('scroll'));
         setBloqueoEdicion(true);
@@ -67,7 +67,7 @@ function setBloqueoEdicion(bloqueado) {
         excluirBotones: 'button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)'
     });
 
-    const enModoGlobal = StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+    const enModoGlobal = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
     const elObjetivo = $('edit-objetivo');
     const objetivoDeshabilitado = bloqueado || enModoGlobal;
     [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
@@ -96,7 +96,7 @@ function _actualizarHintEdicion() {
     const e = document.getElementById('edit-entrada')?.value.trim();
     const s = document.getElementById('edit-salida')?.value.trim();
     let tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
-    if (tf) tf = TimeUtils.normalizarMinutosSueltos(tf);
+    if (tf) tf = TiempoUtils.normalizarMinutosSueltos(tf);
 
     const tipoEspecial = (e || s) ? TiposRegistro.obtenerTipoPorCodigo(e, s) : null;
     const elRef = document.getElementById('edit-referencia-compensatorio');
@@ -128,14 +128,14 @@ function actualizarHintGrupo() {
         hint.textContent = `1 día`;
         return;
     }
-    if (!TimeUtils.validarFecha(desde) || !TimeUtils.validarFecha(hasta) || desde > hasta) {
+    if (!TiempoUtils.validarFecha(desde) || !TiempoUtils.validarFecha(hasta) || desde > hasta) {
         hint.textContent = 'Rango inválido';
         return;
     }
-    const fechaInicio = TimeUtils.parsearFechaLocal(desde);
-    const fechaFin = TimeUtils.parsearFechaLocal(hasta);
+    const fechaInicio = TiempoUtils.parsearFechaLocal(desde);
+    const fechaFin = TiempoUtils.parsearFechaLocal(hasta);
     const diasTotales = Math.ceil(Math.abs(fechaFin - fechaInicio) / (1000 * 60 * 60 * 24)) + 1;
-    hint.textContent = `${diasTotales} día${TimeUtils.pluralizar(diasTotales)}`;
+    hint.textContent = `${diasTotales} día${TiempoUtils.pluralizar(diasTotales)}`;
 }
 ['edit-grupo-desde', 'edit-grupo-hasta'].forEach(id => {
     const el = document.getElementById(id);
@@ -237,25 +237,25 @@ function toggleHistorico() {
         if (!expandido) {
             contenido.classList.add('expanded');
             _setIconHistorico(icon, 'meses');
-            StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
+            Almacenamiento.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
             tiempoExpansionBotones = null;
             UICalendario._activarVistaCalendarioHistorico();
 
         } else if (!conBotones) {
             botones.classList.add('expanded');
             _setIconHistorico(icon, 'completo');
-            StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'completo');
+            Almacenamiento.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'completo');
             tiempoExpansionBotones = Date.now();
 
         } else {
             botones.classList.remove('expanded');
             if (Date.now() - (tiempoExpansionBotones || 0) > 500) {
                 _setIconHistorico(icon, 'meses');
-                StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
+                Almacenamiento.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
             } else {
                 contenido.classList.remove('expanded');
                 _setIconHistorico(icon, 'cerrado');
-                StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'cerrado');
+                Almacenamiento.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'cerrado');
             }
             tiempoExpansionBotones = null;
         }
@@ -281,7 +281,7 @@ function iniciarTimerAutoCierreBotones() {
             if (icon) _setIconHistorico(icon, 'meses');
 
             try {
-                StorageHelper.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
+                Almacenamiento.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'meses');
             } catch (e) {
                 console.warn('Error guardando estado histórico:', e);
             }
@@ -347,7 +347,7 @@ function toggleBloqueoEdicionGrupo() {
 }
 
 function cerrarEdicionGrupo() {
-    ModalManager.cerrar('modal-editar-grupo', () => {
+    GestorModales.cerrar('modal-editar-grupo', () => {
         D.setGrupoEnEdicion(null);
         document.dispatchEvent(new Event('scroll'));
         setBloqueoEdicionGrupo(true);

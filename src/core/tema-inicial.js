@@ -27,7 +27,7 @@ if (window.top !== window.self) {
 }());
 
 // Reducir animaciones: 'on' | 'off' | 'auto' (sin valor = auto, sigue al sistema).
-// Misma regla que Motion en app.js; el CSS solo mira <html data-motion>.
+// Misma regla que Movimiento en app.js; el CSS solo mira <html data-motion>.
 (function () {
     try {
         var m = localStorage.getItem('horarios_reducirAnimaciones');

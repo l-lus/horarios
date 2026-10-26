@@ -1,4 +1,4 @@
-import { TimeUtils } from './time-utils.js';
+import { TiempoUtils } from './tiempo-utils.js';
 
 // ====================================================================
 // SECURITY AND UTILS MODULE
@@ -128,18 +128,18 @@ function validarRegistroSeguro(r) {
     if (!r || typeof r !== 'object') return false;
     if (Array.isArray(r) || r instanceof Date) return false;
     if (typeof r.id !== 'string' || !REGEX_PATTERNS.ID.test(r.id)) return false;
-    if (typeof r.fecha !== 'string' || !TimeUtils.validarFecha(r.fecha)) return false;
+    if (typeof r.fecha !== 'string' || !TiempoUtils.validarFecha(r.fecha)) return false;
     if (r.entrada !== null) {
-        if (typeof r.entrada !== 'string' || !TimeUtils.validarHora(r.entrada)) return false;
+        if (typeof r.entrada !== 'string' || !TiempoUtils.validarHora(r.entrada)) return false;
     }
     if (r.salida !== null) {
-        if (typeof r.salida !== 'string' || !TimeUtils.validarHora(r.salida)) return false;
+        if (typeof r.salida !== 'string' || !TiempoUtils.validarHora(r.salida)) return false;
     }
     if (r.tiempoFuera !== null && r.tiempoFuera !== '') {
-        if (typeof r.tiempoFuera !== 'string' || !TimeUtils.validarHora(r.tiempoFuera)) return false;
+        if (typeof r.tiempoFuera !== 'string' || !TiempoUtils.validarHora(r.tiempoFuera)) return false;
     }
     if (r.credito !== null && r.credito !== undefined && r.credito !== '') {
-        if (typeof r.credito !== 'string' || !TimeUtils.validarHora(r.credito)) return false;
+        if (typeof r.credito !== 'string' || !TiempoUtils.validarHora(r.credito)) return false;
     }
     if (r.notas !== null && r.notas !== undefined && r.notas !== '') {
         if (typeof r.notas !== 'string' || r.notas.length > SECURITY_LIMITS.MAX_NOTAS_LENGTH) return false;
@@ -148,7 +148,7 @@ function validarRegistroSeguro(r) {
         if (!Number.isFinite(r.objetivoHoras) || r.objetivoHoras < 0 || r.objetivoHoras > 24) return false;
     }
     if (r.referenciaCompensatorio !== null && r.referenciaCompensatorio !== undefined) {
-        if (typeof r.referenciaCompensatorio !== 'string' || !TimeUtils.validarFecha(r.referenciaCompensatorio)) return false;
+        if (typeof r.referenciaCompensatorio !== 'string' || !TiempoUtils.validarFecha(r.referenciaCompensatorio)) return false;
     }
     if (!Number.isFinite(r.horas) || r.horas < 0 || r.horas > 24) return false;
     if (!Number.isFinite(r.minutos) || r.minutos < 0 || r.minutos > 59) return false;
@@ -162,7 +162,7 @@ function validarRegistroSeguro(r) {
     return true;
 }
 
-export const SecurityAndUtils = {
+export const SeguridadYUtils = {
     SECURITY_LIMITS,
     REGEX_PATTERNS,
     sanitizeString,

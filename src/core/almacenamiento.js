@@ -1,5 +1,5 @@
-import { APP_STORAGE_PREFIX, STORAGE_KEYS } from './constants.js';
-import { SecurityAndUtils } from './security.js';
+import { APP_STORAGE_PREFIX, STORAGE_KEYS } from './constantes.js';
+import { SeguridadYUtils } from './seguridad.js';
 
 // ====================================================================
 // STORAGE HELPER MODULE
@@ -99,7 +99,7 @@ function migrarClavesLegadas() {
         const rawPerfiles = localStorage.getItem(STORAGE_KEYS.PERFILES) ?? localStorage.getItem(`${APP_STORAGE_PREFIX}${STORAGE_KEYS.PERFILES}`);
         if (rawPerfiles) {
             try {
-                const parsed = JSON.parse(rawPerfiles, SecurityAndUtils.reviverJSONSeguro);
+                const parsed = JSON.parse(rawPerfiles, SeguridadYUtils.reviverJSONSeguro);
                 if (parsed && typeof parsed === 'object') {
                     Object.keys(parsed).forEach(id => idsPerfiles.add(id));
                 }
@@ -179,7 +179,7 @@ function getObject(key, defaultValue = null, useProfile = false) {
     const val = getItem(key, null, useProfile);
     if (!val) return defaultValue;
     try {
-        return JSON.parse(val, SecurityAndUtils.reviverJSONSeguro);
+        return JSON.parse(val, SeguridadYUtils.reviverJSONSeguro);
     } catch (e) {
         return defaultValue;
     }
@@ -191,7 +191,7 @@ function removeItem(key, useProfile = false) {
     } catch (e) { }
 }
 
-export const StorageHelper = {
+export const Almacenamiento = {
     APP_STORAGE_PREFIX,
     setItem,
     getItem,

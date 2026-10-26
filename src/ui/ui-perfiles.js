@@ -1,29 +1,29 @@
-import { STORAGE_KEYS } from '../core/constants.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { PushReminder } from '../services/push-reminder.js';
-import { StorageHelper } from '../core/storage.js';
-import { PerfilManager } from '../services/perfil-manager.js';
-import { ModalManager } from './modal-manager.js';
-import { UICore } from './ui-core.js';
-import { SecurityAndUtils as S } from '../core/security.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { RecordatorioPush } from '../services/recordatorio-push.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorPerfiles } from '../services/gestor-perfiles.js';
+import { GestorModales } from './gestor-modales.js';
+import { UIBase } from './ui-base.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
 
 // ====================================================================
 //                     UI PROFILES MODULE
 // ====================================================================
-const { mostrarToast, setIconoBtn, _scrollA } = UICore;
+const { mostrarToast, setIconoBtn, _scrollA } = UIBase;
 
 let perfilEnEdicion = null;
 
 const REGEX_NOMBRE_PERFIL = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-_ ]+$/;
 
 function _obtenerTodosPerfilesSafe() {
-    return PerfilManager ? PerfilManager.obtenerTodosPerfiles() : {};
+    return GestorPerfiles ? GestorPerfiles.obtenerTodosPerfiles() : {};
 }
 
 function _guardarPerfilesConManejo(perfiles, contextoError = 'Error al guardar perfil:') {
     try {
-        if (!StorageHelper.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
+        if (!Almacenamiento.setItem(STORAGE_KEYS.PERFILES, perfiles)) throw new Error('quota');
         return true;
     } catch (e) {
         console.error(contextoError, e);
@@ -44,12 +44,12 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
     }
 
     lista.innerHTML = '';
-    PerfilManager.obtenerListaPerfiles().forEach(p => {
+    GestorPerfiles.obtenerListaPerfiles().forEach(p => {
         const container = Object.assign(document.createElement('div'), {
             className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
         });
 
-        const countText = `${p.totalRegistros} registro${TimeUtils.pluralizar(p.totalRegistros)}`;
+        const countText = `${p.totalRegistros} registro${TiempoUtils.pluralizar(p.totalRegistros)}`;
         const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
         const nombreEl = Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre' });
         nombreEl.appendChild(Object.assign(document.createElement('span'), {
@@ -75,7 +75,7 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
             onclick: (e) => { e.stopPropagation(); abrirEditorPerfil(p.id); }
         });
 
-        container.onclick = () => { if (!p.esActual) PerfilManager.cambiarPerfil(p.id); };
+        container.onclick = () => { if (!p.esActual) GestorPerfiles.cambiarPerfil(p.id); };
         container.appendChild(infoSection);
         container.appendChild(editBtn);
         lista.appendChild(container);
@@ -98,7 +98,7 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
 }
 
 function abrirSelectorPerfiles() {
-    ModalManager.abrir('modal-selector-perfiles', () => {
+    GestorModales.abrir('modal-selector-perfiles', () => {
         const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
         if (inputNuevo) inputNuevo.value = '';
 
@@ -116,7 +116,7 @@ function _validarNombrePerfil(nombre, perfiles) {
     if (!nombre) return 'Ingresá un nombre para el perfil';
     if (!REGEX_NOMBRE_PERFIL.test(nombre)) return 'El nombre contiene caracteres no válidos.\n Solo letras, números y espacios.';
     if (Object.values(perfiles).some(p => p.nombre.toLowerCase().trim() === nombre.toLowerCase().trim())) return 'Ya existe un perfil con ese nombre';
-    if (Object.keys(perfiles).length >= PerfilManager.MAX_PERFILES) return `Máximo de perfiles alcanzado (${PerfilManager.MAX_PERFILES})`;
+    if (Object.keys(perfiles).length >= GestorPerfiles.MAX_PERFILES) return `Máximo de perfiles alcanzado (${GestorPerfiles.MAX_PERFILES})`;
     return null;
 }
 
@@ -134,7 +134,7 @@ function crearPerfilDesdeSelector() {
 
     if (!_guardarPerfilesConManejo(perfiles)) { delete perfiles[id]; return; }
 
-    if (PerfilManager) PerfilManager.inicializar();
+    if (GestorPerfiles) GestorPerfiles.inicializar();
     mostrarToast(`Perfil "${nombre}" creado`, 'success');
     input.value = '';
     renderizarListaPerfiles(true);
@@ -145,7 +145,7 @@ function crearPerfilDesdeSelector() {
 }
 
 function cerrarSelectorPerfiles() {
-    ModalManager.cerrar('modal-selector-perfiles');
+    GestorModales.cerrar('modal-selector-perfiles');
 }
 
 function abrirEditorPerfil(perfilId) {
@@ -165,12 +165,12 @@ function abrirEditorPerfil(perfilId) {
         btnEliminar.disabled = (perfilId === 'default');
     }
 
-    ModalManager.alternar('modal-selector-perfiles', 'modal-editar-perfil');
+    GestorModales.alternar('modal-selector-perfiles', 'modal-editar-perfil');
 }
 
 function cerrarEditorPerfil() {
     perfilEnEdicion = null;
-    ModalManager.alternar('modal-editar-perfil', 'modal-selector-perfiles', null, () => {
+    GestorModales.alternar('modal-editar-perfil', 'modal-selector-perfiles', null, () => {
         const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
         if (inputNuevo) inputNuevo.value = '';
         renderizarListaPerfiles();
@@ -204,11 +204,11 @@ function guardarEdicionPerfil() {
     perfiles[perfilEnEdicion].nombre = nuevoNombre;
     if (!_guardarPerfilesConManejo(perfiles)) { perfiles[perfilEnEdicion].nombre = nombreAnterior; return; }
 
-    if (perfilEnEdicion === PerfilManager?.obtenerPerfilActual()) {
+    if (perfilEnEdicion === GestorPerfiles?.obtenerPerfilActual()) {
         const btnTexto = document.getElementById('nombre-perfil-header');
         if (btnTexto) btnTexto.textContent = nuevoNombre;
     }
-    if (PerfilManager) PerfilManager.inicializar();
+    if (GestorPerfiles) GestorPerfiles.inicializar();
     mostrarToast('Perfil actualizado', 'success');
     cerrarEditorPerfil();
 }
@@ -217,7 +217,7 @@ function _limpiarClavesPerfil(pid) {
     ['breakStartTime', STORAGE_KEYS.HISTORY, STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
         'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS,
         STORAGE_KEYS.PUSH_HABILITADO, STORAGE_KEYS.PUSH_ANTICIPACION_MIN, STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, STORAGE_KEYS.PUSH_INFO_ACTIVA, STORAGE_KEYS.PUSH_AVISOS_RESTANTES
-    ].forEach(k => StorageHelper.removeItem(`${k}_${pid}`));
+    ].forEach(k => Almacenamiento.removeItem(`${k}_${pid}`));
 }
 
 async function eliminarPerfilDesdeEditor() {
@@ -230,24 +230,24 @@ async function eliminarPerfilDesdeEditor() {
 
     const tieneRegistros = Array.isArray(perfil.registros) && perfil.registros.length > 0;
     if (tieneRegistros) {
-        if (!await ModalManager.confirmar(`¿Estás seguro de que querés eliminar el perfil "${perfil.nombre}"? Esta acción no se puede deshacer.`, 'Eliminar')) return;
+        if (!await GestorModales.confirmar(`¿Estás seguro de que querés eliminar el perfil "${perfil.nombre}"? Esta acción no se puede deshacer.`, 'Eliminar')) return;
     }
 
-    PushReminder.cancelarFinDeJornada(TimeUtils.obtenerFechaHoy(), perfilEnEdicion);
+    RecordatorioPush.cancelarFinDeJornada(TiempoUtils.obtenerFechaHoy(), perfilEnEdicion);
     _limpiarClavesPerfil(perfilEnEdicion);
     delete perfiles[perfilEnEdicion];
     if (!_guardarPerfilesConManejo(perfiles, 'Error al eliminar perfil:')) return;
 
-    if (perfilEnEdicion === PerfilManager?.obtenerPerfilActual()) {
+    if (perfilEnEdicion === GestorPerfiles?.obtenerPerfilActual()) {
         try {
-            if (!StorageHelper.setItem(STORAGE_KEYS.PERFIL_ACTIVO, 'default')) throw new Error('quota');
+            if (!Almacenamiento.setItem(STORAGE_KEYS.PERFIL_ACTIVO, 'default')) throw new Error('quota');
         } catch (e) {
             console.error('Error al guardar perfil activo:', e); mostrarToast('Error al guardar: almacenamiento lleno', 'error'); return;
         }
         mostrarToast('Perfil eliminado. Recargando...', 'success');
         setTimeout(() => location.reload(), 1000);
     } else {
-        PerfilManager?.inicializar();
+        GestorPerfiles?.inicializar();
         mostrarToast('Perfil eliminado', 'success');
         cerrarEditorPerfil();
     }

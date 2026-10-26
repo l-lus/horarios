@@ -1,10 +1,10 @@
-import { STORAGE_KEYS } from '../core/constants.js';
-import { TimeUtils } from '../core/time-utils.js';
-import { SecurityAndUtils } from '../core/security.js';
-import { StorageHelper } from '../core/storage.js';
-import { PerfilManager } from './perfil-manager.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
+import { SeguridadYUtils } from '../core/seguridad.js';
+import { Almacenamiento } from '../core/almacenamiento.js';
+import { GestorPerfiles } from './gestor-perfiles.js';
 import { TiposRegistro } from './tipos-registro.js';
-import { AppState } from './app-state.js';
+import { EstadoApp } from './estado-app.js';
 
 // ====================================================================
 // PUSH REMINDER MODULE — notification via Cloudflare
@@ -64,11 +64,11 @@ let _idInstalacionFallback = null;
 
 function _idInstalacion() {
     const KEY = STORAGE_KEYS.PUSH_INSTALL_ID;
-    const existente = StorageHelper.getItem(KEY, null);
+    const existente = Almacenamiento.getItem(KEY, null);
     if (existente) return existente;
 
     const nuevo = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    if (StorageHelper.setItem(KEY, nuevo)) return nuevo;
+    if (Almacenamiento.setItem(KEY, nuevo)) return nuevo;
     if (!_idInstalacionFallback) {
         _idInstalacionFallback = crypto.randomUUID
             ? crypto.randomUUID()
@@ -87,17 +87,17 @@ function _generarOwnerToken() {
 
 function _ownerToken() {
     const KEY = STORAGE_KEYS.PUSH_OWNER_TOKEN;
-    const existente = StorageHelper.getItem(KEY, null);
+    const existente = Almacenamiento.getItem(KEY, null);
     if (existente && /^[a-f0-9]{64}$/.test(existente)) return existente;
 
     const nuevo = _generarOwnerToken();
-    if (StorageHelper.setItem(KEY, nuevo)) return nuevo;
+    if (Almacenamiento.setItem(KEY, nuevo)) return nuevo;
     if (!_ownerTokenFallback) _ownerTokenFallback = _generarOwnerToken();
     return _ownerTokenFallback;
 }
 
 function _perfilActivo() {
-    return (PerfilManager ? PerfilManager.obtenerPerfilActual() : null) || 'default';
+    return (GestorPerfiles ? GestorPerfiles.obtenerPerfilActual() : null) || 'default';
 }
 
 function _claveRecordatorio(fechaISO, perfilId) {
@@ -105,13 +105,13 @@ function _claveRecordatorio(fechaISO, perfilId) {
 }
 
 function _getLegacyOPerfil(key, defaultValue, parseFn) {
-    const val = StorageHelper.getItem(key, null, true);
+    const val = Almacenamiento.getItem(key, null, true);
     if (val !== null) return parseFn ? parseFn(val) : val;
-    const legacyVal = StorageHelper.getItem(key, null, false);
+    const legacyVal = Almacenamiento.getItem(key, null, false);
     if (legacyVal !== null) {
         const parsed = parseFn ? parseFn(legacyVal) : legacyVal;
-        StorageHelper.setItem(key, parsed, true);
-        StorageHelper.removeItem(key, false);
+        Almacenamiento.setItem(key, parsed, true);
+        Almacenamiento.removeItem(key, false);
         return parsed;
     }
     return defaultValue;
@@ -126,25 +126,25 @@ function getAnticipacionMin() {
 function setAnticipacionMin(minutos) {
     const n = Number(minutos);
     const seguro = Number.isFinite(n) ? Math.min(60, Math.max(0, n)) : 0;
-    StorageHelper.setItem(STORAGE_KEYS.PUSH_ANTICIPACION_MIN, seguro, true);
+    Almacenamiento.setItem(STORAGE_KEYS.PUSH_ANTICIPACION_MIN, seguro, true);
 }
 function getUsarBufferSemanal() {
     return _getLegacyOPerfil(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, false, v => v === 'true');
 }
 function setUsarBufferSemanal(valor) {
-    StorageHelper.setItem(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, !!valor, true);
+    Almacenamiento.setItem(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, !!valor, true);
 }
 function getBufferSoloUltimoDia() {
     return _getLegacyOPerfil(STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, false, v => v === 'true');
 }
 function setBufferSoloUltimoDia(valor) {
-    StorageHelper.setItem(STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, !!valor, true);
+    Almacenamiento.setItem(STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, !!valor, true);
 }
 function getHabilitado() {
     return _getLegacyOPerfil(STORAGE_KEYS.PUSH_HABILITADO, false, v => v === 'true');
 }
 function setHabilitado(valor) {
-    StorageHelper.setItem(STORAGE_KEYS.PUSH_HABILITADO, !!valor, true);
+    Almacenamiento.setItem(STORAGE_KEYS.PUSH_HABILITADO, !!valor, true);
 }
 const UMBRAL_REGISTROS_ACTIVACION = 15;
 const AVISOS_INICIALES = 3;
@@ -154,43 +154,43 @@ function _soportaPush() {
 function puedeHabilitarse() {
     if (!_soportaPush()) return false;
     if (Notification.permission === 'denied') return false;
-    const registros = AppState.registros() || [];
+    const registros = EstadoApp.registros() || [];
     const regulares = registros.filter(r => !TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida));
     return regulares.length > UMBRAL_REGISTROS_ACTIVACION;
 }
 function _getAvisosRestantes() {
-    return StorageHelper.getNumber(STORAGE_KEYS.PUSH_AVISOS_RESTANTES, AVISOS_INICIALES, true);
+    return Almacenamiento.getNumber(STORAGE_KEYS.PUSH_AVISOS_RESTANTES, AVISOS_INICIALES, true);
 }
 function avisoPendiente() {
-    const hayEleccion = [true, false].some(porPerfil => StorageHelper.getItem(STORAGE_KEYS.PUSH_HABILITADO, null, porPerfil) !== null);
+    const hayEleccion = [true, false].some(porPerfil => Almacenamiento.getItem(STORAGE_KEYS.PUSH_HABILITADO, null, porPerfil) !== null);
     return !hayEleccion && puedeHabilitarse() && _getAvisosRestantes() > 0;
 }
 function consumirAviso() {
-    StorageHelper.setItem(STORAGE_KEYS.PUSH_AVISOS_RESTANTES, Math.max(0, _getAvisosRestantes() - 1), true);
+    Almacenamiento.setItem(STORAGE_KEYS.PUSH_AVISOS_RESTANTES, Math.max(0, _getAvisosRestantes() - 1), true);
 }
 
 function _guardarInfoActiva(fechaISO, targetTimeMs) {
-    StorageHelper.setItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, JSON.stringify({ fechaISO, targetTimeMs }), true);
+    Almacenamiento.setItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, JSON.stringify({ fechaISO, targetTimeMs }), true);
 }
 function _borrarInfoActiva(perfilId) {
     try {
         if (perfilId) {
-            StorageHelper.removeItem(`${STORAGE_KEYS.PUSH_INFO_ACTIVA}_${perfilId}`);
+            Almacenamiento.removeItem(`${STORAGE_KEYS.PUSH_INFO_ACTIVA}_${perfilId}`);
         } else {
-            StorageHelper.removeItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, true);
-            StorageHelper.removeItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, false);
+            Almacenamiento.removeItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, true);
+            Almacenamiento.removeItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, false);
         }
     } catch { /* noop */ }
 }
 function obtenerInfoActiva(perfilId) {
     const raw = perfilId
-        ? StorageHelper.getItem(`${STORAGE_KEYS.PUSH_INFO_ACTIVA}_${perfilId}`)
-        : (StorageHelper.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, true)
-            ?? StorageHelper.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, false));
+        ? Almacenamiento.getItem(`${STORAGE_KEYS.PUSH_INFO_ACTIVA}_${perfilId}`)
+        : (Almacenamiento.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, true)
+            ?? Almacenamiento.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, false));
     if (!raw) return null;
     try {
-        const info = JSON.parse(raw, SecurityAndUtils.reviverJSONSeguro);
-        if (!info || info.fechaISO !== TimeUtils.obtenerFechaHoy()) return null;
+        const info = JSON.parse(raw, SeguridadYUtils.reviverJSONSeguro);
+        if (!info || info.fechaISO !== TiempoUtils.obtenerFechaHoy()) return null;
         return info;
     } catch {
         return null;
@@ -243,7 +243,7 @@ function _construirMensajeNotificacion(anticipacionMin, bufferSemanalHoras) {
             : 'Se cumplió tu horario de hoy. ¡Podés irte!';
     }
 
-    const tiempoTexto = TimeUtils.horasATexto(Math.abs(bufferSemanalHoras));
+    const tiempoTexto = TiempoUtils.horasATexto(Math.abs(bufferSemanalHoras));
     const debeTiempo = bufferSemanalHoras < 0;
 
     if (debeTiempo) {
@@ -301,7 +301,7 @@ async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, buffe
             _avisarFallo('programar', status);
             return;
         }
-        await TimeUtils.esperar(REINTENTO_ESPERA_MS);
+        await TiempoUtils.esperar(REINTENTO_ESPERA_MS);
         if (generacion !== _generacionProgramacion || !getHabilitado() || Date.now() >= targetMs) return;
     }
 }
@@ -323,7 +323,7 @@ function cancelarFinDeJornada(fechaISO, perfilId) {
     const esPerfilActivo = !perfilId || perfilId === _perfilActivo();
     if (esPerfilActivo) limpiarNotificacionVisible();
 
-    const esHoy = fechaISO === TimeUtils.obtenerFechaHoy();
+    const esHoy = fechaISO === TiempoUtils.obtenerFechaHoy();
     if (esHoy && esPerfilActivo) _generacionCancelada = ++_generacionProgramacion;
     const activa = esHoy ? obtenerInfoActiva(perfilId) : null;
     if (esHoy) _borrarInfoActiva(perfilId);
@@ -337,7 +337,7 @@ function cancelarFinDeJornada(fechaISO, perfilId) {
     if (activa?.targetTimeMs && (Date.now() > activa.targetTimeMs + MARGEN_CRON_MS)) {
         return;
     }
-    if (!esHoy && fechaISO < TimeUtils.obtenerFechaHoy()) {
+    if (!esHoy && fechaISO < TiempoUtils.obtenerFechaHoy()) {
         return;
     }
 
@@ -350,7 +350,7 @@ function cancelarFinDeJornada(fechaISO, perfilId) {
 }
 
 function restablecer() {
-    cancelarFinDeJornada(TimeUtils.obtenerFechaHoy());
+    cancelarFinDeJornada(TiempoUtils.obtenerFechaHoy());
     [
         STORAGE_KEYS.PUSH_HABILITADO,
         STORAGE_KEYS.PUSH_ANTICIPACION_MIN,
@@ -358,8 +358,8 @@ function restablecer() {
         STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA,
         STORAGE_KEYS.PUSH_INFO_ACTIVA
     ].forEach(k => {
-        StorageHelper.removeItem(k, true);
-        StorageHelper.removeItem(k, false);
+        Almacenamiento.removeItem(k, true);
+        Almacenamiento.removeItem(k, false);
     });
 }
 
@@ -367,10 +367,10 @@ const USO_INTERVALO_MS = 30 * 60 * 1000;
 
 function _idEstadisticas() {
     const KEY = STORAGE_KEYS.STATS_ID;
-    const existente = StorageHelper.getItem(KEY, null);
+    const existente = Almacenamiento.getItem(KEY, null);
     if (existente) return existente;
     const nuevo = crypto.randomUUID ? crypto.randomUUID() : null;
-    if (nuevo) StorageHelper.setItem(KEY, nuevo);
+    if (nuevo) Almacenamiento.setItem(KEY, nuevo);
     return nuevo;
 }
 
@@ -387,17 +387,17 @@ async function registrarUso() {
     if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
     const KEY = STORAGE_KEYS.STATS_ULTIMO_PING;
     const ahora = Date.now();
-    if (ahora - Number(StorageHelper.getItem(KEY, 0)) < USO_INTERVALO_MS) return;
+    if (ahora - Number(Almacenamiento.getItem(KEY, 0)) < USO_INTERVALO_MS) return;
     const id = _idEstadisticas();
     if (!id) return;
-    StorageHelper.setItem(KEY, String(ahora));
+    Almacenamiento.setItem(KEY, String(ahora));
     const pwa = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     try {
         await _postWorker('/api/hola', { id, modo: pwa ? 'pwa' : 'navegador', version: await _versionApp() });
     } catch { /* sin estadística esta vez, no afecta a la app */ }
 }
 
-export const PushReminder = {
+export const RecordatorioPush = {
     configurarNotificaciones, registrarUso,
     programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
     getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,

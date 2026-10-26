@@ -1,5 +1,5 @@
-import { Motion } from '../core/motion.js';
-import { TimeUtils } from '../core/time-utils.js';
+import { Movimiento } from '../core/movimiento.js';
+import { TiempoUtils } from '../core/tiempo-utils.js';
 
 // ====================================================================
 //                     UI ANIMATIONS MODULE
@@ -12,10 +12,10 @@ function _aArray(valor) {
 function _estaColapsado(el) { return !!el.closest('.collapsible:not(.expanded)'); }
 
 function _scrollA(el, block = 'nearest') {
-    if (el) el.scrollIntoView({ behavior: Motion.scrollBehavior(), block });
+    if (el) el.scrollIntoView({ behavior: Movimiento.scrollBehavior(), block });
 }
 
-function _esperarAnim(extra = 50) { return TimeUtils.esperar(DUR_ANIM() + extra); }
+function _esperarAnim(extra = 50) { return TiempoUtils.esperar(DUR_ANIM() + extra); }
 
 function _getCSSdur(varName) {
     const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
@@ -23,7 +23,7 @@ function _getCSSdur(varName) {
     return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
 }
 function _durSiAnima(varName, el = null) {
-    return (Motion.reducido() || (el && !el.offsetParent)) ? 0 : _getCSSdur(varName);
+    return (Movimiento.reducido() || (el && !el.offsetParent)) ? 0 : _getCSSdur(varName);
 }
 const DUR_ANIM = () => _getCSSdur('--dur-anim');
 const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
@@ -74,7 +74,7 @@ function _animarMutacion(elementos, fn, duracion = null) {
     const dur = duracion ?? DUR_ANIM();
 
     els.forEach(_finalizarMutacionPendiente);
-    if (els.length === 0 || Motion.reducido()) { return Promise.resolve(fn()); }
+    if (els.length === 0 || Movimiento.reducido()) { return Promise.resolve(fn()); }
 
     const fantasmasMap = [];
     els.forEach(el => {
@@ -114,7 +114,7 @@ function _animarMutacion(elementos, fn, duracion = null) {
 }
 
 function _crearFantasmaSiVisible(el) {
-    if (!el || Motion.reducido()) return null;
+    if (!el || Movimiento.reducido()) return null;
     if (_estaColapsado(el)) return null;
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) return null;
@@ -148,7 +148,7 @@ function _animarValor(el, texto, dir = 0) {
     if (actual === texto) { if (el.textContent !== texto) el.textContent = texto; return; }
 
     const dur = _getCSSdur('--dur-valor');
-    const sinMovimiento = Motion.reducido();
+    const sinMovimiento = Movimiento.reducido();
     if (!dir || sinMovimiento || !dur || !el.offsetParent) { el.textContent = texto; return; }
 
     const mk = t => { const s = document.createElement('span'); s.className = 'valor-roll-item'; s.textContent = t; return s; };
@@ -233,7 +233,7 @@ function _animarSlideElemento(el, delta, mutarFn) {
     if (!el) { mutarFn(); return; }
 
     _finalizarSlidePendiente(el);
-    if (Motion.reducido()) { mutarFn(); return; }
+    if (Movimiento.reducido()) { mutarFn(); return; }
 
     const rectViejo = el.getBoundingClientRect();
     const anchoViejo = rectViejo.width;

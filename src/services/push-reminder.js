@@ -63,7 +63,7 @@ function _urlBase64ToUint8Array(base64String) {
 let _idInstalacionFallback = null;
 
 function _idInstalacion() {
-    const KEY = 'pushInstallId';
+    const KEY = STORAGE_KEYS.PUSH_INSTALL_ID;
     const existente = StorageHelper.getItem(KEY, null);
     if (existente) return existente;
 
@@ -86,7 +86,7 @@ function _generarOwnerToken() {
 }
 
 function _ownerToken() {
-    const KEY = 'pushOwnerToken';
+    const KEY = STORAGE_KEYS.PUSH_OWNER_TOKEN;
     const existente = StorageHelper.getItem(KEY, null);
     if (existente && /^[a-f0-9]{64}$/.test(existente)) return existente;
 
@@ -366,7 +366,7 @@ function restablecer() {
 const USO_INTERVALO_MS = 30 * 60 * 1000;
 
 function _idEstadisticas() {
-    const KEY = 'statsId';
+    const KEY = STORAGE_KEYS.STATS_ID;
     const existente = StorageHelper.getItem(KEY, null);
     if (existente) return existente;
     const nuevo = crypto.randomUUID ? crypto.randomUUID() : null;
@@ -385,7 +385,7 @@ async function _versionApp() {
 
 async function registrarUso() {
     if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
-    const KEY = 'statsUltimoPing';
+    const KEY = STORAGE_KEYS.STATS_ULTIMO_PING;
     const ahora = Date.now();
     if (ahora - Number(StorageHelper.getItem(KEY, 0)) < USO_INTERVALO_MS) return;
     const id = _idEstadisticas();

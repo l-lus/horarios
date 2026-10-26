@@ -254,3 +254,59 @@ test('ImportExportData: exportación, validación y restauración de flags de co
     });
 });
 
+test('StorageHelper: prefijo horarios_ (APP_STORAGE_PREFIX) y migración automática de claves legadas sin tocar otras apps', async () => {
+    const { StorageHelper } = await import('../src/core/storage.js');
+    const { APP_STORAGE_PREFIX, STORAGE_KEYS } = await import('../src/core/constants.js');
+
+    const rawStore = new Map();
+    globalThis.localStorage = {
+        get length() { return rawStore.size; },
+        key: (i) => Array.from(rawStore.keys())[i] ?? null,
+        getItem: (k) => (rawStore.has(k) ? rawStore.get(k) : null),
+        setItem: (k, v) => rawStore.set(k, String(v)),
+        removeItem: (k) => rawStore.delete(k)
+    };
+
+    // 1. Sembrar datos legados de Horarios (estáticos, por perfil y dinámicos) + claves de otras apps del mismo GitHub Pages
+    const perfilesLegados = JSON.stringify({
+        default: { nombre: 'Principal', registros: [{ id: 'r1', fecha: '2026-10-20' }], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 },
+        perfil_custom1: { nombre: ' Guardia ', registros: [], diasHabiles: [6, 0], horasDiarias: 12 }
+    });
+    rawStore.set('perfiles', perfilesLegados);
+    rawStore.set('temaOscuro', 'dark');
+    rawStore.set('pushInstallId', 'uuid-instalacion-123');
+    rawStore.set('pushOwnerToken', 'a'.repeat(64));
+    rawStore.set('ignorarTiempoFuera_default', 'true');
+    rawStore.set('history_perfil_custom1', '{"history":[],"currentIndex":-1}');
+    rawStore.set('mes-2026-10-expandido', 'true');
+    rawStore.set('anio-2026-expandido', 'false');
+    rawStore.set('gistSyncLimite_subir', '15');
+
+    // Claves de otras apps en el mismo dominio github.io (NO deben migrarse ni borrarse)
+    rawStore.set('gestion_servicios_config', '{"activo":true}');
+    rawStore.set('IDR_usuario', 'luis');
+
+    // 2. Ejecutar migración automática
+    const migradas = StorageHelper.migrarClavesLegadas();
+    assert.equal(migradas, 9);
+
+    // 3. Verificar que todas las claves legadas de Horarios pasaron al prefijo horarios_ y las viejas se eliminaron
+    assert.equal(rawStore.has('perfiles'), false);
+    assert.equal(rawStore.get(`${APP_STORAGE_PREFIX}perfiles`), perfilesLegados);
+    assert.equal(rawStore.has('temaOscuro'), false);
+    assert.equal(StorageHelper.getItem(STORAGE_KEYS.TEMA_OSCURO), 'dark');
+    assert.equal(StorageHelper.getItem(STORAGE_KEYS.PUSH_INSTALL_ID), 'uuid-instalacion-123');
+    assert.equal(StorageHelper.getItem(STORAGE_KEYS.PUSH_OWNER_TOKEN), 'a'.repeat(64));
+    assert.equal(rawStore.get(`${APP_STORAGE_PREFIX}ignorarTiempoFuera_default`), 'true');
+    assert.equal(rawStore.get(`${APP_STORAGE_PREFIX}history_perfil_custom1`), '{"history":[],"currentIndex":-1}');
+    assert.equal(StorageHelper.getBoolean(STORAGE_KEYS.MES_EXPANDIDO('2026-10')), true);
+    assert.equal(StorageHelper.getBoolean(STORAGE_KEYS.ANIO_EXPANDIDO('2026')), false);
+    assert.equal(StorageHelper.getNumber(STORAGE_KEYS.GIST_LIMITE('subir')), 15);
+
+    // 4. Verificar que las claves de otras apps del mismo origen quedaron intactas
+    assert.equal(rawStore.get('gestion_servicios_config'), '{"activo":true}');
+    assert.equal(rawStore.get('IDR_usuario'), 'luis');
+    assert.equal(rawStore.has(`${APP_STORAGE_PREFIX}gestion_servicios_config`), false);
+});
+
+

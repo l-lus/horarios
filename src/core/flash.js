@@ -8,7 +8,8 @@ if (window.top !== window.self) {
 
 (function () {
     try {
-        var s = localStorage.getItem('temaOscuro');
+        var s = localStorage.getItem('horarios_temaOscuro');
+        if (s === null) s = localStorage.getItem('temaOscuro');
         var html = document.documentElement;
 
         // Compatibilidad con el valor booleano antiguo ('true'/'false')
@@ -29,7 +30,8 @@ if (window.top !== window.self) {
 // Misma regla que Motion en app.js; el CSS solo mira <html data-motion>.
 (function () {
     try {
-        var m = localStorage.getItem('reducirAnimaciones');
+        var m = localStorage.getItem('horarios_reducirAnimaciones');
+        if (m === null) m = localStorage.getItem('reducirAnimaciones');
         var reducir = m === 'on' || (m !== 'off' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
         document.documentElement.setAttribute('data-motion', reducir ? 'reduce' : 'full');
     } catch (e) { }

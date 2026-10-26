@@ -1,6 +1,8 @@
 // ====================================================================
 // STORAGE KEYS — MODULE
 // ====================================================================
+export const APP_STORAGE_PREFIX = 'horarios_';
+
 export const STORAGE_KEYS = Object.freeze({
     TEMA_OSCURO: 'temaOscuro',
     VISTA_ACTUAL: 'vistaActual',
@@ -33,6 +35,10 @@ export const STORAGE_KEYS = Object.freeze({
     PUSH_HABILITADO: 'pushHabilitado',
     PUSH_INFO_ACTIVA: 'pushInfoActiva',
     PUSH_AVISOS_RESTANTES: 'pushAvisosRestantes',
+    PUSH_INSTALL_ID: 'pushInstallId',
+    PUSH_OWNER_TOKEN: 'pushOwnerToken',
+    STATS_ID: 'statsId',
+    STATS_ULTIMO_PING: 'statsUltimoPing',
 
     BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
     GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,

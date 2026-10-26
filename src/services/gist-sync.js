@@ -139,12 +139,12 @@ async function _gistFetch(url, options = {}) {
     return response.json();
 }
 
-async function subir(registros, diasHabiles, horasDiarias, historialDiasHabiles) {
+async function subir(registros, diasHabiles, horasDiarias, historialDiasHabiles, configExtra = {}) {
     const token = getToken();
     if (!token) throw new Error('Falta el token de GitHub');
 
     const hash = await S.calcularHashSHA256(registros);
-    const data = { registros, diasHabiles, horasDiarias, historialDiasHabiles, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
+    const data = { registros, diasHabiles, horasDiarias, historialDiasHabiles, ...configExtra, fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
     const gistId = getGistId();
     const gistIdValido = esGistIdValido(gistId);
     const url = gistIdValido ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';

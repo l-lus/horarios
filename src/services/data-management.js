@@ -33,6 +33,8 @@ const {
 } = Compensatorios;
 
 const {
+    KEYS_CONFIG_EXPORTABLE, obtenerConfigExportable, validarCamposConfigImport,
+    aplicarConfigImportada, calcularCambiosConfigImport,
     normalizarRegistrosImportados, exportarJSON, importarDatos
 } = ImportExportData;
 
@@ -605,6 +607,11 @@ export const DataManagement = {
     vistaActual: AppState.vistaActual,
     setVistaActual: AppState.setVistaActual,
     cargarConfiguracion,
+    KEYS_CONFIG_EXPORTABLE,
+    obtenerConfigExportable,
+    validarCamposConfigImport,
+    aplicarConfigImportada,
+    calcularCambiosConfigImport,
     calcularHoras,
     normalizarRegistrosImportados,
     guardarYActualizar,

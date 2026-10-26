@@ -254,16 +254,7 @@ function _calcularRegistrosMerge(modo, mergeData) {
         };
 
     } else {
-        if (Array.isArray(data.diasHabiles)) {
-            const diasValidos = data.diasHabiles.filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
-            if (diasValidos.length > 0) D.setDiasHabiles(diasValidos);
-        }
-        if (data.horasDiarias != null) {
-            const hd = parseFloat(data.horasDiarias);
-            if (Number.isFinite(hd) && hd >= 0 && hd <= 24) D.setHorasDiarias(hd);
-        }
-        const historialImportado = D.sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
-        D.setHistorialDiasHabiles(historialImportado || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
+        D.aplicarConfigImportada(data, registrosNormalizados);
         return {
             registrosFinales: registrosNormalizados,
             mensajeExito: `${registrosNormalizados.length} registros restaurados desde Gist`
@@ -450,7 +441,8 @@ async function gistSubir() {
             D.registros(),
             D.diasHabiles(),
             D.horasDiarias(),
-            D.historialDiasHabiles()
+            D.historialDiasHabiles(),
+            D.obtenerConfigExportable()
         );
         const gistIdInput = document.getElementById('gist-id');
         if (gistIdInput) gistIdInput.value = nuevoId;
@@ -464,8 +456,8 @@ let _gistMergeData = null;
 
 async function _validarDatosGist(data) {
     if (!data.registros || !Array.isArray(data.registros)) throw new Error('Datos inválidos en el Gist');
-    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
-    if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) throw new Error('Estructura del Gist sospechosa');
+    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...D.KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
+    if (Object.keys(data).some(k => !allowedRootKeys.includes(k)) || !D.validarCamposConfigImport(data)) throw new Error('Estructura del Gist sospechosa');
     if (data._hashNoCoincide) {
         const continuar = await ModalManager.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
         if (!continuar) return null;
@@ -497,16 +489,7 @@ function _calcularDiffGist(registrosNormalizados) {
 }
 
 function _calcularConfigCambios(data) {
-    const cambios = [];
-    if (Array.isArray(data.diasHabiles)) {
-        const diasGist = [...data.diasHabiles].sort().join(',');
-        const diasLocal = [...D.diasHabiles()].sort().join(',');
-        if (diasGist !== diasLocal) cambios.push('días laborales');
-    }
-    if (data.horasDiarias != null && parseFloat(data.horasDiarias) !== D.horasDiarias()) {
-        cambios.push(`horas diarias (${D.horasDiarias()}h → ${parseFloat(data.horasDiarias)}h)`);
-    }
-    return cambios;
+    return D.calcularCambiosConfigImport(data);
 }
 
 const _mkEl = (tag, cls, texto) => {

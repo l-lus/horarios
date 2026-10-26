@@ -155,6 +155,14 @@ function toggleReducirAnimaciones() {
     actualizarHintAnimaciones();
 }
 
+function _refrescarTogglesConfig() {
+    actualizarEstadoBotonIgnorarTF();
+    actualizarEstadoBotonLogicaCubierto();
+    actualizarEstadoBotonObjetivoPorRegistro();
+    actualizarEstadoBotonAplicarHoras();
+    actualizarHintAnimaciones();
+}
+
 function _precargarCamposConfig() {
     const elHoras = $('config-horas-diarias');
     elHoras.dataset.valor = D.horasDiarias();
@@ -168,12 +176,10 @@ function _precargarCamposConfig() {
     });
 
     actualizarFeedbackConfig();
-    actualizarEstadoBotonIgnorarTF();
-    actualizarEstadoBotonAplicarHoras();
+    _refrescarTogglesConfig();
     actualizarEstadoBotonNotificaciones();
     const lbl = $('hint-fondo-label');
     if (lbl) lbl.textContent = _getLabelFondo(getFondoCard());
-    actualizarHintAnimaciones();
 }
 
 function mostrarconfig() {
@@ -192,6 +198,7 @@ function mostrarConfigEnAjuste(id) {
 }
 
 function refrescarConfigSiVisible() {
+    _refrescarTogglesConfig();
     if (document.getElementById('modal-config')?.classList.contains('show')) {
         _precargarCamposConfig();
     }

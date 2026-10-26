@@ -162,6 +162,7 @@ async function exportarRango(desde, hasta, esMes = false) {
         diasHabiles: D.diasHabiles(),
         horasDiarias: D.horasDiarias(),
         historialDiasHabiles: D.historialDiasHabiles(),
+        ...D.obtenerConfigExportable(),
         fecha: fechaLocal,
         version: S.SECURITY_LIMITS.SCHEMA_VERSION,
         hash: await S.calcularHashSHA256(registrosFiltrados),

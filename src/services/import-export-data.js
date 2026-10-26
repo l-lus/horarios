@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from '../core/constants.js';
 import { $ } from '../core/dom.js';
+import { Motion } from '../core/motion.js';
 import { TimeUtils } from '../core/time-utils.js';
 import { StorageHelper } from '../core/storage.js';
 import { PerfilManager } from './perfil-manager.js';
@@ -12,6 +13,104 @@ import { Compensatorios } from './compensatorios.js';
 // ====================================================================
 //           IMPORT / EXPORT & BACKUP NORMALIZATION MODULE
 // ====================================================================
+const KEYS_CONFIG_EXPORTABLE = [
+    STORAGE_KEYS.IGNORAR_TF,
+    STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
+    STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
+    STORAGE_KEYS.REDUCIR_ANIMACIONES
+];
+
+function obtenerConfigExportable() {
+    return {
+        [STORAGE_KEYS.IGNORAR_TF]: D.getIgnorarTiempoFuera(),
+        [STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]: StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
+        [STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]: StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
+        [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Motion.modo()
+    };
+}
+
+function validarCamposConfigImport(data) {
+    if (!data || typeof data !== 'object') return false;
+    const boolKeys = [
+        STORAGE_KEYS.IGNORAR_TF,
+        STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
+        STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO
+    ];
+    for (const k of boolKeys) {
+        if (data[k] !== undefined && typeof data[k] !== 'boolean') return false;
+    }
+    if (data[STORAGE_KEYS.REDUCIR_ANIMACIONES] !== undefined &&
+        !['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES])) {
+        return false;
+    }
+    return true;
+}
+
+function aplicarConfigImportada(data, registrosParaRecalcular = null) {
+    if (!data || typeof data !== 'object') return;
+    if (Array.isArray(data.diasHabiles)) {
+        const diasValidos = data.diasHabiles.filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
+        if (diasValidos.length > 0) D.setDiasHabiles(diasValidos);
+    }
+    if (data.horasDiarias !== undefined && data.horasDiarias !== null) {
+        const h = typeof data.horasDiarias === 'string' ? parseFloat(data.horasDiarias) : data.horasDiarias;
+        if (Number.isFinite(h) && h >= 0 && h <= 24) D.setHorasDiarias(h);
+    }
+    const historialImportado = Compensatorios._sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
+    D._setHistorialDiasHabilesRaw(historialImportado || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
+    D.setDiasHabiles(Compensatorios.diasHabilesEnFecha(TimeUtils.obtenerFechaHoy()));
+
+    if (typeof data[STORAGE_KEYS.IGNORAR_TF] === 'boolean') {
+        D.setIgnorarTiempoFuera(data[STORAGE_KEYS.IGNORAR_TF]);
+        StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, data[STORAGE_KEYS.IGNORAR_TF], true);
+    }
+    if (typeof data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] === 'boolean') {
+        StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO], true);
+    }
+    if (typeof data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] === 'boolean') {
+        StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO], true);
+    }
+    if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES])) {
+        Motion.setModo(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]);
+    }
+
+    if (Array.isArray(registrosParaRecalcular)) {
+        registrosParaRecalcular.forEach(r => {
+            if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return;
+            D._aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera || null, r.credito || null);
+        });
+    }
+}
+
+function calcularCambiosConfigImport(data) {
+    const cambios = [];
+    if (!data || typeof data !== 'object') return cambios;
+    if (Array.isArray(data.diasHabiles)) {
+        const diasGist = [...data.diasHabiles].sort().join(',');
+        const diasLocal = [...D.diasHabiles()].sort().join(',');
+        if (diasGist !== diasLocal) cambios.push('días laborales');
+    }
+    if (data.horasDiarias != null && parseFloat(data.horasDiarias) !== D.horasDiarias()) {
+        cambios.push(`horas diarias (${D.horasDiarias()}h → ${parseFloat(data.horasDiarias)}h)`);
+    }
+    if (typeof data[STORAGE_KEYS.IGNORAR_TF] === 'boolean' && data[STORAGE_KEYS.IGNORAR_TF] !== D.getIgnorarTiempoFuera()) {
+        cambios.push('tiempo fuera');
+    }
+    if (typeof data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] === 'boolean' &&
+        data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] !== StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true)) {
+        cambios.push('banco de horas');
+    }
+    if (typeof data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] === 'boolean' &&
+        data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] !== StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) {
+        cambios.push('objetivo diario global');
+    }
+    if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]) &&
+        data[STORAGE_KEYS.REDUCIR_ANIMACIONES] !== Motion.modo()) {
+        cambios.push('animaciones');
+    }
+    return cambios;
+}
+
 function normalizarRegistrosImportados(rawList, calcularHorasFn) {
     const validarHora = (h) => TimeUtils.validarHora(h) ? S.sanitizeString(h, 5) : null;
     const hoy = TimeUtils.obtenerFechaHoy();
@@ -53,6 +152,7 @@ function normalizarRegistrosImportados(rawList, calcularHorasFn) {
 async function exportarJSON() {
     const data = {
         registros: D.registros(), diasHabiles: D.diasHabiles(), horasDiarias: D.horasDiarias(), historialDiasHabiles: D.historialDiasHabiles(),
+        ...obtenerConfigExportable(),
         fecha: TimeUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION,
         hash: await S.calcularHashSHA256(D.registros()), timestamp: Date.now()
     };
@@ -71,8 +171,8 @@ async function exportarJSON() {
 async function _validarDatosImport(data) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) { D._notify().mostrarToast('Estructura de archivo inválida', 'error'); return false; }
     if (!data.registros || !Array.isArray(data.registros)) { D._notify().mostrarToast('Archivo inválido o corrupto', 'error'); return false; }
-    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
-    if (Object.keys(data).some(k => !allowedRootKeys.includes(k))) { D._notify().mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
+    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
+    if (Object.keys(data).some(k => !allowedRootKeys.includes(k)) || !validarCamposConfigImport(data)) { D._notify().mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
     if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
         D._notify().mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
     }
@@ -138,18 +238,8 @@ function importarDatos(modo = 'replace') {
             if (registrosImportados.length === 0) { D._notify().mostrarToast('No se encontraron registros válidos', 'warning'); return; }
 
             if (modo === 'replace') {
+                aplicarConfigImportada(data, registrosImportados);
                 D._setRegistros(registrosImportados);
-                if (Array.isArray(data.diasHabiles)) {
-                    const diasValidos = data.diasHabiles.filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
-                    if (diasValidos.length > 0) D.setDiasHabiles(diasValidos);
-                }
-                if (data.horasDiarias !== undefined) {
-                    const h = typeof data.horasDiarias === 'string' ? parseFloat(data.horasDiarias) : data.horasDiarias;
-                    if (Number.isFinite(h) && h >= 0 && h <= 24) D.setHorasDiarias(h);
-                }
-                const historialImportado = Compensatorios._sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
-                D._setHistorialDiasHabilesRaw(historialImportado || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
-                D.setDiasHabiles(Compensatorios.diasHabilesEnFecha(TimeUtils.obtenerFechaHoy()));
                 const n = registrosImportados.length;
                 finalizarImportacionAndSave(`Se reemplazaron los datos por ${n === 1 ? '1 registro' : `${n} registros`}`, 'restauración local');
             } else if (modo === 'merge') {
@@ -184,6 +274,11 @@ async function finalizarImportacionAndSave(mensajeExito, descripcion = null) {
 }
 
 export const ImportExportData = {
+    KEYS_CONFIG_EXPORTABLE,
+    obtenerConfigExportable,
+    validarCamposConfigImport,
+    aplicarConfigImportada,
+    calcularCambiosConfigImport,
     normalizarRegistrosImportados,
     exportarJSON,
     _validarDatosImport,

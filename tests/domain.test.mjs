@@ -189,3 +189,68 @@ test('Integración: Arranque completo de UILogic.init() sin errores de ejecució
         globalThis.setTimeout = origSetTimeout;
     }
 });
+
+test('ImportExportData: exportación, validación y restauración de flags de configuración', async () => {
+    const { ImportExportData } = await import('../src/services/import-export-data.js');
+    const { StorageHelper } = await import('../src/core/storage.js');
+    const { Motion } = await import('../src/core/motion.js');
+    const { STORAGE_KEYS } = await import('../src/core/constants.js');
+
+    AppState.setIgnorarTiempoFuera(false);
+    StorageHelper.setItem(STORAGE_KEYS.IGNORAR_TF, false, true);
+    StorageHelper.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
+    StorageHelper.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+    Motion.setModo('auto');
+
+    // Simular un registro importado inicialmente con ignorarTiempoFuera = false (descarga 30m de tiempo fuera -> 7.5h)
+    const registros = ImportExportData.normalizarRegistrosImportados([
+        {
+            id: 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d',
+            fecha: '2026-10-20',
+            entrada: '09:00',
+            salida: '17:00',
+            tiempoFuera: '00:30',
+            horas: 8,
+            minutos: 0,
+            total: 8
+        }
+    ], AppState.calcularHoras);
+    assert.equal(registros[0].total, 7.5);
+
+    const backupData = {
+        registros,
+        diasHabiles: [1, 2, 3, 4],
+        horasDiarias: 8,
+        ignorarTiempoFuera: true,
+        ignorarLogicaCubierto: true,
+        ignorarObjetivoPorRegistro: true,
+        reducirAnimaciones: 'on'
+    };
+
+    assert.equal(ImportExportData.validarCamposConfigImport(backupData), true);
+    assert.equal(ImportExportData.validarCamposConfigImport({ ...backupData, reducirAnimaciones: 'invalido' }), false);
+    assert.equal(ImportExportData.validarCamposConfigImport({ ...backupData, ignorarTiempoFuera: 'si' }), false);
+
+    const cambios = ImportExportData.calcularCambiosConfigImport(backupData);
+    assert.ok(cambios.includes('tiempo fuera'));
+    assert.ok(cambios.includes('banco de horas'));
+    assert.ok(cambios.includes('objetivo diario global'));
+    assert.ok(cambios.includes('animaciones'));
+
+    // Al aplicar la configuración importada en modo replace, debe recalcular el registro con ignorarTiempoFuera = true (-> 8h)
+    ImportExportData.aplicarConfigImportada(backupData, registros);
+    assert.equal(AppState.getIgnorarTiempoFuera(), true);
+    assert.equal(StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true), true);
+    assert.equal(StorageHelper.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true), true);
+    assert.equal(Motion.modo(), 'on');
+    assert.equal(registros[0].total, 8);
+
+    const exportado = ImportExportData.obtenerConfigExportable();
+    assert.deepEqual(exportado, {
+        ignorarTiempoFuera: true,
+        ignorarLogicaCubierto: true,
+        ignorarObjetivoPorRegistro: true,
+        reducirAnimaciones: 'on'
+    });
+});
+

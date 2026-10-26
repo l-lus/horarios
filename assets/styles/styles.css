@@ -2596,13 +2596,16 @@ body.config-onboarding #theme-toggle-config {
     -webkit-touch-callout: none;
 }
 
-#btn-timer-main,
-#btn-timer-main * {
+#btn-timer-main {
     padding: var(--space-sm);
     position: absolute;
     left: 0;
     touch-action: manipulation;
     transition: opacity var(--transition-ui), visibility var(--transition-ui);
+}
+
+#btn-timer-main * {
+    touch-action: manipulation;
 }
 
 #btn-timer-main:disabled {

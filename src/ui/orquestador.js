@@ -423,6 +423,7 @@ async function init() {
     InstaladorPWA.init();
     _suscribirCambiosPermisoNotificaciones();
     actualizarUI(null, false, false, true, true);
+    Calendario.animarEntradaInicial();
     _iniciarCicloStats();
     actualizarBotonesHistorico();
 

@@ -482,6 +482,46 @@
     color: var(--text-muted);
 }
 
+/* Entrada inicial (una sola vez al cargar): pop escalonado en los días con registro,
+   el número sube un instante después y el remate (punto y hoy) cierra la secuencia.
+   Las clases las pone y las saca Calendario.animarEntradaInicial(); solo transform/opacity. */
+.calendario-grid {
+    --cal-fin: calc(var(--dur-cal-espera) + var(--cal-n, 0) * var(--cal-paso, 0ms) + var(--dur-cal-entrada));
+}
+
+.calendario-dia.cal-entrada {
+    animation-name: calendarioEntradaDia;
+    animation-duration: var(--dur-cal-entrada);
+    animation-timing-function: var(--ease-pop);
+    animation-delay: calc(var(--dur-cal-espera) + var(--i, 0) * var(--cal-paso, 0ms));
+    animation-fill-mode: backwards;
+}
+
+.calendario-dia.cal-entrada .calendario-dia-num {
+    display: inline-block;
+    animation-name: calendarioEntradaNumero;
+    animation-duration: var(--dur-cal-numero);
+    animation-timing-function: ease-out;
+    animation-delay: calc(var(--dur-cal-espera) + var(--i, 0) * var(--cal-paso, 0ms) + 100ms);
+    animation-fill-mode: backwards;
+}
+
+.calendario-dia.cal-entrada.tiene-comentario::after {
+    animation-name: calendarioEntradaDia;
+    animation-duration: var(--dur-anim);
+    animation-timing-function: var(--ease-pop);
+    animation-delay: var(--cal-fin);
+    animation-fill-mode: backwards;
+}
+
+.calendario-dia.cal-entrada-remate {
+    animation-name: calendarioEntradaDia;
+    animation-duration: var(--dur-cal-entrada);
+    animation-timing-function: var(--ease-pop);
+    animation-delay: var(--cal-fin);
+    animation-fill-mode: backwards;
+}
+
 .stat-label {
     color: var(--text-muted);
 }

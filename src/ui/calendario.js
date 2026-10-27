@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Movimiento } from '../core/movimiento.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
@@ -13,7 +14,7 @@ const D = GestionDatos;
 // ====================================================================
 //                     UI CALENDAR MODULE
 // ====================================================================
-const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray } = UIBase;
+const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray, _estaColapsado, _durSiAnima } = UIBase;
 
 function _cerrarSelectorMeses(idResaltar = null) {
     const grid = document.getElementById('calendario-grid');
@@ -224,6 +225,41 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     grid.innerHTML = '';
     grid.appendChild(frag);
 
+}
+
+// Entrada inicial: pop escalonado de los días con registro (se llama una vez tras el primer render)
+const ENTRADA_PASO_MS = 25;
+const ENTRADA_TOTAL_MAX_MS = 350;
+
+function _limpiarEntradaCalendario(grid) {
+    grid.style.removeProperty('--cal-n');
+    grid.style.removeProperty('--cal-paso');
+    grid.querySelectorAll('.cal-entrada, .cal-entrada-remate')
+        .forEach(c => c.classList.remove('cal-entrada', 'cal-entrada-remate'));
+}
+
+function animarEntradaInicial() {
+    const grid = document.getElementById('calendario-grid');
+    if (!grid || Movimiento.reducido() || !grid.offsetParent || _estaColapsado(grid)) return;
+    const celdas = grid.querySelectorAll('.calendario-dia[data-reg-id]');
+    if (!celdas.length) return;
+
+    const paso = Math.min(ENTRADA_PASO_MS, Math.floor(ENTRADA_TOTAL_MAX_MS / celdas.length));
+    grid.style.setProperty('--cal-n', celdas.length);
+    grid.style.setProperty('--cal-paso', paso + 'ms');
+    celdas.forEach((celda, i) => {
+        const num = document.createElement('span');
+        num.className = 'calendario-dia-num';
+        num.textContent = celda.textContent;
+        celda.replaceChildren(num);
+        celda.style.setProperty('--i', i);
+        celda.classList.add('cal-entrada');
+    });
+    grid.querySelector('.calendario-dia.hoy:not([data-reg-id])')?.classList.add('cal-entrada-remate');
+
+    const total = _durSiAnima('--dur-cal-espera') + celdas.length * paso
+        + _durSiAnima('--dur-cal-entrada') + _durSiAnima('--dur-anim') + 100;
+    setTimeout(() => _limpiarEntradaCalendario(grid), total);
 }
 
 let _vistaHistoricoCalendario = false;
@@ -644,6 +680,7 @@ export const Calendario = {
     _cerrarSelectorMeses,
     _activarVistaCalendarioHistorico,
     _renderizarCalendario,
+    animarEntradaInicial,
     toggleVistaHistorico,
     _popupCalendario,
     _popupCalendarioDiaSinRegistro,

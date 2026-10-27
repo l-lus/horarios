@@ -135,6 +135,30 @@ button.campo-flash {
 
 /* Filas de ajustes: sin borde propio y dentro de un contenedor con overflow hidden,
    así que el resalte va como sombra interna */
+@keyframes calendarioEntradaDia {
+    from {
+        opacity: 0;
+        transform: scale(0.55);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes calendarioEntradaNumero {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
 @keyframes ajuste-flash {
 
     0%,
@@ -386,6 +410,9 @@ button.campo-flash-color {
     --dur-valor: 1ms;
     --dur-conteo: 1ms;
     --dur-slow: 1ms;
+    --dur-cal-espera: 1ms;
+    --dur-cal-entrada: 1ms;
+    --dur-cal-numero: 1ms;
 }
 
 :root[data-motion="reduce"] :is(.modal-content, .cal-popup, .stat-popup, .filtro-popup) {
@@ -404,6 +431,13 @@ button.campo-flash-color {
 :root[data-motion="reduce"] .tf-badge,
 :root[data-motion="reduce"] .estado-badge--en-curso,
 :root[data-motion="reduce"] .timer-btn.running {
+    animation: none;
+}
+
+:root[data-motion="reduce"] .calendario-dia.cal-entrada,
+:root[data-motion="reduce"] .calendario-dia.cal-entrada-remate,
+:root[data-motion="reduce"] .calendario-dia.cal-entrada .calendario-dia-num,
+:root[data-motion="reduce"] .calendario-dia.cal-entrada.tiene-comentario::after {
     animation: none;
 }
 

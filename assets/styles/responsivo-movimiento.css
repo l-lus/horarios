@@ -260,6 +260,10 @@ button.campo-flash-color {
         padding: var(--space-xl);
     }
 
+    .calendario-semana-actual {
+    inset: 15px -6px;
+    }
+
     .calendario-dia {
         font-size: var(--text-base);
     }

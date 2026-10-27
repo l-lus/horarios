@@ -201,11 +201,8 @@ function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () =
                 timer = null;
                 esScrollManual = true;
             }
-            if (esScrollManual && e.pointerType === 'touch') {
-                const deltaY = ultimoY - e.clientY;
-                window.scrollBy(0, deltaY);
-                ultimoY = e.clientY;
-            }
+            // El scroll (y el pull-to-refresh) lo maneja el navegador de forma nativa
+            // gracias a touch-action: pan-y; al empezar el pan llega pointercancel.
             return;
         }
         e.preventDefault();

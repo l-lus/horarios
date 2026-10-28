@@ -10,7 +10,7 @@
 // cambiar id, label y svg, y guardarlo. La app lo detecta sola.
 // ─────────────────────────────────────────────────────────────────────────────
 
-window.FONDOS_SVG = [
+export const FONDOS_SVG = [
     {
         id: 'golden-gate',
         label: 'Golden Gate',

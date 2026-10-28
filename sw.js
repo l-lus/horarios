@@ -1,16 +1,64 @@
-const CACHE_NAME = 'horarios-v261017.1800-cache';
+const CACHE_PREFIX = 'horarios-';
+const CACHE_NAME = `${CACHE_PREFIX}v261027.0245-cache`;
 const urlsToCache = [
   './',
   './index.html',
-  './manifest.json',
-  './icon.svg',
-  './icons/icon-192.png',
-  './icons/badge-96.png',
-  './app.js',
-  './styles.css',
-  './fondos.js',
-  './feriados.js',
-  './flash.js',
+  './assets/manifest.json',
+  './assets/icons/icon.svg',
+  './assets/icons/icon-192.png',
+  './assets/icons/badge-96.png',
+  './assets/styles/tokens.css',
+  './assets/styles/base.css',
+  './assets/styles/tarjetas-vistas.css',
+  './assets/styles/modales-funciones.css',
+  './assets/styles/responsivo-movimiento.css',
+  './src/core/tema-inicial.js',
+  './src/core/constantes.js',
+  './src/core/dom.js',
+  './src/core/eventos.js',
+  './src/core/movimiento.js',
+  './src/core/tiempo-utils.js',
+  './src/core/seguridad.js',
+  './src/core/almacenamiento.js',
+  './src/data/fondos.js',
+  './src/data/feriados.js',
+  './src/services/estado-app.js',
+  './src/services/instalador-pwa.js',
+  './src/services/recordatorio-push.js',
+  './src/services/gestor-perfiles.js',
+  './src/services/gestor-historial.js',
+  './src/services/tipos-registro.js',
+  './src/services/compensatorios.js',
+  './src/services/importar-exportar.js',
+  './src/services/filtros-periodos.js',
+  './src/services/gestion-datos.js',
+  './src/services/saldo-semanal.js',
+  './src/services/sincronizacion-gist.js',
+  './src/services/feriados-ar.js',
+  './src/ui/gestor-temas.js',
+  './src/ui/gestor-modales.js',
+  './src/ui/animaciones.js',
+  './src/ui/base.js',
+  './src/ui/perfiles.js',
+  './src/ui/calendario.js',
+  './src/ui/respaldo-local.js',
+  './src/ui/gist-respaldo.js',
+  './src/ui/historico-edicion.js',
+  './src/ui/historico.js',
+  './src/ui/reportes.js',
+  './src/ui/estadisticas.js',
+  './src/ui/tarjeta-fondos.js',
+  './src/ui/tarjeta-tiempo-fuera.js',
+  './src/ui/tarjeta-lote.js',
+  './src/ui/tarjeta-fichaje.js',
+  './src/ui/orden-tarjetas.js',
+  './src/ui/notificaciones.js',
+  './src/ui/configuracion.js',
+  './src/ui/historial-dias.js',
+  './src/ui/bienvenida-modal.js',
+  './src/ui/aviso-push.js',
+  './src/ui/orquestador.js',
+  './src/main.js',
 ];
 
 // Instalación
@@ -34,14 +82,14 @@ self.addEventListener('activate', event => {
       .then(cacheNames => Promise.all(
         cacheNames
           // Solo cachés propias: el origen de GitHub Pages es compartido con otras apps
-          .filter(name => name.startsWith('horarios-') && name !== CACHE_NAME)
+          .filter(name => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
           .map(name => caches.delete(name))
       ))
       .then(() => self.clients.claim())
   );
 });
 
-// Fetch — cache-first, fallback a network
+// Fetch — cache-first aislado en CACHE_NAME, fallback a network
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
@@ -51,8 +99,10 @@ self.addEventListener('fetch', event => {
   // Limitar al scope del Service Worker para no cachear otros proyectos en el mismo origen de GitHub Pages
   if (!url.pathname.startsWith(self.registration.scope.replace(location.origin, ''))) return;
 
+  const matchOpts = { cacheName: CACHE_NAME, ignoreSearch: true };
+
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true })
+    caches.match(event.request, matchOpts)
       .then(cached => {
         if (cached) return cached;
 
@@ -69,9 +119,9 @@ self.addEventListener('fetch', event => {
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
             return networkResponse;
           })
-          .catch(() => {
+          .catch(async () => {
             if (event.request.mode === 'navigate') {
-              return caches.match('./index.html', { ignoreSearch: true }) || caches.match('./', { ignoreSearch: true });
+              return (await caches.match('./index.html', matchOpts)) || caches.match('./', matchOpts);
             }
           });
       })
@@ -90,8 +140,8 @@ self.addEventListener('push', event => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Horarios', {
       body: data.body || 'Se cumplió tu horario de hoy',
-      icon: './icons/icon-192.png',
-      badge: './icons/badge-96.png',
+      icon: './assets/icons/icon-192.png',
+      badge: './assets/icons/badge-96.png',
       tag: 'horarios-recordatorio',
       renotify: true,
     })

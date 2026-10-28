@@ -5,3 +5,5 @@ android/
 horarios-push/
 docs/
 *.json
+!assets/manifest.json
+.env

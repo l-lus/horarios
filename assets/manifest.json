@@ -1,19 +1,19 @@
 {
   "name": "Horarios",
   "short_name": "Horarios",
-  "start_url": "./index.html?mode=pwa",
+  "start_url": "../index.html?mode=pwa",
   "display": "standalone",
   "background_color": "#131314",
   "theme_color": "#131314",
   "orientation": "portrait",
-  "scope": "./",
-  "id": "./index.html",
+  "scope": "../",
+  "id": "../index.html",
   "launch_handler": {
     "client_mode": "focus-existing"
   },
   "icons": [
     {
-      "src": "./icon.svg",
+      "src": "./icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

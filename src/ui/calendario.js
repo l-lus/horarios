@@ -662,6 +662,67 @@ function irHoyCalendario() {
     setTimeout(_flashDiaHoyCalendario, DUR_CALENDARIO() + 20);
 }
 
+// ── Atajo PC: rueda del mouse / trackpad sobre los días para cambiar de mes ──
+const RUEDA_UMBRAL_PX = 40;          // acumulado mínimo para disparar el cambio
+const RUEDA_PAUSA_TRACKPAD_MS = 120; // pausa que cierra una ráfaga de trackpad (inercia)
+const RUEDA_COOLDOWN_EXTRA_MS = 60;  // margen sobre la animación de deslizamiento
+const RUEDA_LINEA_PX = 33;           // equivalencia de deltaMode "línea" en px
+
+function _registrarRuedaCalendario(grid) {
+    const contenedor = grid?.parentNode;
+    if (!contenedor || contenedor.dataset.ruedaInit) return;
+    contenedor.dataset.ruedaInit = '1';
+
+    let acumulado = 0;
+    let bloqueadoHasta = 0;
+    let zona = null;          // rect de los días mientras dura el bloqueo (la grilla se oculta al animar)
+    let timerReset = null;
+
+    const dentroDeZona = (x, y) => zona && x >= zona.left && x <= zona.right && y >= zona.top && y <= zona.bottom;
+    const esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    contenedor.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;   // zoom del navegador / atajos
+        if (!esPC()) return;
+
+        const ahora = performance.now();
+        const bloqueado = ahora < bloqueadoHasta;
+        const sobreDias = bloqueado
+            ? dentroDeZona(e.clientX, e.clientY)
+            : (!!e.target.closest?.('#calendario-grid') && grid.offsetParent !== null);
+        if (!sobreDias) return;
+
+        e.preventDefault();   // el scroll de la página queda quieto mientras el cursor está sobre los días
+
+        const factor = e.deltaMode === 1 ? RUEDA_LINEA_PX : e.deltaMode === 2 ? 400 : 1;
+        const dx = e.deltaX * factor, dy = e.deltaY * factor;
+        const delta = Math.abs(dy) >= Math.abs(dx) ? dy : dx;
+        if (!delta) return;
+
+        const esTrackpad = Math.abs(delta) < 50;   // ráfagas de deltas chicos con inercia
+
+        if (bloqueado) {
+            // Trackpad: la inercia sigue emitiendo eventos; se extiende el bloqueo hasta que cese
+            if (esTrackpad) bloqueadoHasta = Math.max(bloqueadoHasta, ahora + RUEDA_PAUSA_TRACKPAD_MS);
+            return;
+        }
+
+        // Cambio de sentido: reinicia el acumulado
+        if (acumulado && Math.sign(acumulado) !== Math.sign(delta)) acumulado = 0;
+        acumulado += delta;
+        clearTimeout(timerReset);
+        timerReset = setTimeout(() => { acumulado = 0; }, 200);
+
+        if (Math.abs(acumulado) < RUEDA_UMBRAL_PX) return;
+
+        const dir = acumulado > 0 ? 1 : -1;   // hacia abajo / derecha = mes siguiente
+        acumulado = 0;
+        zona = grid.getBoundingClientRect();
+        bloqueadoHasta = ahora + DUR_CALENDARIO() + RUEDA_COOLDOWN_EXTRA_MS;
+        navegarCalendario(dir);
+    }, { passive: false });
+}
+
 function bindEventos() {
     $('calendario-titulo-mes')?.addEventListener('click', () => abrirSelectorMesesCalendario());
     document.querySelector('.btn-hoy-calendario')?.addEventListener('click', () => irHoyCalendario());
@@ -671,6 +732,7 @@ function bindEventos() {
         if (navBtns[0]) navBtns[0].addEventListener('click', () => navegarCalendario(-1));
         if (navBtns[1]) navBtns[1].addEventListener('click', () => navegarCalendario(1));
     }
+    _registrarRuedaCalendario($('calendario-grid'));
 
 }
 

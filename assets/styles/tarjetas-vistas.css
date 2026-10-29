@@ -155,6 +155,73 @@
     width: 0%;
 }
 
+/* ─── LÍNEA DEL DÍA (entrada → salida estimada) ──────────────────────────────── */
+
+.linea-dia {
+    display: none;
+    margin: var(--space-sm) 0 var(--space-xs);
+}
+
+.stats-card.con-linea .linea-dia { display: block; }
+.stats-card.con-linea .progress-bar,
+.stats-card.con-linea #toggle-hint { display: none; }
+
+.linea-dia__top {
+    position: relative;
+    height: 1.2rem;
+    font-size: var(--text-sm);
+}
+
+.linea-dia__pista {
+    position: relative;
+    height: 6px;
+    margin: var(--space-xs) 0;
+    border-radius: var(--radius);
+    background: var(--c-blue-bg);
+}
+
+.linea-dia__pista .progress-fill { position: absolute; left: 0; top: 0; }
+
+.linea-dia__punto {
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 3px solid var(--c-blue);
+    background: var(--bg-card);
+    transform: translate(-50%, -50%);
+    transition: left var(--dur-slow);
+}
+
+.linea-dia__punto[data-color="green"] { border-color: var(--c-green); }
+
+.linea-dia__marca {
+    position: absolute;
+    top: 50%;
+    width: 3px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--text-muted);
+    transform: translate(-50%, -50%);
+}
+
+.linea-dia__marca[data-color="green"] { background: var(--c-green); }
+.linea-dia__marca[data-color="red"] { background: var(--c-red); }
+
+.linea-dia__bottom {
+    position: relative;
+    height: 1.2rem;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+
+.linea-dia__etiqueta { position: absolute; top: 0; white-space: nowrap; }
+.linea-dia__etiqueta--entrada { left: 0; }
+.linea-dia__etiqueta--salida { color: var(--text-main); font-weight: var(--fw-semibold); }
+.linea-dia__top .linea-dia__etiqueta { top: 0; }
+
 /* Conteo inicial del valor: la barra llena con la misma duración y curva que el número */
 .stats-card.conteo-inicial .progress-fill {
     transition: width var(--dur-conteo) var(--ease-conteo), background-color var(--dur-slow) ease;

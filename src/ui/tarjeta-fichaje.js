@@ -301,6 +301,36 @@ function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHab
     };
 }
 
+function _calcularLineaDia(reg, objetivoDiario, bufferSemanal, diasHabiles) {
+    const entrada = TiempoUtils.horaAMinutos(reg.entrada);
+    let salida = entrada + (objetivoDiario * 60);
+    if (reg.tiempoFuera && !D.getIgnorarTiempoFuera()) salida += TiempoUtils.horaAMinutos(reg.tiempoFuera);
+    salida += _minutosBreakActivo();
+
+    let ahora = TiempoUtils.horaAMinutos(TiempoUtils.obtenerHoraActual());
+    if (ahora < entrada) ahora += 1440;
+
+    const esLaborable = TiempoUtils.esFechaHabil(reg.fecha, diasHabiles);
+    const hayBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
+    const buf = hayBuffer ? salida - (bufferSemanal * 60) : null;
+
+    const fin = Math.max(salida, buf ?? salida, ahora);
+    const span = Math.max(1, fin - entrada);
+    const pct = (m) => Math.min(100, Math.max(0, ((m - entrada) / span) * 100));
+
+    return {
+        entrada: reg.entrada,
+        salida: _minutosAHoraWrap(salida),
+        pctSalida: pct(salida),
+        pctAhora: pct(ahora),
+        buf: hayBuffer ? {
+            hora: _minutosAHoraWrap(buf),
+            pct: pct(buf),
+            color: bufferSemanal > 0 ? 'green' : 'red'
+        } : null
+    };
+}
+
 function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, labelCero = '') {
     if (objetivoDiario === 0) return labelCero;
     if (cumplido) {
@@ -417,13 +447,17 @@ function derivarVistaHoy(est) {
 
     const colorFinal = estadoFondoColor || (estadoFondo === 'finalizado_fail' ? 'red' : 'green');
 
+    const linea = (!dayClosed && objetivoDiarioAplica > 0 && !est.ayerAbierto && regHoy.entrada)
+        ? _calcularLineaDia(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles)
+        : null;
+
     return _conAvisoAyer({
         titulo: `${_tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal)}`,
         stats: _horasTextoStats(tiempoHoy),
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: prog,
         colorBorde, estadoFondo, estadoFondoColor,
-        hint, hintEsHTML,
+        hint, hintEsHTML, linea,
     }, avisoAyerHint);
 }
 
@@ -609,6 +643,51 @@ function _renderMensaje(vista) {
     el.style.display = vista.mostrarMensaje ? 'block' : 'none';
 }
 
+function _posicionarEtiqueta(el, pct) {
+    el.style.left = `${pct}%`;
+    el.style.transform = `translateX(-${pct}%)`;
+}
+
+function _renderLinea(vista) {
+    const card = $('stats-card');
+    const cont = $('linea-dia');
+    if (!card || !cont) return;
+    const l = vista.linea;
+    card.classList.toggle('con-linea', !!l);
+    if (!l) return;
+
+    $('linea-relleno').className = `progress-fill ${vista.colorBarra}`;
+    $('linea-relleno').style.width = `${l.pctAhora}%`;
+    $('linea-punto').style.left = `${l.pctAhora}%`;
+    $('linea-punto').dataset.color = vista.colorBarra;
+
+    const marcaSalida = $('linea-marca-salida');
+    marcaSalida.style.left = `${l.pctSalida}%`;
+
+    const marcaBuf = $('linea-marca-buf');
+    const top = $('linea-top');
+    if (l.buf) {
+        marcaBuf.hidden = false;
+        marcaBuf.dataset.color = l.buf.color;
+        marcaBuf.style.left = `${l.buf.pct}%`;
+        top.hidden = false;
+        top.innerHTML = `<span class="linea-dia__etiqueta hint-buffer-color hint-buffer-color--${l.buf.color}"><strong>${l.buf.hora}</strong></span>`;
+        _posicionarEtiqueta(top.firstElementChild, l.buf.pct);
+    } else {
+        marcaBuf.hidden = true;
+        top.hidden = true;
+        top.innerHTML = '';
+    }
+
+    $('linea-entrada').textContent = l.entrada;
+    const sal = $('linea-salida');
+    sal.textContent = l.salida;
+    _posicionarEtiqueta(sal, l.pctSalida);
+
+    cont.setAttribute('aria-label',
+        `Entrada ${l.entrada}` + (l.buf ? `, salida con saldo ${l.buf.hora}` : '') + `, salida estimada ${l.salida}`);
+}
+
 function _renderCard(vista) {
     const card = $('stats-card');
     if (!card) return;
@@ -690,6 +769,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
     if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo, est); }
     _renderCard(vista);
     _renderBarra(vista, !!conteo);
+    _renderLinea(vista);
     Estadisticas._renderSelectorStats();
     actualizarEstadoBotonTimerMain(sinAnimarTitulo);
     if (TarjetaLote.getModoLoteActivo()) actualizarBotonLote();

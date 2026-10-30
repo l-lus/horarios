@@ -590,11 +590,15 @@ function _renderBarra(vista, desdeCero = false) {
         punto.style.left = `${vista.anchoBarra}%`;
         punto.classList.toggle('visible', vista.estadoFondo === 'en_curso' && vista.anchoBarra > 0);
         punto.dataset.color = vista.colorCierre ?? vista.colorBarra;
+        // el último tramo de la barra se degrada hacia el color del remate
+        el.style.setProperty('--color-remate', `var(--c-${punto.dataset.color})`);
+        el.style.setProperty('--color-barra', `var(--c-${vista.colorBarra})`);
     }
     _renderMarcas(vista.barra);
     const esDiaria = D.vistaActual() !== 'semana';
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
+    el.classList.toggle('con-remate', !!punto && punto.classList.contains('visible'));
 }
 
 function _renderMarcas(barra) {

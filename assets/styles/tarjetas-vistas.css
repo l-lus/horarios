@@ -267,6 +267,11 @@
     width: 0%;
 }
 
+/* El último tramo de la parte llena se degrada hacia el color del remate */
+.stats-card .progress-fill.con-remate {
+    background: linear-gradient(90deg, var(--color-barra) calc(100% - 5rem), var(--color-remate));
+}
+
 /* Conteo inicial del valor: la barra llena con la misma duración y curva que el número */
 .stats-card.conteo-inicial .progress-fill {
     transition: width var(--dur-conteo) var(--ease-conteo), background-color var(--dur-slow) ease;

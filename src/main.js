@@ -36,7 +36,7 @@ function _iniciarEventosDOM() {
 
     (function _bindLayoutConsistency() {
         const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v261027';
+        const _v = '-v261029';
         const _full = _t + _v;
         let _el = document.querySelector('.version-text');
         if (!_el) {

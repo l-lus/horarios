@@ -110,6 +110,7 @@ async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     }
     notify.avisarFichaje(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
     notify.resetearBoton(btn);
+    notify.animarExitoFichaje(btn);
     $('fecha').value = TiempoUtils.obtenerFechaHoy();
     $('salida').value = '';
 }
@@ -192,6 +193,7 @@ async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
     }
     notify.avisarFichaje(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
     notify.resetearBoton(btn);
+    notify.animarExitoFichaje(btn);
     $('fecha').value = TiempoUtils.obtenerFechaHoy();
     $('entrada').value = ''; $('salida').value = '';
 }

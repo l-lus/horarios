@@ -27,11 +27,15 @@ function _durSiAnima(varName, el = null) {
 }
 const DUR_ANIM = () => _getCSSdur('--dur-anim');
 const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
+const DUR_FICHAJE_OK = () => _getCSSdur('--dur-fichaje-ok');
+const DUR_FICHAJE_SALIDA = () => _getCSSdur('--dur-fichaje-salida');
 
 function _fantasmaDe(el) {
     const rect = el.getBoundingClientRect();
     const clon = el.cloneNode(true);
     clon.classList.add('mutacion-saliente');
+    // El destello de un botón recién fichado no se copia al fantasma: duplicaba el borde/halo
+    clon.classList.remove(..._CLASES_FLASH);
 
     Object.assign(clon.style, {
         position: 'fixed',
@@ -57,6 +61,54 @@ function _fantasmaDe(el) {
 }
 
 const _mutacionAnimEstado = new WeakMap();
+const _CLASES_FLASH = ['campo-flash', 'campo-flash-color'];
+
+// ─── Destello (campo-flash / campo-flash-color) ─────────────────────────────
+// Ambas clases fijan `animation` con más especificidad que .mutacion-entrante, así que
+// si coinciden pisan el fundido de entrada del elemento (el texto nuevo "aparece de golpe")
+// y además el fantasma saliente heredaba el borde. Mientras un elemento tiene una mutación
+// en curso el destello se difiere y arranca recién cuando termina el cambio de texto.
+const _flashDiferido = new WeakMap();
+
+function _aplicarFlash(el, clase, colorVar = null) {
+    clearTimeout(el._flashTimeout);
+    el.classList.remove(clase);
+    if (colorVar) el.style.setProperty('--flash-color', colorVar);
+    void el.offsetWidth;
+    el.classList.add(clase);
+
+    const cs = getComputedStyle(el);
+    const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
+    const iteraciones = parseFloat(cs.animationIterationCount) || 1;
+    el._flashTimeout = setTimeout(() => el.classList.remove(clase), duracionMs * iteraciones);
+}
+
+function _flashElemento(el, clase, colorVar = null) {
+    if (!el) return;
+    if (_mutacionAnimEstado.has(el) || _flashDiferido.has(el)) { _diferirFlash(el, clase, colorVar); return; }
+    _aplicarFlash(el, clase, colorVar);
+}
+
+function _diferirFlash(el, clase, colorVar) {
+    clearTimeout(el._flashTimeout);
+    el.classList.remove(clase);
+    const pendiente = _flashDiferido.get(el) ?? new Map();
+    pendiente.set(clase, colorVar);
+    _flashDiferido.set(el, pendiente);
+}
+
+// Saca del elemento el destello en curso (para que no se copie al fantasma ni pise el fundido)
+function _pausarFlash(el) {
+    _CLASES_FLASH.filter(c => el.classList.contains(c)).forEach(c => _diferirFlash(el, c, null));
+}
+
+function _reanudarFlash(el) {
+    const pendiente = _flashDiferido.get(el);
+    if (!pendiente || !el.isConnected) { _flashDiferido.delete(el); return; }
+    _flashDiferido.delete(el);
+    pendiente.forEach((colorVar, clase) => _aplicarFlash(el, clase, colorVar));
+}
+
 
 function _finalizarMutacionPendiente(el) {
     const estado = _mutacionAnimEstado.get(el);
@@ -76,6 +128,7 @@ function _animarMutacion(elementos, fn, duracion = null) {
     els.forEach(_finalizarMutacionPendiente);
     if (els.length === 0 || Movimiento.reducido()) { return Promise.resolve(fn()); }
 
+    els.forEach(_pausarFlash);
     const fantasmasMap = [];
     els.forEach(el => {
         const rect = el.getBoundingClientRect();
@@ -98,6 +151,7 @@ function _animarMutacion(elementos, fn, duracion = null) {
             els.forEach(el => {
                 el.classList.remove('mutacion-entrante');
                 _mutacionAnimEstado.delete(el);
+                _reanudarFlash(el);
             });
         }, dur);
 
@@ -289,6 +343,8 @@ export const Animaciones = {
     _durSiAnima,
     DUR_ANIM,
     DUR_CALENDARIO,
+    DUR_FICHAJE_OK,
+    DUR_FICHAJE_SALIDA,
     _aArray,
     _estaColapsado,
     _esperarAnim,
@@ -296,6 +352,7 @@ export const Animaciones = {
     _animarSlideElemento,
     _animarFadeSwap,
     _animarMutacion,
+    _flashElemento,
     _crearFantasmaSiVisible,
     _animarValor,
     _animarConteo,

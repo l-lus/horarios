@@ -425,6 +425,11 @@ input.error {
     white-space: nowrap;
 }
 
+/* Contador del botón en modo lote: inline-block para poder desplazarlo al aparecer/salir */
+.btn-cont {
+    display: inline-block;
+}
+
 /* ─── BOTONES ────────────────────────────────────────────────────────────────── */
 
 button {

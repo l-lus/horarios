@@ -10,6 +10,7 @@ let notify = {
     actualizarEstadoBotonTimerMain: () => { },
     actualizarHintGrupo: () => { },
     actualizarUI: () => { },
+    animarExitoFichaje: () => { },
     aplicarFeedbackCampos: () => { },
     avisarFichaje: () => { },
     cerrarEdicion: () => { },

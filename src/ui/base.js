@@ -238,7 +238,77 @@ function _habilitarCierreToast() {
 function resetearBoton(btn) {
     btn.disabled = false;
     btn.classList.remove('btn-color-muted', 'btn-color-red');
-    btn.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> <span id="btn-registrar-texto">Fichar</span>';
+    // Con el check de éxito en curso no se recrea el ícono: lo restaura su propia salida
+    if (_exitoFichaje.has(btn)) return;
+    btn.innerHTML = '<svg class="icon"><use href="#icon-clock"/></svg> <span id="btn-registrar-texto">Fichar</span>';
+}
+
+// ─── Check de éxito en el botón Fichar ──────────────────────────────────────
+// Reemplaza el ícono por icon-check-circle con entrada/salida (~2 s en total).
+// Si mientras tanto se ficha de nuevo con error, el check sale enseguida.
+const _exitoFichaje = new WeakMap();
+
+function _limpiarAnimExito(svg) {
+    svg.getAnimations?.().forEach(a => a.cancel());
+    svg.style.animation = '';
+    svg.classList.remove('fichaje-ok', 'fichaje-ok-vuelta');
+}
+
+function _finalizarExitoFichaje(btn, conVuelta = true) {
+    const est = _exitoFichaje.get(btn);
+    if (!est) return;
+    clearTimeout(est.timer);
+    _exitoFichaje.delete(btn);
+    const { svg, use, original } = est;
+    _limpiarAnimExito(svg);
+    // Si otro flujo ya cambió el ícono (ej. modo lote), no se pisa
+    if (use.getAttribute('href') !== '#icon-check-circle') return;
+    use.setAttribute('href', original);
+    if (conVuelta && !Movimiento.reducido()) {
+        void svg.getBoundingClientRect();
+        svg.classList.add('fichaje-ok-vuelta');
+    }
+}
+
+function animarExitoFichaje(btn) {
+    if (!btn || !btn.offsetParent) return;
+    const svg = btn.querySelector('svg.icon');
+    const use = svg?.querySelector('use');
+    if (!use) return;
+
+    const previo = _exitoFichaje.get(btn);
+    const original = (previo && previo.svg === svg) ? previo.original : use.getAttribute('href');
+    if (previo) { clearTimeout(previo.timer); _limpiarAnimExito(previo.svg); }
+    else _limpiarAnimExito(svg);
+
+    use.setAttribute('href', '#icon-check-circle');
+    void svg.getBoundingClientRect();
+    svg.classList.add('fichaje-ok');
+
+    const timer = setTimeout(() => _finalizarExitoFichaje(btn), DUR_FICHAJE_OK());
+    _exitoFichaje.set(btn, { svg, use, original, timer });
+}
+
+function salirExitoFichaje(btn) {
+    const est = btn && _exitoFichaje.get(btn);
+    if (!est || est.saliendo) return;
+    est.saliendo = true;
+    clearTimeout(est.timer);
+    if (Movimiento.reducido() || !est.svg.isConnected) { _finalizarExitoFichaje(btn); return; }
+
+    const cs = getComputedStyle(est.svg);
+    const desde = { transform: cs.transform, opacity: cs.opacity };
+    const dur = DUR_FICHAJE_SALIDA();
+    est.svg.style.animation = 'none';
+    est.svg.animate([desde, { transform: 'scale(0.4)', opacity: 0 }], { duration: dur, easing: 'ease-in', fill: 'forwards' });
+    est.timer = setTimeout(() => _finalizarExitoFichaje(btn), dur + 20);
+}
+
+function cancelarExitoFichaje(btn) { _finalizarExitoFichaje(btn, false); }
+
+// Ícono "real" del botón: ignora el check mientras dura la animación de éxito
+function obtenerIconoBtn(btn) {
+    return _exitoFichaje.get(btn)?.original ?? btn.querySelector('svg use')?.getAttribute('href');
 }
 
 function restaurarBotonGuardarEdicion(btnGuardar) {
@@ -246,7 +316,7 @@ function restaurarBotonGuardarEdicion(btnGuardar) {
     btnGuardar.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> Guardar';
 }
 
-const { _durSiAnima, DUR_ANIM, DUR_CALENDARIO, _aArray, _estaColapsado, _esperarAnim, _finalizarSlidePendiente, _animarSlideElemento, _animarFadeSwap, _animarMutacion, _crearFantasmaSiVisible, _animarValor, _animarConteo, _conteoEnCurso, _cancelarConteo } = Animaciones;
+const { _durSiAnima, DUR_ANIM, DUR_CALENDARIO, DUR_FICHAJE_OK, DUR_FICHAJE_SALIDA, _aArray, _estaColapsado, _esperarAnim, _finalizarSlidePendiente, _animarSlideElemento, _animarFadeSwap, _animarMutacion, _flashElemento, _crearFantasmaSiVisible, _animarValor, _animarConteo, _conteoEnCurso, _cancelarConteo } = Animaciones;
 function _crearToggleConfig({ getVal, setVal, btnId, onAfterToggle, puedeActivar }) {
     function actualizarEstado() {
         const val = getVal();
@@ -304,6 +374,9 @@ function _poblarSelect(selectId, items, getLabel, selDefault, actualizarFn, agru
 }
 
 function setIconoBtn(btn, icono) {
+    // Con el check de éxito en curso, el ícono nuevo pasa a ser el que se restaura al terminar
+    const exito = _exitoFichaje.get(btn);
+    if (exito) { exito.original = icono; return; }
     const use = btn.querySelector('svg use');
     if (use) use.setAttribute('href', icono);
 }
@@ -404,22 +477,6 @@ function _cerrarModalConPadre(modalId, callbackAbrirPadre = null) {
     else GestorModales.cerrar(modalId);
 }
 
-function _flashElemento(el, clase, colorVar = null) {
-    if (!el) return;
-    clearTimeout(el._flashTimeout);
-    el.classList.remove(clase);
-    if (colorVar) el.style.setProperty('--flash-color', colorVar);
-    void el.offsetWidth;
-    el.classList.add(clase);
-
-    const cs = getComputedStyle(el);
-    const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
-    const iteraciones = parseFloat(cs.animationIterationCount) || 1;
-    const totalMs = duracionMs * iteraciones;
-
-    el._flashTimeout = setTimeout(() => el.classList.remove(clase), totalMs);
-}
-
 function _flashCampoConClase(clase, ids, colorVar = null) {
     ids.forEach(id => _flashElemento(document.getElementById(id), clase, colorVar));
 }
@@ -494,6 +551,7 @@ function _flashCampoTipo(tipo, ...ids) {
 }
 
 function _avisarFichaje(msg, tipo = 'error', { btn = null, duracion } = {}) {
+    if (tipo !== 'success') salirExitoFichaje($('btn-agregar'));
     if (btn) resetearBoton(btn);
     if (msg) mostrarToast(msg, tipo, duracion);
     _flashCampoTipo(tipo, 'btn-agregar');
@@ -547,6 +605,9 @@ export const UIBase = {
     _cerrarToastActual,
     _habilitarCierreToast,
     resetearBoton,
+    animarExitoFichaje,
+    cancelarExitoFichaje,
+    obtenerIconoBtn,
     restaurarBotonGuardarEdicion,
     _durSiAnima,
     DUR_ANIM,

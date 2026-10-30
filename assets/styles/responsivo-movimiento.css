@@ -208,6 +208,65 @@ button.campo-flash-color {
     animation: campo-flash-color 500ms ease-in-out 2;
 }
 
+/* ─── FICHAJE OK (check de éxito en el botón Fichar) ─────────────────────────── */
+/* Entrada con rebote (0-28%), pausa y salida (86-100%) en una sola animación de
+   --dur-fichaje-ok. Solo transform/opacity. La salida anticipada (error al fichar
+   rápido) y el reemplazo del ícono los resuelve base.js. */
+@keyframes fichaje-ok {
+    0% {
+        transform: scale(0.3) rotate(-25deg);
+        opacity: 0;
+        animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+
+    19% {
+        transform: scale(1.22) rotate(6deg);
+        opacity: 1;
+        animation-timing-function: ease-in-out;
+    }
+
+    28% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+        animation-timing-function: linear;
+    }
+
+    86% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+        animation-timing-function: ease-in;
+    }
+
+    100% {
+        transform: scale(0.4) rotate(0deg);
+        opacity: 0;
+    }
+}
+
+@keyframes fichaje-ok-vuelta {
+    from {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.btn-register .icon.fichaje-ok {
+    color: var(--c-green);
+    transform-origin: center;
+    animation: fichaje-ok var(--dur-fichaje-ok) both;
+}
+
+/* Se deja puesta a propósito: evita que vuelva el llamarAtencion recién fichado */
+.btn-register .icon.fichaje-ok-vuelta {
+    transform-origin: center;
+    animation: fichaje-ok-vuelta var(--dur-fichaje-vuelta) ease-out;
+}
+
 @keyframes icono-spin {
     from {
         transform: rotate(0deg);
@@ -413,6 +472,10 @@ button.campo-flash-color {
     --dur-cal-espera: 1ms;
     --dur-cal-entrada: 1ms;
     --dur-cal-numero: 1ms;
+    --dur-fichaje-salida: 1ms;
+    --dur-fichaje-vuelta: 1ms;
+    /* Sin movimiento el check queda fijo: este es solo el tiempo que se muestra */
+    --dur-fichaje-ok: 1500ms;
 }
 
 :root[data-motion="reduce"] :is(.modal-content, .cal-popup, .stat-popup, .filtro-popup) {

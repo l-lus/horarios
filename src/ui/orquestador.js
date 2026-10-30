@@ -29,7 +29,7 @@ const {
     registrarSwipe, debounce, _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
     mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON, mostrarToast,
     _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion, _esperarAnim, _avisarFichaje,
-    aplicarFeedbackCampos
+    aplicarFeedbackCampos, animarExitoFichaje
 } = UIBase;
 
 const {
@@ -90,7 +90,7 @@ function _initGlobales() {
     D.configurarNotificaciones({
         abrirModal: GestorModales.abrir,
         actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
-        aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
+        animarExitoFichaje, aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
         cerrarTodosModales: GestorModales.cerrarTodos,
         confirmarModal: GestorModales.confirmar,
         descargarJSON, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,

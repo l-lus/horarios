@@ -78,6 +78,13 @@ const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBoton
         onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
     });
 
+const { toggle: toggleMetricaUso, actualizarEstado: actualizarEstadoBotonMetricaUso } =
+    _crearToggleConfig({
+        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true),
+        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.STATS_HABILITADO, v),
+        btnId: 'btn-toggle-metrica-uso',
+    });
+
 function actualizarEstadoBotonAplicarHoras() {
     const modoGlobal = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
     _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
@@ -292,6 +299,7 @@ function bindEventos() {
     $('btn-toggle-animaciones')?.addEventListener('click', () => toggleReducirAnimaciones());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
+    $('btn-toggle-metrica-uso')?.addEventListener('click', () => toggleMetricaUso());
     $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());
     document.getElementById('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
@@ -323,7 +331,7 @@ function bindEventos() {
 export const Configuracion = {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
     cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
     pressHoldObjetivoEdicion, formatearInput, bindEventos
 };

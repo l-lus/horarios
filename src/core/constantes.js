@@ -39,6 +39,7 @@ export const STORAGE_KEYS = Object.freeze({
     PUSH_OWNER_TOKEN: 'pushOwnerToken',
     STATS_ID: 'statsId',
     STATS_ULTIMO_PING: 'statsUltimoPing',
+    STATS_HABILITADO: 'statsHabilitado',
 
     BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
     GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,

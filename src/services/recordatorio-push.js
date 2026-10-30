@@ -385,6 +385,7 @@ async function _versionApp() {
 
 async function registrarUso() {
     if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
+    if (!Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true)) return;
     const KEY = STORAGE_KEYS.STATS_ULTIMO_PING;
     const ahora = Date.now();
     if (ahora - Number(Almacenamiento.getItem(KEY, 0)) < USO_INTERVALO_MS) return;

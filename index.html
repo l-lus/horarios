@@ -880,6 +880,17 @@
                         <div class="config-actions">
                             <label>Datos</label>
                             <div class="settings-list">
+                                <button id="btn-toggle-metrica-uso">
+                                    <svg class="icon">
+                                        <use href="#icon-shield" />
+                                    </svg>
+                                    <span class="settings-list-text">
+                                        <span>Métrica de uso anónima</span>
+                                        <span class="settings-list-desc">Envía una señal anónima al abrir la app para
+                                            contar cuántas personas la usan</span>
+                                    </span>
+                                    <span class="toggle-switch" aria-hidden="true"></span>
+                                </button>
                                 <button class="btn-gist">
                                     <svg class="icon">
                                         <use href="#icon-gist" />
@@ -1230,7 +1241,7 @@
 
                         <section class="ayuda-seccion" id="ayuda-sec-analitica">
                             <h4>Analítica</h4>
-                            <p>Para conocer cuántas personas usan la app, al abrirla (como máximo una vez cada 30
+                            <p>Para conocer cuántas personas usan la app (podés desactivarlo en Ajustes → Datos), al abrirla (como máximo una vez cada 30
                                 minutos) se envía una métrica de uso anónima a través de Cloudflare: un identificador
                                 aleatorio propio que se guarda hasheado y no tiene relación con tus horarios ni con las
                                 notificaciones, si se abrió instalada como app o desde el navegador, la versión en

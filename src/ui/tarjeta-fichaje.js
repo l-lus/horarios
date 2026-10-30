@@ -301,6 +301,12 @@ function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHab
     };
 }
 
+// color que tendría la barra si el registro se cerrara ahora (mismo criterio que el día cerrado)
+function _colorSiCerraraAhora(tiempoHoy, objetivo, bufferSemanal) {
+    if (objetivo === 0 || horasGte(tiempoHoy, objetivo)) return 'green';
+    return SaldoSemanal.logicaCubiertoActiva() && horasGte(bufferSemanal, objetivo - tiempoHoy) ? 'gold' : 'red';
+}
+
 function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, labelCero = '') {
     if (objetivoDiario === 0) return labelCero;
     if (cumplido) {
@@ -338,6 +344,7 @@ function derivarVistaHoy(est) {
                 mensaje, mostrarMensaje: true,
                 colorBarra, anchoBarra: prog,
                 colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
+                colorCierre: _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase),
                 hint, hintEsHTML,
             };
         }
@@ -423,6 +430,7 @@ function derivarVistaHoy(est) {
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: prog,
         colorBorde, estadoFondo, estadoFondoColor,
+        colorCierre: dayClosed ? colorBarra : _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAplica, bufferSemanalBase),
         hint, hintEsHTML,
     }, avisoAyerHint);
 }
@@ -589,17 +597,28 @@ function _renderBarra(vista, desdeCero = false) {
     const el = $('progress-bar');
     if (!el) return;
     const card = $('stats-card');
+    const punto = $('progress-punto');
     const dur = desdeCero && card ? _durSiAnima('--dur-conteo') : 0;
     if (dur > 1) {
         card.classList.add('conteo-inicial');
         el.style.width = '0%';
+        if (punto) punto.style.left = '0%';
         void el.offsetWidth;
         TiempoUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
     }
     el.style.width = `${vista.anchoBarra}%`;
+    if (punto) {
+        punto.style.left = `${vista.anchoBarra}%`;
+        punto.classList.toggle('visible', vista.estadoFondo === 'en_curso' && vista.anchoBarra > 0);
+        punto.dataset.color = vista.colorCierre ?? vista.colorBarra;
+        // el último tramo de la barra se degrada hacia el color del remate
+        el.style.setProperty('--color-remate', `var(--c-${punto.dataset.color})`);
+        el.style.setProperty('--color-barra', `var(--c-${vista.colorBarra})`);
+    }
     const esDiaria = D.vistaActual() !== 'semana';
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
+    el.classList.toggle('con-remate', !!punto && punto.classList.contains('visible'));
 }
 
 function _renderMensaje(vista) {

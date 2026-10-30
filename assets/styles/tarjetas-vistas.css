@@ -127,8 +127,38 @@
     background: transparent;
     border-radius: var(--radius);
     overflow: hidden;
+}
+
+.progress-pista {
+    position: relative;
     margin: var(--space-lg) 0;
 }
+
+.progress-punto {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 14px;
+    height: 14px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 3px solid var(--c-blue);
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: left var(--dur-slow), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease;
+}
+
+.progress-punto.visible {
+    opacity: 1;
+}
+
+.progress-punto[data-color="green"] { border-color: var(--c-green); }
+.progress-punto[data-color="red"] { border-color: var(--c-red); }
+.progress-punto[data-color="purple"] { border-color: var(--c-purple); }
+.progress-punto[data-color="orange"] { border-color: var(--c-orange); }
+.progress-punto[data-color="gold"] { border-color: var(--c-gold); }
 
 .progress-fill {
     height: 100%;
@@ -155,9 +185,18 @@
     width: 0%;
 }
 
+/* El último tramo de la parte llena se degrada hacia el color del remate */
+.stats-card .progress-fill.con-remate {
+    background: linear-gradient(90deg, var(--color-barra) calc(100% - 5rem), var(--color-remate));
+}
+
 /* Conteo inicial del valor: la barra llena con la misma duración y curva que el número */
 .stats-card.conteo-inicial .progress-fill {
     transition: width var(--dur-conteo) var(--ease-conteo), background-color var(--dur-slow) ease;
+}
+
+.stats-card.conteo-inicial .progress-punto {
+    transition: left var(--dur-conteo) var(--ease-conteo), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease;
 }
 
 /* ─── REGISTROS ──────────────────────────────────────────────────────────────── */

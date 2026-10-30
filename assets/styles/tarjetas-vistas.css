@@ -147,7 +147,7 @@
     transform: translate(-50%, -50%);
     opacity: 0;
     pointer-events: none;
-    transition: left var(--dur-slow), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease;
+    transition: left var(--dur-slow), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease, background var(--dur-slow) ease;
 }
 
 .progress-punto.visible {
@@ -159,6 +159,18 @@
 .progress-punto[data-color="purple"] { border-color: var(--c-purple); }
 .progress-punto[data-color="orange"] { border-color: var(--c-orange); }
 .progress-punto[data-color="gold"] { border-color: var(--c-gold); }
+.progress-punto[data-color="blue"] { border-color: var(--c-blue); }
+
+.progress-punto.cerrado {
+    border: none;
+}
+
+.progress-punto.cerrado[data-color="green"] { background: linear-gradient(var(--c-green), var(--c-green)), var(--bg-card); }
+.progress-punto.cerrado[data-color="red"] { background: linear-gradient(var(--c-red), var(--c-red)), var(--bg-card); }
+.progress-punto.cerrado[data-color="purple"] { background: linear-gradient(var(--c-purple), var(--c-purple)), var(--bg-card); }
+.progress-punto.cerrado[data-color="orange"] { background: linear-gradient(var(--c-orange), var(--c-orange)), var(--bg-card); }
+.progress-punto.cerrado[data-color="gold"] { background: linear-gradient(var(--c-gold), var(--c-gold)), var(--bg-card); }
+.progress-punto.cerrado[data-color="blue"] { background: linear-gradient(var(--c-blue), var(--c-blue)), var(--bg-card); }
 
 .progress-fill {
     height: 100%;
@@ -196,7 +208,7 @@
 }
 
 .stats-card.conteo-inicial .progress-punto {
-    transition: left var(--dur-conteo) var(--ease-conteo), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease;
+    transition: left var(--dur-conteo) var(--ease-conteo), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease, background var(--dur-slow) ease;
 }
 
 /* ─── REGISTROS ──────────────────────────────────────────────────────────────── */
@@ -484,7 +496,7 @@
     border-radius: 50%;
     font-size: var(--text-sm);
     font-weight: var(--fw-medium);
-    cursor: default;
+    cursor: pointer;
     position: relative;
     transition: opacity var(--dur-fast);
 }
@@ -496,6 +508,7 @@
 
 .calendario-dia.vacio {
     visibility: hidden;
+    cursor: default;
 }
 
 .calendario-dia.hoy {

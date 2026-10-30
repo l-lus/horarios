@@ -260,12 +260,16 @@ function derivarVistaSemana(est) {
         mostrarMensaje = true;
     }
 
+    const cerrado = !semanaAbierta && !todosEspeciales && horasDiarias > 0;
+
     return {
         titulo: `<svg class="icon"><use href="#icon-calendar-simple" /></svg> Esta Semana`,
         stats: todosEspeciales ? '🌞' : _horasTextoStats(tot),
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: progreso,
         colorBorde, estadoFondo,
+        colorCierre: colorBarra,
+        cerrado,
         hint: 'Tocá para ver Hoy',
         hintEsHTML: false,
     };
@@ -345,6 +349,7 @@ function derivarVistaHoy(est) {
                 colorBarra, anchoBarra: prog,
                 colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
                 colorCierre: _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase),
+                cerrado: false,
                 hint, hintEsHTML,
             };
         }
@@ -358,6 +363,7 @@ function derivarVistaHoy(est) {
             mostrarMensaje: horasDiarias > 0,
             colorBarra: 'blue', anchoBarra: 0,
             colorBorde: 'transparent', estadoFondo: 'esperando',
+            cerrado: false,
             hint: 'Tocá para ver la Semana', hintEsHTML: false,
         };
     }
@@ -375,6 +381,7 @@ function derivarVistaHoy(est) {
             colorBarra: tipoEspecialHoy.color, anchoBarra: 100,
             colorBorde: tipoEspecialHoy.color,
             estadoFondo: 'especial', estadoFondoColor: tipoEspecialHoy.color,
+            cerrado: false,
             hint: 'Tocá para ver la Semana', hintEsHTML: false,
         }, avisoAyerHint);
     }
@@ -431,6 +438,7 @@ function derivarVistaHoy(est) {
         colorBarra, anchoBarra: prog,
         colorBorde, estadoFondo, estadoFondoColor,
         colorCierre: dayClosed ? colorBarra : _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAplica, bufferSemanalBase),
+        cerrado: dayClosed,
         hint, hintEsHTML,
     }, avisoAyerHint);
 }
@@ -609,7 +617,9 @@ function _renderBarra(vista, desdeCero = false) {
     el.style.width = `${vista.anchoBarra}%`;
     if (punto) {
         punto.style.left = `${vista.anchoBarra}%`;
-        punto.classList.toggle('visible', vista.estadoFondo === 'en_curso' && vista.anchoBarra > 0);
+        const esVisible = (vista.estadoFondo === 'en_curso' || !!vista.cerrado) && vista.anchoBarra > 0;
+        punto.classList.toggle('visible', esVisible);
+        punto.classList.toggle('cerrado', !!vista.cerrado);
         punto.dataset.color = vista.colorCierre ?? vista.colorBarra;
         // el último tramo de la barra se degrada hacia el color del remate
         el.style.setProperty('--color-remate', `var(--c-${punto.dataset.color})`);
@@ -618,7 +628,7 @@ function _renderBarra(vista, desdeCero = false) {
     const esDiaria = D.vistaActual() !== 'semana';
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
-    el.classList.toggle('con-remate', !!punto && punto.classList.contains('visible'));
+    el.classList.toggle('con-remate', vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
 }
 
 function _renderMensaje(vista) {

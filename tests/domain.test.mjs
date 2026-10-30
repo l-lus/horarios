@@ -309,4 +309,79 @@ test('Almacenamiento: prefijo horarios_ (APP_STORAGE_PREFIX) y migración autom�
     assert.equal(rawStore.has(`${APP_STORAGE_PREFIX}gestion_servicios_config`), false);
 });
 
+test('TarjetaFichaje: derivarVistaHoy y derivarVistaSemana marcan estado cerrado y colorCierre', async () => {
+    const { TarjetaFichaje } = await import('../src/ui/tarjeta-fichaje.js');
 
+    // Semana cerrada cumpliendo objetivo
+    const vistaSemanaOk = TarjetaFichaje.derivarVistaSemana({
+        totalSemana: 35,
+        totalSemanaProgreso: 35,
+        objetivoSemana: 35,
+        semanaAbierta: false,
+        horasDiarias: 7,
+        todosEspeciales: false
+    });
+    assert.equal(vistaSemanaOk.cerrado, true);
+    assert.equal(vistaSemanaOk.colorCierre, 'green');
+
+    // Semana cerrada con faltante
+    const vistaSemanaFail = TarjetaFichaje.derivarVistaSemana({
+        totalSemana: 28,
+        totalSemanaProgreso: 28,
+        objetivoSemana: 35,
+        semanaAbierta: false,
+        horasDiarias: 7,
+        todosEspeciales: false
+    });
+    assert.equal(vistaSemanaFail.cerrado, true);
+    assert.equal(vistaSemanaFail.colorCierre, 'red');
+
+    // Semana en curso (abierta)
+    const vistaSemanaEnCurso = TarjetaFichaje.derivarVistaSemana({
+        totalSemana: 14,
+        totalSemanaProgreso: 14,
+        objetivoSemana: 35,
+        semanaAbierta: true,
+        horasDiarias: 7,
+        todosEspeciales: false
+    });
+    assert.equal(vistaSemanaEnCurso.cerrado, false);
+
+    // Día cerrado (con salida registrada)
+    const vistaDiaCerrado = TarjetaFichaje.derivarVistaHoy({
+        regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: '15:00', total: 7, objetivoHoras: 7 },
+        tiempoHoy: 7,
+        horasDiarias: 7,
+        esDiaHabil: true,
+        tipoEspecialHoy: null,
+        bufferSemanalBase: 0,
+        diasHabiles: [1, 2, 3, 4, 5]
+    });
+    assert.equal(vistaDiaCerrado.cerrado, true);
+    assert.equal(vistaDiaCerrado.colorCierre, 'green');
+
+    // Día cerrado con faltante
+    const vistaDiaFalto = TarjetaFichaje.derivarVistaHoy({
+        regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: '09:07', total: 1.12, objetivoHoras: 7 },
+        tiempoHoy: 1.12,
+        horasDiarias: 7,
+        esDiaHabil: true,
+        tipoEspecialHoy: null,
+        bufferSemanalBase: 0,
+        diasHabiles: [1, 2, 3, 4, 5]
+    });
+    assert.equal(vistaDiaFalto.cerrado, true);
+    assert.equal(vistaDiaFalto.colorCierre, 'red');
+
+    // Día en curso (sin salida)
+    const vistaDiaEnCurso = TarjetaFichaje.derivarVistaHoy({
+        regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: null, objetivoHoras: 7 },
+        tiempoHoy: 2,
+        horasDiarias: 7,
+        esDiaHabil: true,
+        tipoEspecialHoy: null,
+        bufferSemanalBase: 0,
+        diasHabiles: [1, 2, 3, 4, 5]
+    });
+    assert.equal(vistaDiaEnCurso.cerrado, false);
+});

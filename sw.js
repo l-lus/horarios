@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261030.1605-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261030.1655-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const urlsToCache = [
   './assets/icons/icon.svg',
   './assets/icons/icon-192.png',
   './assets/icons/badge-96.png',
+  './assets/fonts/inter-latin.woff2',
   './assets/styles/tokens.css',
   './assets/styles/base.css',
   './assets/styles/tarjetas-vistas.css',

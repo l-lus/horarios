@@ -909,9 +909,9 @@
 .chevron-mes {
     width: 1em;
     height: 1em;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
+    fill: currentColor;
+    stroke: none;
+    stroke-width: 0;
     flex-shrink: 0;
     transition: transform var(--transition-ui);
     order: 1;

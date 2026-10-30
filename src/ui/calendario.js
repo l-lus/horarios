@@ -675,7 +675,7 @@ function _registrarRuedaCalendario(grid) {
 
     let acumulado = 0;
     let bloqueadoHasta = 0;
-    let zona = null;          // rect de los días mientras dura el bloqueo (la grilla se oculta al animar)
+    let zona = null;          // rect de los días mientras la grilla está oculta por la animación
     let timerReset = null;
 
     const dentroDeZona = (x, y) => zona && x >= zona.left && x <= zona.right && y >= zona.top && y <= zona.bottom;
@@ -687,9 +687,10 @@ function _registrarRuedaCalendario(grid) {
 
         const ahora = performance.now();
         const bloqueado = ahora < bloqueadoHasta;
-        const sobreDias = bloqueado
+        const animando = grid.offsetParent === null;   // durante el deslizamiento la grilla real está oculta
+        const sobreDias = (bloqueado || animando)
             ? dentroDeZona(e.clientX, e.clientY)
-            : (!!e.target.closest?.('#calendario-grid') && grid.offsetParent !== null);
+            : !!e.target.closest?.('#calendario-grid');
         if (!sobreDias) return;
 
         e.preventDefault();   // el scroll de la página queda quieto mientras el cursor está sobre los días
@@ -717,8 +718,10 @@ function _registrarRuedaCalendario(grid) {
 
         const dir = acumulado > 0 ? 1 : -1;   // hacia abajo / derecha = mes siguiente
         acumulado = 0;
-        zona = grid.getBoundingClientRect();
-        bloqueadoHasta = ahora + DUR_CALENDARIO() + RUEDA_COOLDOWN_EXTRA_MS;
+        // Rueda de mouse: sin bloqueo (como los botones, la animación se interrumpe y encadena).
+        // Trackpad: se bloquea para absorber la inercia.
+        if (!animando) zona = grid.getBoundingClientRect();
+        if (esTrackpad) bloqueadoHasta = ahora + DUR_CALENDARIO() + RUEDA_COOLDOWN_EXTRA_MS;
         navegarCalendario(dir);
     }, { passive: false });
 }

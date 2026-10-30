@@ -52,10 +52,6 @@
     flex: 1;
 }
 
-#toggle-hint {
-    margin-top: auto;
-}
-
 .stats-card.border-blue {
     border-left-color: var(--c-blue);
 }
@@ -124,11 +120,127 @@
 .progress-bar {
     width: 100%;
     height: 6px;
-    background: transparent;
+    background: color-mix(in srgb, var(--text-main) 12%, transparent);
     border-radius: var(--radius);
     overflow: hidden;
-    margin: var(--space-lg) 0;
 }
+
+.progress-pista {
+    position: relative;
+    margin: var(--space-xl) 0 var(--space-xs);
+}
+
+.progress-cubierto {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background: var(--c-gold);
+    opacity: 0;
+    transition: left var(--dur-slow), width var(--dur-slow), opacity var(--dur-fast) ease;
+}
+
+.progress-cubierto[data-signo="red"] {
+    background: var(--c-red);
+}
+
+.progress-cubierto.visible {
+    opacity: 1;
+}
+
+.progress-marca {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 3px;
+    height: 16px;
+    border-radius: 2px;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: left var(--dur-slow), opacity var(--dur-fast) ease;
+}
+
+.progress-marca--objetivo {
+    background: var(--text-main);
+}
+
+.progress-marca--buffer[data-signo="green"] {
+    background: var(--c-green);
+}
+
+.progress-marca--buffer[data-signo="red"] {
+    background: var(--c-red);
+}
+
+.progress-marca.visible {
+    opacity: 1;
+}
+
+.progress-etiqueta-buffer {
+    position: absolute;
+    bottom: calc(100% + var(--space-xs));
+    left: 0;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    font-size: var(--text-sm);
+    font-weight: var(--fw-medium);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    transition: left var(--dur-slow), opacity var(--dur-fast) ease;
+}
+
+.progress-etiqueta-buffer.visible {
+    opacity: 1;
+}
+
+.progress-etiquetas {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    min-height: 1.2em;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.progress-etiqueta--sobre-marca {
+    position: absolute;
+    top: 0;
+}
+
+.progress-etiqueta--objetivo {
+    color: var(--text-main);
+    font-weight: var(--fw-medium);
+}
+
+.progress-punto {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 14px;
+    height: 14px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 3px solid var(--c-blue);
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: left var(--dur-slow), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease;
+}
+
+.progress-punto.visible {
+    opacity: 1;
+}
+
+.progress-punto[data-color="green"] { border-color: var(--c-green); }
+.progress-punto[data-color="red"] { border-color: var(--c-red); }
+.progress-punto[data-color="purple"] { border-color: var(--c-purple); }
+.progress-punto[data-color="orange"] { border-color: var(--c-orange); }
+.progress-punto[data-color="gold"] { border-color: var(--c-gold); }
 
 .progress-fill {
     height: 100%;
@@ -158,6 +270,10 @@
 /* Conteo inicial del valor: la barra llena con la misma duración y curva que el número */
 .stats-card.conteo-inicial .progress-fill {
     transition: width var(--dur-conteo) var(--ease-conteo), background-color var(--dur-slow) ease;
+}
+
+.stats-card.conteo-inicial .progress-punto {
+    transition: left var(--dur-conteo) var(--ease-conteo), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease;
 }
 
 /* ─── REGISTROS ──────────────────────────────────────────────────────────────── */
@@ -875,7 +991,6 @@
     animation: estadoBadgeParpadeo 3s ease-in-out infinite;
 }
 
-.toggle-hint,
 .config-hint-text,
 .version-text {
     font-size: var(--text-sm);

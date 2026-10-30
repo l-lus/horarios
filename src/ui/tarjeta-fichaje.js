@@ -193,13 +193,6 @@ function _fraseCantidadSufijo(horasDecimales, singular, plural) {
     return `${texto} ${esSingular ? singular : plural}`;
 }
 
-function _hintSalidaODefault(reg, objetivoAplica, bufferSemanal, diasHabiles, hintDefault, permiteEstimado) {
-    if (permiteEstimado && reg && reg.entrada && objetivoAplica > 0 && !TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida)) {
-        return _calcularHintSalidaEstimada(reg, objetivoAplica, bufferSemanal, diasHabiles);
-    }
-    return { hint: hintDefault, hintEsHTML: false };
-}
-
 function _tituloDia(nombreDia) {
     return `<svg class="icon"><use href="#icon-clock" /></svg>${nombreDia}`;
 }
@@ -212,8 +205,8 @@ function _badgeEstadoHoy(dayClosed, colorFinal) {
     return `<span class="estado-badge estado-badge--finalizado estado-badge--${color}">Finalizado</span>`;
 }
 
-function _conAvisoAyer(vista, avisoAyerHint) {
-    return avisoAyerHint ? { ...vista, ...avisoAyerHint } : vista;
+function _conAvisoAyer(vista, avisoAyer) {
+    return avisoAyer ? { ...vista, ...avisoAyer } : vista;
 }
 
 function derivarVistaSemana(est) {
@@ -266,39 +259,35 @@ function derivarVistaSemana(est) {
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: progreso,
         colorBorde, estadoFondo,
-        hint: 'Tocá para ver Hoy',
-        hintEsHTML: false,
     };
 }
 
-function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHabiles) {
-    let minutosTotal = TiempoUtils.horaAMinutos(reg.entrada) + (objetivoDiario * 60);
-
-    if (reg.tiempoFuera && !D.getIgnorarTiempoFuera()) {
-        minutosTotal += TiempoUtils.horaAMinutos(reg.tiempoFuera);
+function _datosBarra(reg, objetivo, bufferSemanal, diasHabiles, tiempoHoy, dayClosed) {
+    if (!reg || !reg.entrada || objetivo <= 0 || TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida)) return null;
+    if (dayClosed) {
+        return { anchoBarra: _calcularProgreso(tiempoHoy, objetivo), entrada: reg.entrada, salida: reg.salida, marcas: [] };
     }
 
-    minutosTotal += _minutosBreakActivo();
+    const hayBuffer = Math.abs(bufferSemanal) > 0.01 && TiempoUtils.esFechaHabil(reg.fecha, diasHabiles);
+    // pasado el objetivo la escala crece con el tiempo trabajado y las marcas se corren a la izquierda
+    const span = Math.max(objetivo + (hayBuffer && bufferSemanal < 0 ? -bufferSemanal : 0), tiempoHoy);
 
-    const horaSalida = _minutosAHoraWrap(minutosTotal);
+    let minutosObjetivo = TiempoUtils.horaAMinutos(reg.entrada) + (objetivo * 60);
+    if (reg.tiempoFuera && !D.getIgnorarTiempoFuera()) minutosObjetivo += TiempoUtils.horaAMinutos(reg.tiempoFuera);
+    minutosObjetivo += _minutosBreakActivo();
 
-    const esLaborable = TiempoUtils.esFechaHabil(reg.fecha, diasHabiles);
-    const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
-
-    if (mostrarBuffer) {
-        const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
-        const horaBuf = _minutosAHoraWrap(minutosConBuffer);
-        const claseBuffer = bufferSemanal > 0 ? ' hint-buffer-color--green' : bufferSemanal < 0 ? ' hint-buffer-color--red' : '';
-        return {
-            hint: `Salida estimada: <strong>${horaSalida}</strong> | <span class="hint-buffer-color${claseBuffer}"><strong>${horaBuf}</strong></span>`,
-            hintEsHTML: true
-        };
+    const marcas = [{ tipo: 'objetivo', hora: _minutosAHoraWrap(minutosObjetivo), pct: (objetivo / span) * 100 }];
+    if (hayBuffer) {
+        const pct = Math.min(100, Math.max(0, ((objetivo - bufferSemanal) / span) * 100));
+        marcas.push({ tipo: 'buffer', signo: bufferSemanal > 0 ? 'green' : 'red', hora: _minutosAHoraWrap(minutosObjetivo - (bufferSemanal * 60)), pct });
     }
+    return { anchoBarra: Math.min((tiempoHoy / span) * 100, 100), entrada: reg.entrada, salida: null, marcas };
+}
 
-    return {
-        hint: `Salida estimada: <strong>${horaSalida}</strong>`,
-        hintEsHTML: true
-    };
+// color que tendría la barra si el registro se cerrara ahora (mismo criterio que el día cerrado)
+function _colorSiCerraraAhora(tiempoHoy, objetivo, bufferSemanal) {
+    if (objetivo === 0 || horasGte(tiempoHoy, objetivo)) return 'green';
+    return SaldoSemanal.logicaCubiertoActiva() && horasGte(bufferSemanal, objetivo - tiempoHoy) ? 'gold' : 'red';
 }
 
 function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, labelCero = '') {
@@ -324,21 +313,21 @@ function derivarVistaHoy(est) {
             const objetivoDiarioAyerAplica = TiempoUtils.esFechaHabil(est.ayerStr, diasHabiles)
                 ? (est.regAyer ? D.objetivoDeRegistro(est.regAyer) : objetivoDiario)
                 : 0;
-            const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
+            const datosBarra = _datosBarra(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, tiempoHoy, false);
+            const prog = datosBarra?.anchoBarra ?? _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
             const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAyerAplica);
             const colorBarra = objetivoDiarioAyerAplica === 0 ? 'blue' : (cumplido ? 'green' : 'blue');
             const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase, 'En curso (cruce de medianoche)');
 
             const nombreDiaAyer = TiempoUtils.obtenerNombreDia(est.ayerStr);
-            const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
-
             return {
                 titulo: `${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false)}`,
                 stats: _horasTextoStats(tiempoHoy),
                 mensaje, mostrarMensaje: true,
                 colorBarra, anchoBarra: prog,
                 colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
-                hint, hintEsHTML,
+                colorCierre: _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase),
+                barra: datosBarra,
             };
         }
 
@@ -351,12 +340,11 @@ function derivarVistaHoy(est) {
             mostrarMensaje: horasDiarias > 0,
             colorBarra: 'blue', anchoBarra: 0,
             colorBorde: 'transparent', estadoFondo: 'esperando',
-            hint: 'Tocá para ver la Semana', hintEsHTML: false,
         };
     }
 
-    const avisoAyerHint = est.ayerAbierto
-        ? { hint: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false }
+    const avisoAyer = est.ayerAbierto
+        ? { mensaje: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, mostrarMensaje: true }
         : null;
 
     if (tipoEspecialHoy) {
@@ -368,13 +356,13 @@ function derivarVistaHoy(est) {
             colorBarra: tipoEspecialHoy.color, anchoBarra: 100,
             colorBorde: tipoEspecialHoy.color,
             estadoFondo: 'especial', estadoFondoColor: tipoEspecialHoy.color,
-            hint: 'Tocá para ver la Semana', hintEsHTML: false,
-        }, avisoAyerHint);
+        }, avisoAyer);
     }
 
     const dayClosed = !!regHoy.salida;
     const objetivoDiarioAplica = esDiaHabil ? objetivoDiario : 0;
-    const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAplica);
+    const datosBarra = _datosBarra(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles, tiempoHoy, dayClosed);
+    const prog = datosBarra?.anchoBarra ?? _calcularProgreso(tiempoHoy, objetivoDiarioAplica);
     const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAplica);
     let colorBarra, colorBorde, estadoFondo, estadoFondoColor = null, mensaje, mostrarMensaje;
 
@@ -413,8 +401,6 @@ function derivarVistaHoy(est) {
         mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAplica, bufferSemanalBase);
     }
 
-    const { hint, hintEsHTML } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
-
     const colorFinal = estadoFondoColor || (estadoFondo === 'finalizado_fail' ? 'red' : 'green');
 
     return _conAvisoAyer({
@@ -423,8 +409,9 @@ function derivarVistaHoy(est) {
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: prog,
         colorBorde, estadoFondo, estadoFondoColor,
-        hint, hintEsHTML,
-    }, avisoAyerHint);
+        colorCierre: dayClosed ? colorBarra : _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAplica, bufferSemanalBase),
+        barra: datosBarra,
+    }, avisoAyer);
 }
 
 const _COLORES_BORDE = ['blue', 'green', 'red', 'purple', 'orange', 'gold', 'transparent'];
@@ -589,17 +576,83 @@ function _renderBarra(vista, desdeCero = false) {
     const el = $('progress-bar');
     if (!el) return;
     const card = $('stats-card');
+    const punto = $('progress-punto');
     const dur = desdeCero && card ? _durSiAnima('--dur-conteo') : 0;
     if (dur > 1) {
         card.classList.add('conteo-inicial');
         el.style.width = '0%';
+        if (punto) punto.style.left = '0%';
         void el.offsetWidth;
         TiempoUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
     }
     el.style.width = `${vista.anchoBarra}%`;
+    if (punto) {
+        punto.style.left = `${vista.anchoBarra}%`;
+        punto.classList.toggle('visible', vista.estadoFondo === 'en_curso' && vista.anchoBarra > 0);
+        punto.dataset.color = vista.colorCierre ?? vista.colorBarra;
+    }
+    _renderMarcas(vista.barra);
     const esDiaria = D.vistaActual() !== 'semana';
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
+}
+
+function _renderMarcas(barra) {
+    for (const tipo of ['objetivo', 'buffer']) {
+        const el = $(`marca-${tipo}`);
+        if (!el) continue;
+        const marca = barra?.marcas.find(m => m.tipo === tipo);
+        el.classList.toggle('visible', !!marca);
+        if (marca) el.style.left = `${marca.pct}%`;
+    }
+    // tramo entre el objetivo y el buffer: dorado (cubierto) si el buffer es positivo, rojo si es negativo
+    const cubierto = $('progress-cubierto');
+    const marcaObjetivo = barra?.marcas.find(m => m.tipo === 'objetivo');
+    const marcaTramo = barra?.marcas.find(m => m.tipo === 'buffer');
+    if (cubierto) {
+        cubierto.classList.toggle('visible', !!marcaTramo && !!marcaObjetivo);
+        if (marcaTramo && marcaObjetivo) {
+            cubierto.style.left = `${Math.min(marcaTramo.pct, marcaObjetivo.pct)}%`;
+            cubierto.style.width = `${Math.abs(marcaObjetivo.pct - marcaTramo.pct)}%`;
+            cubierto.dataset.signo = marcaTramo.signo;
+        }
+    }
+    const etiqueta = $('etiqueta-buffer');
+    const marcaBuffer = barra?.marcas.find(m => m.tipo === 'buffer');
+    if (etiqueta) {
+        if (!marcaBuffer) etiqueta.classList.remove('visible');
+        else {
+            etiqueta.textContent = marcaBuffer.hora;
+            etiqueta.className = `progress-etiqueta-buffer hint-buffer-color hint-buffer-color--${marcaBuffer.signo} visible`;
+            $('marca-buffer').dataset.signo = marcaBuffer.signo;
+            etiqueta.style.left = `${marcaBuffer.pct}%`;
+        }
+    }
+}
+
+function _renderEtiquetas(vista) {
+    const el = $('progress-etiquetas');
+    if (!el) return;
+    el.innerHTML = '';
+    const barra = vista.barra;
+    if (!barra) return;
+    const crear = (clase, texto) => {
+        const span = document.createElement('span');
+        span.className = clase;
+        span.textContent = texto;
+        return span;
+    };
+    el.appendChild(crear('progress-etiqueta', barra.entrada));
+    const marcaObjetivo = barra.marcas.find(m => m.tipo === 'objetivo');
+    const fin = barra.salida ?? marcaObjetivo?.hora;
+    if (fin) {
+        const etiqueta = crear('progress-etiqueta progress-etiqueta--objetivo', fin);
+        if (marcaObjetivo) {
+            etiqueta.classList.add('progress-etiqueta--sobre-marca');
+            etiqueta.style.right = `${100 - marcaObjetivo.pct}%`;
+        }
+        el.appendChild(etiqueta);
+    }
 }
 
 function _renderMensaje(vista) {
@@ -615,13 +668,6 @@ function _renderCard(vista) {
     card.classList.remove(..._COLORES_BORDE.map(c => `border-${c}`));
     card.classList.add(`border-${vista.colorBorde}`);
     actualizarFondoCard(vista.estadoFondo, vista.estadoFondoColor ?? null);
-}
-
-function _renderHint(vista) {
-    const el = $('toggle-hint');
-    if (!el) return;
-    if (vista.hintEsHTML) { el.innerHTML = vista.hint; }
-    else el.textContent = vista.hint;
 }
 
 function _renderBuffer(est) {
@@ -649,7 +695,7 @@ function _animarCambioCard(renderFn) {
         $('stats-semana'),
         $('stats-mensaje'),
         $('stats-buffer'),
-        $('toggle-hint'),
+        $('progress-etiquetas'),
     ];
 
     _detenerCicloStats();
@@ -706,7 +752,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
     const renderResto = () => {
         _renderStats(vista, est, conteo);
         _renderMensaje(vista);
-        _renderHint(vista);
+        _renderEtiquetas(vista);
         _renderBuffer(est);
     };
     if (debeAnimar) {

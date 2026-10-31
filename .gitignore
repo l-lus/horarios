@@ -9,3 +9,4 @@ docs/
 .env
 !package.json
 !tsconfig.json
+!package-lock.json

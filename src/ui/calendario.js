@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -697,7 +697,7 @@ function _registrarRuedaCalendario(grid) {
         if (!esPC()) return;
         // Alt + rueda cambia de mes sobre cualquier parte del calendario, aunque la rueda sola esté desactivada en configuración
         const conAlt = e.altKey;
-        if (!conAlt && !Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, true)) return;   // desactivado: la rueda desplaza la página
+        if (!conAlt && !Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO)) return;   // desactivado: la rueda desplaza la página
 
         const ahora = performance.now();
         const bloqueado = ahora < bloqueadoHasta;

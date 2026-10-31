@@ -238,9 +238,20 @@ test('EstadoTarjeta.calcularEstadoCard arma diasSemana: sin registro, especial, 
         ['2026-10-30', 'activo']
     ]);
     assert.equal(diasSemana[1].especial, 'purple');
+    // resultado de los días cerrados: el lunes cumplió, el jueves (3 h de 7) faltó; los demás estados no lo llevan
+    assert.deepEqual(diasSemana.map(d => d.cumplimiento), ['cumplido', undefined, undefined, 'faltante', undefined]);
     assert.equal(diasSemana[0].total, 7);
     assert.equal(diasSemana[4].activo, true);
     assert.ok(diasSemana[4].total > 0 && diasSemana[4].total < 7, 'el día abierto cuenta lo trabajado hasta ahora');
+
+    // un día con faltante que cubre el saldo de otro con exceso queda como 'cubierto'
+    EstadoApp._setRegistros([
+        reg('2026-10-26', '09:00', '18:00', 9),   // lunes: 2 h de exceso
+        reg('2026-10-29', '09:00', '14:00', 5)    // jueves: le faltan 2 h
+    ]);
+    const conSaldo = EstadoTarjeta.calcularEstadoCard().diasSemana;
+    assert.equal(conSaldo.find(d => d.fecha === '2026-10-26').cumplimiento, 'cumplido');
+    assert.equal(conSaldo.find(d => d.fecha === '2026-10-29').cumplimiento, 'cubierto');
 
     // martes 27/10 10:00: hoy sin registro todavía y el resto de la semana son días futuros
     t.mock.timers.reset();

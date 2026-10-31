@@ -356,8 +356,8 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
     const vistaFranjas = TarjetaFichajeVista.derivarVistaSemana({
         ...base,
         diasSemana: [
-            dia('2026-10-26', 'cerrado', { total: 7 }),                    // lun: cumplió -> franja entera verde
-            dia('2026-10-27', 'cerrado', { total: 3.5 }),                  // mar: faltó -> mitad de la franja
+            dia('2026-10-26', 'cerrado', { total: 7, cumplimiento: 'cumplido' }),   // lun: cumplió -> franja entera verde
+            dia('2026-10-27', 'cerrado', { total: 3.5, cumplimiento: 'faltante' }),   // mar: faltó -> mitad de la franja
             dia('2026-10-28', 'especial', { objetivo: 0, especial: 'purple' }),
             dia('2026-10-29', 'sin-registro'),
             dia('2026-10-30', 'sin-registro'),
@@ -491,4 +491,42 @@ test('TarjetaFichajeVista: con 0 minutos se muestra "Comenzando" o "Sin horas to
     // con horas trabajadas no cambia nada, y una semana de solo días especiales conserva su 🌞
     assert.notEqual(TarjetaFichajeVista.derivarVistaSemana(estSemana({ totalSemana: 3, totalSemanaProgreso: 3 })).stats, 'Sin horas todavía');
     assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({ todosEspeciales: true })).stats, '🌞');
+});
+
+test('GeometriaEtiquetas: conector, reparto de lados y cuándo la entrada pasa arriba (sin DOM)', async () => {
+    const { geometriaConector, repartirLados, entradaDebeSubir, ANCHO_CONECTOR, SEPARACION_ETIQUETA } = await import('../src/core/geometria-etiquetas.js');
+
+    // con lugar a la izquierda la etiqueta va a la izquierda del conector; sin lugar se espeja a la derecha
+    const normal = geometriaConector(200, 30);
+    assert.equal(normal.espejado, false);
+    assert.equal(normal.left, 200 - ANCHO_CONECTOR - SEPARACION_ETIQUETA - 30);
+    assert.equal(normal.hasta, 203);
+    const espejada = geometriaConector(20, 30);
+    assert.equal(espejada.espejado, true);
+    assert.equal(espejada.left, 20 + ANCHO_CONECTOR + SEPARACION_ETIQUETA);
+    assert.equal(espejada.desde, 17);
+    // el margen ensancha el tramo ocupado por la etiqueta
+    assert.equal(geometriaConector(200, 30, 8).desde, normal.left - 4);
+
+    // reparto de lados: la segunda prueba el lado contrario, la tercera ya no entra y queda como solo punto
+    const it = (orden, desde, hasta, preferido, prioridad) => ({ orden, desde, hasta, preferido, prioridad });
+    const a = it(0, 100, 150, 'abajo', 2);
+    const b = it(1, 120, 170, 'abajo', 2);
+    const c = it(2, 130, 180, 'abajo', 2);
+    const lados = repartirLados([a, b, c]);
+    assert.deepEqual([lados.get(a), lados.get(b), lados.get(c)], ['abajo', 'arriba', null]);
+    // con la misma superposición, la de mayor prioridad se queda con su lado
+    const baja = it(0, 100, 150, 'abajo', 0);
+    const alta = it(1, 110, 160, 'abajo', 2);
+    const prioridad = repartirLados([baja, alta]);
+    assert.equal(prioridad.get(alta), 'abajo');
+    assert.equal(prioridad.get(baja), 'arriba');
+
+    // la entrada sube si la salida la pisa, salvo que arriba esté el buffer en el mismo tramo; sin ancho medido no se decide
+    const base = { ancho: 300, entradaLeft: 0, entradaAncho: 40 };
+    assert.equal(entradaDebeSubir({ ...base, salidaLeft: 45 }), true);
+    assert.equal(entradaDebeSubir({ ...base, salidaLeft: 200 }), false);
+    assert.equal(entradaDebeSubir({ ...base, salidaLeft: 45, bufferLeft: 30 }), false);
+    assert.equal(entradaDebeSubir({ ...base, salidaLeft: 45, bufferLeft: 250 }), true);
+    assert.equal(entradaDebeSubir({ ...base, ancho: 0, salidaLeft: 0 }), false);
 });

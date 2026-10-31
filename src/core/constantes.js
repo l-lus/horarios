@@ -54,6 +54,12 @@ export const STORAGE_KEYS = Object.freeze({
     CARD_VISIBLE: (cual) => `cardVisible_${cual}`,
 });
 
+// Valores por defecto de opciones booleanas que se leen desde varios módulos (un solo lugar para que no se desincronicen)
+export const DEFAULTS = Object.freeze({
+    HINT_INTEGRADO: true,
+    RUEDA_CALENDARIO: true,
+});
+
 
 // ====================================================================
 // NUMERIC PRECISION — shared helper

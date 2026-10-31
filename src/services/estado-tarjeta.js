@@ -1,8 +1,10 @@
+import { horasGte } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { EstadoApp } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
 import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { TiposRegistro } from './tipos-registro.js';
+import { SaldoSemanal } from './saldo-semanal.js';
 
 // ====================================================================
 // ESTADO DE LA TARJETA DE FICHAJE MODULE (cálculo del día y la semana, sin DOM)
@@ -101,7 +103,7 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, minutosBreakActi
     const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 
     // Franjas de la semana para la barra con hitos: un día por cada laborable (o con registro), con su objetivo, lo trabajado y su estado
-    /** @type {{ fecha: string, objetivo: number, total: number, activo: boolean, estado: 'especial' | 'cerrado' | 'activo' | 'sin-registro' | 'futuro', especial?: string }[]} */
+    /** @type {{ fecha: string, objetivo: number, total: number, activo: boolean, estado: 'especial' | 'cerrado' | 'activo' | 'sin-registro' | 'futuro', especial?: string, cumplimiento?: 'cumplido' | 'cubierto' | 'faltante' }[]} */
     const diasSemana = [];
     for (const isoDate of TiempoUtils.generarRangoFechas(ini, fn)) {
         const rDia = registrosSemanaCompletaPorFecha.get(isoDate) ?? null;
@@ -118,7 +120,12 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, minutosBreakActi
         else if (activo) estado = 'activo';
         else if (rDia) estado = 'cerrado';
         else estado = isoDate < hoy ? 'sin-registro' : 'futuro';
-        diasSemana.push({ fecha: isoDate, objetivo, total: activo ? tiempoHoy : (rDia?.total ?? 0), activo, estado, especial });
+        const total = activo ? tiempoHoy : (rDia?.total ?? 0);
+        // resultado de un día cerrado: cumplió su objetivo, faltó pero lo cubre el saldo, o faltó (se reutilizan las asignaciones ya calculadas)
+        const cumplimiento = estado !== 'cerrado' ? undefined
+            : (objetivo === 0 || horasGte(total, objetivo)) ? 'cumplido'
+                : SaldoSemanal.cubiertoPorSaldo(isoDate, asignacionesCompensatorio) ? 'cubierto' : 'faltante';
+        diasSemana.push({ fecha: isoDate, objetivo, total, activo, estado, especial, cumplimiento });
     }
 
     return {

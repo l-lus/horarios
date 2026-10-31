@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -84,14 +84,14 @@ const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBoton
 
 const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRuedaCalendario } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, true),
+        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO),
         setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.RUEDA_CALENDARIO, v),
         btnId: 'btn-toggle-rueda-calendario',
     });
 
 const { toggle: toggleHintIntegrado, actualizarEstado: actualizarEstadoBotonHintIntegrado } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, true),
+        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO),
         setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, v),
         btnId: 'btn-toggle-hint-integrado',
         onAfterToggle: () => { EventosApp.emit('config:hint-integrado'); actualizarUI(); }

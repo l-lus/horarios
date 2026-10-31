@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, horasGte, horasEq } from '../core/constantes.js';
+import { STORAGE_KEYS, DEFAULTS, horasGte, horasEq } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -30,9 +30,9 @@ function _refrescarFormatoCortoStatsCache() {
 EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
 
 // "Hint integrado": la salida estimada y la salida con buffer se dibujan sobre la barra en vez de en el texto inferior
-let _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, true);
+let _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
 EventosApp.on('config:hint-integrado', () => {
-    _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, true);
+    _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
 });
 
 function _modoTextoStats() {
@@ -92,10 +92,11 @@ function _conAvisoAyer(vista, avisoAyerHint) {
 const _SIGLAS_DIA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
 // Color del tramo de un día, con el mismo criterio que la vista diaria: en curso azul; cerrado verde si cumplió, dorado si lo cubre el saldo, rojo si faltó
+// (el resultado de cada día cerrado lo calcula el servicio: d.cumplimiento)
+const _COLOR_CUMPLIMIENTO = { cumplido: 'green', cubierto: 'gold', faltante: 'red' };
 function _colorEstadoDia(d) {
     if (d.activo) return 'blue';
-    if (d.objetivo === 0 || horasGte(d.total ?? d.horas, d.objetivo)) return 'green';
-    return SaldoSemanal.cubiertoPorSaldo(d.fecha) ? 'gold' : 'red';
+    return _COLOR_CUMPLIMIENTO[d.cumplimiento] ?? 'red';
 }
 
 // Barra semanal con hint integrado: cada día tiene una franja fija de la barra (proporcional a su objetivo) y lo trabajado la rellena con el color del estado del día.

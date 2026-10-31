@@ -2,6 +2,7 @@ import { TarjetaFondos } from './tarjeta-fondos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
+import { geometriaConector, repartirLados, entradaDebeSubir, MARGEN_SIGLAS } from '../core/geometria-etiquetas.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -231,19 +232,12 @@ function _colocarEtiquetaLinea(el, pct, ancho) {
     el.style.left = `${Math.max(0, Math.min(ancho - w, (pct / 100) * ancho - w / 2))}px`;
 }
 
-// Las marcas de salida y buffer son una "T" con la barra: una curva libre que sale hacia su lado y termina en flecha en el medio de la etiqueta.
-// La etiqueta queda a la izquierda del conector; si no entra, se espeja hacia la derecha.
-const _MARGEN_ETIQUETAS = 12; // separación mínima entre horas del mismo lado antes de reubicar la entrada
-const _MARGEN_SIGLAS = 8; // separación mínima entre siglas del mismo lado en la vista semanal
-const _ANCHO_CONECTOR = 21; // de la marca a la punta de la flecha
-const _SEPARACION_ETIQUETA = 4;
+// Posiciona la etiqueta de una marca en "T" (ver core/geometria-etiquetas.js): a la izquierda del conector o, si no entra, espejada a la derecha.
 function _colocarEtiquetaConector(et, tick, pct, ancho) {
     if (!et) return;
-    const x = (pct / 100) * ancho;
-    const w = et.offsetWidth;
-    const espejado = x - _ANCHO_CONECTOR - _SEPARACION_ETIQUETA - w < 0;
+    const { espejado, left } = geometriaConector((pct / 100) * ancho, et.offsetWidth);
     tick.classList.toggle('espejado', espejado);
-    et.style.left = `${espejado ? x + _ANCHO_CONECTOR + _SEPARACION_ETIQUETA : x - _ANCHO_CONECTOR - _SEPARACION_ETIQUETA - w}px`;
+    et.style.left = `${left}px`;
 }
 
 // Cambia la hora de entrada de lado (abajo/arriba de la barra): la copia sale en el lugar anterior y la etiqueta real reaparece en el nuevo
@@ -315,12 +309,14 @@ function _renderLinea(vista, pista, fill) {
     else _colocarEtiquetaConector(etSalida, tickSalida, pMarca, ancho);
     _colocarEtiquetaConector(etBuffer, tickBuffer, pBuffer ?? pSalida, ancho);
     // si la hora de salida (abierta o cerrada) pisa o queda pegada a la de entrada, esta pasa arriba de la barra,
-    // salvo que arriba esté la etiqueta del buffer en ese mismo tramo
-    const finEntrada = parseFloat(etEntrada.style.left) + etEntrada.offsetWidth + _MARGEN_ETIQUETAS;
-    const salidaChoca = parseFloat(etSalida.style.left) < finEntrada;
-    const arribaOcupado = L.hayBanda && parseFloat(etBuffer.style.left) < finEntrada;
-    const entradaArriba = salidaChoca && !arribaOcupado;
-    _ponerEntradaArriba(etEntrada, entradaArriba);
+    // salvo que arriba esté la etiqueta del buffer en ese mismo tramo (sin ancho medido no se decide nada)
+    _ponerEntradaArriba(etEntrada, entradaDebeSubir({
+        ancho,
+        entradaLeft: parseFloat(etEntrada.style.left),
+        entradaAncho: etEntrada.offsetWidth,
+        salidaLeft: parseFloat(etSalida.style.left),
+        bufferLeft: L.hayBanda ? parseFloat(etBuffer.style.left) : null
+    }));
 
     // relleno: azul hasta la primera salida, color del tramo entre ambas y verde al superar la última
     if (!L.cerrado) {
@@ -342,8 +338,8 @@ let _ultimaVistaSemana = null;
 // Cada sigla va del lado que tenga lugar (primero el que le toca por orden, luego el otro); si en ninguno entra, queda solo el punto sobre la barra.
 function _renderSemana(vista, pista) {
     const cont = $('linea-semana');
-    if (!cont) return;
     const ancho = pista.clientWidth;
+    if (!cont || !(ancho > 0)) return;   // pista oculta: sin medidas no se puede ubicar nada (el resize vuelve a dibujar)
     const hitos = vista.hitosSemana ?? [];
     /** @type {Map<string, HTMLElement>} */
     const existentes = new Map();
@@ -371,28 +367,17 @@ function _renderSemana(vista, pista) {
         et.textContent = h.sigla;
         vigentes.add(h.fecha + 'tick'); vigentes.add(h.fecha + 'et');
         const pct = h.fraccion * 100;   // las franjas se miden sobre toda la pista, no sobre la parte llena
-        const x = (pct / 100) * ancho;
-        const w = et.offsetWidth;
-        const espejado = x - _ANCHO_CONECTOR - _SEPARACION_ETIQUETA - w < 0;
-        // tramo horizontal que ocupa el conector con su etiqueta (la etiqueta va a la izquierda o, espejada, a la derecha)
-        const desde = espejado ? x - 3 : x - _ANCHO_CONECTOR - _SEPARACION_ETIQUETA - w - _MARGEN_SIGLAS / 2;
-        const hasta = espejado ? x + _ANCHO_CONECTOR + _SEPARACION_ETIQUETA + w + _MARGEN_SIGLAS / 2 : x + 3;
-        return { h, i, tick, et, pct, desde, hasta, preferido: i % 2 === 1 ? 'arriba' : 'abajo', lado: null };
+        const { desde, hasta } = geometriaConector((pct / 100) * ancho, et.offsetWidth, MARGEN_SIGLAS);
+        return { h, orden: i, prioridad: h.prioridad, tick, et, pct, desde, hasta, preferido: /** @type {'arriba' | 'abajo'} */ (i % 2 === 1 ? 'arriba' : 'abajo') };
     });
 
-    const ocupado = { arriba: [], abajo: [] };
-    const libre = (lado, it) => ocupado[lado].every(o => it.hasta <= o.desde || it.desde >= o.hasta);
-    [...items].sort((a, b) => (b.h.prioridad ?? 2) - (a.h.prioridad ?? 2) || a.i - b.i).forEach(it => {
-        const otro = it.preferido === 'arriba' ? 'abajo' : 'arriba';
-        const lado = [it.preferido, otro].find(l => libre(l, it));
-        it.lado = lado ?? null;
-        if (lado) ocupado[lado].push(it);
-    });
+    const lados = repartirLados(items);
 
     items.forEach(it => {
-        const arriba = (it.lado ?? it.preferido) === 'arriba';
-        it.tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}${it.lado ? '' : ' solo-punto'}`;
-        it.et.className = `linea-etiqueta dia linea-etiqueta--${arriba ? 'arriba' : 'abajo'}${it.lado ? '' : ' linea-etiqueta--oculta'}`;
+        const lado = lados.get(it) ?? null;
+        const arriba = (lado ?? it.preferido) === 'arriba';
+        it.tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}${lado ? '' : ' solo-punto'}`;
+        it.et.className = `linea-etiqueta dia linea-etiqueta--${arriba ? 'arriba' : 'abajo'}${lado ? '' : ' linea-etiqueta--oculta'}`;
         it.tick.style.left = `${it.pct}%`;
         _colocarEtiquetaConector(it.et, it.tick, it.pct, ancho);
     });

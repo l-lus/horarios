@@ -18,6 +18,7 @@ import { _crearPressHold, debounce } from './gestos.js';
 import { _scrollHastaVisible, _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
+import { AyudaBuscador } from './ayuda-buscador.js';
 
 // ====================================================================
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
@@ -163,6 +164,7 @@ function cerrarConfig() {
 }
 
 function abrirModalAyuda() {
+    AyudaBuscador.limpiar();
     _abrirModalConPadre('modal-ayuda');
 }
 
@@ -327,6 +329,7 @@ function bindEventos() {
     $('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
     $('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
     document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => cerrarModalAyuda());
+    AyudaBuscador.bindEventos();
     $('ayuda-indice')?.addEventListener('click', (e) => {
         const btn = /** @type {HTMLElement} */ (/** @type {HTMLElement} */ (e.target).closest('.ayuda-indice-item'));
         if (!btn) return;

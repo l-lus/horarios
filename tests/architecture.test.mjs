@@ -184,6 +184,15 @@ test('Íconos: todo "#icon-..." / "#hito-..." usado en src/ e index.html existe 
     assert.deepEqual([...new Set(faltantes)], [], 'Íconos usados que no están definidos en el sprite');
 });
 
+test('CSP: index.html no usa estilos en línea (style-src \'self\' los bloquea)', () => {
+    const html = fs.readFileSync('index.html', 'utf8');
+    assert.match(html, /style-src 'self'/, 'la política esperada es style-src \'self\'');
+    const sinComentarios = html.replace(/<!--[\s\S]*?-->/g, '');
+    assert.equal(/<style[\s>]/i.test(sinComentarios), false, 'hay un bloque <style> en index.html');
+    const atributos = [...sinComentarios.matchAll(/\sstyle\s*=\s*"([^"]*)"/g)].map(m => m[1]);
+    assert.deepEqual(atributos, [], 'hay atributos style="..." en index.html');
+});
+
 test('Capas: src/services no accede al DOM (document / $())', () => {
     const reDom = /\bdocument\.(getElementById|querySelector|querySelectorAll|body|createElement|documentElement|activeElement)\b|(?<![\w.])\$\(/g;
     const violaciones = [];

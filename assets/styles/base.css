@@ -716,6 +716,116 @@ button:disabled {
     scroll-margin-top: var(--space-sm);
 }
 
+/* Alto fijo: al filtrar con el buscador el contenido cambia mucho y, con alto automático, el modal se encogería y crecería de golpe */
+#modal-ayuda .modal-content {
+    height: min(90vh, 56rem);
+    height: min(90dvh, 56rem);
+}
+
+/* Buscador de la ayuda: va en el encabezado fijo del modal, así queda a mano en PC y en el móvil mientras se desplaza el contenido */
+#modal-ayuda .modal-panel-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-md);
+}
+
+#modal-ayuda .modal-panel-header h3 {
+    margin-bottom: 0;
+}
+
+.ayuda-buscador {
+    flex: 1 1 12rem;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.ayuda-buscador .input-icon-wrap {
+    flex: 1;
+    min-width: 0;
+}
+
+.ayuda-buscador input[type="search"] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.ayuda-buscador input[type="search"]::-webkit-search-cancel-button {
+    display: none;
+}
+
+.ayuda-buscador .config-hint-text {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* El título de cada sección queda fijo arriba mientras se lee esa sección; al llegar la siguiente, la reemplaza */
+.ayuda-seccion h4 {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0 0 var(--space-sm);
+    padding: var(--space-xs) 0;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+}
+
+.ayuda-seccion[hidden],
+.ayuda-indice-item[hidden],
+.ayuda-buscador .input-icon-btn[hidden],
+.ayuda-sin-resultados[hidden] {
+    display: none !important;
+}
+
+.ayuda-sin-resultados {
+    color: var(--text-muted);
+}
+
+mark.ayuda-resaltado {
+    background: color-mix(in srgb, var(--c-gold) 40%, transparent);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 1px;
+}
+
+/* La coincidencia seleccionada (la que recorre Enter) se distingue de las demás */
+mark.ayuda-resaltado--activa {
+    background: var(--c-gold);
+    outline: 2px solid var(--c-gold);
+    outline-offset: 1px;
+}
+
+/* Leyenda de colores de estado en la ayuda: un círculo del color y su descripción */
+.ayuda-color-fila {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+}
+
+.ayuda-color {
+    flex-shrink: 0;
+    width: 0.9em;
+    height: 0.9em;
+    margin-top: 0.3em;
+    border-radius: 50%;
+    background: var(--ayuda-color, var(--text-muted));
+}
+
+.ayuda-color--blue { --ayuda-color: var(--c-blue); }
+.ayuda-color--green { --ayuda-color: var(--c-green); }
+.ayuda-color--red { --ayuda-color: var(--c-red); }
+.ayuda-color--gold { --ayuda-color: var(--c-gold); }
+.ayuda-color--purple { --ayuda-color: var(--c-purple); }
+.ayuda-color--orange { --ayuda-color: var(--c-orange); }
+/* "sin color": el mismo gris de la pista de la barra */
+.ayuda-color--vacio {
+    --ayuda-color: color-mix(in srgb, var(--text-muted) 24%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 45%, transparent);
+}
+
 .ayuda-seccion h4,
 .ayuda-indice h4 {
     margin: 0 0 var(--space-sm);

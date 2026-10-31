@@ -532,3 +532,33 @@ test('GeometriaEtiquetas: conector, reparto de lados y cuándo la entrada pasa a
     assert.equal(entradaDebeSubir({ ...base, salidaLeft: 45, bufferLeft: 250 }), true);
     assert.equal(entradaDebeSubir({ ...base, ancho: 0, salidaLeft: 0 }), false);
 });
+
+test('BusquedaTexto: coincidencias sin distinguir mayúsculas ni acentos y rangos sobre el texto original (sin DOM)', async () => {
+    const { normalizarBusqueda, terminosDeBusqueda, textoCoincide, rangosCoincidencia, teclaIniciaBusqueda } = await import('../src/core/busqueda-texto.js');
+
+    assert.equal(normalizarBusqueda('Compensación ÁÉÍ'), 'compensacion aei');
+    // las palabras de un solo carácter se ignoran
+    assert.deepEqual(terminosDeBusqueda('  Tiempo   a fuera '), ['tiempo', 'fuera']);
+
+    // todas las palabras deben estar, en cualquier orden y sin importar acentos
+    const texto = 'El tipo Compensatorio sirve para tomarte un día libre';
+    assert.equal(textoCoincide(texto, terminosDeBusqueda('compensatorio dia')), true);
+    assert.equal(textoCoincide(texto, terminosDeBusqueda('compensatorio vacaciones')), false);
+    assert.equal(textoCoincide(texto, []), false);
+
+    // los rangos apuntan al texto original (con acentos) y se unen si se superponen
+    const rangos = rangosCoincidencia(texto, ['dia', 'libre', 'ia li']);
+    assert.deepEqual(rangos.map(([i, f]) => texto.slice(i, f)), ['día libre']);
+    assert.deepEqual(rangosCoincidencia('Banco de horas, banco', ['banco']).map(([i, f]) => [i, f]), [[0, 5], [16, 21]]);
+
+    // escribir una letra suelta empieza la búsqueda; con modificadores, con otras teclas o con el foco ya en un campo, no
+    assert.equal(teclaIniciaBusqueda({ key: 'a' }, false), true);
+    assert.equal(teclaIniciaBusqueda({ key: 'Ñ' }, false), true);
+    assert.equal(teclaIniciaBusqueda({ key: 'é' }, false), true);
+    assert.equal(teclaIniciaBusqueda({ key: 'c', ctrlKey: true }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: 'a', altKey: true }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: 'Enter' }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: ' ' }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: '5' }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: 'a' }, true), false);
+});

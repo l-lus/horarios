@@ -337,6 +337,10 @@ button.campo-flash-color {
     .modal-scrollable>.modal-content {
         max-height: 100%;
     }
+
+    #modal-ayuda .modal-content {
+        height: 100%;
+    }
 }
 
 /* ─── ESCRITORIO (min-width: 1024px) ─────────────────────────────────────────── */

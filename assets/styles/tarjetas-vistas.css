@@ -350,6 +350,12 @@
     transition: color var(--dur-slow) ease;
 }
 
+/* Contorno del punto de anclaje (en el sprite no puede ir como atributo style: la CSP no permite estilos en línea) */
+#hito-ancla circle {
+    stroke: var(--bg-card);
+    stroke-width: 1.2;
+}
+
 .linea-tick--buffer {
     top: auto;
     bottom: 100%;

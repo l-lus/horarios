@@ -62,9 +62,12 @@
     --c-gray-btn: #f0f2f8;
     --c-white: #ffffff;
     --shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
-    --radius: 20px;
-    --radius-sm: calc(var(--radius) / 2);
+    --radius-xs: 6px;
+    --radius-sm: 10px;
     --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --radius-full: 999px;
     --hover: brightness(0.9);
     --dur-fast: 200ms;
     --dur-anim: 300ms;

@@ -125,7 +125,7 @@
     width: 100%;
     height: 6px;
     background: transparent;
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     overflow: hidden;
 }
 
@@ -175,7 +175,7 @@
 .progress-fill {
     height: 100%;
     background: var(--bg-card);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     transition: width var(--dur-slow), background-color var(--dur-slow) ease;
     position: relative;
     overflow: hidden;
@@ -215,7 +215,7 @@
 
 .registro-item {
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-md);
     padding: var(--space-md);
     margin-bottom: var(--space-sm);
     display: flex;
@@ -237,7 +237,7 @@
     font-size: var(--text-sm);
     font-weight: var(--fw-bold);
     padding: var(--space-2xs) var(--space-lg);
-    border-radius: var(--radius);
+    border-radius: var(--radius-md);
     letter-spacing: 0.05em;
 }
 
@@ -294,7 +294,7 @@
     font-weight: var(--fw-semibold);
     color: var(--c-white);
     display: inline-block;
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     padding: var(--space-2xs) var(--space-lg);
 }
 
@@ -330,7 +330,7 @@
     top: var(--sticky-mes-top);
     z-index: 5;
     background: var(--bg-card);
-    border-radius: var(--radius);
+    border-radius: var(--radius-md);
 }
 
 .registro-mes-detalle .registro-mes-header {
@@ -417,7 +417,7 @@
     align-items: center;
     justify-content: center;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     background: var(--input-bg);
     color: var(--text-main);
     font-weight: var(--fw-semibold);
@@ -463,7 +463,7 @@
 .calendario-semana-actual {
     position: absolute;
     inset: 6px -6px;
-    border-radius: 50px;
+    border-radius: var(--radius-full);
     background: var(--input-bg);
     opacity: 0.5;
     pointer-events: none;
@@ -633,7 +633,7 @@
     z-index: var(--z-popup);
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
     padding: var(--space-md) var(--space-lg);
     display: flex;
@@ -682,7 +682,7 @@
     font-size: var(--text-sm);
     font-weight: var(--fw-semibold);
     color: var(--c-white);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     padding: var(--space-2xs) var(--space-smd);
     width: fit-content;
 }
@@ -745,7 +745,7 @@
     padding: var(--space-sm) var(--space-md);
     font-size: var(--text-sm);
     font-weight: var(--fw-medium);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     width: 100%;
     text-align: left;
     transition: opacity var(--dur-anim) var(--ease-anim);
@@ -1146,7 +1146,7 @@
     font-weight: var(--fw-medium);
     line-height: 1;
     padding: var(--space-2xs) var(--space-smd);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     white-space: nowrap;
     animation: estadoBadgeParpadeo 3s ease-in-out infinite;
 }
@@ -1169,7 +1169,7 @@
     font-weight: var(--fw-medium);
     line-height: 1;
     padding: var(--space-2xs) var(--space-smd);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     white-space: nowrap;
 }
 

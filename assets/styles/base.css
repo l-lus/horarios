@@ -108,11 +108,16 @@ body {
 .card,
 .modal-content {
     background: var(--bg-card);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     padding: var(--space-xl) var(--space-sm);
     margin-bottom: var(--space-lg);
     box-shadow: var(--shadow);
     color: var(--text-main);
+}
+
+/* Modales y hojas: un escalón más redondeado que las tarjetas */
+.modal-content {
+    border-radius: var(--radius-xl);
 }
 
 .card h2,
@@ -156,13 +161,13 @@ h2.mutacion-saliente.no-margin,
 .custom-scroll::-webkit-scrollbar-track,
 .ayuda-indice::-webkit-scrollbar-track {
     background: var(--bg-body);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
 }
 
 .custom-scroll::-webkit-scrollbar-thumb,
 .ayuda-indice::-webkit-scrollbar-thumb {
     background: var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
 }
 
 .custom-scroll::-webkit-scrollbar-thumb:hover,
@@ -254,7 +259,7 @@ h2.mutacion-saliente.no-margin,
     flex-shrink: 0;
     gap: 0;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
 }
 
 #modal-config .config-actions .input-number-group--pill button {
@@ -280,7 +285,7 @@ h2.mutacion-saliente.no-margin,
 .input-number-group--embed {
     background: var(--input-bg);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     height: var(--input-height);
     gap: 0;
     transition: background var(--transition-ui);
@@ -349,7 +354,7 @@ select {
     width: 100%;
     padding: var(--space-md);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     font-size: var(--text-base);
     background: var(--input-bg);
     color: var(--text-main);
@@ -436,7 +441,7 @@ button {
     width: 100%;
     padding: 0.875rem;
     border: 1px solid transparent;
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
     font-weight: var(--fw-semibold);
     font-size: var(--text-base);
     cursor: pointer;
@@ -754,7 +759,7 @@ button:disabled {
     color: var(--text-main);
     border: 2px solid transparent;
     padding: var(--space-lg) var(--space-xl);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
     opacity: 0;
     z-index: var(--z-toast);

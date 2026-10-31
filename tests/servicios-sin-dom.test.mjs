@@ -209,3 +209,45 @@ test('EstadoTarjeta.calcularEstadoCard calcula el día y respeta el registro ret
     assert.equal(retenido.hoy, ayer);
     assert.equal(retenido.tiempoHoy, 8);
 });
+
+test('EstadoTarjeta.calcularEstadoCard arma diasSemana: sin registro, especial, cerrado y activo en la semana en curso', async (t) => {
+    const { EstadoTarjeta } = await import('../src/services/estado-tarjeta.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    EstadoApp.setHorasDiarias(7);
+    EstadoApp.setDiasHabiles([1, 2, 3, 4, 5]);
+    EstadoApp.setIgnorarTiempoFuera(false);
+
+    // viernes 30/10/2026 14:00: semana del 26/10 al 01/11
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 30, 14, 0) });
+    const reg = (fecha, entrada, salida, total) => ({ id: fecha, fecha, entrada, salida, total, objetivoHoras: 7 });
+    EstadoApp._setRegistros([
+        reg('2026-10-26', '09:00', '16:00', 7),   // lunes cumplido
+        reg('2026-10-27', '11:11', '11:11', 0),   // martes: licencia (día especial)
+        // miércoles 28 sin registro
+        reg('2026-10-29', '09:00', '12:00', 3),   // jueves con faltante
+        reg('2026-10-30', '13:00', null, 0)       // viernes: jornada abierta
+    ]);
+
+    const { diasSemana } = EstadoTarjeta.calcularEstadoCard();
+    // solo los días laborables: sábado y domingo sin registro no aparecen
+    assert.deepEqual(diasSemana.map(d => [d.fecha, d.estado]), [
+        ['2026-10-26', 'cerrado'],
+        ['2026-10-27', 'especial'],
+        ['2026-10-28', 'sin-registro'],
+        ['2026-10-29', 'cerrado'],
+        ['2026-10-30', 'activo']
+    ]);
+    assert.equal(diasSemana[1].especial, 'purple');
+    assert.equal(diasSemana[0].total, 7);
+    assert.equal(diasSemana[4].activo, true);
+    assert.ok(diasSemana[4].total > 0 && diasSemana[4].total < 7, 'el día abierto cuenta lo trabajado hasta ahora');
+
+    // martes 27/10 10:00: hoy sin registro todavía y el resto de la semana son días futuros
+    t.mock.timers.reset();
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 27, 10, 0) });
+    EstadoApp._setRegistros([reg('2026-10-26', '09:00', '16:00', 7)]);
+    const futuros = EstadoTarjeta.calcularEstadoCard().diasSemana;
+    assert.deepEqual(futuros.map(d => [d.fecha, d.estado]), [
+        ['2026-10-26', 'cerrado'], ['2026-10-27', 'futuro'], ['2026-10-28', 'futuro'], ['2026-10-29', 'futuro'], ['2026-10-30', 'futuro']
+    ]);
+});

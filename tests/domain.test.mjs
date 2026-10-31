@@ -427,3 +427,40 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
     });
     assert.equal(vistaDiaEnCurso.cerrado, false);
 });
+
+test('TarjetaFichajeVista: el badge "En curso" parpadea rápido solo con el objetivo cumplido y la jornada abierta', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const estBase = (tiempoHoy, objetivoHoras) => ({
+        regHoy: { fecha: '2026-10-29', entrada: '08:00', salida: null, objetivoHoras },
+        tiempoHoy, horasDiarias: 7, esDiaHabil: true, tipoEspecialHoy: null,
+        bufferSemanalBase: 0, diasHabiles: [1, 2, 3, 4, 5], esRetenido: false
+    });
+
+    // objetivo de 7 h todavía sin cumplir: parpadeo normal
+    assert.ok(!TarjetaFichajeVista.derivarVistaHoy(estBase(3, 7)).titulo.includes('estado-badge--cumplido'));
+    // objetivo cumplido con la jornada abierta: parpadeo rápido
+    const cumplido = TarjetaFichajeVista.derivarVistaHoy(estBase(7.5, 7));
+    assert.ok(cumplido.titulo.includes('estado-badge--en-curso'));
+    assert.ok(cumplido.titulo.includes('estado-badge--cumplido'));
+});
+
+test('TarjetaFichajeVista: la línea del día abierta ubica la salida estimada y, cerrada, la mueve a la salida real', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const est = (salida) => ({
+        regHoy: { fecha: '2026-10-29', entrada: '09:00', salida, total: salida ? 3 : 0, objetivoHoras: 7 },
+        tiempoHoy: salida ? 3 : 1, horasDiarias: 7, esDiaHabil: true, tipoEspecialHoy: null,
+        bufferSemanalBase: 0, diasHabiles: [1, 2, 3, 4, 5], esRetenido: false
+    });
+
+    const abierta = TarjetaFichajeVista.derivarVistaHoy(est(null)).linea;
+    assert.equal(abierta.cerrado, false);
+    assert.equal(abierta.horaEntrada, '09:00');
+    assert.equal(abierta.marcaSalidaRel, abierta.salidaRel);   // la marca queda en la salida estimada
+
+    const cerrada = TarjetaFichajeVista.derivarVistaHoy(est('12:00')).linea;
+    assert.equal(cerrada.cerrado, true);
+    assert.equal(cerrada.horaSalida, '12:00');                 // la etiqueta muestra la hora real
+    assert.equal(cerrada.marcaSalidaRel, cerrada.ahoraRel);    // la marca se mueve a donde cerró
+    assert.equal(cerrada.marcaSalidaRel, 180);
+    assert.ok(cerrada.salidaRel > cerrada.marcaSalidaRel, 'la escala de la barra sigue basada en la salida estimada');
+});

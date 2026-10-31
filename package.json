@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.mjs",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "release": "node scripts/release.mjs"
   },
   "engines": {
     "node": ">=20"

@@ -39,3 +39,12 @@ npm run typecheck    # tsc --checkJs sobre src/ (JSDoc, sin transpilar nada)
 ```
 
 El código se sirve tal cual: `tsc` solo valida los tipos escritos como JSDoc (`/** @type {...} */`).
+
+### Publicar una versión
+
+```bash
+npm run release   # sube APP_VERSION y CACHE_NAME (sw.js) a la fecha/hora actual
+npm test          # valida que coincidan y que sw.js liste todos los módulos
+```
+
+Sin cambiar `CACHE_NAME`, los usuarios con la PWA instalada siguen viendo la versión cacheada.

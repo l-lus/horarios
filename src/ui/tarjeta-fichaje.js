@@ -337,7 +337,7 @@ function _renderLinea(vista, pista, fill) {
 
 let _ultimaVistaSemana = null;
 
-// Vista semanal con hint integrado: un hito por día, al final de su franja, con su flecha y la sigla (lun, mar...).
+// Vista semanal con hint integrado: un hito por día con horas (los días seguidos sin registro, futuros o especiales del mismo color se fusionan), al final de su franja, con su flecha y la sigla (lun, mar...).
 // Los elementos se reutilizan por fecha: así no se reinicia su animación de aparición en cada actualización.
 // Cada sigla va del lado que tenga lugar (primero el que le toca por orden, luego el otro); si en ninguno entra, queda solo el punto sobre la barra.
 function _renderSemana(vista, pista) {

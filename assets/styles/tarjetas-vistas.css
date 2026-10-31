@@ -1361,6 +1361,11 @@
     animation: estadoBadgeParpadeo 3s ease-in-out infinite;
 }
 
+/* Objetivo diario cumplido con la jornada todavía abierta: el mismo parpadeo, más rápido */
+.estado-badge--en-curso.estado-badge--cumplido {
+    animation-duration: 1.2s;
+}
+
 .estado-badge--finalizado {
     color: var(--c-white);
 }

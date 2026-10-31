@@ -71,9 +71,10 @@ function _tituloDia(nombreDia) {
     return `${icono('#icon-clock')}${nombreDia}`;
 }
 
-function _badgeEstadoHoy(dayClosed, colorFinal) {
+// objetivoCumplido: con el día abierto y la jornada ya cumplida, el badge "En curso" parpadea más rápido
+function _badgeEstadoHoy(dayClosed, colorFinal, objetivoCumplido = false) {
     if (!dayClosed) {
-        return `<span class="estado-badge estado-badge--en-curso">En curso</span>`;
+        return `<span class="estado-badge estado-badge--en-curso${objetivoCumplido ? ' estado-badge--cumplido' : ''}">En curso</span>`;
     }
     const color = colorFinal || 'green';
     return `<span class="estado-badge estado-badge--finalizado estado-badge--${color}">Finalizado</span>`;
@@ -93,16 +94,19 @@ function _colorEstadoDia(d) {
 }
 
 // Barra semanal con hint integrado: cada día tiene una franja fija de la barra (proporcional a su objetivo) y lo trabajado la rellena con el color del estado del día.
-// Un día especial rellena su franja entera con el color de su tipo; uno sin registro (o futuro) la deja vacía.
+// Un día especial rellena su franja entera con el color de su tipo; uno sin registro (o futuro) la deja vacía. Los días seguidos del mismo tipo (sin registro, futuros o especiales del mismo color) se fusionan en un solo hito con rango (lun–mié).
 function _franjasSemana(diasSemana, horasDiarias) {
     if (!diasSemana?.length || !(horasDiarias > 0)) return null;
     const pesos = diasSemana.map(d => d.objetivo > 0 ? d.objetivo : horasDiarias);
     const total = pesos.reduce((a, b) => a + b, 0);
     const sigla = d => _SIGLAS_DIA[TiempoUtils.parsearFechaLocal(d.fecha).getDay()];
+    const tipoFusion = d => d.estado === 'sin-registro' || d.estado === 'futuro' ? d.estado
+        : d.estado === 'especial' ? `especial-${d.especial}` : null;
 
     const tramos = [];
     const hitos = [];
     let inicio = 0;
+    let previo = null;
     let colorPrimera = 'vacio';
     diasSemana.forEach((d, i) => {
         const fin = inicio + pesos[i] / total;
@@ -112,10 +116,19 @@ function _franjasSemana(diasSemana, horasDiarias) {
         if (relleno > 0.0001 && color) tramos.push({ desde: inicio, hasta: inicio + (fin - inicio) * relleno, color });
         if (i === 0) colorPrimera = relleno > 0.0001 && color ? color : 'vacio';   // el remate del comienzo está sobre la primera franja, aunque esté vacía
 
-        hitos.push({
-            fecha: d.fecha, sigla: sigla(d), fraccion: fin,
-            prioridad: d.estado === 'cerrado' || d.estado === 'activo' ? 2 : d.estado === 'especial' ? 1 : 0   // si no entran todas las siglas se conservan primero las de días con horas
-        });
+        const tipo = tipoFusion(d);
+        if (previo && tipo && previo.tipo === tipo) {
+            // día seguido del mismo tipo: el hito anterior se extiende hasta el final de esta franja y su sigla pasa a rango
+            previo.hito.fraccion = fin;
+            previo.hito.sigla = `${previo.primera}–${sigla(d)}`;
+        } else {
+            const hito = {
+                fecha: d.fecha, sigla: sigla(d), fraccion: fin,
+                prioridad: d.estado === 'cerrado' || d.estado === 'activo' ? 2 : d.estado === 'especial' ? 1 : 0   // si no entran todas las siglas se conservan primero las de días con horas
+            };
+            hitos.push(hito);
+            previo = { tipo, hito, primera: hito.sigla };
+        }
         inicio = fin;
     });
     if (!tramos.length) return null;
@@ -284,7 +297,7 @@ function derivarVistaHoy(est) {
             const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
 
             return {
-                titulo: `${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false)}`,
+                titulo: `${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false, undefined, objetivoDiarioAyerAplica > 0 && cumplido)}`,
                 stats: _horasTextoStats(tiempoHoy),
                 mensaje, mostrarMensaje: true,
                 colorBarra, anchoBarra: prog,
@@ -375,7 +388,7 @@ function derivarVistaHoy(est) {
     const colorFinal = estadoFondoColor || (estadoFondo === 'finalizado_fail' ? 'red' : 'green');
 
     return _conAvisoAyer({
-        titulo: `${est.esRetenido ? `${_tituloDia(TiempoUtils.obtenerNombreDia(regHoy.fecha))} (ayer)` : _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal)}`,
+        titulo: `${est.esRetenido ? `${_tituloDia(TiempoUtils.obtenerNombreDia(regHoy.fecha))} (ayer)` : _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal, objetivoDiarioAplica > 0 && cumplido)}`,
         stats: _horasTextoStats(tiempoHoy),
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: prog,

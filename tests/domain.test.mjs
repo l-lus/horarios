@@ -372,10 +372,10 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
         [vistaFranjas.tramosSemana[1].color, Number(sextos(1).toFixed(4)), Number((sextos(1) + sextos(1) / 2).toFixed(4))],
         ['purple', Number(sextos(2).toFixed(4)), Number(sextos(3).toFixed(4))]
     ]);
-    // un hito por día, al final de su franja (sin fusionar días seguidos del mismo tipo)
+    // los días seguidos del mismo tipo se fusionan: jue–vie (sin registro) es un solo hito; el futuro (sáb) es otro
     assert.deepEqual(vistaFranjas.hitosSemana.map(h => [h.sigla, Number(h.fraccion.toFixed(4))]), [
         ['lun', Number(sextos(1).toFixed(4))], ['mar', Number(sextos(2).toFixed(4))], ['mié', Number(sextos(3).toFixed(4))],
-        ['jue', Number(sextos(4).toFixed(4))], ['vie', Number(sextos(5).toFixed(4))], ['sáb', 1]
+        ['jue–vie', Number(sextos(5).toFixed(4))], ['sáb', 1]
     ]);
     assert.equal(vistaFranjas.colorInicioSemana, 'green');
     // si la primera franja está vacía, el remate del comienzo es neutro aunque más adelante haya rellenos

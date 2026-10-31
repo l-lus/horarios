@@ -249,7 +249,7 @@ function actualizarFeedbackConfig() {
 
     if (seleccionados > 0) {
         const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-        const diasVigentes = [...GestionDatos.diasHabiles()].sort((a, b) => a - b);
+        const diasVigentes = [...EstadoApp.diasHabiles()].sort((a, b) => a - b);
         const huboCambio = nuevosDias.length !== diasVigentes.length
             || nuevosDias.some((d, i) => d !== diasVigentes[i]);
         if (huboCambio) Compensatorios.registrarCambioDiasHabiles(nuevosDias);

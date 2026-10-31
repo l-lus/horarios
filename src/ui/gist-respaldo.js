@@ -461,7 +461,7 @@ let _gistMergeData = null;
 
 async function _validarDatosGist(data) {
     if (!data.registros || !Array.isArray(data.registros)) throw new Error('Datos inválidos en el Gist');
-    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...GestionDatos.KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
+    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...ImportarExportar.KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
     if (Object.keys(data).some(k => !allowedRootKeys.includes(k)) || !ImportarExportar.validarCamposConfigImport(data)) throw new Error('Estructura del Gist sospechosa');
     if (data._hashNoCoincide) {
         const continuar = await GestorModales.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');

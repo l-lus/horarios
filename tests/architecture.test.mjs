@@ -181,3 +181,46 @@ test('Capas: src/services no accede al DOM (document / $())', () => {
     }
     assert.deepEqual(violaciones, [], `Los servicios deben hablar con la UI vía notify/EventosApp/Formularios:\n${violaciones.join('\n')}`);
 });
+
+// tsc no lo detecta: en archivos JS con strict:false las propiedades de un objeto literal no se validan
+function clavesDeObjetoExportado(content, inicio) {
+    let i = inicio, depth = 1, nivel1 = '';
+    while (depth && i < content.length) {
+        const c = content[i];
+        if ('{(['.includes(c)) { depth++; if (depth === 2) nivel1 += ' '; }
+        else if ('})]'.includes(c)) depth--;
+        else if (depth === 1) nivel1 += c;
+        i++;
+    }
+    return new Set([...nivel1.matchAll(/(?:^|[,\n])\s*(?:async\s+)?(['"]?)([\w$]+)\1\s*(?=[:,\n]|\s*$)/g)].map(m => m[2]));
+}
+
+test('Módulos: cada Modulo.miembro y cada const { ... } = Modulo existen en el objeto exportado', () => {
+    const archivos = [...srcFiles, ...fs.readdirSync('tests').map(f => `tests/${f}`)];
+    const contenidos = Object.fromEntries(archivos.map(f => [f, fs.readFileSync(f, 'utf8')]));
+    const exportados = {};
+    for (const file of srcFiles) {
+        for (const m of contenidos[file].matchAll(/export const (\w+) = (?:Object\.freeze\()?\{/g)) {
+            exportados[m[1]] = { file, claves: clavesDeObjetoExportado(contenidos[file], m.index + m[0].length) };
+        }
+    }
+    const problemas = [];
+    for (const [file, content] of Object.entries(contenidos)) {
+        for (const [nombre, { file: def, claves }] of Object.entries(exportados)) {
+            if (file === def || !new RegExp(`import \\{[^}]*\\b${nombre}\\b[^}]*\\} from`).test(content)) continue;
+            const aliases = [nombre, ...[...content.matchAll(new RegExp(`\\b${nombre} as (\\w+)`, 'g'))].map(m => m[1])];
+            for (const alias of aliases) {
+                for (const m of content.matchAll(new RegExp(`(?<![\\w$])${alias}\\.([\\w$]+)`, 'g'))) {
+                    if (!claves.has(m[1])) problemas.push(`${file}: ${alias}.${m[1]}`);
+                }
+                for (const m of content.matchAll(new RegExp(`const \\{([^}]*)\\} = ${alias};`, 'g'))) {
+                    for (const parte of m[1].split(',')) {
+                        const clave = parte.trim().split(':')[0].trim();
+                        if (clave && !claves.has(clave)) problemas.push(`${file}: { ${clave} } = ${alias}`);
+                    }
+                }
+            }
+        }
+    }
+    assert.deepEqual(problemas, [], `Miembros inexistentes:\n${problemas.join('\n')}`);
+});

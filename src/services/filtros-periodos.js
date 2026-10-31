@@ -41,7 +41,7 @@ function _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta) {
     const ini = TiempoUtils.parsearFechaLocal(nuevaDesde), fin = TiempoUtils.parsearFechaLocal(nuevaHasta);
     if (ini < dosPasado || fin > dosFuturo) return 'El rango debe estar entre 2 años atrás y 2 años adelante';
     if (!TiposRegistro.validarTipoPermitido(nuevoTipo)) return 'Tipo de registro inválido';
-    const dias = Math.ceil(Math.abs(fin - ini) / 864e5) + 1;
+    const dias = Math.ceil(Math.abs(fin.getTime() - ini.getTime()) / 864e5) + 1;
     if (dias > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) return `El rango contiene ${dias} días.\n Máximo: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación.`;
     return null;
 }
@@ -50,7 +50,7 @@ async function guardarEdicionGrupo() {
     const grupoEnEdicion = EstadoApp.getGrupoEnEdicion();
     if (!grupoEnEdicion) return;
     const notify = EstadoApp._notify();
-    const btnGuardar = $('modal-editar-grupo').querySelector('.btn-edit');
+    const btnGuardar = /** @type {HTMLButtonElement} */ ($('modal-editar-grupo').querySelector('.btn-edit'));
     btnGuardar.disabled = true;
     try {
         const nuevoTipo = S.sanitizeString($('edit-grupo-tipo').value.trim(), 20);

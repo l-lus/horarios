@@ -1,7 +1,13 @@
 // ====================================================================
 // DOM & COLLAPSIBLES — shared helpers
 // ====================================================================
-export const $ = id => document.getElementById(id);
+/**
+ * getElementById tipado como input: casi todos los usos leen .value/.disabled/.checked.
+ * Puede devolver null si el id no existe (por eso el código usa `?.` o `if (el)`).
+ * @param {string} id
+ * @returns {HTMLInputElement}
+ */
+export const $ = id => /** @type {HTMLInputElement} */ (document.getElementById(id));
 
 // ====================================================================
 // COLAPSABLES — shared helper

@@ -5,6 +5,41 @@ import { TiposRegistro } from './tipos-registro.js';
 // ====================================================================
 // CENTRAL APPLICATION STATE & BASE RECORD CALCULATIONS MODULE
 // ====================================================================
+/**
+ * Puerto hacia la UI: lo que los servicios pueden pedirle (la UI lo implementa en orquestador.js).
+ * @typedef {Object} Notificaciones
+ * @property {(mensaje: string, tipo?: string, duracion?: number, detalle?: string|null, accion?: Function|null) => void} mostrarToast
+ * @property {(texto: string, etiqueta?: string, icono?: string, opciones?: object) => Promise<boolean>} confirmarModal
+ * @property {() => boolean} hayUIBloqueante
+ * @property {() => string} temaGuardado
+ * @property {() => string} obtenerNombrePerfilSafe
+ * @property {(vista: string, fn: () => any) => any} forzarVista
+ * @property {(...args: any[]) => void} abrirModal
+ * @property {(...args: any[]) => void} actualizarEstadoBotonTimerMain
+ * @property {(...args: any[]) => void} actualizarHintGrupo
+ * @property {(...args: any[]) => void} actualizarUI
+ * @property {(...args: any[]) => void} animarExitoFichaje
+ * @property {(...args: any[]) => void} aplicarFeedbackCampos
+ * @property {(...args: any[]) => void} avisarFichaje
+ * @property {(...args: any[]) => void} cerrarEdicion
+ * @property {(...args: any[]) => void} cerrarEdicionGrupo
+ * @property {(...args: any[]) => void} cerrarFiltros
+ * @property {(...args: any[]) => void} cerrarImportar
+ * @property {(...args: any[]) => void} cerrarTodosModales
+ * @property {(...args: any[]) => void} descargarJSON
+ * @property {(...args: any[]) => void} iniciarTimerAutoCierreBotones
+ * @property {(...args: any[]) => void} limpiarError
+ * @property {(...args: any[]) => void} mostrarError
+ * @property {(...args: any[]) => void} prepararMostrarFaseAlRenderizar
+ * @property {(...args: any[]) => void} refrescarConfigSiVisible
+ * @property {(...args: any[]) => void} resetearBoton
+ * @property {(...args: any[]) => void} restaurarBotonGuardarEdicion
+ * @property {(...args: any[]) => void} setBloqueoEdicion
+ * @property {(...args: any[]) => void} setBloqueoEdicionGrupo
+ * @property {(...args: any[]) => void} verificarBloqueoCredito
+ */
+
+/** @type {Notificaciones} */
 let notify = {
     abrirModal: () => { },
     actualizarEstadoBotonTimerMain: () => { },
@@ -37,6 +72,7 @@ let notify = {
     verificarBloqueoCredito: () => { },
 };
 
+/** @param {Partial<Notificaciones>} handlers */
 function configurarNotificaciones(handlers) {
     notify = { ...notify, ...handlers };
 }
@@ -58,6 +94,7 @@ let _perfilHooks = {
     obtenerPerfilActual: () => 'default',
     guardarDatosPerfilActual: null
 };
+/** @type {(...args: any[]) => any} */
 let _sincronizarPushHoyFn = () => { };
 
 function setPerfilHooks(hooks) {

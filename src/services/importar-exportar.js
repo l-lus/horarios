@@ -227,7 +227,7 @@ function importarDatos(modo = 'replace') {
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
-            const contenido = e.target.result;
+            const contenido = String(e.target.result ?? '');
             if (!contenido || contenido.trim().length === 0) { D._notify().mostrarToast('Archivo vacío', 'error'); return; }
             if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) { D._notify().mostrarToast('Contenido del archivo demasiado grande', 'error'); return; }
 

@@ -254,7 +254,7 @@ async function eliminarRegistroActual() {
     if (editandoId) {
         const notify = EstadoApp._notify();
         const modal = $('modal-editar');
-        const btnEliminar = modal.querySelector('.btn-delete');
+        const btnEliminar = /** @type {HTMLButtonElement} */ (modal.querySelector('.btn-delete'));
         btnEliminar.disabled = true;
         const registroABorrar = registroPorId(editandoId);
         const hoy = TiempoUtils.obtenerFechaHoy();
@@ -426,7 +426,7 @@ async function guardarEdicion() {
     if (!r) return;
     const notify = EstadoApp._notify();
     const horasDiarias = EstadoApp.horasDiarias();
-    const btnGuardar = $('modal-editar').querySelector('.btn-edit');
+    const btnGuardar = /** @type {HTMLButtonElement} */ ($('modal-editar').querySelector('.btn-edit'));
     btnGuardar.disabled = true;
 
     const f = S.sanitizeString($('edit-fecha').value, 10);

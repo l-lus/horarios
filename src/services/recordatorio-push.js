@@ -19,6 +19,7 @@ const REINTENTO_ESPERA_MS = 60 * 1000;
 let _generacionProgramacion = 0;
 let _generacionCancelada = 0;
 
+/** @type {{ mostrarToast: (mensaje: string, tipo?: string, duracion?: number, detalle?: string|null) => void }} */
 let notify = { mostrarToast: () => { } };
 function configurarNotificaciones(handlers) { notify = { ...notify, ...handlers }; }
 
@@ -392,7 +393,7 @@ async function registrarUso() {
     const id = _idEstadisticas();
     if (!id) return;
     Almacenamiento.setItem(KEY, String(ahora));
-    const pwa = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const pwa = window.matchMedia('(display-mode: standalone)').matches || /** @type {any} */ (window.navigator).standalone === true;
     try {
         await _postWorker('/api/hola', { id, modo: pwa ? 'pwa' : 'navegador', version: await _versionApp() });
     } catch { /* sin estadística esta vez, no afecta a la app */ }

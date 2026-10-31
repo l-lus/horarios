@@ -210,10 +210,11 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 1. **Usar `import`/`export` con extensión `.js` explícita** (obligatorio en ES Modules nativos del navegador, ej. `import { TiempoUtils } from '../core/tiempo-utils.js';`).
 2. **Registrar el archivo en [`sw.js`](../sw.js):**
    - Agregar la ruta en el array `urlsToCache`.
-   - Actualizar la constante `CACHE_NAME` para invalidar la caché anterior.
-3. **Correr la suite de validación arquitectónica y de dominio:**
+   - La caché se invalida al publicar con `npm run release` (ver «Versionado y releases» más abajo), no a mano.
+3. **Correr la suite de validación arquitectónica y de dominio, y el chequeo de tipos:**
    ```bash
-   node --test tests/*.test.mjs
+   npm test
+   npm run typecheck
    ```
 
 ---
@@ -228,3 +229,25 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 | **ARQ-4** | Extracción de [`src/services/filtros-periodos.js`](../src/services/filtros-periodos.js) reduciendo `gestion-datos.js` de 1.004 a 572 líneas | ✅ Aplicado |
 | **ARQ-5** | Creación del bus de eventos liviano [`src/core/eventos.js`](../src/core/eventos.js) (`EventosApp`) para comunicación desacoplada entre módulos | ✅ Aplicado |
 | **ARQ-6** | Suite de tests automatizados con `node --test` en [`tests/architecture.test.mjs`](../tests/architecture.test.mjs) y [`tests/domain.test.mjs`](../tests/domain.test.mjs) (sin dependencias externas) | ✅ Aplicado |
+
+---
+
+## Versionado y releases
+
+La versión vive en **dos lugares** porque `sw.js` es un script clásico y no puede importar módulos ES:
+
+| Dónde | Qué es | Para qué sirve |
+|---|---|---|
+| `APP_VERSION` en [`src/core/constantes.js`](../src/core/constantes.js) (formato `vAAMMDD`) | Versión visible | Se muestra como `LUSHIBOSCA-vAAMMDD` en el título del modal de Ajustes (`main.js`). |
+| `CACHE_NAME` en [`sw.js`](../sw.js) (formato `horarios-vAAMMDD.HHMM-cache`) | Nombre de la caché del Service Worker | Si cambia, los clientes instalan el SW nuevo, descargan los archivos y borran la caché vieja. |
+
+**Para publicar:**
+
+```bash
+npm run release   # actualiza APP_VERSION y CACHE_NAME con la fecha/hora actual (scripts/release.mjs)
+npm test          # valida que ambos coincidan y que sw.js liste todos los módulos de src/
+```
+
+Luego commit y push. Los usuarios ven la versión nueva al recargar la app, cuando el navegador detecta que `sw.js` cambió. Sin ejecutar `release`, la PWA instalada sigue mostrando la versión cacheada (estrategia *cache-first*).
+
+`tests/architecture.test.mjs` falla si `APP_VERSION` y el prefijo de `CACHE_NAME` no coinciden.

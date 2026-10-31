@@ -47,4 +47,6 @@ npm run release   # sube APP_VERSION y CACHE_NAME (sw.js) a la fecha/hora actual
 npm test          # valida que coincidan y que sw.js liste todos los módulos
 ```
 
-Sin cambiar `CACHE_NAME`, los usuarios con la PWA instalada siguen viendo la versión cacheada.
+`release` edita `APP_VERSION` (`src/core/constantes.js`, visible en el título de Ajustes) y `CACHE_NAME` (`sw.js`).
+Luego hacé commit y push. Sin cambiar `CACHE_NAME`, los usuarios con la PWA instalada siguen viendo la versión cacheada.
+Detalle en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md#versionado-y-releases).

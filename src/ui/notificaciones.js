@@ -110,6 +110,17 @@ function actualizarEstadoPermisoNotificaciones() {
     el.appendChild(span);
 }
 
+async function enviarNotificacionPrueba() {
+    const mensajes = {
+        ok: ['Cerrá la app: la notificación llega en 10 segundos', 'info'],
+        denegado: ['El permiso de notificaciones está bloqueado', 'error'],
+        'no-soportado': ['Este navegador no admite notificaciones', 'error'],
+    };
+    const [texto, tipo] = mensajes[await RecordatorioPush.enviarNotificacionPrueba(10000)];
+    UIBase.mostrarToast(texto, tipo, 5000);
+    actualizarEstadoPermisoNotificaciones();
+}
+
 function abrirModalNotificaciones() {
     _abrirModalConPadre('modal-notificaciones', () => {
         actualizarEstadoBotonPushHabilitado();
@@ -131,6 +142,7 @@ function bindEventos() {
     $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => togglePushBufferUltimoDia());
     $('btn-toggle-push-habilitado')?.addEventListener('click', () => togglePushHabilitado());
     $('config-push-anticipacion')?.addEventListener('change', (e) => cambiarPushAnticipacion(/** @type {HTMLInputElement} */ (e.target).value));
+    $('btn-probar-notificacion')?.addEventListener('click', () => enviarNotificacionPrueba());
     $('btn-toggle-notification')?.addEventListener('click', () => abrirModalNotificaciones());
     document.querySelector('#modal-notificaciones .btn-cancel')?.addEventListener('click', () => cerrarModalNotificaciones());
 }

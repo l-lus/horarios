@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261030.2306-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261031.0008-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -136,6 +136,17 @@ self.addEventListener('fetch', event => {
   );
 });
 
+// Muestra el recordatorio de fin de jornada (lo usan el push real y la notificación de prueba)
+function mostrarRecordatorio(data) {
+  return self.registration.showNotification(data.title || 'Horarios', {
+    body: data.body || 'Se cumplió tu horario de hoy',
+    icon: './assets/icons/icon-192.png',
+    badge: './assets/icons/badge-96.png',
+    tag: 'horarios-recordatorio',
+    renotify: true,
+  });
+}
+
 // Push — recordatorio de fin de jornada (viene del Worker de Cloudflare)
 self.addEventListener('push', event => {
   let data = {};
@@ -145,14 +156,17 @@ self.addEventListener('push', event => {
     data = { title: 'Horarios', body: event.data ? event.data.text() : '' };
   }
 
+  event.waitUntil(mostrarRecordatorio(data));
+});
+
+// Notificación de prueba pedida desde Ajustes → Notificaciones. Se muestra con una demora
+// (máx. 60 s) para poder cerrar la app antes y comprobar qué abre el click.
+self.addEventListener('message', event => {
+  if (!event.data || event.data.tipo !== 'notificacion-prueba') return;
+  const demora = Math.min(Math.max(Number(event.data.demoraMs) || 0, 0), 60000);
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Horarios', {
-      body: data.body || 'Se cumplió tu horario de hoy',
-      icon: './assets/icons/icon-192.png',
-      badge: './assets/icons/badge-96.png',
-      tag: 'horarios-recordatorio',
-      renotify: true,
-    })
+    new Promise(resolve => setTimeout(resolve, demora))
+      .then(() => mostrarRecordatorio({ title: 'Notificación de prueba', body: 'Tocá para comprobar que se abre la app' }))
   );
 });
 

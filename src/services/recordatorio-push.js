@@ -384,6 +384,21 @@ async function _versionApp() {
     }
 }
 
+/**
+ * Pide al Service Worker una notificación de prueba (la misma que usa el push real).
+ * @param {number} [demoraMs] espera antes de mostrarla, para poder cerrar la app
+ * @returns {Promise<'ok'|'denegado'|'no-soportado'>}
+ */
+async function enviarNotificacionPrueba(demoraMs = 10000) {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return 'no-soportado';
+    if (Notification.permission === 'denied') return 'denegado';
+    if (Notification.permission !== 'granted' && (await Notification.requestPermission()) !== 'granted') return 'denegado';
+    const reg = await navigator.serviceWorker.ready;
+    if (!reg.active) return 'no-soportado';
+    reg.active.postMessage({ tipo: 'notificacion-prueba', demoraMs });
+    return 'ok';
+}
+
 async function registrarUso() {
     if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
     if (!Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true)) return;
@@ -400,7 +415,7 @@ async function registrarUso() {
 }
 
 export const RecordatorioPush = {
-    configurarNotificaciones, registrarUso,
+    configurarNotificaciones, registrarUso, enviarNotificacionPrueba,
     programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
     getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
     getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, avisoPendiente, consumirAviso,

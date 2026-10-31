@@ -73,3 +73,20 @@ test('GestionDatos.agregarRegistro rechaza una fecha inválida y avisa sin crear
     assert.deepEqual(errores, ['fecha']);
     assert.deepEqual(avisos, ['Verificá los campos']);
 });
+
+test('RecordatorioPush.enviarNotificacionPrueba pide permiso y envía el mensaje al Service Worker', async () => {
+    const { RecordatorioPush } = await import('../src/services/recordatorio-push.js');
+    const mensajes = [];
+    globalThis.Notification = { permission: 'default', requestPermission: async () => 'granted' };
+    Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        value: { serviceWorker: { ready: Promise.resolve({ active: { postMessage: m => mensajes.push(m) } }) } },
+    });
+
+    assert.equal(await RecordatorioPush.enviarNotificacionPrueba(5000), 'ok');
+    assert.deepEqual(mensajes, [{ tipo: 'notificacion-prueba', demoraMs: 5000 }]);
+
+    globalThis.Notification = { permission: 'denied', requestPermission: async () => 'denied' };
+    assert.equal(await RecordatorioPush.enviarNotificacionPrueba(), 'denegado');
+    assert.equal(mensajes.length, 1);
+});

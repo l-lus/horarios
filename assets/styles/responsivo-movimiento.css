@@ -520,3 +520,8 @@ button.campo-flash-color {
     display: none;
 }
 
+
+/* Reducir animaciones: la barra indeterminada del aviso de actualización queda quieta */
+:root[data-motion="reduce"] #toast-act-progreso:indeterminate {
+    animation: none;
+}

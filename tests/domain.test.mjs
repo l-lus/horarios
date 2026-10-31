@@ -562,3 +562,15 @@ test('BusquedaTexto: coincidencias sin distinguir mayúsculas ni acentos y rango
     assert.equal(teclaIniciaBusqueda({ key: '5' }, false), false);
     assert.equal(teclaIniciaBusqueda({ key: 'a' }, true), false);
 });
+
+test('AvisoActualizacion: porcentajeValido acota y redondea el avance que informa el Service Worker', async () => {
+    const { porcentajeValido } = await import('../src/ui/aviso-actualizacion.js');
+    assert.equal(porcentajeValido(45.6), 46);
+    assert.equal(porcentajeValido(0), 0);
+    assert.equal(porcentajeValido(150), 100);
+    assert.equal(porcentajeValido(-3), 0);
+    assert.equal(porcentajeValido('72'), 72);
+    assert.equal(porcentajeValido(undefined), null);
+    assert.equal(porcentajeValido(null), null);
+    assert.equal(porcentajeValido('abc'), null);
+});

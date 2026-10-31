@@ -326,6 +326,19 @@
 
     <div id="toast" class="toast"></div>
 
+    <div id="toast-actualizacion" class="toast toast-actualizacion" role="status" aria-live="polite" hidden>
+        <div class="toast-act-fila">
+            <span id="toast-act-texto"></span>
+            <button type="button" id="toast-act-recargar" class="toast-act-boton" hidden>Recargar</button>
+            <button type="button" id="toast-act-cerrar" class="toast-act-cerrar" aria-label="Cerrar aviso">
+                <svg class="icon">
+                    <use href="#icon-cancelar" />
+                </svg>
+            </button>
+        </div>
+        <progress id="toast-act-progreso" max="100" aria-label="Progreso de la actualización"></progress>
+    </div>
+
     <div class="container">
 
         <div class="left-column">

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261031.1918-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261031.1929-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -64,6 +64,7 @@ const urlsToCache = [
   './src/ui/tarjeta-lote.js',
   './src/ui/barra-hitos.js',
   './src/ui/ayuda-buscador.js',
+  './src/ui/aviso-actualizacion.js',
   './src/ui/tarjeta-fichaje.js',
   './src/ui/tarjeta-fichaje-vista.js',
   './src/ui/orden-tarjetas.js',
@@ -76,18 +77,43 @@ const urlsToCache = [
   './src/main.js',
 ];
 
-// Instalación
+// Avisa a las pestañas abiertas cómo va la descarga de la versión nueva (la página muestra el aviso con barra de progreso)
+function avisarAClientes(mensaje) {
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then(clientes => clientes.forEach(c => c.postMessage(mensaje)))
+    .catch(() => { });
+}
+
+// Instalación: descarga todos los archivos en paralelo (sin usar la caché HTTP) e informa el avance.
+// Es todo o nada: si falla uno, la instalación falla y se conserva la versión anterior.
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache.map(u => new Request(u, { cache: 'reload' }))).catch(err => {
-          console.error('CRÍTICO: Falló la carga de archivos en el install:', err);
-          throw err;
-        });
-      })
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const total = urlsToCache.length;
+    let descargados = 0;
+    let ultimoAviso = -1;
+    const informar = () => {
+      const porcentaje = Math.floor((descargados / total) * 100);
+      if (porcentaje === ultimoAviso) return;
+      ultimoAviso = porcentaje;
+      avisarAClientes({ tipo: 'sw-progreso', progreso: porcentaje, version: CACHE_NAME });
+    };
+    try {
+      informar();
+      await Promise.all(urlsToCache.map(async url => {
+        const respuesta = await fetch(new Request(url, { cache: 'reload' }));
+        if (!respuesta.ok) throw new Error(`${url}: HTTP ${respuesta.status}`);
+        await cache.put(url, respuesta);
+        descargados++;
+        informar();
+      }));
+    } catch (err) {
+      console.error('CRÍTICO: Falló la carga de archivos en el install:', err);
+      await avisarAClientes({ tipo: 'sw-error', version: CACHE_NAME });
+      throw err;
+    }
+    await self.skipWaiting();
+  })());
 });
 
 // Activación — limpieza de cachés viejas

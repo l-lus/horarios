@@ -1,17 +1,18 @@
 # Arquitectura del Frontend — Horarios
 
-**Última actualización:** 2026-10-25  
-**Estado:** Arquitectura modularizada y saneada (47 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa y suite de tests nativos en `tests/`).
+**Última actualización:** 2026-10-30  
+**Estado:** Arquitectura modularizada y saneada (54 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
 ## 1. Principios y restricciones de diseño
 
-1. **Cero paso de build (Zero-Build):** El frontend se sirve tal cual está en el repositorio sobre GitHub Pages (o cualquier servidor HTTP estático local). No usa Webpack, Vite ni dependencias de `npm` en el cliente.
+1. **Cero paso de build (Zero-Build):** El frontend se sirve tal cual está en el repositorio sobre GitHub Pages (o cualquier servidor HTTP estático local). No usa Webpack, Vite ni dependencias de `npm` en el cliente. La única `devDependency` es TypeScript, y solo para validar tipos (no transpila nada).
 2. **ES Modules nativos (`import` / `export`):** El navegador carga [`src/main.js`](../src/main.js) mediante `<script type="module" src="src/main.js"></script>` y resuelve el grafo de módulos por HTTP/2.
 3. **Grafo Acíclico Dirigido (DAG) y Capas Estrictas:** Ningún módulo importa de una capa superior ni forma ciclos de dependencia (`A → ... → A`). Esto está verificado automáticamente por [`tests/architecture.test.mjs`](../tests/architecture.test.mjs).
 4. **CSP estricta (`script-src 'self'`):** Prohibido el uso de handlers inline (`onclick=...`), `eval` o scripts inline en [`index.html`](../index.html).
-5. **Offline-first real (`sw.js`):** Todo archivo `.js`, `.css`, `.svg` o `.json` que forme parte de la app **debe** estar listado en `urlsToCache` dentro de [`sw.js`](../sw.js) para que la PWA funcione sin conexión.
+5. **Tipos con JSDoc, sin transpilar:** `npm run typecheck` ejecuta `tsc` (`checkJs`, `strictNullChecks`, `noImplicitReturns`, `noUnusedLocals`, ver [`tsconfig.json`](../tsconfig.json)) sobre todo `src/`. Los tipos se escriben como comentarios `/** @type {...} */`; el navegador sigue recibiendo el JS tal cual.
+6. **Offline-first real (`sw.js`):** Todo archivo `.js`, `.css`, `.svg` o `.json` que forme parte de la app **debe** estar listado en `urlsToCache` dentro de [`sw.js`](../sw.js) para que la PWA funcione sin conexión.
 
 ---
 
@@ -23,6 +24,12 @@ horarios/
 ├── sw.js                       # Service Worker (en la raíz para tener scope sobre todo el proyecto)
 ├── README.md                   # Documentación general del proyecto
 ├── LICENSE                     # Licencia MIT
+├── package.json                # Scripts: test, typecheck, release (solo devDependency: typescript)
+├── tsconfig.json               # Configuración de tsc (checkJs sobre src/, sin emitir archivos)
+├── scripts/
+│   └── release.mjs             # `npm run release`: sube APP_VERSION y CACHE_NAME
+├── .github/workflows/
+│   └── tests.yml               # CI: npm ci, typecheck y tests en cada push/PR
 ├── assets/                     # Recursos estáticos (sin lógica de negocio)
 │   ├── manifest.json           # Web App Manifest (PWA)
 │   ├── styles/                 # Hojas de estilo divididas en 5 capas de cascada
@@ -32,15 +39,17 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (47 módulos)
+├── src/                        # Código fuente en ES Modules (54 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
 │   ├── services/               # Estado de la aplicación, reglas de dominio y servicios externos
 │   └── ui/                     # Componentes visuales, renderizado DOM, eventos y modales
-├── tests/                      # Tests automatizados nativos (`node --test`, sin dependencias)
-│   ├── architecture.test.mjs   # Valida capas, ausencia de ciclos, extensiones .js y precache de sw.js
-│   └── domain.test.mjs         # Valida cálculos horarios, seguridad, compensatorios y arranque UI
+├── tests/                      # Tests automatizados nativos (`npm test` = `node --test tests/*.mjs`, sin dependencias)
+│   ├── architecture.test.mjs   # Capas, ciclos, extensiones .js, precache de sw.js, versión APP_VERSION/CACHE_NAME y services sin DOM
+│   ├── domain.test.mjs         # Cálculos horarios, seguridad, compensatorios y arranque completo de la UI
+│   ├── html.test.mjs           # Escape automático de core/html.js
+│   └── servicios-sin-dom.test.mjs # Servicios ejecutados en Node sin `document`, con formularios simulados
 ├── docs/                       # Documentación técnica, seguridad y arquitectura
 └── horarios-push/              # Backend opcional (Cloudflare Worker para Web Push y métricas anónimas)
 ```
@@ -86,10 +95,10 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 | Carpeta | Rango de capa | Qué contiene | Qué puede importar | Qué **NO** debe hacer |
 |---|---|---|---|---|
 | `src/data/` | `0` | Constantes y catálogos estáticos (`FERIADOS_AR`, `FONDOS_SVG`). | Nada (módulos hoja). | No accede a `document`, `window` ni `localStorage`. |
-| `src/core/` | `1` | Helpers de infraestructura base (`TiempoUtils`, `SeguridadYUtils`, `Almacenamiento`, `EventosApp`, `dom.js`, `movimiento.js`, `constantes.js`, `tema-inicial.js`). | Solo otros módulos de `src/core/` o `src/data/`. | No importa nada de `src/services/` ni `src/ui/`. |
-| `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Compensatorios`, `FiltrosYPeriodos`, `SaldoSemanal`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. Toda comunicación hacia la UI pasa por `EstadoApp._notify()` o `EventosApp`. |
-| `src/ui/` | `3` | Lectura de inputs, renderizado de tablas/tarjetas/calendario, modales, temas y animaciones. | `src/ui/` (sin ciclos), `src/services/`, `src/core/`, `src/data/`. | No escribe directamente en `localStorage` para datos de registros (usa `GestionDatos` o `Almacenamiento`). |
-| `src/main.js` | `4` | Arranque en `DOMContentLoaded`. | `OrquestadorUI`, `InstaladorPWA`, `UsoTracker`, `FeriadosAR`. | No contiene lógica de negocio ni handlers extensos. |
+| `src/core/` | `1` | Helpers de infraestructura base (`TiempoUtils`, `SeguridadYUtils`, `Almacenamiento`, `EventosApp`, `html.js`, `dom.js`, `movimiento.js`, `constantes.js`, `tema-inicial.js`). | Solo otros módulos de `src/core/` o `src/data/`. | No importa nada de `src/services/` ni `src/ui/`. |
+| `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Compensatorios`, `FiltrosYPeriodos`, `SaldoSemanal`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. **Prohibido acceder al DOM** (`document`, `$()`), verificado por test. Toda comunicación hacia la UI pasa por `EstadoApp._notify()`, los puertos de formulario o `EventosApp` (ver 3.1). |
+| `src/ui/` | `3` | Lectura de inputs, renderizado de tablas/tarjetas/calendario, modales, temas y animaciones. | `src/ui/` (sin ciclos), `src/services/`, `src/core/`, `src/data/`. | No escribe directamente en `localStorage` para datos de registros (usa `GestionDatos` o `Almacenamiento`). No inserta HTML con datos sin pasar por ``html`...` `` (3.2). |
+| `src/main.js` | `4` | Arranque en `DOMContentLoaded`. | `OrquestadorUI`, los módulos de `ui/` que enlazan eventos, `InstaladorPWA`, `FeriadosAR` y `RecordatorioPush`. | No contiene lógica de negocio ni handlers extensos. |
 
 ---
 
@@ -104,6 +113,15 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 | `EventosApp` (bus pub/sub) | Avisar que algo cambió, sin esperar respuesta. | `historial:cambio`, `perfil:cambio`, `filtros:cambio`, `grupo:editar` |
 
 Los valores que devuelven los puertos son **crudos**: el servicio los sanitiza y valida. Gracias a esto los servicios se prueban sin DOM (ver `tests/servicios-sin-dom.test.mjs`).
+
+## 3.2. HTML seguro (`core/html.js`)
+
+Para insertar HTML con datos del usuario usá la etiqueta ``html`...` ``: escapa cada interpolación (también dentro de atributos entre comillas). Se inserta marcado sin escapar solo si es otro ``html`...` `` anidado o está envuelto en `crudo()`. Un string común **nunca** se interpreta como HTML, y `_crearPopupFlotante` y `montar(el, contenido)` rechazan strings comunes.
+
+```js
+import { html, montar } from '../core/html.js';
+montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se muestra como texto
+```
 
 ---
 
@@ -121,8 +139,9 @@ Los valores que devuelven los puertos son **crudos**: el servicio los sanitiza y
 | Archivo | Export | Responsabilidad |
 |---|---|---|
 | [`src/core/tema-inicial.js`](../src/core/tema-inicial.js) | *(script clásico en `<head>`)* | Aplica el tema oscuro y modo de animaciones (`horarios_temaOscuro`, `horarios_reducirAnimaciones` con fallback legado) antes del primer pintado (anti-FOUC) y protege contra clickjacking. |
-| [`src/core/constantes.js`](../src/core/constantes.js) | `APP_STORAGE_PREFIX`, `STORAGE_KEYS`, `horasGte`, `horasEq` | Prefijo de aplicación (`horarios_`), claves de `localStorage`, comparadores de punto flotante con tolerancia y constantes globales. |
-| [`src/core/dom.js`](../src/core/dom.js) | `$`, `setColapsable` | Acceso rápido por ID (`document.getElementById`) y helper de contenedores colapsables. |
+| [`src/core/constantes.js`](../src/core/constantes.js) | `APP_NOMBRE`, `APP_VERSION`, `APP_STORAGE_PREFIX`, `STORAGE_KEYS`, `horasGte`, `horasEq` | Prefijo de aplicación (`horarios_`), claves de `localStorage`, comparadores de punto flotante con tolerancia y constantes globales. |
+| [`src/core/html.js`](../src/core/html.js) | ``html`...` ``, `crudo`, `montar`, `esHtmlSeguro` | Plantillas HTML con escape automático de cada interpolación (ver 3.2). |
+| [`src/core/dom.js`](../src/core/dom.js) | `$`, `setColapsable` | `$` (`getElementById` tipado) y helper de contenedores colapsables. |
 | [`src/core/eventos.js`](../src/core/eventos.js) | `EventosApp` | Bus de eventos pub/sub (`on`, `off`, `emit`) y registro de handlers desacoplados (`register`, `call`). |
 | [`src/core/movimiento.js`](../src/core/movimiento.js) | `Movimiento` | Detección de `prefers-reduced-motion` y helpers de transición. |
 | [`src/core/seguridad.js`](../src/core/seguridad.js) | `SeguridadYUtils` | Sanitización de strings/notas, `escapeHtml`, `validarRegistroSeguro`, cálculo SHA-256 (`calcularHashSHA256` con fallback JS puro) y `reviverJSONSeguro`. |
@@ -133,8 +152,8 @@ Los valores que devuelven los puertos son **crudos**: el servicio los sanitiza y
 
 | Archivo | Export | Responsabilidad |
 |---|---|---|
-| [`src/services/estado-app.js`](../src/services/estado-app.js) | `EstadoApp` | **Store central de dominio** (hoja en `services/`): mantiene `registros`, `diasHabiles`, `horasDiarias`, `historialDiasHabiles`, estado de edición/filtros, `calcularHoras` y canal `notify`. |
-| [`src/services/gestion-datos.js`](../src/services/gestion-datos.js) | `GestionDatos` | Fachada de dominio: alta/baja/edición individual de fichajes, validación de formularios, sincronización con Push hoy y undo/redo. |
+| [`src/services/estado-app.js`](../src/services/estado-app.js) | `EstadoApp` | **Store central de dominio** (hoja en `services/`): mantiene `registros`, `diasHabiles`, `horasDiarias`, `historialDiasHabiles`, estado de edición/filtros, `calcularHoras` y canal `notify` y los typedef de los puertos (`Notificaciones`, `FormularioRegistro`, `FormularioEdicion`). |
+| [`src/services/gestion-datos.js`](../src/services/gestion-datos.js) | `GestionDatos` | Fachada de dominio: alta/baja/edición individual de fichajes, validación de los datos de formulario (que llegan por los puertos), sincronización con Push hoy y undo/redo. |
 | [`src/services/compensatorios.js`](../src/services/compensatorios.js) | `Compensatorios` | Cálculo de banco de horas extras, asignación cronológica de horas a francos/compensatorios y tramos históricos de días hábiles. |
 | [`src/services/filtros-periodos.js`](../src/services/filtros-periodos.js) | `FiltrosYPeriodos` | Filtrado de registros, cálculo de buffer por período, detección de jornada nocturna de ayer, edición de grupos y carga/borrado por rango. |
 | [`src/services/importar-exportar.js`](../src/services/importar-exportar.js) | `ImportarExportar` | Serialización para exportación JSON, validación estructural, verificación SHA-256 y merge/reemplazo al importar respaldos. |
@@ -144,16 +163,21 @@ Los valores que devuelven los puertos son **crudos**: el servicio los sanitiza y
 | [`src/services/gestor-perfiles.js`](../src/services/gestor-perfiles.js) | `GestorPerfiles` | Gestión multi-perfil (creación, renombrado, eliminación, cambio de perfil activo y aislamiento de claves en storage). |
 | [`src/services/feriados-ar.js`](../src/services/feriados-ar.js) | `FeriadosAR` | Detección de feriados nacionales del mes en curso y sugerencia automática de carga. |
 | [`src/services/sincronizacion-gist.js`](../src/services/sincronizacion-gist.js) | `SincronizacionGist` | Cliente HTTP de la API de GitHub Gist (crear, subir, descargar respaldos en la nube y verificar hashes). |
-| [`src/services/recordatorio-push.js`](../src/services/recordatorio-push.js) | `RecordatorioPush` | Suscripción Web Push (VAPID), programación y cancelación de recordatorios de fin de jornada con el Worker. |
-| [`src/ui/instalador-pwa.js`](../src/ui/instalador-pwa.js) | `InstaladorPWA` | Captura de `beforeinstallprompt`, registro del Service Worker (`sw.js`) y aviso de actualizaciones. |
-| [`src/services/uso-tracker.js`](../src/services/uso-tracker.js) | `UsoTracker` | Ping diario anónimo de estadísticas de uso hacia el Worker (`/api/hola`). |
+| [`src/services/recordatorio-push.js`](../src/services/recordatorio-push.js) | `RecordatorioPush` | Suscripción Web Push (VAPID), programación y cancelación de recordatorios de fin de jornada con el Worker, y ping diario anónimo de uso (`registrarUso` → `/api/hola`). |
 
 ### 4.4. Interfaz de usuario (`src/ui/`)
 
 | Archivo | Export | Responsabilidad |
 |---|---|---|
 | [`src/ui/orquestador.js`](../src/ui/orquestador.js) | `OrquestadorUI` | Coordinador principal de UI: inicializa todos los submódulos visuales, listeners globales y conecta las notificaciones de `GestionDatos`. |
-| [`src/ui/base.js`](../src/ui/base.js) | `UIBase` | Helpers DOM base (toasts, errores de campos, popups flotantes, swipes táctiles, descarga de archivos y helpers de botones). |
+| [`src/ui/base.js`](../src/ui/base.js) | `UIBase` | Fachada de helpers de UI: reexporta los módulos de abajo y agrega errores de campos, toggles de configuración, selects, flashes de campo, descargas y apertura de modales con padre. |
+| [`src/ui/gestos.js`](../src/ui/gestos.js) | `registrarSwipe`, `debounce`, `_crearPressHold` | Gestos táctiles, debounce y botones de mantener presionado. |
+| [`src/ui/toast.js`](../src/ui/toast.js) | `mostrarToast`, `_cerrarToastActual`, `_habilitarCierreToast` | Cola de avisos (toasts) con cierre por click o swipe. |
+| [`src/ui/boton-fichar.js`](../src/ui/boton-fichar.js) | `resetearBoton`, `animarExitoFichaje`, `setIconoBtn`, ... | Reseteo del botón Fichar y animación del check de éxito. |
+| [`src/ui/popups.js`](../src/ui/popups.js) | `_crearPopupFlotante`, `_posicionarPopup`, `_registrarCierrePopup` | Popups flotantes posicionados junto al elemento disparador (exigen ``html`...` ``). |
+| [`src/ui/scroll.js`](../src/ui/scroll.js) | `_scrollA`, `_esperarFinScroll`, `_scrollHastaVisible` | Desplazamiento respetando `prefers-reduced-motion`. |
+| [`src/ui/formularios.js`](../src/ui/formularios.js) | `Formularios` | Implementación en DOM de los puertos `FormularioRegistro` y `FormularioEdicion` que usan los servicios. |
+| [`src/ui/instalador-pwa.js`](../src/ui/instalador-pwa.js) | `InstaladorPWA` | Captura de `beforeinstallprompt`, registro del Service Worker (`sw.js`) y aviso de actualizaciones. |
 | [`src/ui/animaciones.js`](../src/ui/animaciones.js) | `Animaciones` | Transiciones suaves de altura, fade/swap de elementos, mutación animada de textos y scroll asistido. |
 | [`src/ui/gestor-temas.js`](../src/ui/gestor-temas.js) | `GestorTemas` | Cambio de tema claro/oscuro y sincronización de `meta[name="theme-color"]`. |
 | [`src/ui/gestor-modales.js`](../src/ui/gestor-modales.js) | `GestorModales` | Apertura/cierre de modales accesibles, historial de navegación entre modales y diálogos de confirmación (`confirmar`). |
@@ -229,6 +253,11 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 | **ARQ-4** | Extracción de [`src/services/filtros-periodos.js`](../src/services/filtros-periodos.js) reduciendo `gestion-datos.js` de 1.004 a 572 líneas | ✅ Aplicado |
 | **ARQ-5** | Creación del bus de eventos liviano [`src/core/eventos.js`](../src/core/eventos.js) (`EventosApp`) para comunicación desacoplada entre módulos | ✅ Aplicado |
 | **ARQ-6** | Suite de tests automatizados con `node --test` en [`tests/architecture.test.mjs`](../tests/architecture.test.mjs) y [`tests/domain.test.mjs`](../tests/domain.test.mjs) (sin dependencias externas) | ✅ Aplicado |
+| **ARQ-7** | `npm test`, `npm run typecheck` y CI en GitHub Actions; `tsc` con `checkJs` + `strictNullChecks` sobre todo `src/` | ✅ Aplicado |
+| **ARQ-8** | `services/` sin acceso al DOM: puertos `FormularioRegistro`/`FormularioEdicion` ([`src/ui/formularios.js`](../src/ui/formularios.js)), eventos `historial:cambio`, `perfil:cambio`, `filtros:cambio`, `grupo:editar` y test que lo exige | ✅ Aplicado |
+| **ARQ-9** | [`src/core/html.js`](../src/core/html.js): plantillas con escape automático; popups y lista de secciones de reporte migrados | ✅ Aplicado |
+| **ARQ-10** | `ui/base.js` (645 → ~280 líneas) dividido en `gestos`, `toast`, `boton-fichar`, `popups` y `scroll`, con `UIBase` como fachada | ✅ Aplicado |
+| **ARQ-11** | Versión centralizada (`APP_VERSION`) y `npm run release` para `APP_VERSION` + `CACHE_NAME` | ✅ Aplicado |
 
 ---
 

@@ -33,7 +33,7 @@ horarios/
 ├── assets/                     # Recursos estáticos (sin lógica de negocio)
 │   ├── manifest.json           # Web App Manifest (PWA)
 │   ├── styles/                 # Hojas de estilo divididas en 5 capas de cascada
-│   │   ├── tokens.css          # 1. Variables (:root), modo oscuro y 6 temas de color
+│   │   ├── tokens.css          # 1. Variables (:root), escala de íconos (--icon-sm/md/lg), modo oscuro y temas de color
 │   │   ├── base.css            # 2. Reset, layout, .card, forms, botones, modales base y toast
 │   │   ├── tarjetas-vistas.css     # 3. Fichaje/timer, estadísticas/progreso, histórico y calendario/popups
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop

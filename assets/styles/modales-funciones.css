@@ -50,8 +50,8 @@
 }
 
 .gist-estado .icon {
-    width: 1.8em;
-    height: 1.8em;
+    width: var(--icon-lg);
+    height: var(--icon-lg);
     flex-shrink: 0;
     color: var(--text-muted);
 }
@@ -81,8 +81,8 @@
 }
 
 .gist-acciones .icon {
-    width: 1.8em;
-    height: 1.8em;
+    width: var(--icon-lg);
+    height: var(--icon-lg);
     color: var(--text-muted);
 }
 
@@ -614,9 +614,9 @@ body.config-onboarding #theme-toggle-config {
 }
 
 .btn-perfil-edit .icon {
-    width: 1em;
-    height: 1em;
-    font-size: var(--text-md);
+    width: var(--icon-md);
+    height: var(--icon-md);
+    font-size: var(--text-base);
 }
 
 .add-perfil {

@@ -173,8 +173,8 @@ h2.mutacion-saliente.no-margin,
 /* ─── ICONOS ─────────────────────────────────────────────────────────────────── */
 
 .icon {
-    width: 1.2em;
-    height: 1.2em;
+    width: var(--icon-md);
+    height: var(--icon-md);
     vertical-align: text-bottom;
     fill: currentColor;
     stroke: currentColor;
@@ -187,8 +187,8 @@ h2.mutacion-saliente.no-margin,
 }
 
 .chevron-mes-icon {
-    width: 1.2em;
-    height: 1.2em;
+    width: var(--icon-md);
+    height: var(--icon-md);
     vertical-align: middle;
 }
 

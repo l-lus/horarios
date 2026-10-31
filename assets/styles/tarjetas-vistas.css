@@ -268,8 +268,8 @@
 
 .icon-comentario,
 .cal-popup-caja-icono {
-    width: 14px;
-    height: 14px;
+    width: var(--icon-sm);
+    height: var(--icon-sm);
     flex-shrink: 0;
     color: var(--text-muted);
 }
@@ -1035,8 +1035,8 @@
 }
 
 .btn-toggle-periodo .icon {
-    width: 14px;
-    height: 14px;
+    width: var(--icon-sm);
+    height: var(--icon-sm);
 }
 
 .botones-historico-inner {
@@ -1131,8 +1131,8 @@
 }
 
 .break-counter-label .icon {
-    width: 0.9em;
-    height: 0.9em;
+    width: var(--icon-sm);
+    height: var(--icon-sm);
 }
 
 .tf-badge {
@@ -1152,8 +1152,8 @@
 }
 
 .tf-badge .icon {
-    width: 0.9em;
-    height: 0.9em;
+    width: var(--icon-sm);
+    height: var(--icon-sm);
 }
 
 .tf-badge .break-counter-label {

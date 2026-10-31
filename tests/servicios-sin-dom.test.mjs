@@ -253,6 +253,20 @@ test('EstadoTarjeta.calcularEstadoCard arma diasSemana: sin registro, especial, 
     assert.equal(conSaldo.find(d => d.fecha === '2026-10-26').cumplimiento, 'cumplido');
     assert.equal(conSaldo.find(d => d.fecha === '2026-10-29').cumplimiento, 'cubierto');
 
+    // un día remoto cuenta su objetivo completo (no queda como faltante) y una jornada pasada sin salida no se da por cerrada
+    EstadoApp._setRegistros([
+        reg('2026-10-27', '09:00', null, 0),        // martes: entrada sin salida
+        reg('2026-10-28', '16:16', '16:16', 0)      // miércoles: remoto
+    ]);
+    const conRemoto = EstadoTarjeta.calcularEstadoCard().diasSemana;
+    const martes = conRemoto.find(d => d.fecha === '2026-10-27');
+    const miercoles = conRemoto.find(d => d.fecha === '2026-10-28');
+    assert.equal(martes.estado, 'sin-salida');
+    assert.equal(martes.cumplimiento, undefined);
+    assert.equal(miercoles.estado, 'cerrado');
+    assert.equal(miercoles.total, 7);
+    assert.equal(miercoles.cumplimiento, 'cumplido');
+
     // martes 27/10 10:00: hoy sin registro todavía y el resto de la semana son días futuros
     t.mock.timers.reset();
     t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 27, 10, 0) });

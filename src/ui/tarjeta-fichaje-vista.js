@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, DEFAULTS, horasGte, horasEq } from '../core/constantes.js';
+import { STORAGE_KEYS, DEFAULTS, ESTADO_DIA, CUMPLIMIENTO, horasGte, horasEq } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -93,21 +93,35 @@ const _SIGLAS_DIA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
 // Color del tramo de un día, con el mismo criterio que la vista diaria: en curso azul; cerrado verde si cumplió, dorado si lo cubre el saldo, rojo si faltó
 // (el resultado de cada día cerrado lo calcula el servicio: d.cumplimiento)
-const _COLOR_CUMPLIMIENTO = { cumplido: 'green', cubierto: 'gold', faltante: 'red' };
+const _COLOR_CUMPLIMIENTO = { [CUMPLIMIENTO.CUMPLIDO]: 'green', [CUMPLIMIENTO.CUBIERTO]: 'gold', [CUMPLIMIENTO.FALTANTE]: 'red' };
 function _colorEstadoDia(d) {
     if (d.activo) return 'blue';
     return _COLOR_CUMPLIMIENTO[d.cumplimiento] ?? 'red';
 }
 
+// Cómo se nombra el estado de un día para quien no ve la barra (lector de pantalla)
+const _PALABRA_CUMPLIMIENTO = { [CUMPLIMIENTO.CUMPLIDO]: 'cumplido', [CUMPLIMIENTO.CUBIERTO]: 'cubierto por el saldo', [CUMPLIMIENTO.FALTANTE]: 'con faltante' };
+function _palabraEstadoDia(d) {
+    switch (d.estado) {
+        case ESTADO_DIA.ACTIVO: return 'en curso';
+        case ESTADO_DIA.ESPECIAL: return 'día especial';
+        case ESTADO_DIA.SIN_SALIDA: return 'sin salida registrada';
+        case ESTADO_DIA.SIN_REGISTRO: return 'sin registro';
+        case ESTADO_DIA.FUTURO: return 'pendiente';
+        default: return _PALABRA_CUMPLIMIENTO[d.cumplimiento] ?? '';
+    }
+}
+
 // Barra semanal con hint integrado: cada día tiene una franja fija de la barra (proporcional a su objetivo) y lo trabajado la rellena con el color del estado del día.
-// Un día especial rellena su franja entera con el color de su tipo; uno sin registro (o futuro) la deja vacía. Los días seguidos del mismo tipo (sin registro, futuros o especiales del mismo color) se fusionan en un solo hito con rango (lun–mié).
+// Un día especial rellena su franja entera con el color de su tipo; uno sin registro, sin salida o futuro la deja vacía. Los días seguidos del mismo tipo (sin registro, futuros o especiales del mismo color) se fusionan en un solo hito con rango (lun–mié).
 function _franjasSemana(diasSemana, horasDiarias) {
     if (!diasSemana?.length || !(horasDiarias > 0)) return null;
     const pesos = diasSemana.map(d => d.objetivo > 0 ? d.objetivo : horasDiarias);
     const total = pesos.reduce((a, b) => a + b, 0);
     const sigla = d => _SIGLAS_DIA[TiempoUtils.parsearFechaLocal(d.fecha).getDay()];
-    const tipoFusion = d => d.estado === 'sin-registro' || d.estado === 'futuro' ? d.estado
-        : d.estado === 'especial' ? `especial-${d.especial}` : null;
+    const tipoFusion = d => d.estado === ESTADO_DIA.SIN_REGISTRO || d.estado === ESTADO_DIA.FUTURO ? d.estado
+        : d.estado === ESTADO_DIA.ESPECIAL ? `${ESTADO_DIA.ESPECIAL}-${d.especial}` : null;
+    const conHoras = d => d.estado === ESTADO_DIA.ACTIVO || d.estado === ESTADO_DIA.CERRADO;
 
     const tramos = [];
     const hitos = [];
@@ -116,9 +130,8 @@ function _franjasSemana(diasSemana, horasDiarias) {
     let colorPrimera = 'vacio';
     diasSemana.forEach((d, i) => {
         const fin = inicio + pesos[i] / total;
-        const relleno = d.estado === 'especial' ? 1
-            : d.estado === 'activo' || d.estado === 'cerrado' ? Math.min(1, Math.max(0, d.total / pesos[i])) : 0;
-        const color = d.estado === 'especial' ? d.especial : d.estado === 'activo' ? 'blue' : d.estado === 'cerrado' ? _colorEstadoDia(d) : null;
+        const relleno = d.estado === ESTADO_DIA.ESPECIAL ? 1 : conHoras(d) ? Math.min(1, Math.max(0, d.total / pesos[i])) : 0;
+        const color = d.estado === ESTADO_DIA.ESPECIAL ? d.especial : d.estado === ESTADO_DIA.ACTIVO ? 'blue' : d.estado === ESTADO_DIA.CERRADO ? _colorEstadoDia(d) : null;
         if (relleno > 0.0001 && color) tramos.push({ desde: inicio, hasta: inicio + (fin - inicio) * relleno, color });
         if (i === 0) colorPrimera = relleno > 0.0001 && color ? color : 'vacio';   // el remate del comienzo está sobre la primera franja, aunque esté vacía
 
@@ -127,10 +140,12 @@ function _franjasSemana(diasSemana, horasDiarias) {
             // día seguido del mismo tipo: el hito anterior se extiende hasta el final de esta franja y su sigla pasa a rango
             previo.hito.fraccion = fin;
             previo.hito.sigla = `${previo.primera}–${sigla(d)}`;
+            previo.hito.descripcion = `${previo.hito.sigla} ${_palabraEstadoDia(d)}`;
         } else {
             const hito = {
                 fecha: d.fecha, sigla: sigla(d), fraccion: fin,
-                prioridad: d.estado === 'cerrado' || d.estado === 'activo' ? 2 : d.estado === 'especial' ? 1 : 0   // si no entran todas las siglas se conservan primero las de días con horas
+                descripcion: `${sigla(d)} ${_palabraEstadoDia(d)}`,
+                prioridad: conHoras(d) ? 2 : d.estado === ESTADO_DIA.ESPECIAL || d.estado === ESTADO_DIA.SIN_SALIDA ? 1 : 0   // si no entran todas las siglas se conservan primero las de días con horas
             };
             hitos.push(hito);
             previo = { tipo, hito, primera: hito.sigla };

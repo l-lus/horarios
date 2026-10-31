@@ -170,13 +170,13 @@ test('Versión: APP_VERSION de constantes.js coincide con el prefijo de CACHE_NA
     assert.ok(cache.startsWith(`${version}.`), `CACHE_NAME "${cache}" debe empezar con "${version}."`);
 });
 
-test('Íconos: todo "#icon-..." usado en src/ e index.html existe como <symbol> del sprite', () => {
+test('Íconos: todo "#icon-..." / "#hito-..." usado en src/ e index.html existe en el sprite', () => {
     const html = fs.readFileSync('index.html', 'utf8');
-    const definidos = new Set([...html.matchAll(/<symbol id="(icon-[\w-]+)"/g)].map(m => m[1]));
+    const definidos = new Set([...html.matchAll(/<(?:symbol|g) id="((?:icon|hito)-[\w-]+)"/g)].map(m => m[1]));
     const faltantes = [];
     for (const archivo of [...srcFiles, 'index.html']) {
         const contenido = fs.readFileSync(archivo, 'utf8');
-        for (const m of contenido.matchAll(/#(icon-[\w-]+)/g)) {
+        for (const m of contenido.matchAll(/#((?:icon|hito)-[\w-]+)/g)) {
             if (!definidos.has(m[1])) faltantes.push(`${archivo}: #${m[1]}`);
         }
     }

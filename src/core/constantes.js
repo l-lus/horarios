@@ -61,6 +61,24 @@ export const DEFAULTS = Object.freeze({
 });
 
 
+// Estado de cada día de la semana en la tarjeta de fichaje (lo calcula el servicio; la vista lo traduce a colores y textos)
+export const ESTADO_DIA = Object.freeze({
+    ESPECIAL: 'especial',          // licencia, feriado... (sin horas)
+    CERRADO: 'cerrado',            // jornada con entrada y salida
+    ACTIVO: 'activo',              // jornada abierta que se está contando
+    SIN_SALIDA: 'sin-salida',      // día pasado con entrada pero sin salida (jornada olvidada)
+    SIN_REGISTRO: 'sin-registro',  // día laborable pasado sin registro
+    FUTURO: 'futuro',              // hoy sin registro todavía o días que vienen
+});
+
+// Resultado de un día cerrado respecto de su objetivo
+export const CUMPLIMIENTO = Object.freeze({
+    CUMPLIDO: 'cumplido',
+    CUBIERTO: 'cubierto',          // faltó, pero lo cubre el saldo de otro día
+    FALTANTE: 'faltante',
+});
+
+
 // ====================================================================
 // NUMERIC PRECISION — shared helper
 // ====================================================================

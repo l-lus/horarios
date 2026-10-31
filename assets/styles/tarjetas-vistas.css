@@ -311,7 +311,7 @@
 
 /* Sigla que no entra: queda solo el punto de anclaje sobre la barra */
 .linea-etiqueta--oculta { display: none !important; }
-.linea-tick.solo-punto path { display: none; }
+.linea-tick.solo-punto .hito-flecha { display: none; }
 
 .linea-banda {
     top: 0;
@@ -348,18 +348,6 @@
     stroke-linecap: round;
     stroke-linejoin: round;
     transition: color var(--dur-slow) ease;
-}
-
-/* La línea de la flecha es un trazo que engrosa desde el punto de anclaje hasta la punta (polígono relleno); la punta sí es un trazo de ancho fijo */
-.linea-tick .linea-cola {
-    fill: currentColor;
-    stroke: none;
-}
-
-.linea-tick .linea-ancla {
-    fill: currentColor;
-    stroke: var(--bg-card);
-    stroke-width: 1.2;
 }
 
 .linea-tick--buffer {

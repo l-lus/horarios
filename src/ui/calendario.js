@@ -2,6 +2,7 @@ import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Movimiento } from '../core/movimiento.js';
+import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
@@ -679,6 +680,15 @@ const RUEDA_PAUSA_TRACKPAD_MS = 120; // pausa que cierra una ráfaga de trackpad
 const RUEDA_COOLDOWN_EXTRA_MS = 60;  // margen sobre la animación de deslizamiento
 const RUEDA_LINEA_PX = 33;           // equivalencia de deltaMode "línea" en px
 
+// La opción se lee del almacenamiento una sola vez: el evento de configuración invalida el valor guardado (el handler de la rueda corre en cada ráfaga)
+/** @type {boolean | null} */
+let _ruedaHabilitada = null;
+EventosApp.on('config:rueda-calendario', () => { _ruedaHabilitada = null; });
+function _ruedaActiva() {
+    _ruedaHabilitada ??= Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO);
+    return _ruedaHabilitada;
+}
+
 function _registrarRuedaCalendario(grid) {
     const contenedor = grid?.parentNode;
     if (!contenedor || contenedor.dataset.ruedaInit) return;
@@ -697,7 +707,7 @@ function _registrarRuedaCalendario(grid) {
         if (!esPC()) return;
         // Alt + rueda cambia de mes sobre cualquier parte del calendario, aunque la rueda sola esté desactivada en configuración
         const conAlt = e.altKey;
-        if (!conAlt && !Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO)) return;   // desactivado: la rueda desplaza la página
+        if (!conAlt && !_ruedaActiva()) return;   // desactivado: la rueda desplaza la página
 
         const ahora = performance.now();
         const bloqueado = ahora < bloqueadoHasta;

@@ -87,6 +87,7 @@ const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRu
         getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO),
         setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.RUEDA_CALENDARIO, v),
         btnId: 'btn-toggle-rueda-calendario',
+        onAfterToggle: () => { EventosApp.emit('config:rueda-calendario'); }
     });
 
 const { toggle: toggleHintIntegrado, actualizarEstado: actualizarEstadoBotonHintIntegrado } =

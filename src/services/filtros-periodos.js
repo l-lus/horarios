@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
+import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
@@ -235,16 +236,16 @@ function limpiarFiltros() {
     const notify = EstadoApp._notify();
     notify.cerrarFiltros();
     notify.mostrarToast('Filtro eliminado', 'info');
-    document.getElementById('btn-filtro')?.classList.remove('filtro-activo');
+    EventosApp.emit('filtros:cambio', { activo: false });
 }
 
 function aplicarFiltrosInmediato(desde, hasta, tipo) {
     if (!desde && !hasta && !tipo) {
         EstadoApp.setFiltroState({ activo: false, desde: null, hasta: null, tipo: null });
-        document.getElementById('btn-filtro')?.classList.remove('filtro-activo');
+        EventosApp.emit('filtros:cambio', { activo: false });
     } else {
         EstadoApp.setFiltroState({ activo: true, desde: desde || null, hasta: hasta || null, tipo: tipo || null });
-        document.getElementById('btn-filtro')?.classList.add('filtro-activo');
+        EventosApp.emit('filtros:cambio', { activo: true });
     }
     EstadoApp.guardarYActualizar();
 }

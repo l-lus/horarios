@@ -1,7 +1,8 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
+import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
-import { InstaladorPWA } from '../services/instalador-pwa.js';
+import { InstaladorPWA } from './instalador-pwa.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -84,7 +85,24 @@ const {
     cerrarModalHistorialDias, cerrarEditorTramoDias
 } = HistorialDias;
 
+function _suscribirEventosServicios() {
+    EventosApp.on('historial:cambio', ({ canUndo, canRedo }) => {
+        const undoBtn = $('btn-undo');
+        const redoBtn = $('btn-redo');
+        if (undoBtn) undoBtn.disabled = !canUndo;
+        if (redoBtn) redoBtn.disabled = !canRedo;
+    });
+    EventosApp.on('perfil:cambio', ({ nombre }) => {
+        const el = $('nombre-perfil-header');
+        if (el) el.textContent = nombre;
+    });
+    EventosApp.on('filtros:cambio', ({ activo }) => {
+        $('btn-filtro')?.classList.toggle('filtro-activo', activo);
+    });
+}
+
 function _initGlobales() {
+    _suscribirEventosServicios();
     GestorPerfiles.inicializar();
     
     D.configurarNotificaciones({
@@ -96,6 +114,7 @@ function _initGlobales() {
         descargarJSON, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
         obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
         setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado, verificarBloqueoCredito,
+        hayUIBloqueante: () => !!document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding'),
         forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, refrescarConfigSiVisible
     });
     Almacenamiento.configurarNotificaciones({ mostrarToast });

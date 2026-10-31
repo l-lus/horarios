@@ -1,4 +1,5 @@
-import { InstaladorPWA } from './services/instalador-pwa.js';
+import { APP_NOMBRE, APP_VERSION } from './core/constantes.js';
+import { InstaladorPWA } from './ui/instalador-pwa.js';
 import { RecordatorioPush } from './services/recordatorio-push.js';
 import { FeriadosAR } from './services/feriados-ar.js';
 import { Perfiles } from './ui/perfiles.js';
@@ -21,6 +22,11 @@ import { AvisoPush } from './ui/aviso-push.js';
 InstaladorPWA.registrarServiceWorker();
 OrquestadorUI.init();
 
+function _mostrarVersion() {
+    const el = document.querySelector('.version-text');
+    if (el) el.textContent = `${APP_NOMBRE}-${APP_VERSION}`;
+}
+
 function _iniciarEventosDOM() {
     InstaladorPWA.bindEventos();
     Perfiles.bindEventos();
@@ -34,25 +40,7 @@ function _iniciarEventosDOM() {
     Configuracion.bindEventos();
     HistorialDias.bindEventos();
 
-    (function _bindLayoutConsistency() {
-        const _t = [76, 85, 83, 72, 73, 66, 79, 83, 67, 65].map(c => String.fromCharCode(c)).join('');
-        const _v = '-v261030';
-        const _full = _t + _v;
-        let _el = document.querySelector('.version-text');
-        if (!_el) {
-            _el = document.createElement('span');
-            _el.className = 'version-text';
-            const _h3 = document.querySelector('.modal-panel-header h3');
-            if (_h3) _h3.appendChild(_el);
-        }
-        if (!_el.parentNode) return;
-        _el.textContent = _full;
-        const _fix = () => { if ((_el.textContent || '') !== _full) _el.textContent = _full; };
-        new MutationObserver(_fix).observe(_el, { childList: true, characterData: true, subtree: true });
-        new MutationObserver(ms => ms.forEach(m => {
-            if ([...m.removedNodes].includes(_el)) { _el.textContent = _full; m.target.appendChild(_el); }
-        })).observe(_el.parentNode, { childList: true });
-    })();
+    _mostrarVersion();
 }
 
 if (document.readyState === 'loading') {

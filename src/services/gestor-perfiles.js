@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
+import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EstadoApp } from './estado-app.js';
 
@@ -60,10 +61,7 @@ function guardarDatosPerfilActual() {
 }
 
 function actualizarSelector() {
-    const btnTexto = document.getElementById('nombre-perfil-header');
-    if (btnTexto && perfiles[perfilActual]) {
-        btnTexto.textContent = perfiles[perfilActual].nombre;
-    }
+    if (perfiles[perfilActual]) EventosApp.emit('perfil:cambio', { nombre: perfiles[perfilActual].nombre });
 }
 
 function obtenerListaPerfiles() {

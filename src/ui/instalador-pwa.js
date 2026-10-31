@@ -1,5 +1,5 @@
 import { $ } from '../core/dom.js';
-import { EstadoApp } from './estado-app.js';
+import { EstadoApp } from '../services/estado-app.js';
 
 // ====================================================================
 // PWA INSTALLER MODULE

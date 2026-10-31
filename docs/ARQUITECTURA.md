@@ -87,7 +87,7 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 |---|---|---|---|---|
 | `src/data/` | `0` | Constantes y catálogos estáticos (`FERIADOS_AR`, `FONDOS_SVG`). | Nada (módulos hoja). | No accede a `document`, `window` ni `localStorage`. |
 | `src/core/` | `1` | Helpers de infraestructura base (`TiempoUtils`, `SeguridadYUtils`, `Almacenamiento`, `EventosApp`, `dom.js`, `movimiento.js`, `constantes.js`, `tema-inicial.js`). | Solo otros módulos de `src/core/` o `src/data/`. | No importa nada de `src/services/` ni `src/ui/`. |
-| `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Compensatorios`, `FiltrosYPeriodos`, `SaldoSemanal`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`, `InstaladorPWA`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. Toda comunicación hacia la UI pasa por `EstadoApp._notify()` o `EventosApp`. |
+| `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Compensatorios`, `FiltrosYPeriodos`, `SaldoSemanal`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. Toda comunicación hacia la UI pasa por `EstadoApp._notify()` o `EventosApp`. |
 | `src/ui/` | `3` | Lectura de inputs, renderizado de tablas/tarjetas/calendario, modales, temas y animaciones. | `src/ui/` (sin ciclos), `src/services/`, `src/core/`, `src/data/`. | No escribe directamente en `localStorage` para datos de registros (usa `GestionDatos` o `Almacenamiento`). |
 | `src/main.js` | `4` | Arranque en `DOMContentLoaded`. | `OrquestadorUI`, `InstaladorPWA`, `UsoTracker`, `FeriadosAR`. | No contiene lógica de negocio ni handlers extensos. |
 
@@ -131,7 +131,7 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 | [`src/services/feriados-ar.js`](../src/services/feriados-ar.js) | `FeriadosAR` | Detección de feriados nacionales del mes en curso y sugerencia automática de carga. |
 | [`src/services/sincronizacion-gist.js`](../src/services/sincronizacion-gist.js) | `SincronizacionGist` | Cliente HTTP de la API de GitHub Gist (crear, subir, descargar respaldos en la nube y verificar hashes). |
 | [`src/services/recordatorio-push.js`](../src/services/recordatorio-push.js) | `RecordatorioPush` | Suscripción Web Push (VAPID), programación y cancelación de recordatorios de fin de jornada con el Worker. |
-| [`src/services/instalador-pwa.js`](../src/services/instalador-pwa.js) | `InstaladorPWA` | Captura de `beforeinstallprompt`, registro del Service Worker (`sw.js`) y aviso de actualizaciones. |
+| [`src/ui/instalador-pwa.js`](../src/ui/instalador-pwa.js) | `InstaladorPWA` | Captura de `beforeinstallprompt`, registro del Service Worker (`sw.js`) y aviso de actualizaciones. |
 | [`src/services/uso-tracker.js`](../src/services/uso-tracker.js) | `UsoTracker` | Ping diario anónimo de estadísticas de uso hacia el Worker (`/api/hola`). |
 
 ### 4.4. Interfaz de usuario (`src/ui/`)

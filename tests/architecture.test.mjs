@@ -159,3 +159,34 @@ test('Arquitectura CSS: Las 5 capas de assets/styles/ se cargan en orden de casc
     }
 });
 
+
+test('Versión: APP_VERSION de constantes.js coincide con el prefijo de CACHE_NAME en sw.js', () => {
+    const constantes = fs.readFileSync('src/core/constantes.js', 'utf8');
+    const version = constantes.match(/APP_VERSION\s*=\s*'([^']+)'/)?.[1];
+    assert.ok(version, 'No se encontró APP_VERSION en src/core/constantes.js');
+    const sw = fs.readFileSync('sw.js', 'utf8');
+    const cache = sw.match(/CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\}([^`]+)`/)?.[1];
+    assert.ok(cache, 'No se encontró CACHE_NAME en sw.js');
+    assert.ok(cache.startsWith(`${version}.`), `CACHE_NAME "${cache}" debe empezar con "${version}."`);
+});
+
+test('Capas: src/services no accede al DOM (ratchet: no se permiten usos nuevos)', () => {
+    // Deuda conocida: estos servicios aún leen/escriben formularios vía $().
+    // Bajar estos números al migrar esa lógica a src/ui; nunca subirlos.
+    const baseline = {
+        'src/services/gestion-datos.js': 41,
+        'src/services/filtros-periodos.js': 13,
+        'src/services/importar-exportar.js': 2,
+        'src/services/compensatorios.js': 1,
+    };
+    const reDom = /\bdocument\.(getElementById|querySelector|querySelectorAll|body|createElement|documentElement|activeElement)\b|(?<![\w.])\$\(/g;
+    const excesos = [];
+    for (const file of srcFiles.filter(f => f.startsWith('src/services/'))) {
+        const codigo = fs.readFileSync(file, 'utf8')
+            .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+        const usos = (codigo.match(reDom) || []).length;
+        const max = baseline[file] ?? 0;
+        if (usos > max) excesos.push(`${file}: ${usos} usos (máx. ${max})`);
+    }
+    assert.deepEqual(excesos, [], `Acceso al DOM en servicios:\n${excesos.join('\n')}`);
+});

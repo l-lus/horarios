@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { SeguridadYUtils } from '../core/seguridad.js';
+import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 
 // ====================================================================
@@ -56,10 +57,7 @@ function canUndo() { return currentIndex > 0; }
 function canRedo() { return currentIndex < _stack.length - 1; }
 
 function updateButtons() {
-    const undoBtn = document.getElementById('btn-undo');
-    const redoBtn = document.getElementById('btn-redo');
-    if (undoBtn) undoBtn.disabled = !canUndo();
-    if (redoBtn) redoBtn.disabled = !canRedo();
+    EventosApp.emit('historial:cambio', { canUndo: canUndo(), canRedo: canRedo() });
 }
 
 function saveToLocalStorage() {

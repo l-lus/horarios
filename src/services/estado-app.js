@@ -21,6 +21,7 @@ let notify = {
     confirmarModal: async () => false,
     descargarJSON: () => { },
     forzarVista: (vista, fn) => fn(),
+    hayUIBloqueante: () => false,
     iniciarTimerAutoCierreBotones: () => { },
     limpiarError: () => { },
     mostrarError: () => { },

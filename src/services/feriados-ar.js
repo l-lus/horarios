@@ -55,10 +55,7 @@ async function chequearYNotificar() {
 
     if (!pendientes.length) return;
 
-    while (
-        document.querySelector('.modal.show') ||
-        document.body.classList.contains('config-onboarding')
-    ) {
+    while (GestionDatos._notify().hayUIBloqueante()) {
         await TiempoUtils.esperar(2000);
     }
 

@@ -1,6 +1,10 @@
 // ====================================================================
 // STORAGE KEYS — MODULE
 // ====================================================================
+// APP_VERSION debe coincidir con el prefijo de CACHE_NAME en sw.js (lo valida tests/architecture.test.mjs).
+export const APP_NOMBRE = 'LUSHIBOSCA';
+export const APP_VERSION = 'v261030';
+
 export const APP_STORAGE_PREFIX = 'horarios_';
 
 export const STORAGE_KEYS = Object.freeze({

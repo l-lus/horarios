@@ -14,6 +14,7 @@ export const STORAGE_KEYS = Object.freeze({
     HOVER_POPUP: 'hoverPopupCalendario',
     REDUCIR_ANIMACIONES: 'reducirAnimaciones',
     FORMATO_CORTO_STATS: 'formatoCortoStats',
+    HINT_INTEGRADO: 'hintIntegrado',
     DIAS_HABILES: 'diasHabiles',
     HISTORIAL_DIAS_HABILES: 'historialDiasHabiles',
     HORAS_DIARIAS: 'horasDiarias',

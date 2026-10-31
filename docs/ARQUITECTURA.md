@@ -110,7 +110,7 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 |---|---|---|
 | `EstadoApp._notify()` (typedef `Notificaciones`) | Órdenes a la UI o consultas con respuesta (toasts, confirmar, cerrar modales). | `notify.mostrarToast(...)`, `notify.confirmarModal(...)` |
 | Puertos de formulario (`FormularioRegistro`, `FormularioEdicion`) | Leer o escribir los campos de un formulario. Los implementa [`src/ui/formularios.js`](../src/ui/formularios.js). | `notify.formularioRegistro.leer()` |
-| `EventosApp` (bus pub/sub) | Avisar que algo cambió, sin esperar respuesta. | `historial:cambio`, `perfil:cambio`, `filtros:cambio`, `grupo:editar` |
+| `EventosApp` (bus pub/sub) | Avisar que algo cambió, sin esperar respuesta. | `historial:cambio`, `perfil:cambio`, `filtros:cambio`, `grupo:editar`, `config:hint-integrado` |
 
 Los valores que devuelven los puertos son **crudos**: el servicio los sanitiza y valida. Gracias a esto los servicios se prueban sin DOM (ver `tests/servicios-sin-dom.test.mjs`).
 
@@ -181,7 +181,7 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/ui/animaciones.js`](../src/ui/animaciones.js) | `Animaciones` | Transiciones suaves de altura, fade/swap de elementos, mutación animada de textos y scroll asistido. |
 | [`src/ui/gestor-temas.js`](../src/ui/gestor-temas.js) | `GestorTemas` | Cambio de tema claro/oscuro y sincronización de `meta[name="theme-color"]`. |
 | [`src/ui/gestor-modales.js`](../src/ui/gestor-modales.js) | `GestorModales` | Apertura/cierre de modales accesibles, historial de navegación entre modales y diálogos de confirmación (`confirmar`). |
-| [`src/ui/tarjeta-fichaje.js`](../src/ui/tarjeta-fichaje.js) | `TarjetaFichaje` | Tarjeta principal de fichaje del día/semana (barra de progreso, hints de salida estimada, ciclo de textos y actualización general). |
+| [`src/ui/tarjeta-fichaje.js`](../src/ui/tarjeta-fichaje.js) | `TarjetaFichaje` | Tarjeta principal de fichaje del día/semana (barra de progreso, hints de salida estimada, ciclo de textos y actualización general). Con el ajuste opcional «Hint integrado en la barra» (`STORAGE_KEYS.HINT_INTEGRADO`, apagado por defecto) la entrada, la salida estimada y la salida con buffer se dibujan sobre la barra; apagado, se usa el `toggle-hint` de texto. |
 | [`src/ui/tarjeta-tiempo-fuera.js`](../src/ui/tarjeta-tiempo-fuera.js) | `TarjetaTiempoFuera` | Cronómetro en vivo de tiempo fuera (pausa/almuerzo) en la tarjeta principal. |
 | [`src/ui/tarjeta-lote.js`](../src/ui/tarjeta-lote.js) | `TarjetaLote` | Modo de carga por lote (múltiples días/licencias desde la tarjeta principal) y helpers de inputs de hora/fecha. |
 | [`src/ui/tarjeta-fondos.js`](../src/ui/tarjeta-fondos.js) | `TarjetaFondos` | Selector, sanitización segura con `DOMParser` y renderizado de fondos SVG en la tarjeta de fichaje. |

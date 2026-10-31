@@ -78,6 +78,14 @@ const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBoton
         onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
     });
 
+const { toggle: toggleHintIntegrado, actualizarEstado: actualizarEstadoBotonHintIntegrado } =
+    _crearToggleConfig({
+        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false),
+        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, v),
+        btnId: 'btn-toggle-hint-integrado',
+        onAfterToggle: () => { EventosApp.emit('config:hint-integrado'); actualizarUI(); }
+    });
+
 const { toggle: toggleMetricaUso, actualizarEstado: actualizarEstadoBotonMetricaUso } =
     _crearToggleConfig({
         getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true),
@@ -299,6 +307,7 @@ function bindEventos() {
     $('btn-toggle-animaciones')?.addEventListener('click', () => toggleReducirAnimaciones());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
+    $('btn-toggle-hint-integrado')?.addEventListener('click', () => toggleHintIntegrado());
     $('btn-toggle-metrica-uso')?.addEventListener('click', () => toggleMetricaUso());
     $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());
@@ -331,7 +340,7 @@ function bindEventos() {
 export const Configuracion = {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
     cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
     pressHoldObjetivoEdicion, formatearInput, bindEventos
 };

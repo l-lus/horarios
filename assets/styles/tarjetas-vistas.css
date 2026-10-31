@@ -145,6 +145,7 @@
     background: var(--bg-card);
     border: 3px solid var(--c-blue);
     transform: translate(-50%, -50%);
+    z-index: 2;
     opacity: 0;
     pointer-events: none;
     transition: left var(--dur-slow), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease, background var(--dur-slow) ease;
@@ -206,6 +207,130 @@
 .stats-card.conteo-inicial .progress-fill {
     transition: width var(--dur-conteo) var(--ease-conteo), background-color var(--dur-slow) ease;
 }
+
+/* ─── LÍNEA DEL DÍA: entrada, salida estimada y salida con buffer ───────────── */
+
+.toggle-hint:empty {
+    display: none;
+}
+
+.progress-pista {
+    transition: margin var(--dur-slow) var(--ease-conteo);
+}
+
+/* Hint integrado: la pista reserva el alto de la línea (vista diaria o semanal) */
+.progress-pista.reserva-linea,
+.progress-pista.con-linea {
+    margin: calc(var(--space-lg) + 1.2rem) 0 calc(var(--space-lg) + 1.2rem);
+}
+
+/* Al aparecer (display none → block) los elementos de la línea entran con fundido; el estado final es el natural de cada uno */
+@keyframes linea-aparece {
+    from { opacity: 0; }
+}
+
+@keyframes linea-tick-aparece {
+    from { opacity: 0; transform: translateY(-50%) scaleY(0.2); }
+}
+
+@keyframes linea-etiqueta-aparece {
+    from { opacity: 0; translate: 0 0.35rem; }
+}
+
+.progress-pista.con-linea::before {
+    animation: linea-aparece var(--dur-slow) ease backwards;
+}
+
+.progress-pista.con-linea .linea-banda {
+    animation: linea-aparece var(--dur-slow) ease 0.25s backwards;
+}
+
+.progress-pista.con-linea .linea-tick {
+    animation: linea-tick-aparece var(--dur-slow) var(--ease-pop) 0.15s backwards;
+}
+
+.progress-pista.con-linea .linea-tick--buffer {
+    animation-delay: 0.3s;
+}
+
+.progress-pista.con-linea .linea-etiqueta {
+    animation: linea-etiqueta-aparece var(--dur-slow) var(--ease-conteo) 0.3s backwards;
+}
+
+.progress-pista.con-linea .linea-etiqueta--arriba {
+    animation-delay: 0.45s;
+}
+
+.progress-pista.con-linea::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+}
+
+.progress-pista.con-linea .progress-bar {
+    position: relative;
+}
+
+.progress-pista.con-linea .progress-fill.segmentado {
+    background-image: linear-gradient(90deg, var(--seg-1) 0 var(--seg-a), var(--seg-2) var(--seg-a) var(--seg-b), var(--seg-3) var(--seg-b) 100%);
+    background-size: var(--ancho-pista, 100%) 100%;
+    background-repeat: no-repeat;
+    background-color: transparent;
+}
+
+.linea-banda,
+.linea-tick,
+.linea-etiqueta {
+    display: none;
+    position: absolute;
+    pointer-events: none;
+}
+
+.progress-pista.con-linea .linea-banda,
+.progress-pista.con-linea .linea-tick,
+.progress-pista.con-linea .linea-etiqueta {
+    display: block;
+}
+
+.linea-banda {
+    top: 0;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background: var(--banda-color, transparent);
+    opacity: 0.35;
+    transition: left var(--dur-slow), width var(--dur-slow), background var(--dur-slow) ease;
+}
+
+.linea-tick {
+    top: 50%;
+    width: 3px;
+    height: 20px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    transform: translateY(-50%);
+    z-index: 1;
+    background: var(--text-muted);
+    transition: left var(--dur-slow), opacity var(--dur-fast) ease, background var(--dur-slow) ease;
+}
+
+.linea-tick--buffer.positivo { background: var(--c-green); }
+.linea-tick--buffer.negativo { background: var(--c-red); }
+
+.linea-etiqueta {
+    font-size: var(--text-sm);
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    transition: left var(--dur-slow), opacity var(--dur-fast) ease;
+}
+
+.linea-etiqueta--abajo { top: calc(100% + 0.8rem); }
+.linea-etiqueta--arriba { bottom: calc(100% + 0.8rem); font-weight: 600; }
+.linea-etiqueta--arriba.positivo { color: var(--c-green); }
+.linea-etiqueta--arriba.negativo { color: var(--c-red); }
 
 .stats-card.conteo-inicial .progress-punto {
     transition: left var(--dur-conteo) var(--ease-conteo), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease, background var(--dur-slow) ease;

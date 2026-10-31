@@ -165,6 +165,12 @@ function _refrescarFormatoCortoStatsCache() {
 }
 EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
 
+// "Hint integrado": la salida estimada y la salida con buffer se dibujan sobre la barra en vez de en el texto inferior
+let _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false);
+EventosApp.on('config:hint-integrado', () => {
+    _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false);
+});
+
 function _modoTextoStats() {
     return _formatoCortoStatsCache ? 'short' : 'long';
 }
@@ -302,6 +308,33 @@ function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHab
     };
 }
 
+// Datos de la línea del día, en minutos relativos a la entrada (evita problemas con el cruce de medianoche).
+// Con la jornada abierta incluye la salida estimada y la salida con buffer; cerrada, solo la estimada.
+function _calcularLinea(reg, objetivoDiario, bufferSemanal, diasHabiles) {
+    if (!reg || !reg.entrada || !(objetivoDiario > 0) || TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida)) return null;
+    const entrada = TiempoUtils.horaAMinutos(reg.entrada);
+    const rel = minutos => (((minutos - entrada) % 1440) + 1440) % 1440;
+    const cerrado = !!reg.salida;
+
+    let salidaRel = objetivoDiario * 60;
+    if (reg.tiempoFuera && !D.getIgnorarTiempoFuera()) salidaRel += TiempoUtils.horaAMinutos(reg.tiempoFuera);
+    salidaRel += _minutosBreakActivo();
+
+    const ahoraRel = rel(TiempoUtils.horaAMinutos(cerrado ? reg.salida : TiempoUtils.obtenerHoraActual()));
+    const hayBuffer = !cerrado && TiempoUtils.esFechaHabil(reg.fecha, diasHabiles) && Math.abs(bufferSemanal) > 0.01;
+    // con un buffer mayor que la jornada la salida con buffer no puede quedar antes de la entrada
+    const bufferRel = hayBuffer ? Math.max(0, salidaRel - bufferSemanal * 60) : null;
+    const hayBanda = bufferRel !== null && Math.abs(bufferRel - salidaRel) >= 1;
+
+    return {
+        entrada, cerrado, salidaRel, bufferRel, ahoraRel, hayBanda,
+        bufferPositivo: bufferSemanal > 0,
+        horaEntrada: reg.entrada,
+        horaSalida: _minutosAHoraWrap(entrada + salidaRel),
+        horaBuffer: bufferRel !== null ? _minutosAHoraWrap(entrada + bufferRel) : '',
+    };
+}
+
 // color que tendría la barra si el registro se cerrara ahora (mismo criterio que el día cerrado)
 function _colorSiCerraraAhora(tiempoHoy, objetivo, bufferSemanal) {
     if (objetivo === 0 || horasGte(tiempoHoy, objetivo)) return 'green';
@@ -337,6 +370,7 @@ function derivarVistaHoy(est) {
             const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase, 'En curso (cruce de medianoche)');
 
             const nombreDiaAyer = TiempoUtils.obtenerNombreDia(est.ayerStr);
+            const linea = _calcularLinea(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles);
             const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
 
             return {
@@ -348,6 +382,7 @@ function derivarVistaHoy(est) {
                 colorCierre: _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase),
                 cerrado: false,
                 hint, hintEsHTML,
+                linea,
             };
         }
 
@@ -366,7 +401,7 @@ function derivarVistaHoy(est) {
     }
 
     const avisoAyerHint = est.ayerAbierto
-        ? { hint: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false }
+        ? { hint: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false, aviso: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar` }
         : null;
 
     if (tipoEspecialHoy) {
@@ -424,6 +459,7 @@ function derivarVistaHoy(est) {
         mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAplica, bufferSemanalBase);
     }
 
+    const linea = _calcularLinea(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles);
     const { hint, hintEsHTML } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
 
     const colorFinal = estadoFondoColor || (estadoFondo === 'finalizado_fail' ? 'red' : 'green');
@@ -437,6 +473,7 @@ function derivarVistaHoy(est) {
         colorCierre: dayClosed ? colorBarra : _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAplica, bufferSemanalBase),
         cerrado: dayClosed,
         hint, hintEsHTML,
+        linea,
     }, avisoAyerHint);
 }
 
@@ -600,11 +637,81 @@ function _renderStats(vista, est, conteo = null) {
     }
 }
 
+let _ultimaVistaLinea = null;
+// La última marca llega al final de la barra; el dominio se estira solo si "ahora" la supera, y ahí las marcas se corren hacia la izquierda.
+function _escalaLinea(L) {
+    const fin = Math.max(L.salidaRel, L.bufferRel ?? 0, L.ahoraRel, 60);
+    return t => Math.min(100, Math.max(0, (t / fin) * 100));
+}
+
+function _colocarEtiquetaLinea(el, pct, ancho) {
+    if (!el) return;
+    const w = el.offsetWidth;
+    el.style.left = `${Math.max(0, Math.min(ancho - w, (pct / 100) * ancho - w / 2))}px`;
+}
+
+function _renderLinea(vista, pista, fill) {
+    const L = vista.linea;
+    const ancho = pista.clientWidth;
+    pista.style.setProperty('--ancho-pista', ancho ? `${ancho}px` : '100%');
+
+    const pct = _escalaLinea(L);
+    const pSalida = pct(L.salidaRel);
+    const pBuffer = L.bufferRel !== null ? pct(L.bufferRel) : null;
+    const lo = pBuffer !== null && L.hayBanda ? Math.min(pSalida, pBuffer) : pSalida;
+    const hi = pBuffer !== null && L.hayBanda ? Math.max(pSalida, pBuffer) : pSalida;
+    const colorMedio = L.bufferPositivo ? (SaldoSemanal.logicaCubiertoActiva() ? 'gold' : 'green') : 'red';
+
+    const banda = $('linea-banda');
+    banda.style.left = `${lo}%`;
+    banda.style.width = L.hayBanda ? `${hi - lo}%` : '0%';
+    banda.style.setProperty('--banda-color', `var(--c-${colorMedio})`);
+
+    const tickSalida = $('linea-tick-salida');
+    const tickBuffer = $('linea-tick-buffer');
+    tickSalida.style.left = `${pSalida}%`;
+    tickBuffer.style.left = `${pBuffer ?? pSalida}%`;
+    tickBuffer.style.opacity = L.hayBanda ? '1' : '0';
+    tickBuffer.classList.toggle('positivo', L.bufferPositivo);
+    tickBuffer.classList.toggle('negativo', !L.bufferPositivo);
+
+    const etEntrada = $('linea-et-entrada');
+    const etSalida = $('linea-et-salida');
+    const etBuffer = $('linea-et-buffer');
+    etEntrada.textContent = L.horaEntrada;
+    etSalida.textContent = L.horaSalida;
+    etBuffer.textContent = L.horaBuffer;
+    etBuffer.style.opacity = L.hayBanda ? '1' : '0';
+    etBuffer.classList.toggle('positivo', L.bufferPositivo);
+    etBuffer.classList.toggle('negativo', !L.bufferPositivo);
+    _colocarEtiquetaLinea(etEntrada, 0, ancho);
+    _colocarEtiquetaLinea(etSalida, pSalida, ancho);
+    _colocarEtiquetaLinea(etBuffer, pBuffer ?? pSalida, ancho);
+
+    // relleno: azul hasta la primera salida, color del tramo entre ambas y verde al superar la última
+    if (!L.cerrado) {
+        fill.classList.add('segmentado');
+        fill.style.setProperty('--seg-1', 'var(--c-blue)');
+        fill.style.setProperty('--seg-2', `var(--c-${colorMedio})`);
+        fill.style.setProperty('--seg-3', 'var(--c-green)');
+        fill.style.setProperty('--seg-a', `${lo}%`);
+        fill.style.setProperty('--seg-b', `${hi}%`);
+    }
+}
+
 function _renderBarra(vista, desdeCero = false) {
     const el = $('progress-bar');
     if (!el) return;
     const card = $('stats-card');
     const punto = $('progress-punto');
+    const pista = el.closest('.progress-pista');
+    const esDiaria = D.vistaActual() !== 'semana';
+    const conLinea = !!(_hintIntegrado && esDiaria && vista.linea && pista);
+    pista?.classList.toggle('con-linea', conLinea);
+    // con el hint integrado la pista reserva siempre el alto de la línea (vista diaria o semanal), así nada se corre al cambiar de vista o crear el registro
+    pista?.classList.toggle('reserva-linea', _hintIntegrado);
+    _ultimaVistaLinea = conLinea ? vista : null;
+    const anchoBarra = conLinea ? _escalaLinea(vista.linea)(vista.linea.ahoraRel) : vista.anchoBarra;
     const dur = desdeCero && card ? _durSiAnima('--dur-conteo') : 0;
     if (dur > 1) {
         card.classList.add('conteo-inicial');
@@ -613,10 +720,10 @@ function _renderBarra(vista, desdeCero = false) {
         void el.offsetWidth;
         TiempoUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
     }
-    el.style.width = `${vista.anchoBarra}%`;
+    el.style.width = `${anchoBarra}%`;
     if (punto) {
-        punto.style.left = `${vista.anchoBarra}%`;
-        const esVisible = (vista.estadoFondo === 'en_curso' || !!vista.cerrado) && vista.anchoBarra > 0;
+        punto.style.left = `${anchoBarra}%`;
+        const esVisible = (vista.estadoFondo === 'en_curso' || !!vista.cerrado) && anchoBarra > 0;
         punto.classList.toggle('visible', esVisible);
         punto.classList.toggle('cerrado', !!vista.cerrado);
         punto.dataset.color = vista.colorCierre ?? vista.colorBarra;
@@ -624,10 +731,10 @@ function _renderBarra(vista, desdeCero = false) {
         el.style.setProperty('--color-remate', `var(--c-${punto.dataset.color})`);
         el.style.setProperty('--color-barra', `var(--c-${vista.colorBarra})`);
     }
-    const esDiaria = D.vistaActual() !== 'semana';
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
-    el.classList.toggle('con-remate', vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
+    if (conLinea) _renderLinea(vista, pista, el);
+    el.classList.toggle('con-remate', !conLinea && vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
 }
 
 function _renderMensaje(vista) {
@@ -648,6 +755,7 @@ function _renderCard(vista) {
 function _renderHint(vista) {
     const el = $('toggle-hint');
     if (!el) return;
+    if (_hintIntegrado) { el.textContent = vista.aviso || ''; return; }
     if (vista.hintEsHTML) { el.innerHTML = vista.hint; }
     else el.textContent = vista.hint;
 }
@@ -796,7 +904,11 @@ function bindEventos() {
         let resizeTimer = null;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(crearObserver, 200);
+            resizeTimer = setTimeout(() => {
+                crearObserver();
+                const pista = $('progress-bar')?.closest('.progress-pista');
+                if (_ultimaVistaLinea && pista) _renderLinea(_ultimaVistaLinea, pista, $('progress-bar'));
+            }, 200);
         });
     })();
 

@@ -254,6 +254,12 @@
                             <div class="progress-fill" id="progress-bar"></div>
                         </div>
                         <span class="progress-punto" id="progress-punto"></span>
+                        <span class="linea-banda" id="linea-banda" aria-hidden="true"></span>
+                        <span class="linea-tick" id="linea-tick-salida" aria-hidden="true"></span>
+                        <span class="linea-tick linea-tick--buffer" id="linea-tick-buffer" aria-hidden="true"></span>
+                        <span class="linea-etiqueta linea-etiqueta--abajo" id="linea-et-entrada"></span>
+                        <span class="linea-etiqueta linea-etiqueta--abajo" id="linea-et-salida"></span>
+                        <span class="linea-etiqueta linea-etiqueta--arriba" id="linea-et-buffer"></span>
                     </div>
                     <div id="stats-mensaje" class="card-anim">Cargando...</div>
                     <div id="stats-buffer" class="card-anim"></div>
@@ -677,6 +683,17 @@
                                         <span>Formato de tiempo corto</span>
                                         <span class="settings-list-desc">Muestra las horas abreviadas (5h 9m) en
                                             vez de completas</span>
+                                    </span>
+                                    <span class="toggle-switch" aria-hidden="true"></span>
+                                </button>
+                                <button id="btn-toggle-hint-integrado">
+                                    <svg class="icon">
+                                        <use href="#icon-eye" />
+                                    </svg>
+                                    <span class="settings-list-text">
+                                        <span>Hint integrado en la barra</span>
+                                        <span class="settings-list-desc">Muestra la entrada, la salida estimada y la
+                                            salida con buffer sobre la barra de progreso, en vez del texto inferior</span>
                                     </span>
                                     <span class="toggle-switch" aria-hidden="true"></span>
                                 </button>

@@ -1,3 +1,5 @@
+import { esHtmlSeguro } from '../core/html.js';
+
 // ====================================================================
 // POPUPS FLOTANTES — posicionamiento, cierre y creación
 // ====================================================================
@@ -69,7 +71,8 @@ export function _crearPopupFlotante({ className, id, dataset = {}, html, event, 
     popup.className = className;
     popup.id = id;
     Object.entries(dataset).forEach(([k, v]) => { popup.dataset[k] = v; });
-    popup.innerHTML = html;
+    if (!esHtmlSeguro(html)) throw new TypeError('_crearPopupFlotante: "html" debe ser un html`...` (core/html.js)');
+    popup.innerHTML = html.valor;
     popup.style.visibility = 'hidden';
     document.body.appendChild(popup);
 

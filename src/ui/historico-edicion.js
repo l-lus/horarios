@@ -8,7 +8,7 @@ import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
 import { Calendario } from './calendario.js';
 import { Configuracion } from './configuracion.js';
-import { SeguridadYUtils as S } from '../core/seguridad.js';
+import { html } from '../core/html.js';
 const D = GestionDatos;
 
 // ====================================================================
@@ -162,12 +162,12 @@ function mostrarFiltros(event) {
     }
 
     const tipos = TiposRegistro.obtenerTodosLosTipos();
-    const opcionesTipo = tipos.map(t => `<option value="${S.escapeHtml(t.id)}">${S.escapeHtml(t.emoji)} ${S.escapeHtml(t.labelPlural)}</option>`).join('');
+    const opcionesTipo = tipos.map(t => html`<option value="${t.id}">${t.emoji} ${t.labelPlural}</option>`);
 
     const popup = _crearPopupFlotante({
         className: 'filtro-popup',
         id: '_filtro-popup',
-        html: `
+        html: html`
         <div class="filtro-popup-titulo">
             <svg class="icon"><use href="#icon-filter" /></svg>
             Filtrar Registros

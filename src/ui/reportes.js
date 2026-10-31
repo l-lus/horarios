@@ -7,6 +7,7 @@ import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { UIBase } from './base.js';
+import { html, montar } from '../core/html.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 const D = GestionDatos;
 
@@ -440,14 +441,14 @@ function _renderSeccionesReporte() {
     const cont = document.getElementById('reporte-secciones-lista');
     if (!cont) return;
     const modo = _statsProvider.getModoEstadisticas() === 'anual' ? 'anual' : 'mensual';
-    cont.innerHTML = SECCIONES_REPORTE
+    montar(cont, html`${SECCIONES_REPORTE
         .filter(sec => !sec.soloModo || sec.soloModo === modo)
-        .map(sec => `
+        .map(sec => html`
         <button type="button" class="btn-seccion-reporte btn-activo" data-seccion="${sec.id}">
             <svg class="icon"><use href="${sec.icono}" /></svg>
-            <span>${S.escapeHtml(sec.label)}</span>
+            <span>${sec.label}</span>
             <span class="toggle-switch" aria-hidden="true"></span>
-        </button>`).join('');
+        </button>`)}`);
 }
 
 function abrirModalReporteSecciones() {

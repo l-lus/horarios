@@ -8,7 +8,7 @@ import { TiposRegistro } from '../services/tipos-registro.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { UIBase } from './base.js';
 import { Configuracion } from './configuracion.js';
-import { SeguridadYUtils as S } from '../core/seguridad.js';
+import { html } from '../core/html.js';
 import { GestionDatos as D } from '../services/gestion-datos.js';
 
 // ====================================================================
@@ -411,15 +411,18 @@ function _popupStat(event, statId) {
     }
 
     let info = DESCRIPCIONES_STATS[statId];
+    const conExtra = (partes) => ({ titulo: info.titulo, desc: html`${info.desc}${partes}` });
+    const nota = (texto) => html`<hr class="stat-popup-sep"><strong>${texto}</strong>`;
+
     if (statId === 'stat-saldo' && info) {
-        let descExtra = '';
+        const partes = [];
 
         const stats = _ultimosStatsRenderizados;
         if (stats && stats.aprovechamientoSaldo) {
             const { horas: horasUtil, generado: saldoGenerado } = stats.aprovechamientoSaldo;
-            descExtra += `<hr class="stat-popup-sep">`
-                + `<div class="stat-popup-metric"><span>Generado</span><strong>${S.escapeHtml(TiempoUtils.horasATexto(saldoGenerado, 'short'))}</strong></div>`
-                + `<div class="stat-popup-metric"><span>Utilizado</span><strong>${S.escapeHtml(TiempoUtils.horasATexto(horasUtil, 'short'))}</strong></div>`;
+            partes.push(html`<hr class="stat-popup-sep">`
+                , html`<div class="stat-popup-metric"><span>Generado</span><strong>${TiempoUtils.horasATexto(saldoGenerado, 'short')}</strong></div>`
+                , html`<div class="stat-popup-metric"><span>Utilizado</span><strong>${TiempoUtils.horasATexto(horasUtil, 'short')}</strong></div>`);
         }
 
         const modoTexto = modoEstadisticas === 'anual'
@@ -429,38 +432,37 @@ function _popupStat(event, statId) {
                 : modoEstadisticas === 'semanal'
                     ? 'Se calcula a partir del PRIMER DÍA LABORAL de la semana.'
                     : null;
-        if (modoTexto) descExtra += `<hr class="stat-popup-sep"><strong>${modoTexto}</strong>`;
+        if (modoTexto) partes.push(nota(modoTexto));
 
-        if (descExtra) info = { titulo: info.titulo, desc: `${info.desc}${descExtra}` };
+        if (partes.length) info = conExtra(partes);
     }
     if (statId === 'stat-dias-trabajados' && info) {
         const diasTexto = [...D.diasHabiles()].sort((a, b) => a - b).map(d => TiempoUtils.nombreDiaPorIndice(d)).join(', ');
-        info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Días hábiles: ${diasTexto}.</strong>` };
+        info = conExtra(nota(`Días hábiles: ${diasTexto}.`));
     }
     if (statId === 'stat-tiempo-fuera-total' && info) {
         const ignorarTF = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
-        const modoTexto = ignorarTF
+        info = conExtra(nota(ignorarTF
             ? 'Actualmente NO SE RESTA el tiempo fuera del tiempo total.'
-            : 'Actualmente SE RESTA el tiempo fuera del tiempo total.';
-        info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
+            : 'Actualmente SE RESTA el tiempo fuera del tiempo total.'));
     }
     if (statId === 'stat-promedio-diario' && info) {
-        info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Actualmente las horas diarias objetivo son ${D.horasDiarias()}h.</strong>` };
+        info = conExtra(nota(`Actualmente las horas diarias objetivo son ${D.horasDiarias()}h.`));
     }
     if (!info) {
         const valueEl = $(statId);
         const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');
         const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${TiposRegistro.claveStat(t)}`);
         info = {
-            titulo: S.escapeHtml(label ? label.textContent : 'Estadística'),
+            titulo: label ? label.textContent : 'Estadística',
             desc: tipoMatch
-                ? `Cantidad de jornadas registradas como "${S.escapeHtml(tipoMatch.label)}" en el período.`
+                ? `Cantidad de jornadas registradas como "${tipoMatch.label}" en el período.`
                 : 'Detalle de esta estadística.'
         };
     }
 
     const ajusteId = AJUSTE_POR_STAT[statId];
-    const btnModificarHtml = ajusteId ? `
+    const btnModificarHtml = ajusteId ? html`
         <button class="cal-popup-btn-edit" id="_stat-popup-btn-modificar">
             <svg class="icon"><use href="#icon-settings"/></svg>
             Modificar
@@ -470,8 +472,8 @@ function _popupStat(event, statId) {
         className: 'stat-popup',
         id: '_stat-popup',
         dataset: { statId },
-        html: `
-        <div class="stat-popup-titulo">${S.escapeHtml(info.titulo)}</div>
+        html: html`
+        <div class="stat-popup-titulo">${info.titulo}</div>
         <div class="stat-popup-desc">${info.desc}</div>
         ${btnModificarHtml}`,
         event,

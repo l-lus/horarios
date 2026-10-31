@@ -111,6 +111,7 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, minutosBreakActi
         const especial = tipo && tipo.id !== 'remoto' ? tipo.color : undefined;
         const objetivo = rDia ? (esLaborable ? Compensatorios.objetivoDeRegistro(rDia) : 0) : horasDiarias;
         const activo = !!regActivo && isoDate === regActivo.fecha;
+        /** @type {'especial' | 'cerrado' | 'activo' | 'sin-registro' | 'futuro'} */
         let estado;
         if (isoDate > hoy) estado = 'futuro';
         else if (especial) estado = 'especial';

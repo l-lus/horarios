@@ -345,13 +345,18 @@ function _renderSemana(vista, pista) {
     if (!cont) return;
     const ancho = pista.clientWidth;
     const hitos = vista.hitosSemana ?? [];
-    const existentes = new Map([...cont.querySelectorAll('[data-fecha]')].map(el => [el.dataset.fecha + el.dataset.tipo, el]));
+    /** @type {Map<string, HTMLElement>} */
+    const existentes = new Map();
+    cont.querySelectorAll('span[data-fecha]').forEach(el => {
+        const nodo = /** @type {HTMLElement} */ (el);
+        existentes.set(`${nodo.dataset.fecha}${nodo.dataset.tipo}`, nodo);
+    });
     const vigentes = new Set();
     const svgBase = $('linea-tick-salida')?.firstElementChild;
 
     const items = hitos.map((h, i) => {
         let tick = existentes.get(h.fecha + 'tick');
-        let et = existentes.get(h.fecha + 'et');
+        let et = /** @type {HTMLElement} */ (existentes.get(h.fecha + 'et'));
         if (!tick) {
             tick = document.createElement('span');
             tick.dataset.fecha = h.fecha; tick.dataset.tipo = 'tick';

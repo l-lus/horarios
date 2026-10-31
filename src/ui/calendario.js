@@ -14,7 +14,7 @@ const D = GestionDatos;
 // ====================================================================
 //                     UI CALENDAR MODULE
 // ====================================================================
-const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray, _estaColapsado, _durSiAnima } = UIBase;
+const { registrarSwipe, _animarMutacion, _animarSlideElemento, _crearPopupFlotante, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray, _estaColapsado, _durSiAnima } = UIBase;
 
 function _cerrarSelectorMeses(idResaltar = null) {
     const grid = $('calendario-grid');

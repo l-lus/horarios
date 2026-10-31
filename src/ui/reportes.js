@@ -5,7 +5,6 @@ import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { UIBase } from './base.js';
 import { html, montar } from '../core/html.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';

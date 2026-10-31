@@ -157,8 +157,6 @@ function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () =
     let pointerId = null;
     let targetCaptura = null;
     let inicio = null;
-    let ultimoY = 0;
-    let esScrollManual = false;
     let tragarClic = false;
 
     function terminar(confirmar) {
@@ -171,7 +169,6 @@ function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () =
         window.removeEventListener('touchend', onTouchEnd);
         const arrastrado = arrastrando ? el : null;
         arrastrando = false;
-        esScrollManual = false;
         el = null;
         if (arrastrado) {
             if (targetCaptura) {
@@ -205,7 +202,6 @@ function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () =
             if (timer && dist > 8) {
                 clearTimeout(timer);
                 timer = null;
-                esScrollManual = true;
             }
             // El scroll (y el pull-to-refresh) lo maneja el navegador de forma nativa
             // gracias a touch-action: pan-y; al empezar el pan llega pointercancel.
@@ -255,8 +251,6 @@ function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () =
         pointerId = e.pointerId;
         targetCaptura = e.target;
         inicio = { x: e.clientX, y: e.clientY };
-        ultimoY = e.clientY;
-        esScrollManual = false;
 
         timer = setTimeout(() => {
             timer = null;
@@ -346,7 +340,6 @@ function evaluarNuevoOrdenCards(arrastrado, visibles, clientX, clientY) {
 }
 
 function iniciarDragTarjetas() {
-    let cardArrastrada = null;
     let ordenInicial = null;
     let deslizandoHasta = 0;
 
@@ -364,7 +357,6 @@ function iniciarDragTarjetas() {
         },
         capturar: (card) => card.querySelector('.card-registrar-header, .card-header-clickable') || card,
         alEmpezar: (card) => {
-            cardArrastrada = card;
             ordenInicial = obtenerOrdenCards();
             card.classList.add('reordenando');
             document.body.classList.add('tarjeta-arrastrando-activa');
@@ -406,7 +398,6 @@ function iniciarDragTarjetas() {
                 );
                 Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenInicial, true);
             }
-            cardArrastrada = null;
             ordenInicial = null;
         }
     });

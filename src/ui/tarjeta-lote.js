@@ -1,7 +1,6 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
@@ -11,7 +10,7 @@ const D = GestionDatos;
 //           UI CARD BATCH / FORM & INPUT HELPERS MODULE
 // ====================================================================
 const {
-    mostrarToast, resetearBoton, _setBtnDisabled, _flashCampo, _avisarFichaje,
+    resetearBoton, _flashCampo, _avisarFichaje,
     _animarFadeSwap, _animarSlideElemento, toggleSeccionGen, _crearOpcion,
     setIconoBtn, aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible, cancelarExitoFichaje, animarExitoFichaje,
     obtenerIconoBtn, _animarValor, _durSiAnima
@@ -44,7 +43,6 @@ function toggleModoLote(deltaSwipe, conAnimacion = true) {
     const modoContenedor = $('modo-contenedor');
     const modoNormal = $('modo-normal');
     const modoLote = $('modo-lote');
-    const btnTexto = $('btn-registrar-texto');
     const btnTimer = $('btn-timer-main');
     const btn = $('btn-agregar');
 

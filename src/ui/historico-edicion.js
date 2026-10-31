@@ -15,9 +15,9 @@ const D = GestionDatos;
 //           UI HISTORY EDIT, FILTERS & HEADER ACTIONS MODULE
 // ====================================================================
 const {
-    mostrarToast, _setBtnActivo, _actualizarOffsetsStickyMes,
-    _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante,
-    setIconoBtn, toggleSeccionGen
+    mostrarToast, _setBtnActivo, 
+    _crearPopupFlotante,
+    setIconoBtn
 } = UIBase;
 
 let edicionBloqueada = true;
@@ -272,7 +272,6 @@ function iniciarTimerAutoCierreBotones() {
 
     timerAutoCierreBotones = setTimeout(() => {
         const botones = $('botones-historico');
-        const contenido = $('contenido-historico');
         const icon = $('icon-indicator-historico');
 
         if (botones && botones.classList.contains('expanded')) {

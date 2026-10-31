@@ -1,9 +1,8 @@
 import { Reportes } from './reportes.js';
-import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { UIBase } from './base.js';
@@ -15,9 +14,9 @@ import { GestionDatos as D } from '../services/gestion-datos.js';
 //                     UI STATISTICS MODULE
 // ====================================================================
 const {
-    mostrarToast, _poblarSelect,
-    _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante,
-    toggleSeccionGen, registrarSwipe, _animarFadeSwap, descargarArchivo
+    _poblarSelect,
+    _animarSlideElemento, _crearPopupFlotante,
+    toggleSeccionGen, registrarSwipe, _animarFadeSwap
 } = UIBase;
 
 let modoEstadisticas = 'mensual';

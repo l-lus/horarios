@@ -1,10 +1,9 @@
 import { HistoricoEdicion } from './historico-edicion.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $, setColapsable } from '../core/dom.js';
+import { $ } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
@@ -17,8 +16,8 @@ const D = GestionDatos;
 //                     UI HISTORY MODULE
 // ====================================================================
 const {
-    formatoDiferencia, mostrarToast, _setBtnActivo, debounce,
-    _actualizarOffsetsStickyMes, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, setIconoBtn,
+    
+    _actualizarOffsetsStickyMes, 
     _crearFantasmaSiVisible, DUR_ANIM, _aArray, _estaColapsado, _scrollA
 } = UIBase;
 

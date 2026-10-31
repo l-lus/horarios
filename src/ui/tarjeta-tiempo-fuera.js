@@ -4,7 +4,6 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorHistorial } from '../services/gestor-historial.js';
-import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos as D } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
 import { TarjetaLote } from './tarjeta-lote.js';
@@ -12,7 +11,7 @@ import { TarjetaLote } from './tarjeta-lote.js';
 // ====================================================================
 //                     UI CARD BREAK TIMER MODULE
 // ====================================================================
-const { mostrarToast, _setBtnActivo, _setBtnDisabled, _flashCampo, _avisarFichaje, setIconoBtn } = UIBase;
+const { mostrarToast, setIconoBtn } = UIBase;
 let _renderTituloAnimadoFn = (titulo, nuevoHTML, cb) => {
     if (titulo) { titulo.innerHTML = nuevoHTML; titulo.dataset.firma = nuevoHTML; }
     if (cb) cb();
@@ -71,8 +70,6 @@ function _quitarLabelTF(contenedor) {
     const label = contenedor.querySelector('#' + TF_LABEL_ID);
     if (label) label.remove();
 }
-
-const sumarMinutosAHora = TiempoUtils.sumarMinutosAHora;
 
 function _actualizarCardTimerRunning(card, storageKey, sinAnimar = false) {
     if (!card) return;

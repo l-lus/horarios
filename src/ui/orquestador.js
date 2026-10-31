@@ -42,7 +42,7 @@ const {
 } = Calendario;
 
 const {
-    mostrarImportar, cerrarImportar, cerrarExportar, toggleCamposRangoExport,
+    cerrarImportar, cerrarExportar, toggleCamposRangoExport,
     actualizarBotonesHistorico, cerrarModalGist, gistMergeCancelar, gistSubir, gistBajar
 } = GistRespaldo;
 

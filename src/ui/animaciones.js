@@ -11,10 +11,6 @@ function _aArray(valor) {
 
 function _estaColapsado(el) { return !!el.closest('.collapsible:not(.expanded)'); }
 
-function _scrollA(el, block = 'nearest') {
-    if (el) el.scrollIntoView({ behavior: Movimiento.scrollBehavior(), block });
-}
-
 function _esperarAnim(extra = 50) { return TiempoUtils.esperar(DUR_ANIM() + extra); }
 
 function _getCSSdur(varName) {

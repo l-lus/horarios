@@ -81,7 +81,7 @@ function descargarArchivo(contenido, nombreArchivo, mime) {
     URL.revokeObjectURL(url);
 }
 
-const { _durSiAnima, DUR_ANIM, DUR_CALENDARIO, DUR_FICHAJE_OK, DUR_FICHAJE_SALIDA, _aArray, _estaColapsado, _esperarAnim, _finalizarSlidePendiente, _animarSlideElemento, _animarFadeSwap, _animarMutacion, _flashElemento, _crearFantasmaSiVisible, _animarValor, _animarConteo, _conteoEnCurso, _cancelarConteo } = Animaciones;
+const { _durSiAnima, DUR_ANIM, DUR_CALENDARIO, _aArray, _estaColapsado, _esperarAnim, _finalizarSlidePendiente, _animarSlideElemento, _animarFadeSwap, _animarMutacion, _flashElemento, _crearFantasmaSiVisible, _animarValor, _animarConteo, _conteoEnCurso, _cancelarConteo } = Animaciones;
 /**
  * @param {{ getVal: () => boolean, setVal: (v: boolean) => any, btnId: string,
  *           onAfterToggle?: (v: boolean) => void, puedeActivar?: () => boolean }} cfg

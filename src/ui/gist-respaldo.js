@@ -18,7 +18,7 @@ const D = GestionDatos;
 // ====================================================================
 const {
     mostrarToast, _setBtnDisabled, _setBtnActivo, _flashCampo, _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre,
-    descargarJSON, obtenerNombrePerfilSafe, _posicionarPopup, _registrarCierrePopup, setIconoBtn, _animarValor
+    setIconoBtn, _animarValor
 } = UIBase;
 
 const { mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport } = RespaldoLocal;

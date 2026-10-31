@@ -4,11 +4,8 @@ import { TarjetaLote } from './tarjeta-lote.js';
 import { STORAGE_KEYS, horasGte, horasEq } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
-import { FONDOS_SVG } from '../data/fondos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { GestorPerfiles } from '../services/gestor-perfiles.js';
-import { GestorHistorial } from '../services/gestor-historial.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
@@ -22,10 +19,10 @@ const D = GestionDatos;
 //                     UI CLOCK-IN CARD MODULE
 // ====================================================================
 const {
-    formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
-    _setBtnActivo, _setBtnDisabled, _flashCampo, _avisarFichaje, registrarSwipe, _animarFadeSwap,
-    _animarMutacion, _animarSlideElemento, toggleSeccionGen, _crearOpcion, setIconoBtn,
-    aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible,
+    
+    _animarFadeSwap,
+    _animarMutacion, 
+    
     _animarConteo, _conteoEnCurso, _cancelarConteo, _durSiAnima
 } = UIBase;
 
@@ -36,7 +33,6 @@ const _minutosAHoraWrap = (...args) => TarjetaTiempoFuera._minutosAHoraWrap(...a
 const _formatearMinutosCorto = (...args) => TarjetaTiempoFuera._formatearMinutosCorto(...args);
 const _obtenerOCrearLabelTF = (...args) => TarjetaTiempoFuera._obtenerOCrearLabelTF(...args);
 const _quitarLabelTF = (...args) => TarjetaTiempoFuera._quitarLabelTF(...args);
-const _actualizarCardTimerRunning = (...args) => TarjetaTiempoFuera._actualizarCardTimerRunning(...args);
 const actualizarEstadoBotonTimerMain = (...args) => TarjetaTiempoFuera.actualizarEstadoBotonTimerMain(...args);
 const toggleTimerBreakMain = (...args) => TarjetaTiempoFuera.toggleTimerBreakMain.apply(TarjetaTiempoFuera, args);
 const pegarHoraActual = (...args) => TarjetaLote.pegarHoraActual(...args);

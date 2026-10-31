@@ -1,7 +1,6 @@
 import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
-import { GestorHistorial } from '../services/gestor-historial.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
@@ -11,7 +10,7 @@ const D = GestionDatos;
 //                     UI LOCAL BACKUP MODULE (Import / Export JSON)
 // ====================================================================
 const {
-    mostrarToast, _setBtnDisabled, _setBtnActivo, _flashCampo,
+    mostrarToast, 
     descargarJSON, obtenerNombrePerfilSafe, setIconoBtn
 } = UIBase;
 

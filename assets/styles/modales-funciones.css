@@ -538,9 +538,7 @@ body.config-onboarding #theme-toggle-config {
     flex-direction: column;
     background: var(--input-bg);
     border-radius: var(--radius-md);
-    max-height: 300px;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 .btn-perfil-select {

@@ -1529,406 +1529,446 @@
             </div>
         </div>
     </div>
-    <div class="modal" id="modal-importar" role="dialog" aria-modal="true" aria-labelledby="modal-importar-titulo">
+    <div class="modal modal-scrollable" id="modal-importar" role="dialog" aria-modal="true" aria-labelledby="modal-importar-titulo">
         <div class="modal-content">
-            <h3 id="modal-importar-titulo"><svg class="icon">
-                    <use href="#icon-upload" />
-                </svg> Restaurar Registros</h3>
-            <div class="form-group">
-                <input type="file" id="file-import" accept=".json" aria-label="Archivo de backup a restaurar" />
-                <button type="button" class="btn-backup" id="btn-seleccionar-archivo">
-                    <svg class="icon">
+            <div class="modal-panel-header">
+                <h3 id="modal-importar-titulo"><svg class="icon">
                         <use href="#icon-upload" />
-                    </svg>
-                    Seleccionar archivo
-                </button>
-                <div id="nombre-archivo-seleccionado" class="config-hint-text">
-                </div>
-                <hr class="modal-hr">
+                    </svg> Restaurar Registros</h3>
             </div>
-            <div class="importar-btns">
-                <button class="btn-backup" id="btn-combinar" disabled>
-                    <svg class="icon">
-                        <use href="#icon-combine" />
-                    </svg>
-                    Combinar
-                </button>
-                <button class="btn-merge" id="btn-reemplazar" disabled>
-                    <svg class="icon">
-                        <use href="#icon-replace-swap" />
-                    </svg>
-                    Reemplazar
-                </button>
-                <button class="btn-cancel" id="btn-volver-importar">
-                    <svg class="icon">
-                        <use href="#icon-back" />
-                    </svg>
-                    Volver
-                </button>
-            </div>
-        </div>
-    </div>
-    <div class="modal" id="modal-exportar" role="dialog" aria-modal="true" aria-labelledby="modal-exportar-titulo">
-        <div class="modal-content">
-            <h3 id="modal-exportar-titulo">
-                <span class="modal-title-block">
-                    <svg class="icon">
-                        <use href="#icon-download" />
-                    </svg>
-                    Respaldar Registros
-                </span>
-            </h3>
-            <div class="form-group">
-                <select id="tipo-exportacion" aria-label="Tipo de exportación">
-                    <option value="todo">📦 Todo el perfil</option>
-                    <option value="mes-actual">📅 Mes actual</option>
-                    <option value="rango">📊 Rango personalizado</option>
-                </select>
-            </div>
-            <div id="campos-rango-exportar" class="collapsible">
-                <div class="collapsible-inner">
-                    <div class="form-group">
-                        <label for="export-fecha-desde">Desde</label>
-                        <input type="date" id="export-fecha-desde" />
-                    </div>
-                    <div class="form-group">
-                        <label for="export-fecha-hasta">Hasta</label>
-                        <input type="date" id="export-fecha-hasta" />
+            <div class="modal-panel-body custom-scroll">
+                <div class="form-group">
+                    <input type="file" id="file-import" accept=".json" aria-label="Archivo de backup a restaurar" />
+                    <button type="button" class="btn-backup" id="btn-seleccionar-archivo">
+                        <svg class="icon">
+                            <use href="#icon-upload" />
+                        </svg>
+                        Seleccionar archivo
+                    </button>
+                    <div id="nombre-archivo-seleccionado" class="config-hint-text">
                     </div>
                 </div>
             </div>
-
-            <div class="btn-group">
-                <button class="btn-export">
-                    <svg class="icon">
-                        <use href="#icon-download" />
-                    </svg>
-                    Descargar
-                </button>
-                <button class="btn-cancel" id="btn-volver-exportar">
-                    <svg class="icon">
-                        <use href="#icon-back" />
-                    </svg>
-                    Volver
-                </button>
-            </div>
-        </div>
-    </div>
-    <div class="modal" id="modal-reporte-secciones" role="dialog" aria-modal="true"
-        aria-labelledby="modal-reporte-secciones-titulo">
-        <div class="modal-content">
-            <h3 id="modal-reporte-secciones-titulo">
-                <span class="modal-title-block">
-                    <svg class="icon">
-                        <use href="#icon-list" />
-                    </svg>
-                    Secciones del reporte
-                </span>
-            </h3>
-            <div class="config-actions settings-list" id="reporte-secciones-lista"></div>
-            <div class="btn-group">
-                <button class="btn-export" id="btn-confirmar-reporte">
-                    <svg class="icon">
-                        <use href="#icon-download" />
-                    </svg>
-                    Generar
-                </button>
-                <button class="btn-cancel" id="btn-volver-reporte-secciones">
-                    <svg class="icon">
-                        <use href="#icon-back" />
-                    </svg>
-                    Volver
-                </button>
-            </div>
-        </div>
-    </div>
-    <div class="modal" id="modal-selector-perfiles" role="dialog" aria-modal="true"
-        aria-labelledby="modal-selector-perfiles-titulo">
-        <div class="modal-content">
-            <h3 id="modal-selector-perfiles-titulo">
-                <span class="modal-title-block">
-                    <svg class="icon">
-                        <use href="#icon-briefcase" />
-                    </svg>
-                    Perfiles
-                </span>
-            </h3>
-            <div id="lista-perfiles-botones" class="perfil-list-container custom-scroll"></div>
-            <div class="form-group form-group-border-top">
-                <label for="nombre-nuevo-perfil-selector">Agregar perfil</label>
-                <div class="input-with-btn">
-                    <input type="text" id="nombre-nuevo-perfil-selector" placeholder="Nombre del perfil, lugar..."
-                        maxlength="30" />
-                    <button class="time-btn" id="btn-crear-perfil" title="Crear perfil">
+            <div class="modal-panel-footer">
+                <div class="importar-btns">
+                    <button class="btn-backup" id="btn-combinar" disabled>
                         <svg class="icon">
-                            <use href="#icon-plus" />
+                            <use href="#icon-combine" />
                         </svg>
+                        Combinar
+                    </button>
+                    <button class="btn-merge" id="btn-reemplazar" disabled>
+                        <svg class="icon">
+                            <use href="#icon-replace-swap" />
+                        </svg>
+                        Reemplazar
+                    </button>
+                    <button class="btn-cancel" id="btn-volver-importar">
+                        <svg class="icon">
+                            <use href="#icon-back" />
+                        </svg>
+                        Volver
                     </button>
                 </div>
             </div>
-            <div class="btn-group">
-                <button class="btn-settings flex-1">
-                    <svg class="icon">
-                        <use href="#icon-settings" />
-                    </svg>
-                    Ajustes
-                </button>
-                <button class="time-btn" id="theme-toggle-modal" title="Cambiar tema">
-                    <svg class="icon">
-                        <use href="#icon-moon" />
-                    </svg>
-                </button>
-            </div>
-            <div class="btn-group">
-                <button class="btn-cancel">
-                    <svg class="icon">
-                        <use href="#icon-cancelar" />
-                    </svg>Cerrar
-                </button>
-                <button class="time-btn" id="btn-ayuda-perfiles" title="Ayuda">
-                    <svg class="icon">
-                        <use href="#icon-help" />
-                    </svg>
-                </button>
-            </div>
         </div>
     </div>
-    <div class="modal" id="modal-editar-perfil" role="dialog" aria-modal="true"
-        aria-labelledby="modal-editar-perfil-titulo">
+    <div class="modal modal-scrollable" id="modal-exportar" role="dialog" aria-modal="true" aria-labelledby="modal-exportar-titulo">
         <div class="modal-content">
-            <h3 id="modal-editar-perfil-titulo">
-                <span class="modal-title-block">
-                    <svg class="icon">
-                        <use href="#icon-edit" />
-                    </svg>
-                    Editar Perfil
-                </span>
-            </h3>
-
-            <div class="form-group">
-                <label for="nombre-perfil-editar">Nombre del perfil</label>
-                <input type="text" id="nombre-perfil-editar" placeholder="Nombre del perfil, lugar..." maxlength="30" />
-            </div>
-
-            <div class="btn-group">
-                <button class="btn-edit">
-                    <svg class="icon">
-                        <use href="#icon-check" />
-                    </svg>
-                    Guardar
-                </button>
-                <button class="btn-delete" id="btn-eliminar-perfil-editor">
-                    <svg class="icon">
-                        <use href="#icon-trash" />
-                    </svg>
-                    Eliminar
-                </button>
-            </div>
-
-            <div class="btn-group">
-                <button class="btn-cancel">
-                    <svg class="icon">
-                        <use href="#icon-back" />
-                    </svg>
-                    Volver
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="modal-notificaciones" role="dialog" aria-modal="true"
-        aria-labelledby="modal-notificaciones-titulo">
-        <div class="modal-content">
-            <h3 id="modal-notificaciones-titulo">
-                <span class="modal-title-block">
-                    <svg class="icon">
-                        <use href="#icon-bell" />
-                    </svg>
-                    Notificaciones
-                </span>
-            </h3>
-            <div class="form-group">
-                <div class="settings-list">
-                    <button id="btn-toggle-push-habilitado">
+            <div class="modal-panel-header">
+                <h3 id="modal-exportar-titulo">
+                    <span class="modal-title-block">
                         <svg class="icon">
-                            <use href="#icon-bell" />
+                            <use href="#icon-download" />
                         </svg>
-                        <span class="settings-list-text">
-                            <span>Notificar horario cumplido</span>
-                            <span class="settings-list-desc">Te avisa cuando llega la hora de terminar tu jornada con
-                                una notificación</span>
-                        </span>
-                        <span class="toggle-switch" aria-hidden="true"></span>
-                    </button>
-                </div>
+                        Respaldar Registros
+                    </span>
+                </h3>
             </div>
-            <div class="config-actions form-group ">
-                <label>Banco de horas</label>
-                <div class="settings-list">
-                    <button id="btn-toggle-push-buffer">
-                        <svg class="icon">
-                            <use href="#icon-shield" />
-                        </svg>
-                        <span class="settings-list-text">
-                            <span>Incluir banco de horas</span>
-                            <span class="settings-list-desc">Ajusta el aviso según las horas que debés o tenés a favor
-                                en la semana</span>
-                        </span>
-                        <span class="toggle-switch" aria-hidden="true"></span>
-                    </button>
-                    <button id="btn-toggle-push-buffer-ultimo-dia">
-                        <svg class="icon">
-                            <use href="#icon-shield" />
-                        </svg>
-                        <span class="settings-list-text">
-                            <span>Solo el último día hábil</span>
-                            <span class="settings-list-desc">Aplica el ajuste anterior únicamente el último día hábil de
-                                la
-                                semana, no todos los días</span>
-                        </span>
-                        <span class="toggle-switch" aria-hidden="true"></span>
-                    </button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>¿Cuándo?</label>
-                <div class="input-with-btn">
-                    <select id="config-push-anticipacion">
-                        <option value="0">Al cumplir el horario</option>
-                        <option value="5">5 minutos antes</option>
-                        <option value="10">10 minutos antes</option>
-                        <option value="15">15 minutos antes</option>
-                        <option value="30">30 minutos antes</option>
+            <div class="modal-panel-body custom-scroll">
+                <div class="form-group">
+                    <select id="tipo-exportacion" aria-label="Tipo de exportación">
+                        <option value="todo">📦 Todo el perfil</option>
+                        <option value="mes-actual">📅 Mes actual</option>
+                        <option value="rango">📊 Rango personalizado</option>
                     </select>
                 </div>
+                <div id="campos-rango-exportar" class="collapsible">
+                    <div class="collapsible-inner">
+                        <div class="form-group">
+                            <label for="export-fecha-desde">Desde</label>
+                            <input type="date" id="export-fecha-desde" />
+                        </div>
+                        <div class="form-group">
+                            <label for="export-fecha-hasta">Hasta</label>
+                            <input type="date" id="export-fecha-hasta" />
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="config-actions form-group">
-                <div class="settings-list">
-                    <button id="btn-probar-notificacion">
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-export">
                         <svg class="icon">
-                            <use href="#icon-bell" />
+                            <use href="#icon-download" />
                         </svg>
-                        <span class="settings-list-text">
-                            <span>Enviar notificación de prueba</span>
-                            <span class="settings-list-desc">Llega en 10 segundos: cerrá la app y tocala para comprobar que
-                                se abre</span>
-                        </span>
+                        Descargar
+                    </button>
+                    <button class="btn-cancel" id="btn-volver-exportar">
+                        <svg class="icon">
+                            <use href="#icon-back" />
+                        </svg>
+                        Volver
                     </button>
                 </div>
             </div>
-            <div id="push-permiso-estado" class="push-permiso-estado" role="status" aria-live="polite"></div>
-            <div class="config-hint-text">
-                Las notificaciones pueden retrasarse según el uso y modo de ahorro de energía del dispositivo, o
-                anularse por límites del servidor.
-            </div>
-            <div class="btn-group">
-                <button class="btn-cancel">
-                    <svg class="icon">
-                        <use href="#icon-back" />
-                    </svg>
-                    Volver
-                </button>
-            </div>
         </div>
     </div>
-
-    <div class="modal" id="modal-historial-dias" role="dialog" aria-modal="true"
-        aria-labelledby="modal-historial-dias-titulo">
+    <div class="modal modal-scrollable" id="modal-reporte-secciones" role="dialog" aria-modal="true"
+        aria-labelledby="modal-reporte-secciones-titulo">
         <div class="modal-content">
-            <h3 id="modal-historial-dias-titulo">
-                <span class="modal-title-block">
-                    <svg class="icon">
-                        <use href="#icon-list" />
-                    </svg>
-                    Historial de días laborales
-                </span>
-            </h3>
-
-            <div id="lista-historial-dias" class="perfil-list-container custom-scroll"></div>
-
-            <div class="btn-group">
-                <button class="btn-cancel">
-                    <svg class="icon">
-                        <use href="#icon-back" />
-                    </svg>
-                    Volver
-                </button>
+            <div class="modal-panel-header">
+                <h3 id="modal-reporte-secciones-titulo">
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-list" />
+                        </svg>
+                        Secciones del reporte
+                    </span>
+                </h3>
             </div>
-        </div>
-    </div>
-
-    <div class="modal" id="modal-editar-tramo-dias" role="dialog" aria-modal="true"
-        aria-labelledby="modal-editar-tramo-dias-titulo">
-        <div class="modal-content">
-            <h3 id="modal-editar-tramo-dias-titulo">
-                <span class="modal-title-block">
-                    <svg class="icon">
-                        <use href="#icon-edit" />
-                    </svg>
-                    Editar tramo
-                </span>
-            </h3>
-
-            <div class="form-group">
-                <label for="editar-tramo-desde">Vigente desde</label>
-                <input type="date" id="editar-tramo-desde" />
+            <div class="modal-panel-body custom-scroll">
+                <div class="config-actions settings-list" id="reporte-secciones-lista"></div>
             </div>
-
-            <div class="form-group">
-                <label>Días laborales</label>
-                <div class="week-selector">
-                    <label class="day-checkbox">
-                        <input type="checkbox" name="dia-habil-tramo" value="1">
-                        <span>Lu</span>
-                    </label>
-                    <label class="day-checkbox">
-                        <input type="checkbox" name="dia-habil-tramo" value="2">
-                        <span>Ma</span>
-                    </label>
-                    <label class="day-checkbox">
-                        <input type="checkbox" name="dia-habil-tramo" value="3">
-                        <span>Mi</span>
-                    </label>
-                    <label class="day-checkbox">
-                        <input type="checkbox" name="dia-habil-tramo" value="4">
-                        <span>Ju</span>
-                    </label>
-                    <label class="day-checkbox">
-                        <input type="checkbox" name="dia-habil-tramo" value="5">
-                        <span>Vi</span>
-                    </label>
-                    <label class="day-checkbox">
-                        <input type="checkbox" name="dia-habil-tramo" value="6">
-                        <span>Sa</span>
-                    </label>
-                    <label class="day-checkbox">
-                        <input type="checkbox" name="dia-habil-tramo" value="0"> <span>Do</span>
-                    </label>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-export" id="btn-confirmar-reporte">
+                        <svg class="icon">
+                            <use href="#icon-download" />
+                        </svg>
+                        Generar
+                    </button>
+                    <button class="btn-cancel" id="btn-volver-reporte-secciones">
+                        <svg class="icon">
+                            <use href="#icon-back" />
+                        </svg>
+                        Volver
+                    </button>
                 </div>
             </div>
-
-            <div class="btn-group">
-                <button class="btn-edit">
-                    <svg class="icon">
-                        <use href="#icon-check" />
-                    </svg>
-                    Guardar
-                </button>
-                <button class="btn-delete" id="btn-eliminar-tramo-dias">
-                    <svg class="icon">
-                        <use href="#icon-trash" />
-                    </svg>
-                    Eliminar
-                </button>
+        </div>
+    </div>
+    <div class="modal modal-scrollable" id="modal-selector-perfiles" role="dialog" aria-modal="true"
+        aria-labelledby="modal-selector-perfiles-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3 id="modal-selector-perfiles-titulo">
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-briefcase" />
+                        </svg>
+                        Perfiles
+                    </span>
+                </h3>
             </div>
+            <div class="modal-panel-body custom-scroll">
+                <div id="lista-perfiles-botones" class="perfil-list-container"></div>
+                <div class="form-group form-group-border-top">
+                    <label for="nombre-nuevo-perfil-selector">Agregar perfil</label>
+                    <div class="input-with-btn">
+                        <input type="text" id="nombre-nuevo-perfil-selector" placeholder="Nombre del perfil, lugar..."
+                            maxlength="30" />
+                        <button class="time-btn" id="btn-crear-perfil" title="Crear perfil">
+                            <svg class="icon">
+                                <use href="#icon-plus" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-settings flex-1">
+                        <svg class="icon">
+                            <use href="#icon-settings" />
+                        </svg>
+                        Ajustes
+                    </button>
+                    <button class="time-btn" id="theme-toggle-modal" title="Cambiar tema">
+                        <svg class="icon">
+                            <use href="#icon-moon" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="btn-group">
+                    <button class="btn-cancel">
+                        <svg class="icon">
+                            <use href="#icon-cancelar" />
+                        </svg>Cerrar
+                    </button>
+                    <button class="time-btn" id="btn-ayuda-perfiles" title="Ayuda">
+                        <svg class="icon">
+                            <use href="#icon-help" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal modal-scrollable" id="modal-editar-perfil" role="dialog" aria-modal="true"
+        aria-labelledby="modal-editar-perfil-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3 id="modal-editar-perfil-titulo">
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-edit" />
+                        </svg>
+                        Editar Perfil
+                    </span>
+                </h3>
+            </div>
+            <div class="modal-panel-body custom-scroll">
+                <div class="form-group">
+                    <label for="nombre-perfil-editar">Nombre del perfil</label>
+                    <input type="text" id="nombre-perfil-editar" placeholder="Nombre del perfil, lugar..." maxlength="30" />
+                </div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-edit">
+                        <svg class="icon">
+                            <use href="#icon-check" />
+                        </svg>
+                        Guardar
+                    </button>
+                    <button class="btn-delete" id="btn-eliminar-perfil-editor">
+                        <svg class="icon">
+                            <use href="#icon-trash" />
+                        </svg>
+                        Eliminar
+                    </button>
+                </div>
 
-            <div class="btn-group">
-                <button class="btn-cancel">
-                    <svg class="icon">
-                        <use href="#icon-back" />
-                    </svg>
-                    Volver
-                </button>
+                <div class="btn-group">
+                    <button class="btn-cancel">
+                        <svg class="icon">
+                            <use href="#icon-back" />
+                        </svg>
+                        Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal modal-scrollable" id="modal-notificaciones" role="dialog" aria-modal="true"
+        aria-labelledby="modal-notificaciones-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3 id="modal-notificaciones-titulo">
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-bell" />
+                        </svg>
+                        Notificaciones
+                    </span>
+                </h3>
+            </div>
+            <div class="modal-panel-body custom-scroll">
+                <div class="form-group">
+                    <div class="settings-list">
+                        <button id="btn-toggle-push-habilitado">
+                            <svg class="icon">
+                                <use href="#icon-bell" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Notificar horario cumplido</span>
+                                <span class="settings-list-desc">Te avisa cuando llega la hora de terminar tu jornada con
+                                    una notificación</span>
+                            </span>
+                            <span class="toggle-switch" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="config-actions form-group ">
+                    <label>Banco de horas</label>
+                    <div class="settings-list">
+                        <button id="btn-toggle-push-buffer">
+                            <svg class="icon">
+                                <use href="#icon-shield" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Incluir banco de horas</span>
+                                <span class="settings-list-desc">Ajusta el aviso según las horas que debés o tenés a favor
+                                    en la semana</span>
+                            </span>
+                            <span class="toggle-switch" aria-hidden="true"></span>
+                        </button>
+                        <button id="btn-toggle-push-buffer-ultimo-dia">
+                            <svg class="icon">
+                                <use href="#icon-shield" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Solo el último día hábil</span>
+                                <span class="settings-list-desc">Aplica el ajuste anterior únicamente el último día hábil de
+                                    la
+                                    semana, no todos los días</span>
+                            </span>
+                            <span class="toggle-switch" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>¿Cuándo?</label>
+                    <div class="input-with-btn">
+                        <select id="config-push-anticipacion">
+                            <option value="0">Al cumplir el horario</option>
+                            <option value="5">5 minutos antes</option>
+                            <option value="10">10 minutos antes</option>
+                            <option value="15">15 minutos antes</option>
+                            <option value="30">30 minutos antes</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="config-actions form-group">
+                    <div class="settings-list">
+                        <button id="btn-probar-notificacion">
+                            <svg class="icon">
+                                <use href="#icon-bell" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Enviar notificación de prueba</span>
+                                <span class="settings-list-desc">Llega en 10 segundos: cerrá la app y tocala para comprobar que
+                                    se abre</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+                <div id="push-permiso-estado" class="push-permiso-estado" role="status" aria-live="polite"></div>
+                <div class="config-hint-text">
+                    Las notificaciones pueden retrasarse según el uso y modo de ahorro de energía del dispositivo, o
+                    anularse por límites del servidor.
+                </div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-cancel">
+                        <svg class="icon">
+                            <use href="#icon-back" />
+                        </svg>
+                        Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal modal-scrollable" id="modal-historial-dias" role="dialog" aria-modal="true"
+        aria-labelledby="modal-historial-dias-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3 id="modal-historial-dias-titulo">
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-list" />
+                        </svg>
+                        Historial de días laborales
+                    </span>
+                </h3>
+            </div>
+            <div class="modal-panel-body custom-scroll">
+                <div id="lista-historial-dias" class="perfil-list-container"></div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-cancel">
+                        <svg class="icon">
+                            <use href="#icon-back" />
+                        </svg>
+                        Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal modal-scrollable" id="modal-editar-tramo-dias" role="dialog" aria-modal="true"
+        aria-labelledby="modal-editar-tramo-dias-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3 id="modal-editar-tramo-dias-titulo">
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-edit" />
+                        </svg>
+                        Editar tramo
+                    </span>
+                </h3>
+            </div>
+            <div class="modal-panel-body custom-scroll">
+                <div class="form-group">
+                    <label for="editar-tramo-desde">Vigente desde</label>
+                    <input type="date" id="editar-tramo-desde" />
+                </div>
+
+                <div class="form-group">
+                    <label>Días laborales</label>
+                    <div class="week-selector">
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="dia-habil-tramo" value="1">
+                            <span>Lu</span>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="dia-habil-tramo" value="2">
+                            <span>Ma</span>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="dia-habil-tramo" value="3">
+                            <span>Mi</span>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="dia-habil-tramo" value="4">
+                            <span>Ju</span>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="dia-habil-tramo" value="5">
+                            <span>Vi</span>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="dia-habil-tramo" value="6">
+                            <span>Sa</span>
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" name="dia-habil-tramo" value="0"> <span>Do</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-edit">
+                        <svg class="icon">
+                            <use href="#icon-check" />
+                        </svg>
+                        Guardar
+                    </button>
+                    <button class="btn-delete" id="btn-eliminar-tramo-dias">
+                        <svg class="icon">
+                            <use href="#icon-trash" />
+                        </svg>
+                        Eliminar
+                    </button>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-cancel">
+                        <svg class="icon">
+                            <use href="#icon-back" />
+                        </svg>
+                        Volver
+                    </button>
+                </div>
             </div>
         </div>
     </div>

@@ -27,6 +27,7 @@ const toggleBloqueoEdicion = (...args) => HistoricoEdicion.toggleBloqueoEdicion.
 const toggleCredito = (...args) => HistoricoEdicion.toggleCredito.apply(HistoricoEdicion, args);
 const _actualizarHintEdicion = (...args) => HistoricoEdicion._actualizarHintEdicion.apply(HistoricoEdicion, args);
 const actualizarHintGrupo = (...args) => HistoricoEdicion.actualizarHintGrupo.apply(HistoricoEdicion, args);
+const guardarEdicionGrupoDesdeFormulario = (...args) => HistoricoEdicion.guardarEdicionGrupoDesdeFormulario.apply(HistoricoEdicion, args);
 const mostrarFiltros = (...args) => HistoricoEdicion.mostrarFiltros(...args);
 const cerrarFiltros = (...args) => HistoricoEdicion.cerrarFiltros.apply(HistoricoEdicion, args);
 const toggleHistorico = (...args) => HistoricoEdicion.toggleHistorico.apply(HistoricoEdicion, args);
@@ -634,7 +635,7 @@ function bindEventos() {
     document.querySelector('#modal-editar .btn-cancel')?.addEventListener('click', () => cerrarEdicion());
 
     $('btn-lock-grupo-toggle')?.addEventListener('click', () => toggleBloqueoEdicionGrupo());
-    document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => GestionDatos.guardarEdicionGrupo());
+    document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => guardarEdicionGrupoDesdeFormulario());
     document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => GestionDatos.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => cerrarEdicionGrupo());
 

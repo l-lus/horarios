@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
+import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
@@ -137,6 +138,26 @@ function actualizarHintGrupo() {
     const diasTotales = Math.ceil(Math.abs(fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     hint.textContent = `${diasTotales} día${TiempoUtils.pluralizar(diasTotales)}`;
 }
+EventosApp.on('grupo:editar', ({ subtipo, desde, hasta }) => {
+    $('edit-grupo-tipo').value = subtipo;
+    $('edit-grupo-desde').value = desde;
+    $('edit-grupo-hasta').value = hasta;
+});
+
+async function guardarEdicionGrupoDesdeFormulario() {
+    const btnGuardar = /** @type {HTMLButtonElement} */ ($('modal-editar-grupo').querySelector('.btn-edit'));
+    btnGuardar.disabled = true;
+    try {
+        await D.guardarEdicionGrupo({
+            tipo: $('edit-grupo-tipo').value,
+            desde: $('edit-grupo-desde').value,
+            hasta: $('edit-grupo-hasta').value,
+        });
+    } finally {
+        btnGuardar.disabled = false;
+    }
+}
+
 ['edit-grupo-desde', 'edit-grupo-hasta'].forEach(id => {
     const el = $(id);
     if (el) el.addEventListener('change', actualizarHintGrupo);
@@ -146,6 +167,7 @@ let _popupFiltrosEl = null;
 
 function mostrarFiltros(event) {
     if (D.obtenerRegistrosFiltrados().length !== D.registros().length) {
+        ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => { if ($(id)) $(id).value = ''; });
         D.limpiarFiltros();
         return;
     }
@@ -361,6 +383,7 @@ export const HistoricoEdicion = {
     toggleCredito,
     _actualizarHintEdicion,
     actualizarHintGrupo,
+    guardarEdicionGrupoDesdeFormulario,
     mostrarFiltros,
     cerrarFiltros,
     toggleHistorico,

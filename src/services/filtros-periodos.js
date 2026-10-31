@@ -1,5 +1,4 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -21,9 +20,7 @@ function editarGrupo(grupo) {
         fechaHasta: grupo.registros[0].fecha
     };
     EstadoApp.setGrupoEnEdicion(grupoEnEdicion);
-    $('edit-grupo-tipo').value = grupo.subtipo;
-    $('edit-grupo-desde').value = grupoEnEdicion.fechaDesde;
-    $('edit-grupo-hasta').value = grupoEnEdicion.fechaHasta;
+    EventosApp.emit('grupo:editar', { subtipo: grupo.subtipo, desde: grupoEnEdicion.fechaDesde, hasta: grupoEnEdicion.fechaHasta });
     const notify = EstadoApp._notify();
     notify.actualizarHintGrupo();
     notify.setBloqueoEdicionGrupo(true);
@@ -46,58 +43,53 @@ function _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta) {
     return null;
 }
 
-async function guardarEdicionGrupo() {
+/** @param {{ tipo: string, desde: string, hasta: string }} datos valores crudos del formulario de edición de grupo */
+async function guardarEdicionGrupo({ tipo, desde, hasta }) {
     const grupoEnEdicion = EstadoApp.getGrupoEnEdicion();
     if (!grupoEnEdicion) return;
     const notify = EstadoApp._notify();
-    const btnGuardar = /** @type {HTMLButtonElement} */ ($('modal-editar-grupo').querySelector('.btn-edit'));
-    btnGuardar.disabled = true;
-    try {
-        const nuevoTipo = S.sanitizeString($('edit-grupo-tipo').value.trim(), 20);
-        const nuevaDesde = S.sanitizeString($('edit-grupo-desde').value.trim(), 10);
-        const nuevaHasta = S.sanitizeString($('edit-grupo-hasta').value.trim(), 10);
+    const nuevoTipo = S.sanitizeString((tipo ?? '').trim(), 20);
+    const nuevaDesde = S.sanitizeString((desde ?? '').trim(), 10);
+    const nuevaHasta = S.sanitizeString((hasta ?? '').trim(), 10);
 
-        const error = _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta);
-        if (error) { notify.mostrarToast(error, 'error'); return; }
+    const error = _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta);
+    if (error) { notify.mostrarToast(error, 'error'); return; }
 
-        if (nuevoTipo === grupoEnEdicion.subtipo && nuevaDesde === grupoEnEdicion.fechaDesde && nuevaHasta === grupoEnEdicion.fechaHasta) {
-            notify.mostrarToast('Sin cambios', 'info'); notify.cerrarEdicionGrupo(); return;
-        }
-
-        const fechasNuevas = TiempoUtils.generarRangoFechas(nuevaDesde, nuevaHasta);
-        const idsDelGrupo = new Set(grupoEnEdicion.registros.map(r => r.id));
-        const fechasSet = new Set(fechasNuevas);
-        const registros = EstadoApp.registros();
-        const conflictos = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
-        if (conflictos.length > 0) {
-            const dias = conflictos.map(r => r.fecha.substring(8, 10)).sort((a, b) => a - b).join(', ');
-            notify.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
-        }
-
-        const deltaRegistros = fechasNuevas.length - idsDelGrupo.size;
-        if (deltaRegistros > 0 && !EstadoApp._hayEspacioParaRegistros(deltaRegistros)) {
-            notify.mostrarToast('Límite de registros alcanzado', 'error'); return;
-        }
-        const notaPrevia = TiposRegistro.notaDeGrupo(grupoEnEdicion) || null;
-        const objetivoPorFecha = new Map(grupoEnEdicion.registros.map(r => [r.fecha, r.objetivoHoras]));
-        const filtrados = registros.filter(r => !idsDelGrupo.has(r.id));
-        const { entrada, salida } = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
-        const nuevosRegistros = fechasNuevas.map((fechaISO, idx) => {
-            const reg = EstadoApp._construirRegistro(fechaISO, entrada, salida);
-            if (Compensatorios._esObjetivoValido(objetivoPorFecha.get(fechaISO))) reg.objetivoHoras = objetivoPorFecha.get(fechaISO);
-            if (idx === 0 && notaPrevia) reg.notas = notaPrevia;
-            return reg;
-        });
-        filtrados.push(...nuevosRegistros);
-        EstadoApp._setRegistros(filtrados);
-        EstadoApp.ordenarRegistros();
-        EstadoApp.sincronizarPushHoy();
-        GestorHistorial.saveState(EstadoApp.registros(), `editar grupo (${nuevosRegistros.length} día${TiempoUtils.pluralizar(nuevosRegistros.length)})`);
-        const saved = await EstadoApp.guardarYActualizar(nuevosRegistros.map(r => r.id));
-        if (saved) { notify.mostrarToast('Grupo actualizado', 'success'); notify.cerrarEdicionGrupo(); }
-    } finally {
-        btnGuardar.disabled = false;
+    if (nuevoTipo === grupoEnEdicion.subtipo && nuevaDesde === grupoEnEdicion.fechaDesde && nuevaHasta === grupoEnEdicion.fechaHasta) {
+        notify.mostrarToast('Sin cambios', 'info'); notify.cerrarEdicionGrupo(); return;
     }
+
+    const fechasNuevas = TiempoUtils.generarRangoFechas(nuevaDesde, nuevaHasta);
+    const idsDelGrupo = new Set(grupoEnEdicion.registros.map(r => r.id));
+    const fechasSet = new Set(fechasNuevas);
+    const registros = EstadoApp.registros();
+    const conflictos = registros.filter(r => fechasSet.has(r.fecha) && !idsDelGrupo.has(r.id));
+    if (conflictos.length > 0) {
+        const dias = conflictos.map(r => r.fecha.substring(8, 10)).sort((a, b) => a - b).join(', ');
+        notify.mostrarToast(`Conflicto en día(s): ${dias}\n Ya existen registros en esas fechas.`, 'error'); return;
+    }
+
+    const deltaRegistros = fechasNuevas.length - idsDelGrupo.size;
+    if (deltaRegistros > 0 && !EstadoApp._hayEspacioParaRegistros(deltaRegistros)) {
+        notify.mostrarToast('Límite de registros alcanzado', 'error'); return;
+    }
+    const notaPrevia = TiposRegistro.notaDeGrupo(grupoEnEdicion) || null;
+    const objetivoPorFecha = new Map(grupoEnEdicion.registros.map(r => [r.fecha, r.objetivoHoras]));
+    const filtrados = registros.filter(r => !idsDelGrupo.has(r.id));
+    const { entrada, salida } = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
+    const nuevosRegistros = fechasNuevas.map((fechaISO, idx) => {
+        const reg = EstadoApp._construirRegistro(fechaISO, entrada, salida);
+        if (Compensatorios._esObjetivoValido(objetivoPorFecha.get(fechaISO))) reg.objetivoHoras = objetivoPorFecha.get(fechaISO);
+        if (idx === 0 && notaPrevia) reg.notas = notaPrevia;
+        return reg;
+    });
+    filtrados.push(...nuevosRegistros);
+    EstadoApp._setRegistros(filtrados);
+    EstadoApp.ordenarRegistros();
+    EstadoApp.sincronizarPushHoy();
+    GestorHistorial.saveState(EstadoApp.registros(), `editar grupo (${nuevosRegistros.length} día${TiempoUtils.pluralizar(nuevosRegistros.length)})`);
+    const saved = await EstadoApp.guardarYActualizar(nuevosRegistros.map(r => r.id));
+    if (saved) { notify.mostrarToast('Grupo actualizado', 'success'); notify.cerrarEdicionGrupo(); }
 }
 
 async function eliminarGrupoActual() {
@@ -229,9 +221,6 @@ function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutos
 
 function limpiarFiltros() {
     EstadoApp.setFiltroState({ activo: false, desde: null, hasta: null, tipo: null });
-    if ($('filtro-fecha-desde')) $('filtro-fecha-desde').value = '';
-    if ($('filtro-fecha-hasta')) $('filtro-fecha-hasta').value = '';
-    if ($('filtro-tipo')) $('filtro-tipo').value = '';
     EstadoApp.guardarYActualizar();
     const notify = EstadoApp._notify();
     notify.cerrarFiltros();

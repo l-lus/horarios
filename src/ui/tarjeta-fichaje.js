@@ -234,6 +234,7 @@ function _colocarEtiquetaLinea(el, pct, ancho) {
 // Las marcas de salida y buffer son una "T" con la barra: una curva libre que sale hacia su lado y termina en flecha en el medio de la etiqueta.
 // La etiqueta queda a la izquierda del conector; si no entra, se espeja hacia la derecha.
 const _MARGEN_ETIQUETAS = 12; // separación mínima entre horas del mismo lado antes de reubicar la entrada
+const _MARGEN_SIGLAS = 8; // separación mínima entre siglas del mismo lado en la vista semanal
 const _ANCHO_CONECTOR = 21; // de la marca a la punta de la flecha
 const _SEPARACION_ETIQUETA = 4;
 function _colocarEtiquetaConector(et, tick, pct, ancho) {
@@ -336,9 +337,10 @@ function _renderLinea(vista, pista, fill) {
 
 let _ultimaVistaSemana = null;
 
-// Vista semanal con hint integrado: un hito por día con horas, donde termina su porción del total, con su flecha y la sigla (lun, mar...).
+// Vista semanal con hint integrado: un hito por día, al final de su franja, con su flecha y la sigla (lun, mar...).
 // Los elementos se reutilizan por fecha: así no se reinicia su animación de aparición en cada actualización.
-function _renderSemana(vista, pista, anchoBarra) {
+// Cada sigla va del lado que tenga lugar (primero el que le toca por orden, luego el otro); si en ninguno entra, queda solo el punto sobre la barra.
+function _renderSemana(vista, pista) {
     const cont = $('linea-semana');
     if (!cont) return;
     const ancho = pista.clientWidth;
@@ -347,9 +349,7 @@ function _renderSemana(vista, pista, anchoBarra) {
     const vigentes = new Set();
     const svgBase = $('linea-tick-salida')?.firstElementChild;
 
-    hitos.forEach((h, i) => {
-        const arriba = i % 2 === 1;   // alternan lados para que las siglas no se encimen
-        const pct = h.fraccion * anchoBarra;
+    const items = hitos.map((h, i) => {
         let tick = existentes.get(h.fecha + 'tick');
         let et = existentes.get(h.fecha + 'et');
         if (!tick) {
@@ -358,16 +358,53 @@ function _renderSemana(vista, pista, anchoBarra) {
             if (svgBase) tick.appendChild(svgBase.cloneNode(true));
             et = document.createElement('span');
             et.dataset.fecha = h.fecha; et.dataset.tipo = 'et';
+            tick.className = 'linea-tick dia';
+            et.className = 'linea-etiqueta dia linea-etiqueta--abajo';
             cont.append(tick, et);
         }
-        tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}`;
-        et.className = `linea-etiqueta dia linea-etiqueta--${arriba ? 'arriba' : 'abajo'}`;
+        et.classList.remove('linea-etiqueta--oculta');   // si estaba oculta hay que volver a medirla
         et.textContent = h.sigla;
-        tick.style.left = `${pct}%`;
-        _colocarEtiquetaConector(et, tick, pct, ancho);
         vigentes.add(h.fecha + 'tick'); vigentes.add(h.fecha + 'et');
+        const pct = h.fraccion * 100;   // las franjas se miden sobre toda la pista, no sobre la parte llena
+        const x = (pct / 100) * ancho;
+        const w = et.offsetWidth;
+        const espejado = x - _ANCHO_CONECTOR - _SEPARACION_ETIQUETA - w < 0;
+        // tramo horizontal que ocupa el conector con su etiqueta (la etiqueta va a la izquierda o, espejada, a la derecha)
+        const desde = espejado ? x - 3 : x - _ANCHO_CONECTOR - _SEPARACION_ETIQUETA - w - _MARGEN_SIGLAS / 2;
+        const hasta = espejado ? x + _ANCHO_CONECTOR + _SEPARACION_ETIQUETA + w + _MARGEN_SIGLAS / 2 : x + 3;
+        return { h, i, tick, et, pct, desde, hasta, preferido: i % 2 === 1 ? 'arriba' : 'abajo', lado: null };
+    });
+
+    const ocupado = { arriba: [], abajo: [] };
+    const libre = (lado, it) => ocupado[lado].every(o => it.hasta <= o.desde || it.desde >= o.hasta);
+    [...items].sort((a, b) => (b.h.prioridad ?? 2) - (a.h.prioridad ?? 2) || a.i - b.i).forEach(it => {
+        const otro = it.preferido === 'arriba' ? 'abajo' : 'arriba';
+        const lado = [it.preferido, otro].find(l => libre(l, it));
+        it.lado = lado ?? null;
+        if (lado) ocupado[lado].push(it);
+    });
+
+    items.forEach(it => {
+        const arriba = (it.lado ?? it.preferido) === 'arriba';
+        it.tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}${it.lado ? '' : ' solo-punto'}`;
+        it.et.className = `linea-etiqueta dia linea-etiqueta--${arriba ? 'arriba' : 'abajo'}${it.lado ? '' : ' linea-etiqueta--oculta'}`;
+        it.tick.style.left = `${it.pct}%`;
+        _colocarEtiquetaConector(it.et, it.tick, it.pct, ancho);
     });
     existentes.forEach((el, clave) => { if (!vigentes.has(clave)) el.remove(); });
+}
+
+// Los tramos vienen como fracciones de la pista; el relleno mide hasta el final del último, así que se reescalan a ese ancho
+function _gradienteSemana(tramos, fin) {
+    const pct = f => `${((f / fin) * 100).toFixed(3)}%`;
+    const paradas = [];
+    let cursor = 0;
+    tramos.forEach(t => {
+        if (t.desde > cursor + 1e-6) paradas.push(`transparent ${pct(cursor)} ${pct(t.desde)}`);
+        paradas.push(`var(--c-${t.color}) ${pct(t.desde)} ${pct(t.hasta)}`);
+        cursor = t.hasta;
+    });
+    return `linear-gradient(90deg, ${paradas.join(', ')})`;
 }
 
 function _renderBarra(vista, desdeCero = false) {
@@ -378,7 +415,7 @@ function _renderBarra(vista, desdeCero = false) {
     const pista = el.closest('.progress-pista');
     const esDiaria = EstadoApp.vistaActual() !== 'semana';
     const conLinea = !!(_hintIntegradoActivo() && esDiaria && vista.linea && pista);
-    const conSemana = !!(_hintIntegradoActivo() && !esDiaria && vista.hitosSemana?.length && vista.anchoBarra > 0 && pista);
+    const conSemana = !!(_hintIntegradoActivo() && !esDiaria && vista.tramosSemana?.length && vista.anchoBarra > 0 && pista);
     pista?.classList.toggle('con-linea', conLinea || conSemana);
     pista?.classList.toggle('linea-semanal', conSemana);
     // con el hint integrado la pista reserva siempre el alto de la línea (vista diaria o semanal), así nada se corre al cambiar de vista o crear el registro
@@ -395,11 +432,8 @@ function _renderBarra(vista, desdeCero = false) {
         TiempoUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
     }
     el.style.width = `${anchoBarra}%`;
-    // vista semanal con hint integrado: cada tramo (día) lleva el color del estado de ese día
-    const hitosColor = conSemana ? vista.hitosSemana : [];
-    el.style.backgroundImage = conSemana
-        ? `linear-gradient(90deg, ${hitosColor.map((h, i) => `${h.color ? `var(--c-${h.color})` : 'transparent'} ${i ? (hitosColor[i - 1].fraccion * 100).toFixed(3) : 0}% ${(h.fraccion * 100).toFixed(3)}%`).join(', ')})`
-        : '';
+    // vista semanal con hint integrado: la parte llena es un degradé a cortes netos por día (el relleno de cada franja con el color de su estado, huecos transparentes)
+    el.style.backgroundImage = conSemana ? _gradienteSemana(vista.tramosSemana, vista.anchoBarra / 100) : '';
     el.style.backgroundColor = conSemana ? 'transparent' : '';   // los tramos sin color dejan ver la pista
     if (punto) {
         punto.style.left = `${anchoBarra}%`;
@@ -407,7 +441,7 @@ function _renderBarra(vista, desdeCero = false) {
         punto.classList.toggle('visible', esVisible);
         punto.classList.toggle('cerrado', !!vista.cerrado);
         // abierto: el remate toma el color del tramo donde está; cerrado: el color final del registro
-        punto.dataset.color = conSemana ? (vista.hitosSemana[vista.hitosSemana.length - 1].color ?? vista.colorBarra) : vista.cerrado ? (vista.colorCierre ?? vista.colorBarra) : vista.colorBarra;
+        punto.dataset.color = conSemana ? vista.colorFinSemana : vista.cerrado ? (vista.colorCierre ?? vista.colorBarra) : vista.colorBarra;
         // el último tramo de la barra se degrada hacia el color del remate
         el.style.setProperty('--color-remate', `var(--c-${punto.dataset.color})`);
         el.style.setProperty('--color-barra', `var(--c-${vista.colorBarra})`);
@@ -417,11 +451,11 @@ function _renderBarra(vista, desdeCero = false) {
     if (inicio && punto) {
         inicio.classList.toggle('visible', punto.classList.contains('visible'));
         inicio.classList.add('cerrado'); // siempre relleno: marca el hito del comienzo
-        inicio.dataset.color = conSemana ? (vista.hitosSemana[0].color ?? vista.colorBarra) : (conLinea && !vista.cerrado ? 'blue' : vista.colorBarra);
+        inicio.dataset.color = conSemana ? vista.colorInicioSemana : (conLinea && !vista.cerrado ? 'blue' : vista.colorBarra);
     }
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
-    if (conSemana) _renderSemana(vista, pista, anchoBarra);
+    if (conSemana) _renderSemana(vista, pista);
     if (conLinea) {
         const colorTramo = _renderLinea(vista, pista, el);
         if (punto && !vista.cerrado) punto.dataset.color = colorTramo(anchoBarra);
@@ -594,7 +628,7 @@ function bindEventos() {
                 crearObserver();
                 const pista = $('progress-bar')?.closest('.progress-pista');
                 if (_ultimaVistaLinea && pista) _renderLinea(_ultimaVistaLinea, pista, $('progress-bar'));
-                if (_ultimaVistaSemana && pista) _renderSemana(_ultimaVistaSemana, pista, parseFloat($('progress-bar').style.width) || 0);
+                if (_ultimaVistaSemana && pista) _renderSemana(_ultimaVistaSemana, pista);
             }, 200);
         });
     })();

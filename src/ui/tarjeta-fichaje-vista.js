@@ -85,7 +85,6 @@ function _conAvisoAyer(vista, avisoAyerHint) {
 
 const _SIGLAS_DIA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
-// Hitos de la vista semanal: uno por día con horas, ubicado donde termina su porción del total (fracción 0-1 de la parte llena de la barra)
 // Color del tramo de un día, con el mismo criterio que la vista diaria: en curso azul; cerrado verde si cumplió, dorado si lo cubre el saldo, rojo si faltó
 function _colorEstadoDia(d) {
     if (d.activo) return 'blue';
@@ -93,17 +92,34 @@ function _colorEstadoDia(d) {
     return SaldoSemanal.cubiertoPorSaldo(d.fecha) ? 'gold' : 'red';
 }
 
-function _hitosSemana(horasPorDia = []) {
-    // los días especiales y los sin registro no tienen horas: su tramo mide una jornada nominal; el especial lleva el color de su tipo y el sin registro ninguno (color null)
-    const peso = d => (d.especial || d.sinRegistro) ? (d.nominal ?? 0) : d.horas;
-    const dias = horasPorDia.filter(d => peso(d) > 0.0001);
-    const total = dias.reduce((acc, d) => acc + peso(d), 0);
-    if (total <= 0) return [];
-    let acumulado = 0;
-    return dias.map(d => {
-        acumulado += peso(d);
-        return { fecha: d.fecha, sigla: _SIGLAS_DIA[TiempoUtils.parsearFechaLocal(d.fecha).getDay()], fraccion: acumulado / total, color: d.sinRegistro ? null : (d.especial ?? _colorEstadoDia(d)) };
+// Barra semanal con hint integrado: cada día tiene una franja fija de la barra (proporcional a su objetivo) y lo trabajado la rellena con el color del estado del día.
+// Un día especial rellena su franja entera con el color de su tipo; uno sin registro (o futuro) la deja vacía.
+function _franjasSemana(diasSemana, horasDiarias) {
+    if (!diasSemana?.length || !(horasDiarias > 0)) return null;
+    const pesos = diasSemana.map(d => d.objetivo > 0 ? d.objetivo : horasDiarias);
+    const total = pesos.reduce((a, b) => a + b, 0);
+    const sigla = d => _SIGLAS_DIA[TiempoUtils.parsearFechaLocal(d.fecha).getDay()];
+
+    const tramos = [];
+    const hitos = [];
+    let inicio = 0;
+    let colorPrimera = 'vacio';
+    diasSemana.forEach((d, i) => {
+        const fin = inicio + pesos[i] / total;
+        const relleno = d.estado === 'especial' ? 1
+            : d.estado === 'activo' || d.estado === 'cerrado' ? Math.min(1, Math.max(0, d.total / pesos[i])) : 0;
+        const color = d.estado === 'especial' ? d.especial : d.estado === 'activo' ? 'blue' : d.estado === 'cerrado' ? _colorEstadoDia(d) : null;
+        if (relleno > 0.0001 && color) tramos.push({ desde: inicio, hasta: inicio + (fin - inicio) * relleno, color });
+        if (i === 0) colorPrimera = relleno > 0.0001 && color ? color : 'vacio';   // el remate del comienzo está sobre la primera franja, aunque esté vacía
+
+        hitos.push({
+            fecha: d.fecha, sigla: sigla(d), fraccion: fin,
+            prioridad: d.estado === 'cerrado' || d.estado === 'activo' ? 2 : d.estado === 'especial' ? 1 : 0   // si no entran todas las siglas se conservan primero las de días con horas
+        });
+        inicio = fin;
     });
+    if (!tramos.length) return null;
+    return { hitos, tramos, fin: tramos[tramos.length - 1].hasta, colorPrimera };
 }
 
 function derivarVistaSemana(est) {
@@ -151,18 +167,22 @@ function derivarVistaSemana(est) {
     }
 
     const cerrado = !semanaAbierta && !todosEspeciales && horasDiarias > 0;
+    const franjas = _hintIntegrado && horasDiarias > 0 && !todosEspeciales ? _franjasSemana(est.diasSemana, horasDiarias) : null;
 
     return {
         titulo: `${icono('#icon-calendar-simple')} Esta Semana`,
         stats: todosEspeciales ? '🌞' : _horasTextoStats(tot),
         mensaje, mostrarMensaje,
-        colorBarra, anchoBarra: progreso,
+        colorBarra, anchoBarra: franjas ? franjas.fin * 100 : progreso,
         colorBorde, estadoFondo,
         colorCierre: colorBarra,
         cerrado,
         hint: 'Tocá para ver Hoy',
         hintEsHTML: false,
-        hitosSemana: _hitosSemana(est.horasPorDia),
+        ...(franjas ? {
+            hitosSemana: franjas.hitos, tramosSemana: franjas.tramos,
+            colorInicioSemana: franjas.colorPrimera, colorFinSemana: franjas.tramos[franjas.tramos.length - 1].color
+        } : {}),
     };
 }
 

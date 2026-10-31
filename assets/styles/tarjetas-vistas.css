@@ -164,6 +164,8 @@
 .progress-punto[data-color="orange"] { border-color: var(--c-orange); }
 .progress-punto[data-color="gold"] { border-color: var(--c-gold); }
 .progress-punto[data-color="blue"] { border-color: var(--c-blue); }
+/* Remate sobre una franja vacía (vista semanal): neutro, como la pista */
+.progress-punto[data-color="vacio"] { border-color: color-mix(in srgb, var(--text-muted) 45%, var(--bg-card)); }
 
 .progress-punto.cerrado {
     border: none;
@@ -174,6 +176,7 @@
 .progress-punto.cerrado[data-color="purple"] { background: linear-gradient(var(--c-purple), var(--c-purple)), var(--bg-card); }
 .progress-punto.cerrado[data-color="orange"] { background: linear-gradient(var(--c-orange), var(--c-orange)), var(--bg-card); }
 .progress-punto.cerrado[data-color="gold"] { background: linear-gradient(var(--c-gold), var(--c-gold)), var(--bg-card); }
+.progress-punto.cerrado[data-color="vacio"] { background: linear-gradient(color-mix(in srgb, var(--text-muted) 45%, var(--bg-card)), color-mix(in srgb, var(--text-muted) 45%, var(--bg-card))), var(--bg-card); }
 .progress-punto.cerrado[data-color="blue"] { background: linear-gradient(var(--c-blue), var(--c-blue)), var(--bg-card); }
 
 .progress-fill {
@@ -306,6 +309,10 @@
 
 .linea-etiqueta--arriba.dia { font-weight: 400; }
 
+/* Sigla que no entra: queda solo el punto de anclaje sobre la barra */
+.linea-etiqueta--oculta { display: none !important; }
+.linea-tick.solo-punto path { display: none; }
+
 .linea-banda {
     top: 0;
     height: 100%;
@@ -341,6 +348,12 @@
     stroke-linecap: round;
     stroke-linejoin: round;
     transition: color var(--dur-slow) ease;
+}
+
+/* La línea de la flecha es un trazo que engrosa desde el punto de anclaje hasta la punta (polígono relleno); la punta sí es un trazo de ancho fijo */
+.linea-tick .linea-cola {
+    fill: currentColor;
+    stroke: none;
 }
 
 .linea-tick .linea-ancla {

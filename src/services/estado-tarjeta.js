@@ -76,38 +76,15 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, minutosBreakActi
     const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
     let totalSemana = 0;
     let descuentoCompensatorioSemana = 0;
-    /** @type {{ fecha: string, horas: number, total: number, objetivo: number, activo: boolean, especial?: string, sinRegistro?: boolean, nominal?: number }[]} */
-    const horasPorDia = [];
-    const objetivoDelDia = r => TiempoUtils.esFechaHabil(r.fecha, Compensatorios.diasHabilesEnFecha(r.fecha)) ? Compensatorios.objetivoDeRegistro(r) : 0;
     registrosSemana.forEach(r => {
-        if (regActivo && r.fecha === regActivo.fecha) {
-            totalSemana += tiempoHoy;
-            horasPorDia.push({ fecha: r.fecha, horas: tiempoHoy, total: tiempoHoy, objetivo: objetivoDelDia(r), activo: true });
-            return;
-        }
-        const horasDia = Compensatorios.horasEfectivasDeRegistro(r);
-        const tipoDiaEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-        if (tipoDiaEspecial && tipoDiaEspecial.id !== 'remoto') {
-            // día especial (licencia, feriado...): sin horas, pero lleva su propio tramo del color del tipo, con el ancho de una jornada
-            horasPorDia.push({ fecha: r.fecha, horas: 0, total: 0, objetivo: 0, activo: false, especial: tipoDiaEspecial.color, nominal: horasDiarias });
-        } else {
-            horasPorDia.push({ fecha: r.fecha, horas: horasDia, total: r.total ?? horasDia, objetivo: objetivoDelDia(r), activo: false });
-        }
-        totalSemana += horasDia;
+        if (regActivo && r.fecha === regActivo.fecha) { totalSemana += tiempoHoy; return; }
+        totalSemana += Compensatorios.horasEfectivasDeRegistro(r);
         const tipoDia = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
         if (!tipoDia) {
             descuentoCompensatorioSemana += Compensatorios.montoCompensadoDeReferencia(r, asignacionesCompensatorio);
         }
     });
     const totalSemanaProgreso = totalSemana - descuentoCompensatorioSemana;
-
-    // días laborables ya pasados sin registro: se marcan en la barra con un tramo sin color (queda la pista)
-    const fechasConRegistro = new Set(registrosSemana.map(r => r.fecha));
-    for (const isoDate of TiempoUtils.generarRangoFechas(ini, fechaLimite)) {
-        if (isoDate >= hoy || fechasConRegistro.has(isoDate)) continue;
-        if (!Compensatorios.diasHabilesEnFecha(isoDate).includes(TiempoUtils.parsearFechaLocal(isoDate).getDay())) continue;
-        horasPorDia.push({ fecha: isoDate, horas: 0, total: 0, objetivo: horasDiarias, activo: false, sinRegistro: true, nominal: horasDiarias });
-    }
 
     const registrosSemanaCompletaPorFecha = new Map(
         registros.filter(r => r.fecha >= ini && r.fecha <= fn).map(r => [r.fecha, r])
@@ -123,6 +100,26 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, minutosBreakActi
     }
     const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 
+    // Franjas de la semana para la barra con hitos: un día por cada laborable (o con registro), con su objetivo, lo trabajado y su estado
+    /** @type {{ fecha: string, objetivo: number, total: number, activo: boolean, estado: 'especial' | 'cerrado' | 'activo' | 'sin-registro' | 'futuro', especial?: string }[]} */
+    const diasSemana = [];
+    for (const isoDate of TiempoUtils.generarRangoFechas(ini, fn)) {
+        const rDia = registrosSemanaCompletaPorFecha.get(isoDate) ?? null;
+        const esLaborable = Compensatorios.diasHabilesEnFecha(isoDate).includes(TiempoUtils.parsearFechaLocal(isoDate).getDay());
+        if (!esLaborable && !rDia) continue;
+        const tipo = rDia ? TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida) : null;
+        const especial = tipo && tipo.id !== 'remoto' ? tipo.color : undefined;
+        const objetivo = rDia ? (esLaborable ? Compensatorios.objetivoDeRegistro(rDia) : 0) : horasDiarias;
+        const activo = !!regActivo && isoDate === regActivo.fecha;
+        let estado;
+        if (isoDate > hoy) estado = 'futuro';
+        else if (especial) estado = 'especial';
+        else if (activo) estado = 'activo';
+        else if (rDia) estado = 'cerrado';
+        else estado = isoDate < hoy ? 'sin-registro' : 'futuro';
+        diasSemana.push({ fecha: isoDate, objetivo, total: activo ? tiempoHoy : (rDia?.total ?? 0), activo, estado, especial });
+    }
+
     return {
         hoy: regRetenido ? regRetenido.fecha : hoy, ini, fn,
         registros, regHoy, esRetenido: !!regRetenido,
@@ -130,7 +127,7 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, minutosBreakActi
         diasHabiles, esDiaHabil: regRetenido ? TiempoUtils.esFechaHabil(regRetenido.fecha, diasHabiles) : esDiaHabil,
         semanaAbierta, bufferSemanal, bufferSemanalBase,
         totalSemana, totalSemanaProgreso, objetivoSemana,
-        horasPorDia: horasPorDia.sort((a, b) => a.fecha.localeCompare(b.fecha)),
+        diasSemana,
         tipoEspecialHoy, tiempoHoy,
         todosEspeciales,
         ayerAbierto, ayerStr: ayer, regAyer

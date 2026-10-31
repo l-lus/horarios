@@ -10,6 +10,9 @@ import { Animaciones } from './animaciones.js';
 // Este módulo solo dibuja: los datos ya vienen resueltos en la vista (tarjeta-fichaje-vista.js).
 const { _durSiAnima } = Animaciones;
 
+// En móviles (mismo corte que el CSS responsivo) las etiquetas de los días usan la inicial, que es más angosta
+const _consultaMovil = window.matchMedia('(max-width: 600px)');
+
 // La última marca llega al final de la barra; el dominio se estira solo si "ahora" la supera, y ahí las marcas se corren hacia la izquierda.
 function _escalaLinea(L) {
     const fin = Math.max(L.salidaRel, L.bufferRel ?? 0, L.ahoraRel, 60);
@@ -121,7 +124,7 @@ function _renderLinea(vista, pista, fill) {
     return x => (x < lo ? 'blue' : (x < hi ? colorMedio : 'green'));
 }
 
-// Vista semanal con hint integrado: un hito por día con horas (los días seguidos sin registro, futuros o especiales del mismo color se fusionan), al final de su franja, con su flecha y la sigla (lun, mar...).
+// Vista semanal con hint integrado: un hito por día, al final de su franja, con su flecha y la inicial (L, M, X...); los días seguidos sin registro o especiales del mismo color se fusionan y hoy lleva un badge.
 // Los elementos se reutilizan por fecha: así no se reinicia su animación de aparición en cada actualización.
 // Cada sigla va del lado que tenga lugar (primero el que le toca por orden, luego el otro); si en ninguno entra, queda solo el punto sobre la barra.
 function _renderSemana(vista, pista) {
@@ -152,7 +155,8 @@ function _renderSemana(vista, pista) {
             cont.append(tick, et);
         }
         et.classList.remove('linea-etiqueta--oculta');   // si estaba oculta hay que volver a medirla
-        et.textContent = h.sigla;
+        et.classList.toggle('linea-etiqueta--hoy', !!h.hoy);   // el badge cambia el ancho: tiene que estar antes de medir
+        et.textContent = _consultaMovil.matches ? h.inicial : h.sigla;
         vigentes.add(h.fecha + 'tick'); vigentes.add(h.fecha + 'et');
         const pct = h.fraccion * 100;   // las franjas se miden sobre toda la pista, no sobre la parte llena
         const { desde, hasta } = geometriaConector((pct / 100) * ancho, et.offsetWidth, MARGEN_SIGLAS);
@@ -165,7 +169,7 @@ function _renderSemana(vista, pista) {
         const lado = lados.get(it) ?? null;
         const arriba = (lado ?? it.preferido) === 'arriba';
         it.tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}${lado ? '' : ' solo-punto'}`;
-        it.et.className = `linea-etiqueta dia linea-etiqueta--${arriba ? 'arriba' : 'abajo'}${lado ? '' : ' linea-etiqueta--oculta'}`;
+        it.et.className = `linea-etiqueta dia linea-etiqueta--${arriba ? 'arriba' : 'abajo'}${it.h.hoy ? ' linea-etiqueta--hoy' : ''}${lado ? '' : ' linea-etiqueta--oculta'}`;
         it.tick.style.left = `${it.pct}%`;
         _colocarEtiquetaConector(it.et, it.tick, it.pct, ancho);
     });

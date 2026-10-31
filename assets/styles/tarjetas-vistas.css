@@ -309,6 +309,16 @@
 
 .linea-etiqueta--arriba.dia { font-weight: 400; }
 
+/* Hoy en la vista semanal: la inicial va en un badge */
+.linea-etiqueta--hoy.dia {
+    font-weight: var(--fw-semibold);
+    color: var(--bg-card);
+    background: var(--text-main);   /* neutro e invertido en cada tema: no se confunde con los colores de estado de la barra */
+    border-radius: var(--radius-full);
+    padding: var(--space-2xs) var(--space-xsm);
+    line-height: 1;
+}
+
 /* Sigla que no entra: queda solo el punto de anclaje sobre la barra */
 .linea-etiqueta--oculta { display: none !important; }
 .linea-tick.solo-punto .hito-flecha { display: none; }

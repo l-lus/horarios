@@ -115,9 +115,11 @@ body {
     color: var(--text-main);
 }
 
-/* Modales y hojas: un escalón más redondeado que las tarjetas */
+/* Modales y hojas: un escalón más redondeado que las tarjetas.
+   Sin margen inferior (lo hereda de .card): el contenedor flex lo centraría contándolo y dejaría más aire abajo que arriba */
 .modal-content {
     border-radius: var(--radius-xl);
+    margin-bottom: 0;
 }
 
 .card h2,

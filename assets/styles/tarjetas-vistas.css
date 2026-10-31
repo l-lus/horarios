@@ -1160,9 +1160,30 @@
     gap: var(--space-sm);
 }
 
+/* El texto del buffer ocupa una sola línea: la parte principal ("... faltantes") se recorta con puntos suspensivos si hace falta,
+   y " esta semana" se muestra solo si entra a continuación (si no entra pasa a una segunda línea que queda recortada) */
 #stats-buffer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
     font-size: var(--text-base);
+    line-height: var(--lh-normal);
     min-height: 1.2rem;
+    max-height: calc(1em * var(--lh-normal));
+    overflow: hidden;
+}
+
+#stats-buffer .buffer-semanal-texto:not(.buffer-semanal-sufijo) {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#stats-buffer .buffer-semanal-sufijo {
+    margin-left: 0.3em;
+    white-space: nowrap;
 }
 
 .card-registrar-header {

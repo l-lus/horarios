@@ -500,9 +500,13 @@ function _renderBuffer(est) {
         span.className = `buffer-semanal-texto ${claseColor}`;
         const { texto: textoBuffer, singular } = _cantidadHoras(Math.abs(bufferSemanal));
         const adjetivo = esPositivo ? (singular ? 'extra' : 'extras') : (singular ? 'faltante' : 'faltantes');
-        span.textContent = `${textoBuffer} ${adjetivo} esta semana`;
+        span.textContent = `${textoBuffer} ${adjetivo}`;
         span.insertBefore(punto, span.firstChild);
-        el.appendChild(span);
+        // " esta semana" va aparte: si no entra en la misma línea, se oculta (ver #stats-buffer)
+        const sufijo = document.createElement('span');
+        sufijo.className = `buffer-semanal-texto buffer-semanal-sufijo ${claseColor}`;
+        sufijo.textContent = 'esta semana';
+        el.append(span, sufijo);
     }
 }
 

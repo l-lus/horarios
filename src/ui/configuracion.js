@@ -82,6 +82,13 @@ const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBoton
         onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
     });
 
+const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRuedaCalendario } =
+    _crearToggleConfig({
+        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, true),
+        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.RUEDA_CALENDARIO, v),
+        btnId: 'btn-toggle-rueda-calendario',
+    });
+
 const { toggle: toggleHintIntegrado, actualizarEstado: actualizarEstadoBotonHintIntegrado } =
     _crearToggleConfig({
         getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false),
@@ -311,6 +318,7 @@ function bindEventos() {
     $('btn-toggle-animaciones')?.addEventListener('click', () => toggleReducirAnimaciones());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
+    $('btn-toggle-rueda-calendario')?.addEventListener('click', () => toggleRuedaCalendario());
     $('btn-toggle-hint-integrado')?.addEventListener('click', () => toggleHintIntegrado());
     $('btn-toggle-metrica-uso')?.addEventListener('click', () => toggleMetricaUso());
     $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
@@ -342,7 +350,7 @@ function bindEventos() {
 }
 
 export const Configuracion = {
-    actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
+    actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
     actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
     cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,

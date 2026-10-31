@@ -12,6 +12,7 @@ export const STORAGE_KEYS = Object.freeze({
     VISTA_ACTUAL: 'vistaActual',
     MODO_ESTADISTICAS: 'modoEstadisticas',
     HOVER_POPUP: 'hoverPopupCalendario',
+    RUEDA_CALENDARIO: 'ruedaCalendario',
     REDUCIR_ANIMACIONES: 'reducirAnimaciones',
     FORMATO_CORTO_STATS: 'formatoCortoStats',
     HINT_INTEGRADO: 'hintIntegrado',

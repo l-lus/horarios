@@ -98,7 +98,7 @@ const {
 } = Notificaciones;
 
 const {
-    actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
+    actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
     actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
     cerrarModalAyuda, refrescarConfigSiVisible, formatearInput
@@ -256,6 +256,7 @@ function _initDatosYConfig() {
     actualizarEstadoBotonIgnorarTF();
     poblarSelectoresTipos();
     actualizarEstadoBotonHoverPopup();
+    actualizarEstadoBotonRuedaCalendario();
     actualizarEstadoBotonLogicaCubierto();
     actualizarEstadoBotonObjetivoPorRegistro();
     actualizarEstadoBotonFormatoCortoStats();

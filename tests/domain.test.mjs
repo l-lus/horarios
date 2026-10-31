@@ -197,6 +197,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
     Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, false, true);
     Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
     Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, false);
     Movimiento.setModo('auto');
 
     // Simular un registro importado inicialmente con ignorarTiempoFuera = false (descarga 30m de tiempo fuera -> 7.5h)
@@ -221,10 +222,12 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarTiempoFuera: true,
         ignorarLogicaCubierto: true,
         ignorarObjetivoPorRegistro: true,
-        reducirAnimaciones: 'on'
+        reducirAnimaciones: 'on',
+        hintIntegrado: true
     };
 
     assert.equal(ImportarExportar.validarCamposConfigImport(backupData), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...backupData, hintIntegrado: 'si' }), false);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...backupData, reducirAnimaciones: 'invalido' }), false);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...backupData, ignorarTiempoFuera: 'si' }), false);
 
@@ -233,6 +236,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
     assert.ok(cambios.includes('banco de horas'));
     assert.ok(cambios.includes('objetivo diario global'));
     assert.ok(cambios.includes('animaciones'));
+    assert.ok(cambios.includes('hint integrado'));
 
     // Al aplicar la configuración importada en modo replace, debe recalcular el registro con ignorarTiempoFuera = true (-> 8h)
     ImportarExportar.aplicarConfigImportada(backupData, registros);
@@ -240,6 +244,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true), true);
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true), true);
     assert.equal(Movimiento.modo(), 'on');
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false), true);
     assert.equal(registros[0].total, 8);
 
     const exportado = ImportarExportar.obtenerConfigExportable();
@@ -247,7 +252,8 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarTiempoFuera: true,
         ignorarLogicaCubierto: true,
         ignorarObjetivoPorRegistro: true,
-        reducirAnimaciones: 'on'
+        reducirAnimaciones: 'on',
+        hintIntegrado: true
     });
 });
 

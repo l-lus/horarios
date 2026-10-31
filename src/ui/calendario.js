@@ -695,6 +695,7 @@ function _registrarRuedaCalendario(grid) {
     contenedor.addEventListener('wheel', (e) => {
         if (e.ctrlKey || e.metaKey || e.altKey) return;   // zoom del navegador / atajos
         if (!esPC()) return;
+        if (!Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, true)) return;   // desactivado en configuración: la rueda desplaza la página
 
         const ahora = performance.now();
         const bloqueado = ahora < bloqueadoHasta;

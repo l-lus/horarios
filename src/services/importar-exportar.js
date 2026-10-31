@@ -2,6 +2,7 @@ import { STORAGE_KEYS } from '../core/constantes.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
+import { EventosApp } from '../core/eventos.js';
 import { GestorPerfiles } from './gestor-perfiles.js';
 import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
@@ -16,7 +17,8 @@ const KEYS_CONFIG_EXPORTABLE = [
     STORAGE_KEYS.IGNORAR_TF,
     STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
     STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
-    STORAGE_KEYS.REDUCIR_ANIMACIONES
+    STORAGE_KEYS.REDUCIR_ANIMACIONES,
+    STORAGE_KEYS.HINT_INTEGRADO
 ];
 
 function obtenerConfigExportable() {
@@ -24,7 +26,8 @@ function obtenerConfigExportable() {
         [STORAGE_KEYS.IGNORAR_TF]: D.getIgnorarTiempoFuera(),
         [STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
         [STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
-        [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Movimiento.modo()
+        [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Movimiento.modo(),
+        [STORAGE_KEYS.HINT_INTEGRADO]: Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false)
     };
 }
 
@@ -33,7 +36,8 @@ function validarCamposConfigImport(data) {
     const boolKeys = [
         STORAGE_KEYS.IGNORAR_TF,
         STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
-        STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO
+        STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
+        STORAGE_KEYS.HINT_INTEGRADO
     ];
     for (const k of boolKeys) {
         if (data[k] !== undefined && typeof data[k] !== 'boolean') return false;
@@ -73,6 +77,10 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
     if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES])) {
         Movimiento.setModo(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]);
     }
+    if (typeof data[STORAGE_KEYS.HINT_INTEGRADO] === 'boolean') {
+        Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, data[STORAGE_KEYS.HINT_INTEGRADO]);
+        EventosApp.emit('config:hint-integrado');
+    }
 
     if (Array.isArray(registrosParaRecalcular)) {
         registrosParaRecalcular.forEach(r => {
@@ -107,6 +115,10 @@ function calcularCambiosConfigImport(data) {
     if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]) &&
         data[STORAGE_KEYS.REDUCIR_ANIMACIONES] !== Movimiento.modo()) {
         cambios.push('animaciones');
+    }
+    if (typeof data[STORAGE_KEYS.HINT_INTEGRADO] === 'boolean' &&
+        data[STORAGE_KEYS.HINT_INTEGRADO] !== Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false)) {
+        cambios.push('hint integrado');
     }
     return cambios;
 }

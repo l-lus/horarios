@@ -27,7 +27,7 @@ function obtenerConfigExportable() {
         [STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
         [STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
         [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Movimiento.modo(),
-        [STORAGE_KEYS.HINT_INTEGRADO]: Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false)
+        [STORAGE_KEYS.HINT_INTEGRADO]: Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, true)
     };
 }
 
@@ -117,7 +117,7 @@ function calcularCambiosConfigImport(data) {
         cambios.push('animaciones');
     }
     if (typeof data[STORAGE_KEYS.HINT_INTEGRADO] === 'boolean' &&
-        data[STORAGE_KEYS.HINT_INTEGRADO] !== Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false)) {
+        data[STORAGE_KEYS.HINT_INTEGRADO] !== Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, true)) {
         cambios.push('hint integrado');
     }
     return cambios;

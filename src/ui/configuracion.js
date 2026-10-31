@@ -91,7 +91,7 @@ const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRu
 
 const { toggle: toggleHintIntegrado, actualizarEstado: actualizarEstadoBotonHintIntegrado } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false),
+        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, true),
         setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, v),
         btnId: 'btn-toggle-hint-integrado',
         onAfterToggle: () => { EventosApp.emit('config:hint-integrado'); actualizarUI(); }

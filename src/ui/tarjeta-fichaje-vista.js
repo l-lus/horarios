@@ -30,9 +30,9 @@ function _refrescarFormatoCortoStatsCache() {
 EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
 
 // "Hint integrado": la salida estimada y la salida con buffer se dibujan sobre la barra en vez de en el texto inferior
-let _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false);
+let _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, true);
 EventosApp.on('config:hint-integrado', () => {
-    _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false);
+    _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, true);
 });
 
 function _modoTextoStats() {

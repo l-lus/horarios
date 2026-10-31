@@ -90,3 +90,39 @@ test('RecordatorioPush.enviarNotificacionPrueba pide permiso y envía el mensaje
     assert.equal(await RecordatorioPush.enviarNotificacionPrueba(), 'denegado');
     assert.equal(mensajes.length, 1);
 });
+
+test('RecordatorioPush.calcularTarget ubica la entrada en la fecha del registro (cruce de medianoche)', async () => {
+    const { RecordatorioPush } = await import('../src/services/recordatorio-push.js');
+    // Entrada de ayer 18:40, jornada de 7 h: el aviso cae a la 01:40 de hoy (menos el margen del cron de 1 min)
+    const esperado = new Date(2026, 9, 30, 18, 40).getTime() + 7 * 3600 * 1000 - 60 * 1000;
+    assert.equal(RecordatorioPush.calcularTarget('2026-10-30', '18:40', 7), esperado);
+    assert.equal(new Date(esperado).getDate(), 31);
+});
+
+test('GestionDatos._registroAbiertoParaPush toma la jornada abierta de ayer si hoy no tiene registro', async (t) => {
+    const { GestionDatos: D } = await import('../src/services/gestion-datos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const reg = (fecha, entrada, salida) => ({ id: `${fecha}-${entrada}`, fecha, entrada, salida, objetivoHoras: 7 });
+
+    // 31/10/2026 00:26 (sábado): la jornada del viernes 30 sigue abierta
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 31, 0, 26) });
+
+    EstadoApp._setRegistros([reg('2026-10-30', '18:40', null)]);
+    assert.equal(D._registroAbiertoParaPush('2026-10-31')?.fecha, '2026-10-30');
+
+    // Ayer ya tiene salida: nada para avisar
+    EstadoApp._setRegistros([reg('2026-10-30', '18:40', '23:00')]);
+    assert.equal(D._registroAbiertoParaPush('2026-10-31'), null);
+
+    // Hoy ya tiene su propio registro cerrado: no se arrastra el de ayer
+    EstadoApp._setRegistros([reg('2026-10-30', '18:40', null), reg('2026-10-31', '08:00', '09:00')]);
+    assert.equal(D._registroAbiertoParaPush('2026-10-31'), null);
+
+    // Hoy (sábado) tiene uno abierto, pero no es día hábil: no se avisa
+    EstadoApp._setRegistros([reg('2026-10-31', '08:00', null)]);
+    assert.equal(D._registroAbiertoParaPush('2026-10-31'), null);
+
+    // Abierto hace más de 24 h: se considera olvidado
+    EstadoApp._setRegistros([reg('2026-10-30', '00:10', null)]);
+    assert.equal(D._registroAbiertoParaPush('2026-10-31'), null);
+});

@@ -183,6 +183,15 @@ function _borrarInfoActiva(perfilId) {
         }
     } catch { /* noop */ }
 }
+/** Vigente si es de hoy, o de ayer con el aviso todavía pendiente (jornada que cruza la medianoche). */
+function _infoVigente(info) {
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    if (info.fechaISO === hoy) return true;
+    const ayer = TiempoUtils.parsearFechaLocal(hoy);
+    ayer.setDate(ayer.getDate() - 1);
+    return info.fechaISO === TiempoUtils.formatearFechaLocal(ayer) && Number(info.targetTimeMs) + MARGEN_CRON_MS >= Date.now();
+}
+
 function obtenerInfoActiva(perfilId) {
     const raw = perfilId
         ? Almacenamiento.getItem(`${STORAGE_KEYS.PUSH_INFO_ACTIVA}_${perfilId}`)
@@ -191,7 +200,7 @@ function obtenerInfoActiva(perfilId) {
     if (!raw) return null;
     try {
         const info = JSON.parse(raw, SeguridadYUtils.reviverJSONSeguro);
-        if (!info || info.fechaISO !== TiempoUtils.obtenerFechaHoy()) return null;
+        if (!info || !_infoVigente(info)) return null;
         return info;
     } catch {
         return null;
@@ -219,8 +228,12 @@ async function _asegurarSuscripcion() {
     }
 }
 
-function _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
-    if (!entradaHHMM || !objetivoHoras) return null;
+/**
+ * Momento (ms) en que corresponde avisar. La entrada se ubica en `fechaISO` (no en "hoy"),
+ * así una jornada abierta ayer que cruza la medianoche se programa bien.
+ */
+function _calcularTarget(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
+    if (!fechaISO || !entradaHHMM || !objetivoHoras) return null;
     const [h, m] = entradaHHMM.split(':').map(Number);
     if (Number.isNaN(h) || Number.isNaN(m)) return null;
 
@@ -229,7 +242,7 @@ function _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, min
         objetivoAjustado = Math.max(0, objetivoHoras - bufferSemanalHoras);
     }
     const anticipacionMin = getAnticipacionMin();
-    const target = new Date();
+    const target = TiempoUtils.parsearFechaLocal(fechaISO);
     target.setHours(h, m, 0, 0);
     const extraMs = Number.isFinite(minutosTiempoFuera) ? minutosTiempoFuera * 60 * 1000 : 0;
     target.setTime(target.getTime() + objetivoAjustado * 60 * 60 * 1000 + extraMs - anticipacionMin * 60 * 1000 - MARGEN_CRON_MS);
@@ -260,7 +273,7 @@ function _construirMensajeNotificacion(anticipacionMin, bufferSemanalHoras) {
 
 async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
     if (!getHabilitado()) return;
-    const targetMs = _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras, minutosTiempoFuera);
+    const targetMs = _calcularTarget(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras, minutosTiempoFuera);
     if (targetMs == null) return;
 
     const generacion = ++_generacionProgramacion;
@@ -324,9 +337,11 @@ function cancelarFinDeJornada(fechaISO, perfilId) {
     const esPerfilActivo = !perfilId || perfilId === _perfilActivo();
     if (esPerfilActivo) limpiarNotificacionVisible();
 
-    const esHoy = fechaISO === TiempoUtils.obtenerFechaHoy();
+    // "Jornada vigente": la de hoy o la de ayer que sigue programada (cruce de medianoche)
+    const infoVigente = obtenerInfoActiva(perfilId);
+    const esHoy = fechaISO === TiempoUtils.obtenerFechaHoy() || infoVigente?.fechaISO === fechaISO;
     if (esHoy && esPerfilActivo) _generacionCancelada = ++_generacionProgramacion;
-    const activa = esHoy ? obtenerInfoActiva(perfilId) : null;
+    const activa = esHoy ? infoVigente : null;
     if (esHoy) _borrarInfoActiva(perfilId);
 
     // Sin info local igual se cancela: el Worker pudo guardar el aviso aunque la
@@ -421,5 +436,6 @@ export const RecordatorioPush = {
     getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, avisoPendiente, consumirAviso,
     getBufferSoloUltimoDia, calcularTarget: _calcularTarget,
     targetProgramadoParaHoy: () => obtenerInfoActiva()?.targetTimeMs ?? null,
+    fechaProgramadaActiva: () => obtenerInfoActiva()?.fechaISO ?? null,
     restablecer,
 };

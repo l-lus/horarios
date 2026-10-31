@@ -114,22 +114,37 @@ async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     notify.formularioRegistro.escribir({ fecha: TiempoUtils.obtenerFechaHoy(), salida: '' });
 }
 
+/**
+ * Registro cuya salida hay que avisar: el abierto de hoy, o el de ayer si sigue abierto
+ * (jornada que cruza la medianoche) y hoy todavía no tiene registro. Debe caer en día hábil.
+ */
+function _registroAbiertoParaPush(hoy) {
+    const regs = EstadoApp.registros();
+    let candidato = regs.find(r => r.fecha === hoy && r.entrada && !r.salida) ?? null;
+    if (!candidato && !existeRegistroEnFecha(hoy)) {
+        const { regAyer, ayerAbierto } = detectarAyerAbierto(hoy, regs);
+        if (ayerAbierto) candidato = regAyer;
+    }
+    if (!candidato) return null;
+    return TiempoUtils.esFechaHabil(candidato.fecha, diasHabilesEnFecha(candidato.fecha)) ? candidato : null;
+}
+
 function _sincronizarPushHoy() {
     const hoy = TiempoUtils.obtenerFechaHoy();
-    const esDiaHabil = TiempoUtils.esFechaHabil(hoy, diasHabilesEnFecha(hoy));
-    const abierto = esDiaHabil && EstadoApp.registros().find(r => r.fecha === hoy && r.entrada && !r.salida);
+    const abierto = _registroAbiertoParaPush(hoy);
     const habilitado = RecordatorioPush.getHabilitado();
     const minutosTF = abierto && !EstadoApp.getIgnorarTiempoFuera() && abierto.tiempoFuera ? TiempoUtils.horaAMinutos(abierto.tiempoFuera) : 0;
+    const buffer = abierto ? _bufferSemanalParaPush(abierto.fecha) : 0;
     const nuevoTarget = (habilitado && abierto)
-        ? RecordatorioPush.calcularTarget(abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF)
+        ? RecordatorioPush.calcularTarget(abierto.fecha, abierto.entrada, objetivoDeRegistro(abierto), buffer, minutosTF)
         : null;
     const targetActual = RecordatorioPush.targetProgramadoParaHoy();
     if (nuevoTarget === targetActual) return;
 
     if (abierto && nuevoTarget != null) {
-        RecordatorioPush.programarFinDeJornada(abierto.fecha, abierto.entrada, objetivoDeRegistro(abierto), _bufferSemanalParaPush(hoy), minutosTF);
+        RecordatorioPush.programarFinDeJornada(abierto.fecha, abierto.entrada, objetivoDeRegistro(abierto), buffer, minutosTF);
     } else if (targetActual != null) {
-        RecordatorioPush.cancelarFinDeJornada(hoy);
+        RecordatorioPush.cancelarFinDeJornada(RecordatorioPush.fechaProgramadaActiva() ?? hoy);
     }
 }
 
@@ -617,6 +632,7 @@ export const GestionDatos = {
     eliminarGrupoActual,
     setGrupoEnEdicion: EstadoApp.setGrupoEnEdicion,
     sincronizarPushHoy: _sincronizarPushHoy,
+    _registroAbiertoParaPush,
     bufferSemanalParaPush: _bufferSemanalParaPush,
     undoAction: function () { _aplicarEstadoHistorial(GestorHistorial.undo(), 'Deshecho'); },
     redoAction: function () { _aplicarEstadoHistorial(GestorHistorial.redo(), 'Rehecho'); },

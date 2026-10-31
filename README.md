@@ -29,3 +29,13 @@ Para iniciar el servidor local de desarrollo:
   .\iniciar.ps1 [-Port puerto]
   ```
   *(Por defecto utiliza el puerto 8001)*
+
+## 🧪 Desarrollo
+
+```bash
+npm ci               # instala TypeScript (solo para chequear tipos, no hay build)
+npm test             # tests nativos de Node (dominio, arquitectura, html seguro)
+npm run typecheck    # tsc --checkJs sobre src/ (JSDoc, sin transpilar nada)
+```
+
+El código se sirve tal cual: `tsc` solo valida los tipos escritos como JSDoc (`/** @type {...} */`).

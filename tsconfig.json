@@ -9,6 +9,7 @@
     "noEmit": true,
     "strict": false,
     "noImplicitAny": false,
+    "noImplicitReturns": true,
     "skipLibCheck": true
   },
   "include": ["src/core/**/*.js", "src/data/**/*.js", "src/services/**/*.js", "src/ui/**/*.js", "src/main.js"]

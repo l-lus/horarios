@@ -83,6 +83,29 @@ function _conAvisoAyer(vista, avisoAyerHint) {
     return avisoAyerHint ? { ...vista, ...avisoAyerHint } : vista;
 }
 
+const _SIGLAS_DIA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+// Hitos de la vista semanal: uno por día con horas, ubicado donde termina su porción del total (fracción 0-1 de la parte llena de la barra)
+// Color del tramo de un día, con el mismo criterio que la vista diaria: en curso azul; cerrado verde si cumplió, dorado si lo cubre el saldo, rojo si faltó
+function _colorEstadoDia(d) {
+    if (d.activo) return 'blue';
+    if (d.objetivo === 0 || horasGte(d.total ?? d.horas, d.objetivo)) return 'green';
+    return SaldoSemanal.cubiertoPorSaldo(d.fecha) ? 'gold' : 'red';
+}
+
+function _hitosSemana(horasPorDia = []) {
+    // los días especiales y los sin registro no tienen horas: su tramo mide una jornada nominal; el especial lleva el color de su tipo y el sin registro ninguno (color null)
+    const peso = d => (d.especial || d.sinRegistro) ? (d.nominal ?? 0) : d.horas;
+    const dias = horasPorDia.filter(d => peso(d) > 0.0001);
+    const total = dias.reduce((acc, d) => acc + peso(d), 0);
+    if (total <= 0) return [];
+    let acumulado = 0;
+    return dias.map(d => {
+        acumulado += peso(d);
+        return { fecha: d.fecha, sigla: _SIGLAS_DIA[TiempoUtils.parsearFechaLocal(d.fecha).getDay()], fraccion: acumulado / total, color: d.sinRegistro ? null : (d.especial ?? _colorEstadoDia(d)) };
+    });
+}
+
 function derivarVistaSemana(est) {
     const { totalSemana: tot, totalSemanaProgreso, objetivoSemana, semanaAbierta, horasDiarias, todosEspeciales } = est;
     const prog = totalSemanaProgreso ?? tot;
@@ -139,6 +162,7 @@ function derivarVistaSemana(est) {
         cerrado,
         hint: 'Tocá para ver Hoy',
         hintEsHTML: false,
+        hitosSemana: _hitosSemana(est.horasPorDia),
     };
 }
 

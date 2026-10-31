@@ -334,6 +334,42 @@ function _renderLinea(vista, pista, fill) {
     return x => (x < lo ? 'blue' : (x < hi ? colorMedio : 'green'));
 }
 
+let _ultimaVistaSemana = null;
+
+// Vista semanal con hint integrado: un hito por día con horas, donde termina su porción del total, con su flecha y la sigla (lun, mar...).
+// Los elementos se reutilizan por fecha: así no se reinicia su animación de aparición en cada actualización.
+function _renderSemana(vista, pista, anchoBarra) {
+    const cont = $('linea-semana');
+    if (!cont) return;
+    const ancho = pista.clientWidth;
+    const hitos = vista.hitosSemana ?? [];
+    const existentes = new Map([...cont.querySelectorAll('[data-fecha]')].map(el => [el.dataset.fecha + el.dataset.tipo, el]));
+    const vigentes = new Set();
+    const svgBase = $('linea-tick-salida')?.firstElementChild;
+
+    hitos.forEach((h, i) => {
+        const arriba = i % 2 === 1;   // alternan lados para que las siglas no se encimen
+        const pct = h.fraccion * anchoBarra;
+        let tick = existentes.get(h.fecha + 'tick');
+        let et = existentes.get(h.fecha + 'et');
+        if (!tick) {
+            tick = document.createElement('span');
+            tick.dataset.fecha = h.fecha; tick.dataset.tipo = 'tick';
+            if (svgBase) tick.appendChild(svgBase.cloneNode(true));
+            et = document.createElement('span');
+            et.dataset.fecha = h.fecha; et.dataset.tipo = 'et';
+            cont.append(tick, et);
+        }
+        tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}`;
+        et.className = `linea-etiqueta dia linea-etiqueta--${arriba ? 'arriba' : 'abajo'}`;
+        et.textContent = h.sigla;
+        tick.style.left = `${pct}%`;
+        _colocarEtiquetaConector(et, tick, pct, ancho);
+        vigentes.add(h.fecha + 'tick'); vigentes.add(h.fecha + 'et');
+    });
+    existentes.forEach((el, clave) => { if (!vigentes.has(clave)) el.remove(); });
+}
+
 function _renderBarra(vista, desdeCero = false) {
     const el = $('progress-bar');
     if (!el) return;
@@ -342,10 +378,13 @@ function _renderBarra(vista, desdeCero = false) {
     const pista = el.closest('.progress-pista');
     const esDiaria = EstadoApp.vistaActual() !== 'semana';
     const conLinea = !!(_hintIntegradoActivo() && esDiaria && vista.linea && pista);
-    pista?.classList.toggle('con-linea', conLinea);
+    const conSemana = !!(_hintIntegradoActivo() && !esDiaria && vista.hitosSemana?.length && vista.anchoBarra > 0 && pista);
+    pista?.classList.toggle('con-linea', conLinea || conSemana);
+    pista?.classList.toggle('linea-semanal', conSemana);
     // con el hint integrado la pista reserva siempre el alto de la línea (vista diaria o semanal), así nada se corre al cambiar de vista o crear el registro
     pista?.classList.toggle('reserva-linea', _hintIntegradoActivo());
     _ultimaVistaLinea = conLinea ? vista : null;
+    _ultimaVistaSemana = conSemana ? vista : null;
     const anchoBarra = conLinea ? _escalaLinea(vista.linea)(vista.linea.ahoraRel) : vista.anchoBarra;
     const dur = desdeCero && card ? _durSiAnima('--dur-conteo') : 0;
     if (dur > 1) {
@@ -356,13 +395,19 @@ function _renderBarra(vista, desdeCero = false) {
         TiempoUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
     }
     el.style.width = `${anchoBarra}%`;
+    // vista semanal con hint integrado: cada tramo (día) lleva el color del estado de ese día
+    const hitosColor = conSemana ? vista.hitosSemana : [];
+    el.style.backgroundImage = conSemana
+        ? `linear-gradient(90deg, ${hitosColor.map((h, i) => `${h.color ? `var(--c-${h.color})` : 'transparent'} ${i ? (hitosColor[i - 1].fraccion * 100).toFixed(3) : 0}% ${(h.fraccion * 100).toFixed(3)}%`).join(', ')})`
+        : '';
+    el.style.backgroundColor = conSemana ? 'transparent' : '';   // los tramos sin color dejan ver la pista
     if (punto) {
         punto.style.left = `${anchoBarra}%`;
         const esVisible = (vista.estadoFondo === 'en_curso' || !!vista.cerrado) && anchoBarra > 0;
         punto.classList.toggle('visible', esVisible);
         punto.classList.toggle('cerrado', !!vista.cerrado);
         // abierto: el remate toma el color del tramo donde está; cerrado: el color final del registro
-        punto.dataset.color = vista.cerrado ? (vista.colorCierre ?? vista.colorBarra) : vista.colorBarra;
+        punto.dataset.color = conSemana ? (vista.hitosSemana[vista.hitosSemana.length - 1].color ?? vista.colorBarra) : vista.cerrado ? (vista.colorCierre ?? vista.colorBarra) : vista.colorBarra;
         // el último tramo de la barra se degrada hacia el color del remate
         el.style.setProperty('--color-remate', `var(--c-${punto.dataset.color})`);
         el.style.setProperty('--color-barra', `var(--c-${vista.colorBarra})`);
@@ -372,15 +417,16 @@ function _renderBarra(vista, desdeCero = false) {
     if (inicio && punto) {
         inicio.classList.toggle('visible', punto.classList.contains('visible'));
         inicio.classList.add('cerrado'); // siempre relleno: marca el hito del comienzo
-        inicio.dataset.color = conLinea && !vista.cerrado ? 'blue' : vista.colorBarra;
+        inicio.dataset.color = conSemana ? (vista.hitosSemana[0].color ?? vista.colorBarra) : (conLinea && !vista.cerrado ? 'blue' : vista.colorBarra);
     }
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
+    if (conSemana) _renderSemana(vista, pista, anchoBarra);
     if (conLinea) {
         const colorTramo = _renderLinea(vista, pista, el);
         if (punto && !vista.cerrado) punto.dataset.color = colorTramo(anchoBarra);
     }
-    el.classList.toggle('con-remate', !conLinea && vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
+    el.classList.toggle('con-remate', !conLinea && !conSemana && vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
 }
 
 function _renderMensaje(vista) {
@@ -548,6 +594,7 @@ function bindEventos() {
                 crearObserver();
                 const pista = $('progress-bar')?.closest('.progress-pista');
                 if (_ultimaVistaLinea && pista) _renderLinea(_ultimaVistaLinea, pista, $('progress-bar'));
+                if (_ultimaVistaSemana && pista) _renderSemana(_ultimaVistaSemana, pista, parseFloat($('progress-bar').style.width) || 0);
             }, 200);
         });
     })();

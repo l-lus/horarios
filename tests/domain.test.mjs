@@ -350,6 +350,37 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
     });
     assert.equal(vistaSemanaEnCurso.cerrado, false);
 
+    // Hitos por día: cada uno termina donde acaba su porción del total; los días sin horas no llevan hito
+    const vistaConHitos = TarjetaFichajeVista.derivarVistaSemana({
+        totalSemana: 14, totalSemanaProgreso: 14, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false,
+        horasPorDia: [
+            { fecha: '2026-10-26', horas: 7 },   // lunes
+            { fecha: '2026-10-27', horas: 0 },   // martes sin horas
+            { fecha: '2026-10-28', horas: 7 }    // miércoles
+        ]
+    });
+    assert.deepEqual(vistaConHitos.hitosSemana.map(h => [h.sigla, h.fraccion]), [['lun', 0.5], ['mié', 1]]);
+
+    // Un día especial suma un tramo de una jornada nominal, con el color de su tipo
+    const vistaConEspecial = TarjetaFichajeVista.derivarVistaSemana({
+        totalSemana: 7, totalSemanaProgreso: 7, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false,
+        horasPorDia: [
+            { fecha: '2026-10-26', horas: 7, total: 7, objetivo: 7, activo: false },
+            { fecha: '2026-10-28', horas: 0, total: 0, objetivo: 0, activo: false, especial: 'purple', nominal: 7 }
+        ]
+    });
+    assert.deepEqual(vistaConEspecial.hitosSemana.map(h => [h.sigla, h.fraccion, h.color]), [['lun', 0.5, 'green'], ['mié', 1, 'purple']]);
+
+    // Un día laborable sin registro suma un tramo nominal sin color (null)
+    const vistaSinRegistro = TarjetaFichajeVista.derivarVistaSemana({
+        totalSemana: 7, totalSemanaProgreso: 7, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false,
+        horasPorDia: [
+            { fecha: '2026-10-26', horas: 7, total: 7, objetivo: 7, activo: false },
+            { fecha: '2026-10-27', horas: 0, total: 0, objetivo: 7, activo: false, sinRegistro: true, nominal: 7 }
+        ]
+    });
+    assert.deepEqual(vistaSinRegistro.hitosSemana.map(h => [h.sigla, h.fraccion, h.color]), [['lun', 0.5, 'green'], ['mar', 1, null]]);
+
     // Día cerrado (con salida registrada)
     const vistaDiaCerrado = TarjetaFichajeVista.derivarVistaHoy({
         regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: '15:00', total: 7, objetivoHoras: 7 },

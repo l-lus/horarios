@@ -8,7 +8,7 @@
     border: 1px solid transparent;
     border-left: 3px solid transparent;
     transition: transform var(--dur-fast) ease-out, opacity var(--dur-fast) ease-out, box-shadow var(--transition-ui), border-color var(--transition-ui);
-    height: 15rem;
+    height: 16rem;
     position: relative;
     overflow: hidden;
     display: flex;
@@ -129,9 +129,12 @@
     overflow: hidden;
 }
 
+/* El número de arriba lleva su propio margen inferior y más aire interno que el mensaje de abajo: el margen inferior de la pista
+   suma esa diferencia (medida: 12 px) para que la distancia visual de la barra a ambos textos sea la misma */
 .progress-pista {
+    --ajuste-optico: 0.75rem;
     position: relative;
-    margin: var(--space-lg) 0;
+    margin: var(--space-lg) 0 calc(var(--space-lg) + var(--ajuste-optico));
 }
 
 .progress-punto {
@@ -221,7 +224,7 @@
 /* Hint integrado: la pista reserva el alto de la línea (vista diaria o semanal) */
 .progress-pista.reserva-linea,
 .progress-pista.con-linea {
-    margin: calc(var(--space-lg) + 1.2rem) 0 calc(var(--space-lg) + 1.2rem);
+    margin: calc(var(--space-lg) + 1.2rem) 0 calc(var(--space-lg) + 1.2rem + var(--ajuste-optico));
 }
 
 /* Al aparecer (display none → block) los elementos de la línea entran con fundido; el estado final es el natural de cada uno */
@@ -289,6 +292,19 @@
 .progress-pista.con-linea .linea-etiqueta {
     display: block;
 }
+
+/* Vista semanal: se ocultan los elementos de la línea del día; los hitos de cada día (clase "dia") viven dentro de #linea-semana */
+.linea-semana { display: none; }
+
+.progress-pista.linea-semanal .linea-semana { display: contents; }
+
+.progress-pista.linea-semanal > .linea-banda,
+.progress-pista.linea-semanal > .linea-tick,
+.progress-pista.linea-semanal > .linea-etiqueta {
+    display: none;
+}
+
+.linea-etiqueta--arriba.dia { font-weight: 400; }
 
 .linea-banda {
     top: 0;

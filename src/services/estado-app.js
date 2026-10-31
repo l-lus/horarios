@@ -11,6 +11,7 @@ import { TiposRegistro } from './tipos-registro.js';
  * @property {(mensaje: string, tipo?: string, duracion?: number, detalle?: string|null, accion?: Function|null) => void} mostrarToast
  * @property {(texto: string, etiqueta?: string, icono?: string, opciones?: object) => Promise<boolean>} confirmarModal
  * @property {() => boolean} hayUIBloqueante
+ * @property {() => number} leerObjetivoEdicion objetivo (horas) mostrado en el formulario de edición; NaN si no hay
  * @property {() => string} temaGuardado
  * @property {() => string} obtenerNombrePerfilSafe
  * @property {(vista: string, fn: () => any) => any} forzarVista
@@ -57,6 +58,7 @@ let notify = {
     descargarJSON: () => { },
     forzarVista: (vista, fn) => fn(),
     hayUIBloqueante: () => false,
+    leerObjetivoEdicion: () => NaN,
     iniciarTimerAutoCierreBotones: () => { },
     limpiarError: () => { },
     mostrarError: () => { },

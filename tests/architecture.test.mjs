@@ -175,8 +175,6 @@ test('Capas: src/services no accede al DOM (ratchet: no se permiten usos nuevos)
     // Bajar estos números al migrar esa lógica a src/ui; nunca subirlos.
     const baseline = {
         'src/services/gestion-datos.js': 41,
-        'src/services/importar-exportar.js': 2,
-        'src/services/compensatorios.js': 1,
     };
     const reDom = /\bdocument\.(getElementById|querySelector|querySelectorAll|body|createElement|documentElement|activeElement)\b|(?<![\w.])\$\(/g;
     const excesos = [];

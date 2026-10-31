@@ -1,5 +1,4 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -217,9 +216,8 @@ function _aplicarMergeImport(registrosImportados) {
     finalizarImportacionAndSave(`Combinado: ${partes.join(', ')}`, 'combinar datos importados');
 }
 
-function importarDatos(modo = 'replace') {
-    const fileInput = $('file-import');
-    const file = fileInput.files[0];
+/** @param {File|undefined} file archivo elegido por el usuario (lo obtiene la UI del input) */
+function importarDatos(file, modo = 'replace') {
     if (!file) { D._notify().mostrarToast('Seleccioná un archivo primero', 'error'); return; }
     if (file.size > S.SECURITY_LIMITS.MAX_JSON_SIZE) { D._notify().mostrarToast('Archivo muy grande', 'error'); return; }
     if (!file.type || file.type !== 'application/json') { D._notify().mostrarToast('Solo se permiten archivos JSON', 'error'); return; }
@@ -268,7 +266,6 @@ async function finalizarImportacionAndSave(mensajeExito, descripcion = null) {
         }
         D._notify().mostrarToast(mensajeExito, 'success');
         D._notify().cerrarImportar();
-        $('file-import').value = '';
         D._notify().refrescarConfigSiVisible();
     }
 }

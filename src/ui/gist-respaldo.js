@@ -682,8 +682,8 @@ function bindEventos() {
     $('btn-gist-merge-cancelar')?.addEventListener('click', () => gistMergeCancelar());
 
     $('btn-seleccionar-archivo')?.addEventListener('click', () => $('file-import').click());
-    $('btn-combinar')?.addEventListener('click', () => GestionDatos.importarDatos('merge'));
-    $('btn-reemplazar')?.addEventListener('click', () => GestionDatos.importarDatos('replace'));
+    $('btn-combinar')?.addEventListener('click', () => GestionDatos.importarDatos($('file-import').files[0], 'merge'));
+    $('btn-reemplazar')?.addEventListener('click', () => GestionDatos.importarDatos($('file-import').files[0], 'replace'));
     $('btn-volver-importar')?.addEventListener('click', () => cerrarImportar());
 
     document.querySelector('#modal-exportar .btn-export')?.addEventListener('click', () => ejecutarExportacion());

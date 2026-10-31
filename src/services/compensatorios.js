@@ -1,5 +1,4 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorHistorial } from './gestor-historial.js';
@@ -180,7 +179,7 @@ function horasEfectivasDeRegistro(registro) {
 
 function objetivoEdicionEnVivo() {
     if (Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return D.horasDiarias();
-    const v = parseFloat($('edit-objetivo')?.dataset.valor);
+    const v = D._notify().leerObjetivoEdicion();
     return _esObjetivoValido(v) ? v : D.horasDiarias();
 }
 

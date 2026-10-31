@@ -64,6 +64,7 @@ function mostrarImportar(desdeLista = false) {
 }
 
 function cerrarImportar() {
+    $('file-import').value = '';
     _cerrarModalConfigHija('modal-importar');
 }
 

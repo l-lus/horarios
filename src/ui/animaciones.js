@@ -339,6 +339,37 @@ function _animarSlideElemento(el, delta, mutarFn) {
     _slideAnimEstado.set(el, { timeout, wrapper });
 }
 
+// Mientras está activa (p. ej. al cambiar de vista la tarjeta), _renderConFirma reemplaza sin animar.
+let _rendersSinAnimar = false;
+
+async function _conRendersSinAnimar(fn) {
+    _rendersSinAnimar = true;
+    try {
+        return await fn();
+    } finally {
+        _rendersSinAnimar = false;
+    }
+}
+
+function _rendersSinAnimarActivos() { return _rendersSinAnimar; }
+
+/**
+ * Reemplaza el HTML de `el` solo si cambió (dataset.firma) y lo anima; `forzar` lo aplica siempre sin animar.
+ * @param {(() => void) | null} [alAplicar]
+ */
+function _renderConFirma(el, nuevoHTML, alAplicar = null, { forzar = false } = {}) {
+    if (!el) { if (alAplicar) alAplicar(); return; }
+    const aplicar = () => {
+        el.innerHTML = nuevoHTML;
+        el.dataset.firma = nuevoHTML;
+        if (alAplicar) alAplicar();
+    };
+    if (forzar) { aplicar(); return; }
+    if (el.dataset.firma === nuevoHTML) { if (alAplicar) alAplicar(); return; }
+    if (_rendersSinAnimar) { aplicar(); return; }
+    _animarMutacion(el, aplicar);
+}
+
 export const Animaciones = {
     _durSiAnima,
     DUR_ANIM,
@@ -352,6 +383,9 @@ export const Animaciones = {
     _animarSlideElemento,
     _animarFadeSwap,
     _animarMutacion,
+    _conRendersSinAnimar,
+    _rendersSinAnimarActivos,
+    _renderConFirma,
     _flashElemento,
     _crearFantasmaSiVisible,
     _animarValor,

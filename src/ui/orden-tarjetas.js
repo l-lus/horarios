@@ -7,9 +7,7 @@ import { UIBase } from './base.js';
 // ====================================================================
 // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
 // ====================================================================
-const {
-    _crearToggleConfig, _setBtnActivo
-} = UIBase;
+const { _crearToggleConfig, _setBtnActivo } = UIBase;
 
 const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
     _crearToggleConfig({

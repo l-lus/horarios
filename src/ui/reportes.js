@@ -4,43 +4,33 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { GestionDatos } from '../services/gestion-datos.js';
+import { EstadisticasPeriodo } from '../services/estadisticas-periodo.js';
 import { UIBase } from './base.js';
-import { html, montar } from '../core/html.js';
-import { SeguridadYUtils as S } from '../core/seguridad.js';
-const D = GestionDatos;
+import { html, crudo, montar, icono } from '../core/html.js';
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { mostrarToast } from './toast.js';
 
 // ====================================================================
 //                     UI REPORTS MODULE (HTML Report Generator)
 // ====================================================================
-const { mostrarToast, descargarArchivo } = UIBase;
+const { descargarArchivo } = UIBase;
 
-/** @type {{ calcularEstadisticasAnio: (anio: any, regs: any) => any, calcularEstadisticasMes: (mes: any, regs: any) => any, getModoEstadisticas: () => string }} */
-let _statsProvider = {
-    calcularEstadisticasAnio: () => ({}),
-    calcularEstadisticasMes: () => ({}),
-    getModoEstadisticas: () => 'mensual'
-};
+const { calcularEstadisticasMes, calcularEstadisticasAnio, sumarHorasEfectivas } = EstadisticasPeriodo;
 
-function configurarStatsProvider(provider) {
-    _statsProvider = { ..._statsProvider, ...provider };
-}
-
-function _sumarHorasEfectivas(regs) {
-    return regs.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0);
-}
+let _modoReporte = 'mensual';
 
 function _resolverPeriodoDatos(esAnual) {
     if (esAnual) {
         const anio = $('select-anio-stats')?.value;
         if (!anio) { mostrarToast('No hay año seleccionado', 'error'); return null; }
         const anioNum = parseInt(anio);
-        const registrosPeriodo = D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
+        const registrosPeriodo = EstadoApp.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
         return {
             periodoLabel: anio,
             nombreArchivo: `reporte_${anio}.html`,
             registrosPeriodo,
-            stats: _statsProvider.calcularEstadisticasAnio(anio, registrosPeriodo),
+            stats: calcularEstadisticasAnio(anio, registrosPeriodo),
             mesSeleccionado: null
         };
     }
@@ -48,7 +38,7 @@ function _resolverPeriodoDatos(esAnual) {
     const mes = selectMes?.value;
     if (!mes) { mostrarToast('No hay mes seleccionado', 'error'); return null; }
     const [año, mesNum] = mes.split('-').map(Number);
-    const registrosPeriodo = D.registros().filter(r => {
+    const registrosPeriodo = EstadoApp.registros().filter(r => {
         const [aReg, mReg] = r.fecha.split('-').map(Number);
         return aReg === año && mReg === mesNum;
     });
@@ -56,7 +46,7 @@ function _resolverPeriodoDatos(esAnual) {
         periodoLabel: /** @type {HTMLSelectElement} */ (/** @type {unknown} */ (selectMes)).selectedOptions[0].text,
         nombreArchivo: `reporte_${mes}.html`,
         registrosPeriodo,
-        stats: _statsProvider.calcularEstadisticasMes(mes, registrosPeriodo),
+        stats: calcularEstadisticasMes(mes, registrosPeriodo),
         mesSeleccionado: mes
     };
 }
@@ -81,23 +71,23 @@ function _seccionDetalleAnual(registrosPeriodo) {
                 .filter(Boolean)
         ];
 
-        const nombreMes = S.escapeHtml(TiempoUtils.formatoTituloMes(claveMes).split(' ')[0]);
-        return `
+        const nombreMes = TiempoUtils.formatoTituloMes(claveMes).split(' ')[0];
+        return html`
         <tr>
             <td class="col-mes">${nombreMes}</td>
-            <td class="col-horas">${S.escapeHtml(TiempoUtils.horasATexto(_sumarHorasEfectivas(regsM), 'short'))}</td>
-            <td class="col-notas">${S.escapeHtml(notas.join(', '))}</td>
+            <td class="col-horas">${TiempoUtils.horasATexto(sumarHorasEfectivas(regsM), 'short')}</td>
+            <td class="col-notas">${notas.join(', ')}</td>
         </tr>`;
-    }).join('');
+    });
 
-    return `
+    return html`
 <section class="seccion">
     <h2>📅 Totales por mes</h2>
     <table class="tabla-mes">
         <thead>
             <tr><th>Mes</th><th>Horas</th><th>Notas</th></tr>
         </thead>
-        <tbody>${filas || '<tr><td colspan="3" class="vacio">Sin registros</td></tr>'}</tbody>
+        <tbody>${filas.length ? filas : html`<tr><td colspan="3" class="vacio">Sin registros</td></tr>`}</tbody>
     </table>
 </section>`;
 }
@@ -106,48 +96,48 @@ function _seccionDetalleDiario(registrosPeriodo) {
     const ordenados = [...registrosPeriodo].sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
     const filas = ordenados.map(r => {
         const tipoEspecial = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-        const fecha = S.escapeHtml(TiempoUtils.fechaCorta(r.fecha, true));
-        const dia = S.escapeHtml(TiempoUtils.obtenerNombreDia(r.fecha));
+        const fecha = TiempoUtils.fechaCorta(r.fecha, true);
+        const dia = TiempoUtils.obtenerNombreDia(r.fecha);
 
         if (tipoEspecial) {
-            return `
+            return html`
         <tr class="fila-especial">
             <td class="col-fecha">${fecha}</td>
             <td class="col-dia">${dia}</td>
-            <td class="col-especial" colspan="2">${S.escapeHtml(tipoEspecial.emoji || '')} ${S.escapeHtml(tipoEspecial.label.toUpperCase())}</td>
+            <td class="col-especial" colspan="2">${tipoEspecial.emoji || ''} ${tipoEspecial.label.toUpperCase()}</td>
             <td class="col-tag"></td>
             <td class="col-linea2" aria-hidden="true">&nbsp;</td>
         </tr>`;
         }
 
-        const entrada = S.escapeHtml(r.entrada || '--:--');
-        const salida = S.escapeHtml(r.salida || '--:--');
-        const total = r.salida ? S.escapeHtml(TiempoUtils.horasATexto(r.total, 'short')) : 'Incompleto';
+        const entrada = r.entrada || '--:--';
+        const salida = r.salida || '--:--';
+        const total = r.salida ? TiempoUtils.horasATexto(r.total, 'short') : 'Incompleto';
         const tiempoFuera = (r.tiempoFuera && r.tiempoFuera !== '00:00')
-            ? `${S.escapeHtml(TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(r.tiempoFuera) / 60, 'short'))} fuera`
+            ? `${TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(r.tiempoFuera) / 60, 'short')} fuera`
             : '';
-        const salidaTemprano = (r.credito && r.credito !== '00:00') ? ' <span class="tag tag-info">Salida temprana</span>' : '';
-        const cumplido = r.salida ? horasGte(r.total, D.objetivoDeRegistro(r)) : null;
-        const indicador = cumplido === null ? '' : (cumplido ? '<span class="tag tag-ok">✓</span>' : '<span class="tag tag-bad">✗</span>');
+        const salidaTemprano = (r.credito && r.credito !== '00:00') ? html` <span class="tag tag-info">Salida temprana</span>` : '';
+        const cumplido = r.salida ? horasGte(r.total, Compensatorios.objetivoDeRegistro(r)) : null;
+        const indicador = cumplido === null ? '' : (cumplido ? html`<span class="tag tag-ok">✓</span>` : html`<span class="tag tag-bad">✗</span>`);
 
-        return `
+        return html`
         <tr>
             <td class="col-fecha">${fecha}</td>
             <td class="col-dia">${dia}</td>
             <td class="col-horario">${entrada} → ${salida}</td>
-            <td class="col-total">${total}${tiempoFuera ? ` <span class="detalle-sub">· ${tiempoFuera}</span>` : ''}</td>
+            <td class="col-total">${total}${tiempoFuera ? html` <span class="detalle-sub">· ${tiempoFuera}</span>` : ''}</td>
             <td class="col-tag">${indicador}${salidaTemprano}</td>
         </tr>`;
-    }).join('');
+    });
 
-    return `
+    return html`
 <section class="seccion">
     <h2>📋 Detalle diario</h2>
     <table class="tabla-diario">
         <thead>
             <tr><th>Fecha</th><th>Día</th><th>Horario</th><th>Total</th><th></th></tr>
         </thead>
-        <tbody>${filas || '<tr><td colspan="5" class="vacio">Sin registros</td></tr>'}</tbody>
+        <tbody>${filas.length ? filas : html`<tr><td colspan="5" class="vacio">Sin registros</td></tr>`}</tbody>
     </table>
 </section>`;
 }
@@ -285,13 +275,13 @@ function _seccionResumenGeneral(stats) {
         ...TiposRegistro.obtenerTodosLosTipos().map(t => ({ label: t.labelPlural, valor: stats[TiposRegistro.claveStat(t)] || 0, esConteo: true })),
     ].filter(t => !(t.esConteo && t.valor === 0));
 
-    const filasHtml = tarjetas.map(t => `
+    const filasHtml = tarjetas.map(t => html`
         <li class="fila-resumen">
-            <span class="label">${S.escapeHtml(t.label)}</span>
-            <span class="valor ${t.clase || ''}">${S.escapeHtml(String(t.valor))}</span>
-        </li>`).join('');
+            <span class="label">${t.label}</span>
+            <span class="valor ${t.clase || ''}">${String(t.valor)}</span>
+        </li>`);
 
-    return `
+    return html`
 <section class="seccion">
     <h2>📈 Resumen general</h2>
     <ul class="lista-resumen">${filasHtml}</ul>
@@ -312,7 +302,7 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
 
     const filas = semanasOrdenadas.map(([lunesOriginal, datos], index) => {
         let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
-        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + D.objetivoDeRegistro(r), 0);
+        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + Compensatorios.objetivoDeRegistro(r), 0);
 
         const fechaLunes = TiempoUtils.parsearFechaLocal(lunesOriginal);
         const fechaDomingo = new Date(fechaLunes);
@@ -345,20 +335,20 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
         if (esIncompleta && continuaEn) semanasIncompletas.push(`* Semana ${index + 1}: ${continuaEn}`);
 
         const rango = `${TiempoUtils.fechaCorta(lunes, true)} – ${TiempoUtils.fechaCorta(fechaFin, true)}${esIncompleta ? ' *' : ''}`;
-        return `
+        return html`
         <tr>
             <td class="col-semana">Semana ${index + 1}</td>
-            <td class="col-rango">${S.escapeHtml(rango)}</td>
-            <td class="col-total">${S.escapeHtml(TiempoUtils.horasATexto(totalSemanal, 'short'))}</td>
-            <td class="col-notas">${notasExtras.length ? S.escapeHtml(notasExtras.join(', ')) : '—'}</td>
+            <td class="col-rango">${rango}</td>
+            <td class="col-total">${TiempoUtils.horasATexto(totalSemanal, 'short')}</td>
+            <td class="col-notas">${notasExtras.length ? notasExtras.join(', ') : '—'}</td>
         </tr>`;
-    }).join('');
+    });
 
     const notaIncompletas = semanasIncompletas.length
-        ? `<div class="nota-incompleta">${semanasIncompletas.map(s => S.escapeHtml(s)).join('<br>')}</div>`
+        ? html`<div class="nota-incompleta">${semanasIncompletas.map((s, i) => html`${i > 0 ? html`<br>` : ''}${s}`)}</div>`
         : '';
 
-    return `
+    return html`
 <section class="seccion">
     <h2>📅 Totales por semana</h2>
     <table class="tabla-semana">
@@ -374,18 +364,18 @@ function _seccionConfiguracion() {
         ? '' : ' (objetivo estampado por registro)';
     const ignorarTF = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
     const tiempoFueraTexto = ignorarTF ? 'No se descuenta del total' : 'Se descuenta del total';
-    return `
+    return html`
 <section class="seccion">
     <h2>⚙️ Ajustes aplicados</h2>
-    <p class="config-linea"><b>Horas diarias:</b> ${S.escapeHtml(String(D.horasDiarias()))}${S.escapeHtml(objetivoTexto)}</p>
-    <p class="config-linea"><b>Días hábiles:</b> ${S.escapeHtml(D.diasHabiles().map(d => TiempoUtils.nombreDiaPorIndice(d)).join(', '))}</p>
-    <p class="config-linea"><b>Horas semanales:</b> ${S.escapeHtml(String(D.horasSemanales()))}</p>
-    <p class="config-linea"><b>Tiempo fuera:</b> ${S.escapeHtml(tiempoFueraTexto)}</p>
+    <p class="config-linea"><b>Horas diarias:</b> ${String(EstadoApp.horasDiarias())}${objetivoTexto}</p>
+    <p class="config-linea"><b>Días hábiles:</b> ${EstadoApp.diasHabiles().map(d => TiempoUtils.nombreDiaPorIndice(d)).join(', ')}</p>
+    <p class="config-linea"><b>Horas semanales:</b> ${String(EstadoApp.horasSemanales())}</p>
+    <p class="config-linea"><b>Tiempo fuera:</b> ${tiempoFueraTexto}</p>
 </section>`;
 }
 
 function generarReporte(opciones = {}) {
-    const esAnual = _statsProvider.getModoEstadisticas() === 'anual';
+    const esAnual = _modoReporte === 'anual';
     const incluir = { resumen: true, totalesMes: true, detalleDiario: true, totalesSemana: true, configuracion: true, ...opciones };
     const periodo = _resolverPeriodoDatos(esAnual);
     if (!periodo) return;
@@ -393,21 +383,21 @@ function generarReporte(opciones = {}) {
 
     const generadoEl = `${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}`;
 
-    const html = `<!DOCTYPE html>
+    const documento = html`<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-<title>Reporte de horas — ${S.escapeHtml(periodoLabel)}</title>
-<style>${REPORTE_ESTILOS}</style>
+<title>Reporte de horas — ${periodoLabel}</title>
+<style>${crudo(REPORTE_ESTILOS)}</style>
 </head>
 <body>
     <div class="reporte">
 <header class="reporte-header">
     <h1>Reporte de horas trabajadas</h1>
-    <div class="periodo">Período: ${S.escapeHtml(periodoLabel)}</div>
-    <div class="generado">Generado el ${S.escapeHtml(generadoEl)}</div>
+    <div class="periodo">Período: ${periodoLabel}</div>
+    <div class="generado">Generado el ${generadoEl}</div>
 </header>
 
 ${incluir.resumen ? _seccionResumenGeneral(stats) : ''}
@@ -422,7 +412,7 @@ ${incluir.configuracion ? _seccionConfiguracion() : ''}
 </html>`;
 
     try {
-        descargarArchivo(html, nombreArchivo, 'text/html;charset=utf-8');
+        descargarArchivo(String(documento), nombreArchivo, 'text/html;charset=utf-8');
         mostrarToast(esAnual ? 'Reporte anual generado' : 'Reporte generado', 'success');
     } catch (e) {
         console.error('Error generando reporte:', e);
@@ -441,18 +431,19 @@ const SECCIONES_REPORTE = [
 function _renderSeccionesReporte() {
     const cont = $('reporte-secciones-lista');
     if (!cont) return;
-    const modo = _statsProvider.getModoEstadisticas() === 'anual' ? 'anual' : 'mensual';
+    const modo = _modoReporte === 'anual' ? 'anual' : 'mensual';
     montar(cont, html`${SECCIONES_REPORTE
         .filter(sec => !sec.soloModo || sec.soloModo === modo)
         .map(sec => html`
         <button type="button" class="btn-seccion-reporte btn-activo" data-seccion="${sec.id}">
-            <svg class="icon"><use href="${sec.icono}" /></svg>
+            ${icono(sec.icono)}
             <span>${sec.label}</span>
             <span class="toggle-switch" aria-hidden="true"></span>
         </button>`)}`);
 }
 
-function abrirModalReporteSecciones() {
+function abrirModalReporteSecciones(modoEstadisticas = 'mensual') {
+    _modoReporte = modoEstadisticas;
     _renderSeccionesReporte();
     GestorModales.abrir('modal-reporte-secciones');
 }
@@ -481,8 +472,6 @@ function confirmarGenerarReporte() {
 
 
 export const Reportes = {
-    configurarStatsProvider,
-    _sumarHorasEfectivas,
     generarReporte,
     abrirModalReporteSecciones,
     cerrarModalReporteSecciones,

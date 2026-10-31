@@ -6,15 +6,22 @@ import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UIBase } from './base.js';
 import { TarjetaLote } from './tarjeta-lote.js';
-import { html } from '../core/html.js';
-const D = GestionDatos;
+import { html, icono } from '../core/html.js';
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
+import { registrarSwipe } from './gestos.js';
+import { _crearPopupFlotante } from './popups.js';
+import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 //                     UI CALENDAR MODULE
 // ====================================================================
-const { registrarSwipe, _animarMutacion, _animarSlideElemento, _crearPopupFlotante, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray, _estaColapsado, _durSiAnima } = UIBase;
+const {
+    _animarMutacion, _animarSlideElemento, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible,
+    _aArray, _estaColapsado, _durSiAnima
+} = Animaciones;
 
 /** @param {any} [idResaltar] */
 function _cerrarSelectorMeses(idResaltar = null) {
@@ -37,7 +44,7 @@ function abrirSelectorMesesCalendario() {
 
     if (selector.style.display !== 'none') { _cerrarSelectorMeses(); return; }
 
-    const mesesOrdenados = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
+    const mesesOrdenados = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
     selector.innerHTML = '';
 
     if (mesesOrdenados.length === 0) {
@@ -76,7 +83,7 @@ function abrirSelectorMesesCalendario() {
     _animarMutacion([grid, selector], () => {
         grid.style.display = 'none';
         navBotones.style.display = 'none';
-        titulo.innerHTML = '<svg class="icon"><use href="#icon-back" /></svg> Volver';
+        titulo.innerHTML = `${icono('#icon-back')} Volver`;
         selector.style.display = 'grid';
     });
 }
@@ -112,12 +119,12 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     const mes = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
     if (titulo) titulo.textContent = `${TiempoUtils.nombreMesPorIndice(mes)} ${anio}`;
     const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
-    const registrosFiltrados = D.obtenerRegistrosFiltrados();
-    const todosLosRegistros = D.registros();
+    const registrosFiltrados = FiltrosYPeriodos.obtenerRegistrosFiltrados();
+    const todosLosRegistros = EstadoApp.registros();
     const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
     const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
     const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
-    const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
+    const asignacionesCompensatorio = asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio();
     const claveMes = `${anio}-${TiempoUtils._pad2(mes + 1)}`;
     const notasDelMes = TiposRegistro.mapaNotasPorRegistro(todosLosRegistros.filter(r => r.fecha.startsWith(claveMes)));
     const claseDelDia = (fecha) => {
@@ -162,7 +169,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
         const cell = document.createElement('div');
         let clases = `calendario-dia ${clase}`;
         if (esHoy) clases += ' hoy';
-        if (clase === 'dia-sin-registro' && !TiempoUtils.esFechaHabil(fecha, D.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
+        if (clase === 'dia-sin-registro' && !TiempoUtils.esFechaHabil(fecha, Compensatorios.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
         if (esNuevo) {
             clases += ' nuevo-registro-animacion';
             cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
@@ -188,7 +195,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     }
 
     const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
-    const esLaborable = (f) => TiempoUtils.esFechaHabil(f, D.diasHabilesEnFecha(f));
+    const esLaborable = (f) => TiempoUtils.esFechaHabil(f, Compensatorios.diasHabilesEnFecha(f));
     const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
     const segmentosSemana = [];
     for (let d = 1; d <= ultimoDia.getDate(); d++) {
@@ -303,7 +310,7 @@ let _popupCalendarioEl = null;
 
 /** @param {any} [asignaciones] */
 function _buildInfoHtmlRegistro(reg, asignaciones = null) {
-    const est = SaldoSemanal.estadoDeRegistro(reg, asignaciones || D.calcularAsignacionesCompensatorio());
+    const est = SaldoSemanal.estadoDeRegistro(reg, asignaciones || Compensatorios.calcularAsignacionesCompensatorio());
     if (est.estado === 'especial') {
         const { tipo } = est;
         const colorSafe = /^[a-z]+$/.test(tipo?.color || '') ? tipo?.color : 'purple';
@@ -342,9 +349,9 @@ function _cerrarPopupCalendario() {
     else el.remove();
 }
 
-function _cajaPopupHtml(icono, texto) {
+function _cajaPopupHtml(iconoHref, texto) {
     return html`<div class="cal-popup-caja">
-        <svg class="icon cal-popup-caja-icono"><use href="${icono}"/></svg>
+        ${icono(iconoHref, 'cal-popup-caja-icono')}
         <span class="cal-popup-caja-texto">${texto}</span>
     </div>`;
 }
@@ -362,11 +369,11 @@ function _popupCalendario(event, registroId, asignaciones = null) {
 
     _cerrarPopupCalendario();
 
-    const reg = D.registroPorId(registroId);
+    const reg = EstadoApp.registroPorId(registroId);
     if (!reg) return;
 
     const claveMes = reg.fecha.substring(0, 7);
-    const registrosDelMes = D.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
+    const registrosDelMes = EstadoApp.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
     const grupos = TiposRegistro.agruparConsecutivos(registrosDelMes);
     const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
 
@@ -376,7 +383,7 @@ function _popupCalendario(event, registroId, asignaciones = null) {
     const comentarioHtml = notasTexto ? _cajaPopupHtml('#icon-comment', notasTexto) : '';
     const btnGrupoHtml = grupoDelRegistro ? html`
         <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
-            <svg class="icon"><use href="#icon-grid-group"/></svg>
+            ${icono('#icon-grid-group')}
             Editar grupo
         </button>` : '';
 
@@ -389,7 +396,7 @@ function _popupCalendario(event, registroId, asignaciones = null) {
         ${infoHtml}
         ${comentarioHtml}
         <button class="cal-popup-btn-edit" id="_cal-popup-btn-edit">
-            <svg class="icon"><use href="#icon-edit"/></svg>
+            ${icono('#icon-edit')}
             Editar
         </button>
         ${btnGrupoHtml}`,
@@ -406,7 +413,7 @@ function _popupCalendario(event, registroId, asignaciones = null) {
     });
     popup.querySelector('#_cal-popup-btn-grupo')?.addEventListener('click', () => {
         cerrar();
-        GestionDatos.editarGrupo(grupoDelRegistro);
+        FiltrosYPeriodos.editarGrupo(grupoDelRegistro);
     });
 
     popup.addEventListener('mouseenter', () => clearTimeout(_popupCalendarioHoverTimer));
@@ -495,16 +502,16 @@ function _htmlPopupSemana(lunes) {
     const d = TiempoUtils.parsearFechaLocal(lunes);
     d.setDate(d.getDate() + 6);
     const domingo = TiempoUtils.formatearFechaLocal(d);
-    const asignaciones = D.calcularAsignacionesCompensatorio();
-    const registros = D.registros()
+    const asignaciones = Compensatorios.calcularAsignacionesCompensatorio();
+    const registros = EstadoApp.registros()
         .filter(r => r.fecha >= lunes && r.fecha <= domingo)
         .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
     const titulo = html`<div class="cal-popup-fecha">${TiempoUtils.formatearRangoSemana(lunes)}</div>`;
     if (!registros.length) return html`${titulo}<div class="cal-popup-sin-reg">Sin registros</div>`;
 
-    const total = registros.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0);
-    const buffer = D.calcularBufferPeriodo(lunes, domingo, false, 0, asignaciones);
+    const total = registros.reduce((sum, r) => sum + Compensatorios.horasEfectivasDeRegistro(r), 0);
+    const buffer = FiltrosYPeriodos.calcularBufferPeriodo(lunes, domingo, false, 0, asignaciones);
     const bufferTxt = TiempoUtils.formatoDiferencia(buffer, 0);
     const chip = bufferTxt
         ? html`<span class="registro-total ${buffer > 0 ? 'green-text' : 'red-text'}">${bufferTxt}</span>`
@@ -567,11 +574,11 @@ function _popupCalendarioDiaSinRegistro(event, fecha) {
         <div class="cal-popup-fecha">${fechaLabel}</div>
         <div class="cal-popup-sin-reg">Sin registros</div>
         ${esFechaFutura ? '' : html`<button class="cal-popup-btn-edit cal-popup-btn-accion cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
-            <svg class="icon"><use href="#icon-clock"/></svg>
+            ${icono('#icon-clock')}
             Jornada regular
         </button>`}
         <button class="cal-popup-btn-edit cal-popup-btn-accion cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
-            <svg class="icon"><use href="#icon-calendar-simple"/></svg>
+            ${icono('#icon-calendar-simple')}
             Jornada especial
         </button>`,
         event,

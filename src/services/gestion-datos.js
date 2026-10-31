@@ -1,5 +1,4 @@
 import { Compensatorios } from './compensatorios.js';
-import { ImportarExportar } from './importar-exportar.js';
 import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { EstadoApp } from './estado-app.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
@@ -22,26 +21,12 @@ const {
 } = EstadoApp;
 
 const {
-    _esObjetivoValido, _sanitizarHistorialDiasHabiles, diasHabilesEnFecha,
-    registrarCambioDiasHabiles, objetivoDeRegistro, esTipoRemoto,
-    _calcularAsignacionesCompensatorio, _buscarAsignacionCompensatorio,
-    _montoCompensadoPorRegistro, _fechaCompensadaPorRegistro,
-    _fechaCompensadoDeRegistro, _montoCompensadoDeReferencia,
-    horasEfectivasDeRegistro, objetivoEdicionEnVivo, migrarObjetivoHorasFaltante,
-    _recalcularCreditoRegistro, aplicarHorasATodosLosRegistros
+    _esObjetivoValido, diasHabilesEnFecha, objetivoDeRegistro, calcularAsignacionesCompensatorio,
+    _buscarAsignacionCompensatorio, objetivoEdicionEnVivo, _recalcularCreditoRegistro
 } = Compensatorios;
 
 const {
-    KEYS_CONFIG_EXPORTABLE, obtenerConfigExportable, validarCamposConfigImport,
-    aplicarConfigImportada, calcularCambiosConfigImport,
-    normalizarRegistrosImportados, exportarJSON, importarDatos
-} = ImportarExportar;
-
-const {
-    editarGrupo, guardarEdicionGrupo, eliminarGrupoActual, registrarDiaEspecial,
-    detenerYRegistrarTimer, detectarAyerAbierto, registroParaTiempoFuera,
-    calcularBufferPeriodo, limpiarFiltros, aplicarFiltrosInmediato,
-    obtenerRegistrosFiltrados, registrarVacacionesDirecto, borrarPeriodoDirecto
+    detenerYRegistrarTimer, detectarAyerAbierto, registroParaTiempoFuera, calcularBufferPeriodo
 } = FiltrosYPeriodos;
 
 function cargarConfiguracion() {
@@ -158,7 +143,7 @@ EstadoApp.setSincronizarPushHoyHook(_sincronizarPushHoy);
 
 function _bufferSemanalActual() {
     const { inicio: iniSemana } = TiempoUtils.obtenerSemanaRangoActual();
-    return calcularBufferPeriodo(iniSemana, TiempoUtils.obtenerFechaHoy(), false, 0, _calcularAsignacionesCompensatorio());
+    return calcularBufferPeriodo(iniSemana, TiempoUtils.obtenerFechaHoy(), false, 0, calcularAsignacionesCompensatorio());
 }
 
 function _ultimoDiaHabilEfectivoSemana() {
@@ -346,7 +331,7 @@ function pegarReferenciaAutomatica() {
         const listaSinManual = EstadoApp.registros().map(x => x.id === editandoId
             ? { ...x, fecha: f, entrada: e || null, salida: s || null, referenciaCompensatorio: undefined }
             : x);
-        const asignaciones = _calcularAsignacionesCompensatorio(listaSinManual);
+        const asignaciones = calcularAsignacionesCompensatorio(listaSinManual);
         const asignacion = asignaciones.find(a => a.compensatorioId === editandoId);
         form.escribirReferencia(asignacion?.referenciaFecha || '');
     }
@@ -453,7 +438,7 @@ async function guardarEdicion() {
                 notify.mostrarToast('El día a compensar no puede ser posterior al compensatorio', 'error');
                 return;
             }
-            const asignacionesActuales = _calcularAsignacionesCompensatorio();
+            const asignacionesActuales = calcularAsignacionesCompensatorio();
             const yaUsadoPorOtro = asignacionesActuales.find(a => a.compensatorioId !== r.id && a.referenciaFecha === referenciaCompensatorioNueva);
             if (yaUsadoPorOtro) {
                 notify.restaurarBotonGuardarEdicion(btnGuardar);
@@ -463,7 +448,7 @@ async function guardarEdicion() {
             const listaSimulada = EstadoApp.registros().map(x => x.id === r.id
                 ? { ...x, fecha: f, entrada: e || null, salida: s || null, referenciaCompensatorio: referenciaCompensatorioNueva }
                 : x);
-            const asigTest = _calcularAsignacionesCompensatorio(listaSimulada);
+            const asigTest = calcularAsignacionesCompensatorio(listaSimulada);
             const resuelto = _buscarAsignacionCompensatorio(r.id, 'compensatorioId', asigTest);
             if (!resuelto?.referenciaFecha) {
                 notify.restaurarBotonGuardarEdicion(btnGuardar);
@@ -564,37 +549,11 @@ function _aplicarEstadoHistorial(resultado, mensaje) {
 }
 
 export const GestionDatos = {
-    registros: EstadoApp.registros,
-    horasSemanales: EstadoApp.horasSemanales,
-    diasHabiles: EstadoApp.diasHabiles,
-    horasDiarias: EstadoApp.horasDiarias,
-    setDiasHabiles: EstadoApp.setDiasHabiles,
-    setHorasDiarias: EstadoApp.setHorasDiarias,
-    registroPorFecha,
-    registroPorId,
-    existeRegistroEnFecha,
-    historialDiasHabiles: EstadoApp.historialDiasHabiles,
     setHistorialDiasHabiles: (v) => {
         const arr = Array.isArray(v) ? v : [];
         EstadoApp._setHistorialDiasHabilesRaw(arr);
         if (arr.length > 0) EstadoApp.setDiasHabiles(diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
     },
-    diasHabilesEnFecha,
-    registrarCambioDiasHabiles,
-    sanitizarHistorialDiasHabiles: _sanitizarHistorialDiasHabiles,
-    getIgnorarTiempoFuera: EstadoApp.getIgnorarTiempoFuera,
-    setIgnorarTiempoFuera: EstadoApp.setIgnorarTiempoFuera,
-    objetivoDeRegistro,
-    objetivoEdicionEnVivo,
-    migrarObjetivoHorasFaltante,
-    aplicarHorasATodosLosRegistros,
-    esTipoRemoto,
-    horasEfectivasDeRegistro,
-    montoCompensadoPorRegistro: _montoCompensadoPorRegistro,
-    fechaCompensadaPorRegistro: _fechaCompensadaPorRegistro,
-    fechaCompensadoDeRegistro: _fechaCompensadoDeRegistro,
-    montoCompensadoDeReferencia: _montoCompensadoDeReferencia,
-    calcularAsignacionesCompensatorio: _calcularAsignacionesCompensatorio,
     recalcularTotalesEnMemoria: function (recalcularCreditos = false) {
         EstadoApp.registros().forEach(r => {
             if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
@@ -603,51 +562,15 @@ export const GestionDatos = {
             }
         });
     },
-    editandoId: EstadoApp.editandoId,
-    setEditandoId: EstadoApp.setEditandoId,
-    vistaActual: EstadoApp.vistaActual,
-    setVistaActual: EstadoApp.setVistaActual,
     cargarConfiguracion,
-    KEYS_CONFIG_EXPORTABLE,
-    obtenerConfigExportable,
-    validarCamposConfigImport,
-    aplicarConfigImportada,
-    calcularCambiosConfigImport,
-    calcularHoras,
-    normalizarRegistrosImportados,
-    guardarYActualizar,
     agregarRegistro,
     eliminarRegistroActual,
     editarRegistro,
     guardarEdicion,
     pegarReferenciaAutomatica,
     borrarTodoHistorial,
-    exportarJSON,
-    importarDatos,
-    calcularBufferPeriodo,
-    detectarAyerAbierto,
-    registroParaTiempoFuera,
-    aplicarFiltrosInmediato,
-    limpiarFiltros,
-    obtenerRegistrosFiltrados,
-    registrarVacacionesDirecto,
-    borrarPeriodoDirecto,
-    registrarDiaEspecial,
-    editarGrupo,
-    guardarEdicionGrupo,
-    eliminarGrupoActual,
-    setGrupoEnEdicion: EstadoApp.setGrupoEnEdicion,
     sincronizarPushHoy: _sincronizarPushHoy,
     _registroAbiertoParaPush,
-    bufferSemanalParaPush: _bufferSemanalParaPush,
     undoAction: function () { _aplicarEstadoHistorial(GestorHistorial.undo(), 'Deshecho'); },
-    redoAction: function () { _aplicarEstadoHistorial(GestorHistorial.redo(), 'Rehecho'); },
-    configurarNotificaciones: EstadoApp.configurarNotificaciones,
-    _notify: EstadoApp._notify,
-    _setRegistros: EstadoApp._setRegistros,
-    _setHistorialDiasHabilesRaw: EstadoApp._setHistorialDiasHabilesRaw,
-    _ordenarRegistros: ordenarRegistros,
-    _hayEspacioParaRegistros,
-    _aplicarCalculoHoras,
-    _recalcularHorasSiValido
+    redoAction: function () { _aplicarEstadoHistorial(GestorHistorial.redo(), 'Rehecho'); }
 };

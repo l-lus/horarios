@@ -183,7 +183,7 @@ function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutos
     const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);
     const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
     const { ayerStr, ayerAbierto } = detectarAyerAbierto(hoy, regsPorFecha);
-    const asignacionesCompensatorio = asignacionesPrecalculadas || Compensatorios._calcularAsignacionesCompensatorio();
+    const asignacionesCompensatorio = asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio();
 
     const regHoy = regsPorFecha.get(hoy) ?? null;
     const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
@@ -204,7 +204,7 @@ function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutos
         if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += objetivoDia;
         if (r && r.salida && !esEspecial && diaTerminado) {
             hechas += r.total;
-            hechas -= Compensatorios._montoCompensadoDeReferencia(r, asignacionesCompensatorio);
+            hechas -= Compensatorios.montoCompensadoDeReferencia(r, asignacionesCompensatorio);
         }
         if (esRemoto && esDiaHabil && diaTerminado) hechas += objetivoDia;
 

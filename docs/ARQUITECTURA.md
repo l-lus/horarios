@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
-**Última actualización:** 2026-10-30  
-**Estado:** Arquitectura modularizada y saneada (54 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Última actualización:** 2026-10-31  
+**Estado:** Arquitectura modularizada y saneada (57 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -39,7 +39,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (54 módulos)
+├── src/                        # Código fuente en ES Modules (57 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
@@ -96,7 +96,7 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 |---|---|---|---|---|
 | `src/data/` | `0` | Constantes y catálogos estáticos (`FERIADOS_AR`, `FONDOS_SVG`). | Nada (módulos hoja). | No accede a `document`, `window` ni `localStorage`. |
 | `src/core/` | `1` | Helpers de infraestructura base (`TiempoUtils`, `SeguridadYUtils`, `Almacenamiento`, `EventosApp`, `html.js`, `dom.js`, `movimiento.js`, `constantes.js`, `tema-inicial.js`). | Solo otros módulos de `src/core/` o `src/data/`. | No importa nada de `src/services/` ni `src/ui/`. |
-| `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Compensatorios`, `FiltrosYPeriodos`, `SaldoSemanal`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. **Prohibido acceder al DOM** (`document`, `$()`), verificado por test. Toda comunicación hacia la UI pasa por `EstadoApp._notify()`, los puertos de formulario o `EventosApp` (ver 3.1). |
+| `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Compensatorios`, `FiltrosYPeriodos`, `SaldoSemanal`, `EstadisticasPeriodo`, `EstadoTarjeta`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. **Prohibido acceder al DOM** (`document`, `$()`), verificado por test. Toda comunicación hacia la UI pasa por `EstadoApp._notify()`, los puertos de formulario o `EventosApp` (ver 3.1). |
 | `src/ui/` | `3` | Lectura de inputs, renderizado de tablas/tarjetas/calendario, modales, temas y animaciones. | `src/ui/` (sin ciclos), `src/services/`, `src/core/`, `src/data/`. | No escribe directamente en `localStorage` para datos de registros (usa `GestionDatos` o `Almacenamiento`). No inserta HTML con datos sin pasar por ``html`...` `` (3.2). |
 | `src/main.js` | `4` | Arranque en `DOMContentLoaded`. | `OrquestadorUI`, los módulos de `ui/` que enlazan eventos, `InstaladorPWA`, `FeriadosAR` y `RecordatorioPush`. | No contiene lógica de negocio ni handlers extensos. |
 
@@ -140,9 +140,9 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 |---|---|---|
 | [`src/core/tema-inicial.js`](../src/core/tema-inicial.js) | *(script clásico en `<head>`)* | Aplica el tema oscuro y modo de animaciones (`horarios_temaOscuro`, `horarios_reducirAnimaciones` con fallback legado) antes del primer pintado (anti-FOUC) y protege contra clickjacking. |
 | [`src/core/constantes.js`](../src/core/constantes.js) | `APP_NOMBRE`, `APP_VERSION`, `APP_STORAGE_PREFIX`, `STORAGE_KEYS`, `horasGte`, `horasEq` | Prefijo de aplicación (`horarios_`), claves de `localStorage`, comparadores de punto flotante con tolerancia y constantes globales. |
-| [`src/core/html.js`](../src/core/html.js) | ``html`...` ``, `crudo`, `montar`, `esHtmlSeguro` | Plantillas HTML con escape automático de cada interpolación (ver 3.2). |
+| [`src/core/html.js`](../src/core/html.js) | ``html`...` ``, `crudo`, `montar`, `esHtmlSeguro`, `icono` | Plantillas HTML con escape automático de cada interpolación (ver 3.2) e `icono(href, clase)` para los íconos del sprite SVG (`'#icon-…'`). |
 | [`src/core/dom.js`](../src/core/dom.js) | `$`, `setColapsable` | `$` (`getElementById` tipado) y helper de contenedores colapsables. |
-| [`src/core/eventos.js`](../src/core/eventos.js) | `EventosApp` | Bus de eventos pub/sub (`on`, `off`, `emit`) y registro de handlers desacoplados (`register`, `call`). |
+| [`src/core/eventos.js`](../src/core/eventos.js) | `EventosApp` | Bus de eventos pub/sub (`on`, `off`, `emit`) (`on` devuelve la función para desuscribirse). |
 | [`src/core/movimiento.js`](../src/core/movimiento.js) | `Movimiento` | Detección de `prefers-reduced-motion` y helpers de transición. |
 | [`src/core/seguridad.js`](../src/core/seguridad.js) | `SeguridadYUtils` | Sanitización de strings/notas, `escapeHtml`, `validarRegistroSeguro`, cálculo SHA-256 (`calcularHashSHA256` con fallback JS puro) y `reviverJSONSeguro`. |
 | [`src/core/almacenamiento.js`](../src/core/almacenamiento.js) | `Almacenamiento` | Lectura/escritura segura en `localStorage` bajo el namespace `horarios_`, migración automática de claves legadas (`migrarClavesLegadas`), manejo de cuota y resolución de clave por perfil (`setProfileKeyResolver`). |
@@ -153,11 +153,13 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | Archivo | Export | Responsabilidad |
 |---|---|---|
 | [`src/services/estado-app.js`](../src/services/estado-app.js) | `EstadoApp` | **Store central de dominio** (hoja en `services/`): mantiene `registros`, `diasHabiles`, `horasDiarias`, `historialDiasHabiles`, estado de edición/filtros, `calcularHoras` y canal `notify` y los typedef de los puertos (`Notificaciones`, `FormularioRegistro`, `FormularioEdicion`). |
-| [`src/services/gestion-datos.js`](../src/services/gestion-datos.js) | `GestionDatos` | Fachada de dominio: alta/baja/edición individual de fichajes, validación de los datos de formulario (que llegan por los puertos), sincronización con Push hoy y undo/redo. |
+| [`src/services/gestion-datos.js`](../src/services/gestion-datos.js) | `GestionDatos` | Comandos de dominio: alta/baja/edición individual de fichajes, validación de los datos de formulario (que llegan por los puertos), recálculo de totales, sincronización con Push hoy y undo/redo. No reexporta otros servicios: para leer estado o cálculos se importa el módulo dueño (`EstadoApp`, `Compensatorios`, `FiltrosYPeriodos`, `ImportarExportar`). |
 | [`src/services/compensatorios.js`](../src/services/compensatorios.js) | `Compensatorios` | Cálculo de banco de horas extras, asignación cronológica de horas a francos/compensatorios y tramos históricos de días hábiles. |
 | [`src/services/filtros-periodos.js`](../src/services/filtros-periodos.js) | `FiltrosYPeriodos` | Filtrado de registros, cálculo de buffer por período, detección de jornada nocturna de ayer, edición de grupos y carga/borrado por rango. |
 | [`src/services/importar-exportar.js`](../src/services/importar-exportar.js) | `ImportarExportar` | Serialización para exportación JSON, validación estructural, verificación SHA-256 y merge/reemplazo al importar respaldos. |
 | [`src/services/saldo-semanal.js`](../src/services/saldo-semanal.js) | `SaldoSemanal` | Cálculo de saldos por semana y mes para las vistas de calendario, resumen y estadísticas. |
+| [`src/services/estadisticas-periodo.js`](../src/services/estadisticas-periodo.js) | `EstadisticasPeriodo` | Métricas de un período (semana, mes o año): promedios de entrada/salida, regularidad, conteos por tipo, banco de horas y aprovechamiento del saldo. Lo usan `Estadisticas` y `Reportes`. |
+| [`src/services/estado-tarjeta.js`](../src/services/estado-tarjeta.js) | `EstadoTarjeta` | Estado de la tarjeta de fichaje (tiempo de hoy, totales y objetivo de la semana, buffer). Lo que depende de la UI (tiempo fuera en curso, registro de ayer retenido) llega por parámetro. |
 | [`src/services/tipos-registro.js`](../src/services/tipos-registro.js) | `TiposRegistro` | Definición y consulta de tipos de registro especiales (feriado, vacaciones, enfermedad, compensatorio, remoto, etc.). |
 | [`src/services/gestor-historial.js`](../src/services/gestor-historial.js) | `GestorHistorial` | Pila de estados en memoria y `localStorage` para Deshacer (`undo`) y Rehacer (`redo`). |
 | [`src/services/gestor-perfiles.js`](../src/services/gestor-perfiles.js) | `GestorPerfiles` | Gestión multi-perfil (creación, renombrado, eliminación, cambio de perfil activo y aislamiento de claves en storage). |
@@ -170,7 +172,7 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | Archivo | Export | Responsabilidad |
 |---|---|---|
 | [`src/ui/orquestador.js`](../src/ui/orquestador.js) | `OrquestadorUI` | Coordinador principal de UI: inicializa todos los submódulos visuales, listeners globales y conecta las notificaciones de `GestionDatos`. |
-| [`src/ui/base.js`](../src/ui/base.js) | `UIBase` | Fachada de helpers de UI: reexporta los módulos de abajo y agrega errores de campos, toggles de configuración, selects, flashes de campo, descargas y apertura de modales con padre. |
+| [`src/ui/base.js`](../src/ui/base.js) | `UIBase` | Helpers de UI propios: errores de campos, toggles de configuración, selects, flashes de campo, descargas, secciones colapsables y apertura de modales con padre. No reexporta: gestos, toasts, botón Fichar, popups, scroll y animaciones se importan de su módulo. |
 | [`src/ui/gestos.js`](../src/ui/gestos.js) | `registrarSwipe`, `debounce`, `_crearPressHold` | Gestos táctiles, debounce y botones de mantener presionado. |
 | [`src/ui/toast.js`](../src/ui/toast.js) | `mostrarToast`, `_cerrarToastActual`, `_habilitarCierreToast` | Cola de avisos (toasts) con cierre por click o swipe. |
 | [`src/ui/boton-fichar.js`](../src/ui/boton-fichar.js) | `resetearBoton`, `animarExitoFichaje`, `setIconoBtn`, ... | Reseteo del botón Fichar y animación del check de éxito. |
@@ -178,17 +180,18 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/ui/scroll.js`](../src/ui/scroll.js) | `_scrollA`, `_esperarFinScroll`, `_scrollHastaVisible` | Desplazamiento respetando `prefers-reduced-motion`. |
 | [`src/ui/formularios.js`](../src/ui/formularios.js) | `Formularios` | Implementación en DOM de los puertos `FormularioRegistro` y `FormularioEdicion` que usan los servicios. |
 | [`src/ui/instalador-pwa.js`](../src/ui/instalador-pwa.js) | `InstaladorPWA` | Captura de `beforeinstallprompt`, registro del Service Worker (`sw.js`) y aviso de actualizaciones. |
-| [`src/ui/animaciones.js`](../src/ui/animaciones.js) | `Animaciones` | Transiciones suaves de altura, fade/swap de elementos, mutación animada de textos y scroll asistido. |
+| [`src/ui/animaciones.js`](../src/ui/animaciones.js) | `Animaciones` | Transiciones suaves de altura, fade/swap de elementos, mutación animada de textos y scroll asistido. `_renderConFirma` reemplaza HTML solo si cambió (`dataset.firma`) y `_conRendersSinAnimar` lo aplica sin animar mientras dura un cambio de vista. |
 | [`src/ui/gestor-temas.js`](../src/ui/gestor-temas.js) | `GestorTemas` | Cambio de tema claro/oscuro y sincronización de `meta[name="theme-color"]`. |
 | [`src/ui/gestor-modales.js`](../src/ui/gestor-modales.js) | `GestorModales` | Apertura/cierre de modales accesibles, historial de navegación entre modales y diálogos de confirmación (`confirmar`). |
-| [`src/ui/tarjeta-fichaje.js`](../src/ui/tarjeta-fichaje.js) | `TarjetaFichaje` | Tarjeta principal de fichaje del día/semana (barra de progreso, hints de salida estimada, ciclo de textos y actualización general). Con el ajuste opcional «Hint integrado en la barra» (`STORAGE_KEYS.HINT_INTEGRADO`, apagado por defecto) la entrada, la salida estimada y la salida con buffer se dibujan sobre la barra; apagado, se usa el `toggle-hint` de texto. Al cerrar una jornada de ayer que cruzó la medianoche, el servicio avisa por `retenerRegistroAyer` y la tarjeta la muestra ~4 s (salida y total) antes de pasar a hoy; un nuevo fichaje lo anula. |
+| [`src/ui/tarjeta-fichaje-vista.js`](../src/ui/tarjeta-fichaje-vista.js) | `TarjetaFichajeVista` | Modelo de vista de la tarjeta de fichaje (`derivarVistaHoy`, `derivarVistaSemana`): títulos, hints, colores, línea de salida estimada y preferencias de texto (formato corto, hint integrado). |
+| [`src/ui/tarjeta-fichaje.js`](../src/ui/tarjeta-fichaje.js) | `TarjetaFichaje` | Tarjeta principal de fichaje del día/semana: renderizado (barra de progreso, hints, ciclo de textos) y actualización general a partir de `EstadoTarjeta` y `TarjetaFichajeVista`. Con el ajuste opcional «Hint integrado en la barra» (`STORAGE_KEYS.HINT_INTEGRADO`, apagado por defecto) la entrada, la salida estimada y la salida con buffer se dibujan sobre la barra; apagado, se usa el `toggle-hint` de texto. Al cerrar una jornada de ayer que cruzó la medianoche, el servicio avisa por `retenerRegistroAyer` y la tarjeta la muestra ~4 s (salida y total) antes de pasar a hoy; un nuevo fichaje lo anula. |
 | [`src/ui/tarjeta-tiempo-fuera.js`](../src/ui/tarjeta-tiempo-fuera.js) | `TarjetaTiempoFuera` | Cronómetro en vivo de tiempo fuera (pausa/almuerzo) en la tarjeta principal. |
 | [`src/ui/tarjeta-lote.js`](../src/ui/tarjeta-lote.js) | `TarjetaLote` | Modo de carga por lote (múltiples días/licencias desde la tarjeta principal) y helpers de inputs de hora/fecha. |
 | [`src/ui/tarjeta-fondos.js`](../src/ui/tarjeta-fondos.js) | `TarjetaFondos` | Selector, sanitización segura con `DOMParser` y renderizado de fondos SVG en la tarjeta de fichaje. |
 | [`src/ui/calendario.js`](../src/ui/calendario.js) | `Calendario` | Vista de calendario mensual interactivo en el historial, selector de meses/años y popups de detalle diario, más la animación de entrada inicial de los días con registro (`animarEntradaInicial`, respeta `Movimiento`). |
 | [`src/ui/historico.js`](../src/ui/historico.js) | `Historico` | Renderizado de la lista histórica agrupada por año/mes/semana, grupos de licencias y acciones por fila. |
 | [`src/ui/historico-edicion.js`](../src/ui/historico-edicion.js) | `HistoricoEdicion` | Modales de edición individual y de grupo, candado de bloqueo de edición y popup de filtros. |
-| [`src/ui/estadisticas.js`](../src/ui/estadisticas.js) | `Estadisticas` | Tarjeta de estadísticas (semanal, mensual, anual), cálculo de métricas y popups explicativos de cada indicador. |
+| [`src/ui/estadisticas.js`](../src/ui/estadisticas.js) | `Estadisticas` | Tarjeta de estadísticas (semanal, mensual, anual): selectores, renderizado de las métricas de `EstadisticasPeriodo` y popups explicativos de cada indicador. |
 | [`src/ui/reportes.js`](../src/ui/reportes.js) | `Reportes` | Generación y descarga de reportes HTML autocontenidos con CSP propia y selector de secciones. |
 | [`src/ui/configuracion.js`](../src/ui/configuracion.js) | `Configuracion` | Modal de configuración (jornada laboral, días hábiles, toggles de cálculo, selector de fondo y modal de ayuda). |
 | [`src/ui/historial-dias.js`](../src/ui/historial-dias.js) | `HistorialDias` | Modal para administrar tramos históricos de días hábiles cuando cambia la jornada laboral del usuario. |
@@ -217,7 +220,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 
 ### Caso C: Es una regla de negocio, cálculo sobre los registros o integración con una API/Storage
 - **¿Calcula saldos, filtra registros, transforma datos para guardar o habla con una API externa (Gist, Google Drive, Worker)?** → Va en `src/services/`.
-  - **Importante:** Si necesita leer el estado (`registros`, `diasHabiles`, `horasDiarias`), debe importar [`EstadoApp`](../src/services/estado-app.js) (`import { EstadoApp } from './estado-app.js'`), **no** `GestionDatos`, para no introducir ciclos.
+  - **Importante:** Si necesita leer el estado (`registros`, `diasHabiles`, `horasDiarias`), debe importar [`EstadoApp`](../src/services/estado-app.js) (`import { EstadoApp } from './estado-app.js'`), **no** `GestionDatos`, para no introducir ciclos. Lo mismo vale para `ui/`: se importa el módulo dueño de cada función (sin reexportaciones ni funciones de reenvío `(...args) => Otro.fn(...args)`).
   - *Ejemplo:* Regla para calcular francos compensatorios → [`src/services/compensatorios.js`](../src/services/compensatorios.js).
   - *Ejemplo:* Sincronización con Google Drive → Nuevo módulo `src/services/drive-sync.js`.
 
@@ -258,6 +261,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 | **ARQ-9** | [`src/core/html.js`](../src/core/html.js): plantillas con escape automático; popups y lista de secciones de reporte migrados | ✅ Aplicado |
 | **ARQ-10** | `ui/base.js` (645 → ~280 líneas) dividido en `gestos`, `toast`, `boton-fichar`, `popups` y `scroll`, con `UIBase` como fachada | ✅ Aplicado |
 | **ARQ-11** | Versión centralizada (`APP_VERSION`) y `npm run release` para `APP_VERSION` + `CACHE_NAME` | ✅ Aplicado |
+| **ARQ-12** | Saneamiento: código muerto eliminado, ~50 funciones de reenvío y reexportaciones quitadas, `GestionDatos` (75 → 14 miembros) y `UIBase` (53 → 18) sin pasamanos, cálculo de estadísticas y de la tarjeta movidos a `services/` (`EstadisticasPeriodo`, `EstadoTarjeta`) con tests sin DOM, `tarjeta-fichaje.js` (1.012 → 540 líneas) dividido con `tarjeta-fichaje-vista.js`, helper `icono()` y reportes con ``html`...` `` | ✅ Aplicado |
 
 ---
 

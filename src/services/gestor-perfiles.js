@@ -9,12 +9,10 @@ import { EstadoApp } from './estado-app.js';
 const MAX_PERFILES = 9;
 let perfilActual = 'default';
 let perfiles = {};
-let _inicializado = false;
 
 function inicializar() {
     cargarPerfiles();
     actualizarSelector();
-    _inicializado = true;
 }
 
 function cargarPerfiles() {
@@ -88,7 +86,6 @@ function cambiarPerfil(nuevoId) {
 
 function obtenerPerfilActual() { return perfilActual; }
 function esPerfilDefault() { return perfilActual === 'default'; }
-function estaInicializado() { return _inicializado; }
 function obtenerDatosPerfil() { return perfiles[perfilActual]; }
 function obtenerTodosPerfiles() { return perfiles; }
 
@@ -100,7 +97,7 @@ Almacenamiento.setProfileKeyResolver(perfilKey);
 EstadoApp.setPerfilHooks({ obtenerPerfilActual, guardarDatosPerfilActual });
 
 export const GestorPerfiles = {
-    inicializar, estaInicializado, cambiarPerfil, guardarDatosPerfilActual,
+    inicializar, cambiarPerfil, guardarDatosPerfilActual,
     obtenerPerfilActual, esPerfilDefault, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
     guardarPerfiles, perfilKey, MAX_PERFILES
 };

@@ -4,18 +4,18 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
-const D = GestionDatos;
+import { EstadoApp } from '../services/estado-app.js';
+import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
+import { resetearBoton, setIconoBtn, cancelarExitoFichaje, animarExitoFichaje, obtenerIconoBtn } from './boton-fichar.js';
+import { _scrollHastaVisible } from './scroll.js';
+import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 //           UI CARD BATCH / FORM & INPUT HELPERS MODULE
 // ====================================================================
-const {
-    resetearBoton, _flashCampo, _avisarFichaje,
-    _animarFadeSwap, _animarSlideElemento, toggleSeccionGen, _crearOpcion,
-    setIconoBtn, aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible, cancelarExitoFichaje, animarExitoFichaje,
-    obtenerIconoBtn, _animarValor, _durSiAnima
-} = UIBase;
-const actualizarEstadoBotonTimerMain = (...args) => D._notify().actualizarEstadoBotonTimerMain(...args);
+const { _flashCampo, _avisarFichaje, toggleSeccionGen, _crearOpcion, aplicarFeedbackCampos } = UIBase;
+const { _animarFadeSwap, _animarSlideElemento, _esperarAnim, _animarValor, _durSiAnima } = Animaciones;
+const actualizarEstadoBotonTimerMain = (...args) => EstadoApp._notify().actualizarEstadoBotonTimerMain(...args);
 
 let modoLoteActivo = false;
 let _pintandoSinAnimar = false;
@@ -99,11 +99,11 @@ function _limpiarCamposLote() {
 }
 
 async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
-    if (D.existeRegistroEnFecha(fecha)) {
+    if (EstadoApp.existeRegistroEnFecha(fecha)) {
         _avisarFichaje(mensajeDuplicado, 'warning'); return;
     }
     try {
-        await GestionDatos.registrarDiaEspecial(fecha, tipo);
+        await FiltrosYPeriodos.registrarDiaEspecial(fecha, tipo);
         alExito?.();
         _limpiarCamposLote();
         actualizarBotonLote();
@@ -148,8 +148,8 @@ async function registrarLoteDesdeCard() {
     }
 
     try {
-        if (tipo === 'normal') await GestionDatos.borrarPeriodoDirecto(desde, hasta);
-        else await GestionDatos.registrarVacacionesDirecto(desde, hasta, tipo);
+        if (tipo === 'normal') await FiltrosYPeriodos.borrarPeriodoDirecto(desde, hasta);
+        else await FiltrosYPeriodos.registrarVacacionesDirecto(desde, hasta, tipo);
         aplicarFeedbackCampos(
             [
                 { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
@@ -268,7 +268,7 @@ function _setBtnError(btn, btnTexto, mensaje) {
 }
 
 function _actualizarBtnNormal(btn, btnTexto, desde, hasta) {
-    const n = GestionDatos.registros().filter(r =>
+    const n = EstadoApp.registros().filter(r =>
         r.fecha >= desde && r.fecha <= hasta && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
     ).length;
     n > 0
@@ -280,11 +280,11 @@ function _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales) 
     const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(tipo);
     if (!codigosTipo) return _pintarBotonLote(btn, btnTexto, 'Fichar');
 
-    const yaRegistrados = GestionDatos.registros().filter(r =>
+    const yaRegistrados = EstadoApp.registros().filter(r =>
         r.fecha >= desde && r.fecha <= hasta &&
         r.entrada === codigosTipo.entrada && r.salida === codigosTipo.salida
     ).length;
-    const diasOcupados = GestionDatos.registros().filter(r => r.fecha >= desde && r.fecha <= hasta).length;
+    const diasOcupados = EstadoApp.registros().filter(r => r.fecha >= desde && r.fecha <= hasta).length;
     const disponibles = diasTotales - diasOcupados;
     const sobreescribirOtros = diasOcupados - yaRegistrados;
 
@@ -305,7 +305,7 @@ function actualizarBotonLote() {
         if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Completar rango');
 
         const hoy = TiempoUtils.obtenerFechaHoy();
-        const existeHoy = D.existeRegistroEnFecha(hoy);
+        const existeHoy = EstadoApp.existeRegistroEnFecha(hoy);
         return existeHoy
             ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
             : _pintarBotonLote(btn, btnTexto, 'Fichar');
@@ -315,7 +315,7 @@ function actualizarBotonLote() {
     if (!TiempoUtils.validarFecha(desde)) return _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida');
     if (desde && !hasta) {
         if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
-        const existe = D.existeRegistroEnFecha(desde);
+        const existe = EstadoApp.existeRegistroEnFecha(desde);
         return existe
             ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
             : _pintarBotonLote(btn, btnTexto, 'Fichar');

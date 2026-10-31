@@ -1,5 +1,6 @@
 import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
+import { icono } from '../core/html.js';
 
 // ====================================================================
 // FORMULARIOS — implementación en DOM del puerto que usan los servicios
@@ -81,7 +82,7 @@ const edicion = {
     },
     liberarEliminar: (btn) => {
         btn.disabled = false;
-        btn.innerHTML = '<svg class="icon"><use href="#icon-trash"/></svg> Eliminar';
+        btn.innerHTML = `${icono('#icon-trash')} Eliminar`;
     },
 };
 

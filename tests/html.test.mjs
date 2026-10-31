@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { html, crudo, esHtmlSeguro, montar } from '../src/core/html.js';
+import { html, crudo, esHtmlSeguro, montar, icono } from '../src/core/html.js';
 
 test('html: escapa interpolaciones de texto', () => {
     const nota = '<img src=x onerror="alert(1)">\'&';
@@ -26,4 +26,11 @@ test('html: un string común no es HtmlSeguro y montar() lo rechaza', () => {
     const el = {};
     montar(el, html`<b>${'<'}</b>`);
     assert.equal(el.innerHTML, '<b>&lt;</b>');
+});
+
+test('icono: arma el <svg> del sprite, escapa href y clase, y se anida sin re-escapar', () => {
+    assert.equal(String(icono('#icon-clock')), '<svg class="icon"><use href="#icon-clock"/></svg>');
+    assert.equal(String(icono('#icon-edit', 'extra')), '<svg class="icon extra"><use href="#icon-edit"/></svg>');
+    assert.equal(String(icono('"><b>')), '<svg class="icon"><use href="&quot;&gt;&lt;b&gt;"/></svg>');
+    assert.equal(String(html`<p>${icono('#icon-x')}</p>`), '<p><svg class="icon"><use href="#icon-x"/></svg></p>');
 });

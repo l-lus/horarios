@@ -296,4 +296,4 @@ function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones
     });
 }
 
-export const GestorModales = { abrir, cerrar, alternar, cerrarTodos, confirmar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, setPadre: (id, padreId) => { if (id && padreId) _padres[id] = padreId; }, registrarAccionVolver };
+export const GestorModales = { abrir, cerrar, alternar, cerrarTodos, confirmar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, registrarAccionVolver };

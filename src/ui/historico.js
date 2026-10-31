@@ -10,34 +10,24 @@ import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { UIBase } from './base.js';
 import { Calendario } from './calendario.js';
 import { RespaldoLocal } from './respaldo-local.js';
-const D = GestionDatos;
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
+import { _scrollA } from './scroll.js';
+import { Animaciones } from './animaciones.js';
+import { icono } from '../core/html.js';
 
 // ====================================================================
 //                     UI HISTORY MODULE
 // ====================================================================
-const {
-    
-    _actualizarOffsetsStickyMes, 
-    _crearFantasmaSiVisible, DUR_ANIM, _aArray, _estaColapsado, _scrollA
-} = UIBase;
+const { _actualizarOffsetsStickyMes } = UIBase;
+const { _crearFantasmaSiVisible, DUR_ANIM, _aArray, _estaColapsado } = Animaciones;
 
-const cerrarEdicion = (...args) => HistoricoEdicion.cerrarEdicion.apply(HistoricoEdicion, args);
-const setBloqueoEdicion = (...args) => HistoricoEdicion.setBloqueoEdicion(...args);
-const toggleBloqueoEdicion = (...args) => HistoricoEdicion.toggleBloqueoEdicion.apply(HistoricoEdicion, args);
-const toggleCredito = (...args) => HistoricoEdicion.toggleCredito.apply(HistoricoEdicion, args);
-const _actualizarHintEdicion = (...args) => HistoricoEdicion._actualizarHintEdicion.apply(HistoricoEdicion, args);
-const actualizarHintGrupo = (...args) => HistoricoEdicion.actualizarHintGrupo.apply(HistoricoEdicion, args);
-const guardarEdicionGrupoDesdeFormulario = (...args) => HistoricoEdicion.guardarEdicionGrupoDesdeFormulario.apply(HistoricoEdicion, args);
-const mostrarFiltros = (...args) => HistoricoEdicion.mostrarFiltros(...args);
-const cerrarFiltros = (...args) => HistoricoEdicion.cerrarFiltros.apply(HistoricoEdicion, args);
-const toggleHistorico = (...args) => HistoricoEdicion.toggleHistorico.apply(HistoricoEdicion, args);
-const iniciarTimerAutoCierreBotones = (...args) => HistoricoEdicion.iniciarTimerAutoCierreBotones.apply(HistoricoEdicion, args);
-const cancelarTimerAutoCierreBotones = (...args) => HistoricoEdicion.cancelarTimerAutoCierreBotones.apply(HistoricoEdicion, args);
-const verificarBloqueoCredito = (...args) => HistoricoEdicion.verificarBloqueoCredito.apply(HistoricoEdicion, args);
-const setBloqueoEdicionGrupo = (...args) => HistoricoEdicion.setBloqueoEdicionGrupo(...args);
-const toggleBloqueoEdicionGrupo = (...args) => HistoricoEdicion.toggleBloqueoEdicionGrupo.apply(HistoricoEdicion, args);
-const cerrarEdicionGrupo = (...args) => HistoricoEdicion.cerrarEdicionGrupo.apply(HistoricoEdicion, args);
-const setTiempoExpansionBotones = (...args) => HistoricoEdicion.setTiempoExpansionBotones(...args);
+const {
+    cerrarEdicion, toggleBloqueoEdicion, toggleCredito, guardarEdicionGrupoDesdeFormulario,
+    mostrarFiltros, toggleHistorico, iniciarTimerAutoCierreBotones, toggleBloqueoEdicionGrupo,
+    cerrarEdicionGrupo
+} = HistoricoEdicion;
 function agruparRegistrosPorMes(registros) {
     if (!Array.isArray(registros)) {
         console.warn('agruparRegistrosPorMes: entrada inválida');
@@ -259,11 +249,11 @@ function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asi
 function _renderEmptyStateLista(lista) {
     const emptyDiv = document.createElement('div');
     emptyDiv.className = 'empty-state';
-    if (D.registros().length === 0) {
+    if (EstadoApp.registros().length === 0) {
         const msg = Object.assign(document.createElement('p'), { textContent: 'No hay registros' });
         const btn = Object.assign(document.createElement('button'), {
             className: 'btn-backup empty-state__btn-restaurar',
-            innerHTML: '<svg class="icon"><use href="#icon-upload" /></svg> Restaurar desde archivo'
+            innerHTML: `${icono('#icon-upload')} Restaurar desde archivo`
         });
         btn.addEventListener('click', () => RespaldoLocal.mostrarImportar(true));
         emptyDiv.appendChild(msg);
@@ -425,7 +415,7 @@ function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalc
     const animacionLista = _prepararAnimacionLista(lista, idNuevo);
     lista.innerHTML = '';
 
-    const registrosAMostrar = D.obtenerRegistrosFiltrados();
+    const registrosAMostrar = FiltrosYPeriodos.obtenerRegistrosFiltrados();
     if (registrosAMostrar.length === 0) { _renderEmptyStateLista(lista); return; }
 
     const hoy = TiempoUtils.obtenerFechaHoy();
@@ -433,7 +423,7 @@ function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalc
     const anioHoy = hoy.substring(0, 4);
     const gruposPorMes = agruparRegistrosPorMes(registrosAMostrar);
     const fragmento = document.createDocumentFragment();
-    const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
+    const asignacionesCompensatorio = asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio();
 
     const mesesAnioActual = new Map();
     const mesesPorAnio = new Map();
@@ -499,7 +489,7 @@ function crearGrupoExpandible(grupo, idResaltar = null, asignacionesCompensatori
     /** @type {{ texto: any, clase: string }[]} */
     const badgesExtra = [];
     if (tipoConfig?.id === 'compensatorio') {
-        const fechasCompensadas = [...new Set(grupo.registros.map(r => D.fechaCompensadaPorRegistro(r, asignacionesCompensatorio)).filter(Boolean))];
+        const fechasCompensadas = [...new Set(grupo.registros.map(r => Compensatorios.fechaCompensadaPorRegistro(r, asignacionesCompensatorio)).filter(Boolean))];
         if (fechasCompensadas.length === 1) {
             badgesExtra.push({ texto: TiempoUtils.fechaCorta(fechasCompensadas[0]), clase: colorClase });
         }
@@ -528,12 +518,12 @@ function _initListenerAccionesLista(lista) {
         if (!target) return;
         if (target.dataset.accion === 'editar-registro') {
             const id = target.dataset.registroId;
-            if (id) D.editarRegistro(id);
+            if (id) GestionDatos.editarRegistro(id);
         } else if (target.dataset.accion === 'editar-grupo') {
             const grupoData = _grupoPorCabecera.get(target);
             if (!grupoData) return;
-            const registrosCompletos = D.registros().filter(r => grupoData.registros.includes(r.id));
-            D.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
+            const registrosCompletos = EstadoApp.registros().filter(r => grupoData.registros.includes(r.id));
+            FiltrosYPeriodos.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
         }
     });
 }
@@ -632,8 +622,8 @@ function bindEventos() {
         Calendario.toggleVistaHistorico();
     });
     $('btn-filtro')?.addEventListener('click', (e) => mostrarFiltros(e));
-    $('btn-undo')?.addEventListener('click', () => D.undoAction());
-    $('btn-redo')?.addEventListener('click', () => D.redoAction());
+    $('btn-undo')?.addEventListener('click', () => GestionDatos.undoAction());
+    $('btn-redo')?.addEventListener('click', () => GestionDatos.redoAction());
 
     $('btn-toggle-credito')?.addEventListener('click', () => toggleCredito());
     $('btn-lock-toggle')?.addEventListener('click', () => toggleBloqueoEdicion());
@@ -644,7 +634,7 @@ function bindEventos() {
 
     $('btn-lock-grupo-toggle')?.addEventListener('click', () => toggleBloqueoEdicionGrupo());
     document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => guardarEdicionGrupoDesdeFormulario());
-    document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => GestionDatos.eliminarGrupoActual());
+    document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => FiltrosYPeriodos.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => cerrarEdicionGrupo());
 
 }
@@ -652,23 +642,7 @@ function bindEventos() {
 export const Historico = {
     bindEventos,
     actualizarListaRegistros,
-    cerrarEdicion,
-    setBloqueoEdicion,
-    toggleBloqueoEdicion,
-    toggleCredito,
-    _actualizarHintEdicion,
     _initListenerAccionesLista,
     _initListenerToggleAnio,
-    _initListenerToggleMes,
-    actualizarHintGrupo,
-    mostrarFiltros,
-    cerrarFiltros,
-    toggleHistorico,
-    iniciarTimerAutoCierreBotones,
-    cancelarTimerAutoCierreBotones,
-    verificarBloqueoCredito,
-    setBloqueoEdicionGrupo,
-    toggleBloqueoEdicionGrupo,
-    cerrarEdicionGrupo,
-    setTiempoExpansionBotones
+    _initListenerToggleMes
 };

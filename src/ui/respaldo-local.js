@@ -1,18 +1,17 @@
 import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
-import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
-const D = GestionDatos;
+import { EstadoApp } from '../services/estado-app.js';
+import { ImportarExportar } from '../services/importar-exportar.js';
+import { setIconoBtn } from './boton-fichar.js';
+import { mostrarToast } from './toast.js';
 
 // ====================================================================
 //                     UI LOCAL BACKUP MODULE (Import / Export JSON)
 // ====================================================================
-const {
-    mostrarToast, 
-    descargarJSON, obtenerNombrePerfilSafe, setIconoBtn
-} = UIBase;
+const { descargarJSON, obtenerNombrePerfilSafe } = UIBase;
 
 let _modalAbiertoDesdeLista = false;
 
@@ -99,7 +98,7 @@ async function ejecutarExportacion() {
 
     try {
         if (tipo === 'todo') {
-            D.exportarJSON();
+            ImportarExportar.exportarJSON();
             cerrarExportar();
 
         } else if (tipo === 'mes-actual') {
@@ -142,12 +141,12 @@ async function ejecutarExportacion() {
 function _filtrarRegistrosRango(desde, hasta, esMes) {
     if (esMes) {
         const [año, mes] = desde.split('-').map(Number);
-        return D.registros().filter(r => {
+        return EstadoApp.registros().filter(r => {
             const [aReg, mReg] = r.fecha.split('-').map(Number);
             return aReg === año && mReg === mes;
         });
     }
-    return D.registros().filter(r => r.fecha >= desde && r.fecha <= hasta);
+    return EstadoApp.registros().filter(r => r.fecha >= desde && r.fecha <= hasta);
 }
 
 async function exportarRango(desde, hasta, esMes = false) {
@@ -159,10 +158,10 @@ async function exportarRango(desde, hasta, esMes = false) {
 
     const data = {
         registros: registrosFiltrados,
-        diasHabiles: D.diasHabiles(),
-        horasDiarias: D.horasDiarias(),
-        historialDiasHabiles: D.historialDiasHabiles(),
-        ...D.obtenerConfigExportable(),
+        diasHabiles: EstadoApp.diasHabiles(),
+        horasDiarias: EstadoApp.horasDiarias(),
+        historialDiasHabiles: EstadoApp.historialDiasHabiles(),
+        ...ImportarExportar.obtenerConfigExportable(),
         fecha: fechaLocal,
         version: S.SECURITY_LIMITS.SCHEMA_VERSION,
         hash: await S.calcularHashSHA256(registrosFiltrados),

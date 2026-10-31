@@ -13,7 +13,7 @@ function _esObjetivoValido(v) {
     return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24;
 }
 
-function _sanitizarHistorialDiasHabiles(historial) {
+function sanitizarHistorialDiasHabiles(historial) {
     if (!Array.isArray(historial)) return null;
     const limpio = historial
         .filter(t => t && typeof t.desde === 'string' && (t.desde === '0001-01-01' || TiempoUtils.validarFecha(t.desde)) && Array.isArray(t.dias))
@@ -65,7 +65,7 @@ function registrarCambioDiasHabiles(nuevosDias) {
         const idx = hist.findIndex(t => t.desde === hoy);
         if (idx >= 0) hist[idx] = { desde: hoy, dias: nuevosDias };
         else hist.push({ desde: hoy, dias: nuevosDias });
-        hist = _sanitizarHistorialDiasHabiles(hist) || [{ desde: '0001-01-01', dias: nuevosDias }];
+        hist = sanitizarHistorialDiasHabiles(hist) || [{ desde: '0001-01-01', dias: nuevosDias }];
     }
     D._setHistorialDiasHabilesRaw(hist);
     D.setDiasHabiles(nuevosDias);
@@ -90,7 +90,7 @@ function _excedenteDeRegistro(r) {
 
 const LIMITE_DIAS_COMPENSATORIO = 14;
 
-function _calcularAsignacionesCompensatorio(listaRegistros = D.registros()) {
+function calcularAsignacionesCompensatorio(listaRegistros = D.registros()) {
     const ordenados = [...listaRegistros].sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
 
     const excedentePorFecha = new Map();
@@ -146,7 +146,7 @@ function _calcularAsignacionesCompensatorio(listaRegistros = D.registros()) {
 
 /** @param {any} [asignacionesPrecalculadas] */
 function _buscarAsignacionCompensatorio(idBuscado, campoId, asignacionesPrecalculadas = null) {
-    const asignaciones = asignacionesPrecalculadas || _calcularAsignacionesCompensatorio();
+    const asignaciones = asignacionesPrecalculadas || calcularAsignacionesCompensatorio();
     return asignaciones.find(a => a[campoId] === idBuscado) || null;
 }
 
@@ -157,19 +157,19 @@ function _montoCompensadoPorRegistro(registroCompensatorio, asignacionesPrecalcu
 }
 
 /** @param {any} [asignacionesPrecalculadas] */
-function _fechaCompensadaPorRegistro(registroCompensatorio, asignacionesPrecalculadas = null) {
+function fechaCompensadaPorRegistro(registroCompensatorio, asignacionesPrecalculadas = null) {
     const a = _buscarAsignacionCompensatorio(registroCompensatorio.id, 'compensatorioId', asignacionesPrecalculadas);
     return a ? a.referenciaFecha : null;
 }
 
 /** @param {any} [asignacionesPrecalculadas] */
-function _fechaCompensadoDeRegistro(registroReferencia, asignacionesPrecalculadas = null) {
+function fechaCompensadoDeRegistro(registroReferencia, asignacionesPrecalculadas = null) {
     const a = _buscarAsignacionCompensatorio(registroReferencia.id, 'referenciaId', asignacionesPrecalculadas);
     return a ? a.compensatorioFecha : null;
 }
 
 /** @param {any} [asignacionesPrecalculadas] */
-function _montoCompensadoDeReferencia(registroReferencia, asignacionesPrecalculadas = null) {
+function montoCompensadoDeReferencia(registroReferencia, asignacionesPrecalculadas = null) {
     const a = _buscarAsignacionCompensatorio(registroReferencia.id, 'referenciaId', asignacionesPrecalculadas);
     return a ? a.excedente : 0;
 }
@@ -231,18 +231,18 @@ function aplicarHorasATodosLosRegistros() {
 
 export const Compensatorios = {
     _esObjetivoValido,
-    _sanitizarHistorialDiasHabiles,
+    sanitizarHistorialDiasHabiles,
     diasHabilesEnFecha,
     registrarCambioDiasHabiles,
     objetivoDeRegistro,
     esTipoRemoto,
     _excedenteDeRegistro,
-    _calcularAsignacionesCompensatorio,
+    calcularAsignacionesCompensatorio,
     _buscarAsignacionCompensatorio,
     _montoCompensadoPorRegistro,
-    _fechaCompensadaPorRegistro,
-    _fechaCompensadoDeRegistro,
-    _montoCompensadoDeReferencia,
+    fechaCompensadaPorRegistro,
+    fechaCompensadoDeRegistro,
+    montoCompensadoDeReferencia,
     horasEfectivasDeRegistro,
     objetivoEdicionEnVivo,
     migrarObjetivoHorasFaltante,

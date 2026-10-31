@@ -56,7 +56,7 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
         const h = typeof data.horasDiarias === 'string' ? parseFloat(data.horasDiarias) : data.horasDiarias;
         if (Number.isFinite(h) && h >= 0 && h <= 24) D.setHorasDiarias(h);
     }
-    const historialImportado = Compensatorios._sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
+    const historialImportado = Compensatorios.sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
     D._setHistorialDiasHabilesRaw(historialImportado || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
     D.setDiasHabiles(Compensatorios.diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
 

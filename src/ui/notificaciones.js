@@ -1,14 +1,15 @@
 import { $ } from '../core/dom.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { UIBase } from './base.js';
-import { GestionDatos as D } from '../services/gestion-datos.js';
+import { GestionDatos } from '../services/gestion-datos.js';
+import { debounce } from './gestos.js';
+import { mostrarToast } from './toast.js';
 
 // ====================================================================
 // UI NOTIFICATIONS MODULE (push y permisos de notificaciones)
 // ====================================================================
 const {
-    debounce, _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnActivo,
-    _setBtnDisabled
+    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnActivo, _setBtnDisabled
 } = UIBase;
 
 function _actualizarDisponibilidadBotonesPush() {
@@ -22,7 +23,7 @@ function actualizarEstadoBotonNotificaciones() {
     _setBtnActivo('btn-toggle-notification', RecordatorioPush.getHabilitado());
 }
 
-const _sincronizarPushHoyDebounced = debounce(() => D.sincronizarPushHoy(), 400);
+const _sincronizarPushHoyDebounced = debounce(() => GestionDatos.sincronizarPushHoy(), 400);
 
 const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuffer } =
     _crearToggleConfig({
@@ -117,7 +118,7 @@ async function enviarNotificacionPrueba() {
         'no-soportado': ['Este navegador no admite notificaciones', 'error'],
     };
     const [texto, tipo] = mensajes[await RecordatorioPush.enviarNotificacionPrueba(10000)];
-    UIBase.mostrarToast(texto, tipo, 5000);
+    mostrarToast(texto, tipo, 5000);
     actualizarEstadoPermisoNotificaciones();
 }
 

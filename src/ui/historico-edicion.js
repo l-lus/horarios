@@ -5,21 +5,21 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
 import { Calendario } from './calendario.js';
 import { Configuracion } from './configuracion.js';
-import { html } from '../core/html.js';
-const D = GestionDatos;
+import { html, icono } from '../core/html.js';
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
+import { setIconoBtn } from './boton-fichar.js';
+import { _crearPopupFlotante } from './popups.js';
+import { mostrarToast } from './toast.js';
 
 // ====================================================================
 //           UI HISTORY EDIT, FILTERS & HEADER ACTIONS MODULE
 // ====================================================================
-const {
-    mostrarToast, _setBtnActivo, 
-    _crearPopupFlotante,
-    setIconoBtn
-} = UIBase;
+const { _setBtnActivo } = UIBase;
 
 let edicionBloqueada = true;
 
@@ -31,7 +31,7 @@ let timerAutoCierreBotones = null;
 function cerrarEdicion() {
     Configuracion.pressHoldObjetivoEdicion.detener();
     GestorModales.cerrar('modal-editar', () => {
-        D.setEditandoId(null);
+        EstadoApp.setEditandoId(null);
         document.dispatchEvent(new Event('scroll'));
         setBloqueoEdicion(true);
     });
@@ -111,7 +111,7 @@ function _actualizarHintEdicion() {
     if (!e && !s) { hint.textContent = ''; return; }
     if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }
     if (e?.length === 5 && s?.length === 5) {
-        const t = D.calcularHoras(e, s, tf || null, null, false);
+        const t = EstadoApp.calcularHoras(e, s, tf || null, null, false);
         hint.textContent = t ? `Total: ${t.horas}h ${t.minutos}m` : '';
     } else {
         hint.textContent = '';
@@ -148,7 +148,7 @@ async function guardarEdicionGrupoDesdeFormulario() {
     const btnGuardar = /** @type {HTMLButtonElement} */ ($('modal-editar-grupo').querySelector('.btn-edit'));
     btnGuardar.disabled = true;
     try {
-        await D.guardarEdicionGrupo({
+        await FiltrosYPeriodos.guardarEdicionGrupo({
             tipo: $('edit-grupo-tipo').value,
             desde: $('edit-grupo-desde').value,
             hasta: $('edit-grupo-hasta').value,
@@ -166,9 +166,9 @@ async function guardarEdicionGrupoDesdeFormulario() {
 let _popupFiltrosEl = null;
 
 function mostrarFiltros(event) {
-    if (D.obtenerRegistrosFiltrados().length !== D.registros().length) {
+    if (FiltrosYPeriodos.obtenerRegistrosFiltrados().length !== EstadoApp.registros().length) {
         ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => { if ($(id)) $(id).value = ''; });
-        D.limpiarFiltros();
+        FiltrosYPeriodos.limpiarFiltros();
         return;
     }
 
@@ -191,7 +191,7 @@ function mostrarFiltros(event) {
         id: '_filtro-popup',
         html: html`
         <div class="filtro-popup-titulo">
-            <svg class="icon"><use href="#icon-filter" /></svg>
+            ${icono('#icon-filter')}
             Filtrar Registros
         </div>
         <div class="form-group form-group-mb-half">
@@ -221,7 +221,7 @@ function mostrarFiltros(event) {
         const desde = $('filtro-fecha-desde').value;
         const hasta = $('filtro-fecha-hasta').value;
         const tipo = $('filtro-tipo').value;
-        D.aplicarFiltrosInmediato(desde, hasta, tipo);
+        FiltrosYPeriodos.aplicarFiltrosInmediato(desde, hasta, tipo);
     };
 
     ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => {
@@ -346,8 +346,8 @@ function verificarBloqueoCredito() {
 
     if (TiposRegistro.esRegistroEspecial(e, s)) return _bloquear();
 
-    const calcTemp = D.calcularHoras(e, s, tf, null);
-    const objetivoEdicion = D.objetivoEdicionEnVivo();
+    const calcTemp = EstadoApp.calcularHoras(e, s, tf, null);
+    const objetivoEdicion = Compensatorios.objetivoEdicionEnVivo();
     if (!calcTemp || calcTemp.total >= objetivoEdicion) return _bloquear();
 
     _habilitar();
@@ -369,7 +369,7 @@ function toggleBloqueoEdicionGrupo() {
 
 function cerrarEdicionGrupo() {
     GestorModales.cerrar('modal-editar-grupo', () => {
-        D.setGrupoEnEdicion(null);
+        EstadoApp.setGrupoEnEdicion(null);
         document.dispatchEvent(new Event('scroll'));
         setBloqueoEdicionGrupo(true);
     });

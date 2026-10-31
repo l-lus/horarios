@@ -48,9 +48,6 @@ test('EventosApp: suscripción, desuscripción y registro de handlers', () => {
     off();
     EventosApp.emit('test:evento', { ok: 99 });
     assert.deepEqual(recibido, { ok: 42 });
-
-    EventosApp.register('test:sumar', (a, b) => a + b);
-    assert.equal(EventosApp.call('test:sumar', 10, 15), 25);
 });
 
 test('EstadoApp.calcularHoras y Compensatorios: cálculo de jornada, cruce de medianoche y asignación de compensatorios', () => {
@@ -98,7 +95,7 @@ test('EstadoApp.calcularHoras y Compensatorios: cálculo de jornada, cruce de me
         }
     ];
     EstadoApp._setRegistros(lista);
-    const asignaciones = Compensatorios._calcularAsignacionesCompensatorio(lista);
+    const asignaciones = Compensatorios.calcularAsignacionesCompensatorio(lista);
     assert.equal(asignaciones.length, 1);
     assert.equal(asignaciones[0].compensatorioId, 'reg-comp-1');
     assert.equal(asignaciones[0].referenciaId, 'reg-excedente-1');
@@ -309,11 +306,11 @@ test('Almacenamiento: prefijo horarios_ (APP_STORAGE_PREFIX) y migración autom�
     assert.equal(rawStore.has(`${APP_STORAGE_PREFIX}gestion_servicios_config`), false);
 });
 
-test('TarjetaFichaje: derivarVistaHoy y derivarVistaSemana marcan estado cerrado y colorCierre', async () => {
-    const { TarjetaFichaje } = await import('../src/ui/tarjeta-fichaje.js');
+test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado cerrado y colorCierre', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
 
     // Semana cerrada cumpliendo objetivo
-    const vistaSemanaOk = TarjetaFichaje.derivarVistaSemana({
+    const vistaSemanaOk = TarjetaFichajeVista.derivarVistaSemana({
         totalSemana: 35,
         totalSemanaProgreso: 35,
         objetivoSemana: 35,
@@ -325,7 +322,7 @@ test('TarjetaFichaje: derivarVistaHoy y derivarVistaSemana marcan estado cerrado
     assert.equal(vistaSemanaOk.colorCierre, 'green');
 
     // Semana cerrada con faltante
-    const vistaSemanaFail = TarjetaFichaje.derivarVistaSemana({
+    const vistaSemanaFail = TarjetaFichajeVista.derivarVistaSemana({
         totalSemana: 28,
         totalSemanaProgreso: 28,
         objetivoSemana: 35,
@@ -337,7 +334,7 @@ test('TarjetaFichaje: derivarVistaHoy y derivarVistaSemana marcan estado cerrado
     assert.equal(vistaSemanaFail.colorCierre, 'red');
 
     // Semana en curso (abierta)
-    const vistaSemanaEnCurso = TarjetaFichaje.derivarVistaSemana({
+    const vistaSemanaEnCurso = TarjetaFichajeVista.derivarVistaSemana({
         totalSemana: 14,
         totalSemanaProgreso: 14,
         objetivoSemana: 35,
@@ -348,7 +345,7 @@ test('TarjetaFichaje: derivarVistaHoy y derivarVistaSemana marcan estado cerrado
     assert.equal(vistaSemanaEnCurso.cerrado, false);
 
     // Día cerrado (con salida registrada)
-    const vistaDiaCerrado = TarjetaFichaje.derivarVistaHoy({
+    const vistaDiaCerrado = TarjetaFichajeVista.derivarVistaHoy({
         regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: '15:00', total: 7, objetivoHoras: 7 },
         tiempoHoy: 7,
         horasDiarias: 7,
@@ -361,7 +358,7 @@ test('TarjetaFichaje: derivarVistaHoy y derivarVistaSemana marcan estado cerrado
     assert.equal(vistaDiaCerrado.colorCierre, 'green');
 
     // Día cerrado con faltante
-    const vistaDiaFalto = TarjetaFichaje.derivarVistaHoy({
+    const vistaDiaFalto = TarjetaFichajeVista.derivarVistaHoy({
         regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: '09:07', total: 1.12, objetivoHoras: 7 },
         tiempoHoy: 1.12,
         horasDiarias: 7,
@@ -374,7 +371,7 @@ test('TarjetaFichaje: derivarVistaHoy y derivarVistaSemana marcan estado cerrado
     assert.equal(vistaDiaFalto.colorCierre, 'red');
 
     // Día en curso (sin salida)
-    const vistaDiaEnCurso = TarjetaFichaje.derivarVistaHoy({
+    const vistaDiaEnCurso = TarjetaFichajeVista.derivarVistaHoy({
         regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: null, objetivoHoras: 7 },
         tiempoHoy: 2,
         horasDiarias: 7,

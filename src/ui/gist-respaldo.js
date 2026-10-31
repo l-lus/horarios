@@ -11,17 +11,22 @@ import { HistoricoEdicion } from './historico-edicion.js';
 import { TarjetaFichaje } from './tarjeta-fichaje.js';
 import { Configuracion } from './configuracion.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
-const D = GestionDatos;
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { ImportarExportar } from '../services/importar-exportar.js';
+import { setIconoBtn } from './boton-fichar.js';
+import { _crearPressHold } from './gestos.js';
+import { mostrarToast } from './toast.js';
+import { Animaciones } from './animaciones.js';
+import { icono, montar } from '../core/html.js';
 
 // ====================================================================
 //                     UI GIST AND BACKUP MODULE
 // ====================================================================
-const {
-    mostrarToast, _setBtnDisabled, _setBtnActivo, _flashCampo, _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre,
-    setIconoBtn, _animarValor
-} = UIBase;
+const { _setBtnDisabled, _setBtnActivo, _flashCampo, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
+const { _animarValor } = Animaciones;
 
-const { mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar, ejecutarExportacion, toggleCamposRangoExport } = RespaldoLocal;
+const { mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar, ejecutarExportacion } = RespaldoLocal;
 let _gistAutoSyncTemp = null;
 let _gistLimitesTemp = null;
 let _gistMergeDesdeModal = false;
@@ -229,17 +234,17 @@ function _calcularRegistrosMerge(modo, mergeData) {
         if (soloEnGist.length === 0 && complementarios.length === 0) {
             return { vacio: true };
         }
-        if (D.registros().length + soloEnGist.length > S.SECURITY_LIMITS.MAX_REGISTROS) {
+        if (EstadoApp.registros().length + soloEnGist.length > S.SECURITY_LIMITS.MAX_REGISTROS) {
             return { limiteAlcanzado: true };
         }
 
-        const registrosActualizados = D.registros().map(local => {
+        const registrosActualizados = EstadoApp.registros().map(local => {
             const imp = complementarios.find(c => c.fecha === local.fecha);
             if (!imp) return local;
             const actualizado = { ...local };
             if (!actualizado.salida && imp.salida) actualizado.salida = imp.salida;
             if (!actualizado.tiempoFuera && imp.tiempoFuera) actualizado.tiempoFuera = imp.tiempoFuera;
-            const t = D.calcularHoras(actualizado.entrada, actualizado.salida, actualizado.tiempoFuera || null, actualizado.credito || null);
+            const t = EstadoApp.calcularHoras(actualizado.entrada, actualizado.salida, actualizado.tiempoFuera || null, actualizado.credito || null);
             if (t) { actualizado.horas = t.horas; actualizado.minutos = t.minutos; actualizado.total = t.total; }
             return actualizado;
         });
@@ -254,7 +259,7 @@ function _calcularRegistrosMerge(modo, mergeData) {
         };
 
     } else {
-        D.aplicarConfigImportada(data, registrosNormalizados);
+        ImportarExportar.aplicarConfigImportada(data, registrosNormalizados);
         return {
             registrosFinales: registrosNormalizados,
             mensajeExito: `${registrosNormalizados.length} registros restaurados desde Gist`
@@ -290,16 +295,16 @@ async function gistMergeAplicar(modo, modoAutomatico = false) {
 
     const { registrosFinales, mensajeExito } = resultado;
 
-    D.registros().splice(0, D.registros().length, ...registrosFinales);
-    D.registros().sort((a, b) => {
+    EstadoApp.registros().splice(0, EstadoApp.registros().length, ...registrosFinales);
+    EstadoApp.registros().sort((a, b) => {
         if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
         return (b.entrada || '').localeCompare(a.entrada || '');
     });
-    D.migrarObjetivoHorasFaltante();
-    D.sincronizarPushHoy();
-    GestorHistorial.saveState(D.registros(), modo === 'replace' ? 'reemplazar con Gist' : 'combinar con Gist');
+    Compensatorios.migrarObjetivoHorasFaltante();
+    GestionDatos.sincronizarPushHoy();
+    GestorHistorial.saveState(EstadoApp.registros(), modo === 'replace' ? 'reemplazar con Gist' : 'combinar con Gist');
 
-    await D.guardarYActualizar();
+    await EstadoApp.guardarYActualizar();
     TarjetaFichaje.actualizarUI();
     Configuracion.refrescarConfigSiVisible();
 
@@ -438,11 +443,11 @@ async function gistSubir() {
     _gistGuardarCredencialesSiModalAbierto();
     await _gistConSpinner('btn-gist-subir', 'Error al subir', async () => {
         const nuevoId = await SincronizacionGist.subir(
-            D.registros(),
-            D.diasHabiles(),
-            D.horasDiarias(),
-            D.historialDiasHabiles(),
-            D.obtenerConfigExportable()
+            EstadoApp.registros(),
+            EstadoApp.diasHabiles(),
+            EstadoApp.horasDiarias(),
+            EstadoApp.historialDiasHabiles(),
+            ImportarExportar.obtenerConfigExportable()
         );
         const gistIdInput = $('gist-id');
         if (gistIdInput) gistIdInput.value = nuevoId;
@@ -456,8 +461,8 @@ let _gistMergeData = null;
 
 async function _validarDatosGist(data) {
     if (!data.registros || !Array.isArray(data.registros)) throw new Error('Datos inválidos en el Gist');
-    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...D.KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
-    if (Object.keys(data).some(k => !allowedRootKeys.includes(k)) || !D.validarCamposConfigImport(data)) throw new Error('Estructura del Gist sospechosa');
+    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...GestionDatos.KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
+    if (Object.keys(data).some(k => !allowedRootKeys.includes(k)) || !ImportarExportar.validarCamposConfigImport(data)) throw new Error('Estructura del Gist sospechosa');
     if (data._hashNoCoincide) {
         const continuar = await GestorModales.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
         if (!continuar) return null;
@@ -468,19 +473,19 @@ async function _validarDatosGist(data) {
     if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
         mostrarToast(`Gist de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
     }
-    const registrosNormalizados = D.normalizarRegistrosImportados(data.registros, D.calcularHoras);
+    const registrosNormalizados = ImportarExportar.normalizarRegistrosImportados(data.registros, EstadoApp.calcularHoras);
     if (registrosNormalizados.length === 0) throw new Error('No se encontraron registros válidos');
     if (registrosNormalizados.length > S.SECURITY_LIMITS.MAX_REGISTROS) throw new Error(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`);
     return registrosNormalizados;
 }
 
 function _calcularDiffGist(registrosNormalizados) {
-    const localesPorFecha = new Map(D.registros().map(r => [r.fecha, r]));
+    const localesPorFecha = new Map(EstadoApp.registros().map(r => [r.fecha, r]));
     const gistPorFecha = new Map(registrosNormalizados.map(r => [r.fecha, r]));
 
     const soloEnGist = registrosNormalizados.filter(r => !localesPorFecha.has(r.fecha));
     const enAmbos = registrosNormalizados.filter(r => localesPorFecha.has(r.fecha));
-    const soloLocal = D.registros().filter(r => !gistPorFecha.has(r.fecha));
+    const soloLocal = EstadoApp.registros().filter(r => !gistPorFecha.has(r.fecha));
     const complementarios = enAmbos.filter(imp => {
         const local = localesPorFecha.get(imp.fecha);
         return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
@@ -489,7 +494,7 @@ function _calcularDiffGist(registrosNormalizados) {
 }
 
 function _calcularConfigCambios(data) {
-    return D.calcularCambiosConfigImport(data);
+    return ImportarExportar.calcularCambiosConfigImport(data);
 }
 
 const _mkEl = (tag, cls, texto) => {
@@ -511,11 +516,11 @@ function _crearSelectorModoMerge(onCambio) {
     const el = _mkEl('div', 'btn-group');
     el.setAttribute('role', 'group');
     el.setAttribute('aria-label', 'Cómo aplicar los datos del Gist');
-    const btns = [['merge', '#icon-combine', 'Combinar'], ['replace', '#icon-replace-swap', 'Reemplazar']].map(([modo, icono, texto]) => {
+    const btns = [['merge', '#icon-combine', 'Combinar'], ['replace', '#icon-replace-swap', 'Reemplazar']].map(([modo, href, texto]) => {
         const btn = _mkEl('button');
         btn.type = 'button';
         btn.dataset.modo = modo;
-        btn.innerHTML = `<svg class="icon"><use href="${icono}" /></svg>`;
+        montar(btn, icono(href));
         btn.appendChild(document.createTextNode(texto));
         btn.addEventListener('click', () => onCambio(modo));
         el.appendChild(btn);
@@ -580,7 +585,7 @@ function _crearTarjetaResultadoMerge({ nLocal, nGist, nNuevos, nComp }, configCa
 function _crearAlertaReemplazoMerge(nSoloLocal) {
     if (nSoloLocal === 0) return null;
     const alerta = _mkEl('div', 'gist-alerta');
-    alerta.innerHTML = '<svg class="icon"><use href="#icon-alert-triangle" /></svg>';
+    montar(alerta, icono('#icon-alert-triangle'));
     const txt = _mkEl('span');
     txt.append(
         'Se eliminan ',
@@ -682,8 +687,8 @@ function bindEventos() {
     $('btn-gist-merge-cancelar')?.addEventListener('click', () => gistMergeCancelar());
 
     $('btn-seleccionar-archivo')?.addEventListener('click', () => $('file-import').click());
-    $('btn-combinar')?.addEventListener('click', () => GestionDatos.importarDatos($('file-import').files?.[0], 'merge'));
-    $('btn-reemplazar')?.addEventListener('click', () => GestionDatos.importarDatos($('file-import').files?.[0], 'replace'));
+    $('btn-combinar')?.addEventListener('click', () => ImportarExportar.importarDatos($('file-import').files?.[0], 'merge'));
+    $('btn-reemplazar')?.addEventListener('click', () => ImportarExportar.importarDatos($('file-import').files?.[0], 'replace'));
     $('btn-volver-importar')?.addEventListener('click', () => cerrarImportar());
 
     document.querySelector('#modal-exportar .btn-export')?.addEventListener('click', () => ejecutarExportacion());
@@ -696,12 +701,6 @@ function bindEventos() {
 
 export const GistRespaldo = {
     bindEventos,
-    mostrarImportar,
-    cerrarImportar,
-    mostrarExportar,
-    cerrarExportar,
-    ejecutarExportacion,
-    toggleCamposRangoExport,
     actualizarEstadoBotonesGist,
     actualizarResumenLimites: _actualizarResumenLimites,
     toggleGistPanel,

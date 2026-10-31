@@ -157,3 +157,55 @@ test('GestionDatos.agregarRegistro: cerrar la jornada abierta de ayer la retiene
     assert.equal(EstadoApp.registros()[0].salida, '00:26');
     assert.deepEqual(retenidos, []);
 });
+
+test('EstadisticasPeriodo calcula promedios, regularidad y conteos de un rango sin DOM', async () => {
+    const { EstadisticasPeriodo: E } = await import('../src/services/estadisticas-periodo.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    EstadoApp.setHorasDiarias(0);
+
+    assert.equal(E.desviacionEstandar([480]), null);
+    assert.equal(E.calcularRegularidad(null), '--:--');
+    assert.equal(E.calcularRegularidad(15), 'Alta');
+    assert.equal(E.calcularRegularidad(30), 'Media');
+    assert.equal(E.calcularRegularidad(60), 'Baja');
+
+    const vacio = E.calcularEstadisticasRango([]);
+    assert.equal(vacio.diasTrabajados, 0);
+    assert.equal(vacio.entradaPromedio, '--:--');
+
+    const stats = E.calcularEstadisticasRango([
+        { id: 1, fecha: '2026-10-05', entrada: '08:00', salida: '16:00', total: 8, tiempoFuera: '00:30' },
+        { id: 2, fecha: '2026-10-06', entrada: '09:00', salida: '17:00', total: 8 },
+    ]);
+    assert.equal(stats.diasTrabajados, 2);
+    assert.equal(stats.entradaPromedio, '08:30');
+    assert.equal(stats.salidaPromedio, '16:30');
+    assert.equal(stats.regularidadJornada, 'Alta');
+    assert.equal(stats.regularidadEntrada, 'Media');
+});
+
+test('EstadoTarjeta.calcularEstadoCard calcula el día y respeta el registro retenido que inyecta la UI', async () => {
+    const { EstadoTarjeta } = await import('../src/services/estado-tarjeta.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { TiempoUtils } = await import('../src/core/tiempo-utils.js');
+    EstadoApp.setHorasDiarias(7);
+    EstadoApp.setDiasHabiles([1, 2, 3, 4, 5]);
+    EstadoApp.setIgnorarTiempoFuera(false);
+
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    const ayer = TiempoUtils.formatearFechaLocal(new Date(Date.now() - 86400000));
+    const regHoy = { id: 'h', fecha: hoy, entrada: '08:00', salida: '15:30', total: 7.5 };
+    const regAyer = { id: 'a', fecha: ayer, entrada: '09:00', salida: '17:00', total: 8 };
+    EstadoApp._setRegistros([regAyer, regHoy]);
+
+    const est = EstadoTarjeta.calcularEstadoCard();
+    assert.equal(est.hoy, hoy);
+    assert.equal(est.esRetenido, false);
+    assert.equal(est.tiempoHoy, 7.5);
+
+    EstadoApp._setRegistros([regAyer]);
+    const retenido = EstadoTarjeta.calcularEstadoCard({ resolverRetenido: () => regAyer });
+    assert.equal(retenido.esRetenido, true);
+    assert.equal(retenido.hoy, ayer);
+    assert.equal(retenido.tiempoHoy, 8);
+});

@@ -5,13 +5,16 @@ import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
-import { UIBase } from './base.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
+import { setIconoBtn } from './boton-fichar.js';
+import { _scrollA } from './scroll.js';
+import { mostrarToast } from './toast.js';
+import { icono } from '../core/html.js';
 
 // ====================================================================
 //                     UI PROFILES MODULE
 // ====================================================================
-const { mostrarToast, setIconoBtn, _scrollA } = UIBase;
+
 
 let perfilEnEdicion = null;
 
@@ -70,7 +73,7 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
 
         const editBtn = Object.assign(document.createElement('button'), {
             className: 'btn-perfil-edit',
-            innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
+            innerHTML: String(icono('#icon-edit')),
             title: 'Editar perfil',
             onclick: (e) => { e.stopPropagation(); abrirEditorPerfil(p.id); }
         });

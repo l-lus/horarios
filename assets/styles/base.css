@@ -186,11 +186,6 @@ h2.mutacion-saliente.no-margin,
     stroke-width: 0;
 }
 
-.icon-line {
-    stroke-width: 2;
-    fill: none;
-}
-
 .chevron-mes-icon {
     width: var(--icon-md);
     height: var(--icon-md);

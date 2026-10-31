@@ -17,22 +17,34 @@ import { Perfiles } from './perfiles.js';
 import { Calendario } from './calendario.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
 import { GistRespaldo } from './gist-respaldo.js';
+import { RespaldoLocal } from './respaldo-local.js';
 import { Historico } from './historico.js';
+import { HistoricoEdicion } from './historico-edicion.js';
 import { Estadisticas } from './estadisticas.js';
+import { Reportes } from './reportes.js';
 import { TarjetaFichaje } from './tarjeta-fichaje.js';
+import { TarjetaFichajeVista } from './tarjeta-fichaje-vista.js';
+import { TarjetaFondos } from './tarjeta-fondos.js';
+import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
+import { TarjetaLote } from './tarjeta-lote.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
 import { Notificaciones } from './notificaciones.js';
 import { Configuracion } from './configuracion.js';
 import { HistorialDias } from './historial-dias.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
-import { GestionDatos as D } from '../services/gestion-datos.js';
+import { GestionDatos } from '../services/gestion-datos.js';
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { resetearBoton, restaurarBotonGuardarEdicion, animarExitoFichaje } from './boton-fichar.js';
+import { registrarSwipe, debounce } from './gestos.js';
+import { mostrarToast, _habilitarCierreToast } from './toast.js';
+import { Animaciones } from './animaciones.js';
 
 const {
-    registrarSwipe, debounce, _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
-    mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON, mostrarToast,
-    _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion, _esperarAnim, _avisarFichaje,
-    aplicarFeedbackCampos, animarExitoFichaje
+    _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced, mostrarError, limpiarError,
+    obtenerNombrePerfilSafe, descargarJSON, _avisarFichaje, aplicarFeedbackCampos
 } = UIBase;
+const { _esperarAnim } = Animaciones;
 
 const {
     crearPerfilDesdeSelector, cerrarSelectorPerfiles, cerrarEditorPerfil
@@ -43,27 +55,37 @@ const {
 } = Calendario;
 
 const {
-    cerrarImportar, cerrarExportar, toggleCamposRangoExport,
     actualizarBotonesHistorico, cerrarModalGist, gistMergeCancelar, gistSubir, gistBajar
 } = GistRespaldo;
 
+const { cerrarImportar, cerrarExportar, toggleCamposRangoExport } = RespaldoLocal;
+
 const {
-    cerrarEdicion, setBloqueoEdicion, _actualizarHintEdicion, _initListenerAccionesLista,
-    _initListenerToggleAnio, _initListenerToggleMes, actualizarHintGrupo, cerrarFiltros,
-    iniciarTimerAutoCierreBotones, verificarBloqueoCredito, setBloqueoEdicionGrupo, cerrarEdicionGrupo,
-    setTiempoExpansionBotones
+    _initListenerAccionesLista, _initListenerToggleAnio, _initListenerToggleMes
 } = Historico;
 
 const {
-    cerrarModalReporteSecciones, _bindStatItemPopups, toggleStats, setModoEstadisticas
-} = Estadisticas;
+    cerrarEdicion, setBloqueoEdicion, _actualizarHintEdicion, actualizarHintGrupo, cerrarFiltros,
+    iniciarTimerAutoCierreBotones, verificarBloqueoCredito, setBloqueoEdicionGrupo, cerrarEdicionGrupo,
+    setTiempoExpansionBotones
+} = HistoricoEdicion;
 
 const {
-    setFondoCard, actualizarUI, alternarVista, _forzarVista, actualizarEstadoBotonTimerMain,
-    toggleModoLote, poblarSelectoresTipos, actualizarBotonLote, toggleFormulario, setTimerAutoVista,
-    _iniciarCicloStats, _detenerCicloStats, _prepararMostrarFaseAlRenderizar, _retenerRegistroAyer,
-    _refrescarFormatoCortoStatsCache
+    _bindStatItemPopups, toggleStats, setModoEstadisticas
+} = Estadisticas;
+
+const { cerrarModalReporteSecciones } = Reportes;
+
+const {
+    actualizarUI, alternarVista, _forzarVista, setTimerAutoVista,
+    _iniciarCicloStats, _detenerCicloStats, _prepararMostrarFaseAlRenderizar, _retenerRegistroAyer
 } = TarjetaFichaje;
+
+const { _refrescarFormatoCortoStatsCache } = TarjetaFichajeVista;
+
+const { setFondoCard } = TarjetaFondos;
+const { actualizarEstadoBotonTimerMain } = TarjetaTiempoFuera;
+const { toggleModoLote, poblarSelectoresTipos, actualizarBotonLote, toggleFormulario } = TarjetaLote;
 
 const {
     aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards, iniciarDragTarjetas
@@ -106,7 +128,7 @@ function _initGlobales() {
     _suscribirEventosServicios();
     GestorPerfiles.inicializar();
     
-    D.configurarNotificaciones({
+    EstadoApp.configurarNotificaciones({
         abrirModal: GestorModales.abrir,
         actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
         animarExitoFichaje, aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
@@ -228,9 +250,9 @@ function _initSwipesYStats() {
 }
 
 function _initDatosYConfig() {
-    const config = D.cargarConfiguracion();
-    D.setVistaActual(config.vistaActual);
-    D.setIgnorarTiempoFuera(config.ignorarTiempoFuera || false);
+    const config = GestionDatos.cargarConfiguracion();
+    EstadoApp.setVistaActual(config.vistaActual);
+    EstadoApp.setIgnorarTiempoFuera(config.ignorarTiempoFuera || false);
     actualizarEstadoBotonIgnorarTF();
     poblarSelectoresTipos();
     actualizarEstadoBotonHoverPopup();
@@ -253,38 +275,38 @@ function _initDatosYConfig() {
     setModoEstadisticas(config.modoEstadisticas || 'mensual');
 
     const perfilActual = GestorPerfiles.obtenerDatosPerfil();
-    D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
+    EstadoApp.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
     const hdPerfil = parseFloat(perfilActual.horasDiarias);
-    D.setHorasDiarias(Number.isFinite(hdPerfil) && hdPerfil >= 0 && hdPerfil <= 24 ? hdPerfil : 7);
-    const historialGuardado = D.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
-    D.setHistorialDiasHabiles(
+    EstadoApp.setHorasDiarias(Number.isFinite(hdPerfil) && hdPerfil >= 0 && hdPerfil <= 24 ? hdPerfil : 7);
+    const historialGuardado = Compensatorios.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
+    GestionDatos.setHistorialDiasHabiles(
         historialGuardado && historialGuardado.length > 0
             ? historialGuardado
-            : [{ desde: '0001-01-01', dias: D.diasHabiles() }]
+            : [{ desde: '0001-01-01', dias: EstadoApp.diasHabiles() }]
     );
-    D.registros().splice(0, D.registros().length, ...(perfilActual.registros || []));
+    EstadoApp.registros().splice(0, EstadoApp.registros().length, ...(perfilActual.registros || []));
 
     const historialCargado = GestorHistorial.loadFromLocalStorage();
     if (historialCargado) {
         const estadoActual = GestorHistorial.getCurrentState();
         if (estadoActual !== null && estadoActual !== undefined) {
-            D.registros().splice(0, D.registros().length, ...estadoActual);
+            EstadoApp.registros().splice(0, EstadoApp.registros().length, ...estadoActual);
         } else {
             console.warn('Historial corrupto, descartado. Usando registros del perfil.');
             GestorHistorial.clear();
         }
     }
-    D.recalcularTotalesEnMemoria();
+    GestionDatos.recalcularTotalesEnMemoria();
     if (!historialCargado) {
-        GestorHistorial.saveState(D.registros());
+        GestorHistorial.saveState(EstadoApp.registros());
     }
 
-    const migrados = D.migrarObjetivoHorasFaltante();
+    const migrados = Compensatorios.migrarObjetivoHorasFaltante();
     if (migrados > 0) {
-        console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${D.horasDiarias()}h).`);
+        console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${EstadoApp.horasDiarias()}h).`);
         GestorHistorial.parchearRegistrosEnHistorial(r => {
             if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
-                r.objetivoHoras = D.horasDiarias();
+                r.objetivoHoras = EstadoApp.horasDiarias();
                 return true;
             }
             return false;
@@ -296,7 +318,7 @@ function _initDatosYConfig() {
 }
 
 function _restaurarEstadoVisual() {
-    const config = D.cargarConfiguracion();
+    const config = GestionDatos.cargarConfiguracion();
     GestorTemas.aplicarTema(config.tema);
     Movimiento.init();
 
@@ -453,8 +475,8 @@ async function init() {
     actualizarBotonesHistorico();
 
     const hoy = TiempoUtils.obtenerFechaHoy();
-    const hoyEsLaborable = TiempoUtils.esFechaHabil(hoy, D.diasHabilesEnFecha(hoy));
-    if (D.vistaActual() === 'semana' && hoyEsLaborable) {
+    const hoyEsLaborable = TiempoUtils.esFechaHabil(hoy, Compensatorios.diasHabilesEnFecha(hoy));
+    if (EstadoApp.vistaActual() === 'semana' && hoyEsLaborable) {
         setTimerAutoVista(setTimeout(() => {
             setTimerAutoVista(null);
             alternarVista();

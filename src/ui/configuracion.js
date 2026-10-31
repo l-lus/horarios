@@ -12,25 +12,29 @@ import { TarjetaFondos } from './tarjeta-fondos.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
 import { Notificaciones } from './notificaciones.js';
 import { EventosApp } from '../core/eventos.js';
-const D = GestionDatos;
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { _crearPressHold, debounce } from './gestos.js';
+import { _scrollHastaVisible, _scrollA } from './scroll.js';
+import { mostrarToast } from './toast.js';
+import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
 // ====================================================================
 const {
-    _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, _esperarAnim,
-    _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible, _scrollA, debounce
+    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnDisabled, _flashCampo
 } = UIBase;
+const { _esperarAnim, _animarValor } = Animaciones;
 
-const _reprogramarPushDebounced = debounce(() => D.sincronizarPushHoy(), 400);
+const _reprogramarPushDebounced = debounce(() => GestionDatos.sincronizarPushHoy(), 400);
 
-const verificarBloqueoCredito = (...args) => D._notify().verificarBloqueoCredito(...args);
-const actualizarUI = (...args) => D._notify().actualizarUI(...args);
-const getFondoCard = (...args) => TarjetaFondos.getFondoCard.apply(TarjetaFondos, args);
-const _getLabelFondo = (...args) => TarjetaFondos._getLabelFondo(...args);
+const verificarBloqueoCredito = (...args) => EstadoApp._notify().verificarBloqueoCredito(...args);
+const actualizarUI = (...args) => EstadoApp._notify().actualizarUI(...args);
+const { getFondoCard, _getLabelFondo } = TarjetaFondos;
 const _refrescarFormatoCortoStatsCache = () => EventosApp.emit('config:formato-corto-stats');
-const actualizarEstadoBotonPersistir = (...args) => OrdenTarjetas.actualizarEstadoBotonPersistir.apply(OrdenTarjetas, args);
-const actualizarEstadoBotonNotificaciones = (...args) => Notificaciones.actualizarEstadoBotonNotificaciones.apply(Notificaciones, args);
+const { actualizarEstadoBotonPersistir } = OrdenTarjetas;
+const { actualizarEstadoBotonNotificaciones } = Notificaciones;
 
 function alternarTema() {
     const temaActual = GestorTemas.temaGuardado();
@@ -41,10 +45,10 @@ function alternarTema() {
 
 const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
     _crearToggleConfig({
-        getVal: () => D.getIgnorarTiempoFuera(),
-        setVal: (v) => { D.setIgnorarTiempoFuera(v); Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
+        getVal: () => EstadoApp.getIgnorarTiempoFuera(),
+        setVal: (v) => { EstadoApp.setIgnorarTiempoFuera(v); Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
         btnId: 'btn-toggle-ignorar-tf',
-        onAfterToggle: () => { D.recalcularTotalesEnMemoria(true); D.guardarYActualizar(); D.sincronizarPushHoy(); },
+        onAfterToggle: () => { GestionDatos.recalcularTotalesEnMemoria(true); EstadoApp.guardarYActualizar(); GestionDatos.sincronizarPushHoy(); },
     });
 
 const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
@@ -102,8 +106,8 @@ async function aplicarHorasConfiguradasATodos() {
     const btn = $('btn-aplicar-horas-todos');
     if (btn && btn.disabled) return;
 
-    const horas = D.horasDiarias();
-    const totalRegistros = D.registros().length;
+    const horas = EstadoApp.horasDiarias();
+    const totalRegistros = EstadoApp.registros().length;
     if (totalRegistros === 0) {
         mostrarToast('No hay registros para actualizar', 'info');
         return;
@@ -116,8 +120,8 @@ async function aplicarHorasConfiguradasATodos() {
     );
     if (!confirmado) return;
 
-    const { aplicados, creditosRecalculados } = D.aplicarHorasATodosLosRegistros();
-    const guardado = await D.guardarYActualizar();
+    const { aplicados, creditosRecalculados } = Compensatorios.aplicarHorasATodosLosRegistros();
+    const guardado = await EstadoApp.guardarYActualizar();
     if (guardado) {
         actualizarUI();
         _reprogramarPushDebounced();
@@ -180,10 +184,10 @@ function _refrescarTogglesConfig() {
 
 function _precargarCamposConfig() {
     const elHoras = $('config-horas-diarias');
-    elHoras.dataset.valor = String(D.horasDiarias());
-    elHoras.textContent = TiempoUtils.horasATexto(D.horasDiarias(), 'short');
+    elHoras.dataset.valor = String(EstadoApp.horasDiarias());
+    elHoras.textContent = TiempoUtils.horasATexto(EstadoApp.horasDiarias(), 'short');
 
-    const diasActivos = D.diasHabiles();
+    const diasActivos = EstadoApp.diasHabiles();
     const checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]'));
     checkboxes.forEach(cb => {
         cb.checked = diasActivos.includes(parseInt(cb.value));
@@ -228,7 +232,7 @@ function mostrarConfigOnboarding() {
 function actualizarFeedbackConfig() {
     let checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]:checked'));
     if (checkboxes.length === 0) {
-        const vigentes = D.diasHabiles();
+        const vigentes = EstadoApp.diasHabiles();
         /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]')).forEach(cb => { cb.checked = vigentes.includes(parseInt(cb.value)); });
         mostrarToast('Seleccioná al menos un día', 'error');
         checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]:checked'));
@@ -245,13 +249,13 @@ function actualizarFeedbackConfig() {
 
     if (seleccionados > 0) {
         const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-        const diasVigentes = [...D.diasHabiles()].sort((a, b) => a - b);
+        const diasVigentes = [...GestionDatos.diasHabiles()].sort((a, b) => a - b);
         const huboCambio = nuevosDias.length !== diasVigentes.length
             || nuevosDias.some((d, i) => d !== diasVigentes[i]);
-        if (huboCambio) D.registrarCambioDiasHabiles(nuevosDias);
+        if (huboCambio) Compensatorios.registrarCambioDiasHabiles(nuevosDias);
         const esDefault = GestorPerfiles && GestorPerfiles.esPerfilDefault();
         if (esDefault) Almacenamiento.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
-        D.guardarYActualizar();
+        EstadoApp.guardarYActualizar();
         if (huboCambio) _reprogramarPushDebounced();
     }
     if (typeof actualizarEstadoBotonPersistir === 'function') {
@@ -261,7 +265,7 @@ function actualizarFeedbackConfig() {
 
 function _ajustarStepperHoras(el, incremento) {
     let valorActual = parseFloat(el.dataset.valor);
-    if (isNaN(valorActual)) valorActual = D.horasDiarias();
+    if (isNaN(valorActual)) valorActual = EstadoApp.horasDiarias();
     const nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
     if (isNaN(nuevoValor)) return nuevoValor;
     el.dataset.valor = nuevoValor;
@@ -275,7 +279,7 @@ function cambiarHorasDiarias(incremento) {
     const nuevoValor = _ajustarStepperHoras($('config-horas-diarias'), incremento);
     if (isNaN(nuevoValor)) return;
 
-    D.setHorasDiarias(nuevoValor);
+    EstadoApp.setHorasDiarias(nuevoValor);
     const esDefault = GestorPerfiles && GestorPerfiles.esPerfilDefault();
     if (esDefault) Almacenamiento.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
     actualizarFeedbackConfig();

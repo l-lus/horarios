@@ -28,6 +28,11 @@ export function html(literales, ...valores) {
 /** Marca un string como HTML ya confiable (constantes del código, nunca datos del usuario). */
 export function crudo(s) { return new HtmlSeguro(String(s)); }
 
+/** Ícono del sprite SVG de index.html (`href` = '#icon-…'); sirve dentro de html`...` y en strings comunes. */
+export function icono(href, clase = '') {
+    return html`<svg class="${clase ? `icon ${clase}` : 'icon'}"><use href="${href}"/></svg>`;
+}
+
 export function esHtmlSeguro(v) { return v instanceof HtmlSeguro; }
 
 /** Reemplaza el contenido de `el` por un html`...` (único camino recomendado para innerHTML con datos). */

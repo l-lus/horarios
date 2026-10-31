@@ -2,7 +2,7 @@ import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { FONDOS_SVG } from '../data/fondos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { GestionDatos as D } from '../services/gestion-datos.js';
+import { EstadoApp } from '../services/estado-app.js';
 
 // ====================================================================
 //           UI CARD BACKGROUNDS & PROGRESS BAR COLOR MODULE
@@ -85,7 +85,7 @@ function actualizarFondoCard(estado, colorOverride = null) {
     const bg = $('stats-card-bg');
     if (!bg) return;
     bg.dataset.estado = estado;
-    bg.classList.toggle('stats-card-bg--zoom', D.vistaActual() !== 'semana');
+    bg.classList.toggle('stats-card-bg--zoom', EstadoApp.vistaActual() !== 'semana');
 
     const coloresVar = {
         blue: 'rgba(76,114,172,0.12)',

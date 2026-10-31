@@ -1,14 +1,12 @@
 import { Animaciones } from './animaciones.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
-import { GestionDatos as D } from '../services/gestion-datos.js';
-import { registrarSwipe, debounce, _crearPressHold } from './gestos.js';
+import { debounce, _crearPressHold } from './gestos.js';
 import { mostrarToast, _cerrarToastActual, _habilitarCierreToast } from './toast.js';
-import { resetearBoton, animarExitoFichaje, salirExitoFichaje, cancelarExitoFichaje, obtenerIconoBtn, restaurarBotonGuardarEdicion, setIconoBtn } from './boton-fichar.js';
+import { resetearBoton, salirExitoFichaje } from './boton-fichar.js';
 import { _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante } from './popups.js';
 import { _scrollA, _esperarFinScroll, _scrollHastaVisible } from './scroll.js';
 
@@ -34,10 +32,6 @@ function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
     if (isExpanded && callback) callback();
 }
 
-
-function formatoDiferencia(tiempoTotal, objetivo = D.horasDiarias()) {
-    return TiempoUtils.formatoDiferencia(tiempoTotal, objetivo);
-}
 
 function _actualizarOffsetsStickyMes() {
     const header = document.querySelector('.header');
@@ -82,7 +76,7 @@ function descargarArchivo(contenido, nombreArchivo, mime) {
     URL.revokeObjectURL(url);
 }
 
-const { _durSiAnima, DUR_ANIM, DUR_CALENDARIO, _aArray, _estaColapsado, _esperarAnim, _finalizarSlidePendiente, _animarSlideElemento, _animarFadeSwap, _animarMutacion, _flashElemento, _crearFantasmaSiVisible, _animarValor, _animarConteo, _conteoEnCurso, _cancelarConteo } = Animaciones;
+const { _animarMutacion, _flashElemento } = Animaciones;
 /**
  * @param {{ getVal: () => boolean, setVal: (v: boolean) => any, btnId: string,
  *           onAfterToggle?: (v: boolean) => void, puedeActivar?: () => boolean }} cfg
@@ -240,10 +234,6 @@ function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'lab
 
 export const UIBase = {
     aplicarFeedbackCampos,
-    formatoDiferencia,
-    registrarSwipe,
-    debounce,
-    _crearPressHold,
     _actualizarOffsetsStickyMes,
     actualizarOffsetsStickyMesDebounced,
     mostrarError,
@@ -251,45 +241,14 @@ export const UIBase = {
     obtenerNombrePerfilSafe,
     descargarJSON,
     descargarArchivo,
-    mostrarToast,
-    _cerrarToastActual,
-    _habilitarCierreToast,
-    resetearBoton,
-    animarExitoFichaje,
-    cancelarExitoFichaje,
-    obtenerIconoBtn,
-    restaurarBotonGuardarEdicion,
-    _durSiAnima,
-    DUR_ANIM,
-    DUR_CALENDARIO,
     _crearToggleConfig,
     _setBtnActivo,
     _crearOpcion,
     _poblarSelect,
-    setIconoBtn,
     _setBtnDisabled,
-    _posicionarPopup,
-    _registrarCierrePopup,
-    _crearPopupFlotante,
     _abrirModalConPadre,
     _cerrarModalConPadre,
     _flashCampo,
-    _aArray,
-    _estaColapsado,
-    _scrollA,
-    _esperarAnim,
-    _esperarFinScroll,
-    _scrollHastaVisible,
     _avisarFichaje,
-    _flashElemento,
-    _finalizarSlidePendiente,
-    _animarSlideElemento,
-    toggleSeccionGen,
-    _animarFadeSwap,
-    _animarMutacion,
-    _crearFantasmaSiVisible,
-    _animarValor,
-    _animarConteo,
-    _conteoEnCurso,
-    _cancelarConteo
+    toggleSeccionGen
 };

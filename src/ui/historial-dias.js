@@ -3,16 +3,18 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
 import { UIBase } from './base.js';
 import { Configuracion } from './configuracion.js';
-import { GestionDatos as D } from '../services/gestion-datos.js';
+import { GestionDatos } from '../services/gestion-datos.js';
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { mostrarToast } from './toast.js';
+import { icono } from '../core/html.js';
 
 // ====================================================================
 // UI WORKDAY HISTORY MODULE (historial de días hábiles y horas)
 // ====================================================================
-const {
-    _abrirModalConPadre, _cerrarModalConPadre, mostrarToast
-} = UIBase;
+const { _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
 
-const _precargarCamposConfig = (...args) => Configuracion._precargarCamposConfig.apply(Configuracion, args);
+const { _precargarCamposConfig } = Configuracion;
 
 let _tramoEnEdicionDesde = null;
 
@@ -22,10 +24,10 @@ function _formatoFechaHistorial(iso) {
 }
 
 function _obtenerTramosOrdenados() {
-    const historial = D.historialDiasHabiles();
+    const historial = EstadoApp.historialDiasHabiles();
     return Array.isArray(historial) && historial.length > 0
         ? [...historial].sort((a, b) => a.desde.localeCompare(b.desde))
-        : [{ desde: '0001-01-01', dias: D.diasHabiles() }];
+        : [{ desde: '0001-01-01', dias: EstadoApp.diasHabiles() }];
 }
 
 function _renderizarListaHistorialDias() {
@@ -56,7 +58,7 @@ function _renderizarListaHistorialDias() {
 
         const editBtn = Object.assign(document.createElement('button'), {
             className: 'btn-perfil-edit',
-            innerHTML: '<svg class="icon"><use href="#icon-edit"/></svg>',
+            innerHTML: String(icono('#icon-edit')),
             title: 'Editar tramo',
             onclick: (e) => { e.stopPropagation(); abrirEditorTramoDias(tramo.desde); }
         });
@@ -127,10 +129,10 @@ async function guardarEdicionTramoDias() {
         mostrarToast('Ya existe un tramo con esa fecha', 'error'); return;
     }
 
-    const nuevoHistorial = D.sanitizarHistorialDiasHabiles([...otros, { desde: nuevaFecha, dias: nuevosDias }]);
-    D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: nuevosDias }]);
+    const nuevoHistorial = Compensatorios.sanitizarHistorialDiasHabiles([...otros, { desde: nuevaFecha, dias: nuevosDias }]);
+    GestionDatos.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: nuevosDias }]);
 
-    const guardado = await D.guardarYActualizar();
+    const guardado = await EstadoApp.guardarYActualizar();
     if (!guardado) return;
 
     mostrarToast('Tramo actualizado', 'success');
@@ -145,10 +147,10 @@ async function eliminarTramoDias() {
     if (!await GestorModales.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
 
     const restantes = tramos.filter(t => t.desde !== _tramoEnEdicionDesde);
-    const nuevoHistorial = D.sanitizarHistorialDiasHabiles(restantes);
-    D.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
+    const nuevoHistorial = Compensatorios.sanitizarHistorialDiasHabiles(restantes);
+    GestionDatos.setHistorialDiasHabiles(nuevoHistorial || [{ desde: '0001-01-01', dias: EstadoApp.diasHabiles() }]);
 
-    const guardado = await D.guardarYActualizar();
+    const guardado = await EstadoApp.guardarYActualizar();
     if (!guardado) return;
 
     mostrarToast('Tramo eliminado', 'success');

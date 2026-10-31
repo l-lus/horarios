@@ -3,7 +3,8 @@ import { FERIADOS_AR } from '../data/feriados.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { SeguridadYUtils } from '../core/seguridad.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { GestionDatos } from './gestion-datos.js';
+import { EstadoApp } from './estado-app.js';
+import { FiltrosYPeriodos } from './filtros-periodos.js';
 
 // ====================================================================
 // HOLIDAYS MODULE
@@ -45,7 +46,7 @@ async function chequearYNotificar() {
     if (!candidatos.length) return;
 
     const procesados = _cargarProcesados();
-    const yaExisteRegistro = fecha => GestionDatos.existeRegistroEnFecha(fecha);
+    const yaExisteRegistro = fecha => EstadoApp.existeRegistroEnFecha(fecha);
 
     const pendientes = candidatos.filter(f => {
         if (procesados.has(f.fecha)) return false;
@@ -55,7 +56,7 @@ async function chequearYNotificar() {
 
     if (!pendientes.length) return;
 
-    while (GestionDatos._notify().hayUIBloqueante()) {
+    while (EstadoApp._notify().hayUIBloqueante()) {
         await TiempoUtils.esperar(2000);
     }
 
@@ -64,7 +65,7 @@ async function chequearYNotificar() {
     const pregunta = pendientes.length > 1 ? `¿Querés agregar estos ${pendientes.length} días como Feriado?` : '¿Querés agregar este día como Feriado?';
     const texto = `${lineas.join('\n')}\n\n${pregunta}`;
 
-    const confirmo = await GestionDatos._notify().confirmarModal(texto, 'Sí', '#icon-check', {
+    const confirmo = await EstadoApp._notify().confirmarModal(texto, 'Sí', '#icon-check', {
         titulo: pendientes.length > 1 ? `Feriados de ${nombreMes}` : `Feriado de ${nombreMes}`,
         labelCancel: 'No'
     });
@@ -73,7 +74,7 @@ async function chequearYNotificar() {
 
     if (confirmo) {
         for (const feriado of pendientes) {
-            try { await GestionDatos.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { console.error('Error registrando feriado:', e); }
+            try { await FiltrosYPeriodos.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { console.error('Error registrando feriado:', e); }
         }
     }
 }

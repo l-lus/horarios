@@ -1,13 +1,16 @@
 import { Animaciones } from './animaciones.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
-import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { GestionDatos as D } from '../services/gestion-datos.js';
+import { registrarSwipe, debounce, _crearPressHold } from './gestos.js';
+import { mostrarToast, _cerrarToastActual, _habilitarCierreToast } from './toast.js';
+import { resetearBoton, animarExitoFichaje, salirExitoFichaje, cancelarExitoFichaje, obtenerIconoBtn, restaurarBotonGuardarEdicion, setIconoBtn } from './boton-fichar.js';
+import { _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante } from './popups.js';
+import { _scrollA, _esperarFinScroll, _scrollHastaVisible } from './scroll.js';
 
 // ====================================================================
 //                     UI CORE MODULE (generic UI utilities)
@@ -31,102 +34,8 @@ function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
 }
 
 
-let toastTimeout = null;
-let _toastQueue = [];
-let _toastRunning = false;
-let _toastAccionActual = null;
-const MAX_TOAST_QUEUE = 4;
-
 function formatoDiferencia(tiempoTotal, objetivo = D.horasDiarias()) {
     return TiempoUtils.formatoDiferencia(tiempoTotal, objetivo);
-}
-
-function registrarSwipe(el, callback, { minX = 50, maxY = 80 } = {}) {
-    if (!el || el.dataset.swipeInit) return;
-    el.dataset.swipeInit = '1';
-    let _x = null, _y = null;
-    let _direccionBloqueada = null;
-
-    el.addEventListener('touchstart', e => {
-        if (e.touches.length !== 1) return;
-        _x = e.touches[0].clientX;
-        _y = e.touches[0].clientY;
-        _direccionBloqueada = null;
-    }, { passive: true });
-
-    el.addEventListener('touchmove', e => {
-        if (_x === null || _y === null) return;
-
-        const dx = Math.abs(e.touches[0].clientX - _x);
-        const dy = Math.abs(e.touches[0].clientY - _y);
-
-        if (!_direccionBloqueada && (dx > 5 || dy > 5)) {
-            _direccionBloqueada = dx > dy ? 'x' : 'y';
-        }
-
-        if (_direccionBloqueada === 'x' && e.cancelable) {
-            e.preventDefault();
-        }
-    }, { passive: false });
-
-    el.addEventListener('touchend', e => {
-        if (_x === null || _direccionBloqueada === 'y') {
-            _x = null; _y = null;
-            return;
-        }
-
-        const dx = e.changedTouches[0].clientX - _x;
-        const dy = e.changedTouches[0].clientY - _y;
-        _x = null; _y = null;
-
-        if (Math.abs(dy) > maxY) return;
-        if (Math.abs(dx) < minX) return;
-        callback(dx < 0 ? 1 : -1);
-    }, { passive: true });
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-function _crearPressHold(accionFn) {
-    let timeout = null, intervalo = null;
-    const iniciar = (arg) => {
-        accionFn(arg);
-        timeout = setTimeout(() => {
-            intervalo = setInterval(() => accionFn(arg), 100);
-        }, 500);
-    };
-    const detener = () => {
-        if (timeout) { clearTimeout(timeout); timeout = null; }
-        if (intervalo) { clearInterval(intervalo); intervalo = null; }
-    };
-    const vincular = (btn, arg) => {
-        const start = (e) => {
-            if (btn.disabled) return;
-            if (e.type === 'touchstart') e.preventDefault();
-            iniciar(arg);
-        };
-        const stop = (e) => {
-            if (e && e.type === 'touchend') e.preventDefault();
-            detener();
-        };
-        btn.addEventListener('mousedown', start);
-        btn.addEventListener('touchstart', start, { passive: false });
-        btn.addEventListener('mouseup', stop);
-        btn.addEventListener('mouseleave', stop);
-        btn.addEventListener('touchend', stop, { passive: false });
-        btn.addEventListener('touchcancel', stop);
-    };
-    return { iniciar, detener, vincular };
 }
 
 function _actualizarOffsetsStickyMes() {
@@ -170,150 +79,6 @@ function descargarArchivo(contenido, nombreArchivo, mime) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-}
-
-function mostrarToast(mensaje, tipo = 'info', duracion = 3000, detalle = null, accion = null) {
-    const texto = detalle ? `${mensaje}, ${detalle}` : mensaje;
-    const textoLimpio = S.sanitizeString(texto, 200);
-    const ultimo = _toastQueue[_toastQueue.length - 1];
-    const actual = _toastRunning ? $('toast')?.textContent : null;
-    if ((ultimo && ultimo.mensaje === textoLimpio) || actual === textoLimpio) return;
-    _toastQueue.push({ mensaje: textoLimpio, tipo, duracionBase: duracion, accion });
-    if (_toastQueue.length > MAX_TOAST_QUEUE) {
-        _toastQueue.splice(0, _toastQueue.length - MAX_TOAST_QUEUE);
-    }
-    if (!_toastRunning) _procesarToastQueue();
-}
-
-function _procesarToastQueue() {
-    if (_toastQueue.length === 0) {
-        _toastRunning = false;
-        _toastAccionActual = null;
-        return;
-    }
-
-    _toastRunning = true;
-    const actual = _toastQueue.shift();
-    _toastAccionActual = actual.accion || null;
-    const toast = $('toast');
-    toast.classList.remove('show');
-    toast.textContent = actual.mensaje;
-    toast.className = `toast ${actual.tipo}`;
-    toast.classList.toggle('toast-accionable', !!actual.accion);
-    let duracionFinal = actual.duracionBase || 3000;
-    if (_toastQueue.length >= 1) {
-        duracionFinal = Math.floor(duracionFinal / 2);
-    }
-
-    setTimeout(() => {
-        toast.classList.add('show');
-        toastTimeout = setTimeout(() => {
-            toast.classList.remove('show');
-            toastTimeout = null;
-            _esperarAnim().then(() => _procesarToastQueue());
-        }, duracionFinal);
-    }, 10);
-}
-
-function _cerrarToastActual() {
-    if (toastTimeout) { clearTimeout(toastTimeout); toastTimeout = null; }
-    const toast = $('toast');
-    if (!toast || !toast.classList.contains('show')) return;
-    toast.classList.remove('show');
-    _esperarAnim().then(() => _procesarToastQueue());
-}
-
-function _habilitarCierreToast() {
-    const toast = $('toast');
-    if (!toast || toast.dataset.cierreInit) return;
-    toast.dataset.cierreInit = '1';
-    toast.addEventListener('click', () => {
-        const accion = _toastAccionActual;
-        _cerrarToastActual();
-        if (accion) accion();
-    });
-    registrarSwipe(toast, () => _cerrarToastActual(), { minX: 40 });
-}
-
-function resetearBoton(btn) {
-    btn.disabled = false;
-    btn.classList.remove('btn-color-muted', 'btn-color-red');
-    // Con el check de éxito en curso no se recrea el ícono: lo restaura su propia salida
-    if (_exitoFichaje.has(btn)) return;
-    btn.innerHTML = '<svg class="icon"><use href="#icon-clock"/></svg> <span id="btn-registrar-texto">Fichar</span>';
-}
-
-// ─── Check de éxito en el botón Fichar ──────────────────────────────────────
-// Reemplaza el ícono por icon-check-circle con entrada/salida (~2 s en total).
-// Si mientras tanto se ficha de nuevo con error, el check sale enseguida.
-const _exitoFichaje = new WeakMap();
-
-function _limpiarAnimExito(svg) {
-    svg.getAnimations?.().forEach(a => a.cancel());
-    svg.style.animation = '';
-    svg.classList.remove('fichaje-ok', 'fichaje-ok-vuelta');
-}
-
-function _finalizarExitoFichaje(btn, conVuelta = true) {
-    const est = _exitoFichaje.get(btn);
-    if (!est) return;
-    clearTimeout(est.timer);
-    _exitoFichaje.delete(btn);
-    const { svg, use, original } = est;
-    _limpiarAnimExito(svg);
-    // Si otro flujo ya cambió el ícono (ej. modo lote), no se pisa
-    if (use.getAttribute('href') !== '#icon-check-circle') return;
-    use.setAttribute('href', original);
-    if (conVuelta && !Movimiento.reducido()) {
-        void svg.getBoundingClientRect();
-        svg.classList.add('fichaje-ok-vuelta');
-    }
-}
-
-function animarExitoFichaje(btn) {
-    if (!btn || !btn.offsetParent) return;
-    const svg = btn.querySelector('svg.icon');
-    const use = svg?.querySelector('use');
-    if (!use) return;
-
-    const previo = _exitoFichaje.get(btn);
-    const original = (previo && previo.svg === svg) ? previo.original : use.getAttribute('href');
-    if (previo) { clearTimeout(previo.timer); _limpiarAnimExito(previo.svg); }
-    else _limpiarAnimExito(svg);
-
-    use.setAttribute('href', '#icon-check-circle');
-    void svg.getBoundingClientRect();
-    svg.classList.add('fichaje-ok');
-
-    const timer = setTimeout(() => _finalizarExitoFichaje(btn), DUR_FICHAJE_OK());
-    _exitoFichaje.set(btn, { svg, use, original, timer });
-}
-
-function salirExitoFichaje(btn) {
-    const est = btn && _exitoFichaje.get(btn);
-    if (!est || est.saliendo) return;
-    est.saliendo = true;
-    clearTimeout(est.timer);
-    if (Movimiento.reducido() || !est.svg.isConnected) { _finalizarExitoFichaje(btn); return; }
-
-    const cs = getComputedStyle(est.svg);
-    const desde = { transform: cs.transform, opacity: cs.opacity };
-    const dur = DUR_FICHAJE_SALIDA();
-    est.svg.style.animation = 'none';
-    est.svg.animate([desde, { transform: 'scale(0.4)', opacity: 0 }], { duration: dur, easing: 'ease-in', fill: 'forwards' });
-    est.timer = setTimeout(() => _finalizarExitoFichaje(btn), dur + 20);
-}
-
-function cancelarExitoFichaje(btn) { _finalizarExitoFichaje(btn, false); }
-
-// Ícono "real" del botón: ignora el check mientras dura la animación de éxito
-function obtenerIconoBtn(btn) {
-    return _exitoFichaje.get(btn)?.original ?? btn.querySelector('svg use')?.getAttribute('href');
-}
-
-function restaurarBotonGuardarEdicion(btnGuardar) {
-    btnGuardar.disabled = false;
-    btnGuardar.innerHTML = '<svg class="icon"><use href="#icon-save"/></svg> Guardar';
 }
 
 const { _durSiAnima, DUR_ANIM, DUR_CALENDARIO, DUR_FICHAJE_OK, DUR_FICHAJE_SALIDA, _aArray, _estaColapsado, _esperarAnim, _finalizarSlidePendiente, _animarSlideElemento, _animarFadeSwap, _animarMutacion, _flashElemento, _crearFantasmaSiVisible, _animarValor, _animarConteo, _conteoEnCurso, _cancelarConteo } = Animaciones;
@@ -373,94 +138,10 @@ function _poblarSelect(selectId, items, getLabel, selDefault, actualizarFn, agru
     actualizarFn(sel);
 }
 
-function setIconoBtn(btn, icono) {
-    // Con el check de éxito en curso, el ícono nuevo pasa a ser el que se restaura al terminar
-    const exito = _exitoFichaje.get(btn);
-    if (exito) { exito.original = icono; return; }
-    const use = btn.querySelector('svg use');
-    if (use) use.setAttribute('href', icono);
-}
-
 function _setBtnDisabled(id, disabled) {
     const btn = document.getElementById(id);
     if (!btn) return;
     btn.disabled = disabled;
-}
-
-function _posicionarPopup(popup, event) {
-    const el = event.currentTarget || event.target;
-    const rect = el.getBoundingClientRect();
-    const margin = 8;
-    requestAnimationFrame(() => {
-        if (!popup.isConnected || popup.classList.contains('closing')) return;
-        const pw = popup.offsetWidth, ph = popup.offsetHeight;
-        let top = rect.bottom + 12;
-        let left = rect.left + (rect.width / 2) - (pw / 2);
-        if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
-        if (left < margin) left = margin;
-        if (top + ph > window.innerHeight - margin) top = rect.top - ph - 12;
-        if (top < margin) top = margin;
-        popup.style.top = `${top}px`;
-        popup.style.left = `${left}px`;
-
-        const triggerCenterX = rect.left + rect.width / 2;
-        const triggerCenterY = rect.top + rect.height / 2;
-        const originX = Math.round(triggerCenterX - left);
-        const originY = Math.round(triggerCenterY - top);
-        popup.style.transformOrigin = `${originX}px ${originY}px`;
-
-        popup.style.visibility = '';
-        requestAnimationFrame(() => {
-            if (!popup.isConnected || popup.classList.contains('closing')) return;
-            popup.classList.add('show');
-            setTimeout(() => {
-                if (!popup.classList.contains('closing')) popup.classList.add('listo');
-            }, 280);
-        });
-    });
-}
-
-function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar) {
-    let cerrado = false;
-    const cerrar = () => {
-        if (cerrado) return;
-        cerrado = true;
-        popup.classList.remove('show');
-        popup.classList.remove('listo');
-        popup.classList.add('closing');
-        document.removeEventListener('click', onClick, true);
-        document.removeEventListener('scroll', cerrar, true);
-        setTimeout(() => {
-            popup.remove();
-            if (alCerrar) alCerrar(popup);
-        }, 200);
-    };
-    popup._cerrar = cerrar;
-    const onClick = (e) => {
-        const trigger = e.target.closest(selectorTrigger);
-        if (trigger && esMismoTrigger(trigger)) return;
-        if (!popup.contains(e.target)) cerrar();
-    };
-    setTimeout(() => {
-        if (cerrado) return;
-        document.addEventListener('click', onClick, { capture: true, passive: true });
-        document.addEventListener('scroll', cerrar, { capture: true, passive: true });
-    }, 10);
-    return cerrar;
-}
-
-function _crearPopupFlotante({ className, id, dataset = {}, html, event, selectorTrigger, esMismoTrigger, alCerrar }) {
-    const popup = document.createElement('div');
-    popup.className = className;
-    popup.id = id;
-    Object.entries(dataset).forEach(([k, v]) => { popup.dataset[k] = v; });
-    popup.innerHTML = html;
-    popup.style.visibility = 'hidden';
-    document.body.appendChild(popup);
-
-    const cerrar = _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, alCerrar);
-    _posicionarPopup(popup, event);
-    return { popup, cerrar };
 }
 
 function _abrirModalConPadre(modalId, setupFn = null) {
@@ -482,51 +163,6 @@ function _flashCampoConClase(clase, ids, colorVar = null) {
 }
 
 function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
-
-function _scrollA(el, block = 'nearest') {
-    if (el) el.scrollIntoView({ behavior: Movimiento.scrollBehavior(), block });
-}
-function _esperarFinScroll(objetivo = window, { estable = 120, maximo = 1500 } = {}) {
-    const esVentana = objetivo === window;
-    const origen = esVentana ? document : objetivo;
-    const posicion = () => (esVentana ? window.scrollY : objetivo.scrollTop);
-    return new Promise(resolve => {
-        let terminado = false;
-        const inicio = performance.now();
-        let ultimaPos = posicion();
-        let desde = inicio;
-        const fin = () => {
-            if (terminado) return;
-            terminado = true;
-            origen.removeEventListener('scrollend', fin);
-            resolve();
-        };
-        origen.addEventListener('scrollend', fin, { once: true });
-        const revisar = (ahora) => {
-            if (terminado) return;
-            const pos = posicion();
-            if (pos !== ultimaPos) { ultimaPos = pos; desde = ahora; }
-            if (ahora - desde >= estable && ahora - inicio >= estable) return fin();
-            if (ahora - inicio >= maximo) return fin();
-            requestAnimationFrame(revisar);
-        };
-        requestAnimationFrame(revisar);
-    });
-}
-
-function _scrollHastaVisible(el, { contenedor = null, margenSuperior = 0 } = {}) {
-    if (!el) return Promise.resolve();
-    const r = el.getBoundingClientRect();
-    const c = contenedor ? contenedor.getBoundingClientRect() : null;
-    const limiteSup = c ? c.top : margenSuperior;
-    const limiteInf = c ? c.bottom : window.innerHeight;
-    if (r.top >= limiteSup && r.bottom <= limiteInf) return Promise.resolve();
-
-    if (contenedor) _scrollA(el, 'nearest');
-    else window.scrollTo({ top: window.scrollY + r.top - margenSuperior, behavior: Movimiento.scrollBehavior() });
-    if (Movimiento.reducido()) return Promise.resolve();
-    return _esperarFinScroll(contenedor || window);
-}
 
 const _COLOR_TOAST_POR_TIPO = {
     success: 'var(--c-green)', error: 'var(--c-red)', warning: 'var(--c-red)', info: 'var(--c-blue)'

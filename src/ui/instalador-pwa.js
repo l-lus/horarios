@@ -40,7 +40,6 @@ async function instalarApp() {
 
 function bindEventos() {
     $('btn-install')?.addEventListener('click', () => instalarApp());
-    AvisoActualizacion.bindEventos();
 }
 
 // Mínimo entre búsquedas de versión nueva al volver a la app (el navegador por sí solo revisa poco si la PWA queda abierta en segundo plano)

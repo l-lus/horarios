@@ -15,6 +15,12 @@ let _toastRunning = false;
 let _toastAccionActual = null;
 const MAX_TOAST_QUEUE = 4;
 
+// Toast con barra de progreso (p. ej. descarga de una actualización): se queda en pantalla hasta que termina, pero cede el lugar a los toasts
+// normales (un guardado, un aviso) y vuelve a mostrarse cuando la cola se vacía.
+/** @type {{ mensaje: string, porcentaje: number | null } | null} */
+let _progreso = null;
+let _progresoVisible = false;
+
 /** @param {any} [detalle] @param {any} [accion] */
 export function mostrarToast(mensaje, tipo = 'info', duracion = 3000, detalle = null, accion = null) {
     const texto = detalle ? `${mensaje}, ${detalle}` : mensaje;
@@ -26,13 +32,20 @@ export function mostrarToast(mensaje, tipo = 'info', duracion = 3000, detalle = 
     if (_toastQueue.length > MAX_TOAST_QUEUE) {
         _toastQueue.splice(0, _toastQueue.length - MAX_TOAST_QUEUE);
     }
-    if (!_toastRunning) _procesarToastQueue();
+    if (_progresoVisible) {
+        // el toast de progreso se retira un momento para mostrar este
+        _ocultarProgreso();
+        _esperarAnim().then(() => _procesarToastQueue());
+    } else if (!_toastRunning) {
+        _procesarToastQueue();
+    }
 }
 
 function _procesarToastQueue() {
     if (_toastQueue.length === 0) {
         _toastRunning = false;
         _toastAccionActual = null;
+        if (_progreso) _mostrarProgreso();
         return;
     }
 
@@ -59,7 +72,68 @@ function _procesarToastQueue() {
     }, 10);
 }
 
+function _pintarProgreso() {
+    const toast = $('toast');
+    if (!toast || !_progreso) return;
+    const texto = toast.querySelector('.toast-texto');
+    const barra = /** @type {HTMLProgressElement | null} */ (/** @type {unknown} */ (toast.querySelector('.toast-progreso')));
+    const { mensaje, porcentaje } = _progreso;
+    if (texto) texto.textContent = porcentaje === null ? mensaje : `${mensaje} ${porcentaje} %`;
+    if (barra) { if (porcentaje === null) barra.removeAttribute('value'); else barra.value = porcentaje; }
+}
+
+function _mostrarProgreso() {
+    const toast = $('toast');
+    if (!toast || !_progreso) return;
+    _toastRunning = true;
+    _progresoVisible = true;
+    _toastAccionActual = null;
+    toast.className = 'toast info toast-con-progreso';
+    toast.replaceChildren();
+    const texto = document.createElement('span');
+    texto.className = 'toast-texto';
+    const barra = document.createElement('progress');
+    barra.className = 'toast-progreso';
+    barra.max = 100;
+    toast.append(texto, barra);
+    _pintarProgreso();
+    requestAnimationFrame(() => { if (_progresoVisible) toast.classList.add('show'); });
+}
+
+function _ocultarProgreso() {
+    _progresoVisible = false;
+    $('toast')?.classList.remove('show');
+}
+
+/** Muestra un toast con barra de progreso (indeterminada hasta que se informe un porcentaje). @param {string} mensaje */
+export function iniciarToastProgreso(mensaje) {
+    _progreso = { mensaje: S.sanitizeString(mensaje, 200), porcentaje: null };
+    if (!_toastRunning) _mostrarProgreso();
+}
+
+/** @param {number} porcentaje entero de 0 a 100 */
+export function actualizarToastProgreso(porcentaje) {
+    if (!_progreso) return;   // ya terminó o la persona lo cerró
+    _progreso.porcentaje = porcentaje;
+    if (_progresoVisible) _pintarProgreso();
+}
+
+/** Retira el toast de progreso (si estaba a la vista). Lo que siga se muestra con `mostrarToast`. */
+export function finalizarToastProgreso() {
+    _progreso = null;
+    if (!_progresoVisible) return;
+    _ocultarProgreso();
+    _esperarAnim().then(() => _procesarToastQueue());
+}
+
 export function _cerrarToastActual() {
+    if (_progresoVisible) {
+        // tocar o deslizar el toast de progreso lo descarta; la descarga sigue y el aviso final sí se muestra
+        _progreso = null;
+        _ocultarProgreso();
+        _esperarAnim().then(() => _procesarToastQueue());
+        return;
+    }
     if (toastTimeout) { clearTimeout(toastTimeout); toastTimeout = null; }
     const toast = $('toast');
     if (!toast || !toast.classList.contains('show')) return;

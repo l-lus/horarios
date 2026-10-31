@@ -521,7 +521,7 @@ button.campo-flash-color {
 }
 
 
-/* Reducir animaciones: la barra indeterminada del aviso de actualización queda quieta */
-:root[data-motion="reduce"] #toast-act-progreso:indeterminate {
+/* Reducir animaciones: la barra indeterminada del toast de progreso queda quieta */
+:root[data-motion="reduce"] .toast-progreso:indeterminate {
     animation: none;
 }

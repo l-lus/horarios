@@ -170,20 +170,14 @@ test('Versión: APP_VERSION de constantes.js coincide con el prefijo de CACHE_NA
     assert.ok(cache.startsWith(`${version}.`), `CACHE_NAME "${cache}" debe empezar con "${version}."`);
 });
 
-test('Capas: src/services no accede al DOM (ratchet: no se permiten usos nuevos)', () => {
-    // Deuda conocida: estos servicios aún leen/escriben formularios vía $().
-    // Bajar estos números al migrar esa lógica a src/ui; nunca subirlos.
-    const baseline = {
-        'src/services/gestion-datos.js': 41,
-    };
+test('Capas: src/services no accede al DOM (document / $())', () => {
     const reDom = /\bdocument\.(getElementById|querySelector|querySelectorAll|body|createElement|documentElement|activeElement)\b|(?<![\w.])\$\(/g;
-    const excesos = [];
+    const violaciones = [];
     for (const file of srcFiles.filter(f => f.startsWith('src/services/'))) {
         const codigo = fs.readFileSync(file, 'utf8')
             .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
         const usos = (codigo.match(reDom) || []).length;
-        const max = baseline[file] ?? 0;
-        if (usos > max) excesos.push(`${file}: ${usos} usos (máx. ${max})`);
+        if (usos > 0) violaciones.push(`${file}: ${usos} usos`);
     }
-    assert.deepEqual(excesos, [], `Acceso al DOM en servicios:\n${excesos.join('\n')}`);
+    assert.deepEqual(violaciones, [], `Los servicios deben hablar con la UI vía notify/EventosApp/Formularios:\n${violaciones.join('\n')}`);
 });

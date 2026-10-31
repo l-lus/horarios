@@ -3,7 +3,6 @@ import { ImportarExportar } from './importar-exportar.js';
 import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { EstadoApp } from './estado-app.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from './recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -65,9 +64,10 @@ function cargarConfiguracion() {
 function validarFormulario() {
     let valido = true;
     const notify = EstadoApp._notify();
-    const fecha = S.sanitizeString($('fecha').value, 10);
-    const entrada = S.sanitizeString($('entrada').value.trim(), 5);
-    const salida = S.sanitizeString($('salida').value.trim(), 5);
+    const form = notify.formularioRegistro.leer();
+    const fecha = S.sanitizeString(form.fecha, 10);
+    const entrada = S.sanitizeString(form.entrada.trim(), 5);
+    const salida = S.sanitizeString(form.salida.trim(), 5);
 
     notify.limpiarError('fecha', null);
     notify.limpiarError('entrada', null);
@@ -111,8 +111,7 @@ async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     notify.avisarFichaje(_mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s), 'success');
     notify.resetearBoton(btn);
     notify.animarExitoFichaje(btn);
-    $('fecha').value = TiempoUtils.obtenerFechaHoy();
-    $('salida').value = '';
+    notify.formularioRegistro.escribir({ fecha: TiempoUtils.obtenerFechaHoy(), salida: '' });
 }
 
 function _sincronizarPushHoy() {
@@ -194,20 +193,20 @@ async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
     notify.avisarFichaje(usaHoraActual ? 'Registro agregado con hora actual' : 'Registro agregado', 'success');
     notify.resetearBoton(btn);
     notify.animarExitoFichaje(btn);
-    $('fecha').value = TiempoUtils.obtenerFechaHoy();
-    $('entrada').value = ''; $('salida').value = '';
+    notify.formularioRegistro.escribir({ fecha: TiempoUtils.obtenerFechaHoy(), entrada: '', salida: '' });
 }
 
 async function agregarRegistro() {
     const notify = EstadoApp._notify();
     if (!validarFormulario()) { notify.avisarFichaje('Verificá los campos'); return; }
 
-    const btn = $('btn-agregar');
-    btn.disabled = true;
+    const formulario = notify.formularioRegistro;
+    const btn = formulario.bloquearBoton();
     let usaHoraActual = false;
-    let f = S.sanitizeString($('fecha').value, 10);
-    let e = S.sanitizeString($('entrada').value.trim(), 5);
-    let s = S.sanitizeString($('salida').value.trim(), 5);
+    const campos = formulario.leer();
+    let f = S.sanitizeString(campos.fecha, 10);
+    let e = S.sanitizeString(campos.entrada.trim(), 5);
+    let s = S.sanitizeString(campos.salida.trim(), 5);
 
     if (_fechaFuturaInvalida(f, e, s)) {
         notify.mostrarError('fecha', null);
@@ -217,7 +216,7 @@ async function agregarRegistro() {
     const hoy = TiempoUtils.obtenerFechaHoy();
     if (!e && f === hoy) {
         const { ayerStr: ayer, ayerAbierto } = detectarAyerAbierto(hoy, EstadoApp.registros());
-        if (ayerAbierto && !existeRegistroEnFecha(hoy)) { f = ayer; $('fecha').value = f; }
+        if (ayerAbierto && !existeRegistroEnFecha(hoy)) { f = ayer; formulario.escribir({ fecha: f }); }
     }
 
     const registroExistente = registroPorFecha(f);
@@ -225,9 +224,9 @@ async function agregarRegistro() {
     if (!e && !s) {
         const horaActual = TiempoUtils.obtenerHoraActual();
         if (registroExistente?.entrada && !registroExistente.salida) {
-            s = horaActual; $('salida').value = s;
+            s = horaActual; formulario.escribir({ salida: s });
         } else {
-            e = horaActual; $('entrada').value = e;
+            e = horaActual; formulario.escribir({ entrada: e });
         }
         usaHoraActual = true;
     }
@@ -242,7 +241,7 @@ async function agregarRegistro() {
     }
 
     if (registroExistente) {
-        if (usaHoraActual) $('entrada').value = '';
+        if (usaHoraActual) formulario.escribir({ entrada: '' });
         notify.avisarFichaje('Ya existe un registro para esta fecha', 'error', { btn }); return;
     }
 
@@ -253,9 +252,7 @@ async function eliminarRegistroActual() {
     const editandoId = EstadoApp.editandoId();
     if (editandoId) {
         const notify = EstadoApp._notify();
-        const modal = $('modal-editar');
-        const btnEliminar = /** @type {HTMLButtonElement} */ (modal.querySelector('.btn-delete'));
-        btnEliminar.disabled = true;
+        const btnEliminar = notify.formularioEdicion.bloquearEliminar();
         const registroABorrar = registroPorId(editandoId);
         const hoy = TiempoUtils.obtenerFechaHoy();
 
@@ -273,8 +270,7 @@ async function eliminarRegistroActual() {
         GestorHistorial.saveState(EstadoApp.registros(), `eliminar registro${registroABorrar ? ` (${TiempoUtils.fechaCorta(registroABorrar.fecha)})` : ''}`);
 
         const saved = await guardarYActualizar();
-        btnEliminar.disabled = false;
-        btnEliminar.innerHTML = '<svg class="icon"><use href="#icon-trash"/></svg> Eliminar';
+        notify.formularioEdicion.liberarEliminar(btnEliminar);
 
         if (saved) {
             notify.mostrarToast('Registro eliminado', 'success');
@@ -292,65 +288,47 @@ function editarRegistro(id) {
     const notify = EstadoApp._notify();
     const horasDiarias = EstadoApp.horasDiarias();
     EstadoApp.setEditandoId(id);
-    $('edit-fecha').value = r.fecha;
-    $('edit-entrada').value = r.entrada || '';
-    $('edit-salida').value = r.salida || '';
-    $('edit-tiempo-fuera').value = r.tiempoFuera || '';
-    $('edit-notas').value = r.notas || '';
-
     const objetivoActual = (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras)) ? r.objetivoHoras : horasDiarias;
-    const elObjetivo = $('edit-objetivo');
-    if (elObjetivo) {
-        elObjetivo.dataset.valor = objetivoActual;
-        elObjetivo.textContent = TiempoUtils.horasATexto(objetivoActual, 'short');
-    }
-
-    const elRef = $('edit-referencia-compensatorio');
-    if (elRef) {
-        const esCompensatorio = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'compensatorio';
-        setColapsable($('grupo-referencia-compensatorio'), esCompensatorio, { animar: false });
-        elRef.value = esCompensatorio ? (r.referenciaCompensatorio || '') : '';
-    }
-
-    const btnCredito = document.getElementById('btn-toggle-credito');
-
-    if (r.credito && r.credito !== '00:00') {
-        btnCredito.dataset.activo = "true";
-        btnCredito.classList.add('btn-activo');
-    } else {
-        btnCredito.dataset.activo = "false";
-        btnCredito.classList.remove('btn-activo');
-    }
+    notify.formularioEdicion.poblar({
+        fecha: r.fecha,
+        entrada: r.entrada || '',
+        salida: r.salida || '',
+        tiempoFuera: r.tiempoFuera || '',
+        notas: r.notas || '',
+        objetivo: objetivoActual,
+        esCompensatorio: TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'compensatorio',
+        referencia: r.referenciaCompensatorio || '',
+        creditoActivo: !!(r.credito && r.credito !== '00:00'),
+    });
 
     notify.setBloqueoEdicion(true);
     notify.abrirModal('modal-editar');
 
     requestAnimationFrame(() => {
         notify.verificarBloqueoCredito();
-        const hintEl = document.getElementById('edit-hint-resumen');
-        if (hintEl) document.getElementById('edit-entrada').dispatchEvent(new Event('input'));
+        notify.formularioEdicion.refrescarHintResumen();
     });
 }
 
 function pegarReferenciaAutomatica() {
     const editandoId = EstadoApp.editandoId();
-    const elRef = $('edit-referencia-compensatorio');
-    if (!elRef || editandoId === null) return;
+    const form = EstadoApp._notify().formularioEdicion;
+    if (!form.tieneCampoReferencia() || editandoId === null) return;
 
-    if (elRef.value) {
-        elRef.value = '';
+    const campos = form.leer();
+    if (campos.referencia) {
+        form.escribirReferencia('');
     } else {
-        const f = S.sanitizeString($('edit-fecha').value, 10);
-        const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
-        const s = S.sanitizeString($('edit-salida').value.trim(), 5);
+        const f = S.sanitizeString(campos.fecha, 10);
+        const e = S.sanitizeString(campos.entrada.trim(), 5);
+        const s = S.sanitizeString(campos.salida.trim(), 5);
         const listaSinManual = EstadoApp.registros().map(x => x.id === editandoId
             ? { ...x, fecha: f, entrada: e || null, salida: s || null, referenciaCompensatorio: undefined }
             : x);
         const asignaciones = _calcularAsignacionesCompensatorio(listaSinManual);
         const asignacion = asignaciones.find(a => a.compensatorioId === editandoId);
-        elRef.value = asignacion?.referenciaFecha || '';
+        form.escribirReferencia(asignacion?.referenciaFecha || '');
     }
-    elRef.dispatchEvent(new Event('input'));
 }
 
 function _validarCamposEdicion(f, e, s, tf) {
@@ -393,8 +371,7 @@ function _validarCamposEdicion(f, e, s, tf) {
 }
 
 function _calcularCredito(e, s, tf, objetivo = EstadoApp.horasDiarias()) {
-    const btn = document.getElementById('btn-toggle-credito');
-    if (!btn || btn.dataset.activo !== 'true') return null;
+    if (!EstadoApp._notify().formularioEdicion.leer().creditoActivo) return null;
     const calc = calcularHoras(e, s, tf, null);
     if (!calc) return null;
     const diferencia = objetivo - calc.total;
@@ -426,26 +403,26 @@ async function guardarEdicion() {
     if (!r) return;
     const notify = EstadoApp._notify();
     const horasDiarias = EstadoApp.horasDiarias();
-    const btnGuardar = /** @type {HTMLButtonElement} */ ($('modal-editar').querySelector('.btn-edit'));
-    btnGuardar.disabled = true;
+    const btnGuardar = notify.formularioEdicion.bloquearGuardar();
 
-    const f = S.sanitizeString($('edit-fecha').value, 10);
-    const e = S.sanitizeString($('edit-entrada').value.trim(), 5);
-    const s = S.sanitizeString($('edit-salida').value.trim(), 5);
-    let tf = S.sanitizeString($('edit-tiempo-fuera').value.trim(), 5) || null;
+    const campos = notify.formularioEdicion.leer();
+    const f = S.sanitizeString(campos.fecha, 10);
+    const e = S.sanitizeString(campos.entrada.trim(), 5);
+    const s = S.sanitizeString(campos.salida.trim(), 5);
+    let tf = S.sanitizeString(campos.tiempoFuera.trim(), 5) || null;
     tf = tf ? TiempoUtils.normalizarMinutosSueltos(tf) : tf;
-    let notas = S.sanitizeString($('edit-notas').value.trim(), S.SECURITY_LIMITS.MAX_NOTAS_LENGTH);
+    let notas = S.sanitizeString(campos.notas.trim(), S.SECURITY_LIMITS.MAX_NOTAS_LENGTH);
     if (notas) notas = S.sanitizeNotas(notas, true) || null;
     if (notas === '') notas = null;
 
-    let objetivoNuevo = parseFloat($('edit-objetivo')?.dataset.valor);
+    let objetivoNuevo = campos.objetivo;
     if (!_esObjetivoValido(objetivoNuevo)) objetivoNuevo = horasDiarias;
     const objetivoPrevio = (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras)) ? r.objetivoHoras : horasDiarias;
 
     const esCompensatorioNuevo = TiposRegistro.obtenerTipoPorCodigo(e, s)?.id === 'compensatorio';
     let referenciaCompensatorioNueva;
     if (esCompensatorioNuevo) {
-        const refInput = S.sanitizeString($('edit-referencia-compensatorio')?.value || '', 10);
+        const refInput = S.sanitizeString(campos.referencia, 10);
         referenciaCompensatorioNueva = TiempoUtils.validarFecha(refInput) ? refInput : undefined;
 
         if (referenciaCompensatorioNueva) {

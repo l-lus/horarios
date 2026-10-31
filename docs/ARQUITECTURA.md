@@ -93,6 +93,20 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 
 ---
 
+## 3.1. Cómo hablan los servicios con la UI (sin tocar el DOM)
+
+`src/services/` **no accede al DOM** (ni `document` ni `$()`); lo verifica `tests/architecture.test.mjs`. Hay tres canales, todos inyectados/escuchados desde la UI:
+
+| Canal | Cuándo usarlo | Ejemplo |
+|---|---|---|
+| `EstadoApp._notify()` (typedef `Notificaciones`) | Órdenes a la UI o consultas con respuesta (toasts, confirmar, cerrar modales). | `notify.mostrarToast(...)`, `notify.confirmarModal(...)` |
+| Puertos de formulario (`FormularioRegistro`, `FormularioEdicion`) | Leer o escribir los campos de un formulario. Los implementa [`src/ui/formularios.js`](../src/ui/formularios.js). | `notify.formularioRegistro.leer()` |
+| `EventosApp` (bus pub/sub) | Avisar que algo cambió, sin esperar respuesta. | `historial:cambio`, `perfil:cambio`, `filtros:cambio`, `grupo:editar` |
+
+Los valores que devuelven los puertos son **crudos**: el servicio los sanitiza y valida. Gracias a esto los servicios se prueban sin DOM (ver `tests/servicios-sin-dom.test.mjs`).
+
+---
+
 ## 4. Catálogo completo de módulos (`src/`)
 
 ### 4.1. Datos estáticos (`src/data/`)

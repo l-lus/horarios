@@ -6,10 +6,34 @@ import { TiposRegistro } from './tipos-registro.js';
 // CENTRAL APPLICATION STATE & BASE RECORD CALCULATIONS MODULE
 // ====================================================================
 /**
+ * Formulario "Fichar": los servicios lo leen/escriben sin conocer el DOM (lo implementa ui/formularios.js).
+ * Los valores de `leer` son crudos: el servicio los sanitiza.
+ * @typedef {Object} FormularioRegistro
+ * @property {() => { fecha: string, entrada: string, salida: string }} leer
+ * @property {(campos: { fecha?: string, entrada?: string, salida?: string }) => void} escribir
+ * @property {() => any} bloquearBoton deshabilita el botón de fichar y devuelve un handle opaco para notify.avisarFichaje/resetearBoton
+ */
+
+/**
+ * Formulario del modal de edición de un registro (implementado en ui/formularios.js).
+ * @typedef {Object} FormularioEdicion
+ * @property {() => { fecha: string, entrada: string, salida: string, tiempoFuera: string, notas: string, objetivo: number, referencia: string, creditoActivo: boolean }} leer
+ * @property {(datos: { fecha: string, entrada: string, salida: string, tiempoFuera: string, notas: string, objetivo: number, esCompensatorio: boolean, referencia: string, creditoActivo: boolean }) => void} poblar
+ * @property {() => void} refrescarHintResumen
+ * @property {() => boolean} tieneCampoReferencia
+ * @property {(valor: string) => void} escribirReferencia
+ * @property {() => any} bloquearGuardar devuelve handle opaco para notify.restaurarBotonGuardarEdicion
+ * @property {() => any} bloquearEliminar
+ * @property {(handle: any) => void} liberarEliminar
+ */
+
+/**
  * Puerto hacia la UI: lo que los servicios pueden pedirle (la UI lo implementa en orquestador.js).
  * @typedef {Object} Notificaciones
  * @property {(mensaje: string, tipo?: string, duracion?: number, detalle?: string|null, accion?: Function|null) => void} mostrarToast
  * @property {(texto: string, etiqueta?: string, icono?: string, opciones?: object) => Promise<boolean>} confirmarModal
+ * @property {FormularioRegistro} formularioRegistro
+ * @property {FormularioEdicion} formularioEdicion
  * @property {() => boolean} hayUIBloqueante
  * @property {() => number} leerObjetivoEdicion objetivo (horas) mostrado en el formulario de edición; NaN si no hay
  * @property {() => string} temaGuardado
@@ -57,6 +81,21 @@ let notify = {
     confirmarModal: async () => false,
     descargarJSON: () => { },
     forzarVista: (vista, fn) => fn(),
+    formularioRegistro: {
+        leer: () => ({ fecha: '', entrada: '', salida: '' }),
+        escribir: () => { },
+        bloquearBoton: () => null,
+    },
+    formularioEdicion: {
+        leer: () => ({ fecha: '', entrada: '', salida: '', tiempoFuera: '', notas: '', objetivo: NaN, referencia: '', creditoActivo: false }),
+        poblar: () => { },
+        refrescarHintResumen: () => { },
+        tieneCampoReferencia: () => false,
+        escribirReferencia: () => { },
+        bloquearGuardar: () => null,
+        bloquearEliminar: () => null,
+        liberarEliminar: () => { },
+    },
     hayUIBloqueante: () => false,
     leerObjetivoEdicion: () => NaN,
     iniciarTimerAutoCierreBotones: () => { },

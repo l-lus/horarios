@@ -812,7 +812,18 @@ button:disabled {
 
 #modo-normal,
 #gist-limite-sync,
-.contenedor-fechas,
-.contenedor-horas {
+.contenedor-fechas {
     display: block;
+}
+
+/* Entrada y salida de la tarjeta de fichaje: siempre en la misma línea, mitad y mitad (el modo lote mantiene su propio layout) */
+.contenedor-horas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+.contenedor-horas .form-group {
+    min-width: 0;
+    margin-bottom: 0;
 }

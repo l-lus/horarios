@@ -474,10 +474,10 @@ test('TarjetaFichajeVista: con 0 minutos se muestra "Comenzando" o "Sin horas to
     });
 
     // Hoy: jornada abierta en su primer minuto -> "Comenzando"; con minutos o ya cerrada se mantiene el tiempo real
-    assert.equal(TarjetaFichajeVista.derivarVistaHoy(estDia(null, 0)).stats, 'Comenzando');
-    assert.notEqual(TarjetaFichajeVista.derivarVistaHoy(estDia(null, 0.5)).stats, 'Comenzando');
+    assert.equal(TarjetaFichajeVista.derivarVistaHoy(estDia(null, 0)).stats, 'Comenzando...');
+    assert.notEqual(TarjetaFichajeVista.derivarVistaHoy(estDia(null, 0.5)).stats, 'Comenzando...');
     const cerradaEnCero = TarjetaFichajeVista.derivarVistaHoy(estDia('09:00', 0)).stats;
-    assert.notEqual(cerradaEnCero, 'Comenzando');
+    assert.notEqual(cerradaEnCero, 'Comenzando...');
     assert.match(cerradaEnCero, /^0/);
 
     // Semana: 0 minutos con jornada abierta -> "Comenzando"; sin jornada y semana abierta -> "Sin horas todavía"; semana terminada -> el 0 real
@@ -485,7 +485,7 @@ test('TarjetaFichajeVista: con 0 minutos se muestra "Comenzando" o "Sin horas to
         totalSemana: 0, totalSemanaProgreso: 0, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false,
         regHoy: null, ayerAbierto: false, tipoEspecialHoy: null, ...extra
     });
-    assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({ regHoy: { entrada: '09:00', salida: null } })).stats, 'Comenzando');
+    assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({ regHoy: { entrada: '09:00', salida: null } })).stats, 'Comenzando...');
     assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({})).stats, 'Sin horas todavía');
     assert.match(TarjetaFichajeVista.derivarVistaSemana(estSemana({ semanaAbierta: false })).stats, /^0/);
     // con horas trabajadas no cambia nada, y una semana de solo días especiales conserva su 🌞

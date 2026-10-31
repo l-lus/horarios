@@ -229,10 +229,6 @@
     from { opacity: 0; }
 }
 
-@keyframes linea-tick-aparece {
-    from { opacity: 0; transform: translateY(-50%) scaleY(0.2); }
-}
-
 @keyframes linea-etiqueta-aparece {
     from { opacity: 0; translate: 0 0.35rem; }
 }
@@ -246,7 +242,7 @@
 }
 
 .progress-pista.con-linea .linea-tick {
-    animation: linea-tick-aparece var(--dur-slow) var(--ease-pop) 0.15s backwards;
+    animation: linea-aparece var(--dur-slow) ease 0.15s backwards;
 }
 
 .progress-pista.con-linea .linea-tick--buffer {
@@ -303,38 +299,51 @@
     transition: left var(--dur-slow), width var(--dur-slow), background var(--dur-slow) ease;
 }
 
+/* Marca en "T" con flecha: sale de la barra hacia el lado de su etiqueta y se curva libremente hasta apuntar a su centro.
+   El dibujo (svg) es el de la marca de salida con la etiqueta a la izquierda; las demás variantes son espejos. */
 .linea-tick {
-    top: 50%;
-    width: 3px;
-    height: 20px;
-    margin-left: -1.5px;
-    border-radius: 2px;
-    transform: translateY(-50%);
-    z-index: 1;
-    background: var(--text-muted);
-    transition: left var(--dur-slow), opacity var(--dur-fast) ease, background var(--dur-slow) ease;
-}
-
-/* Marcas muy juntas: forman una "T" con la barra; la de salida baja y la del buffer sube */
-.progress-pista.con-linea.marcas-juntas .linea-tick {
-    height: 10px;
-    border-radius: 0 0 2px 2px;
-    transform: none;
-    animation: linea-aparece var(--dur-slow) ease backwards;
-}
-
-.progress-pista.con-linea.marcas-juntas .linea-tick:not(.linea-tick--buffer) {
+    --tick-color: var(--text-muted);
+    --alto-conector: calc(0.8rem + var(--text-sm) / 2);
     top: 100%;
+    width: 26px;
+    height: var(--alto-conector);
+    margin-left: -24px;
+    transform-origin: 24px 50%;
+    color: var(--tick-color);
+    z-index: 1;
+    transition: left var(--dur-slow), opacity var(--dur-fast) ease;
 }
 
-.progress-pista.con-linea.marcas-juntas .linea-tick--buffer {
+.linea-tick svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: color var(--dur-slow) ease;
+}
+
+.linea-tick .linea-ancla {
+    fill: currentColor;
+    stroke: var(--bg-card);
+    stroke-width: 1.2;
+}
+
+.linea-tick--buffer {
     top: auto;
     bottom: 100%;
-    border-radius: 2px 2px 0 0;
+    transform: scaleY(-1);
 }
 
-.linea-tick--buffer.positivo { background: var(--c-green); }
-.linea-tick--buffer.negativo { background: var(--c-red); }
+.linea-tick.espejado { transform: scaleX(-1); }
+.linea-tick--buffer.espejado { transform: scale(-1, -1); }
+
+.linea-tick--buffer.positivo { --tick-color: var(--c-green); }
+.linea-tick--buffer.negativo { --tick-color: var(--c-red); }
 
 .linea-etiqueta {
     font-size: var(--text-sm);
@@ -346,6 +355,7 @@
 }
 
 .linea-etiqueta--abajo { top: calc(100% + 0.8rem); }
+.linea-etiqueta--abajo.linea-etiqueta--entrada-arriba { top: auto; bottom: calc(100% + 0.8rem); }
 .linea-etiqueta--arriba { bottom: calc(100% + 0.8rem); font-weight: 600; }
 .linea-etiqueta--arriba.positivo { color: var(--c-green); }
 .linea-etiqueta--arriba.negativo { color: var(--c-red); }

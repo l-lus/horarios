@@ -231,6 +231,45 @@ function _colocarEtiquetaLinea(el, pct, ancho) {
     el.style.left = `${Math.max(0, Math.min(ancho - w, (pct / 100) * ancho - w / 2))}px`;
 }
 
+// Las marcas de salida y buffer son una "T" con la barra: una curva libre que sale hacia su lado y termina en flecha en el medio de la etiqueta.
+// La etiqueta queda a la izquierda del conector; si no entra, se espeja hacia la derecha.
+const _ANCHO_CONECTOR = 21; // de la marca a la punta de la flecha
+const _SEPARACION_ETIQUETA = 4;
+function _colocarEtiquetaConector(et, tick, pct, ancho) {
+    if (!et) return;
+    const x = (pct / 100) * ancho;
+    const w = et.offsetWidth;
+    const espejado = x - _ANCHO_CONECTOR - _SEPARACION_ETIQUETA - w < 0;
+    tick.classList.toggle('espejado', espejado);
+    et.style.left = `${espejado ? x + _ANCHO_CONECTOR + _SEPARACION_ETIQUETA : x - _ANCHO_CONECTOR - _SEPARACION_ETIQUETA - w}px`;
+}
+
+// Cambia la hora de entrada de lado (abajo/arriba de la barra): la copia sale en el lugar anterior y la etiqueta real reaparece en el nuevo
+// con la misma animación y retardo con que aparecen las etiquetas al crear el registro (linea-etiqueta-aparece), así espera a que terminen de irse las líneas estimadas.
+// No usa las clases compartidas de la mutación: al quitarlas, la animación de aparición propia de las etiquetas se reinicia y la hora parpadea.
+function _ponerEntradaArriba(et, arriba) {
+    const previo = et.dataset.arriba;
+    et.dataset.arriba = String(arriba);
+    if (previo === undefined || previo === String(arriba)) {
+        et.classList.toggle('linea-etiqueta--entrada-arriba', arriba);
+        return;
+    }
+    const durSalida = _durSiAnima('--dur-fast', et);
+    const dur = _durSiAnima('--dur-slow', et);
+    if (dur <= 0) { et.classList.toggle('linea-etiqueta--entrada-arriba', arriba); return; }
+    const fantasma = /** @type {HTMLElement} */ (et.cloneNode(true));
+    fantasma.removeAttribute('id');
+    Object.assign(fantasma.style, { pointerEvents: 'none', animation: 'none', transition: 'none' });
+    et.parentNode.appendChild(fantasma);
+    et.classList.toggle('linea-etiqueta--entrada-arriba', arriba);
+    const salida = fantasma.animate([{ opacity: 1 }, { opacity: 0 }], { duration: durSalida, easing: 'ease', fill: 'forwards' });
+    salida.onfinish = () => fantasma.remove();
+    const curva = getComputedStyle(document.documentElement).getPropertyValue('--ease-conteo').trim() || 'ease';
+    et.animate([{ opacity: 0, translate: '0 0.35rem' }, { opacity: 1, translate: '0 0' }], {
+        duration: dur, easing: curva, delay: arriba ? 450 : 300, fill: 'backwards'
+    });
+}
+
 function _renderLinea(vista, pista, fill) {
     const L = vista.linea;
     const ancho = pista.clientWidth;
@@ -249,9 +288,6 @@ function _renderLinea(vista, pista, fill) {
     banda.style.setProperty('--banda-color', `var(--c-${colorMedio})`);
 
     const pMarca = pct(L.marcaSalidaRel);
-    // marcas muy juntas: en vez de cruzar la barra se bifurcan en "T", cada una hacia el lado de su etiqueta
-    const pxEntreMarcas = pBuffer !== null && L.hayBanda ? Math.abs(pMarca - pBuffer) / 100 * ancho : Infinity;
-    pista.classList.toggle('marcas-juntas', pxEntreMarcas < 10);
     const tickSalida = $('linea-tick-salida');
     const tickBuffer = $('linea-tick-buffer');
     tickSalida.style.left = `${pMarca}%`;
@@ -272,8 +308,13 @@ function _renderLinea(vista, pista, fill) {
     etBuffer.classList.toggle('positivo', L.bufferPositivo);
     etBuffer.classList.toggle('negativo', !L.bufferPositivo);
     _colocarEtiquetaLinea(etEntrada, 0, ancho);
-    _colocarEtiquetaLinea(etSalida, pMarca, ancho);
-    _colocarEtiquetaLinea(etBuffer, pBuffer ?? pSalida, ancho);
+    // cerrada no hay conector (queda solo la hora, centrada bajo el remate)
+    if (L.cerrado) _colocarEtiquetaLinea(etSalida, pMarca, ancho);
+    else _colocarEtiquetaConector(etSalida, tickSalida, pMarca, ancho);
+    // registro cerrado y muy corto: la hora de entrada pisaría a la de salida, así que pasa arriba de la barra (ahí no hay buffer)
+    const entradaArriba = L.cerrado && parseFloat(etSalida.style.left) < parseFloat(etEntrada.style.left) + etEntrada.offsetWidth + 6;
+    _ponerEntradaArriba(etEntrada, entradaArriba);
+    _colocarEtiquetaConector(etBuffer, tickBuffer, pBuffer ?? pSalida, ancho);
 
     // relleno: azul hasta la primera salida, color del tramo entre ambas y verde al superar la última
     if (!L.cerrado) {

@@ -39,6 +39,11 @@ function _modoTextoStats() {
     return _formatoCortoStatsCache ? 'short' : 'long';
 }
 
+// Con la jornada recién abierta el reloj marca 0 minutos: se muestra un texto en lugar del cero
+const _TEXTO_COMENZANDO = 'Comenzando...';
+const _TEXTO_SEMANA_SIN_HORAS = 'Sin horas todavía';
+const _sinMinutos = horasDecimales => Math.round(horasDecimales * 60) === 0;
+
 function _horasTextoStats(horasDecimales) {
     return TiempoUtils.horasATexto(horasDecimales, _modoTextoStats());
 }
@@ -135,6 +140,15 @@ function _franjasSemana(diasSemana, horasDiarias) {
     return { hitos, tramos, fin: tramos[tramos.length - 1].hasta, colorPrimera };
 }
 
+// Semana con 0 minutos: "Comenzando" si hay una jornada abierta (primer minuto), "Sin horas todavía" si la semana sigue abierta; ya terminada se muestra el 0 real
+function _textoStatsSemana(total, est, semanaAbierta) {
+    if (!_sinMinutos(total)) return _horasTextoStats(total);
+    const hoy = est.regHoy;
+    const jornadaAbierta = !!est.ayerAbierto || !!(hoy?.entrada && !hoy.salida && !est.tipoEspecialHoy);
+    if (jornadaAbierta) return _TEXTO_COMENZANDO;
+    return semanaAbierta ? _TEXTO_SEMANA_SIN_HORAS : _horasTextoStats(total);
+}
+
 function derivarVistaSemana(est) {
     const { totalSemana: tot, totalSemanaProgreso, objetivoSemana, semanaAbierta, horasDiarias, todosEspeciales } = est;
     const prog = totalSemanaProgreso ?? tot;
@@ -184,7 +198,7 @@ function derivarVistaSemana(est) {
 
     return {
         titulo: `${icono('#icon-calendar-simple')} Esta Semana`,
-        stats: todosEspeciales ? '🌞' : _horasTextoStats(tot),
+        stats: todosEspeciales ? '🌞' : _textoStatsSemana(tot, est, semanaAbierta),
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: franjas ? franjas.fin * 100 : progreso,
         colorBorde, estadoFondo,
@@ -298,7 +312,7 @@ function derivarVistaHoy(est) {
 
             return {
                 titulo: `${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false, undefined, objetivoDiarioAyerAplica > 0 && cumplido)}`,
-                stats: _horasTextoStats(tiempoHoy),
+                stats: _sinMinutos(tiempoHoy) ? _TEXTO_COMENZANDO : _horasTextoStats(tiempoHoy),
                 mensaje, mostrarMensaje: true,
                 colorBarra, anchoBarra: prog,
                 colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
@@ -389,7 +403,7 @@ function derivarVistaHoy(est) {
 
     return _conAvisoAyer({
         titulo: `${est.esRetenido ? `${_tituloDia(TiempoUtils.obtenerNombreDia(regHoy.fecha))} (ayer)` : _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal, objetivoDiarioAplica > 0 && cumplido)}`,
-        stats: _horasTextoStats(tiempoHoy),
+        stats: !dayClosed && _sinMinutos(tiempoHoy) ? _TEXTO_COMENZANDO : _horasTextoStats(tiempoHoy),
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: prog,
         colorBorde, estadoFondo, estadoFondoColor,

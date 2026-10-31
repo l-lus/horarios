@@ -464,3 +464,31 @@ test('TarjetaFichajeVista: la línea del día abierta ubica la salida estimada y
     assert.equal(cerrada.marcaSalidaRel, 180);
     assert.ok(cerrada.salidaRel > cerrada.marcaSalidaRel, 'la escala de la barra sigue basada en la salida estimada');
 });
+
+test('TarjetaFichajeVista: con 0 minutos se muestra "Comenzando" o "Sin horas todavía" en lugar del cero', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const estDia = (salida, tiempoHoy) => ({
+        regHoy: { fecha: '2026-10-29', entrada: '09:00', salida, total: tiempoHoy, objetivoHoras: 7 },
+        tiempoHoy, horasDiarias: 7, esDiaHabil: true, tipoEspecialHoy: null,
+        bufferSemanalBase: 0, diasHabiles: [1, 2, 3, 4, 5], esRetenido: false
+    });
+
+    // Hoy: jornada abierta en su primer minuto -> "Comenzando"; con minutos o ya cerrada se mantiene el tiempo real
+    assert.equal(TarjetaFichajeVista.derivarVistaHoy(estDia(null, 0)).stats, 'Comenzando');
+    assert.notEqual(TarjetaFichajeVista.derivarVistaHoy(estDia(null, 0.5)).stats, 'Comenzando');
+    const cerradaEnCero = TarjetaFichajeVista.derivarVistaHoy(estDia('09:00', 0)).stats;
+    assert.notEqual(cerradaEnCero, 'Comenzando');
+    assert.match(cerradaEnCero, /^0/);
+
+    // Semana: 0 minutos con jornada abierta -> "Comenzando"; sin jornada y semana abierta -> "Sin horas todavía"; semana terminada -> el 0 real
+    const estSemana = (extra) => ({
+        totalSemana: 0, totalSemanaProgreso: 0, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false,
+        regHoy: null, ayerAbierto: false, tipoEspecialHoy: null, ...extra
+    });
+    assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({ regHoy: { entrada: '09:00', salida: null } })).stats, 'Comenzando');
+    assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({})).stats, 'Sin horas todavía');
+    assert.match(TarjetaFichajeVista.derivarVistaSemana(estSemana({ semanaAbierta: false })).stats, /^0/);
+    // con horas trabajadas no cambia nada, y una semana de solo días especiales conserva su 🌞
+    assert.notEqual(TarjetaFichajeVista.derivarVistaSemana(estSemana({ totalSemana: 3, totalSemanaProgreso: 3 })).stats, 'Sin horas todavía');
+    assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({ todosEspeciales: true })).stats, '🌞');
+});

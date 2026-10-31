@@ -233,6 +233,7 @@ function _colocarEtiquetaLinea(el, pct, ancho) {
 
 // Las marcas de salida y buffer son una "T" con la barra: una curva libre que sale hacia su lado y termina en flecha en el medio de la etiqueta.
 // La etiqueta queda a la izquierda del conector; si no entra, se espeja hacia la derecha.
+const _MARGEN_ETIQUETAS = 12; // separación mínima entre horas del mismo lado antes de reubicar la entrada
 const _ANCHO_CONECTOR = 21; // de la marca a la punta de la flecha
 const _SEPARACION_ETIQUETA = 4;
 function _colocarEtiquetaConector(et, tick, pct, ancho) {
@@ -311,10 +312,14 @@ function _renderLinea(vista, pista, fill) {
     // cerrada no hay conector (queda solo la hora, centrada bajo el remate)
     if (L.cerrado) _colocarEtiquetaLinea(etSalida, pMarca, ancho);
     else _colocarEtiquetaConector(etSalida, tickSalida, pMarca, ancho);
-    // registro cerrado y muy corto: la hora de entrada pisaría a la de salida, así que pasa arriba de la barra (ahí no hay buffer)
-    const entradaArriba = L.cerrado && parseFloat(etSalida.style.left) < parseFloat(etEntrada.style.left) + etEntrada.offsetWidth + 6;
-    _ponerEntradaArriba(etEntrada, entradaArriba);
     _colocarEtiquetaConector(etBuffer, tickBuffer, pBuffer ?? pSalida, ancho);
+    // si la hora de salida (abierta o cerrada) pisa o queda pegada a la de entrada, esta pasa arriba de la barra,
+    // salvo que arriba esté la etiqueta del buffer en ese mismo tramo
+    const finEntrada = parseFloat(etEntrada.style.left) + etEntrada.offsetWidth + _MARGEN_ETIQUETAS;
+    const salidaChoca = parseFloat(etSalida.style.left) < finEntrada;
+    const arribaOcupado = L.hayBanda && parseFloat(etBuffer.style.left) < finEntrada;
+    const entradaArriba = salidaChoca && !arribaOcupado;
+    _ponerEntradaArriba(etEntrada, entradaArriba);
 
     // relleno: azul hasta la primera salida, color del tramo entre ambas y verde al superar la última
     if (!L.cerrado) {

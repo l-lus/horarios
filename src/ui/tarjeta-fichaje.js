@@ -47,6 +47,34 @@ const _irAFicharConFecha = (...args) => TarjetaLote._irAFicharConFecha(...args);
 const _scrollACardFichar = (...args) => TarjetaLote._scrollACardFichar(...args);
 const alternarFechaActual = (...args) => TarjetaLote.alternarFechaActual(...args);
 let _timerAutoVista = null;
+
+// Al cerrar la jornada abierta de ayer, la tarjeta sigue mostrando ese registro (salida y total) antes de pasar a hoy.
+// Dura lo que un ciclo completo de la salida (fase "Salida" + total); fichar de nuevo lo anula y pasa a hoy al instante.
+let _retencionAyer = null;
+const _RETENCION_AYER_MS = 4000;
+
+function _cancelarRetencionAyer() {
+    if (!_retencionAyer) return;
+    clearTimeout(_retencionAyer.timer);
+    _retencionAyer = null;
+}
+
+/** @param {string | null} id registro de ayer recién cerrado; null anula la retención */
+function _retenerRegistroAyer(id) {
+    _cancelarRetencionAyer();
+    if (id === null) return;
+    _retencionAyer = {
+        id,
+        timer: setTimeout(() => { _retencionAyer = null; actualizarUI(null, false, true); }, _RETENCION_AYER_MS),
+    };
+}
+
+function _registroRetenidoAyer(registros, regHoy) {
+    if (!_retencionAyer) return null;
+    const reg = registros.find(r => r.id === _retencionAyer?.id);
+    if (regHoy?.entrada || !reg?.salida) { _cancelarRetencionAyer(); return null; }
+    return reg;
+}
 let _suprimirAnimacionInterna = false;
 
 function _estadoDiasHabiles(diasHabiles) {
@@ -90,8 +118,10 @@ function calcularEstadoCard(asignacionesPrecalculadas = null) {
     const { ayerStr: ayer, regAyer, ayerAbierto } = D.detectarAyerAbierto(hoy, registros);
 
     const { esDiaHabil, quedanDiasFuturos } = _estadoDiasHabiles(diasHabiles);
-    const regHoy = registros.find(r => r.fecha === hoy) ?? null;
-    const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
+    const regHoyReal = registros.find(r => r.fecha === hoy) ?? null;
+    const regRetenido = _registroRetenidoAyer(registros, regHoyReal);
+    const regHoy = regRetenido ?? regHoyReal;
+    const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoyReal && regHoyReal.salida));
     const minutosBreakActivo = _minutosBreakActivo();
     const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
     const bufferSemanalBase = D.calcularBufferPeriodo(ini, hoy, false, 0, asignacionesCompensatorio);
@@ -138,10 +168,10 @@ function calcularEstadoCard(asignacionesPrecalculadas = null) {
     const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
 
     return {
-        hoy, ini, fn,
-        registros, regHoy,
+        hoy: regRetenido ? regRetenido.fecha : hoy, ini, fn,
+        registros, regHoy, esRetenido: !!regRetenido,
         horasDiarias, horasSemanales,
-        diasHabiles, esDiaHabil,
+        diasHabiles, esDiaHabil: regRetenido ? TiempoUtils.esFechaHabil(regRetenido.fecha, diasHabiles) : esDiaHabil,
         semanaAbierta, bufferSemanal, bufferSemanalBase,
         totalSemana, totalSemanaProgreso, objetivoSemana,
         tipoEspecialHoy, tiempoHoy,
@@ -465,7 +495,7 @@ function derivarVistaHoy(est) {
     const colorFinal = estadoFondoColor || (estadoFondo === 'finalizado_fail' ? 'red' : 'green');
 
     return _conAvisoAyer({
-        titulo: `${_tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal)}`,
+        titulo: `${est.esRetenido ? `${_tituloDia(TiempoUtils.obtenerNombreDia(regHoy.fecha))} (ayer)` : _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal)}`,
         stats: _horasTextoStats(tiempoHoy),
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: prog,
@@ -978,4 +1008,5 @@ export const TarjetaFichaje = {
     _cicloStatsActivo,
     _prepararMostrarFaseAlRenderizar,
     _refrescarFormatoCortoStatsCache,
+    _retenerRegistroAyer,
 };

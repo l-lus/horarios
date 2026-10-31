@@ -91,13 +91,19 @@ function _mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s) {
 async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     const notify = EstadoApp._notify();
     const timerDetenido = detenerYRegistrarTimer(reg);
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    // jornada de ayer que cruzó la medianoche: la tarjeta la sigue mostrando unos segundos antes de pasar a hoy
+    const ayer = detectarAyerAbierto(hoy, EstadoApp.registros());
+    const eraAyerAbierto = reg.fecha !== hoy && ayer.ayerAbierto && ayer.regAyer === reg;
     reg.salida = s;
     _aplicarCalculoHoras(reg, reg.entrada, s, reg.tiempoFuera || null);
 
-    const esHoy = reg.fecha === TiempoUtils.obtenerFechaHoy();
+    const esHoy = reg.fecha === hoy;
     GestorHistorial.saveState(EstadoApp.registros(), `salida ${s} (${TiempoUtils.fechaCorta(reg.fecha)})`);
-    const saved = await _guardarConCicloSiHoy(reg.id, esHoy, 'salida');
+    if (eraAyerAbierto) notify.retenerRegistroAyer(reg.id);
+    const saved = await _guardarConCicloSiHoy(reg.id, esHoy || eraAyerAbierto, 'salida');
     if (!saved) {
+        if (eraAyerAbierto) notify.retenerRegistroAyer(null);
         notify.avisarFichaje(null, 'error', { btn });
         return;
     }

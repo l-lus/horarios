@@ -126,3 +126,34 @@ test('GestionDatos._registroAbiertoParaPush toma la jornada abierta de ayer si h
     EstadoApp._setRegistros([reg('2026-10-30', '00:10', null)]);
     assert.equal(D._registroAbiertoParaPush('2026-10-31'), null);
 });
+
+test('GestionDatos.agregarRegistro: cerrar la jornada abierta de ayer la retiene en la tarjeta; cerrar la de hoy no', async (t) => {
+    const { GestionDatos: D } = await import('../src/services/gestion-datos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const reg = (fecha, entrada, salida) => ({ id: `${fecha}-${entrada}`, fecha, entrada, salida, tiempoFuera: null, objetivoHoras: 7 });
+
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 31, 0, 26) });
+    const retenidos = [];
+    EstadoApp.configurarNotificaciones({
+        formularioRegistro: {
+            leer: () => ({ fecha: '2026-10-31', entrada: '', salida: '' }),
+            escribir: () => { },
+            bloquearBoton: () => ({ id: 'btn-simulado' }),
+        },
+        avisarFichaje: () => { },
+        retenerRegistroAyer: id => retenidos.push(id),
+    });
+
+    // 00:26: fichar sin entrada cierra la jornada abierta de ayer
+    EstadoApp._setRegistros([reg('2026-10-30', '18:40', null)]);
+    await D.agregarRegistro();
+    assert.equal(EstadoApp.registros()[0].salida, '00:26');
+    assert.deepEqual(retenidos, ['2026-10-30-18:40']);
+
+    // El registro de hoy se cierra por el circuito normal, sin retención
+    retenidos.length = 0;
+    EstadoApp._setRegistros([reg('2026-10-31', '00:10', null)]);
+    await D.agregarRegistro();
+    assert.equal(EstadoApp.registros()[0].salida, '00:26');
+    assert.deepEqual(retenidos, []);
+});

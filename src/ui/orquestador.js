@@ -61,7 +61,7 @@ const {
 const {
     setFondoCard, actualizarUI, alternarVista, _forzarVista, actualizarEstadoBotonTimerMain,
     toggleModoLote, poblarSelectoresTipos, actualizarBotonLote, toggleFormulario, setTimerAutoVista,
-    _iniciarCicloStats, _detenerCicloStats, _prepararMostrarFaseAlRenderizar,
+    _iniciarCicloStats, _detenerCicloStats, _prepararMostrarFaseAlRenderizar, _retenerRegistroAyer,
     _refrescarFormatoCortoStatsCache
 } = TarjetaFichaje;
 
@@ -118,7 +118,7 @@ function _initGlobales() {
         formularioRegistro: Formularios.registro, formularioEdicion: Formularios.edicion,
         leerObjetivoEdicion: () => parseFloat($('edit-objetivo')?.dataset.valor ?? ''),
         hayUIBloqueante: () => !!document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding'),
-        forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, refrescarConfigSiVisible
+        forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, retenerRegistroAyer: _retenerRegistroAyer, refrescarConfigSiVisible
     });
     Almacenamiento.configurarNotificaciones({ mostrarToast });
     RecordatorioPush.configurarNotificaciones({ mostrarToast });

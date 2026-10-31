@@ -57,6 +57,7 @@ import { TiposRegistro } from './tipos-registro.js';
  * @property {(...args: any[]) => void} mostrarError
  * @property {(...args: any[]) => void} prepararMostrarFaseAlRenderizar
  * @property {(...args: any[]) => void} refrescarConfigSiVisible
+ * @property {(id: string | null) => void} retenerRegistroAyer
  * @property {(...args: any[]) => void} resetearBoton
  * @property {(...args: any[]) => void} restaurarBotonGuardarEdicion
  * @property {(...args: any[]) => void} setBloqueoEdicion
@@ -105,6 +106,7 @@ let notify = {
     obtenerNombrePerfilSafe: () => '',
     prepararMostrarFaseAlRenderizar: () => { },
     refrescarConfigSiVisible: () => { },
+    retenerRegistroAyer: () => { },
     resetearBoton: () => { },
     restaurarBotonGuardarEdicion: () => { },
     setBloqueoEdicion: () => { },

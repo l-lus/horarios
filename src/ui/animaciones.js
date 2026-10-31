@@ -18,6 +18,7 @@ function _getCSSdur(varName) {
     if (!raw) return 300;
     return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
 }
+/** @param {any} [el] */
 function _durSiAnima(varName, el = null) {
     return (Movimiento.reducido() || (el && !el.offsetParent)) ? 0 : _getCSSdur(varName);
 }
@@ -66,6 +67,7 @@ const _CLASES_FLASH = ['campo-flash', 'campo-flash-color'];
 // en curso el destello se difiere y arranca recién cuando termina el cambio de texto.
 const _flashDiferido = new WeakMap();
 
+/** @param {any} [colorVar] */
 function _aplicarFlash(el, clase, colorVar = null) {
     clearTimeout(el._flashTimeout);
     el.classList.remove(clase);
@@ -79,6 +81,7 @@ function _aplicarFlash(el, clase, colorVar = null) {
     el._flashTimeout = setTimeout(() => el.classList.remove(clase), duracionMs * iteraciones);
 }
 
+/** @param {any} [colorVar] */
 function _flashElemento(el, clase, colorVar = null) {
     if (!el) return;
     if (_mutacionAnimEstado.has(el) || _flashDiferido.has(el)) { _diferirFlash(el, clase, colorVar); return; }
@@ -117,6 +120,7 @@ function _finalizarMutacionPendiente(el) {
     _mutacionAnimEstado.delete(el);
 }
 
+/** @param {any} [duracion] */
 function _animarMutacion(elementos, fn, duracion = null) {
     const els = _aArray(elementos).filter(Boolean);
     const dur = duracion ?? DUR_ANIM();
@@ -327,7 +331,7 @@ function _animarSlideElemento(el, delta, mutarFn) {
 
     const timeout = setTimeout(() => {
         el.style.display = '';
-        wrapper.parentNode.insertBefore(el, wrapper);
+        wrapper.parentNode?.insertBefore(el, wrapper);
         wrapper.remove();
         _slideAnimEstado.delete(el);
     }, dur + 20);

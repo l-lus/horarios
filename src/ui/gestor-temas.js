@@ -33,7 +33,7 @@ function aplicarTema(tema) {
 function sincronizarBarraDelSistema() {
     const color = getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
     if (!/^#[0-9a-f]{3,8}$/i.test(color)) return;
-    /** @type {HTMLMetaElement} */
+    /** @type {HTMLMetaElement|null} */
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
         meta = document.createElement('meta');

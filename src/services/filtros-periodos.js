@@ -76,7 +76,7 @@ async function guardarEdicionGrupo({ tipo, desde, hasta }) {
     const notaPrevia = TiposRegistro.notaDeGrupo(grupoEnEdicion) || null;
     const objetivoPorFecha = new Map(grupoEnEdicion.registros.map(r => [r.fecha, r.objetivoHoras]));
     const filtrados = registros.filter(r => !idsDelGrupo.has(r.id));
-    const { entrada, salida } = TiposRegistro.obtenerCodigosPorTipo(nuevoTipo);
+    const { entrada, salida } = /** @type {{ entrada: string, salida: string }} */ (TiposRegistro.obtenerCodigosPorTipo(nuevoTipo));
     const nuevosRegistros = fechasNuevas.map((fechaISO, idx) => {
         const reg = EstadoApp._construirRegistro(fechaISO, entrada, salida);
         if (Compensatorios._esObjetivoValido(objetivoPorFecha.get(fechaISO))) reg.objetivoHoras = objetivoPorFecha.get(fechaISO);
@@ -176,6 +176,7 @@ function registroParaTiempoFuera(fechaHoy = TiempoUtils.obtenerFechaHoy()) {
     return ayerAbierto ? regAyer : regHoy;
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutosBreakActivo = 0, asignacionesPrecalculadas = null) {
     const hoy = TiempoUtils.obtenerFechaHoy();
     const registros = EstadoApp.registros();

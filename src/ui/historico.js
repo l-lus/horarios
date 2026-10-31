@@ -75,6 +75,7 @@ function _crearIconoSvg(href, clase) {
 
 const _crearChevron = () => _crearIconoSvg('#icon-chevron-down', 'chevron-mes chevron-mes-icon');
 
+/** @param {{ fechaText?: any, horasText?: any, totalText?: any, totalClase?: string, badgesExtra?: { texto: any, clase: string }[], comentarioText?: any }} datos */
 function _crearInfoRegistro({ fechaText, horasText, totalText, totalClase = '', badgesExtra = [], comentarioText = '' }) {
     const info = document.createElement('div');
     info.className = 'registro-info';
@@ -125,6 +126,7 @@ function _crearInfoRegistro({ fechaText, horasText, totalText, totalClase = '', 
     return info;
 }
 
+/** @param {any} [idResaltar] @param {any} [asignacionesCompensatorio] */
 function crearItemRegistroIndividual(r, idResaltar = null, hoy = TiempoUtils.obtenerFechaHoy(), asignacionesCompensatorio = null) {
     const item = document.createElement('div');
 
@@ -169,6 +171,7 @@ function crearItemRegistroIndividual(r, idResaltar = null, hoy = TiempoUtils.obt
         totalClase = { cumplido: 'green-text', cubierto: 'gold-text', incompleto: 'red-text', neutro: 'neutro-text' }[est.estado] || '';
     }
 
+    /** @type {{ texto: any, clase: string }[]} */
     const badgesExtra = [];
     if (est.estado === 'cubierto') badgesExtra.push({ texto: 'Cubierto', clase: 'gold-text' });
     if (tipoEspecial?.id === 'compensatorio') {
@@ -192,6 +195,7 @@ function crearItemRegistroIndividual(r, idResaltar = null, hoy = TiempoUtils.obt
 
 const _guardarExpandido = (storageKeyFn, id, abierto) => Almacenamiento.setItem(storageKeyFn(id), String(abierto));
 
+/** @param {any} [asignacionesCompensatorio] */
 function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asignacionesCompensatorio = null) {
     const grupos = TiposRegistro.agruparConsecutivos(registrosDelMes);
 
@@ -270,6 +274,7 @@ function _renderEmptyStateLista(lista) {
     lista.appendChild(emptyDiv);
 }
 
+/** @param {any} [asignacionesCompensatorio] */
 function _crearContenedorAnio(anio, mesesDelAnio, idNuevo, mesHoy, hoy, asignacionesCompensatorio = null) {
     const contenedor = document.createElement('div');
     contenedor.className = 'registro-mes-container';
@@ -414,6 +419,7 @@ function _prepararAnimacionLista(lista, idNuevo) {
     };
 }
 
+/** @param {any} [idNuevo] @param {any} [asignacionesPrecalculadas] */
 function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalculadas = null) {
     const lista = $('lista-registros');
     const animacionLista = _prepararAnimacionLista(lista, idNuevo);
@@ -454,6 +460,7 @@ function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalc
     animacionLista.reproducir();
 }
 
+/** @param {any} [idResaltar] @param {any} [asignacionesCompensatorio] */
 function crearGrupoExpandible(grupo, idResaltar = null, asignacionesCompensatorio = null) {
     const primerReg = grupo.registros[0];
     const ultimoReg = grupo.registros[grupo.registros.length - 1];
@@ -489,6 +496,7 @@ function crearGrupoExpandible(grupo, idResaltar = null, asignacionesCompensatori
 
     const colorClase = tipoConfig ? `${tipoConfig.color}-text` : 'purple-text';
 
+    /** @type {{ texto: any, clase: string }[]} */
     const badgesExtra = [];
     if (tipoConfig?.id === 'compensatorio') {
         const fechasCompensadas = [...new Set(grupo.registros.map(r => D.fechaCompensadaPorRegistro(r, asignacionesCompensatorio)).filter(Boolean))];

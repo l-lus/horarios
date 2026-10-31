@@ -45,6 +45,7 @@ function validarCamposConfigImport(data) {
     return true;
 }
 
+/** @param {any} [registrosParaRecalcular] */
 function aplicarConfigImportada(data, registrosParaRecalcular = null) {
     if (!data || typeof data !== 'object') return;
     if (Array.isArray(data.diasHabiles)) {
@@ -225,7 +226,7 @@ function importarDatos(file, modo = 'replace') {
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
-            const contenido = String(e.target.result ?? '');
+            const contenido = String(e.target?.result ?? '');
             if (!contenido || contenido.trim().length === 0) { D._notify().mostrarToast('Archivo vacío', 'error'); return; }
             if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) { D._notify().mostrarToast('Contenido del archivo demasiado grande', 'error'); return; }
 
@@ -252,6 +253,7 @@ function importarDatos(file, modo = 'replace') {
     reader.readAsText(file);
 }
 
+/** @param {any} [descripcion] */
 async function finalizarImportacionAndSave(mensajeExito, descripcion = null) {
     D._ordenarRegistros();
     Compensatorios.migrarObjetivoHorasFaltante();

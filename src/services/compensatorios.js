@@ -144,26 +144,31 @@ function _calcularAsignacionesCompensatorio(listaRegistros = D.registros()) {
     return [...asignaciones.values()];
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function _buscarAsignacionCompensatorio(idBuscado, campoId, asignacionesPrecalculadas = null) {
     const asignaciones = asignacionesPrecalculadas || _calcularAsignacionesCompensatorio();
     return asignaciones.find(a => a[campoId] === idBuscado) || null;
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function _montoCompensadoPorRegistro(registroCompensatorio, asignacionesPrecalculadas = null) {
     const a = _buscarAsignacionCompensatorio(registroCompensatorio.id, 'compensatorioId', asignacionesPrecalculadas);
     return a ? a.excedente : 0;
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function _fechaCompensadaPorRegistro(registroCompensatorio, asignacionesPrecalculadas = null) {
     const a = _buscarAsignacionCompensatorio(registroCompensatorio.id, 'compensatorioId', asignacionesPrecalculadas);
     return a ? a.referenciaFecha : null;
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function _fechaCompensadoDeRegistro(registroReferencia, asignacionesPrecalculadas = null) {
     const a = _buscarAsignacionCompensatorio(registroReferencia.id, 'referenciaId', asignacionesPrecalculadas);
     return a ? a.compensatorioFecha : null;
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function _montoCompensadoDeReferencia(registroReferencia, asignacionesPrecalculadas = null) {
     const a = _buscarAsignacionCompensatorio(registroReferencia.id, 'referenciaId', asignacionesPrecalculadas);
     return a ? a.excedente : 0;

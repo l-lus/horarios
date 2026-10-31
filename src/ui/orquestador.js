@@ -116,7 +116,7 @@ function _initGlobales() {
         obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
         setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado, verificarBloqueoCredito,
         formularioRegistro: Formularios.registro, formularioEdicion: Formularios.edicion,
-        leerObjetivoEdicion: () => parseFloat($('edit-objetivo')?.dataset.valor),
+        leerObjetivoEdicion: () => parseFloat($('edit-objetivo')?.dataset.valor ?? ''),
         hayUIBloqueante: () => !!document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding'),
         forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, refrescarConfigSiVisible
     });
@@ -168,7 +168,7 @@ function _initListenersFormulario() {
         const v = notasEl.value;
         const filtrado = S.sanitizeNotas(v);
         if (filtrado !== v) {
-            const pos = notasEl.selectionStart - (v.length - filtrado.length);
+            const pos = (notasEl.selectionStart ?? 0) - (v.length - filtrado.length);
             notasEl.value = filtrado;
             notasEl.setSelectionRange(pos, pos);
         }
@@ -221,7 +221,7 @@ function _initSwipesYStats() {
             const value = Object.assign(document.createElement('div'), { className: 'stat-value', id: `stat-${TiposRegistro.claveStat(t)}`, textContent: '0' });
             item.appendChild(label);
             item.appendChild(value);
-            anchor.parentNode.insertBefore(item, anchor);
+            anchor.parentNode?.insertBefore(item, anchor);
         });
     }
     _bindStatItemPopups(document.querySelector('.stats-grid'));
@@ -415,9 +415,9 @@ function _initListenersOtros() {
             const nombreEl = $('nombre-archivo-seleccionado');
             const btnCombinar = $('btn-combinar');
             const btnReemplazar = $('btn-reemplazar');
-            const hayArchivo = /** @type {HTMLInputElement} */ (e.target).files.length > 0;
+            const hayArchivo = (/** @type {HTMLInputElement} */ (e.target).files?.length ?? 0) > 0;
             if (hayArchivo) {
-                if (nombreEl) { nombreEl.textContent = `✓ ${/** @type {HTMLInputElement} */ (e.target).files[0].name}`; nombreEl.style.display = 'block'; }
+                if (nombreEl) { nombreEl.textContent = `✓ ${/** @type {HTMLInputElement} */ (e.target).files?.[0].name}`; nombreEl.style.display = 'block'; }
                 if (btnCombinar) btnCombinar.disabled = false;
                 if (btnReemplazar) btnReemplazar.disabled = false;
             } else {

@@ -16,6 +16,7 @@ const D = GestionDatos;
 // ====================================================================
 const { registrarSwipe, _animarMutacion, _animarSlideElemento, _crearPopupFlotante, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray, _estaColapsado, _durSiAnima } = UIBase;
 
+/** @param {any} [idResaltar] */
 function _cerrarSelectorMeses(idResaltar = null) {
     const grid = $('calendario-grid');
     const selector = $('calendario-selector-meses');
@@ -93,6 +94,7 @@ function _activarVistaCalendarioHistorico() {
 
 let _calendarioMes = null;
 
+/** @param {any} [idResaltar] @param {any} [asignacionesPrecalculadas] */
 function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = null) {
     const grid = $('calendario-grid');
     const titulo = $('calendario-titulo-mes');
@@ -123,7 +125,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
         if (!r && filtroActivo && todosRegsPorFecha[fecha]) return 'dia-filtrado';
         if (!r) return 'dia-sin-registro';
         const { estado, tipo } = SaldoSemanal.estadoDeRegistro(r, asignacionesCompensatorio);
-        if (estado === 'especial') return `dia-especial-${tipo.color}`;
+        if (estado === 'especial') return `dia-especial-${tipo?.color}`;
         if (estado === 'en-curso') return 'dia-en-curso';
         if (estado === 'cubierto') return 'dia-cubierto';
         if (estado === 'incompleto' || estado === 'sin-datos') return 'dia-incompleto';
@@ -218,7 +220,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     if (idResaltar) {
         const idsAnimados = _aArray(idResaltar).map(String);
         /** @type {NodeListOf<HTMLElement>} */ (grid.querySelectorAll('.calendario-dia[data-reg-id]')).forEach(celdaVieja => {
-            if (idsAnimados.includes(celdaVieja.dataset.regId)) _crearFantasmaSiVisible(celdaVieja);
+            if (idsAnimados.includes(celdaVieja.dataset.regId ?? '')) _crearFantasmaSiVisible(celdaVieja);
         });
     }
 
@@ -299,15 +301,16 @@ function toggleVistaHistorico() {
 
 let _popupCalendarioEl = null;
 
+/** @param {any} [asignaciones] */
 function _buildInfoHtmlRegistro(reg, asignaciones = null) {
     const est = SaldoSemanal.estadoDeRegistro(reg, asignaciones || D.calcularAsignacionesCompensatorio());
     if (est.estado === 'especial') {
         const { tipo } = est;
-        const colorSafe = /^[a-z]+$/.test(tipo.color || '') ? tipo.color : 'purple';
+        const colorSafe = /^[a-z]+$/.test(tipo?.color || '') ? tipo?.color : 'purple';
         const fechaCompensadaHtml = est.fechaCompensada
             ? html` <span class="cal-popup-badge cal-popup-badge--${colorSafe}">${TiempoUtils.fechaCorta(est.fechaCompensada)}</span>`
             : '';
-        return html`<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${tipo.emoji ?? ''} ${tipo.label}</span>${fechaCompensadaHtml}`;
+        return html`<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${tipo?.emoji ?? ''} ${tipo?.label}</span>${fechaCompensadaHtml}`;
     }
     if (est.estado === 'en-curso') {
         const esHoy = reg.fecha === TiempoUtils.obtenerFechaHoy();
@@ -353,6 +356,7 @@ function _formatearFechaLabelPopup(fecha) {
     return `${diaSemana}, ${d.getDate()} de ${mes}`;
 }
 
+/** @param {any} [asignaciones] */
 function _popupCalendario(event, registroId, asignaciones = null) {
     event.stopPropagation();
 
@@ -469,7 +473,7 @@ function _filaSemana(r, asignaciones) {
     const diaTxt = `${TiempoUtils.obtenerNombreDia(r.fecha).slice(0, 3)} ${parseInt(r.fecha.substring(8), 10)}`;
     let medio = '', totalHtml = null, diffHtml = null;
     if (est.estado === 'especial') {
-        medio = `${est.tipo.emoji ?? ''} ${est.tipo.label}`.trim();
+        medio = `${est.tipo?.emoji ?? ''} ${est.tipo?.label}`.trim();
     } else if (est.estado === 'en-curso') {
         medio = `${r.entrada} → …`;
         totalHtml = html`<span class="cal-semana-hs cal-popup-info--blue">${r.fecha === TiempoUtils.obtenerFechaHoy() ? 'En curso' : 'Incompleto'}</span>`;
@@ -581,6 +585,7 @@ function _popupCalendarioDiaSinRegistro(event, fecha) {
     popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrar(); TarjetaLote._irAFicharConFecha(fecha, true); });
 }
 
+/** @param {any} [asignaciones] */
 function _popupCalendarioHover(event, registroId, asignaciones = null) {
     if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
     if (!window.matchMedia('(hover: hover)').matches) return;
@@ -595,6 +600,7 @@ function _popupCalendarioHover(event, registroId, asignaciones = null) {
     }, 150);
 }
 
+/** @param {any} [asignaciones] */
 function _onclickCalendarioDia(event, registroId, asignaciones = null) {
     const esDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     const stored = Almacenamiento.getItem(STORAGE_KEYS.HOVER_POPUP, null);

@@ -196,6 +196,7 @@ function _renderizarStats(stats, opciones = {}) {
     _ultimosStatsRenderizados = stats;
 }
 
+/** @param {any} [mesAnio] @param {any} [registrosPeriodo] */
 function calcularEstadisticasMes(mesAnio = null, registrosPeriodo = null) {
     let mesActual, añoActual;
     if (mesAnio) {
@@ -214,6 +215,7 @@ function calcularEstadisticasMes(mesAnio = null, registrosPeriodo = null) {
     return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: fechaDesde, hasta: ultimoDia });
 }
 
+/** @param {any} [mesAnio] */
 function actualizarEstadisticas(mesAnio = null) {
     const selectMes = $('select-mes-stats');
     if (!mesAnio && selectMes) mesAnio = selectMes.value;
@@ -256,6 +258,7 @@ function _renderSelectorStats() {
     }
 }
 
+/** @param {any} [registrosPeriodo] */
 function calcularEstadisticasAnio(anio, registrosPeriodo = null) {
     const anioNum = parseInt(anio);
     const registros = registrosPeriodo ?? D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);

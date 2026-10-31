@@ -18,6 +18,7 @@ function deepClone(obj) {
     }
 }
 
+/** @param {any} [descripcion] */
 function saveState(registros, descripcion = null) {
     const copiaSegura = deepClone(registros);
     if (currentIndex < _stack.length - 1) _stack.splice(currentIndex + 1);

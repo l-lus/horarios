@@ -411,6 +411,7 @@ async function guardarEdicion() {
     const s = S.sanitizeString(campos.salida.trim(), 5);
     let tf = S.sanitizeString(campos.tiempoFuera.trim(), 5) || null;
     tf = tf ? TiempoUtils.normalizarMinutosSueltos(tf) : tf;
+    /** @type {string|null} */
     let notas = S.sanitizeString(campos.notas.trim(), S.SECURITY_LIMITS.MAX_NOTAS_LENGTH);
     if (notas) notas = S.sanitizeNotas(notas, true) || null;
     if (notas === '') notas = null;

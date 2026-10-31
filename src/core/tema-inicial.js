@@ -3,7 +3,7 @@
 // Se oculta siempre: un <iframe sandbox> bloquea la navegación del top sin lanzar excepción.
 if (window.top !== window.self) {
     document.documentElement.style.display = 'none';
-    try { window.top.location = window.self.location.href; } catch (e) { }
+    try { /** @type {Window} */ (window.top).location = window.self.location.href; } catch (e) { }
 }
 
 (function () {

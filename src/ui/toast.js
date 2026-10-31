@@ -15,6 +15,7 @@ let _toastRunning = false;
 let _toastAccionActual = null;
 const MAX_TOAST_QUEUE = 4;
 
+/** @param {any} [detalle] @param {any} [accion] */
 export function mostrarToast(mensaje, tipo = 'info', duracion = 3000, detalle = null, accion = null) {
     const texto = detalle ? `${mensaje}, ${detalle}` : mensaje;
     const textoLimpio = S.sanitizeString(texto, 200);

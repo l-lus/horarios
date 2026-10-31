@@ -131,6 +131,7 @@ let filtroHasta = null;
 let filtroTipo = null;
 let grupoEnEdicion = null;
 
+/** @type {{ obtenerPerfilActual: () => string, guardarDatosPerfilActual: (() => boolean) | null }} */
 let _perfilHooks = {
     obtenerPerfilActual: () => 'default',
     guardarDatosPerfilActual: null
@@ -169,6 +170,7 @@ function _fechaFuturaInvalida(fecha, entrada, salida) {
     return fecha > TiempoUtils.obtenerFechaHoy() && !TiposRegistro.esRegistroEspecial(entrada, salida);
 }
 
+/** @param {any} [tf] @param {any} [cr] */
 function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
     const tfEfectivo = ignorarTiempoFuera ? null : tf;
     const tfMinutos = tfEfectivo ? TiempoUtils.horaAMinutos(tfEfectivo) : 0;
@@ -199,6 +201,7 @@ function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
     return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
 }
 
+/** @param {any} [tf] @param {any} [cr] */
 function _aplicarCalculoHoras(r, e, s, tf = null, cr = null, calcularFn = calcularHoras) {
     const t = calcularFn(e, s, tf, cr);
     r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
@@ -220,6 +223,7 @@ function _construirRegistro(fecha, entrada, salida) {
     };
 }
 
+/** @param {any} [idNuevo] */
 async function guardarYActualizar(idNuevo = null, animarCard = false) {
     let saveSuccessful = false;
     try {
@@ -237,6 +241,7 @@ async function guardarYActualizar(idNuevo = null, animarCard = false) {
     return saveSuccessful;
 }
 
+/** @param {any} [fase] */
 async function _guardarConCicloSiHoy(idOrIds, esHoy, fase = null) {
     const ejecutar = async () => {
         if (esHoy && fase) notify.prepararMostrarFaseAlRenderizar(fase);

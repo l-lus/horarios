@@ -79,6 +79,7 @@ function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
     });
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function calcularEstadoCard(asignacionesPrecalculadas = null) {
     const hoy = TiempoUtils.obtenerFechaHoy();
     const { inicio: ini, fin: fn } = TiempoUtils.obtenerSemanaRangoActual();
@@ -454,6 +455,7 @@ function _renderTituloAnimado(el, nuevoHTML, aplicarExtra) {
 }
 TarjetaTiempoFuera.configurarRenderTitulo(_renderTituloAnimado);
 
+/** @param {any} [est] */
 function _renderTitulo(vista, sinAnimar = false, est = null) {
     const el = $('stats-titulo');
     const aplicarExtra = () => _actualizarTiempoFueraConsolidado(el, est);
@@ -550,7 +552,7 @@ function _iniciarCicloEnFase(tipo) {
 
     const fases = _fasesCiclo();
     const prefijo = _CICLO_PREFIJOS[tipo];
-    const idx = prefijo ? fases.findIndex(f => f.startsWith(prefijo)) : -1;
+    const idx = prefijo ? fases.findIndex(f => f?.startsWith(prefijo)) : -1;
     if (idx === -1) return false;
 
     const estado = { idx };
@@ -563,6 +565,7 @@ function _iniciarCicloEnFase(tipo) {
     return true;
 }
 
+/** @param {any} [conteo] */
 function _renderStats(vista, est, conteo = null) {
     const el = $('stats-semana');
     if (!el) return;
@@ -696,6 +699,7 @@ function _planConteoInicial(vista, est) {
     return { texto };
 }
 
+/** @param {any} [idNuevo] */
 function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false, conteoInicial = false) {
     const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
 

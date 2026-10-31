@@ -19,7 +19,7 @@ let _modalAbiertoDesdeLista = false;
 function _actualizarBotonVolver(id, desdeLista) {
     const btn = $(id);
     if (!btn) return;
-    btn.lastChild.textContent = desdeLista ? ' Cerrar' : ' Volver';
+    if (btn.lastChild) btn.lastChild.textContent = desdeLista ? ' Cerrar' : ' Volver';
     setIconoBtn(btn, desdeLista ? '#icon-cancelar' : '#icon-undo');
 }
 

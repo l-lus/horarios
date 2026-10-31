@@ -11,6 +11,7 @@ function logicaCubiertoActiva() {
     return !Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
     const lunesDate = TiempoUtils.parsearFechaLocal(lunes);
     lunesDate.setDate(lunesDate.getDate() + 6);
@@ -74,6 +75,7 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
     return { pendientes, excedentes, poolGenerado, poolUsado };
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
     if (!logicaCubiertoActiva()) return false;
     const lunes = TiempoUtils.obtenerLunesSemanaISO(fecha);
@@ -84,6 +86,7 @@ function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
     return deuda ? deuda.restante <= EPS : false;
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null) {
     if (!logicaCubiertoActiva()) return null;
     const hoy = TiempoUtils.obtenerFechaHoy();
@@ -114,6 +117,7 @@ function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null)
     };
 }
 
+/** @param {any} [asignaciones] */
 function estadoDeRegistro(r, asignaciones = null) {
     const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
     if (tipo) {

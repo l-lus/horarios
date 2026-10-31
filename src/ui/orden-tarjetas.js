@@ -102,6 +102,12 @@ function obtenerCardsVisibles() {
     return cards;
 }
 
+/**
+ * @param {any} obtener
+ * @param {any} clave
+ * @param {any} cambiar
+ * @param {{ encima?: Element|null }} [opciones]
+ */
 function uiAnimarReubicacion(obtener, clave, cambiar, { encima = null } = {}) {
     const antes = new Map();
     for (const el of obtener()) antes.set(clave(el), el.getBoundingClientRect());

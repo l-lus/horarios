@@ -15,6 +15,7 @@ import { _scrollA, _esperarFinScroll, _scrollHastaVisible } from './scroll.js';
 // ====================================================================
 //                     UI CORE MODULE (generic UI utilities)
 // ====================================================================
+/** @param {any} [callback] */
 function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
     const el = $(elementId);
     const icon = $(iconId);
@@ -118,6 +119,7 @@ function _crearOpcion(value, text, selected = false) {
     return opt;
 }
 
+/** @param {any} [agruparFn] */
 function _poblarSelect(selectId, items, getLabel, selDefault, actualizarFn, agruparFn = null) {
     const select = $(selectId);
     if (!select) return;
@@ -148,6 +150,7 @@ function _setBtnDisabled(id, disabled) {
     btn.disabled = disabled;
 }
 
+/** @param {any} [setupFn] */
 function _abrirModalConPadre(modalId, setupFn = null) {
     const modalAbierto = document.querySelector('.modal.show');
     const padre = modalAbierto ? modalAbierto.id : null;
@@ -156,12 +159,14 @@ function _abrirModalConPadre(modalId, setupFn = null) {
     else GestorModales.abrir(modalId);
 }
 
+/** @param {any} [callbackAbrirPadre] */
 function _cerrarModalConPadre(modalId, callbackAbrirPadre = null) {
     const padre = GestorModales.getPadre(modalId);
     if (padre) GestorModales.alternar(modalId, padre, null, callbackAbrirPadre ? () => callbackAbrirPadre(padre) : null);
     else GestorModales.cerrar(modalId);
 }
 
+/** @param {any} [colorVar] */
 function _flashCampoConClase(clase, ids, colorVar = null) {
     ids.forEach(id => _flashElemento($(id), clase, colorVar));
 }

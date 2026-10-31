@@ -52,6 +52,7 @@ function _getKey(key, useProfile) {
     return baseKey.startsWith(APP_STORAGE_PREFIX) ? baseKey : `${APP_STORAGE_PREFIX}${baseKey}`;
 }
 
+/** @param {any} [idsPerfilesExtra] */
 function esClaveLegadaHorarios(key, idsPerfilesExtra = null) {
     if (!key || typeof key !== 'string' || key.startsWith(APP_STORAGE_PREFIX)) return false;
     if (CLAVES_ESTATICAS_HORARIOS.has(key)) return true;
@@ -155,6 +156,7 @@ function setItem(key, value, useProfile = false) {
     }
 }
 
+/** @param {any} [defaultValue] */
 function getItem(key, defaultValue = null, useProfile = false) {
     try {
         const value = localStorage.getItem(_getKey(key, useProfile));
@@ -177,6 +179,7 @@ function getNumber(key, defaultValue = 0, useProfile = false) {
     return isNaN(parsed) ? defaultValue : parsed;
 }
 
+/** @param {any} [defaultValue] */
 function getObject(key, defaultValue = null, useProfile = false) {
     const val = getItem(key, null, useProfile);
     if (!val) return defaultValue;

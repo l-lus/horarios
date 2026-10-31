@@ -145,6 +145,7 @@ function handleOutsideClick(event) {
     }
 }
 
+/** @param {any} [callback] */
 function abrir(modalId, callback = null) {
     const modal = $(modalId);
     if (!modal) return;
@@ -165,6 +166,7 @@ function abrir(modalId, callback = null) {
     }, 100);
 }
 
+/** @param {any} [callback] */
 function cerrar(modalId, callback = null) {
     const modal = $(modalId);
     if (!modal) return;
@@ -199,6 +201,7 @@ function cerrar(modalId, callback = null) {
     }, 350);
 }
 
+/** @param {any} [callbackCerrar] @param {any} [callbackAbrir] */
 function alternar(modalIdCerrar, modalIdAbrir, callbackCerrar = null, callbackAbrir = null) {
     const esHaciaAtras = (_padres[modalIdCerrar] === modalIdAbrir);
 

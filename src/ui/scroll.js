@@ -12,7 +12,7 @@ export function _esperarFinScroll(objetivo = window, { estable = 120, maximo = 1
     const esVentana = objetivo === window;
     const origen = esVentana ? document : objetivo;
     const posicion = () => (esVentana ? window.scrollY : /** @type {HTMLElement} */ (objetivo).scrollTop);
-    return new Promise(resolve => {
+    return new Promise(/** @param {(v?: any) => void} resolve */ resolve => {
         let terminado = false;
         const inicio = performance.now();
         let ultimaPos = posicion();
@@ -36,6 +36,7 @@ export function _esperarFinScroll(objetivo = window, { estable = 120, maximo = 1
     });
 }
 
+/** @param {HTMLElement|null} el @param {{ contenedor?: HTMLElement|null, margenSuperior?: number }} [opciones] */
 export function _scrollHastaVisible(el, { contenedor = null, margenSuperior = 0 } = {}) {
     if (!el) return Promise.resolve();
     const r = el.getBoundingClientRect();

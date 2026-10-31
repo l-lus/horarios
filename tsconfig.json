@@ -9,6 +9,7 @@
     "noEmit": true,
     "strict": false,
     "noImplicitAny": false,
+    "strictNullChecks": true,
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "skipLibCheck": true

@@ -197,7 +197,7 @@ function mostrarConfigEnAjuste(id) {
     GestorModales.abrir('modal-config', _precargarCamposConfig);
     setTimeout(async () => {
         const el = $(id);
-        const cuerpo = el?.closest('.modal-panel-body');
+        const cuerpo = /** @type {HTMLElement|null} */ (el?.closest('.modal-panel-body'));
         if (!el || !cuerpo) return;
         await _scrollHastaVisible(el, { contenedor: cuerpo });
         _flashCampo(id);
@@ -226,7 +226,7 @@ function actualizarFeedbackConfig() {
         checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]:checked'));
     }
     const seleccionados = checkboxes.length;
-    const horas = parseFloat($('config-horas-diarias').dataset.valor) || 0;
+    const horas = parseFloat($('config-horas-diarias').dataset.valor ?? '') || 0;
     const total = seleccionados * horas;
 
     const el = $('config-total-feedback');
@@ -308,7 +308,7 @@ function bindEventos() {
     $('ayuda-indice')?.addEventListener('click', (e) => {
         const btn = /** @type {HTMLElement} */ (/** @type {HTMLElement} */ (e.target).closest('.ayuda-indice-item'));
         if (!btn) return;
-        _scrollA($(btn.dataset.target), 'start');
+        _scrollA($(btn.dataset.target ?? ''), 'start');
     });
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => GestionDatos.borrarTodoHistorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => cerrarConfig());

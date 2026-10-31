@@ -72,7 +72,7 @@ function _sanitizarSVG(svgStr) {
     });
 
     doc.querySelectorAll('[style]').forEach(el => {
-        const safe = el.getAttribute('style').replace(/@import|url\s*\(/gi, '');
+        const safe = (el.getAttribute('style') || '').replace(/@import|url\s*\(/gi, '');
         el.setAttribute('style', safe);
     });
 
@@ -80,6 +80,7 @@ function _sanitizarSVG(svgStr) {
     return svgEl ? svgEl.outerHTML : '';
 }
 
+/** @param {any} [colorOverride] */
 function actualizarFondoCard(estado, colorOverride = null) {
     const bg = $('stats-card-bg');
     if (!bg) return;

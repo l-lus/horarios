@@ -49,6 +49,7 @@ function registrarServiceWorker() {
                 console.log('SW registrado:', registration.scope);
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
+                    if (!newWorker) return;
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                             EstadoApp._notify().mostrarToast('Se actualizará la versión al recargar', 'info');

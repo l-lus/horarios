@@ -11,7 +11,7 @@ const registro = {
     leer: () => ({ fecha: $('fecha').value, entrada: $('entrada').value, salida: $('salida').value }),
     escribir: (campos) => {
         for (const id of /** @type {const} */ (['fecha', 'entrada', 'salida'])) {
-            if (id in campos) $(id).value = campos[id];
+            if (id in campos) $(id).value = campos[id] ?? '';
         }
     },
     bloquearBoton: () => {
@@ -29,7 +29,7 @@ const edicion = {
         salida: $('edit-salida').value,
         tiempoFuera: $('edit-tiempo-fuera').value,
         notas: $('edit-notas').value,
-        objetivo: parseFloat($('edit-objetivo')?.dataset.valor),
+        objetivo: parseFloat($('edit-objetivo')?.dataset.valor ?? ''),
         referencia: $('edit-referencia-compensatorio')?.value || '',
         creditoActivo: $('btn-toggle-credito')?.dataset.activo === 'true',
     }),

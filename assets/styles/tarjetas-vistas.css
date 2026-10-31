@@ -266,7 +266,7 @@
     position: absolute;
     inset: 0;
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+    background: color-mix(in srgb, var(--text-muted) 32%, transparent);
 }
 
 .progress-pista.con-linea .progress-bar {
@@ -313,6 +313,24 @@
     z-index: 1;
     background: var(--text-muted);
     transition: left var(--dur-slow), opacity var(--dur-fast) ease, background var(--dur-slow) ease;
+}
+
+/* Marcas muy juntas: forman una "T" con la barra; la de salida baja y la del buffer sube */
+.progress-pista.con-linea.marcas-juntas .linea-tick {
+    height: 10px;
+    border-radius: 0 0 2px 2px;
+    transform: none;
+    animation: linea-aparece var(--dur-slow) ease backwards;
+}
+
+.progress-pista.con-linea.marcas-juntas .linea-tick:not(.linea-tick--buffer) {
+    top: 100%;
+}
+
+.progress-pista.con-linea.marcas-juntas .linea-tick--buffer {
+    top: auto;
+    bottom: 100%;
+    border-radius: 2px 2px 0 0;
 }
 
 .linea-tick--buffer.positivo { background: var(--c-green); }

@@ -173,7 +173,7 @@ function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHab
 }
 
 // Datos de la línea del día, en minutos relativos a la entrada (evita problemas con el cruce de medianoche).
-// Con la jornada abierta incluye la salida estimada y la salida con buffer; cerrada, solo la estimada.
+// Con la jornada abierta incluye la salida estimada y la salida con buffer; cerrada, solo la salida real.
 function _calcularLinea(reg, objetivoDiario, bufferSemanal, diasHabiles) {
     if (!reg || !reg.entrada || !(objetivoDiario > 0) || TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida)) return null;
     const entrada = TiempoUtils.horaAMinutos(reg.entrada);
@@ -191,10 +191,12 @@ function _calcularLinea(reg, objetivoDiario, bufferSemanal, diasHabiles) {
     const hayBanda = bufferRel !== null && Math.abs(bufferRel - salidaRel) >= 1;
 
     return {
-        entrada, cerrado, salidaRel, bufferRel, ahoraRel, hayBanda,
+        entrada, cerrado, salidaRel, bufferRel,
+        // cerrada, la marca de salida se mueve a donde cerró el registro (la escala de la barra no cambia)
+        marcaSalidaRel: cerrado ? ahoraRel : salidaRel, ahoraRel, hayBanda,
         bufferPositivo: bufferSemanal > 0,
         horaEntrada: reg.entrada,
-        horaSalida: _minutosAHoraWrap(entrada + salidaRel),
+        horaSalida: cerrado ? reg.salida : _minutosAHoraWrap(entrada + salidaRel),
         horaBuffer: bufferRel !== null ? _minutosAHoraWrap(entrada + bufferRel) : '',
     };
 }

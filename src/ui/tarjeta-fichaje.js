@@ -248,9 +248,15 @@ function _renderLinea(vista, pista, fill) {
     banda.style.width = L.hayBanda ? `${hi - lo}%` : '0%';
     banda.style.setProperty('--banda-color', `var(--c-${colorMedio})`);
 
+    const pMarca = pct(L.marcaSalidaRel);
+    // marcas muy juntas: en vez de cruzar la barra se bifurcan en "T", cada una hacia el lado de su etiqueta
+    const pxEntreMarcas = pBuffer !== null && L.hayBanda ? Math.abs(pMarca - pBuffer) / 100 * ancho : Infinity;
+    pista.classList.toggle('marcas-juntas', pxEntreMarcas < 10);
     const tickSalida = $('linea-tick-salida');
     const tickBuffer = $('linea-tick-buffer');
-    tickSalida.style.left = `${pSalida}%`;
+    tickSalida.style.left = `${pMarca}%`;
+    // cerrada, el remate del final ya marca la salida: queda solo la etiqueta con la hora
+    tickSalida.style.opacity = L.cerrado ? '0' : '';
     tickBuffer.style.left = `${pBuffer ?? pSalida}%`;
     tickBuffer.style.opacity = L.hayBanda ? '1' : '0';
     tickBuffer.classList.toggle('positivo', L.bufferPositivo);
@@ -266,7 +272,7 @@ function _renderLinea(vista, pista, fill) {
     etBuffer.classList.toggle('positivo', L.bufferPositivo);
     etBuffer.classList.toggle('negativo', !L.bufferPositivo);
     _colocarEtiquetaLinea(etEntrada, 0, ancho);
-    _colocarEtiquetaLinea(etSalida, pSalida, ancho);
+    _colocarEtiquetaLinea(etSalida, pMarca, ancho);
     _colocarEtiquetaLinea(etBuffer, pBuffer ?? pSalida, ancho);
 
     // relleno: azul hasta la primera salida, color del tramo entre ambas y verde al superar la última
@@ -278,6 +284,8 @@ function _renderLinea(vista, pista, fill) {
         fill.style.setProperty('--seg-a', `${lo}%`);
         fill.style.setProperty('--seg-b', `${hi}%`);
     }
+    // color del tramo que corresponde a una posición (%) de la barra
+    return x => (x < lo ? 'blue' : (x < hi ? colorMedio : 'green'));
 }
 
 function _renderBarra(vista, desdeCero = false) {
@@ -307,14 +315,25 @@ function _renderBarra(vista, desdeCero = false) {
         const esVisible = (vista.estadoFondo === 'en_curso' || !!vista.cerrado) && anchoBarra > 0;
         punto.classList.toggle('visible', esVisible);
         punto.classList.toggle('cerrado', !!vista.cerrado);
-        punto.dataset.color = vista.colorCierre ?? vista.colorBarra;
+        // abierto: el remate toma el color del tramo donde está; cerrado: el color final del registro
+        punto.dataset.color = vista.cerrado ? (vista.colorCierre ?? vista.colorBarra) : vista.colorBarra;
         // el último tramo de la barra se degrada hacia el color del remate
         el.style.setProperty('--color-remate', `var(--c-${punto.dataset.color})`);
         el.style.setProperty('--color-barra', `var(--c-${vista.colorBarra})`);
     }
+    // remate del comienzo: acompaña al del final y toma el color del primer tramo
+    const inicio = $('progress-punto-inicio');
+    if (inicio && punto) {
+        inicio.classList.toggle('visible', punto.classList.contains('visible'));
+        inicio.classList.add('cerrado'); // siempre relleno: marca el hito del comienzo
+        inicio.dataset.color = conLinea && !vista.cerrado ? 'blue' : vista.colorBarra;
+    }
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
-    if (conLinea) _renderLinea(vista, pista, el);
+    if (conLinea) {
+        const colorTramo = _renderLinea(vista, pista, el);
+        if (punto && !vista.cerrado) punto.dataset.color = colorTramo(anchoBarra);
+    }
     el.classList.toggle('con-remate', !conLinea && vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
 }
 

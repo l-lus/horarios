@@ -3,7 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/*.mjs"
+    "test": "node --test tests/*.mjs",
+    "typecheck": "tsc -p ."
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
 }

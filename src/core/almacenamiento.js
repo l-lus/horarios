@@ -4,9 +4,11 @@ import { SeguridadYUtils } from './seguridad.js';
 // ====================================================================
 // STORAGE HELPER MODULE
 // ====================================================================
+/** @type {{ mostrarToast: (mensaje: string, tipo?: string) => void }} */
 let notify = { mostrarToast: () => { } };
 let _profileKeyResolver = (key) => `${key}_default`;
 
+/** @type {Set<string>} */
 const CLAVES_ESTATICAS_HORARIOS = new Set(
     Object.values(STORAGE_KEYS).filter(v => typeof v === 'string')
 );

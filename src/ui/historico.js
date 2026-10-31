@@ -11,7 +11,6 @@ import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { UIBase } from './base.js';
 import { Calendario } from './calendario.js';
 import { RespaldoLocal } from './respaldo-local.js';
-import { SeguridadYUtils as S } from '../core/seguridad.js';
 const D = GestionDatos;
 
 // ====================================================================
@@ -315,11 +314,14 @@ function _consolidarMesesAbiertos(lista, mesHoy) {
 
 const _MAX_BLOQUES_EXPANDIDOS = 12;
 
+// Datos de cada cabecera de grupo, sin pasar por el DOM (se libera junto con el elemento)
+const _grupoPorCabecera = new WeakMap();
+
 function _clavesItemLista(item) {
     if (!item) return [];
     if (item.dataset.registroId) return ['r:' + item.dataset.registroId];
     if (item.dataset.accion === 'editar-grupo') {
-        try { return JSON.parse(item.dataset.grupoData).registros.map(id => 'r:' + id); } catch (e) { return []; }
+        return (_grupoPorCabecera.get(item)?.registros ?? []).map(id => 'r:' + id);
     }
     return [];
 }
@@ -505,10 +507,7 @@ function crearGrupoExpandible(grupo, idResaltar = null, asignacionesCompensatori
     }));
 
     header.dataset.accion = 'editar-grupo';
-    header.dataset.grupoData = JSON.stringify({
-        registros: grupo.registros.map(r => r.id),
-        subtipo: grupo.subtipo
-    });
+    _grupoPorCabecera.set(header, { registros: grupo.registros.map(r => r.id), subtipo: grupo.subtipo });
 
     container.appendChild(header);
     return container;
@@ -523,11 +522,10 @@ function _initListenerAccionesLista(lista) {
             const id = target.dataset.registroId;
             if (id) D.editarRegistro(id);
         } else if (target.dataset.accion === 'editar-grupo') {
-            try {
-                const grupoData = JSON.parse(target.dataset.grupoData, S.reviverJSONSeguro);
-                const registrosCompletos = D.registros().filter(r => grupoData.registros.includes(r.id));
-                D.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
-            } catch (err) { console.error('Error al abrir grupo:', err); }
+            const grupoData = _grupoPorCabecera.get(target);
+            if (!grupoData) return;
+            const registrosCompletos = D.registros().filter(r => grupoData.registros.includes(r.id));
+            D.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
         }
     });
 }

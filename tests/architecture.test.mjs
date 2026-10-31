@@ -170,6 +170,20 @@ test('Versión: APP_VERSION de constantes.js coincide con el prefijo de CACHE_NA
     assert.ok(cache.startsWith(`${version}.`), `CACHE_NAME "${cache}" debe empezar con "${version}."`);
 });
 
+test('Íconos: todo "#icon-..." usado en src/ e index.html existe como <symbol> del sprite', () => {
+    const html = fs.readFileSync('index.html', 'utf8');
+    const definidos = new Set([...html.matchAll(/<symbol id="(icon-[\w-]+)"/g)].map(m => m[1]));
+    const faltantes = [];
+    for (const archivo of [...srcFiles, 'index.html']) {
+        const contenido = fs.readFileSync(archivo, 'utf8');
+        for (const m of contenido.matchAll(/#(icon-[\w-]+)/g)) {
+            if (!definidos.has(m[1])) faltantes.push(`${archivo}: #${m[1]}`);
+        }
+    }
+    // un ícono inexistente se renderiza vacío (el botón queda sin dibujo)
+    assert.deepEqual([...new Set(faltantes)], [], 'Íconos usados que no están definidos en el sprite');
+});
+
 test('Capas: src/services no accede al DOM (document / $())', () => {
     const reDom = /\bdocument\.(getElementById|querySelector|querySelectorAll|body|createElement|documentElement|activeElement)\b|(?<![\w.])\$\(/g;
     const violaciones = [];

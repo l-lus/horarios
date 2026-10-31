@@ -86,7 +86,7 @@ export function obtenerIconoBtn(btn) {
 
 export function restaurarBotonGuardarEdicion(btnGuardar) {
     btnGuardar.disabled = false;
-    btnGuardar.innerHTML = `${icono('#icon-save')} Guardar`;
+    btnGuardar.innerHTML = `${icono('#icon-check')} Guardar`;
 }
 
 export function setIconoBtn(btn, icono) {

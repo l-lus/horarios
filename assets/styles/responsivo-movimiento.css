@@ -281,6 +281,13 @@ button.campo-flash-color {
     animation: icono-spin 900ms linear infinite;
 }
 
+/* Opciones que solo tienen sentido con mouse: se ocultan en dispositivos táctiles (mismo criterio que usa calendario.js) */
+@media not all and (hover: hover) and (pointer: fine) {
+    .config-solo-pc {
+        display: none !important;
+    }
+}
+
 /* ─── HOVER (pointer: fine) ──────────────────────────────────────────────────── */
 
 @media (hover: hover) and (pointer: fine) {

@@ -673,7 +673,7 @@ function irHoyCalendario() {
     setTimeout(_flashDiaHoyCalendario, DUR_CALENDARIO() + 20);
 }
 
-// ── Atajo PC: rueda del mouse / trackpad sobre los días para cambiar de mes ──
+// ── Atajo PC: rueda del mouse / trackpad sobre los días (o Alt + rueda sobre el calendario) para cambiar de mes ──
 const RUEDA_UMBRAL_PX = 40;          // acumulado mínimo para disparar el cambio
 const RUEDA_PAUSA_TRACKPAD_MS = 120; // pausa que cierra una ráfaga de trackpad (inercia)
 const RUEDA_COOLDOWN_EXTRA_MS = 60;  // margen sobre la animación de deslizamiento
@@ -693,19 +693,21 @@ function _registrarRuedaCalendario(grid) {
     const esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
     contenedor.addEventListener('wheel', (e) => {
-        if (e.ctrlKey || e.metaKey || e.altKey) return;   // zoom del navegador / atajos
+        if (e.ctrlKey || e.metaKey) return;   // zoom del navegador / atajos
         if (!esPC()) return;
-        if (!Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, true)) return;   // desactivado en configuración: la rueda desplaza la página
+        // Alt + rueda cambia de mes sobre cualquier parte del calendario, aunque la rueda sola esté desactivada en configuración
+        const conAlt = e.altKey;
+        if (!conAlt && !Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, true)) return;   // desactivado: la rueda desplaza la página
 
         const ahora = performance.now();
         const bloqueado = ahora < bloqueadoHasta;
         const animando = grid.offsetParent === null;   // durante el deslizamiento la grilla real está oculta
-        const sobreDias = (bloqueado || animando)
+        const sobreDias = conAlt || ((bloqueado || animando)
             ? dentroDeZona(e.clientX, e.clientY)
-            : !!e.target.closest?.('#calendario-grid');
+            : !!e.target.closest?.('#calendario-grid'));
         if (!sobreDias) return;
 
-        e.preventDefault();   // el scroll de la página queda quieto mientras el cursor está sobre los días
+        e.preventDefault();   // el scroll de la página queda quieto mientras el cursor está sobre los días (o con Alt, sobre el calendario)
 
         const factor = e.deltaMode === 1 ? RUEDA_LINEA_PX : e.deltaMode === 2 ? 400 : 1;
         const dx = e.deltaX * factor, dy = e.deltaY * factor;

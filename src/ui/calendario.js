@@ -17,9 +17,9 @@ const D = GestionDatos;
 const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray, _estaColapsado, _durSiAnima } = UIBase;
 
 function _cerrarSelectorMeses(idResaltar = null) {
-    const grid = document.getElementById('calendario-grid');
-    const selector = document.getElementById('calendario-selector-meses');
-    const navBotones = document.getElementById('calendario-nav-botones');
+    const grid = $('calendario-grid');
+    const selector = $('calendario-selector-meses');
+    const navBotones = $('calendario-nav-botones');
     _animarMutacion([selector, grid], () => {
         selector.style.display = 'none';
         navBotones.style.display = 'flex';
@@ -29,10 +29,10 @@ function _cerrarSelectorMeses(idResaltar = null) {
 }
 
 function abrirSelectorMesesCalendario() {
-    const grid = document.getElementById('calendario-grid');
-    const selector = document.getElementById('calendario-selector-meses');
-    const navBotones = document.getElementById('calendario-nav-botones');
-    const titulo = document.getElementById('calendario-titulo-mes');
+    const grid = $('calendario-grid');
+    const selector = $('calendario-selector-meses');
+    const navBotones = $('calendario-nav-botones');
+    const titulo = $('calendario-titulo-mes');
 
     if (selector.style.display !== 'none') { _cerrarSelectorMeses(); return; }
 
@@ -82,9 +82,9 @@ function abrirSelectorMesesCalendario() {
 
 function _activarVistaCalendarioHistorico() {
     if (!_vistaHistoricoCalendario) return;
-    const lista = document.getElementById('lista-registros');
-    const cal = document.getElementById('vista-calendario-historico');
-    const btnFiltro = document.getElementById('btn-filtro');
+    const lista = $('lista-registros');
+    const cal = $('vista-calendario-historico');
+    const btnFiltro = $('btn-filtro');
     if (lista) lista.classList.add('hidden');
     if (cal) cal.classList.remove('hidden');
     if (btnFiltro) btnFiltro.disabled = false;
@@ -94,8 +94,8 @@ function _activarVistaCalendarioHistorico() {
 let _calendarioMes = null;
 
 function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = null) {
-    const grid = document.getElementById('calendario-grid');
-    const titulo = document.getElementById('calendario-titulo-mes');
+    const grid = $('calendario-grid');
+    const titulo = $('calendario-titulo-mes');
     if (!grid) return;
 
     if (grid.parentNode) {
@@ -168,7 +168,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
         if (reg) clases += ' cursor-pointer';
         if (reg && notasDelMes.has(reg.id)) clases += ' tiene-comentario';
         cell.className = clases;
-        cell.textContent = dia;
+        cell.textContent = String(dia);
         cell.dataset.dia = fecha;
 
         if (reg) {
@@ -217,7 +217,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
 
     if (idResaltar) {
         const idsAnimados = _aArray(idResaltar).map(String);
-        grid.querySelectorAll('.calendario-dia[data-reg-id]').forEach(celdaVieja => {
+        /** @type {NodeListOf<HTMLElement>} */ (grid.querySelectorAll('.calendario-dia[data-reg-id]')).forEach(celdaVieja => {
             if (idsAnimados.includes(celdaVieja.dataset.regId)) _crearFantasmaSiVisible(celdaVieja);
         });
     }
@@ -239,20 +239,20 @@ function _limpiarEntradaCalendario(grid) {
 }
 
 function animarEntradaInicial() {
-    const grid = document.getElementById('calendario-grid');
+    const grid = $('calendario-grid');
     if (!grid || Movimiento.reducido() || !grid.offsetParent || _estaColapsado(grid)) return;
-    const celdas = grid.querySelectorAll('.calendario-dia[data-reg-id]');
+    const celdas = /** @type {NodeListOf<HTMLElement>} */ (grid.querySelectorAll('.calendario-dia[data-reg-id]'));
     if (!celdas.length) return;
 
     const paso = Math.min(ENTRADA_PASO_MS, Math.floor(ENTRADA_TOTAL_MAX_MS / celdas.length));
-    grid.style.setProperty('--cal-n', celdas.length);
+    grid.style.setProperty('--cal-n', String(celdas.length));
     grid.style.setProperty('--cal-paso', paso + 'ms');
     celdas.forEach((celda, i) => {
         const num = document.createElement('span');
         num.className = 'calendario-dia-num';
         num.textContent = celda.textContent;
         celda.replaceChildren(num);
-        celda.style.setProperty('--i', i);
+        celda.style.setProperty('--i', String(i));
         celda.classList.add('cal-entrada');
     });
     grid.querySelector('.calendario-dia.hoy:not([data-reg-id])')?.classList.add('cal-entrada-remate');
@@ -268,15 +268,15 @@ function toggleVistaHistorico() {
     _vistaHistoricoCalendario = !_vistaHistoricoCalendario;
     Almacenamiento.setItem(STORAGE_KEYS.VISTA_HISTORICO_CAL, _vistaHistoricoCalendario);
 
-    const lista = document.getElementById('lista-registros');
-    const cal = document.getElementById('vista-calendario-historico');
+    const lista = $('lista-registros');
+    const cal = $('vista-calendario-historico');
     if (lista) {
         lista.querySelectorAll('.nuevo-registro-animacion').forEach(el => el.classList.remove('nuevo-registro-animacion'));
     }
     if (cal) {
         cal.querySelectorAll('.nuevo-registro-animacion').forEach(el => el.classList.remove('nuevo-registro-animacion'));
     }
-    const btnFiltro = document.getElementById('btn-filtro');
+    const btnFiltro = $('btn-filtro');
     const saliente = _vistaHistoricoCalendario ? lista : cal;
     const entrante = _vistaHistoricoCalendario ? cal : lista;
     _animarMutacion([saliente, entrante], () => {
@@ -287,9 +287,9 @@ function toggleVistaHistorico() {
         if (_vistaHistoricoCalendario) _renderizarCalendario();
     });
 
-    const selector = document.getElementById('calendario-selector-meses');
-    const grid = document.getElementById('calendario-grid');
-    const navBotones = document.getElementById('calendario-nav-botones');
+    const selector = $('calendario-selector-meses');
+    const grid = $('calendario-grid');
+    const navBotones = $('calendario-nav-botones');
     if (selector && !selector.classList.contains('hidden') && selector.style.display !== 'none') {
         selector.style.display = 'none';
         if (grid) grid.style.display = 'grid';
@@ -625,7 +625,7 @@ function _cerrarPopupCalendarioHover(event) {
 }
 
 function _animarCalendario(delta, renderFn) {
-    _animarSlideElemento(document.getElementById('calendario-grid'), delta, renderFn);
+    _animarSlideElemento($('calendario-grid'), delta, renderFn);
 }
 
 function navegarCalendario(delta) {

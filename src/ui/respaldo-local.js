@@ -43,14 +43,14 @@ function mostrarImportar(desdeLista = false) {
     _abrirModalConfigHija('modal-importar', desdeLista, () => {
         $('file-import').value = '';
 
-        const nombreEl = document.getElementById('nombre-archivo-seleccionado');
+        const nombreEl = $('nombre-archivo-seleccionado');
         if (nombreEl) {
             nombreEl.style.display = 'none';
             nombreEl.textContent = '';
         }
 
-        const btnCombinar = document.getElementById('btn-combinar');
-        const btnReemplazar = document.getElementById('btn-reemplazar');
+        const btnCombinar = $('btn-combinar');
+        const btnReemplazar = $('btn-reemplazar');
 
         if (btnCombinar) {
             btnCombinar.disabled = true;
@@ -70,13 +70,13 @@ function cerrarImportar() {
 
 function mostrarExportar(desdeLista = false) {
     _abrirModalConfigHija('modal-exportar', desdeLista, () => {
-        const tipoSelect = document.getElementById('tipo-exportacion');
+        const tipoSelect = $('tipo-exportacion');
         if (tipoSelect) tipoSelect.value = 'todo';
 
-        setColapsable(document.getElementById('campos-rango-exportar'), false, { animar: false });
+        setColapsable($('campos-rango-exportar'), false, { animar: false });
 
-        document.getElementById('export-fecha-desde').value = '';
-        document.getElementById('export-fecha-hasta').value = '';
+        $('export-fecha-desde').value = '';
+        $('export-fecha-hasta').value = '';
 
         _actualizarBotonVolver('btn-volver-exportar', desdeLista);
     });
@@ -87,13 +87,13 @@ function cerrarExportar() {
 }
 
 function toggleCamposRangoExport() {
-    const tipo = document.getElementById('tipo-exportacion').value;
-    setColapsable(document.getElementById('campos-rango-exportar'), tipo === 'rango');
+    const tipo = $('tipo-exportacion').value;
+    setColapsable($('campos-rango-exportar'), tipo === 'rango');
 }
 
 async function ejecutarExportacion() {
-    const tipo = document.getElementById('tipo-exportacion').value;
-    const btn = document.querySelector('#modal-exportar .btn-export');
+    const tipo = $('tipo-exportacion').value;
+    const btn = /** @type {HTMLButtonElement} */ (document.querySelector('#modal-exportar .btn-export'));
 
     btn.disabled = true;
 
@@ -107,8 +107,8 @@ async function ejecutarExportacion() {
             await exportarRango(mesActual, mesActual, true);
 
         } else if (tipo === 'rango') {
-            const desde = S.sanitizeString(document.getElementById('export-fecha-desde').value, 10);
-            const hasta = S.sanitizeString(document.getElementById('export-fecha-hasta').value, 10);
+            const desde = S.sanitizeString($('export-fecha-desde').value, 10);
+            const hasta = S.sanitizeString($('export-fecha-hasta').value, 10);
 
             if (!desde || !hasta) {
                 mostrarToast('Completá ambas fechas', 'error');

@@ -27,7 +27,7 @@ function toggleVisibilidadCard(cual) {
 }
 
 function aplicarVisibilidadCard(cual, visible) {
-    const card = document.getElementById('card-' + cual);
+    const card = $('card-' + cual);
     if (card) card.style.display = visible ? '' : 'none';
 }
 
@@ -49,14 +49,14 @@ function obtenerOrdenCards() {
 }
 
 function aplicarOrdenCards(orden) {
-    const statsCard = document.getElementById('stats-card');
+    const statsCard = $('stats-card');
     const leftColumn = statsCard ? statsCard.parentElement : null;
     const container = leftColumn ? leftColumn.parentElement : null;
     if (!leftColumn || !container) return;
 
     const delays = [0.10, 0.15, 0.25];
     orden.forEach((cual, idx) => {
-        const card = document.getElementById('card-' + cual);
+        const card = $('card-' + cual);
         if (!card) return;
         card.style.animationDelay = `${delays[idx] || 0.25}s`;
         const esUltima = idx === orden.length - 1;
@@ -67,10 +67,10 @@ function aplicarOrdenCards(orden) {
         }
     });
 
-    const lista = document.getElementById('lista-orden-cards');
+    const lista = $('lista-orden-cards');
     if (lista) {
         orden.forEach(cual => {
-            const item = document.getElementById('orden-item-' + cual);
+            const item = $('orden-item-' + cual);
             if (item) lista.appendChild(item);
         });
     }
@@ -81,19 +81,19 @@ const REUBICACION_MS = 300;
 const REUBICACION_TRANSICION = 'transform 0.28s cubic-bezier(0.2, 0, 0, 1)';
 
 function obtenerCardsVisibles() {
-    const statsCard = document.getElementById('stats-card');
+    const statsCard = $('stats-card');
     const leftColumn = statsCard ? statsCard.parentElement : null;
     const container = leftColumn ? leftColumn.parentElement : null;
     const cards = [];
     if (leftColumn) {
-        Array.from(leftColumn.children).forEach(el => {
+        /** @type {HTMLElement[]} */ (Array.from(leftColumn.children)).forEach(el => {
             if (el.id && el.id.startsWith('card-') && el.style.display !== 'none' && !el.classList.contains('d-none')) {
                 cards.push(el);
             }
         });
     }
     if (container) {
-        Array.from(container.children).forEach(el => {
+        /** @type {HTMLElement[]} */ (Array.from(container.children)).forEach(el => {
             if (el.id && el.id.startsWith('card-') && el.style.display !== 'none' && !el.classList.contains('d-none')) {
                 cards.push(el);
             }
@@ -144,6 +144,12 @@ function uiAnimarReubicacion(obtener, clave, cambiar, { encima = null } = {}) {
     return animables;
 }
 
+/**
+ * @param {Document|HTMLElement} raiz
+ * @param {{ elegir: any, capturar?: (el: any) => any,
+ *           alEmpezar?: (el: any, inicio: any) => void, alMover?: (e: any, el: any) => void,
+ *           alTerminar?: (el: any, confirmar: any) => void }} cfg
+ */
 function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () => {}, alMover = () => {}, alTerminar = () => {} }) {
     let timer = null;
     let arrastrando = false;
@@ -241,7 +247,7 @@ function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () =
         }
     }, true);
 
-    raiz.addEventListener('pointerdown', (e) => {
+    raiz.addEventListener('pointerdown', (/** @type {PointerEvent} */ e) => {
         if (e.button !== 0 || el) return;
         const elegido = elegir(e);
         if (!elegido) return;
@@ -362,7 +368,7 @@ function iniciarDragTarjetas() {
             ordenInicial = obtenerOrdenCards();
             card.classList.add('reordenando');
             document.body.classList.add('tarjeta-arrastrando-activa');
-            document.querySelectorAll('.animated-card').forEach(c => c.style.animation = 'none');
+            /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.animated-card')).forEach(c => c.style.animation = 'none');
         },
         alMover: (e, card) => {
             if (performance.now() < deslizandoHasta) return;
@@ -406,7 +412,7 @@ function iniciarDragTarjetas() {
     });
 
     // Con teclado (Alt + flechas sobre el encabezado), el mismo recorrido
-    const headers = document.querySelectorAll('#card-registrar .card-registrar-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable');
+    const headers = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#card-registrar .card-registrar-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable'));
     headers.forEach(header => {
         header.addEventListener('keydown', (e) => {
             if (!e.altKey || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
@@ -444,7 +450,7 @@ function iniciarDragTarjetas() {
 }
 
 function iniciarDragOrdenCards() {
-    const lista = document.getElementById('lista-orden-cards');
+    const lista = $('lista-orden-cards');
     if (!lista) return;
 
     let draggingEl = null;

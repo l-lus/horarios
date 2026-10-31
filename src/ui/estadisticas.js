@@ -156,7 +156,7 @@ function _renderizarStats(stats, opciones = {}) {
 
     const toggleStatItem = (id, value) => {
         const el = $(id); if (!el) return;
-        const si = el.closest('.stat-item');
+        const si = /** @type {HTMLElement} */ (el.closest('.stat-item'));
         if (si) { if (value === 0) { si.style.display = 'none'; } else { si.style.display = ''; el.textContent = value; } }
     };
     toggleStatItem('stat-dias-trabajados', stats.diasTrabajados);
@@ -176,7 +176,7 @@ function _renderizarStats(stats, opciones = {}) {
     const elRegJor = $('stat-regularidad-jornada');
     if (elRegJor) elRegJor.textContent = stats.regularidadJornada || '--:--';
 
-    const btnReporte = document.getElementById('btn-reporte');
+    const btnReporte = $('btn-reporte');
     if (btnReporte) {
         btnReporte.disabled = !mostrarBtnReporte;
     }
@@ -343,7 +343,7 @@ function togglePeriodoStats(direccion = 1) {
     modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
     Almacenamiento.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas);
 
-    _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
+    _animarSlideElemento($('stats-inner'), direccion, () => {
         selectMes.classList.add('hidden');
         selectAnio.classList.add('hidden');
         if (selectSemana) selectSemana.classList.add('hidden');
@@ -371,10 +371,10 @@ function poblarSelectorMeses() {
 
 const _sumarHorasEfectivas = (...args) => Reportes._sumarHorasEfectivas(...args);
 const generarReporte = (...args) => Reportes.generarReporte(...args);
-const abrirModalReporteSecciones = (...args) => Reportes.abrirModalReporteSecciones(...args);
-const cerrarModalReporteSecciones = (...args) => Reportes.cerrarModalReporteSecciones(...args);
+const abrirModalReporteSecciones = (...args) => Reportes.abrirModalReporteSecciones.apply(Reportes, args);
+const cerrarModalReporteSecciones = (...args) => Reportes.cerrarModalReporteSecciones.apply(Reportes, args);
 const toggleSeccionReporte = (...args) => Reportes.toggleSeccionReporte(...args);
-const confirmarGenerarReporte = (...args) => Reportes.confirmarGenerarReporte(...args);
+const confirmarGenerarReporte = (...args) => Reportes.confirmarGenerarReporte.apply(Reportes, args);
 Reportes.configurarStatsProvider({
     calcularEstadisticasAnio,
     calcularEstadisticasMes,
@@ -534,7 +534,7 @@ function bindEventos() {
     $('btn-toggle-periodo')?.addEventListener('click', () => togglePeriodoStats());
     $('btn-reporte')?.addEventListener('click', () => abrirModalReporteSecciones());
     $('reporte-secciones-lista')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-seccion-reporte');
+        const btn = /** @type {HTMLElement} */ (e.target).closest('.btn-seccion-reporte');
         if (btn) toggleSeccionReporte(btn);
     });
     $('btn-confirmar-reporte')?.addEventListener('click', () => confirmarGenerarReporte());

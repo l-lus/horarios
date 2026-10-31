@@ -31,8 +31,8 @@ function _gistEstadoAutoSyncActual() {
 }
 
 function actualizarEstadoBotonesGist() {
-    const token = document.getElementById('gist-token')?.value.trim() || '';
-    const gistId = document.getElementById('gist-id')?.value.trim() || '';
+    const token = $('gist-token')?.value.trim() || '';
+    const gistId = $('gist-id')?.value.trim() || '';
     const soloToken = token !== '';
     const ambosCompletos = soloToken && gistId.length > 10;
 
@@ -43,9 +43,9 @@ function actualizarEstadoBotonesGist() {
     const estadoBackup = _gistEstadoAutoSyncActual();
     _setBtnDisabled('btn-toggle-gist-merge', !(ambosCompletos && estadoBackup === 1));
 
-    const estadoEl = document.getElementById('gist-estado');
-    const tituloEl = document.getElementById('gist-estado-titulo');
-    const conexionEl = document.getElementById('gist-conexion-resumen');
+    const estadoEl = $('gist-estado');
+    const tituloEl = $('gist-estado-titulo');
+    const conexionEl = $('gist-conexion-resumen');
     estadoEl?.classList.toggle('gist-estado--off', !ambosCompletos);
     if (tituloEl) tituloEl.textContent = ambosCompletos ? 'Conectado' : soloToken ? 'Falta el Gist ID' : 'Sin configurar';
     if (conexionEl) {
@@ -57,34 +57,34 @@ function actualizarEstadoBotonesGist() {
 }
 
 function _actualizarResumenLimites() {
-    const el = document.getElementById('gist-limites-resumen');
+    const el = $('gist-limites-resumen');
     if (!el) return;
     const tipo = _tipoSyncActual();
     if (!tipo) { el.textContent = 'Desactivado'; return; }
     const limite = _gistLimitesTemp ? _gistLimitesTemp[tipo] : SincronizacionGist.getSyncLimite(tipo);
-    const desde = document.getElementById('gist-rango-desde')?.value || '--:--';
-    const hasta = document.getElementById('gist-rango-hasta')?.value || '--:--';
+    const desde = $('gist-rango-desde')?.value || '--:--';
+    const hasta = $('gist-rango-hasta')?.value || '--:--';
     el.textContent = `${limite === 0 ? 'Sin límite' : `${limite} por hora`} · ${desde} – ${hasta}`;
 }
 
 function _gistSetPanel(btnId, abierto, animar = true) {
-    const btn = document.getElementById(btnId);
-    const panel = document.getElementById(btn?.getAttribute('aria-controls') || '');
+    const btn = $(btnId);
+    const panel = $(btn?.getAttribute('aria-controls') || '');
     if (!btn || !panel) return;
     btn.setAttribute('aria-expanded', String(abierto));
     setColapsable(panel, abierto, { animar });
 }
 
 function toggleGistPanel(btnId) {
-    const btn = document.getElementById(btnId);
+    const btn = $(btnId);
     _gistSetPanel(btnId, btn?.getAttribute('aria-expanded') !== 'true');
 }
 
 function abrirModalGist() {
     _abrirModalConPadre('modal-gist', () => {
-        const tokenInput = document.getElementById('gist-token');
-        const gistIdInput = document.getElementById('gist-id');
-        const lastSyncEl = document.getElementById('gist-ultima-sync');
+        const tokenInput = $('gist-token');
+        const gistIdInput = $('gist-id');
+        const lastSyncEl = $('gist-ultima-sync');
 
         if (tokenInput) tokenInput.value = SincronizacionGist.getToken();
         if (gistIdInput) gistIdInput.value = SincronizacionGist.getGistId();
@@ -94,8 +94,8 @@ function abrirModalGist() {
         }
 
         const rango = SincronizacionGist.getRangoHorario();
-        const desdeEl = document.getElementById('gist-rango-desde');
-        const hastaEl = document.getElementById('gist-rango-hasta');
+        const desdeEl = $('gist-rango-desde');
+        const hastaEl = $('gist-rango-hasta');
         if (desdeEl) desdeEl.value = rango.desde;
         if (hastaEl) hastaEl.value = rango.hasta;
 
@@ -112,8 +112,8 @@ function abrirModalGist() {
 }
 
 function _leerRangoHorarioInputs() {
-    const desdeRaw = document.getElementById('gist-rango-desde')?.value || '';
-    const hastaRaw = document.getElementById('gist-rango-hasta')?.value || '';
+    const desdeRaw = $('gist-rango-desde')?.value || '';
+    const hastaRaw = $('gist-rango-hasta')?.value || '';
     const desdeValida = !desdeRaw || TiempoUtils.validarHora(desdeRaw);
     const hastaValida = !hastaRaw || TiempoUtils.validarHora(hastaRaw);
     return {
@@ -126,11 +126,11 @@ function _leerRangoHorarioInputs() {
 }
 
 function _gistGuardarCredencialesSiModalAbierto() {
-    if (!document.getElementById('modal-gist')?.classList.contains('show')) return;
+    if (!$('modal-gist')?.classList.contains('show')) return;
 
     SincronizacionGist.saveCredentials(
-        document.getElementById('gist-token')?.value.trim() || '',
-        document.getElementById('gist-id')?.value.trim() || ''
+        $('gist-token')?.value.trim() || '',
+        $('gist-id')?.value.trim() || ''
     );
 
     const { desde, hasta, valida } = _leerRangoHorarioInputs();
@@ -148,14 +148,14 @@ function _gistGuardarCredencialesSiModalAbierto() {
 }
 
 function actualizarBotonesHistorico() {
-    const btnRespaldar = document.getElementById('btn-hist-respaldar');
-    const btnRestaurar = document.getElementById('btn-hist-restaurar');
+    const btnRespaldar = $('btn-hist-respaldar');
+    const btnRestaurar = $('btn-hist-restaurar');
     if (!btnRespaldar || !btnRestaurar) return;
 
     const tieneGist = SincronizacionGist.esGistIdValido(SincronizacionGist.getGistId());
 
-    const newRespaldar = btnRespaldar.cloneNode(true);
-    const newRestaurar = btnRestaurar.cloneNode(true);
+    const newRespaldar = /** @type {HTMLElement} */ (btnRespaldar.cloneNode(true));
+    const newRestaurar = /** @type {HTMLElement} */ (btnRestaurar.cloneNode(true));
     btnRespaldar.parentNode.replaceChild(newRespaldar, btnRespaldar);
     btnRestaurar.parentNode.replaceChild(newRestaurar, btnRestaurar);
 
@@ -183,8 +183,8 @@ function actualizarBotonesHistorico() {
 }
 
 function guardarConfigGist() {
-    const token = document.getElementById('gist-token')?.value.trim() || '';
-    const gistId = document.getElementById('gist-id')?.value.trim() || '';
+    const token = $('gist-token')?.value.trim() || '';
+    const gistId = $('gist-id')?.value.trim() || '';
     const { desde, hasta, desdeInvalida, hastaInvalida } = _leerRangoHorarioInputs();
 
     if (desdeInvalida) {
@@ -304,17 +304,17 @@ async function gistMergeAplicar(modo, modoAutomatico = false) {
     Configuracion.refrescarConfigSiVisible();
 
     if (!modoAutomatico) _gistMergeCerrarOVolver();
-    const lastSyncEl = document.getElementById('gist-ultima-sync');
+    const lastSyncEl = $('gist-ultima-sync');
     if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${SincronizacionGist.formatLastSync(SincronizacionGist.getLastSync())}`;
     mostrarToast(mensajeExito, 'success');
 
-    const btn = document.getElementById('btn-gist-bajar');
+    const btn = $('btn-gist-bajar');
     if (btn) btn.disabled = false;
 }
 
 function gistMergeCancelar() {
     _gistMergeData = null;
-    const btn = document.getElementById('btn-gist-bajar');
+    const btn = $('btn-gist-bajar');
     if (btn) btn.disabled = false;
     _gistMergeCerrarOVolver();
 }
@@ -326,11 +326,11 @@ function toggleGistMerge() {
 }
 
 function actualizarBotonGistMerge() {
-    const hint = document.getElementById('hint-gist-merge');
-    const iconEl = document.getElementById('icon-gist-merge');
+    const hint = $('hint-gist-merge');
+    const iconEl = $('icon-gist-merge');
     const esMerge = SincronizacionGist.getMergeBehavior() === 'merge';
     if (hint) hint.textContent = esMerge ? 'Combinar' : 'Reemplazar';
-    const desc = document.getElementById('desc-gist-merge');
+    const desc = $('desc-gist-merge');
     if (desc) desc.textContent = esMerge ? ' · une Gist con tus datos locales' : ' · sustituye tus datos locales';
     if (iconEl) setIconoBtn(iconEl, esMerge ? '#icon-combine' : '#icon-replace-swap');
 }
@@ -344,10 +344,10 @@ function toggleGistBackup() {
 }
 
 function actualizarBotonGistBackup() {
-    const btn = document.getElementById('btn-toggle-gist-backup');
-    const hint = document.getElementById('hint-gist-backup');
-    const label = document.getElementById('label-gist-backup');
-    const rangoEl = document.getElementById('gist-rango-horario');
+    const btn = $('btn-toggle-gist-backup');
+    const hint = $('hint-gist-backup');
+    const label = $('label-gist-backup');
+    const rangoEl = $('gist-rango-horario');
     const estado = _gistEstadoAutoSyncActual();
     if (!btn) return;
 
@@ -368,13 +368,13 @@ function actualizarBotonGistBackup() {
 }
 
 function toggleVerToken() {
-    const input = document.getElementById('gist-token');
+    const input = $('gist-token');
     if (!input) return;
     input.type = input.type === 'password' ? 'text' : 'password';
 }
 
 function abrirGistEnBrowser() {
-    const gistIdRaw = document.getElementById('gist-id')?.value.trim() || SincronizacionGist.getGistId();
+    const gistIdRaw = $('gist-id')?.value.trim() || SincronizacionGist.getGistId();
     if (gistIdRaw && SincronizacionGist.esGistIdValido(gistIdRaw)) {
         window.open(`https://gist.github.com/${gistIdRaw.trim()}`, '_blank', 'noopener,noreferrer');
     } else {
@@ -389,7 +389,7 @@ function _tipoSyncActual() {
 
 function _actualizarCampoLimite(dir = 0) {
     const tipo = _tipoSyncActual();
-    const contenedor = document.getElementById('gist-limite-sync');
+    const contenedor = $('gist-limite-sync');
     if (!contenedor) return;
     if (!tipo) {
         contenedor.classList.add('disabled');
@@ -397,8 +397,8 @@ function _actualizarCampoLimite(dir = 0) {
         return;
     }
     const limite = _gistLimitesTemp ? _gistLimitesTemp[tipo] : SincronizacionGist.getSyncLimite(tipo);
-    const input = document.getElementById('gist-limite-valor');
-    const label = document.getElementById('gist-limite-label');
+    const input = $('gist-limite-valor');
+    const label = $('gist-limite-label');
     if (input) _animarValor(input, limite, dir);
     if (label) label.textContent = tipo === 'bajar' ? 'Límite bajadas por hora (0 = sin límite)' : 'Límite subidas por hora (0 = sin límite)';
     contenedor.classList.remove('disabled');
@@ -417,9 +417,9 @@ function cambiarLimiteSync(delta) {
 const pressHoldLimite = _crearPressHold(delta => cambiarLimiteSync(delta));
 
 async function _gistConSpinner(btnId, mensajeError, accion) {
-    const btn = document.getElementById(btnId);
+    const btn = $(btnId);
     if (btn) btn.disabled = true;
-    const iconoPerfil = document.getElementById('header-profile-icon');
+    const iconoPerfil = $('header-profile-icon');
     iconoPerfil?.classList.add('icono-spin');
     _flashCampo('header-profile-btn');
 
@@ -444,9 +444,9 @@ async function gistSubir() {
             D.historialDiasHabiles(),
             D.obtenerConfigExportable()
         );
-        const gistIdInput = document.getElementById('gist-id');
+        const gistIdInput = $('gist-id');
         if (gistIdInput) gistIdInput.value = nuevoId;
-        const lastSyncEl = document.getElementById('gist-ultima-sync');
+        const lastSyncEl = $('gist-ultima-sync');
         if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${SincronizacionGist.formatLastSync(SincronizacionGist.getLastSync())}`;
         mostrarToast('Datos respaldados en Gist', 'success');
     });
@@ -620,7 +620,7 @@ function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complem
         tarjeta.pintar(esMerge, animar);
         alerta?.pintar(esMerge, animar);
 
-        const btnAplicar = document.getElementById('btn-gist-merge-aplicar');
+        const btnAplicar = $('btn-gist-merge-aplicar');
         if (btnAplicar) {
             btnAplicar.classList.toggle('btn-edit', esMerge);
             btnAplicar.classList.toggle('btn-delete', !esMerge);
@@ -631,7 +631,7 @@ function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complem
 
 async function gistBajar(modoAutomatico = false) {
     _gistGuardarCredencialesSiModalAbierto();
-    _gistMergeDesdeModal = document.getElementById('modal-gist')?.classList.contains('show') ?? false;
+    _gistMergeDesdeModal = $('modal-gist')?.classList.contains('show') ?? false;
     await _gistConSpinner('btn-gist-bajar', 'Error al bajar', async () => {
         const data = await SincronizacionGist.bajar();
         const registrosNormalizados = await _validarDatosGist(data);
@@ -645,7 +645,7 @@ async function gistBajar(modoAutomatico = false) {
             await gistMergeAplicar(SincronizacionGist.getMergeBehavior(), true);
         } else {
             const configCambios = _calcularConfigCambios(data);
-            const resumenEl = document.getElementById('gist-merge-resumen');
+            const resumenEl = $('gist-merge-resumen');
             if (resumenEl) _buildResumenMerge(resumenEl, diff, registrosNormalizados, configCambios);
             if (_gistMergeDesdeModal) GestorModales.alternar('modal-gist', 'modal-gist-merge');
             else GestorModales.abrir('modal-gist-merge');

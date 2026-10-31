@@ -5,11 +5,11 @@ import { EstadoApp } from '../services/estado-app.js';
 // PWA INSTALLER MODULE
 // ====================================================================
 let deferredPrompt = null;
-const btnInstall = document.getElementById('btn-install');
+const btnInstall = $('btn-install');
 
 function init() {
     if (window.matchMedia('(display-mode: standalone)').matches ||
-        window.navigator.standalone === true) {
+        /** @type {any} */ (window.navigator).standalone === true) {
         if (btnInstall) btnInstall.style.display = 'none';
         return;
     }

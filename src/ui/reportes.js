@@ -16,6 +16,7 @@ const D = GestionDatos;
 // ====================================================================
 const { mostrarToast, descargarArchivo } = UIBase;
 
+/** @type {{ calcularEstadisticasAnio: (anio: any, regs: any) => any, calcularEstadisticasMes: (mes: any, regs: any) => any, getModoEstadisticas: () => string }} */
 let _statsProvider = {
     calcularEstadisticasAnio: () => ({}),
     calcularEstadisticasMes: () => ({}),
@@ -53,7 +54,7 @@ function _resolverPeriodoDatos(esAnual) {
         return aReg === año && mReg === mesNum;
     });
     return {
-        periodoLabel: selectMes.options[selectMes.selectedIndex].text,
+        periodoLabel: /** @type {HTMLSelectElement} */ (/** @type {unknown} */ (selectMes)).selectedOptions[0].text,
         nombreArchivo: `reporte_${mes}.html`,
         registrosPeriodo,
         stats: _statsProvider.calcularEstadisticasMes(mes, registrosPeriodo),
@@ -270,6 +271,7 @@ const REPORTE_ESTILOS = `
 
 function _seccionResumenGeneral(stats) {
     const bufferOk = stats.bufferPeriodo === null || stats.bufferPeriodo >= 0;
+    /** @type {{ label: string, valor: any, esConteo?: boolean, clase?: string }[]} */
     const tarjetas = [
         { label: 'Total horas', valor: stats.tiempoTotal },
         { label: 'Banco de horas', valor: stats.bufferPeriodo !== null ? TiempoUtils.horasATexto(stats.bufferPeriodo, 'short') : 'N/A', clase: `valor-saldo-${bufferOk ? 'pos' : 'neg'}` },
@@ -438,7 +440,7 @@ const SECCIONES_REPORTE = [
 ];
 
 function _renderSeccionesReporte() {
-    const cont = document.getElementById('reporte-secciones-lista');
+    const cont = $('reporte-secciones-lista');
     if (!cont) return;
     const modo = _statsProvider.getModoEstadisticas() === 'anual' ? 'anual' : 'mensual';
     montar(cont, html`${SECCIONES_REPORTE
@@ -465,9 +467,9 @@ function toggleSeccionReporte(boton) {
 }
 
 function confirmarGenerarReporte() {
-    const cont = document.getElementById('reporte-secciones-lista');
+    const cont = $('reporte-secciones-lista');
     const opciones = {};
-    cont?.querySelectorAll('.btn-seccion-reporte').forEach(btn => {
+    /** @type {NodeListOf<HTMLElement>} */ (cont?.querySelectorAll('.btn-seccion-reporte')).forEach(btn => {
         opciones[btn.dataset.seccion] = btn.classList.contains('btn-activo');
     });
     if (!Object.values(opciones).some(Boolean)) {

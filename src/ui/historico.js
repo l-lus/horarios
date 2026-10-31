@@ -22,21 +22,21 @@ const {
     _crearFantasmaSiVisible, DUR_ANIM, _aArray, _estaColapsado, _scrollA
 } = UIBase;
 
-const cerrarEdicion = (...args) => HistoricoEdicion.cerrarEdicion(...args);
+const cerrarEdicion = (...args) => HistoricoEdicion.cerrarEdicion.apply(HistoricoEdicion, args);
 const setBloqueoEdicion = (...args) => HistoricoEdicion.setBloqueoEdicion(...args);
-const toggleBloqueoEdicion = (...args) => HistoricoEdicion.toggleBloqueoEdicion(...args);
-const toggleCredito = (...args) => HistoricoEdicion.toggleCredito(...args);
-const _actualizarHintEdicion = (...args) => HistoricoEdicion._actualizarHintEdicion(...args);
-const actualizarHintGrupo = (...args) => HistoricoEdicion.actualizarHintGrupo(...args);
+const toggleBloqueoEdicion = (...args) => HistoricoEdicion.toggleBloqueoEdicion.apply(HistoricoEdicion, args);
+const toggleCredito = (...args) => HistoricoEdicion.toggleCredito.apply(HistoricoEdicion, args);
+const _actualizarHintEdicion = (...args) => HistoricoEdicion._actualizarHintEdicion.apply(HistoricoEdicion, args);
+const actualizarHintGrupo = (...args) => HistoricoEdicion.actualizarHintGrupo.apply(HistoricoEdicion, args);
 const mostrarFiltros = (...args) => HistoricoEdicion.mostrarFiltros(...args);
-const cerrarFiltros = (...args) => HistoricoEdicion.cerrarFiltros(...args);
-const toggleHistorico = (...args) => HistoricoEdicion.toggleHistorico(...args);
-const iniciarTimerAutoCierreBotones = (...args) => HistoricoEdicion.iniciarTimerAutoCierreBotones(...args);
-const cancelarTimerAutoCierreBotones = (...args) => HistoricoEdicion.cancelarTimerAutoCierreBotones(...args);
-const verificarBloqueoCredito = (...args) => HistoricoEdicion.verificarBloqueoCredito(...args);
+const cerrarFiltros = (...args) => HistoricoEdicion.cerrarFiltros.apply(HistoricoEdicion, args);
+const toggleHistorico = (...args) => HistoricoEdicion.toggleHistorico.apply(HistoricoEdicion, args);
+const iniciarTimerAutoCierreBotones = (...args) => HistoricoEdicion.iniciarTimerAutoCierreBotones.apply(HistoricoEdicion, args);
+const cancelarTimerAutoCierreBotones = (...args) => HistoricoEdicion.cancelarTimerAutoCierreBotones.apply(HistoricoEdicion, args);
+const verificarBloqueoCredito = (...args) => HistoricoEdicion.verificarBloqueoCredito.apply(HistoricoEdicion, args);
 const setBloqueoEdicionGrupo = (...args) => HistoricoEdicion.setBloqueoEdicionGrupo(...args);
-const toggleBloqueoEdicionGrupo = (...args) => HistoricoEdicion.toggleBloqueoEdicionGrupo(...args);
-const cerrarEdicionGrupo = (...args) => HistoricoEdicion.cerrarEdicionGrupo(...args);
+const toggleBloqueoEdicionGrupo = (...args) => HistoricoEdicion.toggleBloqueoEdicionGrupo.apply(HistoricoEdicion, args);
+const cerrarEdicionGrupo = (...args) => HistoricoEdicion.cerrarEdicionGrupo.apply(HistoricoEdicion, args);
 const setTiempoExpansionBotones = (...args) => HistoricoEdicion.setTiempoExpansionBotones(...args);
 function agruparRegistrosPorMes(registros) {
     if (!Array.isArray(registros)) {

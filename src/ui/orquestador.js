@@ -147,7 +147,7 @@ function _initListenersFormulario() {
     $('fecha')?.addEventListener('change', () => limpiarError('fecha', null));
 
     ['edit-entrada', 'edit-salida'].forEach(id => {
-        const el = document.getElementById(id);
+        const el = $(id);
         if (!el) return;
         el.addEventListener('input', (e) => { formatearInput(e); verificarBloqueCreditoDebounced(); });
         el.addEventListener('change', verificarBloqueoCredito);
@@ -157,10 +157,10 @@ function _initListenersFormulario() {
         if (e.target === e.currentTarget) _cerrarSelectorMeses();
     });
 
-    const tf = document.getElementById('edit-tiempo-fuera');
+    const tf = $('edit-tiempo-fuera');
     if (tf) tf.addEventListener('input', (e) => { formatearInput(e); verificarBloqueCreditoDebounced(); });
 
-    const notasEl = document.getElementById('edit-notas');
+    const notasEl = $('edit-notas');
     if (notasEl) notasEl.addEventListener('input', () => {
         const v = notasEl.value;
         const filtrado = S.sanitizeNotas(v);
@@ -172,19 +172,19 @@ function _initListenersFormulario() {
     });
 
     ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => {
-        const el = document.getElementById(id);
+        const el = $(id);
         if (el) el.addEventListener('input', formatearInput);
     });
 
     ['edit-entrada', 'edit-salida', 'edit-tiempo-fuera'].forEach(id => {
-        const el = document.getElementById(id);
+        const el = $(id);
         if (el) el.addEventListener('input', _actualizarHintEdicion);
     });
 }
 
 function _initListenersTeclado() {
     const bindEnter = (id, handler) => {
-        const el = document.getElementById(id);
+        const el = $(id);
         if (!el) return;
         el.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter') return;
@@ -192,24 +192,24 @@ function _initListenersTeclado() {
             handler(el);
         });
     };
-    bindEnter('entrada', () => document.getElementById('salida')?.focus());
-    bindEnter('salida', (el) => { el.blur(); const b = document.getElementById('btn-agregar'); if (b && !b.disabled) b.click(); });
-    bindEnter('edit-entrada', () => document.getElementById('edit-salida')?.focus());
-    bindEnter('edit-salida', () => document.getElementById('edit-tiempo-fuera')?.focus());
-    bindEnter('edit-tiempo-fuera', (el) => { el.blur(); const b = document.querySelector('#modal-editar .btn-edit'); if (b && !b.disabled) b.click(); });
+    bindEnter('entrada', () => $('salida')?.focus());
+    bindEnter('salida', (el) => { el.blur(); const b = $('btn-agregar'); if (b && !b.disabled) b.click(); });
+    bindEnter('edit-entrada', () => $('edit-salida')?.focus());
+    bindEnter('edit-salida', () => $('edit-tiempo-fuera')?.focus());
+    bindEnter('edit-tiempo-fuera', (el) => { el.blur(); const b = /** @type {HTMLButtonElement} */ (document.querySelector('#modal-editar .btn-edit')); if (b && !b.disabled) b.click(); });
     bindEnter('nombre-nuevo-perfil-selector', (el) => { el.blur(); crearPerfilDesdeSelector(); });
-    bindEnter('nombre-perfil-editar', (el) => { el.blur(); const b = document.querySelector('#modal-editar-perfil .btn-edit'); if (b && !b.disabled) b.click(); });
+    bindEnter('nombre-perfil-editar', (el) => { el.blur(); const b = /** @type {HTMLButtonElement} */ (document.querySelector('#modal-editar-perfil .btn-edit')); if (b && !b.disabled) b.click(); });
 }
 
 function _initSwipesYStats() {
     _habilitarCierreToast();
-    registrarSwipe(document.getElementById('stats-card'), () => alternarVista());
-    registrarSwipe(document.getElementById('form-registro'), dir => {
-        document.activeElement?.blur?.();
+    registrarSwipe($('stats-card'), () => alternarVista());
+    registrarSwipe($('form-registro'), dir => {
+        /** @type {HTMLElement} */ (document.activeElement)?.blur?.();
         toggleModoLote(dir);
     });
 
-    const anchor = document.getElementById('stat-items-tipos-anchor');
+    const anchor = $('stat-items-tipos-anchor');
     if (anchor) {
         TiposRegistro.obtenerTodosLosTipos().forEach(t => {
             const item = document.createElement('div');
@@ -380,15 +380,16 @@ function _initListenerEscape() {
 function _initListenerUndoRedo() {
     document.addEventListener('keydown', (e) => {
         if (!(e.ctrlKey || e.metaKey)) return;
-        const tag = e.target.tagName;
-        const esCampoEditable = tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable;
+        const objetivo = /** @type {HTMLElement} */ (e.target);
+        const tag = objetivo.tagName;
+        const esCampoEditable = tag === 'INPUT' || tag === 'TEXTAREA' || objetivo.isContentEditable;
         if (esCampoEditable) return;
         if (e.key === 'z' || e.key === 'Z') {
             e.preventDefault();
-            document.getElementById('btn-undo')?.click();
+            $('btn-undo')?.click();
         } else if (e.key === 'y' || e.key === 'Y') {
             e.preventDefault();
-            document.getElementById('btn-redo')?.click();
+            $('btn-redo')?.click();
         }
     });
 }
@@ -400,20 +401,20 @@ function _initListenersOtros() {
         el.addEventListener('change', () => actualizarBotonLote());
         el.addEventListener('input', () => actualizarBotonLoteDebounced());
     };
-    agregarListenersFecha(document.getElementById('lote-fecha-desde'));
-    agregarListenersFecha(document.getElementById('lote-fecha-hasta'));
+    agregarListenersFecha($('lote-fecha-desde'));
+    agregarListenersFecha($('lote-fecha-hasta'));
 
-    document.getElementById('tipo-exportacion')?.addEventListener('change', () => toggleCamposRangoExport());
+    $('tipo-exportacion')?.addEventListener('change', () => toggleCamposRangoExport());
 
-    const fileInput = document.getElementById('file-import');
+    const fileInput = $('file-import');
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
-            const nombreEl = document.getElementById('nombre-archivo-seleccionado');
-            const btnCombinar = document.getElementById('btn-combinar');
-            const btnReemplazar = document.getElementById('btn-reemplazar');
-            const hayArchivo = e.target.files.length > 0;
+            const nombreEl = $('nombre-archivo-seleccionado');
+            const btnCombinar = $('btn-combinar');
+            const btnReemplazar = $('btn-reemplazar');
+            const hayArchivo = /** @type {HTMLInputElement} */ (e.target).files.length > 0;
             if (hayArchivo) {
-                if (nombreEl) { nombreEl.textContent = `✓ ${e.target.files[0].name}`; nombreEl.style.display = 'block'; }
+                if (nombreEl) { nombreEl.textContent = `✓ ${/** @type {HTMLInputElement} */ (e.target).files[0].name}`; nombreEl.style.display = 'block'; }
                 if (btnCombinar) btnCombinar.disabled = false;
                 if (btnReemplazar) btnReemplazar.disabled = false;
             } else {
@@ -463,7 +464,7 @@ async function init() {
 
     _initListenerEscape();
     _initListenerUndoRedo();
-    const lista = document.getElementById('lista-registros');
+    const lista = $('lista-registros');
     if (lista) {
         _initListenerAccionesLista(lista);
         _initListenerToggleAnio(lista);

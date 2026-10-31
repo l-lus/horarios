@@ -82,6 +82,10 @@ function descargarArchivo(contenido, nombreArchivo, mime) {
 }
 
 const { _durSiAnima, DUR_ANIM, DUR_CALENDARIO, DUR_FICHAJE_OK, DUR_FICHAJE_SALIDA, _aArray, _estaColapsado, _esperarAnim, _finalizarSlidePendiente, _animarSlideElemento, _animarFadeSwap, _animarMutacion, _flashElemento, _crearFantasmaSiVisible, _animarValor, _animarConteo, _conteoEnCurso, _cancelarConteo } = Animaciones;
+/**
+ * @param {{ getVal: () => boolean, setVal: (v: boolean) => any, btnId: string,
+ *           onAfterToggle?: (v: boolean) => void, puedeActivar?: () => boolean }} cfg
+ */
 function _crearToggleConfig({ getVal, setVal, btnId, onAfterToggle, puedeActivar }) {
     function actualizarEstado() {
         const val = getVal();
@@ -102,7 +106,7 @@ function _crearToggleConfig({ getVal, setVal, btnId, onAfterToggle, puedeActivar
 }
 
 function _setBtnActivo(id, activo) {
-    const btn = document.getElementById(id);
+    const btn = $(id);
     if (btn) btn.classList.toggle('btn-activo', activo);
 }
 
@@ -139,7 +143,7 @@ function _poblarSelect(selectId, items, getLabel, selDefault, actualizarFn, agru
 }
 
 function _setBtnDisabled(id, disabled) {
-    const btn = document.getElementById(id);
+    const btn = $(id);
     if (!btn) return;
     btn.disabled = disabled;
 }
@@ -159,7 +163,7 @@ function _cerrarModalConPadre(modalId, callbackAbrirPadre = null) {
 }
 
 function _flashCampoConClase(clase, ids, colorVar = null) {
-    ids.forEach(id => _flashElemento(document.getElementById(id), clase, colorVar));
+    ids.forEach(id => _flashElemento($(id), clase, colorVar));
 }
 
 function _flashCampo(...ids) { _flashCampoConClase('campo-flash', ids); }
@@ -186,7 +190,12 @@ function _flashCampoTipo(tipo, ...ids) {
     }
 }
 
-function _avisarFichaje(msg, tipo = 'error', { btn = null, duracion } = {}) {
+/**
+ * @param {string} msg
+ * @param {string} [tipo]
+ * @param {{ btn?: HTMLElement|null, duracion?: number }} [opciones]
+ */
+function _avisarFichaje(msg, tipo = 'error', { btn = null, duracion = undefined } = {}) {
     if (tipo !== 'success') salirExitoFichaje($('btn-agregar'));
     if (btn) resetearBoton(btn);
     if (msg) mostrarToast(msg, tipo, duracion);
@@ -197,7 +206,7 @@ function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'lab
     const activos = campos
         .filter(c => c.mostrar)
         .map(c => {
-            const input = document.getElementById(c.id);
+            const input = $(c.id);
             const label = input?.closest('.form-group')?.querySelector('label');
             const textoOriginal = label ? label.textContent : c.fallback;
             return { label, textoOriginal };

@@ -1,9 +1,11 @@
+import { $ } from '../core/dom.js';
+
 // ====================================================================
 // MODAL MANAGER MODULE
 // ====================================================================
 const _padres = {};
 const _accionesVolver = {
-    'modal-confirmar': () => document.getElementById('modal-confirmar-cancel')?.click(),
+    'modal-confirmar': () => $('modal-confirmar-cancel')?.click(),
 };
 
 function registrarAccionVolver(modalId, fn) {
@@ -28,9 +30,9 @@ const _origenesModal = {};
 const _triggerInfoPorModal = {};
 
 window.addEventListener('pointerdown', (event) => {
-    if (event.target.classList.contains('modal')) return;
+    if (/** @type {HTMLElement} */ (event.target).classList.contains('modal')) return;
     _ultimoClickCoords = { x: event.clientX, y: event.clientY };
-    _ultimoTrigger = event.target.closest('button, [role="button"], a, .card, .registro-item, .chip, tr, td, [data-modal], .btn-action, .icon-btn') || event.target;
+    _ultimoTrigger = /** @type {HTMLElement} */ (event.target).closest('button, [role="button"], a, .card, .registro-item, .chip, tr, td, [data-modal], .btn-action, .icon-btn') || event.target;
 }, true);
 
 window.addEventListener('keydown', (event) => {
@@ -73,7 +75,7 @@ function _calcularOrigen(triggerEl, coords, content) {
 }
 
 function _aplicarOrigenAnimacion(modal, modalId) {
-    const content = modal.querySelector('.modal-content');
+    const content = /** @type {HTMLElement} */ (modal.querySelector('.modal-content'));
     if (!content) return;
 
     if (_enAlternanciaHaciaAtras && _origenesModal[modalId]) {
@@ -89,7 +91,7 @@ function _aplicarOrigenAnimacion(modal, modalId) {
 
 window.addEventListener('resize', () => {
     document.querySelectorAll('.modal.show').forEach(modal => {
-        const content = modal.querySelector('.modal-content');
+        const content = /** @type {HTMLElement} */ (modal.querySelector('.modal-content'));
         const info = _triggerInfoPorModal[modal.id];
         if (content && info) {
             const origen = _calcularOrigen(info.trigger, info.coords, content);
@@ -144,7 +146,7 @@ function handleOutsideClick(event) {
 }
 
 function abrir(modalId, callback = null) {
-    const modal = document.getElementById(modalId);
+    const modal = $(modalId);
     if (!modal) return;
 
     if (callback) callback();
@@ -164,10 +166,10 @@ function abrir(modalId, callback = null) {
 }
 
 function cerrar(modalId, callback = null) {
-    const modal = document.getElementById(modalId);
+    const modal = $(modalId);
     if (!modal) return;
 
-    const content = modal.querySelector('.modal-content');
+    const content = /** @type {HTMLElement} */ (modal.querySelector('.modal-content'));
     if (content && _origenesModal[modalId]) {
         content.style.transformOrigin = _origenesModal[modalId];
     }
@@ -219,7 +221,7 @@ function alternar(modalIdCerrar, modalIdAbrir, callbackCerrar = null, callbackAb
 
 function cerrarTodos() {
     document.querySelectorAll('.modal.show').forEach(modal => {
-        const content = modal.querySelector('.modal-content');
+        const content = /** @type {HTMLElement} */ (modal.querySelector('.modal-content'));
         if (content && _origenesModal[modal.id]) {
             content.style.transformOrigin = _origenesModal[modal.id];
         }
@@ -237,14 +239,14 @@ function cerrarTodos() {
 
 function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones = {}) {
     return new Promise((resolve) => {
-        const elTexto = document.getElementById('modal-confirmar-texto');
-        const elLabel = document.getElementById('modal-confirmar-label-ok');
-        const elLabelCancel = document.getElementById('modal-confirmar-label-cancel');
-        const elTitulo = document.getElementById('modal-confirmar-titulo');
+        const elTexto = $('modal-confirmar-texto');
+        const elLabel = $('modal-confirmar-label-ok');
+        const elLabelCancel = $('modal-confirmar-label-cancel');
+        const elTitulo = $('modal-confirmar-titulo');
         const elIcono = document.querySelector('#modal-confirmar-ok svg use');
         const elIconoCancel = document.querySelector('#modal-confirmar-cancel svg use');
-        const btnOk = document.getElementById('modal-confirmar-ok');
-        const btnCancel = document.getElementById('modal-confirmar-cancel');
+        const btnOk = $('modal-confirmar-ok');
+        const btnCancel = $('modal-confirmar-cancel');
         if (!elTexto || !btnOk || !btnCancel) { resolve(false); return; }
 
         elTexto.textContent = texto;

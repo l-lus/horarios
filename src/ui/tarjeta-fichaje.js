@@ -30,23 +30,23 @@ const {
 } = UIBase;
 
 const { setProgressBarColor, getFondoCard, setFondoCard, toggleFondoCard, _getLabelFondo, actualizarFondoCard } = TarjetaFondos;
-const _breakStorageKey = (...args) => TarjetaTiempoFuera._breakStorageKey(...args);
-const _minutosBreakActivo = (...args) => TarjetaTiempoFuera._minutosBreakActivo(...args);
+const _breakStorageKey = (...args) => TarjetaTiempoFuera._breakStorageKey.apply(TarjetaTiempoFuera, args);
+const _minutosBreakActivo = (...args) => TarjetaTiempoFuera._minutosBreakActivo.apply(TarjetaTiempoFuera, args);
 const _minutosAHoraWrap = (...args) => TarjetaTiempoFuera._minutosAHoraWrap(...args);
 const _formatearMinutosCorto = (...args) => TarjetaTiempoFuera._formatearMinutosCorto(...args);
 const _obtenerOCrearLabelTF = (...args) => TarjetaTiempoFuera._obtenerOCrearLabelTF(...args);
 const _quitarLabelTF = (...args) => TarjetaTiempoFuera._quitarLabelTF(...args);
 const _actualizarCardTimerRunning = (...args) => TarjetaTiempoFuera._actualizarCardTimerRunning(...args);
 const actualizarEstadoBotonTimerMain = (...args) => TarjetaTiempoFuera.actualizarEstadoBotonTimerMain(...args);
-const toggleTimerBreakMain = (...args) => TarjetaTiempoFuera.toggleTimerBreakMain(...args);
+const toggleTimerBreakMain = (...args) => TarjetaTiempoFuera.toggleTimerBreakMain.apply(TarjetaTiempoFuera, args);
 const pegarHoraActual = (...args) => TarjetaLote.pegarHoraActual(...args);
 const limpiarCampo = (...args) => TarjetaLote.limpiarCampo(...args);
 const toggleModoLote = (...args) => TarjetaLote.toggleModoLote(...args);
-const ejecutarAccionRegistro = (...args) => TarjetaLote.ejecutarAccionRegistro(...args);
-const registrarLoteDesdeCard = (...args) => TarjetaLote.registrarLoteDesdeCard(...args);
-const poblarSelectoresTipos = (...args) => TarjetaLote.poblarSelectoresTipos(...args);
-const actualizarBotonLote = (...args) => TarjetaLote.actualizarBotonLote(...args);
-const toggleFormulario = (...args) => TarjetaLote.toggleFormulario(...args);
+const ejecutarAccionRegistro = (...args) => TarjetaLote.ejecutarAccionRegistro.apply(TarjetaLote, args);
+const registrarLoteDesdeCard = (...args) => TarjetaLote.registrarLoteDesdeCard.apply(TarjetaLote, args);
+const poblarSelectoresTipos = (...args) => TarjetaLote.poblarSelectoresTipos.apply(TarjetaLote, args);
+const actualizarBotonLote = (...args) => TarjetaLote.actualizarBotonLote.apply(TarjetaLote, args);
+const toggleFormulario = (...args) => TarjetaLote.toggleFormulario.apply(TarjetaLote, args);
 const _irAFicharConFecha = (...args) => TarjetaLote._irAFicharConFecha(...args);
 const _scrollACardFichar = (...args) => TarjetaLote._scrollACardFichar(...args);
 const alternarFechaActual = (...args) => TarjetaLote.alternarFechaActual(...args);
@@ -774,7 +774,7 @@ function alternarVista() {
 
 function bindEventos() {
     (function () {
-        const header = document.querySelector('.header');
+        const header = /** @type {HTMLElement} */ (document.querySelector('.header'));
         const statsCard = $('stats-card');
         if (!header || !statsCard) return;
 
@@ -801,7 +801,7 @@ function bindEventos() {
     })();
 
     $('stats-card')?.addEventListener('click', (e) => {
-        const enStatsNumber = e.target.closest('#stats-semana');
+        const enStatsNumber = /** @type {HTMLElement} */ (e.target).closest('#stats-semana');
         if (enStatsNumber && D.vistaActual() !== 'semana' && !_cicloStatsActivo()) {
             const ciclado = _iniciarCicloStats(true);
             if (ciclado) {

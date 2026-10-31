@@ -326,7 +326,7 @@ function actualizarBotonLote() {
     if (!TiempoUtils.validarFecha(hasta)) return _setBtnError(btn, btnTexto, 'Fecha Final Inválida');
     if (desde > hasta) return _setBtnError(btn, btnTexto, 'Rango Inválido');
 
-    const diasTotales = Math.ceil(Math.abs(TiempoUtils.parsearFechaLocal(hasta) - TiempoUtils.parsearFechaLocal(desde)) / 864e5) + 1;
+    const diasTotales = Math.ceil(Math.abs(TiempoUtils.parsearFechaLocal(hasta).getTime() - TiempoUtils.parsearFechaLocal(desde).getTime()) / 864e5) + 1;
 
     return tipo === 'normal'
         ? _actualizarBtnNormal(btn, btnTexto, desde, hasta)
@@ -396,7 +396,7 @@ async function _irAFicharConFecha(fecha, esEspecial) {
 }
 
 function _scrollACardFichar(el) {
-    const headerEl = document.querySelector('.header');
+    const headerEl = /** @type {HTMLElement} */ (document.querySelector('.header'));
     const margen = (headerEl ? headerEl.offsetHeight : 0) + 8;
     return _scrollHastaVisible(el, { margenSuperior: margen });
 }

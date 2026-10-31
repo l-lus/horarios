@@ -11,5 +11,5 @@
     "noImplicitAny": false,
     "skipLibCheck": true
   },
-  "include": ["src/core/**/*.js", "src/data/**/*.js", "src/services/**/*.js"]
+  "include": ["src/core/**/*.js", "src/data/**/*.js", "src/services/**/*.js", "src/ui/**/*.js", "src/main.js"]
 }

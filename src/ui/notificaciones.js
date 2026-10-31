@@ -130,7 +130,7 @@ function bindEventos() {
     $('btn-toggle-push-buffer')?.addEventListener('click', () => togglePushBuffer());
     $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => togglePushBufferUltimoDia());
     $('btn-toggle-push-habilitado')?.addEventListener('click', () => togglePushHabilitado());
-    $('config-push-anticipacion')?.addEventListener('change', (e) => cambiarPushAnticipacion(e.target.value));
+    $('config-push-anticipacion')?.addEventListener('change', (e) => cambiarPushAnticipacion(/** @type {HTMLInputElement} */ (e.target).value));
     $('btn-toggle-notification')?.addEventListener('click', () => abrirModalNotificaciones());
     document.querySelector('#modal-notificaciones .btn-cancel')?.addEventListener('click', () => cerrarModalNotificaciones());
 }

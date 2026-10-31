@@ -12,7 +12,7 @@ const {
     _abrirModalConPadre, _cerrarModalConPadre, mostrarToast
 } = UIBase;
 
-const _precargarCamposConfig = (...args) => Configuracion._precargarCamposConfig(...args);
+const _precargarCamposConfig = (...args) => Configuracion._precargarCamposConfig.apply(Configuracion, args);
 
 let _tramoEnEdicionDesde = null;
 
@@ -90,7 +90,7 @@ function abrirEditorTramoDias(desdeOriginal) {
         inputDesde.disabled = (desdeOriginal === '0001-01-01');
     }
 
-    document.querySelectorAll('input[name="dia-habil-tramo"]').forEach(cb => {
+    /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil-tramo"]')).forEach(cb => {
         cb.checked = tramo.dias.includes(parseInt(cb.value));
     });
 
@@ -111,7 +111,7 @@ async function guardarEdicionTramoDias() {
     const esSentinela = _tramoEnEdicionDesde === '0001-01-01';
     const inputDesde = $('editar-tramo-desde');
     const nuevaFecha = esSentinela ? '0001-01-01' : (inputDesde?.value || '');
-    const checkboxes = document.querySelectorAll('input[name="dia-habil-tramo"]:checked');
+    const checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil-tramo"]:checked'));
     const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
 
     if (!esSentinela && !TiempoUtils.validarFecha(nuevaFecha)) {

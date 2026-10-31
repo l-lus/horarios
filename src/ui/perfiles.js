@@ -33,7 +33,7 @@ function _guardarPerfilesConManejo(perfiles, contextoError = 'Error al guardar p
 }
 
 function renderizarListaPerfiles(animarCrecimiento = false) {
-    const lista = document.getElementById('lista-perfiles-botones');
+    const lista = $('lista-perfiles-botones');
     if (!lista) return;
 
     const alturaAnterior = animarCrecimiento ? lista.getBoundingClientRect().height : null;
@@ -99,14 +99,14 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
 
 function abrirSelectorPerfiles() {
     GestorModales.abrir('modal-selector-perfiles', () => {
-        const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
+        const inputNuevo = $('nombre-nuevo-perfil-selector');
         if (inputNuevo) inputNuevo.value = '';
 
         renderizarListaPerfiles();
 
         const esClaro = !document.documentElement.classList.contains('dark-mode')
             && !document.documentElement.getAttribute('data-theme');
-        const toggleBtnModal = document.getElementById('theme-toggle-modal');
+        const toggleBtnModal = $('theme-toggle-modal');
 
         if (toggleBtnModal) setIconoBtn(toggleBtnModal, esClaro ? '#icon-moon' : '#icon-sun');
     });
@@ -121,7 +121,7 @@ function _validarNombrePerfil(nombre, perfiles) {
 }
 
 function crearPerfilDesdeSelector() {
-    const input = document.getElementById('nombre-nuevo-perfil-selector');
+    const input = $('nombre-nuevo-perfil-selector');
     if (!input) return;
     const nombre = S.sanitizeString(input.value.trim(), 30);
     const perfiles = _obtenerTodosPerfilesSafe();
@@ -139,7 +139,7 @@ function crearPerfilDesdeSelector() {
     input.value = '';
     renderizarListaPerfiles(true);
     requestAnimationFrame(() => {
-        const ultimo = document.getElementById('lista-perfiles-botones')?.lastElementChild;
+        const ultimo = $('lista-perfiles-botones')?.lastElementChild;
         if (ultimo) { ultimo.classList.add('add-perfil'); _scrollA(ultimo); }
     });
 }
@@ -158,9 +158,9 @@ function abrirEditorPerfil(perfilId) {
         return;
     }
 
-    document.getElementById('nombre-perfil-editar').value = perfil.nombre;
+    $('nombre-perfil-editar').value = perfil.nombre;
 
-    const btnEliminar = document.getElementById('btn-eliminar-perfil-editor');
+    const btnEliminar = $('btn-eliminar-perfil-editor');
     if (btnEliminar) {
         btnEliminar.disabled = (perfilId === 'default');
     }
@@ -171,10 +171,10 @@ function abrirEditorPerfil(perfilId) {
 function cerrarEditorPerfil() {
     perfilEnEdicion = null;
     GestorModales.alternar('modal-editar-perfil', 'modal-selector-perfiles', null, () => {
-        const inputNuevo = document.getElementById('nombre-nuevo-perfil-selector');
+        const inputNuevo = $('nombre-nuevo-perfil-selector');
         if (inputNuevo) inputNuevo.value = '';
         renderizarListaPerfiles();
-        const btnEliminar = document.getElementById('btn-eliminar-perfil-editor');
+        const btnEliminar = $('btn-eliminar-perfil-editor');
         if (btnEliminar) btnEliminar.disabled = true;
     });
 }
@@ -190,7 +190,7 @@ function _validarNombrePerfilEdicion(nuevoNombre, perfiles, excluirId) {
 
 function guardarEdicionPerfil() {
     if (!perfilEnEdicion) return;
-    const nuevoNombre = S.sanitizeString(document.getElementById('nombre-perfil-editar').value.trim(), 30);
+    const nuevoNombre = S.sanitizeString($('nombre-perfil-editar').value.trim(), 30);
     const perfiles = _obtenerTodosPerfilesSafe();
 
     const error = _validarNombrePerfilEdicion(nuevoNombre, perfiles, perfilEnEdicion);
@@ -205,7 +205,7 @@ function guardarEdicionPerfil() {
     if (!_guardarPerfilesConManejo(perfiles)) { perfiles[perfilEnEdicion].nombre = nombreAnterior; return; }
 
     if (perfilEnEdicion === GestorPerfiles?.obtenerPerfilActual()) {
-        const btnTexto = document.getElementById('nombre-perfil-header');
+        const btnTexto = $('nombre-perfil-header');
         if (btnTexto) btnTexto.textContent = nuevoNombre;
     }
     if (GestorPerfiles) GestorPerfiles.inicializar();

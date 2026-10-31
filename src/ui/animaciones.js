@@ -212,7 +212,7 @@ function _animarValor(el, texto, dir = 0) {
     roll.append(saliente, entrante);
     el.replaceChildren(roll);
 
-    const opts = { duration: dur, easing: 'ease-out', fill: 'both' };
+    const opts = { duration: dur, easing: 'ease-out', fill: /** @type {FillMode} */ ('both') };
     const sgn = dir > 0 ? 1 : -1;
     const anims = [
         saliente.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(${-70 * sgn}%)`, opacity: 0 }], opts),

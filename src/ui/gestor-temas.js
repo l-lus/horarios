@@ -1,3 +1,4 @@
+import { $ } from '../core/dom.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 
@@ -23,7 +24,7 @@ function aplicarTema(tema) {
     }
     const esClaro = tema === 'light';
     ['theme-toggle', 'theme-toggle-modal', 'theme-toggle-config', 'btn-tema-selector'].forEach(id => {
-        const icon = document.getElementById(id)?.querySelector('use');
+        const icon = $(id)?.querySelector('use');
         if (icon) icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
     });
     sincronizarBarraDelSistema();
@@ -32,6 +33,7 @@ function aplicarTema(tema) {
 function sincronizarBarraDelSistema() {
     const color = getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
     if (!/^#[0-9a-f]{3,8}$/i.test(color)) return;
+    /** @type {HTMLMetaElement} */
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
         meta = document.createElement('meta');

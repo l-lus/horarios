@@ -26,11 +26,11 @@ const _reprogramarPushDebounced = debounce(() => D.sincronizarPushHoy(), 400);
 
 const verificarBloqueoCredito = (...args) => D._notify().verificarBloqueoCredito(...args);
 const actualizarUI = (...args) => D._notify().actualizarUI(...args);
-const getFondoCard = (...args) => TarjetaFondos.getFondoCard(...args);
+const getFondoCard = (...args) => TarjetaFondos.getFondoCard.apply(TarjetaFondos, args);
 const _getLabelFondo = (...args) => TarjetaFondos._getLabelFondo(...args);
 const _refrescarFormatoCortoStatsCache = () => EventosApp.emit('config:formato-corto-stats');
-const actualizarEstadoBotonPersistir = (...args) => OrdenTarjetas.actualizarEstadoBotonPersistir(...args);
-const actualizarEstadoBotonNotificaciones = (...args) => Notificaciones.actualizarEstadoBotonNotificaciones(...args);
+const actualizarEstadoBotonPersistir = (...args) => OrdenTarjetas.actualizarEstadoBotonPersistir.apply(OrdenTarjetas, args);
+const actualizarEstadoBotonNotificaciones = (...args) => Notificaciones.actualizarEstadoBotonNotificaciones.apply(Notificaciones, args);
 
 function alternarTema() {
     const temaActual = GestorTemas.temaGuardado();
@@ -172,11 +172,11 @@ function _refrescarTogglesConfig() {
 
 function _precargarCamposConfig() {
     const elHoras = $('config-horas-diarias');
-    elHoras.dataset.valor = D.horasDiarias();
+    elHoras.dataset.valor = String(D.horasDiarias());
     elHoras.textContent = TiempoUtils.horasATexto(D.horasDiarias(), 'short');
 
     const diasActivos = D.diasHabiles();
-    const checkboxes = document.querySelectorAll('input[name="dia-habil"]');
+    const checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]'));
     checkboxes.forEach(cb => {
         cb.checked = diasActivos.includes(parseInt(cb.value));
         cb.onchange = actualizarFeedbackConfig;
@@ -206,7 +206,7 @@ function mostrarConfigEnAjuste(id) {
 
 function refrescarConfigSiVisible() {
     _refrescarTogglesConfig();
-    if (document.getElementById('modal-config')?.classList.contains('show')) {
+    if ($('modal-config')?.classList.contains('show')) {
         _precargarCamposConfig();
     }
 }
@@ -218,12 +218,12 @@ function mostrarConfigOnboarding() {
 }
 
 function actualizarFeedbackConfig() {
-    let checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+    let checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]:checked'));
     if (checkboxes.length === 0) {
         const vigentes = D.diasHabiles();
-        document.querySelectorAll('input[name="dia-habil"]').forEach(cb => { cb.checked = vigentes.includes(parseInt(cb.value)); });
+        /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]')).forEach(cb => { cb.checked = vigentes.includes(parseInt(cb.value)); });
         mostrarToast('Seleccioná al menos un día', 'error');
-        checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+        checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]:checked'));
     }
     const seleccionados = checkboxes.length;
     const horas = parseFloat($('config-horas-diarias').dataset.valor) || 0;
@@ -302,13 +302,13 @@ function bindEventos() {
     $('btn-toggle-metrica-uso')?.addEventListener('click', () => toggleMetricaUso());
     $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());
-    document.getElementById('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
-    document.getElementById('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
+    $('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
+    $('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
     document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => cerrarModalAyuda());
-    document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.ayuda-indice-item');
+    $('ayuda-indice')?.addEventListener('click', (e) => {
+        const btn = /** @type {HTMLElement} */ (/** @type {HTMLElement} */ (e.target).closest('.ayuda-indice-item'));
         if (!btn) return;
-        _scrollA(document.getElementById(btn.dataset.target), 'start');
+        _scrollA($(btn.dataset.target), 'start');
     });
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => GestionDatos.borrarTodoHistorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => cerrarConfig());

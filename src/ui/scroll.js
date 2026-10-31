@@ -7,10 +7,11 @@ import { Movimiento } from '../core/movimiento.js';
 export function _scrollA(el, block = 'nearest') {
     if (el) el.scrollIntoView({ behavior: Movimiento.scrollBehavior(), block });
 }
+/** @param {Window|HTMLElement} [objetivo] */
 export function _esperarFinScroll(objetivo = window, { estable = 120, maximo = 1500 } = {}) {
     const esVentana = objetivo === window;
     const origen = esVentana ? document : objetivo;
-    const posicion = () => (esVentana ? window.scrollY : objetivo.scrollTop);
+    const posicion = () => (esVentana ? window.scrollY : /** @type {HTMLElement} */ (objetivo).scrollTop);
     return new Promise(resolve => {
         let terminado = false;
         const inicio = performance.now();

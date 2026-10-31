@@ -83,7 +83,7 @@ function toggleBloqueoEdicion() {
 }
 
 function toggleCredito() {
-    const btn = document.getElementById('btn-toggle-credito');
+    const btn = $('btn-toggle-credito');
     const estaActivo = btn.dataset.activo === "true";
 
     btn.dataset.activo = estaActivo ? "false" : "true";
@@ -92,17 +92,17 @@ function toggleCredito() {
 }
 
 function _actualizarHintEdicion() {
-    const hint = document.getElementById('edit-hint-resumen');
-    const e = document.getElementById('edit-entrada')?.value.trim();
-    const s = document.getElementById('edit-salida')?.value.trim();
-    let tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
+    const hint = $('edit-hint-resumen');
+    const e = $('edit-entrada')?.value.trim();
+    const s = $('edit-salida')?.value.trim();
+    let tf = $('edit-tiempo-fuera')?.value.trim();
     if (tf) tf = TiempoUtils.normalizarMinutosSueltos(tf);
 
     const tipoEspecial = (e || s) ? TiposRegistro.obtenerTipoPorCodigo(e, s) : null;
-    const elRef = document.getElementById('edit-referencia-compensatorio');
+    const elRef = $('edit-referencia-compensatorio');
     if (elRef) {
         const esCompensatorio = tipoEspecial?.id === 'compensatorio';
-        setColapsable(document.getElementById('grupo-referencia-compensatorio'), esCompensatorio);
+        setColapsable($('grupo-referencia-compensatorio'), esCompensatorio);
         if (!esCompensatorio) elRef.value = '';
     }
 
@@ -119,10 +119,10 @@ function _actualizarHintEdicion() {
 
 
 function actualizarHintGrupo() {
-    const hint = document.getElementById('edit-grupo-hint');
+    const hint = $('edit-grupo-hint');
     if (!hint) return;
-    const desde = document.getElementById('edit-grupo-desde')?.value;
-    const hasta = document.getElementById('edit-grupo-hasta')?.value;
+    const desde = $('edit-grupo-desde')?.value;
+    const hasta = $('edit-grupo-hasta')?.value;
     if (!desde && !hasta) { hint.textContent = ''; return; }
     if (desde && !hasta) {
         hint.textContent = `1 día`;
@@ -134,11 +134,11 @@ function actualizarHintGrupo() {
     }
     const fechaInicio = TiempoUtils.parsearFechaLocal(desde);
     const fechaFin = TiempoUtils.parsearFechaLocal(hasta);
-    const diasTotales = Math.ceil(Math.abs(fechaFin - fechaInicio) / (1000 * 60 * 60 * 24)) + 1;
+    const diasTotales = Math.ceil(Math.abs(fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     hint.textContent = `${diasTotales} día${TiempoUtils.pluralizar(diasTotales)}`;
 }
 ['edit-grupo-desde', 'edit-grupo-hasta'].forEach(id => {
-    const el = document.getElementById(id);
+    const el = $(id);
     if (el) el.addEventListener('change', actualizarHintGrupo);
 });
 
@@ -150,7 +150,7 @@ function mostrarFiltros(event) {
         return;
     }
 
-    const btnFiltro = document.getElementById('btn-filtro');
+    const btnFiltro = $('btn-filtro');
     if (!btnFiltro) return;
 
     if (_popupFiltrosEl) {
@@ -301,7 +301,7 @@ function cancelarTimerAutoCierreBotones() {
 }
 
 function verificarBloqueoCredito() {
-    const btnCredito = document.getElementById('btn-toggle-credito');
+    const btnCredito = $('btn-toggle-credito');
     if (!btnCredito) return;
 
     const _bloquear = () => {
@@ -311,11 +311,11 @@ function verificarBloqueoCredito() {
         btnCredito.disabled = false;
     };
 
-    if (document.getElementById('edit-fecha').disabled) return _bloquear();
+    if ($('edit-fecha').disabled) return _bloquear();
 
-    const e = document.getElementById('edit-entrada').value.trim();
-    const s = document.getElementById('edit-salida').value.trim();
-    const tf = document.getElementById('edit-tiempo-fuera').value.trim() || null;
+    const e = $('edit-entrada').value.trim();
+    const s = $('edit-salida').value.trim();
+    const tf = $('edit-tiempo-fuera').value.trim() || null;
 
     const horarioCompleto = e.length === 5 && s.length === 5;
     if (!horarioCompleto) {

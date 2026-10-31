@@ -116,8 +116,8 @@ function actualizarFondoCard(estado, colorOverride = null) {
         return;
     }
 
-    let layerA = bg.querySelector('.stats-card-bg__layer[data-layer="a"]');
-    let layerB = bg.querySelector('.stats-card-bg__layer[data-layer="b"]');
+    let layerA = /** @type {HTMLElement} */ (bg.querySelector('.stats-card-bg__layer[data-layer="a"]'));
+    let layerB = /** @type {HTMLElement} */ (bg.querySelector('.stats-card-bg__layer[data-layer="b"]'));
     if (!layerA) {
         layerA = document.createElement('div');
         layerA.className = 'stats-card-bg__layer';

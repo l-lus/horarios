@@ -17,14 +17,15 @@ test('atajos: una lista vacía guardada se respeta', () => {
 
 test('atajos: descarta desconocidos y repetidos y respeta el máximo', () => {
     assert.deepEqual(normalizarAtajos(['tema', 'nada', 'tema', 7, 'ayuda'], VALIDOS), ['tema', 'ayuda']);
-    assert.equal(normalizarAtajos(VALIDOS, VALIDOS).length, MAX_ATAJOS);
+    const muchos = Array.from({ length: MAX_ATAJOS + 5 }, (_, i) => `a${i}`);
+    assert.equal(normalizarAtajos(muchos, muchos).length, MAX_ATAJOS);
 });
 
 test('atajos: alternar agrega al final, quita y no pasa del máximo', () => {
     assert.deepEqual(alternarAtajo(['tema'], 'ayuda'), { lista: ['tema', 'ayuda'], lleno: false });
     assert.deepEqual(alternarAtajo(['tema', 'ayuda'], 'tema'), { lista: ['ayuda'], lleno: false });
-    const llena = VALIDOS.slice(0, MAX_ATAJOS);
-    assert.deepEqual(alternarAtajo(llena, VALIDOS[MAX_ATAJOS]), { lista: llena, lleno: true });
+    const llena = Array.from({ length: MAX_ATAJOS }, (_, i) => `a${i}`);
+    assert.deepEqual(alternarAtajo(llena, 'otro'), { lista: llena, lleno: true });
     assert.equal(alternarAtajo(llena, llena[0]).lista.length, MAX_ATAJOS - 1);
 });
 
@@ -33,9 +34,9 @@ test('orden de tarjetas: sin orden guardado o inválido queda el de por defecto'
     assert.deepEqual(normalizarOrdenCards(['x', 'y']), [...CARDS]);
 });
 
-test('orden de tarjetas: un orden guardado antes de existir "atajos" lo incorpora en su lugar por defecto', () => {
-    assert.deepEqual(normalizarOrdenCards(['historico', 'registrar', 'estadisticas']), ['historico', 'atajos', 'registrar', 'estadisticas']);
-    assert.deepEqual(normalizarOrdenCards(['registrar', 'estadisticas', 'historico']), ['registrar', 'atajos', 'estadisticas', 'historico']);
+test('orden de tarjetas: un orden guardado antes de existir "atajos" lo incorpora al final, su lugar por defecto', () => {
+    assert.deepEqual(normalizarOrdenCards(['historico', 'registrar', 'estadisticas']), ['historico', 'registrar', 'estadisticas', 'atajos']);
+    assert.deepEqual(normalizarOrdenCards(['registrar', 'estadisticas', 'historico']), ['registrar', 'estadisticas', 'historico', 'atajos']);
 });
 
 test('orden de tarjetas: un orden completo se respeta y se descartan repetidos', () => {

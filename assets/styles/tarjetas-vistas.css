@@ -1234,7 +1234,7 @@
     padding: 0;
 }
 
-/* Hasta 12 atajos, 6 por fila */
+/* 6 por fila en móvil (en escritorio hasta 10, ver responsivo-movimiento.css) */
 .atajos-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -1248,11 +1248,11 @@
     min-width: 0;
     height: var(--touch-target);
     padding: 0;
-    border: 1px solid var(--border);
+    border: none;
     border-radius: var(--radius-md);
     background: transparent;
     touch-action: manipulation;
-    transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+    transition: background var(--dur-fast), color var(--dur-fast);
 }
 
 .atajo-btn:active:not(:disabled) {

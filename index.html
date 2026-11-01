@@ -472,23 +472,6 @@
                     </div><!-- #modo-contenedor -->
                 </div><!-- #form-registro -->
             </div>
-            <div class="card animated-card" id="card-atajos">
-                <h2 class="no-margin card-atajos-header" tabindex="0" title="Mantener presionado para reordenar">
-                    <span class="card-section-title">
-                        <svg class="icon">
-                            <use href="#icon-bolt" />
-                        </svg> Atajos
-                    </span>
-                    <button class="icon-btn" id="btn-atajos-agregar" title="Agregar o quitar atajos">
-                        <svg class="icon">
-                            <use href="#icon-plus" />
-                        </svg>
-                    </button>
-                </h2>
-                <div class="atajos-grid" id="atajos-grid" role="group" aria-label="Atajos rápidos"></div>
-            </div>
-        </div>
-        <div class="right-column" id="right-column">
             <div class="card animated-card" id="card-estadisticas">
                 <h2 class="no-margin card-header-clickable" tabindex="0" role="button"
                     title="Alternar Estadísticas (mantener presionado para reordenar)">
@@ -573,6 +556,8 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="right-column" id="right-column">
         <div class="card animated-card" id="card-historico">
             <h2 class="no-margin card-header-clickable" tabindex="0" role="button"
                 title="Alternar Registros (mantener presionado para reordenar)">
@@ -650,6 +635,21 @@
                 </div><!-- .detalle-inner -->
             </div><!-- #contenido-historico -->
         </div>
+            <div class="card animated-card" id="card-atajos">
+                <h2 class="no-margin card-atajos-header" tabindex="0" title="Mantener presionado para reordenar">
+                    <span class="card-section-title">
+                        <svg class="icon">
+                            <use href="#icon-bolt" />
+                        </svg> Atajos
+                    </span>
+                    <button class="icon-btn" id="btn-atajos-agregar" title="Agregar o quitar atajos">
+                        <svg class="icon">
+                            <use href="#icon-plus" />
+                        </svg>
+                    </button>
+                </h2>
+                <div class="atajos-grid" id="atajos-grid" role="group" aria-label="Atajos rápidos"></div>
+            </div>
         </div><!-- #right-column -->
     </div>
     <div class="modal modal-scrollable" id="modal-config" role="dialog" aria-modal="true"
@@ -881,16 +881,6 @@
                                         <span class="toggle-switch" aria-hidden="true"></span>
                                     </button>
                                 </div>
-                                <div class="orden-card-item" id="orden-item-atajos">
-                                    <button id="btn-toggle-card-atajos" class="drag-handle flex-1"
-                                        data-card="atajos">
-                                        <svg class="icon">
-                                            <use href="#icon-bolt" />
-                                        </svg>
-                                        <span>Atajos</span>
-                                        <span class="toggle-switch" aria-hidden="true"></span>
-                                    </button>
-                                </div>
                                 <div class="orden-card-item" id="orden-item-estadisticas">
                                     <button id="btn-toggle-card-estadisticas" class="drag-handle flex-1"
                                         data-card="estadisticas">
@@ -908,6 +898,16 @@
                                             <use href="#icon-list" />
                                         </svg>
                                         <span>Registros</span>
+                                        <span class="toggle-switch" aria-hidden="true"></span>
+                                    </button>
+                                </div>
+                                <div class="orden-card-item" id="orden-item-atajos">
+                                    <button id="btn-toggle-card-atajos" class="drag-handle flex-1"
+                                        data-card="atajos">
+                                        <svg class="icon">
+                                            <use href="#icon-bolt" />
+                                        </svg>
+                                        <span>Atajos</span>
                                         <span class="toggle-switch" aria-hidden="true"></span>
                                     </button>
                                 </div>
@@ -1318,7 +1318,7 @@
                             <p><strong>Tarjetas y posición:</strong> mostrá u ocultá Fichar, Atajos, Estadísticas y
                                 Registros, y arrastralas para cambiar el orden. En PC las dos últimas quedan en la
                                 columna derecha.</p>
-                            <p><strong>Atajos:</strong> la tarjeta reúne hasta 12 botones (6 por fila). Con el botón
+                            <p><strong>Atajos:</strong> la tarjeta reúne hasta 20 botones (6 por fila en el celular y 10 en PC). Con el botón
                                 <strong>+</strong> elegís cuáles mostrar: subir y bajar (a Gist si lo configuraste, o a
                                 un archivo), deshacer y rehacer, cambiar el tema, la ayuda, los ajustes, las
                                 notificaciones, reducir animaciones, el estilo del calendario, los perfiles, fichar,
@@ -2031,7 +2031,7 @@
                     <div class="settings-list" id="lista-atajos-opciones"></div>
                 </div>
                 <div class="config-hint-text">
-                    Elegí hasta 12 atajos. Se muestran en la tarjeta en el orden en que los agregás.
+                    Elegí hasta 20 atajos. Se muestran en la tarjeta en el orden en que los agregás.
                 </div>
             </div>
             <div class="modal-panel-footer">

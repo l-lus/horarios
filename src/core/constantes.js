@@ -58,7 +58,7 @@ export const STORAGE_KEYS = Object.freeze({
 
 // Tarjetas que se pueden ocultar y reordenar, en su orden por defecto (la de fichaje con la barra de progreso va siempre arriba y no cuenta).
 // En escritorio las dos últimas pasan a la columna derecha.
-export const CARDS = Object.freeze(['registrar', 'atajos', 'estadisticas', 'historico']);
+export const CARDS = Object.freeze(['registrar', 'estadisticas', 'historico', 'atajos']);
 
 // Valores por defecto de opciones booleanas que se leen desde varios módulos (un solo lugar para que no se desincronicen)
 export const DEFAULTS = Object.freeze({

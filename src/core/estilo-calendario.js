@@ -12,6 +12,7 @@ export const ESTILOS_CALENDARIO = Object.freeze([
     { id: 'aro-grueso', label: 'Aro grueso' },
     { id: 'relleno-aro', label: 'Relleno con aro' },
     { id: 'subrayado', label: 'Subrayado' },
+    { id: 'punto', label: 'Punto' },
     { id: 'solo-contorno', label: 'Solo contorno' }
 ]);
 

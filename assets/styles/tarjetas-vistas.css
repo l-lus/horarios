@@ -816,6 +816,29 @@
     outline-offset: -1.5px;
 }
 
+/* Punto: sin círculo, el número con un puntito del color del día debajo; hoy lleva el número del color del día y en negrita */
+:root[data-estilo-calendario="punto"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+    background: transparent;
+}
+
+:root[data-estilo-calendario="punto"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue)::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 19%;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--cal-color);
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+:root[data-estilo-calendario="punto"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {
+    color: color-mix(in srgb, var(--cal-color) 55%, var(--text-main));
+    outline: none;
+}
+
 /* Solo contorno: aro fino y el número sin color; el color lo lleva únicamente el borde. Hoy va relleno */
 :root[data-estilo-calendario="solo-contorno"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
     background: transparent;

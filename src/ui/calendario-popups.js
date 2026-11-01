@@ -3,13 +3,13 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { html, icono } from '../core/html.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { _crearPopupFlotante } from './popups.js';
+import { EdicionRegistro } from '../services/edicion-registro.js';
 
 // ====================================================================
 //              UI CALENDAR POPUPS (detalle del día y de la semana)
@@ -123,7 +123,7 @@ function _popupCalendario(event, registroId, asignaciones = null) {
 
     popup.querySelector('#_cal-popup-btn-edit')?.addEventListener('click', () => {
         cerrar();
-        GestionDatos.editarRegistro(reg.id);
+        EdicionRegistro.editar(reg.id);
     });
     popup.querySelector('#_cal-popup-btn-grupo')?.addEventListener('click', () => {
         cerrar();
@@ -330,7 +330,7 @@ function _onclickCalendarioDia(event, registroId, asignaciones = null) {
     if (hoverActivo) {
         _cerrarPopupCalendario();
         clearTimeout(_popupCalendarioHoverTimer);
-        GestionDatos.editarRegistro(registroId);
+        EdicionRegistro.editar(registroId);
     } else {
         if (_popupCalendarioEl?.dataset.registroId === registroId) {
             _cerrarPopupCalendario();

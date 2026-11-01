@@ -29,6 +29,18 @@ function limpiarTexto(str, maxLength = SECURITY_LIMITS.MAX_STRING_LENGTH, { salt
     return str.replace(control, '').trim().substring(0, maxLength);
 }
 
+/**
+ * Fecha y horas de un formulario de registro (fichaje o edición), limpias para validar después con su regex.
+ * @param {{ fecha: string, entrada: string, salida: string }} campos valores crudos del puerto del formulario
+ */
+function limpiarCamposHorario(campos) {
+    return {
+        fecha: limpiarTexto(campos.fecha, 10),
+        entrada: limpiarTexto(String(campos.entrada ?? '').trim(), 5),
+        salida: limpiarTexto(String(campos.salida ?? '').trim(), 5),
+    };
+}
+
 function sanitizeNotas(str, trim = false) {
     if (typeof str !== 'string') return '';
     const r = str.replace(REGEX_PATTERNS.NOTAS, '').substring(0, SECURITY_LIMITS.MAX_NOTAS_LENGTH);
@@ -225,6 +237,7 @@ export const SeguridadYUtils = {
     SECURITY_LIMITS,
     REGEX_PATTERNS,
     limpiarTexto,
+    limpiarCamposHorario,
     sanitizeNotas,
     normalizarNotas,
     escapeHtml,

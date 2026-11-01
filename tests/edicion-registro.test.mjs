@@ -15,7 +15,7 @@ globalThis.matchMedia = () => ({ matches: false, addEventListener: () => { } });
 
 const { EstadoApp } = await import('../src/services/estado-app.js');
 const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
-const { GestionDatos: Edicion } = await import('../src/services/gestion-datos.js');
+const { EdicionRegistro } = await import('../src/services/edicion-registro.js');
 GestorPerfiles.inicializar();
 
 const reg = (id, fecha, entrada, salida, extra = {}) => {
@@ -50,7 +50,7 @@ function editar(id, registros, form = {}) {
         setBloqueoEdicion: () => { }, abrirModal: () => { }, verificarBloqueoCredito: () => { },
         actualizarEstadoBotonTimerMain: () => { }, actualizarUI: () => { },
     });
-    Edicion.editarRegistro(id);
+    EdicionRegistro.editar(id);
     // el formulario arranca con lo que poblar() le cargó; cada test cambia solo lo que necesita
     const p = estado.poblado;
     datosForm = p ? {
@@ -71,7 +71,7 @@ test('Edición: abrir el registro carga el formulario con sus datos', () => {
 
 test('Edición: guardar con cambios actualiza horas y notas (normalizadas) y cierra el modal', async () => {
     const { toasts, estado } = editar('r1', [reg('r1', '2026-10-20', '09:00', '17:00')], { salida: '18:00', notas: ' Reunión <b> ' });
-    await Edicion.guardarEdicion();
+    await EdicionRegistro.guardar();
     const r = EstadoApp.registroPorId('r1');
     assert.equal(r.salida, '18:00');
     assert.equal(r.total, 9);
@@ -83,7 +83,7 @@ test('Edición: guardar con cambios actualiza horas y notas (normalizadas) y cie
 test('Edición: sin cambios avisa y no toca el registro', async () => {
     const original = reg('r1', '2026-10-20', '09:00', '17:00');
     const { toasts, estado } = editar('r1', [original]);
-    await Edicion.guardarEdicion();
+    await EdicionRegistro.guardar();
     assert.deepEqual(toasts.at(-1), ['Sin cambios', 'info']);
     assert.equal(estado.cerrado, 1);
     assert.equal(EstadoApp.registroPorId('r1').total, 8);
@@ -91,7 +91,7 @@ test('Edición: sin cambios avisa y no toca el registro', async () => {
 
 test('Edición: rechaza mover el registro a una fecha que ya tiene otro', async () => {
     const { toasts, estado } = editar('r1', [reg('r1', '2026-10-20', '09:00', '17:00'), reg('r2', '2026-10-21', '09:00', '17:00')], { fecha: '2026-10-21' });
-    await Edicion.guardarEdicion();
+    await EdicionRegistro.guardar();
     assert.deepEqual(toasts.at(-1), ['Ya existe otro registro para esa fecha', 'error']);
     assert.equal(estado.cerrado, 0);
     assert.equal(EstadoApp.registroPorId('r1').fecha, '2026-10-20');
@@ -99,14 +99,14 @@ test('Edición: rechaza mover el registro a una fecha que ya tiene otro', async 
 
 test('Edición: rechaza un tiempo fuera mayor al tiempo trabajado', async () => {
     const { toasts } = editar('r1', [reg('r1', '2026-10-20', '09:00', '17:00')], { tiempoFuera: '09:00' });
-    await Edicion.guardarEdicion();
+    await EdicionRegistro.guardar();
     assert.deepEqual(toasts.at(-1), ['El tiempo fuera no puede superar el tiempo efectivo', 'error']);
     assert.equal(EstadoApp.registroPorId('r1').tiempoFuera, null);
 });
 
 test('Edición: con salida temprana activa guarda el crédito que falta para el objetivo', async () => {
     const { toasts } = editar('r1', [reg('r1', '2026-10-20', '09:00', '15:00')], { creditoActivo: true });
-    await Edicion.guardarEdicion();
+    await EdicionRegistro.guardar();
     const r = EstadoApp.registroPorId('r1');
     assert.equal(r.credito, '02:00');
     assert.equal(r.total, 8);
@@ -115,7 +115,7 @@ test('Edición: con salida temprana activa guarda el crédito que falta para el 
 
 test('Edición: vaciar entrada y salida elimina el registro', async () => {
     const { toasts, estado } = editar('r1', [reg('r1', '2026-10-20', '09:00', '17:00')], { entrada: '', salida: '' });
-    await Edicion.guardarEdicion();
+    await EdicionRegistro.guardar();
     assert.equal(EstadoApp.registros().length, 0);
     assert.deepEqual(toasts.at(-1), ['Registro eliminado (vacío)', 'info']);
     assert.equal(estado.cerrado, 1);
@@ -124,11 +124,11 @@ test('Edición: vaciar entrada y salida elimina el registro', async () => {
 test('Edición: el día a compensar no puede ser posterior al compensatorio ni un día sin excedente', async () => {
     const comp = () => reg('c1', '2026-10-22', '18:18', '18:18');
     let { toasts } = editar('c1', [comp(), reg('r1', '2026-10-23', '09:00', '17:00')], { referencia: '2026-10-23' });
-    await Edicion.guardarEdicion();
+    await EdicionRegistro.guardar();
     assert.deepEqual(toasts.at(-1), ['El día a compensar no puede ser posterior al compensatorio', 'error']);
 
     ({ toasts } = editar('c1', [comp(), reg('r1', '2026-10-20', '09:00', '17:00')], { referencia: '2026-10-20' }));
-    await Edicion.guardarEdicion();
+    await EdicionRegistro.guardar();
     assert.deepEqual(toasts.at(-1), ['Ese día no tiene excedente disponible (o ya fue usado por otro compensatorio)', 'error']);
     assert.equal(EstadoApp.registroPorId('c1').referenciaCompensatorio, undefined);
 });
@@ -136,17 +136,17 @@ test('Edición: el día a compensar no puede ser posterior al compensatorio ni u
 test('Edición: referencia automática del compensatorio y limpiarla', () => {
     const regs = [reg('c1', '2026-10-22', '18:18', '18:18'), reg('r1', '2026-10-20', '08:00', '18:00')];   // r1: 2 h de excedente
     let { estado } = editar('c1', regs);
-    Edicion.pegarReferenciaAutomatica();
+    EdicionRegistro.pegarReferencia();
     assert.equal(estado.referencia, '2026-10-20');
 
     ({ estado } = editar('c1', regs, { referencia: '2026-10-20' }));
-    Edicion.pegarReferenciaAutomatica();
+    EdicionRegistro.pegarReferencia();
     assert.equal(estado.referencia, '');
 });
 
 test('Edición: eliminar desde el modal borra el registro y cierra', async () => {
     const { toasts, estado } = editar('r1', [reg('r1', '2026-10-20', '09:00', '17:00'), reg('r2', '2026-10-21', '09:00', '17:00')]);
-    await Edicion.eliminarRegistroActual();
+    await EdicionRegistro.eliminar();
     assert.deepEqual(EstadoApp.registros().map(r => r.id), ['r2']);
     assert.deepEqual(toasts.at(-1), ['Registro eliminado', 'success']);
     assert.equal(estado.cerrado, 1);

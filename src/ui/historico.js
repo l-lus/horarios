@@ -16,6 +16,7 @@ import { _scrollA } from './scroll.js';
 import { Animaciones } from './animaciones.js';
 import { icono, html, montar } from '../core/html.js';
 import { HistoricoItems } from './historico-items.js';
+import { EdicionRegistro } from '../services/edicion-registro.js';
 
 // ====================================================================
 //                     UI HISTORY MODULE
@@ -296,7 +297,7 @@ function _initListenerAccionesLista(lista) {
         if (!target) return;
         if (target.dataset.accion === 'editar-registro') {
             const id = target.dataset.registroId;
-            if (id) GestionDatos.editarRegistro(id);
+            if (id) EdicionRegistro.editar(id);
         } else if (target.dataset.accion === 'editar-grupo') {
             const grupoData = HistoricoItems.grupoDeCabecera(target);
             if (!grupoData) return;
@@ -405,9 +406,9 @@ function bindEventos() {
 
     $('btn-toggle-credito')?.addEventListener('click', () => toggleCredito());
     $('btn-lock-toggle')?.addEventListener('click', () => toggleBloqueoEdicion());
-    $('btn-edit-referencia-compensatorio')?.addEventListener('click', () => GestionDatos.pegarReferenciaAutomatica());
-    document.querySelector('#modal-editar .btn-edit')?.addEventListener('click', () => GestionDatos.guardarEdicion());
-    document.querySelector('#modal-editar .btn-delete')?.addEventListener('click', () => GestionDatos.eliminarRegistroActual());
+    $('btn-edit-referencia-compensatorio')?.addEventListener('click', () => EdicionRegistro.pegarReferencia());
+    document.querySelector('#modal-editar .btn-edit')?.addEventListener('click', () => EdicionRegistro.guardar());
+    document.querySelector('#modal-editar .btn-delete')?.addEventListener('click', () => EdicionRegistro.eliminar());
     document.querySelector('#modal-editar .btn-cancel')?.addEventListener('click', () => cerrarEdicion());
 
     $('btn-lock-grupo-toggle')?.addEventListener('click', () => toggleBloqueoEdicionGrupo());

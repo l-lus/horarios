@@ -279,45 +279,7 @@ function _initDatosYConfig() {
     setFondoCard(config.fondoCard || 'golden-gate');
     setModoEstadisticas(config.modoEstadisticas || 'mensual');
 
-    const perfilActual = GestorPerfiles.obtenerDatosPerfil();
-    EstadoApp.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
-    const hdPerfil = parseFloat(perfilActual.horasDiarias);
-    EstadoApp.setHorasDiarias(Number.isFinite(hdPerfil) && hdPerfil >= 0 && hdPerfil <= 24 ? hdPerfil : 7);
-    const historialGuardado = Compensatorios.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
-    GestionDatos.setHistorialDiasHabiles(
-        historialGuardado && historialGuardado.length > 0
-            ? historialGuardado
-            : [{ desde: '0001-01-01', dias: EstadoApp.diasHabiles() }]
-    );
-    EstadoApp.registros().splice(0, EstadoApp.registros().length, ...(perfilActual.registros || []));
-
-    const historialCargado = GestorHistorial.loadFromLocalStorage();
-    if (historialCargado) {
-        const estadoActual = GestorHistorial.getCurrentState();
-        if (estadoActual !== null && estadoActual !== undefined) {
-            EstadoApp.registros().splice(0, EstadoApp.registros().length, ...estadoActual);
-        } else {
-            console.warn('Historial corrupto, descartado. Usando registros del perfil.');
-            GestorHistorial.clear();
-        }
-    }
-    GestionDatos.recalcularTotalesEnMemoria();
-    if (!historialCargado) {
-        GestorHistorial.saveState(EstadoApp.registros());
-    }
-
-    const migrados = Compensatorios.migrarObjetivoHorasFaltante();
-    if (migrados > 0) {
-        console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${EstadoApp.horasDiarias()}h).`);
-        GestorHistorial.parchearRegistrosEnHistorial(r => {
-            if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
-                r.objetivoHoras = EstadoApp.horasDiarias();
-                return true;
-            }
-            return false;
-        });
-        if (GestorPerfiles) GestorPerfiles.guardarDatosPerfilActual();
-    }
+    GestionDatos.cargarPerfilActivo();
 
     GestorHistorial.updateButtons();
 }

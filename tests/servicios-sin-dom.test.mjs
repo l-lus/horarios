@@ -335,3 +335,40 @@ test('ImportarExportar: archivo y Gist comparten validación (prepararRespaldo) 
 
     assert.deepEqual(await IE.restaurarRespaldo(data, importados, 'merge'), { ok: false, vacio: true });
 });
+
+test('GestionDatos.cargarPerfilActivo repara lo guardado: descarta registros sin fecha, limpia horas inválidas y días hábiles', async () => {
+    const { GestionDatos } = await import('../src/services/gestion-datos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    const { GestorHistorial } = await import('../src/services/gestor-historial.js');
+    GestorHistorial.clear();
+    const perfil = GestorPerfiles.obtenerDatosPerfil();
+    const original = { ...perfil };
+    Object.assign(perfil, {
+        diasHabiles: [5, 1, 1, 'x', 9, 3],
+        horasDiarias: 'mucho',
+        registros: [
+            { id: 'dddddddddd1', fecha: '2026-10-20', entrada: '09:00', salida: '17:00', tiempoFuera: undefined, horas: 0, minutos: 0, total: 0, raro: '<img>' },
+            { id: 'dddddddddd1', fecha: '2026-10-21', entrada: '25:99', salida: null, horas: 'x' },
+            { id: 'dddddddddd3', fecha: 'no-fecha', entrada: '09:00' },
+            'basura',
+        ],
+    });
+    try {
+        GestionDatos.cargarPerfilActivo();
+        assert.deepEqual(EstadoApp.diasHabiles(), [1, 3, 5]);
+        assert.equal(EstadoApp.horasDiarias(), 7);
+        const regs = EstadoApp.registros();
+        assert.equal(regs.length, 2);
+        const r20 = EstadoApp.registroPorFecha('2026-10-20');
+        assert.equal(r20.raro, undefined);
+        assert.equal(r20.total, 8);   // las horas se recalculan al cargar
+        const r21 = EstadoApp.registroPorFecha('2026-10-21');
+        assert.equal(r21.entrada, null);
+        assert.notEqual(r21.id, r20.id);
+    } finally {
+        Object.keys(perfil).forEach(k => delete perfil[k]);
+        Object.assign(perfil, original);
+        GestorHistorial.clear();
+    }
+});

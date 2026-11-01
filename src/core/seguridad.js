@@ -178,7 +178,62 @@ function validarRegistroSeguro(r) {
     return true;
 }
 
+const _horaONull = (v) => (typeof v === 'string' && TiempoUtils.validarHora(v)) ? v : null;
+const _numeroEnRango = (v, max) => (Number.isFinite(v) && v >= 0 && v <= max) ? v : 0;
+
+/**
+ * Registro leído del almacenamiento propio (perfil o pila de deshacer): a diferencia de un respaldo importado no se
+ * descarta por detalles, se repara. Solo se descarta (null) si no es un objeto o no tiene una fecha válida, porque
+ * sin fecha no se puede ubicar en ninguna vista. Las propiedades desconocidas se quitan y las horas inválidas quedan en null.
+ */
+function repararRegistroGuardado(r) {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return null;
+    if (typeof r.fecha !== 'string' || !TiempoUtils.validarFecha(r.fecha)) return null;
+    /** @type {Record<string, any>} */
+    const reparado = {
+        id: (typeof r.id === 'string' && REGEX_PATTERNS.ID.test(r.id)) ? r.id : generarIDSeguro(),
+        fecha: r.fecha,
+        entrada: _horaONull(r.entrada),
+        salida: _horaONull(r.salida),
+        tiempoFuera: _horaONull(r.tiempoFuera),
+        horas: _numeroEnRango(r.horas, 24),
+        minutos: _numeroEnRango(r.minutos, 59),
+        total: _numeroEnRango(r.total, 24),
+    };
+    const credito = _horaONull(r.credito);
+    if (credito) reparado.credito = credito;
+    if (typeof r.notas === 'string' && r.notas) reparado.notas = r.notas.substring(0, SECURITY_LIMITS.MAX_NOTAS_LENGTH);
+    if (Number.isFinite(r.objetivoHoras) && r.objetivoHoras >= 0 && r.objetivoHoras <= 24) reparado.objetivoHoras = r.objetivoHoras;
+    if (typeof r.referenciaCompensatorio === 'string' && TiempoUtils.validarFecha(r.referenciaCompensatorio)) reparado.referenciaCompensatorio = r.referenciaCompensatorio;
+    return reparado;
+}
+
+/** Repara una lista guardada: descarta lo irrecuperable y regenera ids repetidos. */
+function repararRegistrosGuardados(lista) {
+    if (!Array.isArray(lista)) return [];
+    const ids = new Set();
+    const reparados = [];
+    for (const r of lista) {
+        const ok = repararRegistroGuardado(r);
+        if (!ok) continue;
+        if (ids.has(ok.id)) ok.id = generarIDSeguro();
+        ids.add(ok.id);
+        reparados.push(ok);
+    }
+    return reparados;
+}
+
+/** Días hábiles guardados: enteros 0–6 sin repetir y ordenados; null si no queda ninguno. */
+function sanitizarDiasHabiles(dias) {
+    if (!Array.isArray(dias)) return null;
+    const limpios = [...new Set(dias.filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b);
+    return limpios.length > 0 ? limpios : null;
+}
+
 export const SeguridadYUtils = {
+    repararRegistroGuardado,
+    repararRegistrosGuardados,
+    sanitizarDiasHabiles,
     SECURITY_LIMITS,
     REGEX_PATTERNS,
     sanitizeString,

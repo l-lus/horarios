@@ -46,6 +46,56 @@ function cargarConfiguracion() {
     };
 }
 
+/**
+ * Carga en EstadoApp el perfil activo (configuración y registros) y, si sigue vigente, la pila de deshacer.
+ * Lo guardado se repara antes de usarlo (ver SeguridadYUtils.repararRegistrosGuardados): un perfil corrupto
+ * o editado a mano no llega tal cual a los cálculos.
+ */
+function cargarPerfilActivo() {
+    const perfil = GestorPerfiles.obtenerDatosPerfil() || {};
+    EstadoApp.setDiasHabiles(S.sanitizarDiasHabiles(perfil.diasHabiles) ?? [1, 2, 3, 4, 5]);
+    const horas = parseFloat(perfil.horasDiarias);
+    EstadoApp.setHorasDiarias(Number.isFinite(horas) && horas >= 0 && horas <= 24 ? horas : 7);
+    const historialDias = Compensatorios.sanitizarHistorialDiasHabiles(perfil.historialDiasHabiles);
+    GestionDatos.setHistorialDiasHabiles(
+        historialDias && historialDias.length > 0 ? historialDias : [{ desde: '0001-01-01', dias: EstadoApp.diasHabiles() }]
+    );
+
+    const guardados = Array.isArray(perfil.registros) ? perfil.registros : [];
+    const registros = S.repararRegistrosGuardados(guardados);
+    if (registros.length !== guardados.length) {
+        console.warn(`Perfil: ${guardados.length - registros.length} registro(s) guardado(s) sin fecha válida, descartado(s).`);
+    }
+    EstadoApp._setRegistros(registros);
+
+    const historialCargado = GestorHistorial.loadFromLocalStorage();
+    if (historialCargado) {
+        const estadoActual = GestorHistorial.getCurrentState();
+        if (Array.isArray(estadoActual)) {
+            EstadoApp._setRegistros(S.repararRegistrosGuardados(estadoActual));
+        } else {
+            console.warn('Historial corrupto, descartado. Usando registros del perfil.');
+            GestorHistorial.clear();
+        }
+    }
+    ordenarRegistros();
+    GestionDatos.recalcularTotalesEnMemoria();
+    if (!historialCargado) GestorHistorial.saveState(EstadoApp.registros());
+
+    const migrados = Compensatorios.migrarObjetivoHorasFaltante();
+    if (migrados > 0) {
+        console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${EstadoApp.horasDiarias()}h).`);
+        GestorHistorial.parchearRegistrosEnHistorial(r => {
+            if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
+                r.objetivoHoras = EstadoApp.horasDiarias();
+                return true;
+            }
+            return false;
+        });
+        GestorPerfiles.guardarDatosPerfilActual();
+    }
+}
+
 function validarFormulario() {
     let valido = true;
     const notify = EstadoApp._notify();
@@ -560,6 +610,7 @@ export const GestionDatos = {
         });
     },
     cargarConfiguracion,
+    cargarPerfilActivo,
     agregarRegistro,
     eliminarRegistroActual,
     editarRegistro,

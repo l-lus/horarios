@@ -1,6 +1,5 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { SeguridadYUtils } from '../core/seguridad.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from './gestor-perfiles.js';
 import { TiposRegistro } from './tipos-registro.js';
@@ -193,18 +192,11 @@ function _infoVigente(info) {
 }
 
 function obtenerInfoActiva(perfilId) {
-    const raw = perfilId
-        ? Almacenamiento.getItem(`${STORAGE_KEYS.PUSH_INFO_ACTIVA}_${perfilId}`)
-        : (Almacenamiento.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, true)
-            ?? Almacenamiento.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, false));
-    if (!raw) return null;
-    try {
-        const info = JSON.parse(raw, SeguridadYUtils.reviverJSONSeguro);
-        if (!info || !_infoVigente(info)) return null;
-        return info;
-    } catch {
-        return null;
-    }
+    const info = perfilId
+        ? Almacenamiento.getObject(`${STORAGE_KEYS.PUSH_INFO_ACTIVA}_${perfilId}`)
+        : (Almacenamiento.getObject(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, true)
+            ?? Almacenamiento.getObject(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, false));
+    return info && typeof info === 'object' && _infoVigente(info) ? info : null;
 }
 async function _asegurarSuscripcion() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;

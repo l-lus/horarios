@@ -47,6 +47,14 @@ test('SeguridadYUtils.limpiarTexto: quita caracteres de control y conserva comil
     assert.equal(limpiarTexto(null), '');
 });
 
+test('SeguridadYUtils.normalizarNotas: lista blanca, largo máximo y vacía → null', () => {
+    const { normalizarNotas, SECURITY_LIMITS } = SeguridadYUtils;
+    assert.equal(normalizarNotas(' Reunión <b>&amp; "x" '), 'Reunión bamp x');
+    assert.equal(normalizarNotas('a'.repeat(50)).length, SECURITY_LIMITS.MAX_NOTAS_LENGTH);
+    assert.equal(normalizarNotas('<>'), null);
+    assert.equal(normalizarNotas(undefined), null);
+});
+
 test('EventosApp: suscripción, desuscripción y registro de handlers', () => {
     let recibido = null;
     const off = EventosApp.on('test:evento', (payload) => { recibido = payload; });

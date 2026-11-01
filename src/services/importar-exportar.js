@@ -203,7 +203,7 @@ function normalizarRegistrosImportados(rawList, calcularHorasFn) {
             minutos: Math.max(0, Math.min(59, parseFloat(r.minutos) || 0)),
             total: Math.max(0, Math.min(24, parseFloat(r.total) || 0)),
             credito: validarHora(r.credito),
-            notas: (r.notas && typeof r.notas === 'string') ? S.sanitizeString(r.notas, S.SECURITY_LIMITS.MAX_NOTAS_LENGTH) || null : null,
+            notas: S.normalizarNotas(r.notas),
             objetivoHoras: (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras))
                 ? Math.max(0, Math.min(24, r.objetivoHoras))
                 : undefined,

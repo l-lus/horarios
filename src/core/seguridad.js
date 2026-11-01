@@ -51,6 +51,11 @@ function sanitizeNotas(str, trim = false) {
     return trim ? r.trim() : r;
 }
 
+/** Única regla para guardar notas (edición, importación y Gist): lista blanca + largo máximo; vacía → null. */
+function normalizarNotas(str) {
+    return sanitizeNotas(str, true) || null;
+}
+
 function escapeHtml(s) {
     return s == null ? '' : String(s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -179,6 +184,7 @@ export const SeguridadYUtils = {
     sanitizeString,
     limpiarTexto,
     sanitizeNotas,
+    normalizarNotas,
     escapeHtml,
     generarIDSeguro,
     calcularHashSHA256,

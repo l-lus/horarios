@@ -433,6 +433,24 @@
 .linea-etiqueta--arriba.positivo { color: var(--c-green); }
 .linea-etiqueta--arriba.negativo { color: var(--c-red); }
 
+/* La hora de salida con buffer lleva al comienzo el mismo triángulo que el texto del buffer semanal: ▲ si el buffer suma, ▼ si resta (del color de la etiqueta) */
+#linea-et-buffer::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: var(--space-xs);
+    background-color: currentColor;
+}
+
+#linea-et-buffer.positivo::before {
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+#linea-et-buffer.negativo::before {
+    clip-path: polygon(50% 100%, 0% 0%, 100% 0%);
+}
+
 .stats-card.conteo-inicial .progress-punto {
     transition: left var(--dur-conteo) var(--ease-conteo), opacity var(--dur-fast) ease, border-color var(--dur-slow) ease, background var(--dur-slow) ease;
 }

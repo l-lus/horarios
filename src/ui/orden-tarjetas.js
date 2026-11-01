@@ -309,8 +309,8 @@ function evaluarNuevoOrdenCards(arrastrado, visibles, clientX, clientY) {
     return nuevaLista;
 }
 
-// Encabezados desde los que se arrastra cada tarjeta (el de fichaje y el de atajos tienen su propia clase)
-const _SELECTOR_ENCABEZADOS = '#card-registrar .card-registrar-header, #card-atajos .card-atajos-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable';
+// Desde dónde se arrastra cada tarjeta: su encabezado, o la tarjeta entera en la de atajos (no tiene encabezado)
+const _SELECTOR_ENCABEZADOS = '#card-registrar .card-registrar-header, #card-atajos, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable';
 const _SELECTOR_CARDS = '#card-registrar, #card-atajos, #card-estadisticas, #card-historico';
 
 function iniciarDragTarjetas() {
@@ -334,14 +334,14 @@ function iniciarDragTarjetas() {
         elegir: (e) => {
             const el = e.target instanceof Element ? e.target : null;
             if (!el) return null;
-            if (el.closest('#btn-timer-main, #btn-atajos-agregar')) return null;
+            if (el.closest('#btn-timer-main')) return null;
 
             const header = el.closest(_SELECTOR_ENCABEZADOS);
             if (!header) return null;
 
             return header.closest(_SELECTOR_CARDS);
         },
-        capturar: (card) => card.querySelector('.card-registrar-header, .card-atajos-header, .card-header-clickable') || card,
+        capturar: (card) => card.querySelector('.card-registrar-header, .card-header-clickable') || card,
         alEmpezar: (card) => {
             ordenInicial = obtenerOrdenCards();
             ordenEnCurso = ordenInicial;
@@ -401,7 +401,8 @@ function iniciarDragTarjetas() {
             reubicar(nuevaLista, card);
             Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenEnCurso, true);
             ordenEnCurso = null;
-            header.focus();
+            // en la tarjeta de atajos el foco estaba en uno de sus botones
+            (header === card ? /** @type {HTMLElement} */ (e.target) : header).focus();
         });
     });
 }

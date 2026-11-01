@@ -89,7 +89,7 @@ const CATALOGO = [
     {
         id: 'estilo-calendario', nombre: 'Estilo del calendario', descripcion: 'Pasa al siguiente estilo de los días con registro',
         estado: () => ({ icono: '#icon-calendar-simple', titulo: `Estilo del calendario: ${EstiloCalendario.etiqueta()}` }),
-        accion: () => { EstiloCalendario.siguiente(); mostrarToast(`Estilo del calendario: ${EstiloCalendario.etiqueta()}`, 'info'); }
+        accion: () => EstiloCalendario.siguiente()
     },
     {
         id: 'perfiles', nombre: 'Perfiles', descripcion: 'Abre el selector de perfiles',
@@ -134,7 +134,7 @@ function _aplicarEstado(btn, def) {
 
 // Actualiza ícono, título y desactivado de los botones ya dibujados (sin recrearlos, para no perder el foco del teclado)
 function actualizarEstados() {
-    const grilla = $('atajos-grid');
+    const grilla = $('atajos-botones');
     if (!grilla) return;
     grilla.querySelectorAll('button[data-atajo]').forEach(btn => {
         const def = _porId(/** @type {HTMLElement} */ (btn).dataset.atajo);
@@ -143,13 +143,9 @@ function actualizarEstados() {
 }
 
 function renderizar() {
-    const grilla = $('atajos-grid');
+    const grilla = $('atajos-botones');
     if (!grilla) return;
     const defs = obtenerAtajos().flatMap(id => _porId(id) ?? []);
-    if (!defs.length) {
-        montar(grilla, html`<p class="atajos-vacio">Todavía no elegiste atajos. Tocá + para agregarlos.</p>`);
-        return;
-    }
     montar(grilla, html`${defs.map(def => html`<button class="atajo-btn" id="atajo-${def.id}" data-atajo="${def.id}" type="button">${icono(def.estado().icono)}</button>`)}`);
     actualizarEstados();
 }
@@ -188,7 +184,7 @@ function _alternarDesdeSelector(id) {
 }
 
 function bindEventos() {
-    $('atajos-grid')?.addEventListener('click', (e) => {
+    $('atajos-botones')?.addEventListener('click', (e) => {
         const btn = /** @type {HTMLElement} */ (e.target).closest('button[data-atajo]');
         if (!btn) return;
         const def = _porId(/** @type {HTMLElement} */ (btn).dataset.atajo);

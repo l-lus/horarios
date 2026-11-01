@@ -636,19 +636,15 @@
             </div><!-- #contenido-historico -->
         </div>
             <div class="card animated-card" id="card-atajos">
-                <h2 class="no-margin card-atajos-header" tabindex="0" title="Mantener presionado para reordenar">
-                    <span class="card-section-title">
-                        <svg class="icon">
-                            <use href="#icon-bolt" />
-                        </svg> Atajos
-                    </span>
-                    <button class="icon-btn" id="btn-atajos-agregar" title="Agregar o quitar atajos">
+                <div class="atajos-grid" role="group" aria-label="Atajos rápidos">
+                    <button class="atajo-btn atajo-agregar" id="btn-atajos-agregar" type="button"
+                        title="Agregar o quitar atajos" aria-label="Agregar o quitar atajos">
                         <svg class="icon">
                             <use href="#icon-plus" />
                         </svg>
                     </button>
-                </h2>
-                <div class="atajos-grid" id="atajos-grid" role="group" aria-label="Atajos rápidos"></div>
+                    <div class="atajos-botones" id="atajos-botones"></div>
+                </div>
             </div>
         </div><!-- #right-column -->
     </div>

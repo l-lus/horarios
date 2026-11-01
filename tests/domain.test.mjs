@@ -380,6 +380,7 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
     // cada hito lleva su descripción para lectores de pantalla (con el nombre abreviado del día, no la inicial)
     assert.deepEqual(vistaFranjas.hitosSemana.map(h => h.descripcion), ['lun cumplido', 'mar con faltante', 'mié día especial', 'jue–vie sin registro']);
     assert.equal(vistaFranjas.colorInicioSemana, 'green');
+    assert.equal(typeof vistaFranjas.siglasCortas, 'boolean', 'la vista informa si el formato de tiempo corto pide las iniciales');
     // si la primera franja está vacía, el remate del comienzo es neutro aunque más adelante haya rellenos
     const vistaPrimeraVacia = TarjetaFichajeVista.derivarVistaSemana({
         ...base,

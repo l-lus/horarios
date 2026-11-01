@@ -10,7 +10,7 @@ import { Animaciones } from './animaciones.js';
 // Este módulo solo dibuja: los datos ya vienen resueltos en la vista (tarjeta-fichaje-vista.js).
 const { _durSiAnima } = Animaciones;
 
-// En móviles (mismo corte que el CSS responsivo) las etiquetas de los días usan la inicial, que es más angosta
+// En móviles (mismo corte que el CSS responsivo) y con el formato de tiempo corto activo (vista.siglasCortas), las etiquetas de los días usan la inicial, que es más angosta
 const _consultaMovil = window.matchMedia('(max-width: 600px)');
 
 // La última marca llega al final de la barra; el dominio se estira solo si "ahora" la supera, y ahí las marcas se corren hacia la izquierda.
@@ -171,7 +171,7 @@ function _renderSemana(vista, pista) {
         }
         et.classList.remove('linea-etiqueta--oculta');   // si estaba oculta hay que volver a medirla
         et.classList.toggle('linea-etiqueta--hoy', !!h.hoy);   // el badge cambia el ancho: tiene que estar antes de medir
-        et.textContent = _consultaMovil.matches ? h.inicial : h.sigla;
+        et.textContent = _consultaMovil.matches && vista.siglasCortas ? h.inicial : h.sigla;
         vigentes.add(h.fecha + 'tick'); vigentes.add(h.fecha + 'et');
         const pct = h.fraccion * 100;   // las franjas se miden sobre toda la pista, no sobre la parte llena
         const { desde, hasta, left, espejado } = geometriaDiagonal((pct / 100) * ancho, et.offsetWidth, et.offsetHeight);

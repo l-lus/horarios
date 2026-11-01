@@ -237,6 +237,7 @@ function derivarVistaSemana(est) {
         hintEsHTML: false,
         ...(franjas ? {
             hitosSemana: franjas.hitos, tramosSemana: franjas.tramos,
+            siglasCortas: _formatoCortoStatsCache,   // con el formato de tiempo corto, en móviles los días van con su inicial (L, M, X...)
             colorInicioSemana: franjas.colorPrimera, colorFinSemana: franjas.tramos[franjas.tramos.length - 1].color
         } : {}),
     };

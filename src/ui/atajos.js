@@ -89,8 +89,12 @@ const CATALOGO = [
     },
     {
         id: 'estilo-calendario', nombre: 'Estilo del calendario', descripcion: 'Pasa al siguiente estilo de los días con registro',
-        estado: () => ({ icono: '#icon-calendar-simple', titulo: `Estilo del calendario: ${EstiloCalendario.etiqueta()}` }),
-        accion: () => EstiloCalendario.siguiente()
+        // el estilo solo se ve en el calendario: con Registros en vista de lista no hay nada que cambiar
+        estado: () => Almacenamiento.getBoolean(STORAGE_KEYS.VISTA_HISTORICO_CAL, true)
+            ? { icono: '#icon-calendar-simple', titulo: `Estilo del calendario: ${EstiloCalendario.etiqueta()}` }
+            : { icono: '#icon-calendar-simple', titulo: 'Estilo del calendario (disponible en la vista de calendario)', desactivado: true },
+        // aviso fijo (sin el nombre del estilo): al tocar varias veces seguidas los toasts no se acumulan
+        accion: () => { EstiloCalendario.siguiente(); mostrarToast('Estilo de calendario aplicado', 'info'); }
     },
     {
         id: 'perfiles', nombre: 'Perfiles', descripcion: 'Abre el selector de perfiles',
@@ -231,6 +235,7 @@ function bindEventos() {
 // Se escucha desde la carga del módulo: los primeros eventos llegan antes de que se enlace el DOM
 EventosApp.on('historial:cambio', actualizarEstados);
 EventosApp.on('historico:botones', actualizarEstados);
+EventosApp.on('historico:vista', actualizarEstados);   // Registros pasó de lista a calendario o al revés
 EventosApp.on('perfil:cambio', actualizarEstados);
 EventosApp.on('config:atajos', renderizar);
 EventosApp.on('tarjetas:visibilidad', sincronizarBotonesHistorico);   // la tarjeta de atajos se mostró u ocultó   // al restaurar un respaldo o bajar de Gist

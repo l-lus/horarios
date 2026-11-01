@@ -106,11 +106,6 @@
     100% { scale: 2; opacity: 0; }
 }
 
-/* Fundido al cambiar el estilo de los días del calendario (EstiloCalendario usa View Transitions) */
-::view-transition-group(root) {
-    animation-duration: var(--dur-anim);
-}
-
 @keyframes campo-flash {
 
     0%,
@@ -354,8 +349,9 @@ button.campo-flash-color {
         filter: var(--hover);
     }
 
+    /* Con el mouse se suma el brillo al pasar por encima, sin perder las transiciones del estilo (--cal-dia-transicion, ver tarjetas-vistas.css) */
     .calendario-dia:not(.vacio, .dia-sin-registro) {
-        transition: filter var(--transition-ui);
+        transition: var(--cal-dia-transicion), filter var(--transition-ui);
     }
 
     .calendario-dia:not(.vacio, .dia-sin-registro):hover {

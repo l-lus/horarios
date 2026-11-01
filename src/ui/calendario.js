@@ -277,6 +277,7 @@ let _vistaHistoricoCalendario = false;
 function toggleVistaHistorico() {
     _vistaHistoricoCalendario = !_vistaHistoricoCalendario;
     Almacenamiento.setItem(STORAGE_KEYS.VISTA_HISTORICO_CAL, _vistaHistoricoCalendario);
+    EventosApp.emit('historico:vista');
 
     const lista = $('lista-registros');
     const cal = $('vista-calendario-historico');

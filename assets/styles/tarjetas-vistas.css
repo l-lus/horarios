@@ -725,7 +725,27 @@
     font-weight: var(--fw-medium);
     cursor: pointer;
     position: relative;
-    transition: opacity var(--dur-fast);
+    /* Cambiar de estilo (o de color del día) es una transición: todo lo que cambia se interpola, y se retoma desde donde esté si se vuelve a cambiar enseguida */
+    --cal-dia-transicion: opacity var(--dur-fast), background-color var(--dur-anim), box-shadow var(--dur-anim), color var(--dur-anim),
+        border-radius var(--dur-anim), padding var(--dur-anim);
+    transition: var(--cal-dia-transicion);
+}
+
+/* Marca de algunos estilos (barra o punto). Existe siempre, invisible, para que al cambiar de estilo aparezca, se deforme y desaparezca en vez de cortarse */
+.calendario-dia::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 19%;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--cal-color, transparent);
+    transform: translateX(-50%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-anim), width var(--dur-anim), height var(--dur-anim), bottom var(--dur-anim),
+        border-radius var(--dur-anim), background-color var(--dur-anim);
 }
 
 .calendario-dia.dia-filtrado,
@@ -778,15 +798,22 @@
 .calendario-dia.dia-especial-blue,
 .calendario-dia.dia-en-curso { --cal-color: var(--c-blue); }
 
+/* Todos los estilos se arman con propiedades que se interpolan (color de fondo, sombra interna, radio, relleno) y el fondo se recorta al área de contenido:
+   así el hueco entre un aro y su relleno es el relleno interno (padding) y cambiar de estilo es una transición suave */
+.calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+    padding: 0;
+    background-clip: content-box;
+}
+
 /* Contorno con brillo: aro fino del color del día con un resplandor suave; hoy en negrita */
 :root[data-estilo-calendario="contorno-brillo"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
-    background: transparent;
+    background-color: transparent;
     box-shadow: inset 0 0 0 2px var(--cal-color), 0 0 10px color-mix(in srgb, var(--cal-color) 45%, transparent);
 }
 
 /* Aro grueso: aro ancho del color del día y el número del mismo color */
 :root[data-estilo-calendario="aro-grueso"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
-    background: transparent;
+    background-color: transparent;
     box-shadow: inset 0 0 0 4px var(--cal-color);
     color: color-mix(in srgb, var(--cal-color) 55%, var(--text-main));
     font-weight: var(--fw-semibold);
@@ -794,54 +821,39 @@
 
 /* Relleno con aro: disco más chico (algo más oscuro que el color) y, separado por un hueco, un aro fino del color del día */
 :root[data-estilo-calendario="relleno-aro"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
-    background: radial-gradient(closest-side, color-mix(in srgb, var(--cal-color) 80%, var(--bg-card)) calc(100% - 4px), transparent calc(100% - 4px));
+    padding: 4px;
+    background-color: color-mix(in srgb, var(--cal-color) 80%, var(--bg-card));
     box-shadow: inset 0 0 0 1.5px var(--cal-color);
 }
 
-/* Cuadrado con aro: el mismo concepto de relleno con aro, pero en cuadrado de esquinas redondeadas. El relleno se recorta al área de contenido (con un
-   relleno interno de 4px) y así queda separado del aro por un hueco, siguiendo las esquinas */
+/* Cuadrado con aro: el mismo concepto de relleno con aro, pero en cuadrado de esquinas redondeadas */
 :root[data-estilo-calendario="cuadrado-aro"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
     border-radius: 24%;
     padding: 4px;
     background-color: color-mix(in srgb, var(--cal-color) 80%, var(--bg-card));
-    background-clip: content-box;
     box-shadow: inset 0 0 0 1.5px var(--cal-color);
 }
 
-/* Subrayado: sin círculo, el número con una barrita del color del día debajo*/
+/* Subrayado: sin círculo, el número con una barrita del color del día debajo */
 :root[data-estilo-calendario="subrayado"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
-    background: transparent;
+    background-color: transparent;
 }
 
 :root[data-estilo-calendario="subrayado"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue)::before {
-    content: '';
-    position: absolute;
-    left: 50%;
+    opacity: 1;
     bottom: 17%;
     width: 38%;
     height: 3px;
     border-radius: var(--radius-full);
-    background: var(--cal-color);
-    transform: translateX(-50%);
-    pointer-events: none;
 }
 
 /* Punto: sin círculo, el número con un puntito del color del día debajo; hoy lleva el número del color del día y en negrita */
 :root[data-estilo-calendario="punto"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
-    background: transparent;
+    background-color: transparent;
 }
 
 :root[data-estilo-calendario="punto"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue)::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 19%;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--cal-color);
-    transform: translateX(-50%);
-    pointer-events: none;
+    opacity: 1;
 }
 
 :root[data-estilo-calendario="punto"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {

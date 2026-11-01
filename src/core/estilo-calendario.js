@@ -1,6 +1,5 @@
 import { STORAGE_KEYS } from './constantes.js';
 import { Almacenamiento } from './almacenamiento.js';
-import { Movimiento } from './movimiento.js';
 
 // ====================================================================
 // ESTILO DE LOS DÍAS DEL CALENDARIO
@@ -55,15 +54,7 @@ function setEstilo(id) {
     if (!_esValido(id)) return;
     _estilo = id;
     Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO, id);
-    _aplicarSuave();
-}
-
-// Cambiar de estilo reemplaza fondos, aros, barras y puntos a la vez (algunos ni se pueden interpolar con transition): se hace un fundido entre
-// la imagen anterior y la nueva con View Transitions. Sin soporte, o con animaciones reducidas, el cambio es directo
-function _aplicarSuave() {
-    if (typeof document === 'undefined') return;
-    if (typeof document.startViewTransition !== 'function' || Movimiento.reducido()) { _aplicar(); return; }
-    document.startViewTransition(() => _aplicar());
+    _aplicar();   // el CSS lo anima solo (transiciones en .calendario-dia): sin bloquear ni esperar, cada toque cuenta
 }
 
 function siguiente() {

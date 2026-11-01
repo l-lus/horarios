@@ -166,11 +166,14 @@ async function bajar() {
     if (!gistId || !esGistIdValido(gistId)) throw new Error('Gist ID inválido — dejá el campo vacío y subí primero para crear uno');
 
     const respuesta = await _gistFetch(`https://api.github.com/gists/${gistId}`);
-    const file = respuesta.files[GIST_FILENAME];
-    if (!file) throw new Error(`Archivo ${GIST_FILENAME} no encontrado en el Gist`);
+    const file = respuesta?.files?.[GIST_FILENAME];
+    if (!file || typeof file.content !== 'string') throw new Error(`Archivo ${GIST_FILENAME} no encontrado en el Gist`);
+    // La API corta el contenido de archivos de más de 1 MB (truncated): parsearlo daría un JSON roto
+    if (file.truncated) throw new Error('El respaldo del Gist es demasiado grande para descargarlo');
+    if (file.content.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) throw new Error('El respaldo del Gist es demasiado grande');
 
+    // La validación (estructura, hash e integridad) la hace ImportarExportar.prepararRespaldo, igual que con un archivo local
     const data = JSON.parse(file.content, S.reviverJSONSeguro);
-    if (data.hash && await S.calcularHashSHA256(data.registros) !== data.hash) data._hashNoCoincide = true;
 
     saveLastSync(gistId);
     return data;

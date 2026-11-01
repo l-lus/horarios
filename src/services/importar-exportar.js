@@ -259,53 +259,114 @@ async function exportarJSON() {
     }
 }
 
-async function _validarDatosImport(data) {
-    if (!data || typeof data !== 'object' || Array.isArray(data)) { D._notify().mostrarToast('Estructura de archivo inválida', 'error'); return false; }
-    if (!data.registros || !Array.isArray(data.registros)) { D._notify().mostrarToast('Archivo inválido o corrupto', 'error'); return false; }
-    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
-    if (Object.keys(data).some(k => !allowedRootKeys.includes(k)) || !validarCamposConfigImport(data)) { D._notify().mostrarToast('Archivo con estructura sospechosa', 'error'); return false; }
-    if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
-        D._notify().mostrarToast(`Archivo de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
+// Claves que puede traer un respaldo (archivo local o Gist): cualquier otra se considera sospechosa
+const CLAVES_RAIZ_RESPALDO = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
+const _NOMBRE_ORIGEN = { archivo: 'archivo', gist: 'Gist' };
+
+/** Chequeo estructural de un respaldo ya parseado. Devuelve el mensaje de error o null si es válido. */
+function errorEstructuraRespaldo(data, nombre = 'archivo') {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return `Estructura del ${nombre} inválida`;
+    if (!Array.isArray(data.registros)) return `${nombre[0].toUpperCase()}${nombre.slice(1)} inválido o corrupto`;
+    if (Object.keys(data).some(k => !CLAVES_RAIZ_RESPALDO.includes(k)) || !validarCamposConfigImport(data)) return `${nombre[0].toUpperCase()}${nombre.slice(1)} con estructura sospechosa`;
+    if (data.registros.length > S.SECURITY_LIMITS.MAX_REGISTROS) return `Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`;
+    if (data.rangoExportado !== undefined &&
+        (typeof data.rangoExportado !== 'string' || data.rangoExportado.length > 100 || !/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-:]+$/.test(data.rangoExportado))) {
+        return 'Metadatos de rango inválidos';
     }
-    if (data.rangoExportado !== undefined) {
-        const rangoSafe = S.sanitizeString(String(data.rangoExportado), 100);
-        if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-:]+$/.test(rangoSafe)) { D._notify().mostrarToast('Metadatos de rango inválidos', 'error'); return false; }
-    }
-    if (data.hash) {
-        if (await S.calcularHashSHA256(data.registros) !== data.hash) {
-            D._notify().mostrarToast('⚠️ El archivo puede estar corrupto o modificado', 'warning');
-            if (!(await D._notify().confirmarModal('El hash de integridad no coincide. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload'))) return false;
-        }
-    } else {
-        if (!(await D._notify().confirmarModal('Este archivo no tiene verificación de integridad. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload'))) return false;
-    }
-    if (data.registros.length > S.SECURITY_LIMITS.MAX_REGISTROS) { D._notify().mostrarToast(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`, 'error'); return false; }
-    return true;
+    return null;
 }
 
-function _aplicarMergeImport(registrosImportados) {
-    const fechasExistentes = new Set(D.registros().map(r => r.fecha));
-    const nuevos = registrosImportados.filter(imp => !fechasExistentes.has(imp.fecha));
-    const complementarios = registrosImportados.filter(imp => {
-        if (!fechasExistentes.has(imp.fecha)) return false;
-        const local = D.registroPorFecha(imp.fecha);
-        return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
+async function _confirmarIntegridad(data, nombre) {
+    const notify = D._notify();
+    if (!data.hash) return notify.confirmarModal(`Este ${nombre} no tiene verificación de integridad. ¿Restaurar de todas formas?`, 'Restaurar', '#icon-upload');
+    if (await S.calcularHashSHA256(data.registros) === data.hash) return true;
+    notify.mostrarToast(`⚠️ El ${nombre} puede estar corrupto o modificado`, 'warning');
+    return notify.confirmarModal('El hash de integridad no coincide. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
+}
+
+/**
+ * Valida un respaldo (estructura, versión e integridad, con confirmación del usuario si hace falta) y devuelve
+ * sus registros normalizados, o null si no se puede usar (ya se avisó al usuario). Mismo camino para archivo y Gist.
+ * @param {'archivo'|'gist'} [origen]
+ */
+async function prepararRespaldo(data, origen = 'archivo') {
+    const notify = D._notify();
+    const nombre = _NOMBRE_ORIGEN[origen] || 'archivo';
+    const error = errorEstructuraRespaldo(data, nombre);
+    if (error) { notify.mostrarToast(error, 'error'); return null; }
+    if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
+        notify.mostrarToast(`El ${nombre} es de una versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
+    }
+    if (!(await _confirmarIntegridad(data, nombre))) return null;
+    const registros = normalizarRegistrosImportados(data.registros, D.calcularHoras);
+    if (registros.length === 0) { notify.mostrarToast('No se encontraron registros válidos', 'warning'); return null; }
+    return registros;
+}
+
+// Un registro importado completa al local de la misma fecha si le aporta la salida o el tiempo fuera
+const _completaAlLocal = (local, imp) => (!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera);
+
+/** Compara los registros importados con los locales (por fecha). */
+function calcularDiferencias(importados) {
+    const locales = D.registros();
+    const localesPorFecha = new Map(locales.map(r => [r.fecha, r]));
+    const importadosPorFecha = new Map(importados.map(r => [r.fecha, r]));
+    const enAmbos = importados.filter(r => localesPorFecha.has(r.fecha));
+    return {
+        soloImportados: importados.filter(r => !localesPorFecha.has(r.fecha)),
+        enAmbos,
+        soloLocal: locales.filter(r => !importadosPorFecha.has(r.fecha)),
+        complementarios: enAmbos.filter(imp => _completaAlLocal(localesPorFecha.get(imp.fecha), imp))
+    };
+}
+
+/**
+ * Resultado de combinar los importados con los locales, sin tocar el estado:
+ * `{ vacio: true }`, `{ error }` o `{ registros, mensaje }`.
+ * @returns {{ vacio?: boolean, error?: string, registros?: any[], mensaje?: string }}
+ */
+function calcularCombinacion(importados) {
+    const { soloImportados, complementarios } = calcularDiferencias(importados);
+    if (soloImportados.length === 0 && complementarios.length === 0) return { vacio: true };
+    if (!D._hayEspacioParaRegistros(soloImportados.length)) {
+        return { error: `Límite alcanzado. Solo se pueden agregar ${S.SECURITY_LIMITS.MAX_REGISTROS - D.registros().length} registros más` };
+    }
+    const compPorFecha = new Map(complementarios.map(c => [c.fecha, c]));
+    const actualizados = D.registros().map(local => {
+        const imp = compPorFecha.get(local.fecha);
+        if (!imp) return local;
+        const actualizado = { ...local };
+        if (!actualizado.salida && imp.salida) actualizado.salida = imp.salida;
+        if (!actualizado.tiempoFuera && imp.tiempoFuera) actualizado.tiempoFuera = imp.tiempoFuera;
+        D._recalcularHorasSiValido(actualizado);
+        return actualizado;
     });
-    if (nuevos.length === 0 && complementarios.length === 0) { D._notify().mostrarToast('No hay días nuevos ni datos para completar', 'info'); return; }
-    if (!D._hayEspacioParaRegistros(nuevos.length)) { D._notify().mostrarToast(`Límite alcanzado. Solo se pueden agregar ${S.SECURITY_LIMITS.MAX_REGISTROS - D.registros().length} registros más`, 'error'); return; }
-    complementarios.forEach(imp => {
-        const local = D.registroPorFecha(imp.fecha);
-        if (!local) return;
-        if (!local.salida && imp.salida) local.salida = imp.salida;
-        if (!local.tiempoFuera && imp.tiempoFuera) local.tiempoFuera = imp.tiempoFuera;
-        D._recalcularHorasSiValido(local);
-    });
-    D._setRegistros(D.registros().concat(nuevos));
-    const partes = [];
     const p = (n, sustantivo, adjetivo) => `${n} ${sustantivo}${TiempoUtils.pluralizar(n)} ${adjetivo}${TiempoUtils.pluralizar(n)}`;
-    if (nuevos.length > 0) partes.push(p(nuevos.length, 'día', 'nuevo'));
+    const partes = [];
+    if (soloImportados.length > 0) partes.push(p(soloImportados.length, 'día', 'nuevo'));
     if (complementarios.length > 0) partes.push(p(complementarios.length, 'registro', 'completado'));
-    finalizarImportacionAndSave(`Combinado: ${partes.join(', ')}`, 'combinar datos importados');
+    return { registros: [...actualizados, ...soloImportados], mensaje: `Combinado: ${partes.join(', ')}` };
+}
+
+/**
+ * Aplica un respaldo ya preparado: 'merge' combina con los registros locales; 'replace' los reemplaza y aplica la configuración.
+ * @param {'merge'|'replace'} modo
+ * @param {{ etiqueta?: string, cerrarImportar?: boolean }} [opciones] etiqueta: texto para el historial de deshacer ("con Gist")
+ * @returns {Promise<{ ok: boolean, vacio?: boolean }>}
+ */
+async function restaurarRespaldo(data, importados, modo, opciones = {}) {
+    const { etiqueta = 'con archivo local', cerrarImportar = true } = opciones;
+    const notify = D._notify();
+    if (modo === 'merge') {
+        const c = calcularCombinacion(importados);
+        if (c.vacio) { notify.mostrarToast('No hay días nuevos ni datos para completar', 'info'); return { ok: false, vacio: true }; }
+        if (c.error || !c.registros) { notify.mostrarToast(c.error || 'No se pudo combinar', 'error'); return { ok: false }; }
+        return { ok: await _guardarRegistrosImportados(c.registros, c.mensaje || 'Combinado', `combinar ${etiqueta}`, cerrarImportar) };
+    }
+    aplicarConfigImportada(data, importados);
+    const n = importados.length;
+    const mensaje = `Se reemplazaron los datos por ${n === 1 ? '1 registro' : `${n} registros`}`;
+    return { ok: await _guardarRegistrosImportados(importados, mensaje, `reemplazar ${etiqueta}`, cerrarImportar) };
 }
 
 /** @param {File|undefined} file archivo elegido por el usuario (lo obtiene la UI del input) */
@@ -322,19 +383,9 @@ function importarDatos(file, modo = 'replace') {
             if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) { D._notify().mostrarToast('Contenido del archivo demasiado grande', 'error'); return; }
 
             const data = JSON.parse(contenido, S.reviverJSONSeguro);
-            if (!await _validarDatosImport(data)) return;
-
-            const registrosImportados = normalizarRegistrosImportados(data.registros, D.calcularHoras);
-            if (registrosImportados.length === 0) { D._notify().mostrarToast('No se encontraron registros válidos', 'warning'); return; }
-
-            if (modo === 'replace') {
-                aplicarConfigImportada(data, registrosImportados);
-                D._setRegistros(registrosImportados);
-                const n = registrosImportados.length;
-                finalizarImportacionAndSave(`Se reemplazaron los datos por ${n === 1 ? '1 registro' : `${n} registros`}`, 'restauración local');
-            } else if (modo === 'merge') {
-                _aplicarMergeImport(registrosImportados);
-            }
+            const registrosImportados = await prepararRespaldo(data, 'archivo');
+            if (!registrosImportados) return;
+            await restaurarRespaldo(data, registrosImportados, modo === 'merge' ? 'merge' : 'replace');
         } catch (err) {
             console.error('Error en importación:', err);
             D._notify().mostrarToast(err instanceof SyntaxError ? 'Archivo JSON mal formado' : 'Error al procesar el archivo', 'error');
@@ -344,23 +395,23 @@ function importarDatos(file, modo = 'replace') {
     reader.readAsText(file);
 }
 
-/** @param {any} [descripcion] */
-async function finalizarImportacionAndSave(mensajeExito, descripcion = null) {
-    D._ordenarRegistros();
+async function _guardarRegistrosImportados(registros, mensajeExito, descripcion, cerrarImportar) {
+    D._setRegistros(registros);
+    D.ordenarRegistros();
     Compensatorios.migrarObjetivoHorasFaltante();
     D.sincronizarPushHoy();
-    GestorHistorial.saveState(D.registros(), descripcion || mensajeExito);
-    if (await D.guardarYActualizar()) {
-        const esPerfilDefault = GestorPerfiles && GestorPerfiles.esPerfilDefault();
-        if (esPerfilDefault) {
-            Almacenamiento.setItem(STORAGE_KEYS.DIAS_HABILES, D.diasHabiles());
-            Almacenamiento.setItem(STORAGE_KEYS.HORAS_DIARIAS, D.horasDiarias());
-            Almacenamiento.setItem(STORAGE_KEYS.HISTORIAL_DIAS_HABILES, D.historialDiasHabiles());
-        }
-        D._notify().mostrarToast(mensajeExito, 'success');
-        D._notify().cerrarImportar();
-        D._notify().refrescarConfigSiVisible();
+    GestorHistorial.saveState(D.registros(), descripcion);
+    if (!(await D.guardarYActualizar())) return false;
+    if (GestorPerfiles.esPerfilDefault()) {
+        Almacenamiento.setItem(STORAGE_KEYS.DIAS_HABILES, D.diasHabiles());
+        Almacenamiento.setItem(STORAGE_KEYS.HORAS_DIARIAS, D.horasDiarias());
+        Almacenamiento.setItem(STORAGE_KEYS.HISTORIAL_DIAS_HABILES, D.historialDiasHabiles());
     }
+    const notify = D._notify();
+    notify.mostrarToast(mensajeExito, 'success');
+    if (cerrarImportar) notify.cerrarImportar();
+    notify.refrescarConfigSiVisible();
+    return true;
 }
 
 export const ImportarExportar = {
@@ -371,8 +422,10 @@ export const ImportarExportar = {
     calcularCambiosConfigImport,
     normalizarRegistrosImportados,
     exportarJSON,
-    _validarDatosImport,
-    _aplicarMergeImport,
-    importarDatos,
-    finalizarImportacionAndSave
+    errorEstructuraRespaldo,
+    prepararRespaldo,
+    calcularDiferencias,
+    calcularCombinacion,
+    restaurarRespaldo,
+    importarDatos
 };

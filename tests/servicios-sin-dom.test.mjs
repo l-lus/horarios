@@ -294,3 +294,44 @@ test('ImportarExportar.normalizarRegistrosImportados deja un registro por fecha 
     assert.equal(new Set(r.map(x => x.id)).size, 2);
     assert.match(toasts.at(-1)[0], /1 registro con fecha repetida omitido/);
 });
+
+test('ImportarExportar: archivo y Gist comparten validación (prepararRespaldo) y combinación (restaurarRespaldo)', async () => {
+    const { ImportarExportar: IE } = await import('../src/services/importar-exportar.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { SeguridadYUtils: S } = await import('../src/core/seguridad.js');
+    const toasts = [];
+    let confirmaciones = 0;
+    EstadoApp.configurarNotificaciones({
+        mostrarToast: (m, t) => toasts.push([m, t]),
+        confirmarModal: async () => { confirmaciones++; return true; },
+        actualizarUI: () => { }, cerrarImportar: () => { }, refrescarConfigSiVisible: () => { },
+    });
+
+    assert.equal(IE.errorEstructuraRespaldo([], 'Gist'), 'Estructura del Gist inválida');
+    assert.equal(IE.errorEstructuraRespaldo({ registros: [], extra: 1 }, 'Gist'), 'Gist con estructura sospechosa');
+    assert.match(IE.errorEstructuraRespaldo({ registros: new Array(S.SECURITY_LIMITS.MAX_REGISTROS + 1) }), /Máximo/);
+    assert.equal(await IE.prepararRespaldo({ registros: [], _hashNoCoincide: true }, 'gist'), null);
+
+    const base = { tiempoFuera: null, horas: 0, minutos: 0, total: 0 };
+    const registros = [
+        { ...base, id: 'bbbbbbbbbb1', fecha: '2026-10-20', entrada: '09:00', salida: '17:00' },
+        { ...base, id: 'bbbbbbbbbb2', fecha: '2026-10-21', entrada: '09:00', salida: '16:00' },
+    ];
+    const data = { registros, hash: await S.calcularHashSHA256(registros) };
+    const importados = await IE.prepararRespaldo(data, 'gist');
+    assert.equal(importados.length, 2);
+    assert.equal(confirmaciones, 0);   // hash correcto: no pide confirmación
+
+    EstadoApp._setRegistros([{ ...base, id: 'cccccccccc1', fecha: '2026-10-20', entrada: '09:00', salida: null }]);
+    const diff = IE.calcularDiferencias(importados);
+    assert.deepEqual([diff.soloImportados.length, diff.complementarios.length, diff.soloLocal.length], [1, 1, 0]);
+
+    const res = await IE.restaurarRespaldo(data, importados, 'merge', { etiqueta: 'con Gist' });
+    assert.equal(res.ok, true);
+    assert.equal(EstadoApp.registros().length, 2);
+    assert.equal(EstadoApp.registroPorFecha('2026-10-20').salida, '17:00');
+    assert.equal(EstadoApp.registroPorFecha('2026-10-20').id, 'cccccccccc1');   // se completa el local, no se reemplaza
+    assert.equal(EstadoApp.registros()[0].fecha, '2026-10-21');                 // queda ordenado
+
+    assert.deepEqual(await IE.restaurarRespaldo(data, importados, 'merge'), { ok: false, vacio: true });
+});

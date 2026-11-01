@@ -1,18 +1,12 @@
 import { RespaldoLocal } from './respaldo-local.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { EventosApp } from '../core/eventos.js';
 import { GestorModales } from './gestor-modales.js';
-import { GestorHistorial } from '../services/gestor-historial.js';
-import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
 import { HistoricoEdicion } from './historico-edicion.js';
 import { TarjetaFichaje } from './tarjeta-fichaje.js';
-import { Configuracion } from './configuracion.js';
-import { SeguridadYUtils as S } from '../core/seguridad.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { ImportarExportar } from '../services/importar-exportar.js';
 import { setIconoBtn } from './boton-fichar.js';
@@ -31,6 +25,8 @@ const { mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar, ejecut
 let _gistAutoSyncTemp = null;
 let _gistLimitesTemp = null;
 let _gistMergeDesdeModal = false;
+/** @type {{ registrosNormalizados: any[], data: any } | null} */
+let _gistMergeData = null;
 
 function _gistEstadoAutoSyncActual() {
     return parseInt(_gistAutoSyncTemp ?? SincronizacionGist.getAutoSync());
@@ -229,46 +225,6 @@ function cerrarModalGist() {
     actualizarBotonesHistorico();
 }
 
-function _calcularRegistrosMerge(modo, mergeData) {
-    const { registrosNormalizados, soloEnGist, complementarios = [], data } = mergeData;
-
-    if (modo === 'merge') {
-        if (soloEnGist.length === 0 && complementarios.length === 0) {
-            return { vacio: true };
-        }
-        if (EstadoApp.registros().length + soloEnGist.length > S.SECURITY_LIMITS.MAX_REGISTROS) {
-            return { limiteAlcanzado: true };
-        }
-
-        const registrosActualizados = EstadoApp.registros().map(local => {
-            const imp = complementarios.find(c => c.fecha === local.fecha);
-            if (!imp) return local;
-            const actualizado = { ...local };
-            if (!actualizado.salida && imp.salida) actualizado.salida = imp.salida;
-            if (!actualizado.tiempoFuera && imp.tiempoFuera) actualizado.tiempoFuera = imp.tiempoFuera;
-            const t = EstadoApp.calcularHoras(actualizado.entrada, actualizado.salida, actualizado.tiempoFuera || null, actualizado.credito || null);
-            if (t) { actualizado.horas = t.horas; actualizado.minutos = t.minutos; actualizado.total = t.total; }
-            return actualizado;
-        });
-
-        const partes = [];
-        if (soloEnGist.length > 0) partes.push(`${soloEnGist.length} día${TiempoUtils.pluralizar(soloEnGist.length)} nuevo${TiempoUtils.pluralizar(soloEnGist.length)}`);
-        if (complementarios.length > 0) partes.push(`${complementarios.length} registro${TiempoUtils.pluralizar(complementarios.length)} completado${TiempoUtils.pluralizar(complementarios.length)}`);
-
-        return {
-            registrosFinales: [...registrosActualizados, ...soloEnGist],
-            mensajeExito: `Combinado: ${partes.join(', ')}`
-        };
-
-    } else {
-        ImportarExportar.aplicarConfigImportada(data, registrosNormalizados);
-        return {
-            registrosFinales: registrosNormalizados,
-            mensajeExito: `${registrosNormalizados.length} registros restaurados desde Gist`
-        };
-    }
-}
-
 function _gistMergeCerrarOVolver() {
     if (_gistMergeDesdeModal) {
         _gistMergeDesdeModal = false;
@@ -280,40 +236,16 @@ function _gistMergeCerrarOVolver() {
 
 async function gistMergeAplicar(modo, modoAutomatico = false) {
     if (!_gistMergeData) return;
-    const mergeData = _gistMergeData;
+    const { registrosNormalizados, data } = _gistMergeData;
     _gistMergeData = null;
 
-    const resultado = _calcularRegistrosMerge(modo, mergeData);
-
-    if (resultado.vacio) {
-        if (!modoAutomatico) _gistMergeCerrarOVolver();
-        mostrarToast('Sin datos nuevos para completar', 'info');
-        return;
+    const { ok, vacio } = await ImportarExportar.restaurarRespaldo(data, registrosNormalizados, modo === 'merge' ? 'merge' : 'replace', { etiqueta: 'con Gist', cerrarImportar: false });
+    if (ok) TarjetaFichaje.actualizarUI();
+    if ((ok || vacio) && !modoAutomatico) _gistMergeCerrarOVolver();
+    if (ok) {
+        const lastSyncEl = $('gist-ultima-sync');
+        if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${SincronizacionGist.formatLastSync(SincronizacionGist.getLastSync())}`;
     }
-    if (resultado.limiteAlcanzado) {
-        mostrarToast('Límite alcanzado', 'error');
-        return;
-    }
-
-    const { registrosFinales, mensajeExito } = resultado;
-
-    EstadoApp.registros().splice(0, EstadoApp.registros().length, ...registrosFinales);
-    EstadoApp.registros().sort((a, b) => {
-        if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
-        return (b.entrada || '').localeCompare(a.entrada || '');
-    });
-    Compensatorios.migrarObjetivoHorasFaltante();
-    GestionDatos.sincronizarPushHoy();
-    GestorHistorial.saveState(EstadoApp.registros(), modo === 'replace' ? 'reemplazar con Gist' : 'combinar con Gist');
-
-    await EstadoApp.guardarYActualizar();
-    TarjetaFichaje.actualizarUI();
-    Configuracion.refrescarConfigSiVisible();
-
-    if (!modoAutomatico) _gistMergeCerrarOVolver();
-    const lastSyncEl = $('gist-ultima-sync');
-    if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${SincronizacionGist.formatLastSync(SincronizacionGist.getLastSync())}`;
-    mostrarToast(mensajeExito, 'success');
 
     const btn = $('btn-gist-bajar');
     if (btn) btn.disabled = false;
@@ -434,7 +366,7 @@ async function _gistConSpinner(btnId, mensajeError, accion) {
         await accion();
     } catch (e) {
         console.error(`${mensajeError}:`, e);
-        mostrarToast(mensajeError, 'error');
+        mostrarToast(mensajeError, 'error', undefined, e instanceof Error ? e.message : null);
     } finally {
         if (btn) btn.disabled = false;
         iconoPerfil?.classList.remove('icono-spin');
@@ -457,46 +389,6 @@ async function gistSubir() {
         if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${SincronizacionGist.formatLastSync(SincronizacionGist.getLastSync())}`;
         mostrarToast('Datos respaldados en Gist', 'success');
     });
-}
-
-let _gistMergeData = null;
-
-async function _validarDatosGist(data) {
-    if (!data.registros || !Array.isArray(data.registros)) throw new Error('Datos inválidos en el Gist');
-    const allowedRootKeys = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...ImportarExportar.KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', '_hashNoCoincide'];
-    if (Object.keys(data).some(k => !allowedRootKeys.includes(k)) || !ImportarExportar.validarCamposConfigImport(data)) throw new Error('Estructura del Gist sospechosa');
-    if (data._hashNoCoincide) {
-        const continuar = await GestorModales.confirmar('El hash de integridad no coincide. El Gist puede haber sido modificado o corrompido. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
-        if (!continuar) return null;
-    } else if (!data.hash) {
-        const continuar = await GestorModales.confirmar('Este Gist no tiene verificación de integridad. ¿Restaurar de todas formas?', 'Restaurar', '#icon-upload');
-        if (!continuar) return null;
-    }
-    if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
-        mostrarToast(`Gist de versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning');
-    }
-    const registrosNormalizados = ImportarExportar.normalizarRegistrosImportados(data.registros, EstadoApp.calcularHoras);
-    if (registrosNormalizados.length === 0) throw new Error('No se encontraron registros válidos');
-    if (registrosNormalizados.length > S.SECURITY_LIMITS.MAX_REGISTROS) throw new Error(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS} registros permitidos`);
-    return registrosNormalizados;
-}
-
-function _calcularDiffGist(registrosNormalizados) {
-    const localesPorFecha = new Map(EstadoApp.registros().map(r => [r.fecha, r]));
-    const gistPorFecha = new Map(registrosNormalizados.map(r => [r.fecha, r]));
-
-    const soloEnGist = registrosNormalizados.filter(r => !localesPorFecha.has(r.fecha));
-    const enAmbos = registrosNormalizados.filter(r => localesPorFecha.has(r.fecha));
-    const soloLocal = EstadoApp.registros().filter(r => !gistPorFecha.has(r.fecha));
-    const complementarios = enAmbos.filter(imp => {
-        const local = localesPorFecha.get(imp.fecha);
-        return local && ((!local.salida && imp.salida) || (!local.tiempoFuera && imp.tiempoFuera));
-    });
-    return { soloEnGist, enAmbos, soloLocal, complementarios };
-}
-
-function _calcularConfigCambios(data) {
-    return ImportarExportar.calcularCambiosConfigImport(data);
 }
 
 const _mkEl = (tag, cls, texto) => {
@@ -600,11 +492,11 @@ function _crearAlertaReemplazoMerge(nSoloLocal) {
     return { el, pintar: (esMerge, animar) => setColapsable(el, !esMerge, { animar }) };
 }
 
-function _buildResumenMerge(resumenEl, { soloEnGist, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios) {
+function _buildResumenMerge(resumenEl, { soloImportados, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios) {
     const cantidades = {
         nLocal: enAmbos.length + soloLocal.length,
         nGist: registrosNormalizados.length,
-        nNuevos: soloEnGist.length,
+        nNuevos: soloImportados.length,
         nComp: complementarios.length
     };
     resumenEl.innerHTML = '';
@@ -641,17 +533,15 @@ async function gistBajar(modoAutomatico = false) {
     _gistMergeDesdeModal = $('modal-gist')?.classList.contains('show') ?? false;
     await _gistConSpinner('btn-gist-bajar', 'Error al bajar', async () => {
         const data = await SincronizacionGist.bajar();
-        const registrosNormalizados = await _validarDatosGist(data);
+        const registrosNormalizados = await ImportarExportar.prepararRespaldo(data, 'gist');
         if (!registrosNormalizados) return;
-
-        const diff = _calcularDiffGist(registrosNormalizados);
-        const { soloEnGist, complementarios } = diff;
-        _gistMergeData = { registrosNormalizados, soloEnGist, complementarios, data };
+        _gistMergeData = { registrosNormalizados, data };
 
         if (modoAutomatico) {
             await gistMergeAplicar(SincronizacionGist.getMergeBehavior(), true);
         } else {
-            const configCambios = _calcularConfigCambios(data);
+            const diff = ImportarExportar.calcularDiferencias(registrosNormalizados);
+            const configCambios = ImportarExportar.calcularCambiosConfigImport(data);
             const resumenEl = $('gist-merge-resumen');
             if (resumenEl) _buildResumenMerge(resumenEl, diff, registrosNormalizados, configCambios);
             if (_gistMergeDesdeModal) GestorModales.alternar('modal-gist', 'modal-gist-merge');

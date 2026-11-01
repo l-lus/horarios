@@ -477,3 +477,27 @@ test('ImportarExportar.armarRespaldo produce lo que prepararRespaldo acepta (ida
     }
     assert.equal(confirmaciones, 0);   // el hash coincide: no pide confirmación
 });
+
+test('Compensatorios: editar y eliminar tramos de días hábiles validan y no permiten borrar el primero', async () => {
+    const { Compensatorios: C } = await import('../src/services/compensatorios.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    let sincronizaciones = 0;
+    EstadoApp.configurarNotificaciones({ actualizarUI: () => { } });
+    EstadoApp.setSincronizarPushHoyHook(() => { sincronizaciones++; });
+    EstadoApp._setHistorialDiasHabilesRaw([{ desde: '0001-01-01', dias: [1, 2, 3, 4, 5] }, { desde: '2026-06-01', dias: [1, 2, 3, 4] }]);
+
+    assert.match((await C.editarTramoDias('2026-06-01', '2026-13-40', [1])).error, /fecha válida/);
+    assert.match((await C.editarTramoDias('2026-06-01', '2026-06-01', ['x', 9])).error, /al menos un día/);
+    assert.match((await C.editarTramoDias('2026-06-01', '0001-01-01', [1])).error, /Ya existe/);
+    assert.match((await C.editarTramoDias('2020-01-01', '2026-06-01', [1])).error, /no encontrado/);
+    assert.deepEqual(await C.editarTramoDias('2026-06-01', '2026-07-01', [3, 1, 1]), { ok: true });
+    assert.deepEqual(C.tramosDiasHabiles().map(t => [t.desde, t.dias]), [['0001-01-01', [1, 2, 3, 4, 5]], ['2026-07-01', [1, 3]]]);
+    assert.equal(sincronizaciones, 1);
+
+    assert.match((await C.eliminarTramoDias('0001-01-01')).error, /primer tramo/);
+    assert.deepEqual(await C.eliminarTramoDias('2026-07-01'), { ok: true });
+    assert.equal(C.tramosDiasHabiles().length, 1);
+
+    const { AvisoJornada } = await import('../src/services/aviso-jornada.js');
+    EstadoApp.setSincronizarPushHoyHook(AvisoJornada.sincronizarHoy);   // se restaura el hook real
+});

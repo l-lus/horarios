@@ -144,8 +144,8 @@ function _popupCalendario(event, registroId, asignaciones = null) {
 // ── Popup de la semana: long press en móvil, click secundario en PC ──────────
 const LONG_PRESS_MS = 500;
 const LONG_PRESS_TOLERANCIA_PX = 10;
-let _ultimoToqueTs = 0;
-let _longPressDisparadoTs = 0;
+let _ultimoToqueTs = -Infinity;   // sin toques todavía (con 0, los primeros 1,5 s tras cargar ignoraban el click secundario)
+let _longPressDisparadoTs = -Infinity;   // con 0, los primeros 600 ms tras cargar se descartaban los clicks
 
 function _registrarLongPressSemana(grid) {
     if (!grid || grid.dataset.semanaInit) return;

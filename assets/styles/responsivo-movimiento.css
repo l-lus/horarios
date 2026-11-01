@@ -128,19 +128,21 @@ button.campo-flash {
     animation: campo-flash 500ms ease-in-out 2;
 }
 
+/* Destello de "hoy" en el calendario: un aro del color del texto que aparece y se apaga alrededor del día, y vuelve al borde de hoy de cada estilo
+   (variables --hoy-* de tarjetas-vistas.css). Es el mismo en todos los estilos de los días, con o sin registro */
 @keyframes calendario-hoy-flash {
 
     0%,
     60%,
     100% {
-        outline-color: var(--text-muted);
-        outline-width: 2px;
+        outline: var(--hoy-grosor) solid var(--hoy-color);
+        outline-offset: var(--hoy-offset);
     }
 
     20%,
     40% {
-        outline-color: var(--bg-card);
-        outline-width: 4px;
+        outline: 2px solid var(--text-main);
+        outline-offset: 1px;
     }
 }
 

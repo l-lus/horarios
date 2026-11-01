@@ -395,7 +395,9 @@ function derivarVistaHoy(est) {
         colorBarra = dayClosed ? 'green' : 'blue';
         colorBorde = dayClosed ? 'green' : 'blue';
         estadoFondo = dayClosed ? 'finalizado_ok' : 'en_curso';
-        mensaje = ''; mostrarMensaje = false;
+        // en un día no laborable se aclara por qué no hay objetivo; sin objetivo configurado (horasDiarias 0) o con objetivo 0 en un día hábil no hay nada que decir
+        const noLaborable = !esDiaHabil && horasDiarias > 0;
+        mensaje = noLaborable ? 'Día libre' : ''; mostrarMensaje = noLaborable;
     } else if (dayClosed) {
         const dif = tiempoHoy - objetivoDiarioAplica;
 

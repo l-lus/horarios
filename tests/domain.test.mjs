@@ -524,6 +524,13 @@ test('TarjetaFichajeVista: con 0 minutos se muestra "Comenzando" o "Sin horas to
     assert.notEqual(cerradaEnCero, 'Comenzando...');
     assert.match(cerradaEnCero, /^0/);
 
+    // Día libre (no laborable) con registro: no hay objetivo, pero el mensaje aclara por qué; sin objetivo configurado o en un día hábil sin objetivo sigue oculto
+    const noLaborable = TarjetaFichajeVista.derivarVistaHoy({ ...estDia('16:00', 7), esDiaHabil: false });
+    assert.equal(noLaborable.mensaje, 'Día libre');
+    assert.equal(noLaborable.mostrarMensaje, true);
+    assert.equal(TarjetaFichajeVista.derivarVistaHoy({ ...estDia(null, 2), esDiaHabil: false }).mensaje, 'Día libre');
+    assert.equal(TarjetaFichajeVista.derivarVistaHoy({ ...estDia('16:00', 7), esDiaHabil: false, horasDiarias: 0 }).mostrarMensaje, false);
+
     // Semana: 0 minutos con jornada abierta -> "Comenzando"; sin jornada y semana abierta -> "Sin horas todavía"; semana terminada -> el 0 real
     const estSemana = (extra) => ({
         totalSemana: 0, totalSemanaProgreso: 0, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false,

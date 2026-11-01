@@ -3,7 +3,6 @@ import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EventosApp } from '../core/eventos.js';
-import { GestorPerfiles } from './gestor-perfiles.js';
 import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
@@ -411,11 +410,6 @@ async function _guardarRegistrosImportados(registros, mensajeExito, descripcion,
     D.sincronizarPushHoy();
     GestorHistorial.saveState(D.registros(), descripcion);
     if (!(await D.guardarYActualizar())) return false;
-    if (GestorPerfiles.esPerfilDefault()) {
-        Almacenamiento.setItem(STORAGE_KEYS.DIAS_HABILES, D.diasHabiles());
-        Almacenamiento.setItem(STORAGE_KEYS.HORAS_DIARIAS, D.horasDiarias());
-        Almacenamiento.setItem(STORAGE_KEYS.HISTORIAL_DIAS_HABILES, D.historialDiasHabiles());
-    }
     const notify = D._notify();
     notify.mostrarToast(mensajeExito, 'success');
     if (cerrarImportar) notify.cerrarImportar();

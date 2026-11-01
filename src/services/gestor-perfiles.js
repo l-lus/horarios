@@ -153,7 +153,6 @@ function eliminarPerfil(id) {
 }
 
 function obtenerPerfilActual() { return perfilActual; }
-function esPerfilDefault() { return perfilActual === 'default'; }
 function obtenerDatosPerfil() { return perfiles[perfilActual]; }
 function obtenerTodosPerfiles() { return perfiles; }
 
@@ -166,7 +165,7 @@ EstadoApp.setPerfilHooks({ obtenerPerfilActual, guardarDatosPerfilActual });
 
 export const GestorPerfiles = {
     inicializar, cambiarPerfil, guardarDatosPerfilActual,
-    obtenerPerfilActual, esPerfilDefault, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
+    obtenerPerfilActual, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
     guardarPerfiles, perfilKey, MAX_PERFILES, CAMPOS_SYNC_GIST, CAMPOS_GIST_PERFIL,
     errorNombrePerfil, crearPerfil, renombrarPerfil, eliminarPerfil
 };

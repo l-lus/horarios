@@ -29,15 +29,9 @@ const {
     detenerYRegistrarTimer, detectarAyerAbierto, registroParaTiempoFuera, calcularBufferPeriodo
 } = FiltrosYPeriodos;
 
+/** Preferencias de interfaz guardadas (los días y horas del perfil los carga cargarPerfilActivo). */
 function cargarConfiguracion() {
-    const perfilData = GestorPerfiles.obtenerDatosPerfil();
     return {
-        diasHabiles: (perfilData && Array.isArray(perfilData.diasHabiles))
-            ? perfilData.diasHabiles
-            : Almacenamiento.getObject(STORAGE_KEYS.DIAS_HABILES, [1, 2, 3, 4, 5]),
-        horasDiarias: (perfilData && perfilData.horasDiarias !== undefined)
-            ? perfilData.horasDiarias
-            : Almacenamiento.getNumber(STORAGE_KEYS.HORAS_DIARIAS, 7),
         tema: EstadoApp._notify().temaGuardado(),
         vistaActual: Almacenamiento.getItem(STORAGE_KEYS.VISTA_ACTUAL, 'diaria'),
         ignorarTiempoFuera: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true),

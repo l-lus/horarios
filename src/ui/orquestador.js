@@ -253,8 +253,7 @@ function _initSwipesYStats() {
     _bindStatItemPopups(document.querySelector('.stats-grid'));
 }
 
-function _initDatosYConfig() {
-    const config = GestionDatos.cargarConfiguracion();
+function _initDatosYConfig(config) {
     EstadoApp.setVistaActual(config.vistaActual);
     EstadoApp.setIgnorarTiempoFuera(config.ignorarTiempoFuera || false);
     actualizarEstadoBotonIgnorarTF();
@@ -285,8 +284,7 @@ function _initDatosYConfig() {
     GestorHistorial.updateButtons();
 }
 
-function _restaurarEstadoVisual() {
-    const config = GestionDatos.cargarConfiguracion();
+function _restaurarEstadoVisual(config) {
     GestorTemas.aplicarTema(config.tema);
     Movimiento.init();
     EstiloCalendario.init();
@@ -429,8 +427,9 @@ async function init() {
     _initListenersFormulario();
     _initListenersTeclado();
     _initSwipesYStats();
-    _initDatosYConfig();
-    _restaurarEstadoVisual();
+    const config = GestionDatos.cargarConfiguracion();
+    _initDatosYConfig(config);
+    _restaurarEstadoVisual(config);
     setBloqueoEdicion(true);
     setBloqueoEdicionGrupo(true);
     const btnEliminarPerfil = $('btn-eliminar-perfil-editor');

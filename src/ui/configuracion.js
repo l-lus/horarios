@@ -5,7 +5,6 @@ import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorTemas } from './gestor-temas.js';
-import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
@@ -281,8 +280,6 @@ function actualizarFeedbackConfig() {
         const huboCambio = nuevosDias.length !== diasVigentes.length
             || nuevosDias.some((d, i) => d !== diasVigentes[i]);
         if (huboCambio) Compensatorios.registrarCambioDiasHabiles(nuevosDias);
-        const esDefault = GestorPerfiles.esPerfilDefault();
-        if (esDefault) Almacenamiento.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
         EstadoApp.guardarYActualizar();
         if (huboCambio) _reprogramarPushDebounced();
     }
@@ -308,8 +305,6 @@ function cambiarHorasDiarias(incremento) {
     if (isNaN(nuevoValor)) return;
 
     EstadoApp.setHorasDiarias(nuevoValor);
-    const esDefault = GestorPerfiles.esPerfilDefault();
-    if (esDefault) Almacenamiento.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
     actualizarFeedbackConfig();
     _reprogramarPushDebounced();
 }

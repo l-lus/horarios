@@ -431,3 +431,22 @@ test('SincronizacionGist: el token se valida con lista blanca y uno inválido no
     G.saveCredentials('', '');
     assert.equal(G.getToken(), '');
 });
+
+test('FiltrosYPeriodos: día especial y operaciones por lote rechazan fechas inválidas sin tocar los registros', async () => {
+    const { FiltrosYPeriodos: F } = await import('../src/services/filtros-periodos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const avisos = [];
+    EstadoApp.configurarNotificaciones({ avisarFichaje: m => avisos.push(m), mostrarToast: m => avisos.push(m) });
+    EstadoApp._setRegistros([]);
+
+    await assert.rejects(F.registrarDiaEspecial('2026-13-01', 'feriado'));
+    await assert.rejects(F.registrarVacacionesDirecto('no-fecha', '2026-10-20', 'vacaciones'));
+    await assert.rejects(F.registrarVacacionesDirecto('2026-10-20', '2026-10-10', 'vacaciones'));
+    await assert.rejects(F.borrarPeriodoDirecto('2026-10-01', ''));
+    assert.equal(EstadoApp.registros().length, 0);
+    assert.deepEqual(avisos, ['Fecha inválida', 'Fecha "Desde" inválida', 'La fecha inicial debe ser inferior a la final', 'Verificá ambas fechas']);
+
+    EstadoApp._setRegistros([{ id: 'eeeeeeeeee1', fecha: '2026-10-05', entrada: '09:00', salida: '17:00', tiempoFuera: null, horas: 8, minutos: 0, total: 8 }]);
+    await assert.rejects(F.registrarDiaEspecial('2026-10-05', 'feriado'));
+    assert.equal(avisos.at(-1), 'Ya existe un registro para esa fecha');
+});

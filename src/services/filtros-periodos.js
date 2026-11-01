@@ -27,11 +27,18 @@ function editarGrupo(grupo) {
     notify.abrirModal('modal-editar-grupo');
 }
 
+/** Error de un rango de fechas (formato y orden) o null. Lo usan la edición de grupo y las operaciones por lote. */
+function _errorRangoFechas(desde, hasta) {
+    if (!desde || !hasta) return 'Verificá ambas fechas';
+    if (!TiempoUtils.validarFecha(desde)) return 'Fecha "Desde" inválida';
+    if (!TiempoUtils.validarFecha(hasta)) return 'Fecha "Hasta" inválida';
+    if (desde > hasta) return 'La fecha inicial debe ser inferior a la final';
+    return null;
+}
+
 function _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta) {
-    if (!nuevaDesde || !nuevaHasta) return 'Verificá ambas fechas';
-    if (!TiempoUtils.validarFecha(nuevaDesde)) return 'Fecha "Desde" inválida';
-    if (!TiempoUtils.validarFecha(nuevaHasta)) return 'Fecha "Hasta" inválida';
-    if (nuevaDesde > nuevaHasta) return 'La fecha inicial debe ser inferior a la final';
+    const errorRango = _errorRangoFechas(nuevaDesde, nuevaHasta);
+    if (errorRango) return errorRango;
     const hoy = new Date();
     const dosPasado = new Date(hoy); dosPasado.setFullYear(hoy.getFullYear() - 2);
     const dosFuturo = new Date(hoy); dosFuturo.setFullYear(hoy.getFullYear() + 2);
@@ -110,8 +117,12 @@ async function eliminarGrupoActual() {
 
 async function registrarDiaEspecial(fecha, tipo) {
     const notify = EstadoApp._notify();
+    if (!TiempoUtils.validarFecha(fecha)) { notify.avisarFichaje('Fecha inválida'); throw new Error('Fecha inválida'); }
     const registroExistente = EstadoApp.registroPorFecha(fecha);
-    if (registroExistente) { notify.mostrarToast('Ya existe un registro para hoy', 'warning'); throw new Error('Registro ya existe'); }
+    if (registroExistente) {
+        notify.mostrarToast(fecha === TiempoUtils.obtenerFechaHoy() ? 'Ya existe un registro para hoy' : 'Ya existe un registro para esa fecha', 'warning');
+        throw new Error('Registro ya existe');
+    }
 
     const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
     if (!tipoConfig) { notify.avisarFichaje('Tipo inválido'); throw new Error('Tipo inválido'); }
@@ -260,6 +271,8 @@ async function registrarVacacionesDirecto(desde, hasta, tipo) {
     const notify = EstadoApp._notify();
     const tipoConfig = TiposRegistro.obtenerTipoPorId(tipo);
     if (!tipoConfig) { notify.avisarFichaje('Tipo inválido'); throw new Error('Tipo inválido'); }
+    const errorRango = _errorRangoFechas(desde, hasta);
+    if (errorRango) { notify.avisarFichaje(errorRango); throw new Error(errorRango); }
     const entrada = tipoConfig.codigo;
     const salida = tipoConfig.codigo;
 
@@ -295,6 +308,8 @@ async function registrarVacacionesDirecto(desde, hasta, tipo) {
 
 async function borrarPeriodoDirecto(desde, hasta) {
     const notify = EstadoApp._notify();
+    const errorRango = _errorRangoFechas(desde, hasta);
+    if (errorRango) { notify.avisarFichaje(errorRango); throw new Error(errorRango); }
     const registros = EstadoApp.registros();
     const registrosAEliminar = registros.filter(r => {
         if (r.fecha < desde || r.fecha > hasta) return false;

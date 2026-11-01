@@ -212,11 +212,32 @@ function normalizarRegistrosImportados(rawList, calcularHorasFn) {
                 : undefined,
         }));
 
-    normalizados.forEach(r => {
+    const unicos = _sinDuplicados(normalizados);
+    const descartadosDuplicados = normalizados.length - unicos.length;
+    if (descartadosDuplicados > 0)
+        D._notify().mostrarToast(`${descartadosDuplicados} registro${TiempoUtils.pluralizar(descartadosDuplicados)} con fecha repetida omitido${TiempoUtils.pluralizar(descartadosDuplicados)}`, 'warning');
+
+    unicos.forEach(r => {
         if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return;
         D._aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera || null, r.credito || null, calcularHorasFn);
     });
-    return normalizados;
+    return unicos;
+}
+
+// Un registro por fecha (la app lo da por hecho: registroPorFecha) e ids únicos. Ante fechas repetidas queda el
+// registro más completo (con salida antes que sin ella); a igualdad, el primero del archivo.
+function _sinDuplicados(lista) {
+    const porFecha = new Map();
+    for (const r of lista) {
+        const previo = porFecha.get(r.fecha);
+        if (!previo || (!previo.salida && r.salida)) porFecha.set(r.fecha, r);
+    }
+    const ids = new Set();
+    return lista.filter(r => porFecha.get(r.fecha) === r).map(r => {
+        const id = ids.has(r.id) ? S.generarIDSeguro() : r.id;
+        ids.add(id);
+        return id === r.id ? r : { ...r, id };
+    });
 }
 
 async function exportarJSON() {

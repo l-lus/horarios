@@ -276,3 +276,21 @@ test('EstadoTarjeta.calcularEstadoCard arma diasSemana: sin registro, especial, 
         ['2026-10-26', 'cerrado'], ['2026-10-27', 'futuro'], ['2026-10-28', 'futuro'], ['2026-10-29', 'futuro'], ['2026-10-30', 'futuro']
     ]);
 });
+
+test('ImportarExportar.normalizarRegistrosImportados deja un registro por fecha (el más completo) e ids únicos', async () => {
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const toasts = [];
+    EstadoApp.configurarNotificaciones({ mostrarToast: (m, t) => toasts.push([m, t]) });
+    const base = { tiempoFuera: null, horas: 0, minutos: 0, total: 0 };
+    const lista = [
+        { ...base, id: 'aaaaaaaaaa1', fecha: '2026-10-20', entrada: '09:00', salida: null },
+        { ...base, id: 'aaaaaaaaaa2', fecha: '2026-10-20', entrada: '09:00', salida: '17:00' },
+        { ...base, id: 'aaaaaaaaaa2', fecha: '2026-10-21', entrada: '08:00', salida: '16:00' },
+    ];
+    const r = ImportarExportar.normalizarRegistrosImportados(lista, EstadoApp.calcularHoras);
+    assert.equal(r.length, 2);
+    assert.equal(r.find(x => x.fecha === '2026-10-20').salida, '17:00');
+    assert.equal(new Set(r.map(x => x.id)).size, 2);
+    assert.match(toasts.at(-1)[0], /1 registro con fecha repetida omitido/);
+});

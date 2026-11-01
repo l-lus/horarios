@@ -28,6 +28,37 @@ body {
     overflow-y: auto;
 }
 
+/* ─── PANTALLA DE CARGA ──────────────────────────────────────────────────────── */
+/* tema-inicial.js marca <html class="cargando"> antes del primer pintado; main.js la quita cuando la UI está lista.
+   Así no se ven las tarjetas "muertas" (HTML estático) mientras el módulo todavía no corrió. */
+html.cargando body>* {
+    visibility: hidden;
+}
+
+html.cargando body::after {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 36px;
+    height: 36px;
+    margin: -18px 0 0 -18px;
+    border: 3px solid var(--border);
+    border-top-color: var(--text-muted);
+    border-radius: 50%;
+    animation: girarCarga .8s linear infinite;
+}
+
+html[data-motion="reduce"].cargando body::after {
+    animation: none;
+}
+
+@keyframes girarCarga {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* ─── DISEÑO ─────────────────────────────────────────────────────────────────── */
 
 .container {

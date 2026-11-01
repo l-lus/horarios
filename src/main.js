@@ -51,6 +51,9 @@ if (document.readyState === 'loading') {
     _iniciarEventosDOM();
 }
 
+// UI iniciada: se quita la pantalla de carga (ver html.cargando en base.css y tema-inicial.js)
+requestAnimationFrame(() => document.documentElement.classList.remove('cargando'));
+
 (async () => {
     await BienvenidaModal.chequearYMostrar();
     setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);

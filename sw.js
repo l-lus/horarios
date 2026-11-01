@@ -59,6 +59,7 @@ const urlsToCache = [
   './src/ui/calendario-popups.js',
   './src/ui/respaldo-local.js',
   './src/ui/gist-respaldo.js',
+  './src/ui/gist-resumen-merge.js',
   './src/ui/historico-edicion.js',
   './src/ui/historico.js',
   './src/ui/historico-items.js',

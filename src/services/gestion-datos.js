@@ -96,13 +96,22 @@ function cargarPerfilActivo() {
     }
 }
 
-function validarFormulario() {
+/**
+ * Fecha y horas de un formulario, saneadas (los puertos devuelven valores crudos). Lo usan alta, edición y referencia.
+ * @param {{ fecha: string, entrada: string, salida: string }} campos
+ */
+function _camposHorario(campos) {
+    return {
+        fecha: S.sanitizeString(campos.fecha, 10),
+        entrada: S.sanitizeString(campos.entrada.trim(), 5),
+        salida: S.sanitizeString(campos.salida.trim(), 5),
+    };
+}
+
+/** Marca los campos inválidos del formulario de fichaje y devuelve si se puede continuar. */
+function validarFormulario({ fecha, entrada, salida }) {
     let valido = true;
     const notify = EstadoApp._notify();
-    const form = notify.formularioRegistro.leer();
-    const fecha = S.sanitizeString(form.fecha, 10);
-    const entrada = S.sanitizeString(form.entrada.trim(), 5);
-    const salida = S.sanitizeString(form.salida.trim(), 5);
 
     notify.limpiarError('fecha', null);
     notify.limpiarError('entrada', null);
@@ -254,15 +263,13 @@ async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
 
 async function agregarRegistro() {
     const notify = EstadoApp._notify();
-    if (!validarFormulario()) { notify.avisarFichaje('Verificá los campos'); return; }
-
     const formulario = notify.formularioRegistro;
+    const campos = _camposHorario(formulario.leer());
+    if (!validarFormulario(campos)) { notify.avisarFichaje('Verificá los campos'); return; }
+
     const btn = formulario.bloquearBoton();
     let usaHoraActual = false;
-    const campos = formulario.leer();
-    let f = S.sanitizeString(campos.fecha, 10);
-    let e = S.sanitizeString(campos.entrada.trim(), 5);
-    let s = S.sanitizeString(campos.salida.trim(), 5);
+    let { fecha: f, entrada: e, salida: s } = campos;
 
     if (_fechaFuturaInvalida(f, e, s)) {
         notify.mostrarError('fecha', null);
@@ -375,9 +382,7 @@ function pegarReferenciaAutomatica() {
     if (campos.referencia) {
         form.escribirReferencia('');
     } else {
-        const f = S.sanitizeString(campos.fecha, 10);
-        const e = S.sanitizeString(campos.entrada.trim(), 5);
-        const s = S.sanitizeString(campos.salida.trim(), 5);
+        const { fecha: f, entrada: e, salida: s } = _camposHorario(campos);
         const listaSinManual = EstadoApp.registros().map(x => x.id === editandoId
             ? { ...x, fecha: f, entrada: e || null, salida: s || null, referenciaCompensatorio: undefined }
             : x);
@@ -462,9 +467,7 @@ async function guardarEdicion() {
     const btnGuardar = notify.formularioEdicion.bloquearGuardar();
 
     const campos = notify.formularioEdicion.leer();
-    const f = S.sanitizeString(campos.fecha, 10);
-    const e = S.sanitizeString(campos.entrada.trim(), 5);
-    const s = S.sanitizeString(campos.salida.trim(), 5);
+    const { fecha: f, entrada: e, salida: s } = _camposHorario(campos);
     let tf = S.sanitizeString(campos.tiempoFuera.trim(), 5) || null;
     tf = tf ? TiempoUtils.normalizarMinutosSueltos(tf) : tf;
     const notas = S.normalizarNotas(campos.notas);

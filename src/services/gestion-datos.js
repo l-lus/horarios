@@ -21,7 +21,7 @@ const {
 } = EstadoApp;
 
 const {
-    _esObjetivoValido, diasHabilesEnFecha, objetivoDeRegistro, calcularAsignacionesCompensatorio,
+    _esObjetivoValido, diasHabilesEnFecha, objetivoDeRegistro, objetivoGuardado, calcularAsignacionesCompensatorio,
     _buscarAsignacionCompensatorio, objetivoEdicionEnVivo, _recalcularCreditoRegistro
 } = Compensatorios;
 
@@ -86,7 +86,7 @@ function cargarPerfilActivo() {
     if (migrados > 0) {
         console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${EstadoApp.horasDiarias()}h).`);
         GestorHistorial.parchearRegistrosEnHistorial(r => {
-            if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
+            if (!_esObjetivoValido(r.objetivoHoras)) {
                 r.objetivoHoras = EstadoApp.horasDiarias();
                 return true;
             }
@@ -349,9 +349,8 @@ function editarRegistro(id) {
     if (!r) return;
 
     const notify = EstadoApp._notify();
-    const horasDiarias = EstadoApp.horasDiarias();
     EstadoApp.setEditandoId(id);
-    const objetivoActual = (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras)) ? r.objetivoHoras : horasDiarias;
+    const objetivoActual = objetivoGuardado(r);
     notify.formularioEdicion.poblar({
         fecha: r.fecha,
         entrada: r.entrada || '',
@@ -474,7 +473,7 @@ async function guardarEdicion() {
 
     let objetivoNuevo = campos.objetivo;
     if (!_esObjetivoValido(objetivoNuevo)) objetivoNuevo = horasDiarias;
-    const objetivoPrevio = (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras)) ? r.objetivoHoras : horasDiarias;
+    const objetivoPrevio = objetivoGuardado(r);
 
     const esCompensatorioNuevo = TiposRegistro.obtenerTipoPorCodigo(e, s)?.id === 'compensatorio';
     let referenciaCompensatorioNueva;

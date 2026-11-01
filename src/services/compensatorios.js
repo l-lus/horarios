@@ -9,8 +9,12 @@ import { EstadoApp as D } from './estado-app.js';
 // ====================================================================
 //      COMPENSATORY DAYS & WORKDAY HISTORY CALCULATIONS MODULE
 // ====================================================================
-function _esObjetivoValido(v) {
-    return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24;
+const _esObjetivoValido = S.esObjetivoHorasValido;
+
+/** Objetivo guardado en el registro (sin mirar la opción de ignorarlo), o el global si no tiene uno válido. Lo usa la edición. */
+function objetivoGuardado(registro) {
+    const v = registro?.objetivoHoras;
+    return _esObjetivoValido(v) ? v : D.horasDiarias();
 }
 
 function sanitizarHistorialDiasHabiles(historial) {
@@ -191,7 +195,7 @@ function objetivoEdicionEnVivo() {
 function migrarObjetivoHorasFaltante() {
     let migrados = 0;
     D.registros().forEach(r => {
-        if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
+        if (!_esObjetivoValido(r.objetivoHoras)) {
             r.objetivoHoras = D.horasDiarias();
             migrados++;
         }
@@ -235,6 +239,7 @@ export const Compensatorios = {
     diasHabilesEnFecha,
     registrarCambioDiasHabiles,
     objetivoDeRegistro,
+    objetivoGuardado,
     esTipoRemoto,
     _excedenteDeRegistro,
     calcularAsignacionesCompensatorio,

@@ -55,6 +55,12 @@ test('SeguridadYUtils.normalizarNotas: lista blanca, largo máximo y vacía → 
     assert.equal(normalizarNotas(undefined), null);
 });
 
+test('SeguridadYUtils.esObjetivoHorasValido: número finito entre 0 y 24', () => {
+    const { esObjetivoHorasValido: ok } = SeguridadYUtils;
+    assert.deepEqual([0, 7.5, 24].map(ok), [true, true, true]);
+    assert.deepEqual([-1, 25, NaN, Infinity, '7', null, undefined].map(ok), [false, false, false, false, false, false, false]);
+});
+
 test('EventosApp: suscripción, desuscripción y registro de handlers', () => {
     let recibido = null;
     const off = EventosApp.on('test:evento', (payload) => { recibido = payload; });

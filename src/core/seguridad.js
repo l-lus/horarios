@@ -140,6 +140,11 @@ async function calcularHashSHA256(data) {
     return _sha256Fallback(dataBuffer);
 }
 
+/** Objetivo de horas de un registro: número entre 0 y 24. */
+function esObjetivoHorasValido(v) {
+    return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24;
+}
+
 function validarRegistroSeguro(r) {
     if (!r || typeof r !== 'object') return false;
     if (Array.isArray(r) || r instanceof Date) return false;
@@ -161,7 +166,7 @@ function validarRegistroSeguro(r) {
         if (typeof r.notas !== 'string' || r.notas.length > SECURITY_LIMITS.MAX_NOTAS_LENGTH) return false;
     }
     if (r.objetivoHoras !== null && r.objetivoHoras !== undefined) {
-        if (!Number.isFinite(r.objetivoHoras) || r.objetivoHoras < 0 || r.objetivoHoras > 24) return false;
+        if (!esObjetivoHorasValido(r.objetivoHoras)) return false;
     }
     if (r.referenciaCompensatorio !== null && r.referenciaCompensatorio !== undefined) {
         if (typeof r.referenciaCompensatorio !== 'string' || !TiempoUtils.validarFecha(r.referenciaCompensatorio)) return false;
@@ -203,7 +208,7 @@ function repararRegistroGuardado(r) {
     const credito = _horaONull(r.credito);
     if (credito) reparado.credito = credito;
     if (typeof r.notas === 'string' && r.notas) reparado.notas = r.notas.substring(0, SECURITY_LIMITS.MAX_NOTAS_LENGTH);
-    if (Number.isFinite(r.objetivoHoras) && r.objetivoHoras >= 0 && r.objetivoHoras <= 24) reparado.objetivoHoras = r.objetivoHoras;
+    if (esObjetivoHorasValido(r.objetivoHoras)) reparado.objetivoHoras = r.objetivoHoras;
     if (typeof r.referenciaCompensatorio === 'string' && TiempoUtils.validarFecha(r.referenciaCompensatorio)) reparado.referenciaCompensatorio = r.referenciaCompensatorio;
     return reparado;
 }
@@ -244,5 +249,6 @@ export const SeguridadYUtils = {
     generarIDSeguro,
     calcularHashSHA256,
     validarRegistroSeguro,
+    esObjetivoHorasValido,
     reviverJSONSeguro
 };

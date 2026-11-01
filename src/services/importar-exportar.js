@@ -204,9 +204,7 @@ function normalizarRegistrosImportados(rawList, calcularHorasFn) {
             total: Math.max(0, Math.min(24, parseFloat(r.total) || 0)),
             credito: validarHora(r.credito),
             notas: S.normalizarNotas(r.notas),
-            objetivoHoras: (typeof r.objetivoHoras === 'number' && Number.isFinite(r.objetivoHoras))
-                ? Math.max(0, Math.min(24, r.objetivoHoras))
-                : undefined,
+            objetivoHoras: S.esObjetivoHorasValido(r.objetivoHoras) ? r.objetivoHoras : undefined,
             referenciaCompensatorio: (typeof r.referenciaCompensatorio === 'string' && TiempoUtils.validarFecha(r.referenciaCompensatorio))
                 ? r.referenciaCompensatorio
                 : undefined,

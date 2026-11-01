@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261101.1756-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261030.1815-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -171,9 +171,12 @@ self.addEventListener('fetch', event => {
             return networkResponse;
           })
           .catch(async () => {
+            // Sin conexión: una navegación cae a la app precacheada; cualquier otro recurso falla como error de red
             if (event.request.mode === 'navigate') {
-              return (await caches.match('./index.html', matchOpts)) || caches.match('./', matchOpts);
+              const app = (await caches.match('./index.html', matchOpts)) || (await caches.match('./', matchOpts));
+              if (app) return app;
             }
+            return Response.error();
           });
       })
   );

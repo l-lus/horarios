@@ -240,7 +240,12 @@ function limpiarFiltros() {
     EventosApp.emit('filtros:cambio', { activo: false });
 }
 
-function aplicarFiltrosInmediato(desde, hasta, tipo) {
+/** Valores crudos del popup de filtros: lo que no es una fecha válida o un tipo conocido se ignora (como si estuviera vacío). */
+function aplicarFiltrosInmediato(desdeCrudo, hastaCrudo, tipoCrudo) {
+    const fechaOVacio = (v) => (typeof v === 'string' && TiempoUtils.validarFecha(v)) ? v : '';
+    const desde = fechaOVacio(desdeCrudo);
+    const hasta = fechaOVacio(hastaCrudo);
+    const tipo = (tipoCrudo === 'normal' || TiposRegistro.validarTipoPermitido(tipoCrudo)) ? tipoCrudo : '';
     if (!desde && !hasta && !tipo) {
         EstadoApp.setFiltroState({ activo: false, desde: null, hasta: null, tipo: null });
         EventosApp.emit('filtros:cambio', { activo: false });

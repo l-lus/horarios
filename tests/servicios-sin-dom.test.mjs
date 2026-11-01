@@ -450,3 +450,16 @@ test('FiltrosYPeriodos: día especial y operaciones por lote rechazan fechas inv
     await assert.rejects(F.registrarDiaEspecial('2026-10-05', 'feriado'));
     assert.equal(avisos.at(-1), 'Ya existe un registro para esa fecha');
 });
+
+test('FiltrosYPeriodos.aplicarFiltrosInmediato ignora fechas y tipos inválidos', async () => {
+    const { FiltrosYPeriodos: F } = await import('../src/services/filtros-periodos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    EstadoApp.configurarNotificaciones({ actualizarUI: () => { } });
+    F.aplicarFiltrosInmediato('2026-10-01', 'x', '<b>');
+    assert.deepEqual(EstadoApp.getFiltroState(), { filtroActivo: true, filtroDesde: '2026-10-01', filtroHasta: null, filtroTipo: null });
+    F.aplicarFiltrosInmediato('basura', '', 'otro');
+    assert.equal(EstadoApp.getFiltroState().filtroActivo, false);
+    F.aplicarFiltrosInmediato('', '', 'normal');
+    assert.equal(EstadoApp.getFiltroState().filtroTipo, 'normal');
+    F.aplicarFiltrosInmediato('', '', '');
+});

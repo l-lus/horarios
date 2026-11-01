@@ -26,6 +26,14 @@ if (window.top !== window.self) {
     } catch (e) { }
 }());
 
+// Estilo de los días del calendario (ver EstiloCalendario): el CSS solo mira <html data-estilo-calendario>; sin valor guardado queda el original ('legacy').
+(function () {
+    try {
+        var e = localStorage.getItem('horarios_estiloCalendario');
+        document.documentElement.setAttribute('data-estilo-calendario', e || 'legacy');
+    } catch (err) { }
+}());
+
 // Reducir animaciones: 'on' | 'off' | 'auto' (sin valor = auto, sigue al sistema).
 // Misma regla que Movimiento en app.js; el CSS solo mira <html data-motion>.
 (function () {

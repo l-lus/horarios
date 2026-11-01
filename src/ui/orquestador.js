@@ -3,6 +3,7 @@ import { $ } from '../core/dom.js';
 import { Formularios } from './formularios.js';
 import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
+import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { InstaladorPWA } from './instalador-pwa.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
@@ -322,6 +323,7 @@ function _restaurarEstadoVisual() {
     const config = GestionDatos.cargarConfiguracion();
     GestorTemas.aplicarTema(config.tema);
     Movimiento.init();
+    EstiloCalendario.init();
 
     $('fecha').value = TiempoUtils.obtenerFechaHoy();
 

@@ -1,6 +1,7 @@
 import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
+import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorTemas } from './gestor-temas.js';
@@ -184,12 +185,24 @@ function toggleReducirAnimaciones() {
     actualizarHintAnimaciones();
 }
 
+function actualizarHintEstiloCalendario() {
+    const lbl = $('hint-estilo-calendario-label');
+    if (lbl) lbl.textContent = EstiloCalendario.etiqueta();
+}
+
+// Cada toque pasa al estilo siguiente; el CSS reacciona solo al atributo de <html>, así que el calendario cambia al instante
+function toggleEstiloCalendario() {
+    EstiloCalendario.siguiente();
+    actualizarHintEstiloCalendario();
+}
+
 function _refrescarTogglesConfig() {
     actualizarEstadoBotonIgnorarTF();
     actualizarEstadoBotonLogicaCubierto();
     actualizarEstadoBotonObjetivoPorRegistro();
     actualizarEstadoBotonAplicarHoras();
     actualizarHintAnimaciones();
+    actualizarHintEstiloCalendario();
 }
 
 function _precargarCamposConfig() {
@@ -319,6 +332,7 @@ function bindEventos() {
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => toggleHoverPopupCalendario());
     $('btn-toggle-animaciones')?.addEventListener('click', () => toggleReducirAnimaciones());
+    $('btn-estilo-calendario')?.addEventListener('click', () => toggleEstiloCalendario());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
     $('btn-toggle-rueda-calendario')?.addEventListener('click', () => toggleRuedaCalendario());

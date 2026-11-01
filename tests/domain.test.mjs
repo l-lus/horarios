@@ -623,3 +623,23 @@ test('AvisoActualizacion: porcentajeValido acota y redondea el avance que inform
     assert.equal(porcentajeValido(null), null);
     assert.equal(porcentajeValido('abc'), null);
 });
+
+test('EstiloCalendario: el ciclo recorre todos los estilos, vuelve al original y tolera ids desconocidos', async () => {
+    const { ESTILOS_CALENDARIO, siguienteEstilo, etiquetaEstilo } = await import('../src/core/estilo-calendario.js');
+    const ids = ESTILOS_CALENDARIO.map(e => e.id);
+    assert.equal(ids[0], 'legacy', 'el estilo original es el primero y el valor por defecto');
+    assert.equal(new Set(ids).size, ids.length, 'sin ids repetidos');
+    assert.deepEqual(ids, ['legacy', 'contorno-brillo', 'aro-grueso', 'relleno-aro', 'subrayado', 'solo-contorno']);
+
+    // dando la vuelta completa se vuelve al punto de partida y se pasa por todos
+    const visitados = [];
+    let id = 'legacy';
+    for (let i = 0; i < ids.length; i++) { visitados.push(id); id = siguienteEstilo(id); }
+    assert.deepEqual(visitados, ids);
+    assert.equal(id, 'legacy');
+
+    // un valor guardado que ya no existe se trata como el original
+    assert.equal(siguienteEstilo('inventado'), 'contorno-brillo');
+    assert.equal(etiquetaEstilo('inventado'), 'Legacy');
+    assert.equal(etiquetaEstilo('aro-grueso'), 'Aro grueso');
+});

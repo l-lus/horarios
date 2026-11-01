@@ -760,6 +760,81 @@
     color: var(--text-muted);
 }
 
+/* ─── ESTILOS DE LOS DÍAS (opción "Estilo de los días" en ajustes) ───────────────────────────────
+   'legacy' es el original (círculo relleno, definido arriba). Los demás se activan con <html data-estilo-calendario="...">
+   (lo pone core/estilo-calendario.js) y parten del color del día en --cal-color. Los días sin registro no se tocan. */
+.calendario-dia.dia-normal { --cal-color: var(--c-green); }
+.calendario-dia.dia-incompleto,
+.calendario-dia.dia-especial-red { --cal-color: var(--c-red); }
+.calendario-dia.dia-especial-purple { --cal-color: var(--c-purple); }
+.calendario-dia.dia-especial-orange { --cal-color: var(--c-orange); }
+.calendario-dia.dia-cubierto,
+.calendario-dia.dia-especial-gold { --cal-color: var(--c-gold); }
+.calendario-dia.dia-especial-blue,
+.calendario-dia.dia-en-curso { --cal-color: var(--c-blue); }
+
+/* Contorno con brillo: aro fino del color del día con un resplandor suave; hoy en negrita */
+:root[data-estilo-calendario="contorno-brillo"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+    background: transparent;
+    box-shadow: inset 0 0 0 2px var(--cal-color), 0 0 10px color-mix(in srgb, var(--cal-color) 45%, transparent);
+}
+
+/* Aro grueso: aro ancho del color del día y el número del mismo color */
+:root[data-estilo-calendario="aro-grueso"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+    background: transparent;
+    box-shadow: inset 0 0 0 4px var(--cal-color);
+    color: color-mix(in srgb, var(--cal-color) 55%, var(--text-main));
+    font-weight: var(--fw-semibold);
+}
+
+/* Relleno con aro: disco más chico (algo más oscuro que el color) y, separado por un hueco, un aro fino del color del día */
+:root[data-estilo-calendario="relleno-aro"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--cal-color) 80%, var(--bg-card)) calc(100% - 4px), transparent calc(100% - 4px));
+    box-shadow: inset 0 0 0 1.5px var(--cal-color);
+}
+
+/* Subrayado: sin círculo, el número con una barrita del color del día debajo; hoy queda encerrado en un aro fino */
+:root[data-estilo-calendario="subrayado"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+    background: transparent;
+}
+
+:root[data-estilo-calendario="subrayado"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue)::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 17%;
+    width: 38%;
+    height: 3px;
+    border-radius: var(--radius-full);
+    background: var(--cal-color);
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+:root[data-estilo-calendario="subrayado"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {
+    outline: 1.5px solid var(--cal-color);
+    outline-offset: -1.5px;
+}
+
+/* Solo contorno: aro fino y el número sin color; el color lo lleva únicamente el borde. Hoy va relleno */
+:root[data-estilo-calendario="solo-contorno"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--cal-color);
+}
+
+:root[data-estilo-calendario="solo-contorno"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {
+    background: var(--cal-color);
+    box-shadow: none;
+}
+
+/* En los estilos nuevos el borde de hoy sin registro sigue siendo el gris de siempre; con registro hoy se marca con negrita (o con su propio relleno/aro) */
+:root[data-estilo-calendario="contorno-brillo"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy,
+:root[data-estilo-calendario="aro-grueso"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy,
+:root[data-estilo-calendario="relleno-aro"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy,
+:root[data-estilo-calendario="solo-contorno"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {
+    outline: none;
+}
+
 /* Entrada inicial (una sola vez al cargar): pop escalonado en los días con registro,
    el número sube un instante después y el remate (punto y hoy) cierra la secuencia.
    Las clases las pone y las saca Calendario.animarEntradaInicial(); solo transform/opacity. */

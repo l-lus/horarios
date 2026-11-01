@@ -158,6 +158,24 @@
     opacity: 1;
 }
 
+/* Latido del remate cuando el brillo de la barra lo alcanza.
+   Mismo ciclo (5 s) que el brillo, y arranca junto con él (se activa con la clase .shimmer): el brillo llega al remate a ~11 % del ciclo y lo deja a ~15 %; el latido sube con él y vuelve hasta ~22 %. */
+.progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado) {
+    animation: remate-latido 5s ease-in-out infinite;
+}
+
+.progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado)::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    box-sizing: border-box;
+    border: 2px solid;
+    border-color: inherit;
+    border-radius: 50%;
+    opacity: 0;
+    animation: remate-onda 5s ease-out infinite;
+}
+
 .progress-punto[data-color="green"] { border-color: var(--c-green); }
 .progress-punto[data-color="red"] { border-color: var(--c-red); }
 .progress-punto[data-color="purple"] { border-color: var(--c-purple); }

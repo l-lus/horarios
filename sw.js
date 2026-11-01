@@ -179,9 +179,12 @@ self.addEventListener('fetch', event => {
 });
 
 // Muestra el recordatorio de fin de jornada (lo usan el push real y la notificación de prueba)
+// El payload puede llegar como cualquier JSON (null, un número, un array): se toman solo title y body como texto acotado.
 function mostrarRecordatorio(data) {
-  return self.registration.showNotification(data.title || 'Horarios', {
-    body: data.body || 'Se cumplió tu horario de hoy',
+  const d = data && typeof data === 'object' ? data : {};
+  const texto = (v, max) => (typeof v === 'string' && v.trim() ? v.slice(0, max) : '');
+  return self.registration.showNotification(texto(d.title, 100) || 'Horarios', {
+    body: texto(d.body, 300) || 'Se cumplió tu horario de hoy',
     icon: './assets/icons/icon-192.png',
     badge: './assets/icons/badge-96.png',
     tag: 'horarios-recordatorio',

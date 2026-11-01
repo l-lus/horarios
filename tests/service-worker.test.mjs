@@ -12,13 +12,14 @@ function crearEntorno({ fallaEn = null } = {}) {
     const manejadores = {};
     const mensajes = [];
     const guardados = [];
+    const notificaciones = [];
     const estado = { saltoLaEspera: false };
     const cliente = { postMessage: m => mensajes.push(m) };
     const self = {
         addEventListener: (tipo, fn) => { manejadores[tipo] = fn; },
         clients: { matchAll: async () => [cliente], claim: async () => { } },
         skipWaiting: async () => { estado.saltoLaEspera = true; },
-        registration: { scope: 'http://localhost/' },
+        registration: { scope: 'http://localhost/', showNotification: async (titulo, opciones) => { notificaciones.push([titulo, opciones.body]); } },
     };
     const contexto = vm.createContext({
         self,
@@ -33,7 +34,7 @@ function crearEntorno({ fallaEn = null } = {}) {
         },
     });
     vm.runInContext(codigoSw, contexto);
-    return { manejadores, mensajes, guardados, estado, urls: /** @type {string[]} */ (vm.runInContext('urlsToCache', contexto)) };
+    return { manejadores, mensajes, guardados, notificaciones, estado, urls: /** @type {string[]} */ (vm.runInContext('urlsToCache', contexto)) };
 }
 
 async function instalar(entorno) {
@@ -62,4 +63,25 @@ test('Service Worker: si falla un archivo, la instalación falla, avisa el error
     assert.equal(entorno.estado.saltoLaEspera, false, 'se conserva la versión anterior');
     assert.ok(entorno.mensajes.some(m => m.tipo === 'sw-error'));
     assert.equal(entorno.mensajes.some(m => m.progreso === 100), false);
+});
+
+test('Service Worker: un push con payload inesperado (null, número, texto) igual muestra la notificación por defecto', async () => {
+    const entorno = crearEntorno();
+    const push = async (data) => {
+        let promesa;
+        entorno.manejadores.push({ data, waitUntil: p => { promesa = p; } });
+        await promesa;
+    };
+    const conJson = v => ({ json: () => v, text: () => String(v) });
+    await push(conJson(null));
+    await push(conJson(42));
+    await push({ json: () => { throw new Error('no es JSON'); }, text: () => 'hola' });
+    await push(conJson({ title: 'Ya podés irte', body: 'x'.repeat(500) }));
+    assert.deepEqual(entorno.notificaciones.slice(0, 3), [
+        ['Horarios', 'Se cumplió tu horario de hoy'],
+        ['Horarios', 'Se cumplió tu horario de hoy'],
+        ['Horarios', 'hola'],
+    ]);
+    assert.equal(entorno.notificaciones[3][0], 'Ya podés irte');
+    assert.equal(entorno.notificaciones[3][1].length, 300);
 });

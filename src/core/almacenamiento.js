@@ -188,6 +188,11 @@ function getObject(key, defaultValue = null, useProfile = false) {
     }
 }
 
+/** Borra todas las claves por perfil (configuración, historial de deshacer, timer, avisos...) de `perfilId`. */
+function borrarClavesDePerfil(perfilId) {
+    BASES_POR_PERFIL_HORARIOS.forEach(base => removeItem(`${base}_${perfilId}`));
+}
+
 function removeItem(key, useProfile = false) {
     try {
         localStorage.removeItem(_getKey(key, useProfile));
@@ -202,6 +207,7 @@ export const Almacenamiento = {
     getNumber,
     getObject,
     removeItem,
+    borrarClavesDePerfil,
     configurarNotificaciones,
     setProfileKeyResolver,
     esClaveLegadaHorarios,

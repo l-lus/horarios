@@ -372,3 +372,28 @@ test('GestionDatos.cargarPerfilActivo repara lo guardado: descarta registros sin
         GestorHistorial.clear();
     }
 });
+
+test('GestorPerfiles: crear, renombrar y eliminar validan el nombre y borran las claves del perfil', async () => {
+    const { GestorPerfiles: G } = await import('../src/services/gestor-perfiles.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    G.inicializar();
+
+    assert.match(G.crearPerfil('  ').error, /Ingresá/);
+    assert.match(G.crearPerfil('Mal<nombre>').error, /no válidos/);
+    assert.match(G.crearPerfil('principal').error, /Ya existe/);
+
+    const creado = G.crearPerfil('  Trabajo 2  ');
+    assert.equal(creado.nombre, 'Trabajo 2');
+    assert.ok(G.obtenerTodosPerfiles()[creado.id]);
+    assert.deepEqual(G.renombrarPerfil(creado.id, 'Trabajo 2'), { sinCambios: true });
+    assert.match(G.renombrarPerfil(creado.id, 'Principal').error, /Ya existe/);
+    assert.deepEqual(G.renombrarPerfil(creado.id, 'Oficina'), { nombre: 'Oficina' });
+
+    Almacenamiento.setItem(`fondoCard_${creado.id}`, 'x');
+    Almacenamiento.setItem(`feriadosAR_procesados_${creado.id}`, '[]');
+    assert.match(G.eliminarPerfil('default').error, /Principal/);
+    assert.deepEqual(G.eliminarPerfil(creado.id), { eraActual: false });
+    assert.equal(G.obtenerTodosPerfiles()[creado.id], undefined);
+    assert.equal(Almacenamiento.getItem(`fondoCard_${creado.id}`), null);
+    assert.equal(Almacenamiento.getItem(`feriadosAR_procesados_${creado.id}`), null);
+});

@@ -4,7 +4,6 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorHistorial } from '../services/gestor-historial.js';
-import { GestionDatos } from '../services/gestion-datos.js';
 import { Animaciones } from './animaciones.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { EstadoApp } from '../services/estado-app.js';
@@ -12,6 +11,7 @@ import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { mostrarToast } from './toast.js';
 import { icono, html, montar } from '../core/html.js';
+import { AvisoJornada } from '../services/aviso-jornada.js';
 
 // ====================================================================
 //                     UI CARD BREAK TIMER MODULE
@@ -162,7 +162,7 @@ async function _detenerTimerBreak(registroHoy, storageKey, storedStart) {
     GestorHistorial.saveState(EstadoApp.registros(), `tiempo fuera +${minutos}min (${TiempoUtils.fechaCorta(registroHoy.fecha)})`);
     Almacenamiento.removeItem(storageKey);
     await EstadoApp.guardarYActualizar(registroHoy.id);
-    GestionDatos.sincronizarPushHoy();
+    AvisoJornada.sincronizarHoy();
     const ignorarTF = EstadoApp.getIgnorarTiempoFuera();
     const diaTexto = registroHoy.fecha === TiempoUtils.obtenerFechaHoy() ? 'hoy' : 'ayer';
     const mensajeToast = ignorarTF

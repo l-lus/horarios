@@ -9,6 +9,7 @@ import { GestorPerfiles } from './gestor-perfiles.js';
 import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
+import { AvisoJornada } from './aviso-jornada.js';
 
 // ====================================================================
 // DATA MANAGEMENT MODULE
@@ -26,7 +27,7 @@ const {
 } = Compensatorios;
 
 const {
-    detenerYRegistrarTimer, detectarAyerAbierto, registroParaTiempoFuera, calcularBufferPeriodo
+    detenerYRegistrarTimer, detectarAyerAbierto, registroParaTiempoFuera
 } = FiltrosYPeriodos;
 
 /** Preferencias de interfaz guardadas (los días y horas del perfil los carga cargarPerfilActivo). */
@@ -158,69 +159,6 @@ async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     notify.formularioRegistro.escribir({ fecha: TiempoUtils.obtenerFechaHoy(), salida: '' });
 }
 
-/**
- * Registro cuya salida hay que avisar: el abierto de hoy, o el de ayer si sigue abierto
- * (jornada que cruza la medianoche) y hoy todavía no tiene registro. Debe caer en día hábil.
- */
-function _registroAbiertoParaPush(hoy) {
-    const regs = EstadoApp.registros();
-    let candidato = regs.find(r => r.fecha === hoy && r.entrada && !r.salida) ?? null;
-    if (!candidato && !existeRegistroEnFecha(hoy)) {
-        const { regAyer, ayerAbierto } = detectarAyerAbierto(hoy, regs);
-        if (ayerAbierto) candidato = regAyer;
-    }
-    if (!candidato) return null;
-    return TiempoUtils.esFechaHabil(candidato.fecha, diasHabilesEnFecha(candidato.fecha)) ? candidato : null;
-}
-
-function _sincronizarPushHoy() {
-    const hoy = TiempoUtils.obtenerFechaHoy();
-    const abierto = _registroAbiertoParaPush(hoy);
-    const habilitado = RecordatorioPush.getHabilitado();
-    const minutosTF = abierto && !EstadoApp.getIgnorarTiempoFuera() && abierto.tiempoFuera ? TiempoUtils.horaAMinutos(abierto.tiempoFuera) : 0;
-    const buffer = abierto ? _bufferSemanalParaPush(abierto.fecha) : 0;
-    const nuevoTarget = (habilitado && abierto)
-        ? RecordatorioPush.calcularTarget(abierto.fecha, abierto.entrada, objetivoDeRegistro(abierto), buffer, minutosTF)
-        : null;
-    const targetActual = RecordatorioPush.targetProgramadoParaHoy();
-    if (nuevoTarget === targetActual) return;
-
-    if (abierto && nuevoTarget != null) {
-        RecordatorioPush.programarFinDeJornada(abierto.fecha, abierto.entrada, objetivoDeRegistro(abierto), buffer, minutosTF);
-    } else if (targetActual != null) {
-        RecordatorioPush.cancelarFinDeJornada(RecordatorioPush.fechaProgramadaActiva() ?? hoy);
-    }
-}
-
-EstadoApp.setSincronizarPushHoyHook(_sincronizarPushHoy);
-
-function _bufferSemanalActual() {
-    const { inicio: iniSemana } = TiempoUtils.obtenerSemanaRangoActual();
-    return calcularBufferPeriodo(iniSemana, TiempoUtils.obtenerFechaHoy(), false, 0, calcularAsignacionesCompensatorio());
-}
-
-function _ultimoDiaHabilEfectivoSemana() {
-    const { fin } = TiempoUtils.obtenerSemanaRangoActual();
-    let fecha = fin;
-    for (let i = 0; i < 7; i++) {
-        if (TiempoUtils.esFechaHabil(fecha, diasHabilesEnFecha(fecha))) {
-            const reg = registroPorFecha(fecha);
-            const esEspecial = reg && TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
-            if (!esEspecial) return fecha;
-        }
-        const d = TiempoUtils.parsearFechaLocal(fecha);
-        d.setDate(d.getDate() - 1);
-        fecha = TiempoUtils.formatearFechaLocal(d);
-    }
-    return null;
-}
-
-function _bufferSemanalParaPush(fecha) {
-    const buffer = _bufferSemanalActual();
-    if (!RecordatorioPush.getUsarBufferSemanal() || !RecordatorioPush.getBufferSoloUltimoDia()) return buffer;
-    return fecha === _ultimoDiaHabilEfectivoSemana() ? buffer : 0;
-}
-
 async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
     const notify = EstadoApp._notify();
     if (!_hayEspacioParaRegistros(1)) {
@@ -239,7 +177,7 @@ async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
         return;
     }
     if (esHoy && !s && TiempoUtils.esFechaHabil(f, diasHabilesEnFecha(f))) {
-        const bufferSemanal = _bufferSemanalParaPush(f);
+        const bufferSemanal = AvisoJornada.bufferSemanalPara(f);
         RecordatorioPush.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
     }
     const entradaManual = e && !usaHoraActual, salidaManual = s && !usaHoraActual;
@@ -323,7 +261,7 @@ async function eliminarRegistroActual() {
         }
 
         EstadoApp._setRegistros(EstadoApp.registros().filter(r => r.id !== editandoId));
-        _sincronizarPushHoy();
+        AvisoJornada.sincronizarHoy();
         GestorHistorial.saveState(EstadoApp.registros(), `eliminar registro${registroABorrar ? ` (${TiempoUtils.fechaCorta(registroABorrar.fecha)})` : ''}`);
 
         const saved = await guardarYActualizar();
@@ -444,7 +382,7 @@ async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {
         notify.actualizarEstadoBotonTimerMain();
     }
     EstadoApp._setRegistros(EstadoApp.registros().filter(r => r.id !== editandoId));
-    _sincronizarPushHoy();
+    AvisoJornada.sincronizarHoy();
     GestorHistorial.saveState(EstadoApp.registros(), `eliminar registro vacío${reg ? ` (${TiempoUtils.fechaCorta(reg.fecha)})` : ''}`);
     const saved = await guardarYActualizar();
     notify.restaurarBotonGuardarEdicion(btnGuardar);
@@ -540,7 +478,7 @@ async function guardarEdicion() {
     const saved = await guardarYActualizar(r.id, true);
     notify.restaurarBotonGuardarEdicion(btnGuardar);
     if (saved) {
-        _sincronizarPushHoy();
+        AvisoJornada.sincronizarHoy();
         notify.mostrarToast(cr ? `Guardado con Salida Temprana (+${cr})` : 'Registro actualizado', 'success');
         notify.cerrarEdicion();
     }
@@ -580,7 +518,7 @@ function _aplicarEstadoHistorial(resultado, mensaje) {
             _recalcularHorasSiValido(r);
         }
     });
-    _sincronizarPushHoy();
+    AvisoJornada.sincronizarHoy();
     guardarYActualizar(null, true);
     const notify = EstadoApp._notify();
     notify.mostrarToast(mensaje, 'info', undefined, resultado.descripcion);
@@ -609,8 +547,6 @@ export const GestionDatos = {
     guardarEdicion,
     pegarReferenciaAutomatica,
     borrarTodoHistorial,
-    sincronizarPushHoy: _sincronizarPushHoy,
-    _registroAbiertoParaPush,
     undoAction: function () { _aplicarEstadoHistorial(GestorHistorial.undo(), 'Deshecho'); },
     redoAction: function () { _aplicarEstadoHistorial(GestorHistorial.redo(), 'Rehecho'); }
 };

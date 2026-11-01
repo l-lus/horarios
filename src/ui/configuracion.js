@@ -19,6 +19,7 @@ import { _scrollHastaVisible, _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
 import { AyudaBuscador } from './ayuda-buscador.js';
+import { AvisoJornada } from '../services/aviso-jornada.js';
 
 // ====================================================================
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
@@ -28,7 +29,7 @@ const {
 } = UIBase;
 const { _esperarAnim, _animarValor } = Animaciones;
 
-const _reprogramarPushDebounced = debounce(() => GestionDatos.sincronizarPushHoy(), 400);
+const _reprogramarPushDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 400);
 
 const verificarBloqueoCredito = (...args) => EstadoApp._notify().verificarBloqueoCredito(...args);
 const actualizarUI = (...args) => EstadoApp._notify().actualizarUI(...args);
@@ -49,7 +50,7 @@ const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBoto
         getVal: () => EstadoApp.getIgnorarTiempoFuera(),
         setVal: (v) => { EstadoApp.setIgnorarTiempoFuera(v); Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
         btnId: 'btn-toggle-ignorar-tf',
-        onAfterToggle: () => { GestionDatos.recalcularTotalesEnMemoria(true); EstadoApp.guardarYActualizar(); GestionDatos.sincronizarPushHoy(); },
+        onAfterToggle: () => { GestionDatos.recalcularTotalesEnMemoria(true); EstadoApp.guardarYActualizar(); AvisoJornada.sincronizarHoy(); },
     });
 
 const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =

@@ -99,8 +99,8 @@ test('RecordatorioPush.calcularTarget ubica la entrada en la fecha del registro 
     assert.equal(new Date(esperado).getDate(), 31);
 });
 
-test('GestionDatos._registroAbiertoParaPush toma la jornada abierta de ayer si hoy no tiene registro', async (t) => {
-    const { GestionDatos: D } = await import('../src/services/gestion-datos.js');
+test('AvisoJornada.registroAbierto toma la jornada abierta de ayer si hoy no tiene registro', async (t) => {
+    const { AvisoJornada } = await import('../src/services/aviso-jornada.js');
     const { EstadoApp } = await import('../src/services/estado-app.js');
     const reg = (fecha, entrada, salida) => ({ id: `${fecha}-${entrada}`, fecha, entrada, salida, objetivoHoras: 7 });
 
@@ -108,23 +108,23 @@ test('GestionDatos._registroAbiertoParaPush toma la jornada abierta de ayer si h
     t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 31, 0, 26) });
 
     EstadoApp._setRegistros([reg('2026-10-30', '18:40', null)]);
-    assert.equal(D._registroAbiertoParaPush('2026-10-31')?.fecha, '2026-10-30');
+    assert.equal(AvisoJornada.registroAbierto('2026-10-31')?.fecha, '2026-10-30');
 
     // Ayer ya tiene salida: nada para avisar
     EstadoApp._setRegistros([reg('2026-10-30', '18:40', '23:00')]);
-    assert.equal(D._registroAbiertoParaPush('2026-10-31'), null);
+    assert.equal(AvisoJornada.registroAbierto('2026-10-31'), null);
 
     // Hoy ya tiene su propio registro cerrado: no se arrastra el de ayer
     EstadoApp._setRegistros([reg('2026-10-30', '18:40', null), reg('2026-10-31', '08:00', '09:00')]);
-    assert.equal(D._registroAbiertoParaPush('2026-10-31'), null);
+    assert.equal(AvisoJornada.registroAbierto('2026-10-31'), null);
 
     // Hoy (sábado) tiene uno abierto, pero no es día hábil: no se avisa
     EstadoApp._setRegistros([reg('2026-10-31', '08:00', null)]);
-    assert.equal(D._registroAbiertoParaPush('2026-10-31'), null);
+    assert.equal(AvisoJornada.registroAbierto('2026-10-31'), null);
 
     // Abierto hace más de 24 h: se considera olvidado
     EstadoApp._setRegistros([reg('2026-10-30', '00:10', null)]);
-    assert.equal(D._registroAbiertoParaPush('2026-10-31'), null);
+    assert.equal(AvisoJornada.registroAbierto('2026-10-31'), null);
 });
 
 test('GestionDatos.agregarRegistro: cerrar la jornada abierta de ayer la retiene en la tarjeta; cerrar la de hoy no', async (t) => {

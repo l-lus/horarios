@@ -1,9 +1,9 @@
 import { $ } from '../core/dom.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { UIBase } from './base.js';
-import { GestionDatos } from '../services/gestion-datos.js';
 import { debounce } from './gestos.js';
 import { mostrarToast } from './toast.js';
+import { AvisoJornada } from '../services/aviso-jornada.js';
 
 // ====================================================================
 // UI NOTIFICATIONS MODULE (push y permisos de notificaciones)
@@ -23,7 +23,7 @@ function actualizarEstadoBotonNotificaciones() {
     _setBtnActivo('btn-toggle-notification', RecordatorioPush.getHabilitado());
 }
 
-const _sincronizarPushHoyDebounced = debounce(() => GestionDatos.sincronizarPushHoy(), 400);
+const _sincronizarPushHoyDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 400);
 
 const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuffer } =
     _crearToggleConfig({

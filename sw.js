@@ -38,6 +38,7 @@ const urlsToCache = [
   './src/services/importar-exportar.js',
   './src/services/filtros-periodos.js',
   './src/services/gestion-datos.js',
+  './src/services/aviso-jornada.js',
   './src/services/saldo-semanal.js',
   './src/services/estadisticas-periodo.js',
   './src/services/estado-tarjeta.js',

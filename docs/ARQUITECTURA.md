@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
 **Última actualización:** 2026-11-01  
-**Estado:** Arquitectura modularizada y saneada (71 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Estado:** Arquitectura modularizada y saneada (72 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -39,7 +39,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (71 módulos)
+├── src/                        # Código fuente en ES Modules (72 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
@@ -153,7 +153,8 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | Archivo | Export | Responsabilidad |
 |---|---|---|
 | [`src/services/estado-app.js`](../src/services/estado-app.js) | `EstadoApp` | **Store central de dominio** (hoja en `services/`): mantiene `registros`, `diasHabiles`, `horasDiarias`, `historialDiasHabiles`, estado de edición/filtros, `calcularHoras` y canal `notify` y los typedef de los puertos (`Notificaciones`, `FormularioRegistro`, `FormularioEdicion`). |
-| [`src/services/gestion-datos.js`](../src/services/gestion-datos.js) | `GestionDatos` | Carga del perfil activo al arrancar (`cargarPerfilActivo`, repara lo guardado con `SeguridadYUtils.repararRegistrosGuardados`) y comandos de dominio: alta/baja/edición individual de fichajes, validación de los datos de formulario (que llegan por los puertos), recálculo de totales, sincronización con Push hoy y undo/redo. No reexporta otros servicios: para leer estado o cálculos se importa el módulo dueño (`EstadoApp`, `Compensatorios`, `FiltrosYPeriodos`, `ImportarExportar`). |
+| [`src/services/gestion-datos.js`](../src/services/gestion-datos.js) | `GestionDatos` | Carga del perfil activo al arrancar (`cargarPerfilActivo`, repara lo guardado con `SeguridadYUtils.repararRegistrosGuardados`) y comandos de dominio: alta/baja/edición individual de fichajes, validación de los datos de formulario (que llegan por los puertos), recálculo de totales y undo/redo. No reexporta otros servicios: para leer estado o cálculos se importa el módulo dueño (`EstadoApp`, `Compensatorios`, `FiltrosYPeriodos`, `ImportarExportar`). |
+| [`src/services/aviso-jornada.js`](../src/services/aviso-jornada.js) | `AvisoJornada` | Decide qué aviso de fin de jornada corresponde hoy (jornada abierta, objetivo, tiempo fuera y saldo semanal) y lo programa, reprograma o cancela con `RecordatorioPush`. Registra el hook `EstadoApp.sincronizarPushHoy` para los servicios que no pueden importarlo. |
 | [`src/services/compensatorios.js`](../src/services/compensatorios.js) | `Compensatorios` | Cálculo de banco de horas extras, asignación cronológica de horas a francos/compensatorios y tramos históricos de días hábiles. |
 | [`src/services/filtros-periodos.js`](../src/services/filtros-periodos.js) | `FiltrosYPeriodos` | Filtrado de registros, cálculo de buffer por período, detección de jornada nocturna de ayer, edición de grupos y carga/borrado por rango. |
 | [`src/services/importar-exportar.js`](../src/services/importar-exportar.js) | `ImportarExportar` | Serialización para exportación JSON y camino único de restauración para archivo local y Gist: `prepararRespaldo` (estructura, versión, SHA-256 y normalización) y `restaurarRespaldo` (combinar o reemplazar y guardar). |

@@ -57,8 +57,7 @@ function limpiarError(inputId, errorId) {
 }
 
 function obtenerNombrePerfilSafe() {
-    let nombre = 'Backup';
-    if (GestorPerfiles) nombre = GestorPerfiles.obtenerDatosPerfil().nombre;
+    const nombre = String(GestorPerfiles.obtenerDatosPerfil()?.nombre ?? 'Backup');
     return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
 }
 

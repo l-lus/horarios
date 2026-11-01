@@ -30,7 +30,7 @@ const {
 } = FiltrosYPeriodos;
 
 function cargarConfiguracion() {
-    const perfilData = GestorPerfiles ? GestorPerfiles.obtenerDatosPerfil() : null;
+    const perfilData = GestorPerfiles.obtenerDatosPerfil();
     return {
         diasHabiles: (perfilData && Array.isArray(perfilData.diasHabiles))
             ? perfilData.diasHabiles

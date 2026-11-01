@@ -14,20 +14,19 @@ const RANGO_HORARIO_DEFAULT = { desde: '21:00', hasta: '00:00' };
 function esGistIdValido(id) { return id && GIST_ID_REGEX.test(id.trim()); }
 
 function _conPerfil(fn) {
-    if (!GestorPerfiles) return;
     const perfil = GestorPerfiles.obtenerDatosPerfil();
     if (perfil) { fn(perfil); GestorPerfiles.guardarPerfiles(); }
 }
 
 function getToken() { return Almacenamiento.getItem(STORAGE_KEYS.GIST_TOKEN, ''); }
 
-function getGistId() { return GestorPerfiles?.obtenerDatosPerfil()?.gistId || ''; }
-function getLastSync() { return GestorPerfiles?.obtenerDatosPerfil()?.gistLastSync || null; }
-function getMergeBehavior() { return GestorPerfiles?.obtenerDatosPerfil()?.gistMergeBehavior || 'replace'; }
+function getGistId() { return GestorPerfiles.obtenerDatosPerfil()?.gistId || ''; }
+function getLastSync() { return GestorPerfiles.obtenerDatosPerfil()?.gistLastSync || null; }
+function getMergeBehavior() { return GestorPerfiles.obtenerDatosPerfil()?.gistMergeBehavior || 'replace'; }
 function setMergeBehavior(valor) { _conPerfil(perfil => { perfil.gistMergeBehavior = valor; }); }
 
 function getAutoSync() {
-    const val = GestorPerfiles?.obtenerDatosPerfil()?.gistAutoSync;
+    const val = GestorPerfiles.obtenerDatosPerfil()?.gistAutoSync;
     if (val === 1 || val === 2) return val;
     if (val === true) return 1;
     return 0;
@@ -35,7 +34,7 @@ function getAutoSync() {
 function setAutoSync(valor) { _conPerfil(perfil => { perfil.gistAutoSync = valor; }); }
 
 function getRangoHorario() {
-    const perfil = GestorPerfiles?.obtenerDatosPerfil();
+    const perfil = GestorPerfiles.obtenerDatosPerfil();
     return {
         desde: perfil?.gistRangoDesde || RANGO_HORARIO_DEFAULT.desde,
         hasta: perfil?.gistRangoHasta || RANGO_HORARIO_DEFAULT.hasta
@@ -52,7 +51,7 @@ function _clavesSyncCount(tipo) {
 }
 
 function getSyncCount(tipo) {
-    const perfil = GestorPerfiles?.obtenerDatosPerfil();
+    const perfil = GestorPerfiles.obtenerDatosPerfil();
     const { key, keyFecha } = _clavesSyncCount(tipo);
     if (!perfil?.[keyFecha] || perfil[keyFecha] !== _claveHoraActual()) return 0;
     return perfil?.[key] || 0;
@@ -77,7 +76,7 @@ function getSyncLimite(tipo) {
 function setSyncLimite(tipo, valor) {
     const anteriorLimite = getSyncLimite(tipo);
     Almacenamiento.setItem(STORAGE_KEYS.GIST_LIMITE(tipo), valor);
-    if (anteriorLimite === 0 && valor > 0 && GestorPerfiles) {
+    if (anteriorLimite === 0 && valor > 0) {
         const { key, keyFecha } = _clavesSyncCount(tipo);
         _conPerfil(perfil => {
             perfil[key] = 0;

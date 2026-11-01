@@ -98,7 +98,7 @@ function _ownerToken() {
 }
 
 function _perfilActivo() {
-    return (GestorPerfiles ? GestorPerfiles.obtenerPerfilActual() : null) || 'default';
+    return GestorPerfiles.obtenerPerfilActual() || 'default';
 }
 
 function _claveRecordatorio(fechaISO, perfilId) {

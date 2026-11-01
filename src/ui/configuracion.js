@@ -281,7 +281,7 @@ function actualizarFeedbackConfig() {
         const huboCambio = nuevosDias.length !== diasVigentes.length
             || nuevosDias.some((d, i) => d !== diasVigentes[i]);
         if (huboCambio) Compensatorios.registrarCambioDiasHabiles(nuevosDias);
-        const esDefault = GestorPerfiles && GestorPerfiles.esPerfilDefault();
+        const esDefault = GestorPerfiles.esPerfilDefault();
         if (esDefault) Almacenamiento.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
         EstadoApp.guardarYActualizar();
         if (huboCambio) _reprogramarPushDebounced();
@@ -308,7 +308,7 @@ function cambiarHorasDiarias(incremento) {
     if (isNaN(nuevoValor)) return;
 
     EstadoApp.setHorasDiarias(nuevoValor);
-    const esDefault = GestorPerfiles && GestorPerfiles.esPerfilDefault();
+    const esDefault = GestorPerfiles.esPerfilDefault();
     if (esDefault) Almacenamiento.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
     actualizarFeedbackConfig();
     _reprogramarPushDebounced();

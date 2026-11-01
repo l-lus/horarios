@@ -19,7 +19,7 @@ import { icono } from '../core/html.js';
 
 
 function _breakStorageKey() {
-    const perfilId = GestorPerfiles ? GestorPerfiles.obtenerPerfilActual() : 'default';
+    const perfilId = GestorPerfiles.obtenerPerfilActual();
     return STORAGE_KEYS.BREAK_TIME(perfilId);
 }
 

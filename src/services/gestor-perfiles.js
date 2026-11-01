@@ -40,24 +40,28 @@ function guardarPerfiles() {
     return savedPerfiles && savedActivo;
 }
 
+// Datos de sincronización con el Gist que se guardan dentro de cada perfil (los usa sincronizacion-gist.js).
+// Restablecer el perfil borra los de sync pero conserva el gistId.
+const CAMPOS_SYNC_GIST = Object.freeze([
+    'gistLastSync', 'gistAutoSync', 'gistRangoDesde', 'gistRangoHasta', 'gistMergeBehavior',
+    'gistSyncFecha_subir', 'gistSyncCount_subir', 'gistSyncFecha_bajar', 'gistSyncCount_bajar'
+]);
+const CAMPOS_GIST_PERFIL = Object.freeze(['gistId', ...CAMPOS_SYNC_GIST]);
+
+const _camposGist = (perfil) => Object.fromEntries(
+    CAMPOS_GIST_PERFIL.filter(k => perfil[k] != null && perfil[k] !== '').map(k => [k, perfil[k]])
+);
+
 function guardarDatosPerfilActual() {
     const actual = perfiles[perfilActual];
+    if (!actual) return false;   // el perfil activo se acaba de eliminar (la UI está por recargar)
     perfiles[perfilActual] = {
         nombre: actual.nombre,
         registros: [...EstadoApp.registros()],
         diasHabiles: EstadoApp.diasHabiles(),
         horasDiarias: EstadoApp.horasDiarias(),
         historialDiasHabiles: EstadoApp.historialDiasHabiles(),
-        ...(actual.gistId && { gistId: actual.gistId }),
-        ...(actual.gistLastSync && { gistLastSync: actual.gistLastSync }),
-        ...(actual.gistAutoSync != null && { gistAutoSync: actual.gistAutoSync }),
-        ...(actual.gistRangoDesde && { gistRangoDesde: actual.gistRangoDesde }),
-        ...(actual.gistRangoHasta && { gistRangoHasta: actual.gistRangoHasta }),
-        ...(actual.gistSyncFecha_subir && { gistSyncFecha_subir: actual.gistSyncFecha_subir }),
-        ...(actual.gistSyncCount_subir != null && { gistSyncCount_subir: actual.gistSyncCount_subir }),
-        ...(actual.gistSyncFecha_bajar && { gistSyncFecha_bajar: actual.gistSyncFecha_bajar }),
-        ...(actual.gistSyncCount_bajar != null && { gistSyncCount_bajar: actual.gistSyncCount_bajar }),
-        ...(actual.gistMergeBehavior && { gistMergeBehavior: actual.gistMergeBehavior })
+        ..._camposGist(actual)
     };
     return guardarPerfiles();
 }
@@ -163,6 +167,6 @@ EstadoApp.setPerfilHooks({ obtenerPerfilActual, guardarDatosPerfilActual });
 export const GestorPerfiles = {
     inicializar, cambiarPerfil, guardarDatosPerfilActual,
     obtenerPerfilActual, esPerfilDefault, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
-    guardarPerfiles, perfilKey, MAX_PERFILES,
+    guardarPerfiles, perfilKey, MAX_PERFILES, CAMPOS_SYNC_GIST, CAMPOS_GIST_PERFIL,
     errorNombrePerfil, crearPerfil, renombrarPerfil, eliminarPerfil
 };

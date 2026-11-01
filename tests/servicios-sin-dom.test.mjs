@@ -397,3 +397,20 @@ test('GestorPerfiles: crear, renombrar y eliminar validan el nombre y borran las
     assert.equal(Almacenamiento.getItem(`fondoCard_${creado.id}`), null);
     assert.equal(Almacenamiento.getItem(`feriadosAR_procesados_${creado.id}`), null);
 });
+
+test('GestorPerfiles.guardarDatosPerfilActual conserva los campos del Gist con valor y descarta los vacíos', async () => {
+    const { GestorPerfiles: G } = await import('../src/services/gestor-perfiles.js');
+    G.inicializar();
+    const perfil = G.obtenerDatosPerfil();
+    Object.assign(perfil, { gistId: 'abc', gistAutoSync: 0, gistSyncCount_subir: 0, gistLastSync: '', gistRangoDesde: null, otro: 1 });
+    G.guardarDatosPerfilActual();
+    const guardado = G.obtenerDatosPerfil();
+    assert.equal(guardado.gistId, 'abc');
+    assert.equal(guardado.gistAutoSync, 0);
+    assert.equal(guardado.gistSyncCount_subir, 0);
+    assert.equal('gistLastSync' in guardado, false);
+    assert.equal('gistRangoDesde' in guardado, false);
+    assert.equal('otro' in guardado, false);
+    G.CAMPOS_GIST_PERFIL.forEach(k => delete guardado[k]);
+    G.guardarDatosPerfilActual();
+});

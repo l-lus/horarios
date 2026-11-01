@@ -568,12 +568,8 @@ async function borrarTodoHistorial() {
     const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, ...CARDS.map(STORAGE_KEYS.CARD_VISIBLE), STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
     keys.forEach(k => Almacenamiento.removeItem(k, true));
 
-    if (GestorPerfiles) {
-        const perfil = GestorPerfiles.obtenerDatosPerfil();
-        if (perfil) {
-            ['gistLastSync', 'gistAutoSync', 'gistRangoDesde', 'gistRangoHasta', 'gistSyncFecha_subir', 'gistSyncCount_subir', 'gistSyncFecha_bajar', 'gistSyncCount_bajar', 'gistMergeBehavior'].forEach(k => delete perfil[k]);
-        }
-    }
+    const perfil = GestorPerfiles.obtenerDatosPerfil();
+    if (perfil) GestorPerfiles.CAMPOS_SYNC_GIST.forEach(k => delete perfil[k]);
 
     GestorHistorial.saveState(registros, `restablecer perfil (${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)})`);
     if (await guardarYActualizar()) location.reload();

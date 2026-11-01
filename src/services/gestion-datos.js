@@ -1,7 +1,7 @@
 import { Compensatorios } from './compensatorios.js';
 import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { EstadoApp } from './estado-app.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from './recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -518,7 +518,7 @@ async function borrarTodoHistorial() {
 
     const perfilId = EstadoApp.obtenerPerfilIdActual();
     Almacenamiento.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-    const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, 'cardVisible_registrar', 'cardVisible_estadisticas', 'cardVisible_historico', STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
+    const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, ...CARDS.map(STORAGE_KEYS.CARD_VISIBLE), STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
     keys.forEach(k => Almacenamiento.removeItem(k, true));
 
     if (GestorPerfiles) {

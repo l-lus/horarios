@@ -2,6 +2,7 @@ import { RespaldoLocal } from './respaldo-local.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
+import { EventosApp } from '../core/eventos.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestorHistorial } from '../services/gestor-historial.js';
 import { GestionDatos } from '../services/gestion-datos.js';
@@ -185,6 +186,7 @@ function actualizarBotonesHistorico() {
         newRestaurar.addEventListener('click', () => { autoCierre(); mostrarImportar(true); });
         setIconoBtn(newRestaurar, '#icon-upload');
     }
+    EventosApp.emit('historico:botones');
 }
 
 function guardarConfigGist() {

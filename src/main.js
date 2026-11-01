@@ -9,6 +9,7 @@ import { Historico } from './ui/historico.js';
 import { Estadisticas } from './ui/estadisticas.js';
 import { TarjetaFichaje } from './ui/tarjeta-fichaje.js';
 import { OrdenTarjetas } from './ui/orden-tarjetas.js';
+import { Atajos } from './ui/atajos.js';
 import { Notificaciones } from './ui/notificaciones.js';
 import { Configuracion } from './ui/configuracion.js';
 import { HistorialDias } from './ui/historial-dias.js';
@@ -36,6 +37,7 @@ function _iniciarEventosDOM() {
     Estadisticas.bindEventos();
     TarjetaFichaje.bindEventos();
     OrdenTarjetas.bindEventos();
+    Atajos.bindEventos();
     Notificaciones.bindEventos();
     Configuracion.bindEventos();
     HistorialDias.bindEventos();

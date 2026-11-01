@@ -722,3 +722,11 @@ body.tarjeta-arrastrando-activa * {
     gap: var(--space-md);
     margin-top: var(--space-lg);
 }
+
+/* Contador "n/12" del selector de atajos, a la derecha del título */
+.atajos-contador {
+    margin-left: auto;
+    font-size: var(--text-sm);
+    font-weight: var(--fw-medium);
+    color: var(--text-muted);
+}

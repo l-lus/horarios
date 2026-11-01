@@ -1,4 +1,5 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
+import { normalizarOrdenCards, fusionarOrdenVisibles, columnaDeCard } from '../services/orden-cards.js';
 import { $ } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -30,7 +31,7 @@ function aplicarVisibilidadCard(cual, visible) {
 }
 
 function aplicarVisibilidadCards() {
-    ['registrar', 'estadisticas', 'historico'].forEach(cual => {
+    CARDS.forEach(cual => {
         const visible = Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(cual), true, true);
         aplicarVisibilidadCard(cual, visible);
         _setBtnActivo('btn-toggle-card-' + cual, visible);
@@ -38,31 +39,27 @@ function aplicarVisibilidadCards() {
 }
 
 function obtenerOrdenCards() {
-    const guardado = Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true);
-    const validos = ['registrar', 'estadisticas', 'historico'];
-    if (Array.isArray(guardado) && guardado.length === 3 && validos.every(v => guardado.includes(v))) {
-        return guardado;
-    }
-    return validos;
+    return normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
+}
+
+// Columnas de escritorio: la izquierda es la que tiene la tarjeta de fichaje con la barra, la derecha es la que sigue (en móvil se apilan en ese orden)
+function _columnas() {
+    const statsCard = $('stats-card');
+    const izquierda = statsCard ? statsCard.parentElement : null;
+    const derecha = $('right-column') ?? (izquierda ? izquierda.parentElement : null);
+    return { izquierda, derecha };
 }
 
 function aplicarOrdenCards(orden) {
-    const statsCard = $('stats-card');
-    const leftColumn = statsCard ? statsCard.parentElement : null;
-    const container = leftColumn ? leftColumn.parentElement : null;
-    if (!leftColumn || !container) return;
+    const { izquierda, derecha } = _columnas();
+    if (!izquierda || !derecha) return;
 
-    const delays = [0.10, 0.15, 0.25];
+    const delays = [0.10, 0.15, 0.20, 0.25];
     orden.forEach((cual, idx) => {
         const card = $('card-' + cual);
         if (!card) return;
-        card.style.animationDelay = `${delays[idx] || 0.25}s`;
-        const esUltima = idx === orden.length - 1;
-        if (esUltima) {
-            container.appendChild(card);
-        } else {
-            leftColumn.appendChild(card);
-        }
+        card.style.animationDelay = `${delays[idx] ?? 0.25}s`;
+        (columnaDeCard(idx, orden.length) ? derecha : izquierda).appendChild(card);
     });
 
     const lista = $('lista-orden-cards');
@@ -79,24 +76,16 @@ const REUBICACION_MS = 300;
 const REUBICACION_TRANSICION = 'transform 0.28s cubic-bezier(0.2, 0, 0, 1)';
 
 function obtenerCardsVisibles() {
-    const statsCard = $('stats-card');
-    const leftColumn = statsCard ? statsCard.parentElement : null;
-    const container = leftColumn ? leftColumn.parentElement : null;
+    const { izquierda, derecha } = _columnas();
     const cards = [];
-    if (leftColumn) {
-        /** @type {HTMLElement[]} */ (Array.from(leftColumn.children)).forEach(el => {
+    [izquierda, derecha].forEach(columna => {
+        if (!columna) return;
+        /** @type {HTMLElement[]} */ (Array.from(columna.children)).forEach(el => {
             if (el.id && el.id.startsWith('card-') && el.style.display !== 'none' && !el.classList.contains('d-none')) {
                 cards.push(el);
             }
         });
-    }
-    if (container) {
-        /** @type {HTMLElement[]} */ (Array.from(container.children)).forEach(el => {
-            if (el.id && el.id.startsWith('card-') && el.style.display !== 'none' && !el.classList.contains('d-none')) {
-                cards.push(el);
-            }
-        });
-    }
+    });
     return cards;
 }
 
@@ -283,102 +272,89 @@ function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () =
     return { activo: () => arrastrando };
 }
 
+// Con el arrastre, la tarjeta se intercambia de lugar con la que tiene al lado (en su columna) o, si el puntero pasó a la otra columna,
+// con la que está a la altura del puntero. Devuelve las tarjetas visibles en su nuevo orden, o null si no hay cambio.
 function evaluarNuevoOrdenCards(arrastrado, visibles, clientX, clientY) {
     const idxActual = visibles.indexOf(arrastrado);
     if (idxActual === -1 || visibles.length <= 1) return null;
 
     const rects = visibles.map(c => c.getBoundingClientRect());
-    const esDosColumnas = visibles.length >= 2 && Math.abs(rects[0].left - rects[visibles.length - 1].left) > 50;
+    const enDerecha = rects.map(r => Math.abs(r.left - rects[0].left) > 50);
+    const dosColumnas = enDerecha.some(Boolean);
+    const mitad = (i) => rects[i].top + rects[i].height / 2;
+    const indicesDe = (derecha) => visibles.map((_, i) => i).filter(i => enDerecha[i] === derecha);
+
+    let columnaCursor = enDerecha[idxActual];
+    if (dosColumnas) {
+        const finIzq = Math.max(...indicesDe(false).map(i => rects[i].right));
+        const inicioDer = Math.min(...indicesDe(true).map(i => rects[i].left));
+        columnaCursor = clientX >= (finIzq + inicioDer) / 2;
+    }
 
     let targetIdx = null;
-
-    if (!esDosColumnas) {
-        if (idxActual > 0) {
-            const midArriba = rects[idxActual - 1].top + rects[idxActual - 1].height / 2;
-            if (clientY < midArriba) targetIdx = idxActual - 1;
-        }
-        if (targetIdx === null && idxActual < visibles.length - 1) {
-            const midAbajo = rects[idxActual + 1].top + rects[idxActual + 1].height / 2;
-            if (clientY > midAbajo) targetIdx = idxActual + 1;
-        }
+    if (columnaCursor === enDerecha[idxActual]) {
+        const misma = indicesDe(columnaCursor);
+        const pos = misma.indexOf(idxActual);
+        if (pos > 0 && clientY < mitad(misma[pos - 1])) targetIdx = misma[pos - 1];
+        else if (pos < misma.length - 1 && clientY > mitad(misma[pos + 1])) targetIdx = misma[pos + 1];
     } else {
-        if (visibles.length === 3) {
-            const divisoriaX = (rects[0].right + rects[2].left) / 2;
-            if (idxActual === 0 || idxActual === 1) {
-                if (clientX >= divisoriaX) {
-                    targetIdx = 2;
-                } else {
-                    if (idxActual === 0) {
-                        const midAbajo = rects[1].top + rects[1].height / 2;
-                        if (clientY > midAbajo) targetIdx = 1;
-                    } else {
-                        const midArriba = rects[0].top + rects[0].height / 2;
-                        if (clientY < midArriba) targetIdx = 0;
-                    }
-                }
-            } else if (idxActual === 2) {
-                if (clientX < divisoriaX) {
-                    const midCard0 = rects[0].top + rects[0].height / 2;
-                    targetIdx = clientY < midCard0 ? 0 : 1;
-                }
-            }
-        } else if (visibles.length === 2) {
-            const divisoriaX = (rects[0].right + rects[1].left) / 2;
-            if (idxActual === 0 && clientX >= divisoriaX) targetIdx = 1;
-            else if (idxActual === 1 && clientX < divisoriaX) targetIdx = 0;
-        }
+        const otra = indicesDe(columnaCursor);
+        targetIdx = otra.reduce((mejor, i) => (Math.abs(clientY - mitad(i)) < Math.abs(clientY - mitad(mejor)) ? i : mejor), otra[0]);
     }
 
     if (targetIdx === null || targetIdx === idxActual) return null;
 
     const nuevaLista = [...visibles];
-    const [removido] = nuevaLista.splice(idxActual, 1);
-    nuevaLista.splice(targetIdx, 0, removido);
-
-    const nuevoOrden = nuevaLista.map(c => c.id.replace('card-', ''));
-    const validos = ['registrar', 'estadisticas', 'historico'];
-    validos.forEach(c => {
-        if (!nuevoOrden.includes(c)) nuevoOrden.push(c);
-    });
-    return nuevoOrden;
+    [nuevaLista[idxActual], nuevaLista[targetIdx]] = [nuevaLista[targetIdx], nuevaLista[idxActual]];
+    return nuevaLista;
 }
+
+// Encabezados desde los que se arrastra cada tarjeta (el de fichaje y el de atajos tienen su propia clase)
+const _SELECTOR_ENCABEZADOS = '#card-registrar .card-registrar-header, #card-atajos .card-atajos-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable';
+const _SELECTOR_CARDS = '#card-registrar, #card-atajos, #card-estadisticas, #card-historico';
 
 function iniciarDragTarjetas() {
     let ordenInicial = null;
+    let ordenEnCurso = null;
     let deslizandoHasta = 0;
+
+    // Reubica las tarjetas visibles en `visiblesNuevo` (las ocultas conservan su lugar) con la animación de deslizamiento
+    const reubicar = (visiblesNuevo, encima) => {
+        const nuevoOrden = fusionarOrdenVisibles(ordenEnCurso ?? obtenerOrdenCards(), visiblesNuevo.map(c => c.id.replace('card-', '')));
+        ordenEnCurso = nuevoOrden;
+        return uiAnimarReubicacion(
+            () => obtenerCardsVisibles(),
+            c => c.id,
+            () => aplicarOrdenCards(nuevoOrden),
+            { encima }
+        );
+    };
 
     uiArrastreLargo(document, {
         elegir: (e) => {
             const el = e.target instanceof Element ? e.target : null;
             if (!el) return null;
-            if (el.closest('#btn-timer-main')) return null;
+            if (el.closest('#btn-timer-main, #btn-atajos-agregar')) return null;
 
-            const header = el.closest('#card-registrar .card-registrar-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable');
+            const header = el.closest(_SELECTOR_ENCABEZADOS);
             if (!header) return null;
 
-            const card = header.closest('#card-registrar, #card-estadisticas, #card-historico');
-            return card;
+            return header.closest(_SELECTOR_CARDS);
         },
-        capturar: (card) => card.querySelector('.card-registrar-header, .card-header-clickable') || card,
+        capturar: (card) => card.querySelector('.card-registrar-header, .card-atajos-header, .card-header-clickable') || card,
         alEmpezar: (card) => {
             ordenInicial = obtenerOrdenCards();
+            ordenEnCurso = ordenInicial;
             card.classList.add('reordenando');
             document.body.classList.add('tarjeta-arrastrando-activa');
             /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.animated-card')).forEach(c => c.style.animation = 'none');
         },
         alMover: (e, card) => {
             if (performance.now() < deslizandoHasta) return;
-            const visibles = obtenerCardsVisibles();
-            const nuevoOrden = evaluarNuevoOrdenCards(card, visibles, e.clientX, e.clientY);
-            if (!nuevoOrden) return;
+            const visiblesNuevo = evaluarNuevoOrdenCards(card, obtenerCardsVisibles(), e.clientX, e.clientY);
+            if (!visiblesNuevo) return;
 
-            const animo = uiAnimarReubicacion(
-                () => obtenerCardsVisibles(),
-                c => c.id,
-                () => aplicarOrdenCards(nuevoOrden),
-                { encima: card }
-            );
-            if (animo.length > 0) {
+            if (reubicar(visiblesNuevo, card).length > 0) {
                 deslizandoHasta = performance.now() + REUBICACION_MS;
             }
         },
@@ -386,14 +362,8 @@ function iniciarDragTarjetas() {
             card.classList.remove('reordenando');
             document.body.classList.remove('tarjeta-arrastrando-activa');
             if (confirmar) {
-                const visibles = obtenerCardsVisibles();
-                const nuevoOrden = visibles.map(c => c.id.replace('card-', ''));
-                const validos = ['registrar', 'estadisticas', 'historico'];
-                validos.forEach(c => {
-                    if (!nuevoOrden.includes(c)) nuevoOrden.push(c);
-                });
-                Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
-                aplicarOrdenCards(nuevoOrden);
+                Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenEnCurso, true);
+                aplicarOrdenCards(ordenEnCurso);
             } else if (ordenInicial) {
                 uiAnimarReubicacion(
                     () => obtenerCardsVisibles(),
@@ -403,15 +373,16 @@ function iniciarDragTarjetas() {
                 Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenInicial, true);
             }
             ordenInicial = null;
+            ordenEnCurso = null;
         }
     });
 
-    // Con teclado (Alt + flechas sobre el encabezado), el mismo recorrido
-    const headers = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#card-registrar .card-registrar-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable'));
+    // Con teclado (Alt + flechas sobre el encabezado), el mismo recorrido: intercambia con la visible anterior o siguiente
+    const headers = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(_SELECTOR_ENCABEZADOS));
     headers.forEach(header => {
         header.addEventListener('keydown', (e) => {
             if (!e.altKey || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
-            const card = header.closest('#card-registrar, #card-estadisticas, #card-historico');
+            const card = header.closest(_SELECTOR_CARDS);
             if (!card) return;
 
             const visibles = obtenerCardsVisibles();
@@ -422,23 +393,14 @@ function iniciarDragTarjetas() {
             if (atras ? idx <= 0 : idx >= visibles.length - 1) return;
 
             e.preventDefault();
-            const targetIdx = atras ? idx - 1 : idx + 1;
             const nuevaLista = [...visibles];
-            const [removido] = nuevaLista.splice(idx, 1);
-            nuevaLista.splice(targetIdx, 0, removido);
+            const otro = atras ? idx - 1 : idx + 1;
+            [nuevaLista[idx], nuevaLista[otro]] = [nuevaLista[otro], nuevaLista[idx]];
 
-            const nuevoOrden = nuevaLista.map(c => c.id.replace('card-', ''));
-            ['registrar', 'estadisticas', 'historico'].forEach(c => {
-                if (!nuevoOrden.includes(c)) nuevoOrden.push(c);
-            });
-
-            uiAnimarReubicacion(
-                () => obtenerCardsVisibles(),
-                c => c.id,
-                () => aplicarOrdenCards(nuevoOrden),
-                { encima: card }
-            );
-            Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
+            ordenEnCurso = obtenerOrdenCards();
+            reubicar(nuevaLista, card);
+            Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenEnCurso, true);
+            ordenEnCurso = null;
             header.focus();
         });
     });
@@ -546,6 +508,7 @@ function bindEventos() {
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => toggleVisibilidadCard('estadisticas'));
+    $('btn-toggle-card-atajos')?.addEventListener('click', () => toggleVisibilidadCard('atajos'));
     $('btn-toggle-card-historico')?.addEventListener('click', () => toggleVisibilidadCard('historico'));
 }
 

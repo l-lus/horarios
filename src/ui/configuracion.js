@@ -224,6 +224,11 @@ function _precargarCamposConfig() {
     if (lbl) lbl.textContent = _getLabelFondo(getFondoCard());
 }
 
+// Abre los ajustes directamente (sin pasar por el selector de perfiles)
+function abrirConfig() {
+    GestorModales.abrir('modal-config', _precargarCamposConfig);
+}
+
 function mostrarconfig() {
     GestorModales.alternar('modal-selector-perfiles', 'modal-config', null, _precargarCamposConfig);
 }
@@ -371,6 +376,6 @@ export const Configuracion = {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
     actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
-    cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
+    abrirModalAyuda, abrirConfig, alternarTema, cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
     pressHoldObjetivoEdicion, formatearInput, bindEventos
 };

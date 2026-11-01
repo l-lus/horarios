@@ -1207,6 +1207,66 @@
     overflow: visible;
 }
 
+/* ─── TARJETA DE ATAJOS ──────────────────────────────────────────────────────── */
+
+/* El encabezado se arrastra para reordenar como el de las otras tarjetas; el "+" va a la derecha donde otras llevan el chevron */
+.card-atajos-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    position: relative;
+    touch-action: pan-y;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.card-atajos-header * {
+    touch-action: pan-y;
+    -webkit-touch-callout: none;
+}
+
+.card-atajos-header .icon-btn {
+    position: absolute;
+    right: 0;
+    width: var(--touch-target);
+    padding: 0;
+}
+
+/* Hasta 12 atajos, 6 por fila */
+.atajos-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+    padding: 0 var(--space-sm);
+}
+
+.atajo-btn {
+    width: 100%;
+    min-width: 0;
+    height: var(--touch-target);
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: transparent;
+    touch-action: manipulation;
+    transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.atajo-btn:active:not(:disabled) {
+    background: var(--c-gray-btn);
+}
+
+.atajos-vacio {
+    grid-column: 1 / -1;
+    margin: 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
 /* ─── COMPONENTES VARIOS ─────────────────────────────────────────────────────── */
 
 .card-header-clickable {

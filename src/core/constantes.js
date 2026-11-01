@@ -27,6 +27,7 @@ export const STORAGE_KEYS = Object.freeze({
     FONDO_CARD: 'fondoCard',
     PERSISTIR_TARJETAS: 'persistirTarjetas',
     ORDEN_CARDS: 'ordenCards',
+    ATAJOS: 'atajosRapidos',
     FORMULARIO_EXPANDIDO: 'formularioExpandido',
     STATS_EXPANDIDO: 'statsExpandido',
     HISTORICO_EXPANDIDO: 'historicoExpandido',
@@ -54,6 +55,10 @@ export const STORAGE_KEYS = Object.freeze({
     ANIO_EXPANDIDO: (anioId) => `anio-${anioId}-expandido`,
     CARD_VISIBLE: (cual) => `cardVisible_${cual}`,
 });
+
+// Tarjetas que se pueden ocultar y reordenar, en su orden por defecto (la de fichaje con la barra de progreso va siempre arriba y no cuenta).
+// En escritorio las dos últimas pasan a la columna derecha.
+export const CARDS = Object.freeze(['registrar', 'atajos', 'estadisticas', 'historico']);
 
 // Valores por defecto de opciones booleanas que se leen desde varios módulos (un solo lugar para que no se desincronicen)
 export const DEFAULTS = Object.freeze({

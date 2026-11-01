@@ -299,6 +299,14 @@
             <path
                 d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6m0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5" />
         </symbol>
+        <symbol id="icon-bolt" viewBox="0 0 16 16">
+            <path
+                d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09zM4.157 8.5H7a.5.5 0 0 1 .478.647L6.11 13.59l5.732-6.09H9a.5.5 0 0 1-.478-.647L9.89 2.41z" />
+        </symbol>
+        <symbol id="icon-activity" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                d="M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2" />
+        </symbol>
     </svg>
     <div class="header">
         <h1>Horarios</h1>
@@ -464,6 +472,23 @@
                     </div><!-- #modo-contenedor -->
                 </div><!-- #form-registro -->
             </div>
+            <div class="card animated-card" id="card-atajos">
+                <h2 class="no-margin card-atajos-header" tabindex="0" title="Mantener presionado para reordenar">
+                    <span class="card-section-title">
+                        <svg class="icon">
+                            <use href="#icon-bolt" />
+                        </svg> Atajos
+                    </span>
+                    <button class="icon-btn" id="btn-atajos-agregar" title="Agregar o quitar atajos">
+                        <svg class="icon">
+                            <use href="#icon-plus" />
+                        </svg>
+                    </button>
+                </h2>
+                <div class="atajos-grid" id="atajos-grid" role="group" aria-label="Atajos rápidos"></div>
+            </div>
+        </div>
+        <div class="right-column" id="right-column">
             <div class="card animated-card" id="card-estadisticas">
                 <h2 class="no-margin card-header-clickable" tabindex="0" role="button"
                     title="Alternar Estadísticas (mantener presionado para reordenar)">
@@ -548,7 +573,6 @@
                     </div>
                 </div>
             </div>
-        </div>
         <div class="card animated-card" id="card-historico">
             <h2 class="no-margin card-header-clickable" tabindex="0" role="button"
                 title="Alternar Registros (mantener presionado para reordenar)">
@@ -626,6 +650,7 @@
                 </div><!-- .detalle-inner -->
             </div><!-- #contenido-historico -->
         </div>
+        </div><!-- #right-column -->
     </div>
     <div class="modal modal-scrollable" id="modal-config" role="dialog" aria-modal="true"
         aria-labelledby="modal-config-titulo">
@@ -856,6 +881,16 @@
                                         <span class="toggle-switch" aria-hidden="true"></span>
                                     </button>
                                 </div>
+                                <div class="orden-card-item" id="orden-item-atajos">
+                                    <button id="btn-toggle-card-atajos" class="drag-handle flex-1"
+                                        data-card="atajos">
+                                        <svg class="icon">
+                                            <use href="#icon-bolt" />
+                                        </svg>
+                                        <span>Atajos</span>
+                                        <span class="toggle-switch" aria-hidden="true"></span>
+                                    </button>
+                                </div>
                                 <div class="orden-card-item" id="orden-item-estadisticas">
                                     <button id="btn-toggle-card-estadisticas" class="drag-handle flex-1"
                                         data-card="estadisticas">
@@ -1083,6 +1118,7 @@
                             <p>- Sumar los feriados del mes (Argentina) con una confirmación.</p>
                             <p>- Crear distintos perfiles (de usuario o laborales).</p>
                             <p>- Personalizar la interfaz con temas, fondos y el orden de las tarjetas.</p>
+                            <p>- Armar tu propia tarjeta de atajos (subir, bajar, deshacer, tema, ayuda y más).</p>
                             <p>- Crear backups locales o sincronizar con token de GitHub Gist.</p>
                             <p>- Instalarla como app en tu dispositivo.</p>
                         </section>
@@ -1279,8 +1315,14 @@
                                 salida con banco de horas sobre la barra, o las siglas de cada día en la semana) y
                                 Reducir animaciones (Auto sigue la configuración del dispositivo, o se fuerza activada o
                                 desactivada). Las opciones de PC se ocultan en dispositivos táctiles.</p>
-                            <p><strong>Tarjetas y posición:</strong> mostrá u ocultá Fichar, Estadísticas y Registros, y
-                                arrastralas para cambiar el orden.</p>
+                            <p><strong>Tarjetas y posición:</strong> mostrá u ocultá Fichar, Atajos, Estadísticas y
+                                Registros, y arrastralas para cambiar el orden. En PC las dos últimas quedan en la
+                                columna derecha.</p>
+                            <p><strong>Atajos:</strong> la tarjeta reúne hasta 12 botones (6 por fila). Con el botón
+                                <strong>+</strong> elegís cuáles mostrar: subir y bajar (a Gist si lo configuraste, o a
+                                un archivo), deshacer y rehacer, cambiar el tema, la ayuda, los ajustes, las
+                                notificaciones, reducir animaciones, el estilo del calendario, los perfiles, fichar,
+                                tiempo fuera y el reporte. Se muestran en el orden en que los agregás.</p>
                             <p><strong>Estadísticas:</strong> "No descontar tiempo fuera" (las salidas no restan del
                                 total), "No cubrir con banco de horas" (el banco no compensa automáticamente lo que
                                 falta para el objetivo) y "Objetivo diario global" (aplica el mismo objetivo a todos los
@@ -1964,6 +2006,41 @@
                             <use href="#icon-back" />
                         </svg>
                         Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal modal-scrollable" id="modal-atajos" role="dialog" aria-modal="true"
+        aria-labelledby="modal-atajos-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3 id="modal-atajos-titulo">
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-bolt" />
+                        </svg>
+                        Atajos
+                    </span>
+                    <span class="atajos-contador" id="atajos-contador" aria-live="polite"></span>
+                </h3>
+            </div>
+            <div class="modal-panel-body custom-scroll">
+                <div class="form-group">
+                    <div class="settings-list" id="lista-atajos-opciones"></div>
+                </div>
+                <div class="config-hint-text">
+                    Elegí hasta 12 atajos. Se muestran en la tarjeta en el orden en que los agregás.
+                </div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-cancel">
+                        <svg class="icon">
+                            <use href="#icon-check" />
+                        </svg>
+                        Listo
                     </button>
                 </div>
             </div>

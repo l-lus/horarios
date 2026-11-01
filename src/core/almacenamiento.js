@@ -1,4 +1,4 @@
-import { APP_STORAGE_PREFIX, STORAGE_KEYS } from './constantes.js';
+import { APP_STORAGE_PREFIX, STORAGE_KEYS, CARDS } from './constantes.js';
 import { SeguridadYUtils } from './seguridad.js';
 
 // ====================================================================
@@ -29,16 +29,14 @@ const BASES_POR_PERFIL_HORARIOS = [
     STORAGE_KEYS.PUSH_INFO_ACTIVA,
     STORAGE_KEYS.PUSH_AVISOS_RESTANTES,
     'breakStartTime',
-    'cardVisible_registrar',
-    'cardVisible_estadisticas',
-    'cardVisible_historico'
+    ...CARDS.map(STORAGE_KEYS.CARD_VISIBLE)
 ];
 
 const PATRONES_DINAMICOS_HORARIOS = [
     /^gistSyncLimite_(subir|bajar)$/,
     /^mes-\d{4}-\d{1,2}-expandido$/,
     /^anio-\d{4}-expandido$/,
-    /^cardVisible_(registrar|estadisticas|historico)(_(default|perfil_[a-zA-Z0-9_-]+))?$/,
+    new RegExp(`^cardVisible_(${CARDS.join('|')})(_(default|perfil_[a-zA-Z0-9_-]+))?$`),
     new RegExp(`^(${BASES_POR_PERFIL_HORARIOS.join('|')})_(default|perfil_[a-zA-Z0-9_-]+)$`)
 ];
 
@@ -111,7 +109,7 @@ function migrarClavesLegadas() {
 
         const candidatas = new Set(CLAVES_ESTATICAS_HORARIOS);
         ['subir', 'bajar'].forEach(t => candidatas.add(STORAGE_KEYS.GIST_LIMITE(t)));
-        ['registrar', 'estadisticas', 'historico'].forEach(c => candidatas.add(STORAGE_KEYS.CARD_VISIBLE(c)));
+        CARDS.forEach(c => candidatas.add(STORAGE_KEYS.CARD_VISIBLE(c)));
         idsPerfiles.forEach(pid => {
             BASES_POR_PERFIL_HORARIOS.forEach(base => candidatas.add(`${base}_${pid}`));
         });

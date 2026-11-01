@@ -151,3 +151,15 @@ test('Edición: eliminar desde el modal borra el registro y cierra', async () =>
     assert.deepEqual(toasts.at(-1), ['Registro eliminado', 'success']);
     assert.equal(estado.cerrado, 1);
 });
+
+test('Edición: el día a compensar no puede estar asignado ya a otro compensatorio', async () => {
+    const regs = [
+        reg('r1', '2026-10-20', '08:00', '18:00'),                                          // 2 h de excedente
+        reg('c1', '2026-10-22', '18:18', '18:18', { referenciaCompensatorio: '2026-10-20' }),
+        reg('c2', '2026-10-23', '18:18', '18:18'),
+    ];
+    const { toasts } = editar('c2', regs, { referencia: '2026-10-20' });
+    await EdicionRegistro.guardar();
+    assert.match(toasts.at(-1)[0], /^Ese día ya está asignado al compensatorio del /);
+    assert.equal(EstadoApp.registroPorId('c2').referenciaCompensatorio, undefined);
+});

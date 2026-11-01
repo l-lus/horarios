@@ -168,97 +168,98 @@ async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {
     if (saved) { notify.mostrarToast('Registro eliminado (vacío)', 'info'); notify.cerrarEdicion(); }
 }
 
+/** Valores del formulario de edición, limpios y normalizados (la referencia solo cuenta si el registro es un compensatorio). */
+function _leerEdicion(campos) {
+    const { fecha, entrada, salida } = S.limpiarCamposHorario(campos);
+    const tiempoFuera = S.limpiarTexto(campos.tiempoFuera.trim(), 5) || null;
+    const esCompensatorio = TiposRegistro.obtenerTipoPorCodigo(entrada, salida)?.id === 'compensatorio';
+    const referencia = esCompensatorio ? S.limpiarTexto(campos.referencia, 10) : '';
+    return {
+        fecha, entrada, salida,
+        tiempoFuera: tiempoFuera ? TiempoUtils.normalizarMinutosSueltos(tiempoFuera) : null,
+        notas: S.normalizarNotas(campos.notas),
+        objetivo: _esObjetivoValido(campos.objetivo) ? campos.objetivo : EstadoApp.horasDiarias(),
+        referencia: TiempoUtils.validarFecha(referencia) ? referencia : undefined,
+    };
+}
+
+/** Error del día a compensar elegido para un compensatorio (posterior, ya usado o sin excedente), o null. */
+function _errorReferenciaCompensatorio(r, nuevo) {
+    const ref = nuevo.referencia;
+    if (!ref) return null;
+    if (ref > nuevo.fecha) return 'El día a compensar no puede ser posterior al compensatorio';
+
+    const yaUsadoPorOtro = calcularAsignacionesCompensatorio().find(a => a.compensatorioId !== r.id && a.referenciaFecha === ref);
+    if (yaUsadoPorOtro) return `Ese día ya está asignado al compensatorio del ${TiempoUtils.fechaCorta(yaUsadoPorOtro.compensatorioFecha)}`;
+
+    // Se simula la lista con el registro ya editado: la asignación cronológica decide si ese día todavía tiene excedente
+    const listaSimulada = EstadoApp.registros().map(x => x.id === r.id
+        ? { ...x, fecha: nuevo.fecha, entrada: nuevo.entrada || null, salida: nuevo.salida || null, referenciaCompensatorio: ref }
+        : x);
+    const resuelto = _buscarAsignacionCompensatorio(r.id, 'compensatorioId', calcularAsignacionesCompensatorio(listaSimulada));
+    return resuelto?.referenciaFecha ? null : 'Ese día no tiene excedente disponible (o ya fue usado por otro compensatorio)';
+}
+
+function _sinCambios(r, nuevo, credito) {
+    const igual = (a, b) => (a || '') === (b || '');
+    return r.fecha === nuevo.fecha && igual(r.entrada, nuevo.entrada) && igual(r.salida, nuevo.salida)
+        && igual(r.tiempoFuera, nuevo.tiempoFuera) && igual(r.credito, credito) && igual(r.notas, nuevo.notas)
+        && nuevo.objetivo === objetivoGuardado(r) && igual(r.referenciaCompensatorio, nuevo.referencia);
+}
+
+/** Escribe lo editado en el registro y recalcula sus horas. Devuelve el crédito final (puede cambiar al detener el timer). */
+function _aplicarEdicion(r, nuevo, credito) {
+    let { tiempoFuera } = nuevo;
+    let creditoFinal = credito;
+    r.fecha = nuevo.fecha;
+    r.entrada = nuevo.entrada || null;
+    // Se cierra una jornada abierta: si había un timer de tiempo fuera corriendo, se detiene y se suma
+    if (nuevo.salida && !(r.salida || '') && detenerYRegistrarTimer(r)) {
+        tiempoFuera = r.tiempoFuera;
+        creditoFinal = _calcularCredito(nuevo.entrada, nuevo.salida, tiempoFuera, objetivoEdicionEnVivo());
+    }
+    r.salida = nuevo.salida || null;
+    r.tiempoFuera = tiempoFuera;
+    r.credito = creditoFinal;
+    r.notas = nuevo.notas;
+    r.objetivoHoras = nuevo.objetivo;
+    if (nuevo.referencia) r.referenciaCompensatorio = nuevo.referencia;
+    else delete r.referenciaCompensatorio;
+    _aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera, r.credito);
+    return creditoFinal;
+}
+
 async function guardarEdicion() {
-    const editandoId = EstadoApp.editandoId();
-    const r = registroPorId(editandoId);
+    const r = registroPorId(EstadoApp.editandoId());
     if (!r) return;
     const notify = EstadoApp._notify();
-    const horasDiarias = EstadoApp.horasDiarias();
     const btnGuardar = notify.formularioEdicion.bloquearGuardar();
+    const rechazar = (msg, tipo = 'error') => { notify.restaurarBotonGuardarEdicion(btnGuardar); notify.mostrarToast(msg, tipo); };
 
-    const campos = notify.formularioEdicion.leer();
-    const { fecha: f, entrada: e, salida: s } = S.limpiarCamposHorario(campos);
-    let tf = S.limpiarTexto(campos.tiempoFuera.trim(), 5) || null;
-    tf = tf ? TiempoUtils.normalizarMinutosSueltos(tf) : tf;
-    const notas = S.normalizarNotas(campos.notas);
+    const nuevo = _leerEdicion(notify.formularioEdicion.leer());
+    const errorReferencia = _errorReferenciaCompensatorio(r, nuevo);
+    if (errorReferencia) { rechazar(errorReferencia); return; }
 
-    let objetivoNuevo = campos.objetivo;
-    if (!_esObjetivoValido(objetivoNuevo)) objetivoNuevo = horasDiarias;
-    const objetivoPrevio = objetivoGuardado(r);
-
-    const esCompensatorioNuevo = TiposRegistro.obtenerTipoPorCodigo(e, s)?.id === 'compensatorio';
-    let referenciaCompensatorioNueva;
-    if (esCompensatorioNuevo) {
-        const refInput = S.limpiarTexto(campos.referencia, 10);
-        referenciaCompensatorioNueva = TiempoUtils.validarFecha(refInput) ? refInput : undefined;
-
-        if (referenciaCompensatorioNueva) {
-            if (referenciaCompensatorioNueva > f) {
-                notify.restaurarBotonGuardarEdicion(btnGuardar);
-                notify.mostrarToast('El día a compensar no puede ser posterior al compensatorio', 'error');
-                return;
-            }
-            const asignacionesActuales = calcularAsignacionesCompensatorio();
-            const yaUsadoPorOtro = asignacionesActuales.find(a => a.compensatorioId !== r.id && a.referenciaFecha === referenciaCompensatorioNueva);
-            if (yaUsadoPorOtro) {
-                notify.restaurarBotonGuardarEdicion(btnGuardar);
-                notify.mostrarToast(`Ese día ya está asignado al compensatorio del ${TiempoUtils.fechaCorta(yaUsadoPorOtro.compensatorioFecha)}`, 'error');
-                return;
-            }
-            const listaSimulada = EstadoApp.registros().map(x => x.id === r.id
-                ? { ...x, fecha: f, entrada: e || null, salida: s || null, referenciaCompensatorio: referenciaCompensatorioNueva }
-                : x);
-            const asigTest = calcularAsignacionesCompensatorio(listaSimulada);
-            const resuelto = _buscarAsignacionCompensatorio(r.id, 'compensatorioId', asigTest);
-            if (!resuelto?.referenciaFecha) {
-                notify.restaurarBotonGuardarEdicion(btnGuardar);
-                notify.mostrarToast('Ese día no tiene excedente disponible (o ya fue usado por otro compensatorio)', 'error');
-                return;
-            }
-        }
-    }
-
-    let cr = _calcularCredito(e, s, tf, objetivoEdicionEnVivo());
-
-    if (r.fecha === f && (r.entrada || '') === (e || '') && (r.salida || '') === (s || '') &&
-        (r.tiempoFuera || '') === (tf || '') && (r.credito || '') === (cr || '') && (r.notas || '') === (notas || '') &&
-        objetivoNuevo === objetivoPrevio && (r.referenciaCompensatorio || '') === (referenciaCompensatorioNueva || '')) {
+    const credito = _calcularCredito(nuevo.entrada, nuevo.salida, nuevo.tiempoFuera, objetivoEdicionEnVivo());
+    if (_sinCambios(r, nuevo, credito)) {
         notify.mostrarToast('Sin cambios', 'info');
         notify.restaurarBotonGuardarEdicion(btnGuardar);
         notify.cerrarEdicion();
         return;
     }
+    if (!nuevo.entrada && !nuevo.salida) { await _eliminarRegistroVacioDesdeEdicion(btnGuardar); return; }
 
-    if (!e && !s) { await _eliminarRegistroVacioDesdeEdicion(btnGuardar); return; }
+    const error = _validarCamposEdicion(nuevo.fecha, nuevo.entrada, nuevo.salida, nuevo.tiempoFuera);
+    if (error) { rechazar(error.msg, error.tipo); return; }
 
-    const camposError = _validarCamposEdicion(f, e, s, tf);
-    if (camposError) {
-        notify.restaurarBotonGuardarEdicion(btnGuardar);
-        notify.mostrarToast(camposError.msg, camposError.tipo);
-        return;
-    }
-
-    r.fecha = f; r.entrada = e || null;
-    if (s && !(r.salida || '')) {
-        const timerDetenido = detenerYRegistrarTimer(r);
-        if (timerDetenido) {
-            tf = r.tiempoFuera;
-            cr = _calcularCredito(e, s, tf, objetivoEdicionEnVivo());
-        }
-    }
-    r.salida = s || null; r.tiempoFuera = tf; r.credito = cr; r.notas = notas; r.objetivoHoras = objetivoNuevo;
-    if (referenciaCompensatorioNueva) r.referenciaCompensatorio = referenciaCompensatorioNueva;
-    else delete r.referenciaCompensatorio;
-
-    _aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera, r.credito);
-
+    const creditoFinal = _aplicarEdicion(r, nuevo, credito);
     ordenarRegistros();
-    GestorHistorial.saveState(EstadoApp.registros(), `editar registro (${TiempoUtils.fechaCorta(f)})`);
+    GestorHistorial.saveState(EstadoApp.registros(), `editar registro (${TiempoUtils.fechaCorta(nuevo.fecha)})`);
     const saved = await guardarYActualizar(r.id, true);
     notify.restaurarBotonGuardarEdicion(btnGuardar);
     if (saved) {
         AvisoJornada.sincronizarHoy();
-        notify.mostrarToast(cr ? `Guardado con Salida Temprana (+${cr})` : 'Registro actualizado', 'success');
+        notify.mostrarToast(creditoFinal ? `Guardado con Salida Temprana (+${creditoFinal})` : 'Registro actualizado', 'success');
         notify.cerrarEdicion();
     }
 }

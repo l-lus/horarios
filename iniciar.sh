@@ -88,4 +88,4 @@ else
   echo "🚀 Servidor local iniciado en: http://${HOST}:${PORT}"
 fi
 
-exec "${PY_CMD}" -m http.server "${PORT}" -b "${HOST}" -d "${DIR}"
+exec "${PY_CMD}" "${DIR}/scripts/servidor.py" "${PORT}" "${HOST}" "${DIR}"

@@ -42,4 +42,4 @@ if "%HOST%"=="0.0.0.0" (
     echo 🚀 Servidor local iniciado en: http://%HOST%:%PORT%
 )
 echo Presiona Ctrl+C para detener el servidor.
-"%PY_CMD%" -m http.server %PORT% -b %HOST% -d "%DIR%"
+"%PY_CMD%" "%DIR%\scripts\servidor.py" %PORT% %HOST% "%DIR%"

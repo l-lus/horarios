@@ -27,4 +27,4 @@ if ($Bind -eq "0.0.0.0") {
     Write-Host "🚀 Servidor local iniciado en: http://${Bind}:$Port"
 }
 Write-Host "Presiona Ctrl+C para detener el servidor."
-& $pythonCmd -m http.server $Port -b $Bind -d $ScriptDir
+& $pythonCmd (Join-Path $ScriptDir "scripts/servidor.py") $Port $Bind $ScriptDir

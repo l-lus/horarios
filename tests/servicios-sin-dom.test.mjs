@@ -414,3 +414,20 @@ test('GestorPerfiles.guardarDatosPerfilActual conserva los campos del Gist con v
     G.CAMPOS_GIST_PERFIL.forEach(k => delete guardado[k]);
     G.guardarDatosPerfilActual();
 });
+
+test('SincronizacionGist: el token se valida con lista blanca y uno inválido no se guarda', async () => {
+    const { SincronizacionGist: G } = await import('../src/services/sincronizacion-gist.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    GestorPerfiles.inicializar();
+    assert.equal(G.esTokenValido('ghp_' + 'a'.repeat(36)), true);
+    assert.equal(G.esTokenValido('github_pat_' + 'A1_'.repeat(27)), true);
+    assert.equal(G.esTokenValido('ghp_abc"><script>'), false);
+    assert.equal(G.esTokenValido('corto'), false);
+
+    assert.equal(G.saveCredentials('ghp_' + 'b'.repeat(36), ''), true);
+    assert.equal(G.getToken(), 'ghp_' + 'b'.repeat(36));
+    assert.equal(G.saveCredentials('token con espacios y ñ', ''), false);
+    assert.equal(G.getToken(), 'ghp_' + 'b'.repeat(36));   // no se pisó
+    G.saveCredentials('', '');
+    assert.equal(G.getToken(), '');
+});

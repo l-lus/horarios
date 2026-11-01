@@ -48,9 +48,9 @@ async function guardarEdicionGrupo({ tipo, desde, hasta }) {
     const grupoEnEdicion = EstadoApp.getGrupoEnEdicion();
     if (!grupoEnEdicion) return;
     const notify = EstadoApp._notify();
-    const nuevoTipo = S.sanitizeString((tipo ?? '').trim(), 20);
-    const nuevaDesde = S.sanitizeString((desde ?? '').trim(), 10);
-    const nuevaHasta = S.sanitizeString((hasta ?? '').trim(), 10);
+    const nuevoTipo = S.limpiarTexto((tipo ?? '').trim(), 20);
+    const nuevaDesde = S.limpiarTexto((desde ?? '').trim(), 10);
+    const nuevaHasta = S.limpiarTexto((hasta ?? '').trim(), 10);
 
     const error = _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta);
     if (error) { notify.mostrarToast(error, 'error'); return; }

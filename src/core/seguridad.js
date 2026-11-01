@@ -18,22 +18,6 @@ const REGEX_PATTERNS = {
     NOTAS: /[^a-zA-Z0-9áéíóúÁÉÍÓÚüÜñÑ ]/g
 };
 
-function sanitizeString(str, maxLength = SECURITY_LIMITS.MAX_STRING_LENGTH) {
-    if (typeof str !== 'string') return '';
-    return str
-        .replace(/[<>"'`]/g, '')
-        .replace(/javascript:/gi, '')
-        .replace(/data:/gi, '')
-        .replace(/vbscript:/gi, '')
-        .replace(/on\w+\s*=/gi, '')
-        .replace(/[\x00-\x1F\x7F]/g, '')
-        .replace(/&lt;/gi, '')
-        .replace(/&gt;/gi, '')
-        .replace(/&#/g, '')
-        .trim()
-        .substring(0, maxLength);
-}
-
 /**
  * Limpieza para texto que se muestra con textContent (no se interpreta como HTML, así que no hace falta
  * quitar comillas ni '<'): saca caracteres de control, recorta espacios y trunca.
@@ -241,7 +225,6 @@ export const SeguridadYUtils = {
     sanitizarDiasHabiles,
     SECURITY_LIMITS,
     REGEX_PATTERNS,
-    sanitizeString,
     limpiarTexto,
     sanitizeNotas,
     normalizarNotas,

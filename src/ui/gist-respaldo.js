@@ -198,6 +198,14 @@ function guardarConfigGist() {
         mostrarToast('Hora final inválida.', 'error');
         return;
     }
+    if (token && !SincronizacionGist.esTokenValido(token)) {
+        mostrarToast('El token de GitHub tiene caracteres no válidos', 'error');
+        return;
+    }
+    if (gistId && !SincronizacionGist.esGistIdValido(gistId)) {
+        mostrarToast('Gist ID inválido', 'error');
+        return;
+    }
 
     const rango = SincronizacionGist.getRangoHorario();
     const huboCambios = token !== SincronizacionGist.getToken()

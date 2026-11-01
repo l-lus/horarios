@@ -182,7 +182,7 @@ function calcularCambiosConfigImport(data) {
 }
 
 function normalizarRegistrosImportados(rawList, calcularHorasFn) {
-    const validarHora = (h) => TiempoUtils.validarHora(h) ? S.sanitizeString(h, 5) : null;
+    const validarHora = (h) => (typeof h === 'string' && TiempoUtils.validarHora(h)) ? h : null;
     const hoy = TiempoUtils.obtenerFechaHoy();
     const descartadosFuturos = rawList.filter(r =>
         S.validarRegistroSeguro(r) && r.fecha > hoy && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
@@ -197,7 +197,7 @@ function normalizarRegistrosImportados(rawList, calcularHorasFn) {
         })
         .map(r => ({
             id: (r.id && S.REGEX_PATTERNS.ID.test(r.id)) ? r.id : S.generarIDSeguro(),
-            fecha: S.sanitizeString(r.fecha, 10),
+            fecha: r.fecha,
             entrada: validarHora(r.entrada), salida: validarHora(r.salida), tiempoFuera: validarHora(r.tiempoFuera),
             horas: Math.max(0, Math.min(24, parseFloat(r.horas) || 0)),
             minutos: Math.max(0, Math.min(59, parseFloat(r.minutos) || 0)),

@@ -11,7 +11,11 @@ const GIST_FILENAME = 'horarios_backup.json';
 const GIST_ID_REGEX = /^[a-f0-9]{20,40}$/i;
 const RANGO_HORARIO_DEFAULT = { desde: '21:00', hasta: '00:00' };
 
+// Tokens de GitHub (clásicos ghp_…, fine-grained github_pat_… y los viejos de 40 hex): solo letras, números y '_'
+const TOKEN_REGEX = /^[A-Za-z0-9_]{20,255}$/;
+
 function esGistIdValido(id) { return id && GIST_ID_REGEX.test(id.trim()); }
+function esTokenValido(token) { return typeof token === 'string' && TOKEN_REGEX.test(token.trim()); }
 
 function _conPerfil(fn) {
     const perfil = GestorPerfiles.obtenerDatosPerfil();
@@ -97,14 +101,17 @@ function dentroDelRangoHorario() {
     return desde <= hasta ? (horaActual >= desde && horaActual <= hasta) : (horaActual >= desde || horaActual <= hasta);
 }
 
+/** Guarda token y Gist ID. Un token con caracteres no válidos no se guarda (devuelve false). */
 function saveCredentials(token, gistId) {
-    if (token) Almacenamiento.setItem(STORAGE_KEYS.GIST_TOKEN, S.sanitizeString(token.trim(), 256));
+    if (token && !esTokenValido(token)) return false;
+    if (token) Almacenamiento.setItem(STORAGE_KEYS.GIST_TOKEN, token.trim());
     else Almacenamiento.removeItem(STORAGE_KEYS.GIST_TOKEN);
 
     _conPerfil(perfil => {
         if (gistId && esGistIdValido(gistId)) perfil.gistId = gistId.trim();
         else if (gistId === '') delete perfil.gistId;
     });
+    return true;
 }
 
 function saveLastSync(gistId) {
@@ -178,4 +185,4 @@ async function bajar() {
     return data;
 }
 
-export const SincronizacionGist = { getToken, getGistId, getLastSync, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, getSyncCount, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, subir, bajar };
+export const SincronizacionGist = { getToken, getGistId, getLastSync, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, getSyncCount, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, esTokenValido, subir, bajar };

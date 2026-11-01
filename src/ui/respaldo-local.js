@@ -106,8 +106,8 @@ async function ejecutarExportacion() {
             await exportarRango(mesActual, mesActual, true);
 
         } else if (tipo === 'rango') {
-            const desde = S.sanitizeString($('export-fecha-desde').value, 10);
-            const hasta = S.sanitizeString($('export-fecha-hasta').value, 10);
+            const desde = S.limpiarTexto($('export-fecha-desde').value, 10);
+            const hasta = S.limpiarTexto($('export-fecha-hasta').value, 10);
 
             if (!desde || !hasta) {
                 mostrarToast('Completá ambas fechas', 'error');
@@ -166,7 +166,7 @@ async function exportarRango(desde, hasta, esMes = false) {
         version: S.SECURITY_LIMITS.SCHEMA_VERSION,
         hash: await S.calcularHashSHA256(registrosFiltrados),
         timestamp: Date.now(),
-        rangoExportado: S.sanitizeString(esMes ? `Mes ${desde}` : `${desde} a ${hasta}`, 100)
+        rangoExportado: S.limpiarTexto(esMes ? `Mes ${desde}` : `${desde} a ${hasta}`, 100)
     };
 
     try {

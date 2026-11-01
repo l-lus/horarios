@@ -102,9 +102,9 @@ function cargarPerfilActivo() {
  */
 function _camposHorario(campos) {
     return {
-        fecha: S.sanitizeString(campos.fecha, 10),
-        entrada: S.sanitizeString(campos.entrada.trim(), 5),
-        salida: S.sanitizeString(campos.salida.trim(), 5),
+        fecha: S.limpiarTexto(campos.fecha, 10),
+        entrada: S.limpiarTexto(campos.entrada.trim(), 5),
+        salida: S.limpiarTexto(campos.salida.trim(), 5),
     };
 }
 
@@ -467,7 +467,7 @@ async function guardarEdicion() {
 
     const campos = notify.formularioEdicion.leer();
     const { fecha: f, entrada: e, salida: s } = _camposHorario(campos);
-    let tf = S.sanitizeString(campos.tiempoFuera.trim(), 5) || null;
+    let tf = S.limpiarTexto(campos.tiempoFuera.trim(), 5) || null;
     tf = tf ? TiempoUtils.normalizarMinutosSueltos(tf) : tf;
     const notas = S.normalizarNotas(campos.notas);
 
@@ -478,7 +478,7 @@ async function guardarEdicion() {
     const esCompensatorioNuevo = TiposRegistro.obtenerTipoPorCodigo(e, s)?.id === 'compensatorio';
     let referenciaCompensatorioNueva;
     if (esCompensatorioNuevo) {
-        const refInput = S.sanitizeString(campos.referencia, 10);
+        const refInput = S.limpiarTexto(campos.referencia, 10);
         referenciaCompensatorioNueva = TiempoUtils.validarFecha(refInput) ? refInput : undefined;
 
         if (referenciaCompensatorioNueva) {

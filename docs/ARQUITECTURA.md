@@ -1,6 +1,6 @@
 # Arquitectura del Frontend — Horarios
 
-**Última actualización:** 2026-10-31  
+**Última actualización:** 2026-11-01  
 **Estado:** Arquitectura modularizada y saneada (57 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
@@ -262,6 +262,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 | **ARQ-10** | `ui/base.js` (645 → ~280 líneas) dividido en `gestos`, `toast`, `boton-fichar`, `popups` y `scroll`, con `UIBase` como fachada | ✅ Aplicado |
 | **ARQ-11** | Versión centralizada (`APP_VERSION`) y `npm run release` para `APP_VERSION` + `CACHE_NAME` | ✅ Aplicado |
 | **ARQ-12** | Saneamiento: código muerto eliminado, ~50 funciones de reenvío y reexportaciones quitadas, `GestionDatos` (75 → 14 miembros) y `UIBase` (53 → 18) sin pasamanos, cálculo de estadísticas y de la tarjeta movidos a `services/` (`EstadisticasPeriodo`, `EstadoTarjeta`) con tests sin DOM, `tarjeta-fichaje.js` (1.012 → 540 líneas) dividido con `tarjeta-fichaje-vista.js`, helper `icono()` y reportes con ``html`...` `` | ✅ Aplicado |
+| **ARQ-13** | Unificación y endurecimiento: archivo local y Gist restauran por el mismo camino (`prepararRespaldo`/`restaurarRespaldo`), carga del perfil (`cargarPerfilActivo`) y alta/baja/renombre de perfiles movidos a `services/`, datos guardados reparados al cargar, `sanitizeString` reemplazado por `limpiarTexto` + listas blancas, `montar` como único sink de `innerHTML` y CSP con Trusted Types | ✅ Aplicado |
 
 ---
 

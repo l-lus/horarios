@@ -44,13 +44,19 @@ function bindEventos() {
 
 // Mínimo entre búsquedas de versión nueva al volver a la app (el navegador por sí solo revisa poco si la PWA queda abierta en segundo plano)
 const BUSQUEDA_MIN_MS = 60 * 1000;
+// Con la pestaña a la vista y sin recargar (típico en PC) tampoco hay otra revisión: se busca cada tanto
+const BUSQUEDA_PERIODICA_MS = 15 * 60 * 1000;
+
+// Hay una versión instalada y está llegando otra (se avisa y se informa el avance). No depende de que la página esté controlada por el worker:
+// tras una recarga forzada (Ctrl+Shift+R) la página queda sin controlador aunque haya una versión instalada, y no por eso deja de ser una actualización
+let _actualizando = false;
 
 function registrarServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
 
     // El worker informa cuánto lleva descargado de la versión nueva. Solo se avisa si ya había una instalada (no en la primera visita).
     navigator.serviceWorker.addEventListener('message', (e) => {
-        if (!navigator.serviceWorker.controller) return;
+        if (!_actualizando) return;
         const datos = e.data;
         if (datos?.tipo === 'sw-progreso') AvisoActualizacion.progreso(datos.progreso);
         else if (datos?.tipo === 'sw-error') AvisoActualizacion.error();
@@ -62,12 +68,14 @@ function registrarServiceWorker() {
                 console.log('SW registrado:', registration.scope);
                 registration.addEventListener('updatefound', () => {
                     const nuevo = registration.installing;
-                    if (!nuevo || !navigator.serviceWorker.controller) return;
+                    // sin versión activa es la primera instalación: no hay nada que avisar
+                    if (!nuevo || !registration.active) return;
+                    _actualizando = true;
                     // aviso inmediato: ya se sabe que hay una versión nueva aunque todavía se esté descargando
                     AvisoActualizacion.iniciar();
                     nuevo.addEventListener('statechange', () => {
-                        if (nuevo.state === 'installed') AvisoActualizacion.listo();
-                        else if (nuevo.state === 'redundant') AvisoActualizacion.error();
+                        if (nuevo.state === 'installed') { _actualizando = false; AvisoActualizacion.listo(); }
+                        else if (nuevo.state === 'redundant') { _actualizando = false; AvisoActualizacion.error(); }
                     });
                 });
                 _buscarActualizacionAlVolver(registration);
@@ -90,6 +98,11 @@ function _buscarActualizacionAlVolver(registration) {
         ultima = Date.now();
         registration.update().catch(() => { });
     });
+    setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
+        ultima = Date.now();
+        registration.update().catch(() => { });
+    }, BUSQUEDA_PERIODICA_MS);
 }
 
 export const InstaladorPWA = {

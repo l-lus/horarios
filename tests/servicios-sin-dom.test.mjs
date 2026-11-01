@@ -500,3 +500,24 @@ test('Compensatorios: editar y eliminar tramos de días hábiles validan y no pe
     const { AvisoJornada } = await import('../src/services/aviso-jornada.js');
     EstadoApp.setSincronizarPushHoyHook(AvisoJornada.sincronizarHoy);   // se restaura el hook real
 });
+
+test('GestionDatos: deshacer y rehacer restauran los registros y recalculan sus horas', async () => {
+    const { GestionDatos: D } = await import('../src/services/gestion-datos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorHistorial } = await import('../src/services/gestor-historial.js');
+    const toasts = [];
+    EstadoApp.configurarNotificaciones({ actualizarUI: () => { }, iniciarTimerAutoCierreBotones: () => { }, mostrarToast: (m) => toasts.push(m) });
+    GestorHistorial.clear();
+    const r = { id: 'gggggggggg1', fecha: '2026-10-20', entrada: '09:00', salida: '17:00', tiempoFuera: null, horas: 0, minutos: 0, total: 0 };
+    EstadoApp._setRegistros([]);
+    GestorHistorial.saveState([], 'vacío');
+    GestorHistorial.saveState([r], 'agregar');        // el total guardado (0) está desactualizado a propósito
+
+    D.undoAction();
+    assert.equal(EstadoApp.registros().length, 0);
+    D.redoAction();
+    assert.equal(EstadoApp.registros().length, 1);
+    assert.equal(EstadoApp.registros()[0].total, 8);   // se recalculó al restaurar
+    assert.deepEqual(toasts, ['Deshecho', 'Rehecho']);
+    GestorHistorial.clear();
+});

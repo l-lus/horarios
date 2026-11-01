@@ -36,6 +36,23 @@ function cargarConfiguracion() {
     };
 }
 
+/** Historial de días hábiles del perfil; si trae tramos, los días vigentes pasan a ser los de hoy. */
+function _setHistorialDiasHabiles(historial) {
+    const arr = Array.isArray(historial) ? historial : [];
+    EstadoApp._setHistorialDiasHabilesRaw(arr);
+    if (arr.length > 0) EstadoApp.setDiasHabiles(diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
+}
+
+/** Recalcula horas de las jornadas cerradas; con `recalcularCreditos`, también la salida temprana según el objetivo. */
+function recalcularTotalesEnMemoria(recalcularCreditos = false) {
+    EstadoApp.registros().forEach(r => {
+        if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
+            if (recalcularCreditos && r.credito) _recalcularCreditoRegistro(r, objetivoDeRegistro(r));
+            else _recalcularHorasSiValido(r);
+        }
+    });
+}
+
 /**
  * Carga en EstadoApp el perfil activo (configuración y registros) y, si sigue vigente, la pila de deshacer.
  * Lo guardado se repara antes de usarlo (ver SeguridadYUtils.repararRegistrosGuardados): un perfil corrupto
@@ -47,7 +64,7 @@ function cargarPerfilActivo() {
     const horas = parseFloat(perfil.horasDiarias);
     EstadoApp.setHorasDiarias(Number.isFinite(horas) && horas >= 0 && horas <= 24 ? horas : 7);
     const historialDias = Compensatorios.sanitizarHistorialDiasHabiles(perfil.historialDiasHabiles);
-    GestionDatos.setHistorialDiasHabiles(
+    _setHistorialDiasHabiles(
         historialDias && historialDias.length > 0 ? historialDias : [{ desde: '0001-01-01', dias: EstadoApp.diasHabiles() }]
     );
 
@@ -69,7 +86,7 @@ function cargarPerfilActivo() {
         }
     }
     ordenarRegistros();
-    GestionDatos.recalcularTotalesEnMemoria();
+    recalcularTotalesEnMemoria();
     if (!historialCargado) GestorHistorial.saveState(EstadoApp.registros());
 
     const migrados = Compensatorios.migrarObjetivoHorasFaltante();
@@ -255,11 +272,7 @@ function _aplicarEstadoHistorial(resultado, mensaje) {
     if (!resultado?.estado) return;
     const registros = EstadoApp.registros();
     registros.splice(0, registros.length, ...resultado.estado);
-    registros.forEach(r => {
-        if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
-            _recalcularHorasSiValido(r);
-        }
-    });
+    recalcularTotalesEnMemoria();
     AvisoJornada.sincronizarHoy();
     guardarYActualizar(null, true);
     const notify = EstadoApp._notify();
@@ -267,24 +280,15 @@ function _aplicarEstadoHistorial(resultado, mensaje) {
     notify.iniciarTimerAutoCierreBotones();
 }
 
+function deshacer() { _aplicarEstadoHistorial(GestorHistorial.undo(), 'Deshecho'); }
+function rehacer() { _aplicarEstadoHistorial(GestorHistorial.redo(), 'Rehecho'); }
+
 export const GestionDatos = {
-    setHistorialDiasHabiles: (v) => {
-        const arr = Array.isArray(v) ? v : [];
-        EstadoApp._setHistorialDiasHabilesRaw(arr);
-        if (arr.length > 0) EstadoApp.setDiasHabiles(diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
-    },
-    recalcularTotalesEnMemoria: function (recalcularCreditos = false) {
-        EstadoApp.registros().forEach(r => {
-            if (r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
-                if (recalcularCreditos && r.credito) _recalcularCreditoRegistro(r, objetivoDeRegistro(r));
-                else _recalcularHorasSiValido(r);
-            }
-        });
-    },
     cargarConfiguracion,
     cargarPerfilActivo,
     agregarRegistro,
+    recalcularTotalesEnMemoria,
     borrarTodoHistorial,
-    undoAction: function () { _aplicarEstadoHistorial(GestorHistorial.undo(), 'Deshecho'); },
-    redoAction: function () { _aplicarEstadoHistorial(GestorHistorial.redo(), 'Rehecho'); }
+    undoAction: deshacer,
+    redoAction: rehacer,
 };

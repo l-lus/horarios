@@ -254,7 +254,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarObjetivoPorRegistro: true,
         reducirAnimaciones: 'on',
         hintIntegrado: true,
-        atajosRapidos: ['deshacer', 'rehacer', 'tema', 'ayuda'],
+        atajosRapidos: ['deshacer', 'rehacer', 'tema', 'estilo-calendario', 'ayuda'],
         ordenCards: ['registrar', 'estadisticas', 'historico', 'atajos'],
         tarjetasVisibles: { registrar: true, atajos: true, estadisticas: true, historico: true }
     });

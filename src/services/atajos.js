@@ -2,7 +2,7 @@
 // ATAJOS RÁPIDOS (lista elegida por el usuario, sin DOM)
 // ====================================================================
 export const MAX_ATAJOS = 20;   // dos filas de 10 en escritorio (en móvil son 6 por fila)
-export const ATAJOS_POR_DEFECTO = Object.freeze(['deshacer', 'rehacer', 'tema', 'ayuda']);
+export const ATAJOS_POR_DEFECTO = Object.freeze(['deshacer', 'rehacer', 'tema', 'estilo-calendario', 'ayuda']);
 
 /**
  * Lista guardada → lista válida: solo atajos que existen, sin repetir, hasta MAX_ATAJOS.

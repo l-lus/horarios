@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 
 // Sin `document`: si un servicio lo toca, este archivo falla al ejecutarse.
 const store = new Map();
-globalThis.Storage = function () { };
 globalThis.localStorage = {
     getItem: k => (store.has(k) ? store.get(k) : null),
     setItem: (k, v) => store.set(k, String(v)),

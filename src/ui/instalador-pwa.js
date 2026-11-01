@@ -66,7 +66,6 @@ function registrarServiceWorker() {
     const _registrar = () => {
         navigator.serviceWorker.register(urlScriptConfiable('./sw.js'))
             .then(registration => {
-                console.log('SW registrado:', registration.scope);
                 registration.addEventListener('updatefound', () => {
                     const nuevo = registration.installing;
                     // sin versión activa es la primera instalación: no hay nada que avisar

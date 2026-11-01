@@ -172,7 +172,6 @@ test('Integración: Arranque completo de OrquestadorUI.init() sin errores de eje
     globalThis.location = { origin: 'http://localhost:8080', reload: noop, href: 'http://localhost:8080/' };
     globalThis.matchMedia = () => ({ matches: false, addEventListener: noop });
     Object.defineProperty(globalThis, 'navigator', { value: { standalone: false, onLine: true }, configurable: true });
-    globalThis.Storage = function () { };
     const store = new Map();
     globalThis.localStorage = {
         getItem: k => (store.has(k) ? store.get(k) : null),

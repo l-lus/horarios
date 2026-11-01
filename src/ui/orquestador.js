@@ -420,7 +420,6 @@ function _initListenersOtros() {
 }
 
 async function init() {
-    if (typeof Storage === 'undefined') { alert('Tu navegador no soporta localStorage.'); return; }
     Almacenamiento.migrarClavesLegadas();
 
     _initGlobales();

@@ -27,6 +27,7 @@ export const STORAGE_KEYS = Object.freeze({
     FONDO_CARD: 'fondoCard',
     PERSISTIR_TARJETAS: 'persistirTarjetas',
     ORDEN_CARDS: 'ordenCards',
+    ORDEN_CARDS_MOVIL: 'ordenCardsMovil',
     ATAJOS: 'atajosRapidos',
     FORMULARIO_EXPANDIDO: 'formularioExpandido',
     STATS_EXPANDIDO: 'statsExpandido',

@@ -41,8 +41,20 @@ function aplicarVisibilidadCards() {
     EventosApp.emit('tarjetas:visibilidad');
 }
 
+// Escritorio (2 columnas) y móvil (1 columna apilada) tienen cada uno su orden. Mismo corte que el CSS (@media min-width: 1024px).
+// Mientras no se haya ordenado en móvil, se parte del orden de escritorio.
+const _consultaEscritorio = window.matchMedia('(min-width: 1024px)');
+const _esEscritorio = () => _consultaEscritorio.matches;
+const _claveOrden = () => (_esEscritorio() ? STORAGE_KEYS.ORDEN_CARDS : STORAGE_KEYS.ORDEN_CARDS_MOVIL);
+
 function obtenerOrdenCards() {
-    return normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
+    const guardado = Almacenamiento.getObject(_claveOrden(), null, true)
+        ?? Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true);
+    return normalizarOrdenCards(guardado);
+}
+
+function guardarOrdenCards(orden) {
+    Almacenamiento.setItem(_claveOrden(), orden, true);
 }
 
 // Columnas de escritorio: la izquierda es la que tiene la tarjeta de fichaje con la barra, la derecha es la que sigue (en móvil se apilan en ese orden)
@@ -62,8 +74,12 @@ function aplicarOrdenCards(orden) {
         const card = $('card-' + cual);
         if (!card) return;
         card.style.animationDelay = `${delays[idx] ?? 0.25}s`;
-        (columnaDeCard(idx, orden.length) ? derecha : izquierda).appendChild(card);
+        // En móvil todo va apilado en la primera columna (la de la tarjeta de fichaje), en el orden elegido
+        (_esEscritorio() && columnaDeCard(idx, orden.length) ? derecha : izquierda).appendChild(card);
     });
+
+    const etiqueta = $('label-orden-cards');
+    if (etiqueta) etiqueta.textContent = `Tarjetas y posición (${_esEscritorio() ? 'PC' : 'celular'})`;
 
     const lista = $('lista-orden-cards');
     if (lista) {
@@ -79,6 +95,9 @@ EventosApp.on('config:tarjetas', () => {
     aplicarVisibilidadCards();
     aplicarOrdenCards(obtenerOrdenCards());
 });
+
+// Al pasar de escritorio a móvil (o al revés, ej. girar la pantalla o redimensionar) se arma el diseño del modo nuevo
+_consultaEscritorio.addEventListener('change', () => aplicarOrdenCards(obtenerOrdenCards()));
 
 
 function obtenerCardsVisibles() {
@@ -185,7 +204,7 @@ function iniciarDragTarjetas() {
             card.classList.remove('reordenando');
             document.body.classList.remove('tarjeta-arrastrando-activa');
             if (confirmar) {
-                Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenEnCurso, true);
+                guardarOrdenCards(ordenEnCurso);
                 aplicarOrdenCards(ordenEnCurso);
             } else if (ordenInicial) {
                 uiAnimarReubicacion(
@@ -193,7 +212,7 @@ function iniciarDragTarjetas() {
                     c => c.id,
                     () => aplicarOrdenCards(ordenInicial)
                 );
-                Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenInicial, true);
+                guardarOrdenCards(ordenInicial);
             }
             ordenInicial = null;
             ordenEnCurso = null;
@@ -222,7 +241,7 @@ function iniciarDragTarjetas() {
 
             ordenEnCurso = obtenerOrdenCards();
             reubicar(nuevaLista, card);
-            Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, ordenEnCurso, true);
+            guardarOrdenCards(ordenEnCurso);
             ordenEnCurso = null;
             // en la tarjeta de atajos el foco estaba en uno de sus botones
             (header === card ? /** @type {HTMLElement} */ (e.target) : header).focus();
@@ -297,7 +316,7 @@ function iniciarDragOrdenCards() {
         const itemsDOM = Array.from(lista.querySelectorAll('.orden-card-item'));
         const nuevoOrden = itemsDOM.map(i => getCardFromItem(i)).filter(Boolean);
 
-        Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
+        guardarOrdenCards(nuevoOrden);
 
         aplicarOrdenCards(nuevoOrden);
 

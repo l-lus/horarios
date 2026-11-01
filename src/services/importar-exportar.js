@@ -25,6 +25,7 @@ const KEYS_CONFIG_EXPORTABLE = [
     STORAGE_KEYS.HINT_INTEGRADO,
     STORAGE_KEYS.ATAJOS,
     STORAGE_KEYS.ORDEN_CARDS,
+    STORAGE_KEYS.ORDEN_CARDS_MOVIL,
     CLAVE_TARJETAS_VISIBLES
 ];
 
@@ -42,6 +43,8 @@ function _atajosActuales() {
 }
 const _atajosSaneados = (lista) => [...new Set(lista)].slice(0, MAX_ATAJOS);
 const _ordenActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
+// Sin orden propio para móvil se usa el de escritorio (así era antes de separarlos)
+const _ordenMovilActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true) ?? Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
 const _visiblesActuales = () => Object.fromEntries(CARDS.map(c => [c, Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(c), true, true)]));
 
 function obtenerConfigExportable() {
@@ -53,6 +56,7 @@ function obtenerConfigExportable() {
         [STORAGE_KEYS.HINT_INTEGRADO]: Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO),
         [STORAGE_KEYS.ATAJOS]: _atajosActuales(),
         [STORAGE_KEYS.ORDEN_CARDS]: _ordenActual(),
+        [STORAGE_KEYS.ORDEN_CARDS_MOVIL]: _ordenMovilActual(),
         [CLAVE_TARJETAS_VISIBLES]: _visiblesActuales()
     };
 }
@@ -74,6 +78,7 @@ function validarCamposConfigImport(data) {
     }
     if (data[STORAGE_KEYS.ATAJOS] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ATAJOS])) return false;
     if (data[STORAGE_KEYS.ORDEN_CARDS] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ORDEN_CARDS])) return false;
+    if (data[STORAGE_KEYS.ORDEN_CARDS_MOVIL] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL])) return false;
     if (data[CLAVE_TARJETAS_VISIBLES] !== undefined && !_esMapaDeBooleanos(data[CLAVE_TARJETAS_VISIBLES])) return false;
     return true;
 }
@@ -118,6 +123,10 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
     let cambioTarjetas = false;
     if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS])) {
         Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS]), true);
+        cambioTarjetas = true;
+    }
+    if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL])) {
+        Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL]), true);
         cambioTarjetas = true;
     }
     const visibles = data[CLAVE_TARJETAS_VISIBLES];
@@ -171,6 +180,9 @@ function calcularCambiosConfigImport(data) {
     }
     if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS]) && normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS]).join() !== _ordenActual().join()) {
         cambios.push('orden de tarjetas');
+    }
+    if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL]) && normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL]).join() !== _ordenMovilActual().join()) {
+        cambios.push('orden de tarjetas (móvil)');
     }
     const visibles = data[CLAVE_TARJETAS_VISIBLES];
     if (visibles && typeof visibles === 'object') {

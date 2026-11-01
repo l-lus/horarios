@@ -282,6 +282,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         hintIntegrado: true,
         atajosRapidos: ['deshacer', 'rehacer', 'tema', 'estilo-calendario', 'ayuda'],
         ordenCards: ['registrar', 'estadisticas', 'historico', 'atajos'],
+        ordenCardsMovil: ['registrar', 'estadisticas', 'historico', 'atajos'],
         tarjetasVisibles: { registrar: true, atajos: true, estadisticas: true, historico: true }
     });
 });
@@ -293,6 +294,7 @@ test('ImportarExportar: el diseño de la interfaz (atajos, orden y tarjetas visi
     const limpiar = () => {
         Almacenamiento.removeItem(STORAGE_KEYS.ATAJOS);
         Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS, true);
+        Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
         ['registrar', 'atajos', 'estadisticas', 'historico'].forEach(c => Almacenamiento.removeItem(STORAGE_KEYS.CARD_VISIBLE(c), true));
     };
     limpiar();
@@ -338,6 +340,12 @@ test('ImportarExportar: el diseño de la interfaz (atajos, orden y tarjetas visi
         const exportado = ImportarExportar.obtenerConfigExportable();
         assert.deepEqual(exportado.atajosRapidos, ['tema', 'bajar', 'atajo-del-futuro']);
         assert.deepEqual(exportado.ordenCards, ['historico', 'estadisticas', 'registrar', 'atajos']);
+        // Sin orden propio para móvil, usa el de escritorio; con uno propio, cada modo conserva el suyo
+        assert.deepEqual(exportado.ordenCardsMovil, ['historico', 'estadisticas', 'registrar', 'atajos']);
+        ImportarExportar.aplicarConfigImportada({ ordenCardsMovil: ['atajos', 'registrar'] });
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true), ['atajos', 'estadisticas', 'historico', 'registrar']);
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['historico', 'estadisticas', 'registrar', 'atajos']);
+        Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
         assert.deepEqual(exportado.tarjetasVisibles, { registrar: true, atajos: false, estadisticas: true, historico: true });
 
         // Una lista de atajos vacía es una elección válida y se restaura vacía

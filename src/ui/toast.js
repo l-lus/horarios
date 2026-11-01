@@ -26,7 +26,7 @@ let _progresoVisible = false;
 /** @param {any} [detalle] @param {any} [accion] */
 export function mostrarToast(mensaje, tipo = 'info', duracion = 3000, detalle = null, accion = null) {
     const texto = detalle ? `${mensaje}, ${detalle}` : mensaje;
-    const textoLimpio = S.sanitizeString(texto, 200);
+    const textoLimpio = S.limpiarTexto(texto, 200, { saltos: true });
     const ultimo = _toastQueue[_toastQueue.length - 1];
     const actual = _toastRunning ? $('toast')?.textContent : null;
     if ((ultimo && ultimo.mensaje === textoLimpio) || actual === textoLimpio) return;
@@ -114,7 +114,7 @@ function _ocultarProgreso() {
 
 /** Muestra un toast con barra de progreso (indeterminada hasta que se informe un porcentaje). @param {string} mensaje */
 export function iniciarToastProgreso(mensaje) {
-    _progreso = { mensaje: S.sanitizeString(mensaje, 200), porcentaje: null };
+    _progreso = { mensaje: S.limpiarTexto(mensaje, 200, { saltos: true }), porcentaje: null };
     if (!_toastRunning) _mostrarProgreso();
 }
 

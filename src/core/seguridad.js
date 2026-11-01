@@ -34,6 +34,17 @@ function sanitizeString(str, maxLength = SECURITY_LIMITS.MAX_STRING_LENGTH) {
         .substring(0, maxLength);
 }
 
+/**
+ * Limpieza para texto que se muestra con textContent (no se interpreta como HTML, así que no hace falta
+ * quitar comillas ni '<'): saca caracteres de control, recorta espacios y trunca.
+ * Con `saltos` conserva los '\n' (los toasts usan white-space: pre-line).
+ */
+function limpiarTexto(str, maxLength = SECURITY_LIMITS.MAX_STRING_LENGTH, { saltos = false } = {}) {
+    if (typeof str !== 'string') return '';
+    const control = saltos ? /[\x00-\x09\x0B-\x1F\x7F]/g : /[\x00-\x1F\x7F]/g;
+    return str.replace(control, '').trim().substring(0, maxLength);
+}
+
 function sanitizeNotas(str, trim = false) {
     if (typeof str !== 'string') return '';
     const r = str.replace(REGEX_PATTERNS.NOTAS, '').substring(0, SECURITY_LIMITS.MAX_NOTAS_LENGTH);
@@ -166,6 +177,7 @@ export const SeguridadYUtils = {
     SECURITY_LIMITS,
     REGEX_PATTERNS,
     sanitizeString,
+    limpiarTexto,
     sanitizeNotas,
     escapeHtml,
     generarIDSeguro,

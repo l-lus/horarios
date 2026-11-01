@@ -39,6 +39,14 @@ test('SeguridadYUtils: escapeHtml, validarRegistroSeguro y calcularHashSHA256', 
     assert.equal(hash.length, 64);
 });
 
+test('SeguridadYUtils.limpiarTexto: quita caracteres de control y conserva comillas (y saltos de línea si se pide)', () => {
+    const { limpiarTexto } = SeguridadYUtils;
+    assert.equal(limpiarTexto('Salida \nTiempo fuera: "x" data: 1\u0000', 200, { saltos: true }), 'Salida \nTiempo fuera: "x" data: 1');
+    assert.equal(limpiarTexto('a\nb\tc'), 'abc');
+    assert.equal(limpiarTexto('  abcdef  ', 3), 'abc');
+    assert.equal(limpiarTexto(null), '');
+});
+
 test('EventosApp: suscripción, desuscripción y registro de handlers', () => {
     let recibido = null;
     const off = EventosApp.on('test:evento', (payload) => { recibido = payload; });

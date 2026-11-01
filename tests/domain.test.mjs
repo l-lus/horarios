@@ -124,7 +124,10 @@ test('EstadoApp.calcularHoras y Compensatorios: cálculo de jornada, cruce de me
     assert.equal(asignaciones[0].excedente, 2);
 });
 
-test('Integración: Arranque completo de OrquestadorUI.init() sin errores de ejecución', async () => {
+test('Integración: Arranque completo de OrquestadorUI.init() sin errores de ejecución', async (t) => {
+    // Fecha fija (miércoles 28/10/2026 10:00, día hábil): el arranque recorre caminos distintos según el día y
+    // el resultado no puede depender de cuándo se corren los tests. Solo se simula Date (los timers son reales).
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 28, 10, 0) });
     const noop = () => { };
     const fakeEl = () => ({
         style: { setProperty: noop, removeProperty: noop },
@@ -135,6 +138,7 @@ test('Integración: Arranque completo de OrquestadorUI.init() sin errores de eje
         querySelector: () => fakeEl(),
         querySelectorAll: () => [],
         appendChild: noop,
+        append: noop,
         replaceChildren: noop,
         insertBefore: noop,
         remove: noop,

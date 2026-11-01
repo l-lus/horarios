@@ -16,7 +16,7 @@ let _toastAccionActual = null;
 const MAX_TOAST_QUEUE = 4;
 
 // Toast con barra de progreso (p. ej. descarga de una actualización): entra en la cola como cualquier otro y se queda en pantalla hasta que
-// termina; los toasts que lleguen mientras tanto esperan su turno detrás. Si algo se cuelga, se retira solo pasado un tiempo.
+// termina (tocarlo o deslizarlo no lo cierra); los toasts que lleguen mientras tanto esperan su turno detrás. Si algo se cuelga, se retira solo pasado un tiempo.
 const PROGRESO_MAX_MS = 45000;
 let _timerProgreso = null;
 /** @type {{ mensaje: string, porcentaje: number | null } | null} */
@@ -134,11 +134,8 @@ export function finalizarToastProgreso() {
 }
 
 export function _cerrarToastActual() {
-    if (_progresoVisible) {
-        // tocar o deslizar el toast de progreso lo descarta; la descarga sigue y el aviso final sí se muestra
-        _descartarProgreso();
-        return;
-    }
+    // el toast de progreso (descarga de una actualización) no se cierra al tocarlo ni al deslizarlo: se retira solo al terminar
+    if (_progresoVisible) return;
     if (toastTimeout) { clearTimeout(toastTimeout); toastTimeout = null; }
     const toast = $('toast');
     if (!toast || !toast.classList.contains('show')) return;

@@ -14,7 +14,8 @@ export const ESTILOS_CALENDARIO = Object.freeze([
     { id: 'relleno-aro', label: 'Relleno con aro' },
     { id: 'subrayado', label: 'Subrayado' },
     { id: 'punto', label: 'Punto' },
-    { id: 'solo-contorno', label: 'Solo contorno' }
+    { id: 'solo-contorno', label: 'Solo contorno' },
+    { id: 'cuadrado-aro', label: 'Cuadrado con aro' }
 ]);
 
 const ID_POR_DEFECTO = 'legacy';

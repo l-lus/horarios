@@ -697,7 +697,7 @@ test('EstiloCalendario: el ciclo recorre todos los estilos, vuelve al original y
     const ids = ESTILOS_CALENDARIO.map(e => e.id);
     assert.equal(ids[0], 'legacy', 'el estilo original es el primero y el valor por defecto');
     assert.equal(new Set(ids).size, ids.length, 'sin ids repetidos');
-    assert.deepEqual(ids, ['legacy', 'contorno-brillo', 'aro-grueso', 'relleno-aro', 'subrayado', 'punto', 'solo-contorno']);
+    assert.deepEqual(ids, ['legacy', 'contorno-brillo', 'aro-grueso', 'relleno-aro', 'subrayado', 'punto', 'solo-contorno', 'cuadrado-aro']);
 
     // dando la vuelta completa se vuelve al punto de partida y se pasa por todos
     const visitados = [];

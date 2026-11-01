@@ -116,7 +116,7 @@ Los valores que devuelven los puertos son **crudos**: el servicio los sanitiza y
 
 ## 3.2. HTML seguro (`core/html.js`)
 
-Para insertar HTML con datos del usuario usá la etiqueta ``html`...` ``: escapa cada interpolación (también dentro de atributos entre comillas). Se inserta marcado sin escapar solo si es otro ``html`...` `` anidado o está envuelto en `crudo()`. Un string común **nunca** se interpreta como HTML, y `_crearPopupFlotante` y `montar(el, contenido)` rechazan strings comunes.
+Para insertar HTML usá la etiqueta ``html`...` ``: escapa cada interpolación (también dentro de atributos entre comillas). Se inserta marcado sin escapar solo si es otro ``html`...` `` anidado o está envuelto en `crudo()`. Un string común **nunca** se interpreta como HTML: `montar(el, contenido)`, `_crearPopupFlotante` y `Animaciones._renderConFirma` rechazan strings comunes. `montar` es el **único** lugar que asigna `innerHTML` (lo verifica `tests/architecture.test.mjs`); para vaciar un elemento se usa `replaceChildren()`.
 
 ```js
 import { html, montar } from '../core/html.js';

@@ -170,14 +170,14 @@ function poblarSelectoresTipos() {
 
     const cfg = [
         { id: 'lote-tipo', getLabel: t => `${t.emoji} ${t.label}`, extra: [{ value: 'normal', text: '🕒 Jornadas (borrar)' }] },
-        { id: 'filtro-tipo', getLabel: t => `${t.emoji} ${t.labelPlural}`, prefix: '<option value="">Todos</option><option value="normal">🕒 Jornadas</option>' },
+        { id: 'filtro-tipo', getLabel: t => `${t.emoji} ${t.labelPlural}`, prefix: [{ value: '', text: 'Todos' }, { value: 'normal', text: '🕒 Jornadas' }] },
         { id: 'edit-grupo-tipo', getLabel: t => `${t.emoji} ${t.label}` },
     ];
 
-    cfg.forEach(({ id, getLabel, prefix = '', extra = [] }) => {
+    cfg.forEach(({ id, getLabel, prefix = [], extra = [] }) => {
         const sel = $(id);
         if (!sel) return;
-        sel.innerHTML = prefix;
+        sel.replaceChildren(...prefix.map(e => _crearOpcion(e.value, e.text)));
         tipos.forEach(t => sel.appendChild(_crearOpcion(t.id, getLabel(t))));
         extra.forEach(e => sel.appendChild(_crearOpcion(e.value, e.text)));
     });

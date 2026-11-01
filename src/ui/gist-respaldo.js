@@ -507,7 +507,7 @@ function _buildResumenMerge(resumenEl, { soloImportados, enAmbos, soloLocal, com
         nNuevos: soloImportados.length,
         nComp: complementarios.length
     };
-    resumenEl.innerHTML = '';
+    resumenEl.replaceChildren();
     resumenEl.dataset.modo = 'merge';
 
     const selector = _crearSelectorModoMerge(modo => {

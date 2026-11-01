@@ -14,6 +14,7 @@ import { Historico } from './historico.js';
 import { Estadisticas } from './estadisticas.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
+import { esHtmlSeguro, montar } from '../core/html.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD MODULE
@@ -298,7 +299,7 @@ function _renderHint(vista) {
     const el = $('toggle-hint');
     if (!el) return;
     if (_hintIntegradoActivo()) { el.textContent = vista.aviso || ''; return; }
-    if (vista.hintEsHTML) { el.innerHTML = vista.hint; }
+    if (esHtmlSeguro(vista.hint)) montar(el, vista.hint);
     else el.textContent = vista.hint;
 }
 
@@ -308,7 +309,7 @@ let _bufferActual = null;
 function _dibujarBuffer(est, corto) {
     const el = $('stats-buffer');
     if (!el) return;
-    el.innerHTML = '';
+    el.replaceChildren();
     const { bufferSemanal, horasDiarias, semanaAbierta } = est;
     if (horasDiarias > 0 && Math.abs(bufferSemanal) > 0.01 && semanaAbierta) {
         const esPositivo = bufferSemanal > 0;

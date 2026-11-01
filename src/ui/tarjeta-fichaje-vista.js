@@ -7,7 +7,7 @@ import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { icono } from '../core/html.js';
+import { html, icono } from '../core/html.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD VIEW MODEL (textos, hints y colores de la tarjeta)
@@ -91,20 +91,20 @@ function _hintSalidaODefault(reg, objetivoAplica, bufferSemanal, diasHabiles, hi
     if (permiteEstimado && reg && reg.entrada && objetivoAplica > 0 && !TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida)) {
         return _calcularHintSalidaEstimada(reg, objetivoAplica, bufferSemanal, diasHabiles);
     }
-    return { hint: hintDefault, hintEsHTML: false };
+    return { hint: hintDefault };
 }
 
 function _tituloDia(nombreDia) {
-    return `${icono('#icon-clock')}${nombreDia}`;
+    return html`${icono('#icon-clock')}${nombreDia}`;
 }
 
 // objetivoCumplido: con el día abierto y la jornada ya cumplida, el badge "En curso" parpadea más rápido
 function _badgeEstadoHoy(dayClosed, colorFinal, objetivoCumplido = false) {
     if (!dayClosed) {
-        return `<span class="estado-badge estado-badge--en-curso${objetivoCumplido ? ' estado-badge--cumplido' : ''}">En curso</span>`;
+        return html`<span class="estado-badge estado-badge--en-curso${objetivoCumplido ? ' estado-badge--cumplido' : ''}">En curso</span>`;
     }
     const color = colorFinal || 'green';
-    return `<span class="estado-badge estado-badge--finalizado estado-badge--${color}">Finalizado</span>`;
+    return html`<span class="estado-badge estado-badge--finalizado estado-badge--${color}">Finalizado</span>`;
 }
 
 function _conAvisoAyer(vista, avisoAyerHint) {
@@ -248,7 +248,7 @@ function derivarVistaSemana(est) {
     const franjas = _hintIntegrado && horasDiarias > 0 && !todosEspeciales ? _franjasSemana(est.diasSemana, horasDiarias, objetivoSemana, hoy) : null;
 
     return {
-        titulo: `${icono('#icon-calendar-simple')} Esta Semana`,
+        titulo: html`${icono('#icon-calendar-simple')} Esta Semana`,
         stats: todosEspeciales ? '🌞' : _textoStatsSemana(tot, est, semanaAbierta),
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: franjas ? franjas.fin * 100 : progreso,
@@ -256,7 +256,6 @@ function derivarVistaSemana(est) {
         colorCierre: colorBarra,
         cerrado,
         hint: 'Tocá para ver Hoy',
-        hintEsHTML: false,
         ...(franjas ? {
             hitosSemana: franjas.hitos, tramosSemana: franjas.tramos,
             siglasCortas: _formatoCortoStatsCache,   // con el formato de tiempo corto, en móviles los días van con su inicial (L, M, X...)
@@ -284,14 +283,12 @@ function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHab
         const horaBuf = _minutosAHoraWrap(minutosConBuffer);
         const claseBuffer = bufferSemanal > 0 ? ' hint-buffer-color--green' : bufferSemanal < 0 ? ' hint-buffer-color--red' : '';
         return {
-            hint: `Salida estimada: <strong>${horaSalida}</strong> | <span class="hint-buffer-color${claseBuffer}"><strong>${horaBuf}</strong></span>`,
-            hintEsHTML: true
+            hint: html`Salida estimada: <strong>${horaSalida}</strong> | <span class="hint-buffer-color${claseBuffer}"><strong>${horaBuf}</strong></span>`
         };
     }
 
     return {
-        hint: `Salida estimada: <strong>${horaSalida}</strong>`,
-        hintEsHTML: true
+        hint: html`Salida estimada: <strong>${horaSalida}</strong>`
     };
 }
 
@@ -360,17 +357,17 @@ function derivarVistaHoy(est) {
 
             const nombreDiaAyer = TiempoUtils.obtenerNombreDia(est.ayerStr);
             const linea = _calcularLinea(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles);
-            const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
+            const { hint } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
 
             return {
-                titulo: `${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false, undefined, objetivoDiarioAyerAplica > 0 && cumplido)}`,
+                titulo: html`${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false, undefined, objetivoDiarioAyerAplica > 0 && cumplido)}`,
                 stats: _sinMinutos(tiempoHoy) ? _TEXTO_COMENZANDO : _horasTextoStats(tiempoHoy),
                 mensaje, mostrarMensaje: true,
                 colorBarra, anchoBarra: prog,
                 colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
                 colorCierre: _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase),
                 cerrado: false,
-                hint, hintEsHTML,
+                hint,
                 linea,
             };
         }
@@ -385,12 +382,12 @@ function derivarVistaHoy(est) {
             colorBarra: 'blue', anchoBarra: 0,
             colorBorde: 'transparent', estadoFondo: 'esperando',
             cerrado: false,
-            hint: 'Tocá para ver la Semana', hintEsHTML: false,
+            hint: 'Tocá para ver la Semana',
         };
     }
 
     const avisoAyerHint = est.ayerAbierto
-        ? { hint: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false, aviso: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar` }
+        ? { hint: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, aviso: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar` }
         : null;
 
     if (tipoEspecialHoy) {
@@ -403,7 +400,7 @@ function derivarVistaHoy(est) {
             colorBorde: tipoEspecialHoy.color,
             estadoFondo: 'especial', estadoFondoColor: tipoEspecialHoy.color,
             cerrado: false,
-            hint: 'Tocá para ver la Semana', hintEsHTML: false,
+            hint: 'Tocá para ver la Semana',
         }, avisoAyerHint);
     }
 
@@ -451,19 +448,19 @@ function derivarVistaHoy(est) {
     }
 
     const linea = _calcularLinea(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles);
-    const { hint, hintEsHTML } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
+    const { hint } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
 
     const colorFinal = estadoFondoColor || (estadoFondo === 'finalizado_fail' ? 'red' : 'green');
 
     return _conAvisoAyer({
-        titulo: `${est.esRetenido ? `${_tituloDia(TiempoUtils.obtenerNombreDia(regHoy.fecha))} (ayer)` : _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal, objetivoDiarioAplica > 0 && cumplido)}`,
+        titulo: html`${est.esRetenido ? html`${_tituloDia(TiempoUtils.obtenerNombreDia(regHoy.fecha))} (ayer)` : _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal, objetivoDiarioAplica > 0 && cumplido)}`,
         stats: !dayClosed && _sinMinutos(tiempoHoy) ? _TEXTO_COMENZANDO : _horasTextoStats(tiempoHoy),
         mensaje, mostrarMensaje,
         colorBarra, anchoBarra: prog,
         colorBorde, estadoFondo, estadoFondoColor,
         colorCierre: dayClosed ? colorBarra : _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAplica, bufferSemanalBase),
         cerrado: dayClosed,
-        hint, hintEsHTML,
+        hint,
         linea,
     }, avisoAyerHint);
 }

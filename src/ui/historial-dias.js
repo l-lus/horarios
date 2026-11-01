@@ -7,7 +7,7 @@ import { GestionDatos } from '../services/gestion-datos.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { mostrarToast } from './toast.js';
-import { icono } from '../core/html.js';
+import { icono, montar } from '../core/html.js';
 
 // ====================================================================
 // UI WORKDAY HISTORY MODULE (historial de días hábiles y horas)
@@ -37,7 +37,7 @@ function _renderizarListaHistorialDias() {
     const tramos = _obtenerTramosOrdenados();
     const vigenteReal = tramos.filter(t => t.desde <= hoy).slice(-1)[0] || tramos[0];
 
-    lista.innerHTML = '';
+    lista.replaceChildren();
     [...tramos].reverse().forEach(tramo => {
         const esActual = tramo === vigenteReal;
 
@@ -58,10 +58,10 @@ function _renderizarListaHistorialDias() {
 
         const editBtn = Object.assign(document.createElement('button'), {
             className: 'btn-perfil-edit',
-            innerHTML: String(icono('#icon-edit')),
             title: 'Editar tramo',
             onclick: (e) => { e.stopPropagation(); abrirEditorTramoDias(tramo.desde); }
         });
+        montar(editBtn, icono('#icon-edit'));
 
         container.appendChild(infoSection);
         container.appendChild(editBtn);

@@ -8,7 +8,7 @@ import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { TarjetaLote } from './tarjeta-lote.js';
-import { html, icono } from '../core/html.js';
+import { html, icono, montar } from '../core/html.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
@@ -46,7 +46,7 @@ function abrirSelectorMesesCalendario() {
     if (selector.style.display !== 'none') { _cerrarSelectorMeses(); return; }
 
     const mesesOrdenados = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
-    selector.innerHTML = '';
+    selector.replaceChildren();
 
     if (mesesOrdenados.length === 0) {
         const emptyEl = Object.assign(document.createElement('div'), {
@@ -84,7 +84,7 @@ function abrirSelectorMesesCalendario() {
     _animarMutacion([grid, selector], () => {
         grid.style.display = 'none';
         navBotones.style.display = 'none';
-        titulo.innerHTML = `${icono('#icon-back')} Volver`;
+        montar(titulo, html`${icono('#icon-back')} Volver`);
         selector.style.display = 'grid';
     });
 }
@@ -232,7 +232,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
         });
     }
 
-    grid.innerHTML = '';
+    grid.replaceChildren();
     grid.appendChild(frag);
 
 }

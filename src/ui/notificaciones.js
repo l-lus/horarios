@@ -82,7 +82,7 @@ async function _suscribirCambiosPermisoNotificaciones() {
 function actualizarEstadoPermisoNotificaciones() {
     const el = $('push-permiso-estado');
     if (!el) return;
-    el.innerHTML = '';
+    el.replaceChildren();
 
     if (!('Notification' in window)) return;
 

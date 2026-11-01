@@ -135,6 +135,7 @@ test('Integración: Arranque completo de OrquestadorUI.init() sin errores de eje
         querySelector: () => fakeEl(),
         querySelectorAll: () => [],
         appendChild: noop,
+        replaceChildren: noop,
         insertBefore: noop,
         remove: noop,
         setAttribute: noop,
@@ -571,11 +572,11 @@ test('TarjetaFichajeVista: el badge "En curso" parpadea rápido solo con el obje
     });
 
     // objetivo de 7 h todavía sin cumplir: parpadeo normal
-    assert.ok(!TarjetaFichajeVista.derivarVistaHoy(estBase(3, 7)).titulo.includes('estado-badge--cumplido'));
+    assert.ok(!String(TarjetaFichajeVista.derivarVistaHoy(estBase(3, 7)).titulo).includes('estado-badge--cumplido'));
     // objetivo cumplido con la jornada abierta: parpadeo rápido
     const cumplido = TarjetaFichajeVista.derivarVistaHoy(estBase(7.5, 7));
-    assert.ok(cumplido.titulo.includes('estado-badge--en-curso'));
-    assert.ok(cumplido.titulo.includes('estado-badge--cumplido'));
+    assert.ok(String(cumplido.titulo).includes('estado-badge--en-curso'));
+    assert.ok(String(cumplido.titulo).includes('estado-badge--cumplido'));
 });
 
 test('TarjetaFichajeVista: la línea del día abierta ubica la salida estimada y, cerrada, la mueve a la salida real', async () => {

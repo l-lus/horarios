@@ -3,6 +3,7 @@ import { $ } from '../core/dom.js';
 import { FONDOS_SVG } from '../data/fondos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EstadoApp } from '../services/estado-app.js';
+import { crudo, montar } from '../core/html.js';
 
 // ====================================================================
 //           UI CARD BACKGROUNDS & PROGRESS BAR COLOR MODULE
@@ -113,7 +114,7 @@ function actualizarFondoCard(estado, colorOverride = null) {
     _bgUltimaFirma = firma;
 
     if (_fondoCard === 'ninguno') {
-        bg.innerHTML = '';
+        bg.replaceChildren();
         return;
     }
 
@@ -138,7 +139,7 @@ function actualizarFondoCard(estado, colorOverride = null) {
 
     incoming.style.zIndex = '2';
     incoming.classList.remove('visible');
-    incoming.innerHTML = nuevoSVG;
+    montar(incoming, crudo(nuevoSVG));   // SVG del catálogo propio, ya pasado por _sanitizarSVG
 
     outgoing.style.zIndex = '1';
     outgoing.classList.remove('visible');
@@ -150,7 +151,7 @@ function actualizarFondoCard(estado, colorOverride = null) {
 
     _bgActiveLayer = _bgActiveLayer === 'a' ? 'b' : 'a';
     _bgFadeTimer = setTimeout(() => {
-        outgoing.innerHTML = '';
+        outgoing.replaceChildren();
         outgoing.classList.remove('visible');
         _bgFadeTimer = null;
     }, 650);

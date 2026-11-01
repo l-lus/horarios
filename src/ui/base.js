@@ -117,7 +117,7 @@ function _poblarSelect(selectId, items, getLabel, selDefault, actualizarFn, agru
     const select = $(selectId);
     if (!select) return;
     const selActual = select.value;
-    select.innerHTML = '';
+    select.replaceChildren();
     if (!items.length) { select.appendChild(_crearOpcion('', 'Sin registros')); actualizarFn(null); return; }
     const sel = (selActual && items.includes(selActual))
         ? selActual

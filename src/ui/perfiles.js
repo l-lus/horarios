@@ -6,7 +6,7 @@ import { GestorModales } from './gestor-modales.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
-import { icono } from '../core/html.js';
+import { icono, montar } from '../core/html.js';
 
 // ====================================================================
 //                     UI PROFILES MODULE
@@ -26,7 +26,7 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
         lista.style.overflowY = 'hidden';
     }
 
-    lista.innerHTML = '';
+    lista.replaceChildren();
     GestorPerfiles.obtenerListaPerfiles().forEach(p => {
         const container = Object.assign(document.createElement('div'), {
             className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
@@ -53,10 +53,10 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
 
         const editBtn = Object.assign(document.createElement('button'), {
             className: 'btn-perfil-edit',
-            innerHTML: String(icono('#icon-edit')),
             title: 'Editar perfil',
             onclick: (e) => { e.stopPropagation(); abrirEditorPerfil(p.id); }
         });
+        montar(editBtn, icono('#icon-edit'));
 
         container.onclick = () => { if (!p.esActual) GestorPerfiles.cambiarPerfil(p.id); };
         container.appendChild(infoSection);

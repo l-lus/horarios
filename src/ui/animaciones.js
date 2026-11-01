@@ -1,5 +1,6 @@
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
+import { esHtmlSeguro, montar } from '../core/html.js';
 
 // ====================================================================
 //                     UI ANIMATIONS MODULE
@@ -354,13 +355,16 @@ async function _conRendersSinAnimar(fn) {
 function _rendersSinAnimarActivos() { return _rendersSinAnimar; }
 
 /**
- * Reemplaza el HTML de `el` solo si cambió (dataset.firma) y lo anima; `forzar` lo aplica siempre sin animar.
+ * Reemplaza el contenido de `el` por un html`...` solo si cambió (dataset.firma) y lo anima; `forzar` lo aplica siempre sin animar.
+ * Como montar(), rechaza strings comunes.
  * @param {(() => void) | null} [alAplicar]
  */
-function _renderConFirma(el, nuevoHTML, alAplicar = null, { forzar = false } = {}) {
+function _renderConFirma(el, contenido, alAplicar = null, { forzar = false } = {}) {
+    if (!esHtmlSeguro(contenido)) throw new TypeError('_renderConFirma: el contenido debe ser un html`...` (core/html.js)');
     if (!el) { if (alAplicar) alAplicar(); return; }
+    const nuevoHTML = String(contenido);
     const aplicar = () => {
-        el.innerHTML = nuevoHTML;
+        montar(el, contenido);
         el.dataset.firma = nuevoHTML;
         if (alAplicar) alAplicar();
     };

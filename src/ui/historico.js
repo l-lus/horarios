@@ -15,7 +15,7 @@ import { EstadoApp } from '../services/estado-app.js';
 import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { _scrollA } from './scroll.js';
 import { Animaciones } from './animaciones.js';
-import { icono } from '../core/html.js';
+import { icono, html, montar } from '../core/html.js';
 
 // ====================================================================
 //                     UI HISTORY MODULE
@@ -251,10 +251,8 @@ function _renderEmptyStateLista(lista) {
     emptyDiv.className = 'empty-state';
     if (EstadoApp.registros().length === 0) {
         const msg = Object.assign(document.createElement('p'), { textContent: 'No hay registros' });
-        const btn = Object.assign(document.createElement('button'), {
-            className: 'btn-backup empty-state__btn-restaurar',
-            innerHTML: `${icono('#icon-upload')} Restaurar desde archivo`
-        });
+        const btn = Object.assign(document.createElement('button'), { className: 'btn-backup empty-state__btn-restaurar' });
+        montar(btn, html`${icono('#icon-upload')} Restaurar desde archivo`);
         btn.addEventListener('click', () => RespaldoLocal.mostrarImportar(true));
         emptyDiv.appendChild(msg);
         emptyDiv.appendChild(btn);
@@ -413,7 +411,7 @@ function _prepararAnimacionLista(lista, idNuevo) {
 function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalculadas = null) {
     const lista = $('lista-registros');
     const animacionLista = _prepararAnimacionLista(lista, idNuevo);
-    lista.innerHTML = '';
+    lista.replaceChildren();
 
     const registrosAMostrar = FiltrosYPeriodos.obtenerRegistrosFiltrados();
     if (registrosAMostrar.length === 0) { _renderEmptyStateLista(lista); return; }

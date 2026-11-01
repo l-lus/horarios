@@ -11,7 +11,7 @@ import { EstadoApp } from '../services/estado-app.js';
 import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { mostrarToast } from './toast.js';
-import { icono } from '../core/html.js';
+import { icono, html, montar } from '../core/html.js';
 
 // ====================================================================
 //                     UI CARD BREAK TIMER MODULE
@@ -51,7 +51,7 @@ function _obtenerOCrearLabelTF(contenedor) {
         label.id = TF_LABEL_ID;
         label.className = 'break-counter-label';
         if (!enBadge) {
-            label.innerHTML = `${icono('#icon-exit')}<span class="break-counter-label-text"></span>`;
+            montar(label, html`${icono('#icon-exit')}<span class="break-counter-label-text"></span>`);
         }
         const estadoBadge = !enBadge ? contenedor.querySelector('.estado-badge') : null;
         if (estadoBadge) {
@@ -79,7 +79,7 @@ function _actualizarCardTimerRunning(card, storageKey, sinAnimar = false) {
         ? icono('#icon-calendar-simple')
         : icono('#icon-clock');
     const contexto = vistaActual === 'semana' ? 'Esta Semana' : TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy());
-    const nuevoHTML = `${iconoTitulo} ${contexto}<span class="tf-badge">Tiempo fuera</span>`;
+    const nuevoHTML = html`${iconoTitulo} ${contexto}<span class="tf-badge">Tiempo fuera</span>`;
     const agregarContador = () => {
         _obtenerOCrearLabelTF(titulo);
         _iniciarContadorBreak(storageKey);

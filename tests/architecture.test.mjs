@@ -247,3 +247,14 @@ test('Módulos: cada Modulo.miembro y cada const { ... } = Modulo existen en el 
     }
     assert.deepEqual(problemas, [], `Miembros inexistentes:\n${problemas.join('\n')}`);
 });
+
+test('HTML seguro: innerHTML, outerHTML= e insertAdjacentHTML solo dentro de core/html.js (montar)', () => {
+    const SINK = /\.(innerHTML|outerHTML)\s*=(?!=)|insertAdjacentHTML\s*\(|\binnerHTML\s*:/;
+    const violaciones = srcFiles
+        .filter(f => f !== 'src/core/html.js')
+        .flatMap(f => fs.readFileSync(f, 'utf8').split('\n')
+            .map((l, i) => [l, i + 1])
+            .filter(([l]) => SINK.test(l) && !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+            .map(([, n]) => `${f}:${n}`));
+    assert.deepEqual(violaciones, [], 'Usá montar(el, html`...`) o replaceChildren() para limpiar');
+});

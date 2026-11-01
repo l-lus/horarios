@@ -104,7 +104,7 @@
 }
 
 .stats-inner {
-    min-height: 30rem;
+    min-height: 31rem;
     display: flex;
     flex-direction: column;
     transition: min-height var(--dur-collapse) ease-out;

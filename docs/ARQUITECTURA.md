@@ -49,6 +49,7 @@ horarios/
 │   ├── architecture.test.mjs   # Capas, ciclos, extensiones .js, precache de sw.js, versión APP_VERSION/CACHE_NAME y services sin DOM
 │   ├── domain.test.mjs         # Cálculos horarios, seguridad, compensatorios y arranque completo de la UI
 │   ├── html.test.mjs           # Escape automático de core/html.js
+│   ├── edicion-registro.test.mjs # Edición de un registro (modal) sin DOM: guardar, validaciones, crédito, compensatorio, eliminar
 │   └── servicios-sin-dom.test.mjs # Servicios ejecutados en Node sin `document`, con formularios simulados
 ├── docs/                       # Documentación técnica, seguridad y arquitectura
 └── horarios-push/              # Backend opcional (Cloudflare Worker para Web Push y métricas anónimas)

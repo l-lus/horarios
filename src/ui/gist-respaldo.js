@@ -384,13 +384,7 @@ async function _gistConSpinner(btnId, mensajeError, accion) {
 async function gistSubir() {
     _gistGuardarCredencialesSiModalAbierto();
     await _gistConSpinner('btn-gist-subir', 'Error al subir', async () => {
-        const nuevoId = await SincronizacionGist.subir(
-            EstadoApp.registros(),
-            EstadoApp.diasHabiles(),
-            EstadoApp.horasDiarias(),
-            EstadoApp.historialDiasHabiles(),
-            ImportarExportar.obtenerConfigExportable()
-        );
+        const nuevoId = await SincronizacionGist.subir(await ImportarExportar.armarRespaldo(EstadoApp.registros()));
         const gistIdInput = $('gist-id');
         if (gistIdInput) gistIdInput.value = nuevoId;
         const lastSyncEl = $('gist-ultima-sync');

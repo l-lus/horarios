@@ -145,12 +145,11 @@ async function _gistFetch(url, options = {}) {
     return response.json();
 }
 
-async function subir(registros, diasHabiles, horasDiarias, historialDiasHabiles, configExtra = {}) {
+/** Sube un respaldo ya armado (ImportarExportar.armarRespaldo) al Gist del perfil, o crea uno nuevo. Devuelve el id. */
+async function subir(data) {
     const token = getToken();
     if (!token) throw new Error('Falta el token de GitHub');
 
-    const hash = await S.calcularHashSHA256(registros);
-    const data = { registros, diasHabiles, horasDiarias, historialDiasHabiles, ...configExtra, fecha: TiempoUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION, hash, timestamp: Date.now() };
     const gistId = getGistId();
     const gistIdValido = esGistIdValido(gistId);
     const url = gistIdValido ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';

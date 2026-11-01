@@ -156,18 +156,9 @@ async function exportarRango(desde, hasta, esMes = false) {
     const fechaLocal = TiempoUtils.fechaLocalISOFull();
     const fechaHoy = fechaLocal.substring(0, 10);
 
-    const data = {
-        registros: registrosFiltrados,
-        diasHabiles: EstadoApp.diasHabiles(),
-        horasDiarias: EstadoApp.horasDiarias(),
-        historialDiasHabiles: EstadoApp.historialDiasHabiles(),
-        ...ImportarExportar.obtenerConfigExportable(),
-        fecha: fechaLocal,
-        version: S.SECURITY_LIMITS.SCHEMA_VERSION,
-        hash: await S.calcularHashSHA256(registrosFiltrados),
-        timestamp: Date.now(),
+    const data = await ImportarExportar.armarRespaldo(registrosFiltrados, {
         rangoExportado: S.limpiarTexto(esMes ? `Mes ${desde}` : `${desde} a ${hasta}`, 100)
-    };
+    });
 
     try {
         const sufijo = esMes ? `_${desde}` : `_${desde}_${hasta}`;

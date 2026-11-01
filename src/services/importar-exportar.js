@@ -238,13 +238,24 @@ function _sinDuplicados(lista) {
     });
 }
 
-async function exportarJSON() {
-    const data = {
-        registros: D.registros(), diasHabiles: D.diasHabiles(), horasDiarias: D.horasDiarias(), historialDiasHabiles: D.historialDiasHabiles(),
+/**
+ * Contenido de un respaldo (archivo completo, por rango o Gist): los registros dados, la configuración actual,
+ * versión del esquema y hash SHA-256 de los registros. Es el formato que lee prepararRespaldo.
+ * @param {any[]} registros
+ * @param {Record<string, any>} [extra] metadatos adicionales (p. ej. rangoExportado)
+ */
+async function armarRespaldo(registros, extra = {}) {
+    return {
+        registros, diasHabiles: D.diasHabiles(), horasDiarias: D.horasDiarias(), historialDiasHabiles: D.historialDiasHabiles(),
         ...obtenerConfigExportable(),
         fecha: TiempoUtils.fechaLocalISOFull(), version: S.SECURITY_LIMITS.SCHEMA_VERSION,
-        hash: await S.calcularHashSHA256(D.registros()), timestamp: Date.now()
+        hash: await S.calcularHashSHA256(registros), timestamp: Date.now(),
+        ...extra
     };
+}
+
+async function exportarJSON() {
+    const data = await armarRespaldo(D.registros());
     try {
         const nombreSafe = D._notify().obtenerNombrePerfilSafe();
         const fechaHoy = TiempoUtils.fechaLocalISOFull().slice(0, 10);
@@ -419,6 +430,7 @@ export const ImportarExportar = {
     aplicarConfigImportada,
     calcularCambiosConfigImport,
     normalizarRegistrosImportados,
+    armarRespaldo,
     exportarJSON,
     errorEstructuraRespaldo,
     prepararRespaldo,

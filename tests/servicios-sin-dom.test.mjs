@@ -463,3 +463,17 @@ test('FiltrosYPeriodos.aplicarFiltrosInmediato ignora fechas y tipos inválidos'
     assert.equal(EstadoApp.getFiltroState().filtroTipo, 'normal');
     F.aplicarFiltrosInmediato('', '', '');
 });
+
+test('ImportarExportar.armarRespaldo produce lo que prepararRespaldo acepta (ida y vuelta, también con rango)', async () => {
+    const { ImportarExportar: IE } = await import('../src/services/importar-exportar.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    let confirmaciones = 0;
+    EstadoApp.configurarNotificaciones({ mostrarToast: () => { }, confirmarModal: async () => { confirmaciones++; return true; } });
+    const registros = [{ id: 'ffffffffff1', fecha: '2026-10-20', entrada: '09:00', salida: '17:00', tiempoFuera: null, horas: 8, minutos: 0, total: 8 }];
+    for (const extra of [undefined, { rangoExportado: '2026-10-01 a 2026-10-31' }]) {
+        const data = await IE.armarRespaldo(registros, extra);
+        assert.equal(IE.errorEstructuraRespaldo(data), null);
+        assert.equal((await IE.prepararRespaldo(JSON.parse(JSON.stringify(data)))).length, 1);
+    }
+    assert.equal(confirmaciones, 0);   // el hash coincide: no pide confirmación
+});

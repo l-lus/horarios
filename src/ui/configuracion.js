@@ -283,9 +283,7 @@ function actualizarFeedbackConfig() {
         EstadoApp.guardarYActualizar();
         if (huboCambio) _reprogramarPushDebounced();
     }
-    if (typeof actualizarEstadoBotonPersistir === 'function') {
-        actualizarEstadoBotonPersistir();
-    }
+    actualizarEstadoBotonPersistir();
 }
 
 function _ajustarStepperHoras(el, incremento) {

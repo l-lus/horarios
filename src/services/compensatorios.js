@@ -155,12 +155,6 @@ function _buscarAsignacionCompensatorio(idBuscado, campoId, asignacionesPrecalcu
 }
 
 /** @param {any} [asignacionesPrecalculadas] */
-function _montoCompensadoPorRegistro(registroCompensatorio, asignacionesPrecalculadas = null) {
-    const a = _buscarAsignacionCompensatorio(registroCompensatorio.id, 'compensatorioId', asignacionesPrecalculadas);
-    return a ? a.excedente : 0;
-}
-
-/** @param {any} [asignacionesPrecalculadas] */
 function fechaCompensadaPorRegistro(registroCompensatorio, asignacionesPrecalculadas = null) {
     const a = _buscarAsignacionCompensatorio(registroCompensatorio.id, 'compensatorioId', asignacionesPrecalculadas);
     return a ? a.referenciaFecha : null;
@@ -244,7 +238,6 @@ export const Compensatorios = {
     _excedenteDeRegistro,
     calcularAsignacionesCompensatorio,
     _buscarAsignacionCompensatorio,
-    _montoCompensadoPorRegistro,
     fechaCompensadaPorRegistro,
     fechaCompensadoDeRegistro,
     montoCompensadoDeReferencia,

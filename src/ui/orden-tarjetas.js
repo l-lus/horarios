@@ -299,9 +299,7 @@ function iniciarDragOrdenCards() {
 
         Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, nuevoOrden, true);
 
-        if (typeof aplicarOrdenCards === 'function') {
-            aplicarOrdenCards(nuevoOrden);
-        }
+        aplicarOrdenCards(nuevoOrden);
 
         draggingEl = null;
     }

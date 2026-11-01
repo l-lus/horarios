@@ -6,6 +6,12 @@ if (window.top !== window.self) {
     try { /** @type {Window} */ (window.top).location = window.self.location.href; } catch (e) { }
 }
 
+// Listas válidas (copias de TEMAS en ui/gestor-temas.js y de ESTILOS_CALENDARIO en core/estilo-calendario.js: este
+// script clásico no puede importar módulos; tests/architecture.test.mjs verifica que coincidan). Un valor guardado
+// que no esté en la lista se trata como el valor por defecto, igual que hacen esos módulos.
+var TEMAS_VALIDOS = ['light', 'dark', 'medianoche', 'pink', 'green', 'blue', 'lilac', 'crema'];
+var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto'];
+
 (function () {
     try {
         var s = localStorage.getItem('horarios_temaOscuro');
@@ -15,7 +21,7 @@ if (window.top !== window.self) {
         // Compatibilidad con el valor booleano antiguo ('true'/'false')
         if (s === 'true') s = 'dark';
         else if (s === 'false') s = 'light';
-        else if (s === null) s = 'dark'; // valor por defecto
+        else if (s === null || TEMAS_VALIDOS.indexOf(s) === -1) s = 'dark'; // valor por defecto (también si está corrupto)
 
         if (s === 'dark') {
             html.classList.add('dark-mode');
@@ -29,8 +35,8 @@ if (window.top !== window.self) {
 // Estilo de los días del calendario (ver EstiloCalendario): el CSS solo mira <html data-estilo-calendario>; sin valor guardado queda el original ('legacy').
 (function () {
     try {
-        var e = localStorage.getItem('horarios_estiloCalendario');
-        document.documentElement.setAttribute('data-estilo-calendario', e || 'legacy');
+        var e = localStorage.getItem('horarios_estiloCalendario') || 'legacy';
+        document.documentElement.setAttribute('data-estilo-calendario', ESTILOS_CALENDARIO_VALIDOS.indexOf(e) === -1 ? 'legacy' : e);
     } catch (err) { }
 }());
 

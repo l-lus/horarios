@@ -266,3 +266,12 @@ test('CSP: index.html exige Trusted Types con la única política de core/html.j
     assert.match(csp, /trusted-types horarios;/);
     assert.match(fs.readFileSync('src/core/html.js', 'utf8'), /createPolicy\?\.\('horarios'/);
 });
+
+test('tema-inicial.js: sus listas de temas y estilos de calendario coinciden con las de los módulos', async () => {
+    const codigo = fs.readFileSync('src/core/tema-inicial.js', 'utf8');
+    const lista = (nombre) => JSON.parse(new RegExp(`var ${nombre} = (\\[[^\\]]*\\]);`).exec(codigo)[1].replace(/'/g, '"'));
+    const temasModulo = JSON.parse(/const TEMAS = (\[[^\]]*\]);/.exec(fs.readFileSync('src/ui/gestor-temas.js', 'utf8'))[1].replace(/'/g, '"'));
+    const { ESTILOS_CALENDARIO } = await import('../src/core/estilo-calendario.js');
+    assert.deepEqual(lista('TEMAS_VALIDOS'), temasModulo);
+    assert.deepEqual(lista('ESTILOS_CALENDARIO_VALIDOS'), ESTILOS_CALENDARIO.map(e => e.id));
+});

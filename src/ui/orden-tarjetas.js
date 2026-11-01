@@ -2,6 +2,7 @@ import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
 import { normalizarOrdenCards, fusionarOrdenVisibles, columnaDeCard } from '../services/orden-cards.js';
 import { $ } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
+import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { UIBase } from './base.js';
 
@@ -70,6 +71,12 @@ function aplicarOrdenCards(orden) {
         });
     }
 }
+
+// Al restaurar un respaldo o bajar de Gist cambian el orden y las tarjetas visibles: se redibuja el diseño
+EventosApp.on('config:tarjetas', () => {
+    aplicarVisibilidadCards();
+    aplicarOrdenCards(obtenerOrdenCards());
+});
 
 const PULSACION_LARGA_MS = 300;
 const REUBICACION_MS = 300;

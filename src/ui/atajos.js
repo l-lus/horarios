@@ -205,5 +205,6 @@ function bindEventos() {
 EventosApp.on('historial:cambio', actualizarEstados);
 EventosApp.on('historico:botones', actualizarEstados);
 EventosApp.on('perfil:cambio', actualizarEstados);
+EventosApp.on('config:atajos', renderizar);   // al restaurar un respaldo o bajar de Gist
 
 export const Atajos = { renderizar, actualizarEstados, obtenerAtajos, cerrarModalAtajos, bindEventos };

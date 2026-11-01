@@ -3,7 +3,7 @@ import { $ } from '../core/dom.js';
 import { FONDOS_SVG } from '../data/fondos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { crudo, montar } from '../core/html.js';
+import { aHtmlConfiable, crudo, montar } from '../core/html.js';
 
 // ====================================================================
 //           UI CARD BACKGROUNDS & PROGRESS BAR COLOR MODULE
@@ -58,7 +58,7 @@ function _getSvgFondo(id, color) {
 
 function _sanitizarSVG(svgStr) {
     const parser = new DOMParser();
-    const doc = parser.parseFromString(svgStr, 'image/svg+xml');
+    const doc = parser.parseFromString(aHtmlConfiable(crudo(svgStr)), 'image/svg+xml');   // SVG del catálogo propio (data/fondos.js)
 
     const TAGS_BLOQUEADOS = ['script', 'foreignObject', 'use', 'iframe', 'object', 'embed', 'link'];
     TAGS_BLOQUEADOS.forEach(tag => {

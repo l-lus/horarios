@@ -258,3 +258,11 @@ test('HTML seguro: innerHTML, outerHTML= e insertAdjacentHTML solo dentro de cor
             .map(([, n]) => `${f}:${n}`));
     assert.deepEqual(violaciones, [], 'Usá montar(el, html`...`) o replaceChildren() para limpiar');
 });
+
+test('CSP: index.html exige Trusted Types con la única política de core/html.js', () => {
+    const htmlIndex = fs.readFileSync('index.html', 'utf8');
+    const csp = /http-equiv="Content-Security-Policy" content="([^"]+)"/.exec(htmlIndex)?.[1] ?? '';
+    assert.match(csp, /require-trusted-types-for 'script'/);
+    assert.match(csp, /trusted-types horarios;/);
+    assert.match(fs.readFileSync('src/core/html.js', 'utf8'), /createPolicy\?\.\('horarios'/);
+});

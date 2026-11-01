@@ -1,6 +1,7 @@
 import { $ } from '../core/dom.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { AvisoActualizacion } from './aviso-actualizacion.js';
+import { urlScriptConfiable } from '../core/html.js';
 
 // ====================================================================
 // PWA INSTALLER MODULE
@@ -63,7 +64,7 @@ function registrarServiceWorker() {
     });
 
     const _registrar = () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register(urlScriptConfiable('./sw.js'))
             .then(registration => {
                 console.log('SW registrado:', registration.scope);
                 registration.addEventListener('updatefound', () => {

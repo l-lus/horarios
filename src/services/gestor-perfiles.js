@@ -164,8 +164,17 @@ Almacenamiento.setProfileKeyResolver(perfilKey);
 EstadoApp.setPerfilHooks({ obtenerPerfilActual, guardarDatosPerfilActual });
 
 export const GestorPerfiles = {
-    inicializar, cambiarPerfil, guardarDatosPerfilActual,
-    obtenerPerfilActual, obtenerDatosPerfil, obtenerListaPerfiles, obtenerTodosPerfiles,
-    guardarPerfiles, perfilKey, MAX_PERFILES, CAMPOS_SYNC_GIST, CAMPOS_GIST_PERFIL,
-    errorNombrePerfil, crearPerfil, renombrarPerfil, eliminarPerfil
+    inicializar,
+    cambiarPerfil,
+    guardarDatosPerfilActual,
+    obtenerPerfilActual,
+    obtenerDatosPerfil,
+    obtenerListaPerfiles,
+    obtenerTodosPerfiles,
+    guardarPerfiles,
+    CAMPOS_SYNC_GIST,
+    CAMPOS_GIST_PERFIL,
+    crearPerfil,
+    renombrarPerfil,
+    eliminarPerfil
 };

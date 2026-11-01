@@ -376,22 +376,8 @@ function bindEventos() {
 
 export const Estadisticas = {
     bindEventos,
-    _renderizarStats,
-    actualizarEstadisticas,
     _renderSelectorStats,
-    poblarSelectorAnios,
-    actualizarEstadisticasAnio,
-    poblarSelectorSemanas,
-    actualizarEstadisticasSemana,
-    cambiarMesStats,
-    cambiarSemanaStats,
-    cambiarAnioStats,
-    togglePeriodoStats,
-    poblarSelectorMeses,
-    _popupStat,
-    _onclickStatItem,
     _bindStatItemPopups,
     toggleStats,
-    getModoEstadisticas: () => modoEstadisticas,
     setModoEstadisticas: (v) => { modoEstadisticas = v; }
 };

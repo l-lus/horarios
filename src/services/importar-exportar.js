@@ -418,7 +418,6 @@ async function _guardarRegistrosImportados(registros, mensajeExito, descripcion,
 }
 
 export const ImportarExportar = {
-    KEYS_CONFIG_EXPORTABLE,
     obtenerConfigExportable,
     validarCamposConfigImport,
     aplicarConfigImportada,
@@ -429,7 +428,6 @@ export const ImportarExportar = {
     errorEstructuraRespaldo,
     prepararRespaldo,
     calcularDiferencias,
-    calcularCombinacion,
     restaurarRespaldo,
     importarDatos
 };

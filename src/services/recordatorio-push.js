@@ -430,12 +430,24 @@ async function registrarUso() {
 }
 
 export const RecordatorioPush = {
-    configurarNotificaciones, registrarUso, enviarNotificacionPrueba,
-    programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
-    getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
-    getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, avisoPendiente, consumirAviso,
-    getBufferSoloUltimoDia, calcularTarget: _calcularTarget,
+    configurarNotificaciones,
+    registrarUso,
+    enviarNotificacionPrueba,
+    programarFinDeJornada,
+    cancelarFinDeJornada,
+    getAnticipacionMin,
+    setAnticipacionMin,
+    setBufferSoloUltimoDia,
+    getUsarBufferSemanal,
+    setUsarBufferSemanal,
+    getHabilitado,
+    setHabilitado,
+    puedeHabilitarse,
+    avisoPendiente,
+    consumirAviso,
+    getBufferSoloUltimoDia,
+    calcularTarget: _calcularTarget,
     targetProgramadoParaHoy: () => obtenerInfoActiva()?.targetTimeMs ?? null,
     fechaProgramadaActiva: () => obtenerInfoActiva()?.fechaISO ?? null,
-    restablecer,
+    restablecer
 };

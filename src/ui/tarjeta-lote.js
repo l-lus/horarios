@@ -415,11 +415,9 @@ export const TarjetaLote = {
     limpiarCampo,
     toggleModoLote,
     ejecutarAccionRegistro,
-    registrarLoteDesdeCard,
     poblarSelectoresTipos,
     actualizarBotonLote,
     toggleFormulario,
     _irAFicharConFecha,
-    _scrollACardFichar,
     alternarFechaActual
 };

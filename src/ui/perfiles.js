@@ -197,12 +197,7 @@ function bindEventos() {
 
 export const Perfiles = {
     bindEventos,
-    renderizarListaPerfiles,
-    abrirSelectorPerfiles,
     crearPerfilDesdeSelector,
     cerrarSelectorPerfiles,
-    abrirEditorPerfil,
-    cerrarEditorPerfil,
-    guardarEdicionPerfil,
-    eliminarPerfilDesdeEditor
+    cerrarEditorPerfil
 };

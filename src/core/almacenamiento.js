@@ -210,7 +210,5 @@ export const Almacenamiento = {
     borrarClavesDePerfil,
     configurarNotificaciones,
     setProfileKeyResolver,
-    esClaveLegadaHorarios,
-    migrarClavesLegadas,
-    _getKey
+    migrarClavesLegadas
 };

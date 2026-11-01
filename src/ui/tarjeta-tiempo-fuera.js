@@ -194,13 +194,8 @@ export const TarjetaTiempoFuera = {
     _minutosBreakActivo,
     _minutosAHoraWrap,
     _formatearMinutosCorto,
-    TF_LABEL_ID,
     _obtenerOCrearLabelTF,
     _quitarLabelTF,
-    _actualizarCardTimerRunning,
     actualizarEstadoBotonTimerMain,
-    _iniciarContadorBreak,
-    _detenerContadorBreak,
-    _detenerTimerBreak,
     toggleTimerBreakMain
 };

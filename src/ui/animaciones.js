@@ -383,7 +383,6 @@ export const Animaciones = {
     _aArray,
     _estaColapsado,
     _esperarAnim,
-    _finalizarSlidePendiente,
     _animarSlideElemento,
     _animarFadeSwap,
     _animarMutacion,

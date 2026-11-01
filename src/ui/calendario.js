@@ -434,14 +434,11 @@ function bindEventos() {
 
 export const Calendario = {
     bindEventos,
-    abrirSelectorMesesCalendario,
     _cerrarSelectorMeses,
     _activarVistaCalendarioHistorico,
     _renderizarCalendario,
     animarEntradaInicial,
     toggleVistaHistorico,
-    navegarCalendario,
-    irHoyCalendario,
     getVistaHistoricoCalendario: () => _vistaHistoricoCalendario,
     setVistaHistoricoCalendario: (v) => { _vistaHistoricoCalendario = v; }
 };

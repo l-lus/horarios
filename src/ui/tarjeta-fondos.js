@@ -169,7 +169,5 @@ export const TarjetaFondos = {
     setFondoCard,
     toggleFondoCard,
     _getLabelFondo,
-    _getSvgFondo,
-    _sanitizarSVG,
     actualizarFondoCard
 };

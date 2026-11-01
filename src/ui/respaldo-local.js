@@ -178,6 +178,5 @@ export const RespaldoLocal = {
     mostrarExportar,
     cerrarExportar,
     ejecutarExportacion,
-    toggleCamposRangoExport,
-    exportarRango
+    toggleCamposRangoExport
 };

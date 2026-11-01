@@ -235,7 +235,6 @@ export const Compensatorios = {
     objetivoDeRegistro,
     objetivoGuardado,
     esTipoRemoto,
-    _excedenteDeRegistro,
     calcularAsignacionesCompensatorio,
     _buscarAsignacionCompensatorio,
     fechaCompensadaPorRegistro,

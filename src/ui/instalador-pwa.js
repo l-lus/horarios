@@ -109,6 +109,5 @@ function _buscarActualizacionAlVolver(registration) {
 export const InstaladorPWA = {
     bindEventos,
     registrarServiceWorker,
-    init,
-    instalarApp
+    init
 };

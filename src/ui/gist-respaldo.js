@@ -458,21 +458,9 @@ function bindEventos() {
 
 export const GistRespaldo = {
     bindEventos,
-    actualizarEstadoBotonesGist,
-    actualizarResumenLimites: _actualizarResumenLimites,
-    toggleGistPanel,
     actualizarBotonesHistorico,
-    abrirModalGist,
     cerrarModalGist,
-    guardarConfigGist,
-    toggleVerToken,
-    abrirGistEnBrowser,
     gistMergeCancelar,
-    gistMergeAplicar,
-    toggleGistBackup,
-    toggleGistMerge,
-    cambiarLimiteSync,
-    pressHoldLimite,
     gistSubir,
     gistBajar
 };

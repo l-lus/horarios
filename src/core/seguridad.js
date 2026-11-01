@@ -220,7 +220,6 @@ function sanitizarDiasHabiles(dias) {
 }
 
 export const SeguridadYUtils = {
-    repararRegistroGuardado,
     repararRegistrosGuardados,
     sanitizarDiasHabiles,
     SECURITY_LIMITS,

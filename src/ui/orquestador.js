@@ -25,6 +25,7 @@ import { Estadisticas } from './estadisticas.js';
 import { Reportes } from './reportes.js';
 import { TarjetaFichaje } from './tarjeta-fichaje.js';
 import { TarjetaFichajeVista } from './tarjeta-fichaje-vista.js';
+import { CicloStats } from './tarjeta-ciclo-stats.js';
 import { TarjetaFondos } from './tarjeta-fondos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
@@ -79,9 +80,9 @@ const {
 const { cerrarModalReporteSecciones } = Reportes;
 
 const {
-    actualizarUI, alternarVista, _forzarVista, setTimerAutoVista,
-    _iniciarCicloStats, _detenerCicloStats, _prepararMostrarFaseAlRenderizar, _retenerRegistroAyer
+    actualizarUI, alternarVista, _forzarVista, setTimerAutoVista, _retenerRegistroAyer
 } = TarjetaFichaje;
+const { iniciar: _iniciarCicloStats, detener: _detenerCicloStats, prepararFase: _prepararMostrarFaseAlRenderizar } = CicloStats;
 
 const { _refrescarFormatoCortoStatsCache } = TarjetaFichajeVista;
 

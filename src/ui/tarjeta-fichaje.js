@@ -15,6 +15,7 @@ import { Estadisticas } from './estadisticas.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { esHtmlSeguro, montar } from '../core/html.js';
+import { CicloStats } from './tarjeta-ciclo-stats.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD MODULE
@@ -102,88 +103,6 @@ function _actualizarTiempoFueraConsolidado(el, est) {
     label.title = 'Tiempo fuera registrado hoy';
 }
 
-let _cicloStatsInterval = null;
-let _cicloStatsValorHoras = '';
-let _cicloStatsEntrada = '';
-let _cicloStatsSalida = '';
-let _cicloStatsTiempoFuera = '';
-let _cicloStatsFaseAlRenderizar = null;
-
-const _CICLO_DURACION_MS = 2000;
-const _CICLO_PREFIJOS = { entrada: 'Entrada', salida: 'Salida', tiempoFuera: 'Tiempo fuera' };
-
-function _detenerCicloStats() {
-    clearTimeout(_cicloStatsInterval);
-    _cicloStatsInterval = null;
-    const el = $('stats-semana');
-    if (el) el.classList.remove('mutacion-entrante');
-}
-
-function _prepararMostrarFaseAlRenderizar(tipo) {
-    _cicloStatsFaseAlRenderizar = tipo;
-}
-
-function _fasesCiclo() {
-    return [
-        _cicloStatsValorHoras,
-        `Entrada ${_cicloStatsEntrada}`,
-        _cicloStatsTiempoFuera ? `Tiempo fuera ${_formatearMinutosCorto(TiempoUtils.horaAMinutos(_cicloStatsTiempoFuera))}` : null,
-        _cicloStatsSalida ? `Salida ${_cicloStatsSalida}` : null,
-    ].filter(Boolean);
-}
-
-function _crearCicloTick(fases, estado) {
-    const _cicloTick = () => {
-        const el = $('stats-semana');
-        if (!el) { _detenerCicloStats(); return; }
-
-        _animarMutacion(el, () => {
-            estado.idx++;
-            const terminado = estado.idx >= fases.length;
-            el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx];
-            if (terminado) { _detenerCicloStats(); return; }
-            _cicloStatsInterval = setTimeout(_cicloTick, _CICLO_DURACION_MS);
-        });
-    };
-    return _cicloTick;
-}
-
-function _cicloStatsActivo() {
-    return !!_cicloStatsInterval;
-}
-
-function _iniciarCicloStats(inmediato = false) {
-    if (_cicloStatsInterval) return true;
-    _detenerCicloStats();
-    if (!_cicloStatsEntrada) return false;
-
-    const fases = _fasesCiclo();
-    const estado = { idx: 0 };
-    const tick = _crearCicloTick(fases, estado);
-
-    _cicloStatsInterval = setTimeout(tick, inmediato ? 0 : _CICLO_DURACION_MS);
-    return true;
-}
-
-function _iniciarCicloEnFase(tipo) {
-    if (!_cicloStatsEntrada) return false;
-    clearTimeout(_cicloStatsInterval);
-
-    const fases = _fasesCiclo();
-    const prefijo = _CICLO_PREFIJOS[tipo];
-    const idx = prefijo ? fases.findIndex(f => f?.startsWith(prefijo)) : -1;
-    if (idx === -1) return false;
-
-    const estado = { idx };
-    const tick = _crearCicloTick(fases, estado);
-
-    const el = $('stats-semana');
-    if (el) el.textContent = fases[idx];
-
-    _cicloStatsInterval = setTimeout(tick, _CICLO_DURACION_MS);
-    return true;
-}
-
 /** @param {any} [conteo] */
 function _renderStats(vista, est, conteo = null) {
     const el = $('stats-semana');
@@ -196,18 +115,12 @@ function _renderStats(vista, est, conteo = null) {
     const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';
     const tiempoFueraHoy = (esDiaria && regHoy && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00' && !esEspecial) ? regHoy.tiempoFuera : '';
 
-    _cicloStatsValorHoras = vista.stats;
-    _cicloStatsEntrada = entradaHoy;
-    _cicloStatsSalida = salidaHoy;
-    _cicloStatsTiempoFuera = tiempoFueraHoy;
+    CicloStats.actualizarDatos({ valorHoras: vista.stats, entrada: entradaHoy, salida: salidaHoy, tiempoFuera: tiempoFueraHoy });
 
-    if (_cicloStatsFaseAlRenderizar) {
-        const tipo = _cicloStatsFaseAlRenderizar;
-        _cicloStatsFaseAlRenderizar = null;
-        if (_iniciarCicloEnFase(tipo)) return;
-    }
+    const fase = CicloStats.tomarFasePendiente();
+    if (fase && CicloStats.iniciarEnFase(fase)) return;
 
-    if (!_cicloStatsInterval) {
+    if (!CicloStats.activo()) {
         if (conteo) {
             _animarConteo(el, conteo.texto);
         } else if (_conteoEnCurso(el) === vista.stats) {
@@ -348,7 +261,7 @@ function _animarCambioCard(renderFn) {
         $('toggle-hint'),
     ];
 
-    _detenerCicloStats();
+    CicloStats.detener();
     _animarMutacion(els, renderFn);
 }
 
@@ -422,7 +335,7 @@ function _forzarVista(nuevaVista, renderFn) {
     return _animarFadeSwap(content, async () => {
         EstadoApp.setVistaActual(nuevaVista);
         Almacenamiento.setItem(STORAGE_KEYS.VISTA_ACTUAL, nuevaVista);
-        _detenerCicloStats();
+        CicloStats.detener();
         const resultado = await _conRendersSinAnimar(renderFn);
         if (card) card.classList.remove('cambiando-vista');
         return resultado;
@@ -469,8 +382,8 @@ function bindEventos() {
 
     $('stats-card')?.addEventListener('click', (e) => {
         const enStatsNumber = /** @type {HTMLElement} */ (e.target).closest('#stats-semana');
-        if (enStatsNumber && EstadoApp.vistaActual() !== 'semana' && !_cicloStatsActivo()) {
-            const ciclado = _iniciarCicloStats(true);
+        if (enStatsNumber && EstadoApp.vistaActual() !== 'semana' && !CicloStats.activo()) {
+            const ciclado = CicloStats.iniciar(true);
             if (ciclado) {
                 e.stopPropagation();
                 return;
@@ -507,9 +420,5 @@ export const TarjetaFichaje = {
     alternarVista,
     _forzarVista,
     setTimerAutoVista: (v) => { _timerAutoVista = v; },
-    _iniciarCicloStats,
-    _detenerCicloStats,
-    _cicloStatsActivo,
-    _prepararMostrarFaseAlRenderizar,
     _retenerRegistroAyer,
 };

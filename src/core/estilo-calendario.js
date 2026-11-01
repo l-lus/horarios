@@ -7,15 +7,16 @@ import { Movimiento } from './movimiento.js';
 // ====================================================================
 // Cómo se dibuja cada día con registro: el CSS solo mira <html data-estilo-calendario="...">; 'legacy' es el estilo original (círculo relleno).
 // tema-inicial.js lo aplica antes de que cargue la app, igual que el tema y data-motion.
+// El orden del ciclo agrupa los estilos por parecido, de más a menos peso visual: primero los de relleno (el original y sus variantes con aro),
+// luego los de aro (del grueso al fino con brillo) y al final los que solo marcan con una barra o un punto
 export const ESTILOS_CALENDARIO = Object.freeze([
     { id: 'legacy', label: 'Legacy' },
-    { id: 'contorno-brillo', label: 'Contorno con brillo' },
-    { id: 'aro-grueso', label: 'Aro grueso' },
     { id: 'relleno-aro', label: 'Relleno con aro' },
+    { id: 'cuadrado-aro', label: 'Cuadrado con aro' },
+    { id: 'aro-grueso', label: 'Aro grueso' },
+    { id: 'contorno-brillo', label: 'Contorno con brillo' },
     { id: 'subrayado', label: 'Subrayado' },
-    { id: 'punto', label: 'Punto' },
-    { id: 'solo-contorno', label: 'Solo contorno' },
-    { id: 'cuadrado-aro', label: 'Cuadrado con aro' }
+    { id: 'punto', label: 'Punto' }
 ]);
 
 const ID_POR_DEFECTO = 'legacy';

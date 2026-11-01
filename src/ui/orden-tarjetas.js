@@ -24,6 +24,7 @@ function toggleVisibilidadCard(cual) {
     Almacenamiento.setItem(key, nuevo, true);
     aplicarVisibilidadCard(cual, nuevo);
     _setBtnActivo('btn-toggle-card-' + cual, nuevo);
+    EventosApp.emit('tarjetas:visibilidad');
 }
 
 function aplicarVisibilidadCard(cual, visible) {
@@ -37,6 +38,7 @@ function aplicarVisibilidadCards() {
         aplicarVisibilidadCard(cual, visible);
         _setBtnActivo('btn-toggle-card-' + cual, visible);
     });
+    EventosApp.emit('tarjetas:visibilidad');
 }
 
 function obtenerOrdenCards() {

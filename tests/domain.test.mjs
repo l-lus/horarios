@@ -697,7 +697,7 @@ test('EstiloCalendario: el ciclo recorre todos los estilos, vuelve al original y
     const ids = ESTILOS_CALENDARIO.map(e => e.id);
     assert.equal(ids[0], 'legacy', 'el estilo original es el primero y el valor por defecto');
     assert.equal(new Set(ids).size, ids.length, 'sin ids repetidos');
-    assert.deepEqual(ids, ['legacy', 'contorno-brillo', 'aro-grueso', 'relleno-aro', 'subrayado', 'punto', 'solo-contorno', 'cuadrado-aro']);
+    assert.deepEqual(ids, ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto']);
 
     // dando la vuelta completa se vuelve al punto de partida y se pasa por todos
     const visitados = [];
@@ -707,7 +707,9 @@ test('EstiloCalendario: el ciclo recorre todos los estilos, vuelve al original y
     assert.equal(id, 'legacy');
 
     // un valor guardado que ya no existe se trata como el original
-    assert.equal(siguienteEstilo('inventado'), 'contorno-brillo');
+    assert.equal(siguienteEstilo('inventado'), 'relleno-aro');
     assert.equal(etiquetaEstilo('inventado'), 'Legacy');
+    // el estilo que se quitó ('solo-contorno') guardado por una versión anterior vuelve al original
+    assert.equal(etiquetaEstilo('solo-contorno'), 'Legacy');
     assert.equal(etiquetaEstilo('aro-grueso'), 'Aro grueso');
 });

@@ -27,17 +27,18 @@ const _ETIQUETAS_ANIMACIONES = { auto: 'Auto', on: 'Sí', off: 'No' };
 /**
  * Catálogo de atajos. `estado()` devuelve lo que cambia con la situación (ícono, título, si está desactivado); `accion()` lo que hace.
  * El orden de este arreglo es el de la lista del selector.
- * @type {ReadonlyArray<{ id: string, nombre: string, descripcion: string,
+ * `botonHistorico`: el botón equivalente de la tarjeta de Registros, que se oculta mientras el atajo está a la vista (ver sincronizarBotonesHistorico).
+ * @type {ReadonlyArray<{ id: string, nombre: string, descripcion: string, botonHistorico?: string,
  *   estado: () => { icono: string, titulo: string, desactivado?: boolean }, accion: () => void }>}
  */
 const CATALOGO = [
     {
-        id: 'bajar', nombre: 'Bajar / Restaurar', descripcion: 'Baja de Gist si lo tenés configurado; si no, restaura desde un archivo',
+        id: 'bajar', botonHistorico: 'btn-hist-restaurar', nombre: 'Bajar / Restaurar', descripcion: 'Baja de Gist si lo tenés configurado; si no, restaura desde un archivo',
         estado: () => _tieneGist() ? { icono: '#icon-cloud-download', titulo: 'Bajar de Gist' } : { icono: '#icon-upload', titulo: 'Restaurar' },
         accion: _click('btn-hist-restaurar')
     },
     {
-        id: 'subir', nombre: 'Subir / Respaldar', descripcion: 'Sube a Gist si lo tenés configurado; si no, guarda un archivo de respaldo',
+        id: 'subir', botonHistorico: 'btn-hist-respaldar', nombre: 'Subir / Respaldar', descripcion: 'Sube a Gist si lo tenés configurado; si no, guarda un archivo de respaldo',
         estado: () => _tieneGist() ? { icono: '#icon-cloud-upload', titulo: 'Subir a Gist' } : { icono: '#icon-download', titulo: 'Respaldar' },
         accion: _click('btn-hist-respaldar')
     },
@@ -52,12 +53,12 @@ const CATALOGO = [
         accion: () => RespaldoLocal.mostrarImportar(true)
     },
     {
-        id: 'deshacer', nombre: 'Deshacer', descripcion: 'Deshace el último cambio en los registros',
+        id: 'deshacer', botonHistorico: 'btn-undo', nombre: 'Deshacer', descripcion: 'Deshace el último cambio en los registros',
         estado: () => ({ icono: '#icon-undo', titulo: 'Deshacer (Ctrl+Z)', desactivado: !!$('btn-undo')?.disabled }),
         accion: _click('btn-undo')
     },
     {
-        id: 'rehacer', nombre: 'Rehacer', descripcion: 'Vuelve a aplicar el cambio deshecho',
+        id: 'rehacer', botonHistorico: 'btn-redo', nombre: 'Rehacer', descripcion: 'Vuelve a aplicar el cambio deshecho',
         estado: () => ({ icono: '#icon-redo', titulo: 'Rehacer (Ctrl+Y)', desactivado: !!$('btn-redo')?.disabled }),
         accion: _click('btn-redo')
     },
@@ -142,7 +143,18 @@ function actualizarEstados() {
     });
 }
 
+// Los botones de Registros que ya están como atajo se ocultan (siguen en el DOM: los atajos y Ctrl+Z / Ctrl+Y los disparan desde ahí).
+// Si el atajo se quita, o la tarjeta de atajos se oculta, vuelven.
+function sincronizarBotonesHistorico() {
+    const tarjetaVisible = Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE('atajos'), true, true);
+    const elegidos = tarjetaVisible ? obtenerAtajos() : [];
+    CATALOGO.forEach(def => {
+        if (def.botonHistorico) $(def.botonHistorico)?.classList.toggle('btn-en-atajos', elegidos.includes(def.id));
+    });
+}
+
 function renderizar() {
+    sincronizarBotonesHistorico();
     const grilla = $('atajos-botones');
     if (!grilla) return;
     const defs = obtenerAtajos().flatMap(id => _porId(id) ?? []);
@@ -220,6 +232,7 @@ function bindEventos() {
 EventosApp.on('historial:cambio', actualizarEstados);
 EventosApp.on('historico:botones', actualizarEstados);
 EventosApp.on('perfil:cambio', actualizarEstados);
-EventosApp.on('config:atajos', renderizar);   // al restaurar un respaldo o bajar de Gist
+EventosApp.on('config:atajos', renderizar);
+EventosApp.on('tarjetas:visibilidad', sincronizarBotonesHistorico);   // la tarjeta de atajos se mostró u ocultó   // al restaurar un respaldo o bajar de Gist
 
 export const Atajos = { renderizar, actualizarEstados, obtenerAtajos, cerrarModalAtajos, bindEventos };

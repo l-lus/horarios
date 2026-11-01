@@ -50,10 +50,15 @@ function _getLabelFondo(id) {
     return fondo ? fondo.label : id;
 }
 
+// Los fondos son estáticos: cada combinación fondo|color se sanea una sola vez (hay pocas: ~10 fondos × 6 colores)
+const _svgSaneados = new Map();
+
 function _getSvgFondo(id, color) {
     const fondo = (FONDOS_SVG || []).find(f => f.id === id);
     if (!fondo) return '';
-    return _sanitizarSVG(fondo.svg(color));
+    const clave = `${id}|${color}`;
+    if (!_svgSaneados.has(clave)) _svgSaneados.set(clave, _sanitizarSVG(fondo.svg(color)));
+    return _svgSaneados.get(clave);
 }
 
 function _sanitizarSVG(svgStr) {

@@ -95,7 +95,7 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 | Carpeta | Rango de capa | Qué contiene | Qué puede importar | Qué **NO** debe hacer |
 |---|---|---|---|---|
 | `src/data/` | `0` | Constantes y catálogos estáticos (`FERIADOS_AR`, `FONDOS_SVG`). | Nada (módulos hoja). | No accede a `document`, `window` ni `localStorage`. |
-| `src/core/` | `1` | Helpers de infraestructura base (`TiempoUtils`, `SeguridadYUtils`, `Almacenamiento`, `EventosApp`, `html.js`, `dom.js`, `movimiento.js`, `constantes.js`, `tema-inicial.js`). | Solo otros módulos de `src/core/` o `src/data/`. | No importa nada de `src/services/` ni `src/ui/`. |
+| `src/core/` | `1` | Helpers de infraestructura base (`TiempoUtils`, `SeguridadYUtils`, `Almacenamiento`, `EventosApp`, `html.js`, `dom.js`, `movimiento.js`, `constantes.js`, `tema-inicial.js`, `busqueda-texto.js`, `estilo-calendario.js`, `geometria-etiquetas.js`). | Solo otros módulos de `src/core/` o `src/data/`. | No importa nada de `src/services/` ni `src/ui/`. |
 | `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Compensatorios`, `FiltrosYPeriodos`, `SaldoSemanal`, `EstadisticasPeriodo`, `EstadoTarjeta`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. **Prohibido acceder al DOM** (`document`, `$()`), verificado por test. Toda comunicación hacia la UI pasa por `EstadoApp._notify()`, los puertos de formulario o `EventosApp` (ver 3.1). |
 | `src/ui/` | `3` | Lectura de inputs, renderizado de tablas/tarjetas/calendario, modales, temas y animaciones. | `src/ui/` (sin ciclos), `src/services/`, `src/core/`, `src/data/`. | No escribe directamente en `localStorage` para datos de registros (usa `GestionDatos` o `Almacenamiento`). No inserta HTML con datos sin pasar por ``html`...` `` (3.2). |
 | `src/main.js` | `4` | Arranque en `DOMContentLoaded`. | `OrquestadorUI`, los módulos de `ui/` que enlazan eventos, `InstaladorPWA`, `FeriadosAR` y `RecordatorioPush`. | No contiene lógica de negocio ni handlers extensos. |
@@ -147,6 +147,9 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/core/seguridad.js`](../src/core/seguridad.js) | `SeguridadYUtils` | `limpiarTexto` (caracteres de control, espacios y largo; el formato de cada campo se valida después con lista blanca), `normalizarNotas`, `escapeHtml`, `validarRegistroSeguro` (respaldos importados), `repararRegistrosGuardados` y `sanitizarDiasHabiles` (datos propios al cargar), `esObjetivoHorasValido`, cálculo SHA-256 (`calcularHashSHA256` con fallback JS puro) y `reviverJSONSeguro`. |
 | [`src/core/almacenamiento.js`](../src/core/almacenamiento.js) | `Almacenamiento` | Lectura/escritura segura en `localStorage` bajo el namespace `horarios_`, migración automática de claves legadas (`migrarClavesLegadas`), manejo de cuota y resolución de clave por perfil (`setProfileKeyResolver`). |
 | [`src/core/tiempo-utils.js`](../src/core/tiempo-utils.js) | `TiempoUtils` | Aritmética de horas (`HH:MM` ↔ minutos), diferencia entre horarios, cruces de medianoche, formato de fechas ISO y rangos semanales. |
+| [`src/core/busqueda-texto.js`](../src/core/busqueda-texto.js) | `normalizarBusqueda`, `terminosDeBusqueda`, `textoCoincide`, `rangosCoincidencia`, ... | Búsqueda de texto sin distinguir mayúsculas ni acentos, con mapa de posiciones para resaltar coincidencias en el texto original (sin DOM). |
+| [`src/core/estilo-calendario.js`](../src/core/estilo-calendario.js) | `EstiloCalendario`, `ESTILOS_CALENDARIO` | Estilo de los días del calendario (`<html data-estilo-calendario>`): lista de estilos, ciclo y etiqueta. `tema-inicial.js` lo aplica antes del primer pintado. |
+| [`src/core/geometria-etiquetas.js`](../src/core/geometria-etiquetas.js) | `geometriaConector`, `geometriaDiagonal`, `repartirLados`, `entradaDebeSubir`, constantes | Geometría de las marcas y etiquetas que cuelgan de la barra de progreso (posiciones, lados, colisiones), sin DOM. |
 
 ### 4.3. Servicios y dominio (`src/services/`)
 
@@ -155,9 +158,9 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/services/estado-app.js`](../src/services/estado-app.js) | `EstadoApp` | **Store central de dominio** (hoja en `services/`): mantiene `registros`, `diasHabiles`, `horasDiarias`, `historialDiasHabiles`, estado de edición/filtros, `calcularHoras` y canal `notify` y los typedef de los puertos (`Notificaciones`, `FormularioRegistro`, `FormularioEdicion`). |
 | [`src/services/gestion-datos.js`](../src/services/gestion-datos.js) | `GestionDatos` | Carga del perfil activo al arrancar (`cargarPerfilActivo`, repara lo guardado con `SeguridadYUtils.repararRegistrosGuardados`) y comandos de dominio: alta/baja/edición individual de fichajes, validación de los datos de formulario (que llegan por los puertos), recálculo de totales y undo/redo. No reexporta otros servicios: para leer estado o cálculos se importa el módulo dueño (`EstadoApp`, `Compensatorios`, `FiltrosYPeriodos`, `ImportarExportar`). |
 | [`src/services/aviso-jornada.js`](../src/services/aviso-jornada.js) | `AvisoJornada` | Decide qué aviso de fin de jornada corresponde hoy (jornada abierta, objetivo, tiempo fuera y saldo semanal) y lo programa, reprograma o cancela con `RecordatorioPush`. Registra el hook `EstadoApp.sincronizarPushHoy` para los servicios que no pueden importarlo. |
-| [`src/services/compensatorios.js`](../src/services/compensatorios.js) | `Compensatorios` | Cálculo de banco de horas extras, asignación cronológica de horas a francos/compensatorios y tramos históricos de días hábiles. |
+| [`src/services/compensatorios.js`](../src/services/compensatorios.js) | `Compensatorios` | Cálculo de banco de horas extras, asignación cronológica de horas a francos/compensatorios y tramos históricos de días hábiles (consulta y edición: `tramosDiasHabiles`, `editarTramoDias`, `eliminarTramoDias`). |
 | [`src/services/filtros-periodos.js`](../src/services/filtros-periodos.js) | `FiltrosYPeriodos` | Filtrado de registros, cálculo de buffer por período, detección de jornada nocturna de ayer, edición de grupos y carga/borrado por rango. |
-| [`src/services/importar-exportar.js`](../src/services/importar-exportar.js) | `ImportarExportar` | Serialización para exportación JSON y camino único de restauración para archivo local y Gist: `prepararRespaldo` (estructura, versión, SHA-256 y normalización) y `restaurarRespaldo` (combinar o reemplazar y guardar). |
+| [`src/services/importar-exportar.js`](../src/services/importar-exportar.js) | `ImportarExportar` | Armado del respaldo (`armarRespaldo`, el mismo para archivo completo, rango y Gist) y camino único de restauración para archivo local y Gist: `prepararRespaldo` (estructura, versión, SHA-256 y normalización) y `restaurarRespaldo` (combinar o reemplazar y guardar). |
 | [`src/services/saldo-semanal.js`](../src/services/saldo-semanal.js) | `SaldoSemanal` | Cálculo de saldos por semana y mes para las vistas de calendario, resumen y estadísticas. |
 | [`src/services/estadisticas-periodo.js`](../src/services/estadisticas-periodo.js) | `EstadisticasPeriodo` | Métricas de un período (semana, mes o año): promedios de entrada/salida, regularidad, conteos por tipo, banco de horas y aprovechamiento del saldo. Lo usan `Estadisticas` y `Reportes`. |
 | [`src/services/estado-tarjeta.js`](../src/services/estado-tarjeta.js) | `EstadoTarjeta` | Estado de la tarjeta de fichaje (tiempo de hoy, totales y objetivo de la semana, buffer). Lo que depende de la UI (tiempo fuera en curso, registro de ayer retenido) llega por parámetro. |
@@ -167,6 +170,8 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/services/feriados-ar.js`](../src/services/feriados-ar.js) | `FeriadosAR` | Detección de feriados nacionales del mes en curso y sugerencia automática de carga. |
 | [`src/services/sincronizacion-gist.js`](../src/services/sincronizacion-gist.js) | `SincronizacionGist` | Cliente HTTP de la API de GitHub Gist (crear, subir, descargar respaldos en la nube y verificar hashes). |
 | [`src/services/recordatorio-push.js`](../src/services/recordatorio-push.js) | `RecordatorioPush` | Suscripción Web Push (VAPID), programación y cancelación de recordatorios de fin de jornada con el Worker, y ping diario anónimo de uso (`registrarUso` → `/api/hola`). |
+| [`src/services/atajos.js`](../src/services/atajos.js) | `normalizarAtajos`, `alternarAtajo`, `MAX_ATAJOS`, `ATAJOS_POR_DEFECTO` | Lista de atajos rápidos elegida por el usuario: normalización y alta/baja, sin DOM. |
+| [`src/services/orden-cards.js`](../src/services/orden-cards.js) | `normalizarOrdenCards`, `fusionarOrdenVisibles`, `columnaDeCard` | Orden de las tarjetas (ocultas incluidas) y columna de escritorio de cada una, sin DOM. |
 
 ### 4.4. Interfaz de usuario (`src/ui/`)
 
@@ -208,6 +213,10 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/ui/notificaciones.js`](../src/ui/notificaciones.js) | `Notificaciones` | Modal y controles de configuración de avisos Web Push (anticipación, uso de saldo semanal). |
 | [`src/ui/bienvenida-modal.js`](../src/ui/bienvenida-modal.js) | `BienvenidaModal` | Onboarding inicial para configurar horas diarias y días hábiles en el primer uso. |
 | [`src/ui/aviso-push.js`](../src/ui/aviso-push.js) | `AvisoPush` | Banner sugerido para activar notificaciones de fin de jornada luego de alcanzar el umbral de uso. |
+| [`src/ui/atajos.js`](../src/ui/atajos.js) | `Atajos` | Tarjeta de atajos rápidos: catálogo de acciones (ícono, estado, acción), render de los botones y modal para elegirlos. |
+| [`src/ui/aviso-actualizacion.js`](../src/ui/aviso-actualizacion.js) | `AvisoActualizacion` | Toast con barra de progreso mientras el Service Worker descarga una versión nueva. |
+| [`src/ui/ayuda-buscador.js`](../src/ui/ayuda-buscador.js) | `AyudaBuscador` | Buscador del modal de ayuda: filtra secciones y resalta coincidencias (Enter recorre). |
+| [`src/ui/barra-hitos.js`](../src/ui/barra-hitos.js) | `BarraHitos` | Marcas de la barra de progreso con el hint integrado: hora (vista diaria) o sigla (vista semanal). Solo dibuja; los datos vienen de `tarjeta-fichaje-vista.js`. |
 
 ---
 
@@ -234,8 +243,9 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 - **¿Interactúa con elementos HTML, eventos de click/teclado o muestra alertas?** → Va en `src/ui/`.
   - Si extiende una vista existente y el archivo tiene **menos de 500 líneas**, agregalo en el módulo correspondiente (`calendario.js`, `configuracion.js`, etc.).
   - Si la funcionalidad supera **~250–300 líneas** o tiene un ciclo de vida propio, creá un archivo dedicado en `src/ui/` con prefijo semántico:
-    - Subcomponentes de la tarjeta principal: `src/ui/card-<nombre>.js`
-    - Vistas o paneles generales: `src/ui/ui-<nombre>.js`
+    - Subcomponentes de la tarjeta de fichaje: `src/ui/tarjeta-<nombre>.js` (ej. `tarjeta-tiempo-fuera.js`, `tarjeta-ciclo-stats.js`).
+    - Partes de un módulo que creció: `src/ui/<padre>-<parte>.js` (ej. `calendario-popups.js`, `historico-items.js`, `gist-resumen-merge.js`); la parte no importa al padre.
+    - Vistas o paneles nuevos: un nombre descriptivo en español (ej. `ayuda-buscador.js`, `aviso-actualizacion.js`).
   - **Regla anti-ciclos en `src/ui/`:** Un submódulo hijo (`tarjeta-tiempo-fuera.js`, `reportes.js`, `respaldo-local.js`) **no debe importar** a su módulo padre (`tarjeta-fichaje.js`, `estadisticas.js`, `gist-respaldo.js`). Si necesita notificar un cambio hacia arriba, usá `EventosApp.emit(...)` o inyectá un callback desde el padre.
 
 ### Checklist obligatorio al crear o renombrar un archivo `.js`
@@ -269,6 +279,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 | **ARQ-11** | Versión centralizada (`APP_VERSION`) y `npm run release` para `APP_VERSION` + `CACHE_NAME` | ✅ Aplicado |
 | **ARQ-12** | Saneamiento: código muerto eliminado, ~50 funciones de reenvío y reexportaciones quitadas, `GestionDatos` (75 → 14 miembros) y `UIBase` (53 → 18) sin pasamanos, cálculo de estadísticas y de la tarjeta movidos a `services/` (`EstadisticasPeriodo`, `EstadoTarjeta`) con tests sin DOM, `tarjeta-fichaje.js` (1.012 → 540 líneas) dividido con `tarjeta-fichaje-vista.js`, helper `icono()` y reportes con ``html`...` `` | ✅ Aplicado |
 | **ARQ-13** | Unificación y endurecimiento: archivo local y Gist restauran por el mismo camino (`prepararRespaldo`/`restaurarRespaldo`), carga del perfil (`cargarPerfilActivo`) y alta/baja/renombre de perfiles movidos a `services/`, datos guardados reparados al cargar, `sanitizeString` reemplazado por `limpiarTexto` + listas blancas, `montar` como único sink de `innerHTML` y CSP con Trusted Types | ✅ Aplicado |
+| **ARQ-14** | Módulos de UI por debajo de 500 líneas (`calendario-popups`, `historico-items`, `gist-resumen-merge`, `arrastre`, `tarjeta-ciclo-stats`), aviso de fin de jornada en `services/aviso-jornada.js`, tramos de días hábiles y armado de respaldos (`armarRespaldo`) en servicios, fechas del lote y filtros validadas en el servicio, claves heredadas y 60 exportaciones internas eliminadas | ✅ Aplicado |
 
 ---
 

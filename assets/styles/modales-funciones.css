@@ -624,6 +624,67 @@ body.config-onboarding #theme-toggle-config {
     animation: mutacionEntrada var(--dur-anim) ease-out;
 }
 
+/* "Agregar perfil" plegado: el botón se apoya sobre el borde superior del pie (la línea existente) */
+#modal-selector-perfiles .modal-panel-body {
+    padding-bottom: var(--space-lg);
+}
+
+#modal-selector-perfiles .modal-panel-footer {
+    position: relative;
+    padding-top: var(--space-lg);
+}
+
+.perfil-agregar {
+    margin-top: var(--space-lg);
+}
+
+.perfil-agregar-toggle {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    z-index: 3;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0;
+    transform: translate(-50%, -50%);
+    background: var(--input-bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    /* anillo del color de la tarjeta: abre un hueco en la línea alrededor del botón */
+    box-shadow: 0 0 0 var(--space-xsm) var(--bg-card);
+}
+
+/* Área táctil de 48px aunque el botón se vea de 36px */
+.perfil-agregar-toggle::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+}
+
+.perfil-agregar-toggle .icon {
+    width: 1.35em;
+    height: 1.35em;
+}
+
+/* El "+" del icono gira al abrir (--giro-plus se hereda dentro del <use>) */
+.icon-plus-giro {
+    transform: rotate(var(--giro-plus, 0deg));
+    transform-origin: 13.5px 13.5px;
+    transition: transform var(--dur-anim) var(--ease-pop);
+}
+
+.perfil-agregar-toggle:active {
+    transform: translate(-50%, -50%) scale(0.92);
+}
+
+.perfil-agregar-toggle[aria-expanded="true"] {
+    --giro-plus: 45deg;
+    background: var(--c-active);
+    color: var(--c-white);
+    border-color: transparent;
+}
+
 /* ─── SELECTOR DE SEMANA ─────────────────────────────────────────────────────── */
 
 .week-selector {

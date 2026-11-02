@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
@@ -80,10 +80,21 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
     }
 }
 
+/** Muestra u oculta el apartado "Agregar perfil" (botón sobre la línea del pie del modal). */
+function setAgregarPerfil(abierto, { animar = true, enfocar = false } = {}) {
+    setColapsable($('perfil-agregar-panel'), abierto, { animar });
+    $('btn-toggle-agregar-perfil')?.setAttribute('aria-expanded', String(abierto));
+    if (!abierto) return;
+    const input = $('nombre-nuevo-perfil-selector');
+    if (enfocar) input?.focus({ preventScroll: true });
+    requestAnimationFrame(() => _scrollA(input));
+}
+
 function abrirSelectorPerfiles() {
     GestorModales.abrir('modal-selector-perfiles', () => {
         const inputNuevo = $('nombre-nuevo-perfil-selector');
         if (inputNuevo) inputNuevo.value = '';
+        setAgregarPerfil(false, { animar: false });
 
         renderizarListaPerfiles();
 
@@ -103,6 +114,7 @@ function crearPerfilDesdeSelector() {
 
     mostrarToast(`Perfil "${res.nombre}" creado`, 'success');
     input.value = '';
+    setAgregarPerfil(false);
     renderizarListaPerfiles(true);
     requestAnimationFrame(() => {
         const ultimo = $('lista-perfiles-botones')?.lastElementChild;
@@ -138,6 +150,7 @@ function cerrarEditorPerfil() {
     GestorModales.alternar('modal-editar-perfil', 'modal-selector-perfiles', null, () => {
         const inputNuevo = $('nombre-nuevo-perfil-selector');
         if (inputNuevo) inputNuevo.value = '';
+        setAgregarPerfil(false, { animar: false });
         renderizarListaPerfiles();
         const btnEliminar = $('btn-eliminar-perfil-editor');
         if (btnEliminar) btnEliminar.disabled = true;
@@ -188,6 +201,10 @@ function bindEventos() {
 
     document.querySelector('#modal-selector-perfiles .btn-cancel')?.addEventListener('click', () => cerrarSelectorPerfiles());
     $('btn-crear-perfil')?.addEventListener('click', () => crearPerfilDesdeSelector());
+    $('btn-toggle-agregar-perfil')?.addEventListener('click', () => {
+        const abierto = $('btn-toggle-agregar-perfil')?.getAttribute('aria-expanded') === 'true';
+        setAgregarPerfil(!abierto, { enfocar: true });
+    });
 
     document.querySelector('#modal-editar-perfil .btn-edit')?.addEventListener('click', () => guardarEdicionPerfil());
     $('btn-eliminar-perfil-editor')?.addEventListener('click', () => eliminarPerfilDesdeEditor());

@@ -182,6 +182,7 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/ui/orquestador.js`](../src/ui/orquestador.js) | `OrquestadorUI` | Coordinador principal de UI: inicializa todos los submódulos visuales, listeners globales y conecta las notificaciones de `GestionDatos`. |
 | [`src/ui/base.js`](../src/ui/base.js) | `UIBase` | Helpers de UI propios: errores de campos, toggles de configuración, selects, flashes de campo, descargas, secciones colapsables y apertura de modales con padre. No reexporta: gestos, toasts, botón Fichar, popups, scroll y animaciones se importan de su módulo. |
 | [`src/ui/gestos.js`](../src/ui/gestos.js) | `registrarSwipe`, `debounce`, `_crearPressHold` | Gestos táctiles, debounce y botones de mantener presionado. |
+| [`src/ui/recarga-gesto.js`](../src/ui/recarga-gesto.js) | `RecargaGesto` | Reemplaza el pull-to-refresh nativo: las tarjetas se desvanecen al tirar y antes de recargar, y aparecen con fundido al cargar. |
 | [`src/ui/toast.js`](../src/ui/toast.js) | `mostrarToast`, `_cerrarToastActual`, `_habilitarCierreToast` | Cola de avisos (toasts) con cierre por click o swipe. |
 | [`src/ui/boton-fichar.js`](../src/ui/boton-fichar.js) | `resetearBoton`, `animarExitoFichaje`, `setIconoBtn`, ... | Reseteo del botón Fichar y animación del check de éxito. |
 | [`src/ui/popups.js`](../src/ui/popups.js) | `_crearPopupFlotante`, `_posicionarPopup`, `_registrarCierrePopup` | Popups flotantes posicionados junto al elemento disparador (exigen ``html`...` ``). |

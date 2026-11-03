@@ -16,6 +16,8 @@ body.modal-open {
 }
 
 html {
+    /* Desactiva el pull-to-refresh nativo (recarga abrupta): lo reemplaza ui/recarga-gesto.js con fundido de las tarjetas */
+    overscroll-behavior-y: contain;
     scrollbar-gutter: stable;
 }
 
@@ -56,6 +58,30 @@ html[data-motion="reduce"].cargando body::after {
 @keyframes girarCarga {
     to {
         transform: rotate(360deg);
+    }
+}
+
+/* ─── RECARGA POR GESTO / FUNDIDO DE ENTRADA ─────────────────────────────────── */
+/* --recarga-progreso (0→1) lo escribe ui/recarga-gesto.js mientras se tira hacia abajo en el tope de la página. */
+.container {
+    opacity: calc(1 - var(--recarga-progreso, 0) * 0.65);
+}
+
+html.recarga-animando .container {
+    transition: opacity var(--dur-anim) var(--ease-anim);
+}
+
+html.recargando .container {
+    opacity: 0;
+}
+
+html.entrada-pagina .container {
+    animation: fundidoEntrada var(--dur-slow) var(--ease-anim) both;
+}
+
+@keyframes fundidoEntrada {
+    from {
+        opacity: 0;
     }
 }
 

@@ -16,6 +16,7 @@ import { HistorialDias } from './ui/historial-dias.js';
 import { OrquestadorUI } from './ui/orquestador.js';
 import { BienvenidaModal } from './ui/bienvenida-modal.js';
 import { AvisoPush } from './ui/aviso-push.js';
+import { RecargaGesto } from './ui/recarga-gesto.js';
 
 // ====================================================================
 // MAIN — arranque de la aplicación
@@ -41,6 +42,7 @@ function _iniciarEventosDOM() {
     Notificaciones.bindEventos();
     Configuracion.bindEventos();
     HistorialDias.bindEventos();
+    RecargaGesto.bindEventos();
 
     _mostrarVersion();
 }
@@ -52,7 +54,10 @@ if (document.readyState === 'loading') {
 }
 
 // UI iniciada: se quita la pantalla de carga (ver html.cargando en base.css y tema-inicial.js)
-requestAnimationFrame(() => document.documentElement.classList.remove('cargando'));
+requestAnimationFrame(() => {
+    document.documentElement.classList.remove('cargando');
+    RecargaGesto.entrar();
+});
 
 (async () => {
     await BienvenidaModal.chequearYMostrar();

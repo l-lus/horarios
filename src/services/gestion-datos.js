@@ -5,6 +5,7 @@ import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from './recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
+import { Recarga } from '../core/recarga.js';
 import { GestorPerfiles } from './gestor-perfiles.js';
 import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
@@ -265,7 +266,7 @@ async function borrarTodoHistorial() {
     if (perfil) GestorPerfiles.CAMPOS_SYNC_GIST.forEach(k => delete perfil[k]);
 
     GestorHistorial.saveState(registros, `restablecer perfil (${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)})`);
-    if (await guardarYActualizar()) location.reload();
+    if (await guardarYActualizar()) Recarga.solicitar();
 }
 
 function _aplicarEstadoHistorial(resultado, mensaje) {

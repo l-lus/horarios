@@ -6,6 +6,7 @@ import { GestorModales } from './gestor-modales.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
+import { Recarga } from '../core/recarga.js';
 import { icono, montar } from '../core/html.js';
 
 // ====================================================================
@@ -189,7 +190,7 @@ async function eliminarPerfilDesdeEditor() {
 
     if (res.eraActual) {
         mostrarToast('Perfil eliminado. Recargando...', 'success');
-        setTimeout(() => location.reload(), 1000);
+        setTimeout(() => Recarga.solicitar(), 1000);
     } else {
         mostrarToast('Perfil eliminado', 'success');
         cerrarEditorPerfil();

@@ -67,16 +67,23 @@ html[data-motion="reduce"].cargando body::after {
     opacity: calc(1 - var(--recarga-progreso, 0) * 0.65);
 }
 
+/* Duración propia (no --dur-anim): es solo un fundido, no movimiento, así que también se ve con "reducir animaciones" */
 html.recarga-animando .container {
-    transition: opacity var(--dur-anim) var(--ease-anim);
+    transition: opacity var(--dur-recarga, 350ms) var(--ease-anim);
 }
 
 html.recargando .container {
     opacity: 0;
 }
 
+/* Recarga programática (cambio de perfil, etc.): también se desvanece el modal que esté abierto */
+html.recargando .modal {
+    opacity: 0;
+    transition: opacity var(--dur-recarga, 350ms) var(--ease-anim);
+}
+
 html.entrada-pagina .container {
-    animation: fundidoEntrada var(--dur-slow) var(--ease-anim) both;
+    animation: fundidoEntrada var(--dur-recarga, 350ms) var(--ease-anim) both;
 }
 
 @keyframes fundidoEntrada {

@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
+import { Recarga } from '../core/recarga.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EstadoApp } from './estado-app.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
@@ -88,7 +89,7 @@ function cambiarPerfil(nuevoId) {
     guardarDatosPerfilActual();
     perfilActual = nuevoId;
     if (Almacenamiento.setItem(STORAGE_KEYS.PERFIL_ACTIVO, perfilActual)) {
-        location.reload();
+        Recarga.solicitar();
     }
 }
 

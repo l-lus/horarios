@@ -1,4 +1,4 @@
-import { Movimiento } from '../core/movimiento.js';
+import { Recarga } from '../core/recarga.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 
 // ====================================================================
@@ -9,13 +9,14 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 //   · mientras se tira, las tarjetas se van desvaneciendo (var --recarga-progreso)
 //   · al soltar pasado el umbral, terminan de desvanecerse y recién entonces se recarga
 //   · si se suelta antes del umbral, vuelven a aparecer
+// Cualquier otra recarga de la app (cambio de perfil, etc.) pasa por core/recarga.js y usa el mismo fundido.
 // Al cargar la página, las tarjetas aparecen con un fundido de entrada (entrar()).
 
 const UMBRAL_PX = 90;          // distancia (ya amortiguada) a partir de la cual se recarga
 const AMORTIGUACION = 0.5;     // el dedo recorre el doble que el progreso visual
 const MARGEN_INICIO_PX = 10;   // movimiento mínimo hacia abajo antes de reaccionar
 const MAX_ESPERA_GESTO_MS = 350; // un pulsado largo (arrastre de tarjetas) no es un gesto de recarga
-const ESPERA_RECARGA_MS = 260;
+const DURACION_FUNDIDO_MS = 350; // = --dur-recarga (base.css); es solo opacidad, por eso se mantiene aunque se reduzcan animaciones
 const CLASE_ANIMANDO = 'recarga-animando';
 const CLASE_RECARGANDO = 'recargando';
 const CLASE_ENTRADA = 'entrada-pagina';
@@ -93,7 +94,7 @@ async function _recargar() {
     if (_recargando) return;
     _recargando = true;
     raiz().classList.add(CLASE_ANIMANDO, CLASE_RECARGANDO);
-    await TiempoUtils.esperar(Movimiento.reducido() ? 0 : ESPERA_RECARGA_MS);
+    await TiempoUtils.esperar(DURACION_FUNDIDO_MS + 50);
     location.reload();
 }
 
@@ -109,6 +110,7 @@ function entrar() {
 function bindEventos() {
     if (_iniciado) return;
     _iniciado = true;
+    Recarga.definirManejador(_recargar); // cambio de perfil, restablecer, actualizar: todos recargan con fundido
     window.addEventListener('touchstart', _alTocar, { passive: true });
     window.addEventListener('touchmove', _alMover, { passive: true });
     window.addEventListener('touchend', _alSoltar, { passive: true });

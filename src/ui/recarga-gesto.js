@@ -1,5 +1,6 @@
 import { Recarga } from '../core/recarga.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
+import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 // RECARGA POR GESTO — "tirar para recargar" propio, con fundido de las tarjetas
@@ -16,7 +17,6 @@ const UMBRAL_PX = 90;          // distancia (ya amortiguada) a partir de la cual
 const AMORTIGUACION = 0.5;     // el dedo recorre el doble que el progreso visual
 const MARGEN_INICIO_PX = 10;   // movimiento mínimo hacia abajo antes de reaccionar
 const MAX_ESPERA_GESTO_MS = 350; // un pulsado largo (arrastre de tarjetas) no es un gesto de recarga
-const DURACION_FUNDIDO_MS = 350; // = --dur-recarga (base.css); es solo opacidad, por eso se mantiene aunque se reduzcan animaciones
 const CLASE_ANIMANDO = 'recarga-animando';
 const CLASE_RECARGANDO = 'recargando';
 const CLASE_ENTRADA = 'entrada-pagina';
@@ -94,7 +94,7 @@ async function _recargar() {
     if (_recargando) return;
     _recargando = true;
     raiz().classList.add(CLASE_ANIMANDO, CLASE_RECARGANDO);
-    await TiempoUtils.esperar(DURACION_FUNDIDO_MS + 50);
+    await TiempoUtils.esperar(Animaciones.DUR_RECARGA() + 50);
     location.reload();
 }
 

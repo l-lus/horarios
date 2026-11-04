@@ -69,7 +69,7 @@ html[data-motion="reduce"].cargando body::after {
 
 /* Duración propia (no --dur-anim): es solo un fundido, no movimiento, así que también se ve con "reducir animaciones" */
 html.recarga-animando .container {
-    transition: opacity var(--dur-recarga, 350ms) var(--ease-anim);
+    transition: opacity var(--dur-recarga) var(--ease-anim);
 }
 
 html.recargando .container {
@@ -79,7 +79,7 @@ html.recargando .container {
 /* Recarga programática (cambio de perfil, etc.): también se desvanece el modal que esté abierto */
 html.recargando .modal {
     opacity: 0;
-    transition: opacity var(--dur-recarga, 350ms) var(--ease-anim);
+    transition: opacity var(--dur-recarga) var(--ease-anim);
 }
 
 /* Los fantasmas de las animaciones de mutación (ver _fantasmaDe) cuelgan de <body>, fuera de .container, así que el fundido
@@ -92,7 +92,7 @@ html.recargando .modal {
 }
 
 html.recarga-animando .mutacion-saliente {
-    transition: filter var(--dur-recarga, 350ms) var(--ease-anim);
+    transition: filter var(--dur-recarga) var(--ease-anim);
 }
 
 html.recargando .mutacion-saliente {
@@ -100,7 +100,7 @@ html.recargando .mutacion-saliente {
 }
 
 html.entrada-pagina .container {
-    animation: fundidoEntrada var(--dur-entrada, 200ms) var(--ease-anim) both;
+    animation: fundidoEntrada var(--dur-entrada) var(--ease-anim) both;
 }
 
 @keyframes fundidoEntrada {

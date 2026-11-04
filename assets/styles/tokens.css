@@ -82,6 +82,8 @@
     --dur-fichaje-ok: 1800ms;
     --dur-fichaje-salida: 220ms;
     --dur-fichaje-vuelta: 200ms;
+    --dur-recarga: 150ms;   /* fundido de salida al recargar (solo opacidad: se mantiene con "reducir animaciones") */
+    --dur-entrada: 150ms;   /* fundido de entrada de la página al abrirla */
     --ease-anim: ease;
     --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-conteo: cubic-bezier(0.215, 0.61, 0.355, 1);

@@ -27,6 +27,7 @@ const DUR_ANIM = () => _getCSSdur('--dur-anim');
 const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
 const DUR_FICHAJE_OK = () => _getCSSdur('--dur-fichaje-ok');
 const DUR_FICHAJE_SALIDA = () => _getCSSdur('--dur-fichaje-salida');
+const DUR_RECARGA = () => _getCSSdur('--dur-recarga');
 
 function _fantasmaDe(el) {
     const rect = el.getBoundingClientRect();
@@ -380,6 +381,7 @@ export const Animaciones = {
     DUR_CALENDARIO,
     DUR_FICHAJE_OK,
     DUR_FICHAJE_SALIDA,
+    DUR_RECARGA,
     _aArray,
     _estaColapsado,
     _esperarAnim,

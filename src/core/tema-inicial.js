@@ -50,3 +50,11 @@ var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-
         document.documentElement.setAttribute('data-motion', reducir ? 'reduce' : 'full');
     } catch (e) { }
 }());
+
+// Pantalla de carga: oculta el HTML estático (CSS: html.cargando) hasta que main.js lo quita al terminar de iniciar la UI.
+// Red de seguridad: si el módulo falla o tarda demasiado, se muestra la página igual.
+(function () {
+    var html = document.documentElement;
+    html.classList.add('cargando');
+    setTimeout(function () { html.classList.remove('cargando'); }, 8000);
+}());

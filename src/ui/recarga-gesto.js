@@ -95,7 +95,7 @@ function _recargar() {
     location.reload();
 }
 
-/** Fundido de entrada de las tarjetas al abrir la página (se llama apenas arranca la UI). */
+/** Fundido de entrada de las tarjetas al terminar la pantalla de carga (se llama justo al quitar html.cargando). */
 function entrar() {
     const html = raiz();
     html.classList.add(CLASE_ENTRADA);

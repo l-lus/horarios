@@ -99,17 +99,11 @@ html.recargando .modal {
     transition: opacity var(--dur-recarga, 350ms) var(--ease-anim);
 }
 
-/* Los fantasmas de las animaciones de mutación (ver _fantasmaDe) cuelgan de <body>, fuera de .container: si la recarga
-   arranca en medio de una mutación (p. ej. el ciclo entrada/salida de la tarjeta de estado) se quedaban visibles, sueltos, sobre el spinner */
-html.recargando .mutacion-saliente,
-html.recargando .mutacion-entrante {
-    animation: fundidoSalidaRecarga var(--dur-recarga, 350ms) var(--ease-anim) forwards !important;
-}
-
-@keyframes fundidoSalidaRecarga {
-    to {
-        opacity: 0;
-    }
+/* Los fantasmas de las animaciones de mutación (ver _fantasmaDe) cuelgan de <body>, fuera de .container, así que el fundido
+   no los alcanza: si la recarga arranca en medio de una mutación (p. ej. el ciclo entrada/salida de la tarjeta de estado)
+   quedaban sueltos sobre el spinner. Se ocultan de golpe: no se puede reiniciarles la animación (reaparecerían con opacidad 1). */
+html.recargando .mutacion-saliente {
+    display: none;
 }
 
 html.entrada-pagina .container {

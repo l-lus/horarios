@@ -53,11 +53,8 @@ if (document.readyState === 'loading') {
     _iniciarEventosDOM();
 }
 
-// UI iniciada: se quita la pantalla de carga (ver html.cargando en base.css y tema-inicial.js)
-requestAnimationFrame(() => {
-    document.documentElement.classList.remove('cargando');
-    RecargaGesto.entrar();
-});
+// UI iniciada: fundido de entrada de las tarjetas (ver html.entrada-pagina en base.css)
+requestAnimationFrame(() => RecargaGesto.entrar());
 
 (async () => {
     await BienvenidaModal.chequearYMostrar();

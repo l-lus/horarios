@@ -30,14 +30,7 @@ body {
     overflow-y: auto;
 }
 
-/* ─── PANTALLA DE CARGA ──────────────────────────────────────────────────────── */
-/* tema-inicial.js marca <html class="cargando"> antes del primer pintado; main.js la quita cuando la UI está lista.
-   Así no se ven las tarjetas "muertas" (HTML estático) mientras el módulo todavía no corrió. */
-html.cargando body>* {
-    visibility: hidden;
-}
-
-html.cargando body::after,
+/* ─── SPINNER DE RECARGA ─────────────────────────────────────────────────────── */
 html.recargando body::after {
     content: '';
     position: fixed;
@@ -49,12 +42,6 @@ html.recargando body::after {
     border: 3px solid var(--border);
     border-top-color: var(--text-muted);
     border-radius: 50%;
-    animation: girarCarga .8s linear infinite;
-}
-
-html[data-motion="reduce"].cargando body::after,
-html[data-motion="reduce"].recargando body::after {
-    animation: none;
 }
 
 /* Al recargar, el spinner aparece en cuanto empieza el fundido de las tarjetas */

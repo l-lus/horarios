@@ -102,6 +102,16 @@ html.recargando .modal {
 /* Los fantasmas de las animaciones de mutación (ver _fantasmaDe) cuelgan de <body>, fuera de .container, así que el fundido
    no los alcanza: si la recarga arranca en medio de una mutación (p. ej. el ciclo entrada/salida de la tarjeta de estado)
    quedaban sueltos sobre el spinner. Se ocultan de golpe: no se puede reiniciarles la animación (reaparecerían con opacidad 1). */
+/* Mientras se tira con el dedo (todavía sin soltar) el fantasma tampoco puede verse a opacidad plena sobre las tarjetas
+   atenuadas: parecía un semi-overlay. Se atenúa con `filter` (la opacidad ya la maneja su animación) igual que .container */
+.mutacion-saliente {
+    filter: opacity(calc(1 - var(--recarga-progreso, 0) * 0.65));
+}
+
+html.recarga-animando .mutacion-saliente {
+    transition: filter var(--dur-recarga, 350ms) var(--ease-anim);
+}
+
 html.recargando .mutacion-saliente {
     display: none;
 }

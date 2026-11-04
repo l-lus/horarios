@@ -37,7 +37,8 @@ html.cargando body>* {
     visibility: hidden;
 }
 
-html.cargando body::after {
+html.cargando body::after,
+html.recargando body::after {
     content: '';
     position: fixed;
     top: 50%;
@@ -51,8 +52,24 @@ html.cargando body::after {
     animation: girarCarga .8s linear infinite;
 }
 
-html[data-motion="reduce"].cargando body::after {
+html[data-motion="reduce"].cargando body::after,
+html[data-motion="reduce"].recargando body::after {
     animation: none;
+}
+
+/* Al recargar, el spinner aparece en cuanto empieza el fundido de las tarjetas */
+html.recargando body::after {
+    animation: girarCarga .8s linear infinite, aparecerCarga var(--dur-recarga, 350ms) var(--ease-anim) both;
+}
+
+html[data-motion="reduce"].recargando body::after {
+    animation: aparecerCarga var(--dur-recarga, 350ms) var(--ease-anim) both;
+}
+
+@keyframes aparecerCarga {
+    from {
+        opacity: 0;
+    }
 }
 
 @keyframes girarCarga {

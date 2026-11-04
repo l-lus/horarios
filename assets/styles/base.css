@@ -100,7 +100,7 @@ html.recargando .mutacion-saliente {
 }
 
 html.entrada-pagina .container {
-    animation: fundidoEntrada var(--dur-recarga, 350ms) var(--ease-anim) both;
+    animation: fundidoEntrada var(--dur-entrada, 200ms) var(--ease-anim) both;
 }
 
 @keyframes fundidoEntrada {

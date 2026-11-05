@@ -68,8 +68,9 @@ function _ponerDescripcion(et, textos, holgura) {
     _aplicarDescripcion(et, _elegirDescripcion(et, textos, holgura));
 }
 
-// Otro lugar para el foco: si la descripción no entra ni abreviada en el lado natural (a la izquierda de la marca), mientras dura el foco la etiqueta pasa
-// al lugar alternativo donde mejor entre (ver `opcionesColocacion`: a la derecha del conector o centrada sobre el final de la diagonal) y al terminar vuelve a su lugar.
+// Otro lugar para el foco: si la descripción no entra completa a la izquierda de la hora (lado natural), mientras dura el foco se despliega hacia la derecha sin mover nada
+// y, si ni abreviada entra a la izquierda, la etiqueta pasa al lugar alternativo donde mejor entre (ver `opcionesColocacion`: a la derecha del conector o centrada
+// sobre el final de la diagonal). Al terminar todo vuelve a su lugar.
 // `_vuelcos` guarda por etiqueta ambos estados ya resueltos al medir; `volcar` solo los intercambia.
 const _NIVELES = { ninguna: 0, corta: 1, larga: 2 };
 /** @typedef {{ left: string, desc: any, tickEspejado?: boolean }} EstadoVuelco */
@@ -79,10 +80,11 @@ const _vuelcos = new WeakMap();
 function _prepararVuelco(et, tick, textos, opciones, descNatural) {
     clearTimeout(_vuelcos.get(et)?.timer);
     _vuelcos.delete(et);
-    if (!descNatural || descNatural.nivel !== 'ninguna' || et.classList.contains('linea-etiqueta--espejada')) return;
-    // se queda con la alternativa que mejor versión de la descripción permite (a igual versión, la primera); solo vale si mejora la natural
+    if (!descNatural || descNatural.nivel === 'larga' || et.classList.contains('linea-etiqueta--espejada')) return;
+    // se queda con la alternativa que mejor versión de la descripción permite (a igual versión, la primera); solo vale si mejora la natural.
+    // La que no mueve nada (`derecha`) vale siempre; las que mueven la etiqueta, solo si en su lugar natural no entra ni la versión abreviada
     let mejor = null;
-    opciones.forEach(o => {
+    opciones.filter(o => o.tipo === 'derecha' || descNatural.nivel === 'ninguna').forEach(o => {
         const desc = _elegirDescripcion(et, textos, o.holgura);
         if (desc && _NIVELES[desc.nivel] > _NIVELES[mejor?.desc.nivel ?? descNatural.nivel]) mejor = { left: `${o.left}px`, desc, tickEspejado: o.tickEspejado };
     });
@@ -140,17 +142,21 @@ function _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSa
     const descSalida = _elegirDescripcion(etSalida, textosSalida,
         hacia(etSalida, espejadaSalida, 0));
     _aplicarDescripcion(etSalida, descSalida);
-    // abierta, alternativas con la marca; cerrada no hay conector y la hora no se mueve: la descripción solo puede desplegarse a su derecha
+    // cerrada no hay conector y la hora no se mueve: la descripción solo puede desplegarse a su derecha; abierta, además hay alternativas que mueven la etiqueta
+    const derechaSalida = opcionDerechaSinConector(izq(etSalida), etSalida.offsetWidth, ancho);
     _prepararVuelco(etSalida, tickSalida, textosSalida, L.cerrado
-        ? [opcionDerechaSinConector(izq(etSalida), etSalida.offsetWidth, ancho)]
-        : opcionesColocacion(parseFloat(tickSalida.style.left) / 100 * ancho, etSalida.offsetWidth, ancho), descSalida);
+        ? [derechaSalida]
+        : [derechaSalida, ...opcionesColocacion(parseFloat(tickSalida.style.left) / 100 * ancho, etSalida.offsetWidth, ancho)], descSalida);
     if (L.hayBanda) {
         /** @type {[string, string]} */
         const textosBuffer = ['Con banco de horas', 'Con banco'];
         const descBuffer = _elegirDescripcion(etBuffer, textosBuffer,
             hacia(etBuffer, tickBuffer.classList.contains('espejado'), 0));
         _aplicarDescripcion(etBuffer, descBuffer);
-        _prepararVuelco(etBuffer, tickBuffer, textosBuffer, opcionesColocacion(parseFloat(tickBuffer.style.left) / 100 * ancho, etBuffer.offsetWidth, ancho), descBuffer);
+        _prepararVuelco(etBuffer, tickBuffer, textosBuffer, [
+            opcionDerechaSinConector(izq(etBuffer), etBuffer.offsetWidth, ancho),
+            ...opcionesColocacion(parseFloat(tickBuffer.style.left) / 100 * ancho, etBuffer.offsetWidth, ancho)
+        ], descBuffer);
     } else {
         _vuelcos.delete(etBuffer);
     }

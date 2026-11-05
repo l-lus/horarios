@@ -155,7 +155,8 @@ export function opcionesColocacion(x, w, ancho) {
 }
 
 /**
- * Alternativa para una etiqueta sin conector (registro cerrado: la hora queda centrada bajo el remate y no se mueve): la descripción se despliega hacia la derecha.
+ * Alternativa que no mueve nada: la hora y su marca quedan donde están y solo la descripción se despliega hacia la derecha (la etiqueta cuelga a la izquierda del conector
+ * y la descripción lo cruza). Es la única posible en el registro cerrado, donde la hora queda centrada bajo el remate y no tiene conector.
  * Mismo formato que `opcionesColocacion`.
  * @param {number} left borde izquierdo de la etiqueta
  * @param {number} w

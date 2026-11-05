@@ -7,8 +7,10 @@ import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 //              UI CLOCK-IN CARD STATS CYCLE (#stats-semana)
 // ====================================================================
 // Ciclo de textos del número grande de la tarjeta en la vista diaria: horas → "Entrada 08:30" → "Tiempo fuera 25m"
-// → "Salida 17:00" (registro cerrado) → horas. Con el registro abierto, la salida estimada y la salida con banco no cambian el texto (queda el de las horas):
-// solo resaltan su hito en la barra (`soloHito`), que lleva la descripción. Cada 2 s (las fases con hito sobre la barra, un poco más). tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
+// → "Salida 17:00" (registro cerrado) → horas. Con el hint integrado (`hitosEnBarra`) la barra ya muestra la entrada, la salida y, con el registro abierto,
+// la salida estimada y la salida con banco, cada una con su descripción: esas fases no cambian el texto (queda el de las horas) y solo resaltan su hito.
+// El tiempo fuera no tiene hito en la barra y siempre se muestra como texto. Sin el hint integrado, entrada y salida se muestran como texto.
+// Cada 2 s (las fases con hito sobre la barra, un poco más). tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
 // Cada vez que cambia la fase avisa su tipo (o null al terminar) a quien se registre con `alCambiarFase`: así la barra resalta el hito correspondiente
 // sin que este módulo conozca el DOM de la barra.
 const { _animarMutacion } = Animaciones;
@@ -23,6 +25,7 @@ let _cicloStatsSalida = '';
 let _cicloStatsSalidaEstimada = '';
 let _cicloStatsSalidaBanco = '';
 let _cicloStatsTiempoFuera = '';
+let _cicloStatsHitosEnBarra = false;
 let _cicloStatsFaseAlRenderizar = null;
 /** @type {((tipo: string | null) => void) | null} */
 let _alCambiarFase = null;
@@ -48,25 +51,34 @@ function _prepararMostrarFaseAlRenderizar(tipo) {
     _cicloStatsFaseAlRenderizar = tipo;
 }
 
+/**
+ * Fase de un hito de la barra: con el hint integrado deja el texto de las horas y se queda más tiempo (se despliega la descripción);
+ * sin él muestra `texto`.
+ * @param {string} tipo
+ * @param {() => string} texto
+ * @returns {FaseCiclo}
+ */
+function _faseHito(tipo, texto) {
+    return _cicloStatsHitosEnBarra
+        ? { tipo, ms: _CICLO_DURACION_HITO_MS, texto: () => _cicloStatsValorHoras }
+        : { tipo, texto };
+}
+
 /** @returns {FaseCiclo[]} */
 function _fasesCiclo() {
     /** @type {FaseCiclo[]} */
     const fases = [
         { tipo: 'horas', texto: () => _cicloStatsValorHoras },
-        { tipo: 'entrada', texto: () => `Entrada ${_cicloStatsEntrada}` },
+        _faseHito('entrada', () => `Entrada ${_cicloStatsEntrada}`),
     ];
     if (_cicloStatsTiempoFuera) {
         fases.push({ tipo: 'tiempoFuera', texto: () => `Tiempo fuera ${_formatearMinutosCorto(TiempoUtils.horaAMinutos(_cicloStatsTiempoFuera))}` });
     }
     if (_cicloStatsSalida) {
-        fases.push({ tipo: 'salida', texto: () => `Salida ${_cicloStatsSalida}` });
+        fases.push(_faseHito('salida', () => `Salida ${_cicloStatsSalida}`));
     }
-    if (_cicloStatsSalidaEstimada) {
-        fases.push({ tipo: 'salidaEstimada', ms: _CICLO_DURACION_HITO_MS, texto: () => _cicloStatsValorHoras });
-    }
-    if (_cicloStatsSalidaBanco) {
-        fases.push({ tipo: 'banco', ms: _CICLO_DURACION_HITO_MS, texto: () => _cicloStatsValorHoras });
-    }
+    if (_cicloStatsSalidaEstimada) fases.push(_faseHito('salidaEstimada', () => ''));
+    if (_cicloStatsSalidaBanco) fases.push(_faseHito('banco', () => ''));
     return fases;
 }
 
@@ -128,13 +140,14 @@ function _iniciarCicloEnFase(tipo) {
 }
 
 /** Datos del registro de hoy que muestran las fases (strings vacíos si no corresponde). */
-function _actualizarDatos({ valorHoras, entrada, salida, tiempoFuera, salidaEstimada = '', salidaBanco = '' }) {
+function _actualizarDatos({ valorHoras, entrada, salida, tiempoFuera, salidaEstimada = '', salidaBanco = '', hitosEnBarra = false }) {
     _cicloStatsValorHoras = valorHoras;
     _cicloStatsEntrada = entrada;
     _cicloStatsSalida = salida;
     _cicloStatsTiempoFuera = tiempoFuera;
     _cicloStatsSalidaEstimada = salidaEstimada;
     _cicloStatsSalidaBanco = salidaBanco;
+    _cicloStatsHitosEnBarra = hitosEnBarra;
 }
 
 /** Fase pedida para el próximo render (tras fichar), o null; la consume. */

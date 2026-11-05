@@ -135,3 +135,32 @@ export function nivelDescripcion(holgura, anchoLarga, anchoCorta = Infinity) {
 export function primeroQueEntra(opciones, libre, medir) {
     return opciones.find(texto => medir(texto) <= libre) ?? opciones[opciones.length - 1];
 }
+
+/**
+ * Lugares alternativos de una etiqueta de ancho `w` colgada de la marca en `x` para cuando su descripción no entra en el natural (a la izquierda del conector):
+ * `volcada` (a la derecha del conector, con la marca espejada) y `centrada` (la etiqueta centrada sobre el final de la línea diagonal, que deja la marca como está).
+ * Ambas despliegan la descripción hacia la derecha, y `holgura` es lo que queda hasta el final de la pista (más `MARGEN_DESCRIPCION_DERECHA`).
+ * Se descartan las que dejarían la etiqueta fuera del comienzo de la pista. Solo cuenta el espacio de la pista: las otras etiquetas están atenuadas durante el foco y se pueden tapar.
+ * @param {number} x
+ * @param {number} w
+ * @param {number} ancho ancho de la pista
+ * @returns {{ tipo: 'volcada' | 'centrada', left: number, tickEspejado: boolean, holgura: number }[]}
+ */
+export function opcionesColocacion(x, w, ancho) {
+    const limite = ancho + MARGEN_DESCRIPCION_DERECHA;
+    return [
+        { tipo: /** @type {const} */ ('volcada'), left: leftEspejado(x), tickEspejado: true },
+        { tipo: /** @type {const} */ ('centrada'), left: x - ANCHO_CONECTOR - w / 2, tickEspejado: false }
+    ].filter(o => o.left >= 0).map(o => ({ ...o, holgura: holguraDescripcion('derecha', o.left + w, limite) }));
+}
+
+/**
+ * Alternativa para una etiqueta sin conector (registro cerrado: la hora queda centrada bajo el remate y no se mueve): la descripción se despliega hacia la derecha.
+ * Mismo formato que `opcionesColocacion`.
+ * @param {number} left borde izquierdo de la etiqueta
+ * @param {number} w
+ * @param {number} ancho ancho de la pista
+ */
+export function opcionDerechaSinConector(left, w, ancho) {
+    return { tipo: /** @type {const} */ ('derecha'), left, tickEspejado: false, holgura: holguraDescripcion('derecha', left + w, ancho + MARGEN_DESCRIPCION_DERECHA) };
+}

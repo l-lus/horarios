@@ -505,7 +505,7 @@
     transition: left var(--dur-slow) var(--ease-conteo), right var(--dur-slow) var(--ease-conteo), opacity var(--dur-anim) ease;
 }
 
-.linea-etiqueta.foco { color: var(--text-main); }
+.linea-etiqueta.foco { color: var(--text-main); z-index: 2; }   /* por encima de las vecinas atenuadas, que puede tapar */
 .linea-etiqueta--arriba.foco { color: var(--foco-color); }
 
 .linea-etiqueta.foco::after {

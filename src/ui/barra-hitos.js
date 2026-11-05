@@ -1,7 +1,7 @@
 import { $ } from '../core/dom.js';
 import {
-    geometriaConector, geometriaDiagonal, leftEspejado, repartirLados, entradaDebeSubir,
-    holguraDescripcion, nivelDescripcion, MARGEN_HORAS, MARGEN_DESCRIPCION_DERECHA
+    geometriaConector, geometriaDiagonal, opcionesColocacion, opcionDerechaSinConector, repartirLados, entradaDebeSubir,
+    holguraDescripcion, nivelDescripcion, MARGEN_DESCRIPCION_DERECHA
 } from '../core/geometria-etiquetas.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { Animaciones } from './animaciones.js';
@@ -68,50 +68,67 @@ function _ponerDescripcion(et, textos, holgura) {
     _aplicarDescripcion(et, _elegirDescripcion(et, textos, holgura));
 }
 
-// Vuelco del foco: si la descripción no entra a la izquierda de la marca (nivel "ninguna") pero a la derecha sobra lugar, mientras dura el foco
-// la etiqueta pasa al lado derecho del conector (marca y etiqueta espejadas) y al terminar vuelve a su lugar natural.
+// Otro lugar para el foco: si la descripción no entra completa en el lado natural (a la izquierda de la marca), mientras dura el foco la etiqueta pasa
+// al lugar alternativo donde mejor entre (ver `opcionesColocacion`: a la derecha del conector o centrada sobre el final de la diagonal) y al terminar vuelve a su lugar.
 // `_vuelcos` guarda por etiqueta ambos estados ya resueltos al medir; `volcar` solo los intercambia.
-/** @type {WeakMap<HTMLElement, { tick: HTMLElement, natural: { left: string, desc: any }, volcado: { left: string, desc: any }, activo: boolean }>} */
+const _NIVELES = { ninguna: 0, corta: 1, larga: 2 };
+/** @typedef {{ left: string, desc: any, tickEspejado?: boolean }} EstadoVuelco */
+/** @type {WeakMap<HTMLElement, { tick: HTMLElement, natural: EstadoVuelco, volcado: EstadoVuelco, activo: boolean, timer?: ReturnType<typeof setTimeout> }>} */
 const _vuelcos = new WeakMap();
 
-function _prepararVuelco(et, tick, textos, x, ancho, descNatural) {
+function _prepararVuelco(et, tick, textos, opciones, descNatural) {
+    clearTimeout(_vuelcos.get(et)?.timer);
     _vuelcos.delete(et);
-    if (!descNatural || descNatural.nivel !== 'ninguna' || tick.classList.contains('espejado')) return;
-    const left = leftEspejado(x);
-    const desc = _elegirDescripcion(et, textos, holguraDescripcion('derecha', left + et.offsetWidth, ancho + MARGEN_DESCRIPCION_DERECHA));
+    if (!descNatural || descNatural.nivel === 'larga' || et.classList.contains('linea-etiqueta--espejada')) return;
+    // se queda con la alternativa que mejor versión de la descripción permite (a igual versión, la primera); solo vale si mejora la natural
+    let mejor = null;
+    opciones.forEach(o => {
+        const desc = _elegirDescripcion(et, textos, o.holgura);
+        if (desc && _NIVELES[desc.nivel] > _NIVELES[mejor?.desc.nivel ?? descNatural.nivel]) mejor = { left: `${o.left}px`, desc, tickEspejado: o.tickEspejado };
+    });
     _aplicarDescripcion(et, descNatural);   // _elegirDescripcion deja puesto el texto de la última medición
-    if (!desc || desc.nivel === 'ninguna') return;
-    _vuelcos.set(et, { tick, natural: { left: et.style.left, desc: descNatural }, volcado: { left: `${left}px`, desc }, activo: false });
+    if (mejor) _vuelcos.set(et, { tick, natural: { left: et.style.left, desc: descNatural }, volcado: mejor, activo: false });
 }
 
 /**
- * Pasa la etiqueta al lado derecho de su marca (`activo`) o la devuelve a su lugar natural; sin vuelco posible no hace nada.
+ * Pasa la etiqueta a su lugar alternativo (`activo`) o la devuelve al natural; sin alternativa mejor no hace nada.
  * @param {HTMLElement} et
  * @param {boolean} activo
  */
 function volcar(et, activo) {
     const v = _vuelcos.get(et);
-    if (!v || v.activo === activo) return;
-    v.activo = activo;
-    const estado = activo ? v.volcado : v.natural;
-    et.style.left = estado.left;
-    v.tick.classList.toggle('espejado', activo);
-    et.classList.toggle('linea-etiqueta--espejada', activo);
-    _aplicarDescripcion(et, estado.desc);
+    if (!v) return;
+    clearTimeout(v.timer);
+    if (v.activo === activo) return;
+    const aplicar = () => {
+        v.activo = activo;
+        const estado = activo ? v.volcado : v.natural;
+        et.style.left = estado.left;
+        v.tick.classList.toggle('espejado', activo && !!v.volcado.tickEspejado);
+        et.classList.toggle('linea-etiqueta--espejada', activo);
+        _aplicarDescripcion(et, estado.desc);
+    };
+    if (activo) { aplicar(); return; }
+    // al volver, la píldora y la descripción primero se pliegan donde estaban; recién entonces la etiqueta cambia de lado y de lugar
+    // (si no, la descripción salta de lado al instante y la píldora, que sigue animándose, queda desacoplada del texto)
+    v.timer = setTimeout(aplicar, _msPlegado(et));
 }
 
-// La descripción de cada hora se despliega hacia la izquierda (hacia la derecha si la marca está espejada; la entrada, que está pegada al comienzo, siempre a la derecha)
-// y no puede pisar a otra etiqueta del mismo lado: la de entrada abajo a la izquierda, la de salida abajo y la del buffer arriba (la entrada va arriba si la salida la pisa).
-function _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSalida, tickBuffer, entradaArriba }) {
+// Lo que tarda en apagarse la píldora del foco (casi 0 con el movimiento reducido, que deja las transiciones en 1 ms)
+function _msPlegado(et) {
+    const [dur] = getComputedStyle(et, '::after').transitionDuration.split(',');
+    return Math.ceil((parseFloat(dur) || 0) * 1000) + 30;
+}
+
+// La descripción de cada hora se despliega hacia la izquierda (hacia la derecha si la marca está espejada; la entrada, que está pegada al comienzo, siempre a la derecha).
+// Solo cuenta el espacio de la pista: mientras una hora está enfocada las demás están atenuadas, así que su píldora puede tapar a las vecinas.
+function _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSalida, tickBuffer }) {
     const izq = et => parseFloat(et.style.left) || 0;
     const finEntrada = izq(etEntrada) + etEntrada.offsetWidth;
     const limiteDerecho = ancho + MARGEN_DESCRIPCION_DERECHA;
-    const salidaIzq = izq(etSalida);
-    const bufferIzq = L.hayBanda ? izq(etBuffer) : null;
 
     // entrada: hacia la derecha hasta la primera etiqueta de su lado
-    const vecino = entradaArriba ? (bufferIzq !== null ? bufferIzq - MARGEN_HORAS : limiteDerecho) : salidaIzq - MARGEN_HORAS;
-    _ponerDescripcion(etEntrada, ['Entrada', 'Entrada'], holguraDescripcion('derecha', finEntrada, vecino));
+    _ponerDescripcion(etEntrada, ['Entrada', 'Entrada'], holguraDescripcion('derecha', finEntrada, limiteDerecho));
 
     // salida y buffer: a la izquierda hasta la entrada (si está de su lado) o el comienzo; espejadas, a la derecha hasta el final de la pista
     const hacia = (et, espejada, limiteIzquierdo) => espejada
@@ -121,16 +138,19 @@ function _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSa
     /** @type {[string, string]} */
     const textosSalida = L.cerrado ? ['Salida', 'Salida'] : ['Salida estimada', 'Estim.'];
     const descSalida = _elegirDescripcion(etSalida, textosSalida,
-        hacia(etSalida, espejadaSalida, entradaArriba ? 0 : finEntrada + MARGEN_HORAS));
+        hacia(etSalida, espejadaSalida, 0));
     _aplicarDescripcion(etSalida, descSalida);
-    if (!L.cerrado) _prepararVuelco(etSalida, tickSalida, textosSalida, parseFloat(tickSalida.style.left) / 100 * ancho, ancho, descSalida);
+    // abierta, alternativas con la marca; cerrada no hay conector y la hora no se mueve: la descripción solo puede desplegarse a su derecha
+    _prepararVuelco(etSalida, tickSalida, textosSalida, L.cerrado
+        ? [opcionDerechaSinConector(izq(etSalida), etSalida.offsetWidth, ancho)]
+        : opcionesColocacion(parseFloat(tickSalida.style.left) / 100 * ancho, etSalida.offsetWidth, ancho), descSalida);
     if (L.hayBanda) {
         /** @type {[string, string]} */
         const textosBuffer = ['Con banco de horas', 'Con banco'];
         const descBuffer = _elegirDescripcion(etBuffer, textosBuffer,
-            hacia(etBuffer, tickBuffer.classList.contains('espejado'), entradaArriba ? finEntrada + MARGEN_HORAS : 0));
+            hacia(etBuffer, tickBuffer.classList.contains('espejado'), 0));
         _aplicarDescripcion(etBuffer, descBuffer);
-        _prepararVuelco(etBuffer, tickBuffer, textosBuffer, parseFloat(tickBuffer.style.left) / 100 * ancho, ancho, descBuffer);
+        _prepararVuelco(etBuffer, tickBuffer, textosBuffer, opcionesColocacion(parseFloat(tickBuffer.style.left) / 100 * ancho, etBuffer.offsetWidth, ancho), descBuffer);
     } else {
         _vuelcos.delete(etBuffer);
     }
@@ -219,7 +239,7 @@ function _renderLinea(vista, pista, fill) {
     });
     _ponerEntradaArriba(etEntrada, entradaArriba);
     // sin ancho medido (pista oculta) no hay con qué decidir qué versión de la descripción entra
-    if (ancho > 0) _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSalida, tickBuffer, entradaArriba });
+    if (ancho > 0) _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSalida, tickBuffer });
     // un re-render con el foco activo recalcula todo en su lugar natural: se vuelve a volcar lo que corresponda
     if (ancho > 0) [etSalida, etBuffer].forEach(et => { if (et.classList.contains('foco')) volcar(et, true); });
 

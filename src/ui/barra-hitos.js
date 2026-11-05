@@ -68,7 +68,7 @@ function _ponerDescripcion(et, textos, holgura) {
     _aplicarDescripcion(et, _elegirDescripcion(et, textos, holgura));
 }
 
-// Otro lugar para el foco: si la descripción no entra completa en el lado natural (a la izquierda de la marca), mientras dura el foco la etiqueta pasa
+// Otro lugar para el foco: si la descripción no entra ni abreviada en el lado natural (a la izquierda de la marca), mientras dura el foco la etiqueta pasa
 // al lugar alternativo donde mejor entre (ver `opcionesColocacion`: a la derecha del conector o centrada sobre el final de la diagonal) y al terminar vuelve a su lugar.
 // `_vuelcos` guarda por etiqueta ambos estados ya resueltos al medir; `volcar` solo los intercambia.
 const _NIVELES = { ninguna: 0, corta: 1, larga: 2 };
@@ -79,7 +79,7 @@ const _vuelcos = new WeakMap();
 function _prepararVuelco(et, tick, textos, opciones, descNatural) {
     clearTimeout(_vuelcos.get(et)?.timer);
     _vuelcos.delete(et);
-    if (!descNatural || descNatural.nivel === 'larga' || et.classList.contains('linea-etiqueta--espejada')) return;
+    if (!descNatural || descNatural.nivel !== 'ninguna' || et.classList.contains('linea-etiqueta--espejada')) return;
     // se queda con la alternativa que mejor versión de la descripción permite (a igual versión, la primera); solo vale si mejora la natural
     let mejor = null;
     opciones.forEach(o => {

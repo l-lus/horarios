@@ -12,6 +12,14 @@ export const ANCHO_PASO_DIAGONAL = 24;   // ancho de pista que ocupa cada sigla 
 const MEDIO_ANCHO_MARCA = 3;
 
 /**
+ * `left` de una etiqueta colgada de la marca en `x` cuando va espejada a la derecha del conector.
+ * @param {number} x
+ */
+export function leftEspejado(x) {
+    return x + ANCHO_CONECTOR + SEPARACION_ETIQUETA;
+}
+
+/**
  * Posición de una etiqueta de ancho `w` colgada de una marca ubicada en `x` (px desde el borde izquierdo de la pista).
  * `left` es donde va la etiqueta; `desde`/`hasta` es el tramo horizontal que ocupa el conector con su etiqueta
  * (más `margen / 2` a cada lado de la etiqueta), para detectar choques con otras marcas del mismo lado.
@@ -21,7 +29,7 @@ const MEDIO_ANCHO_MARCA = 3;
  */
 export function geometriaConector(x, w, margen = 0) {
     const espejado = x - ANCHO_CONECTOR - SEPARACION_ETIQUETA - w < 0;
-    const left = espejado ? x + ANCHO_CONECTOR + SEPARACION_ETIQUETA : x - ANCHO_CONECTOR - SEPARACION_ETIQUETA - w;
+    const left = espejado ? leftEspejado(x) : x - ANCHO_CONECTOR - SEPARACION_ETIQUETA - w;
     return {
         espejado,
         left,

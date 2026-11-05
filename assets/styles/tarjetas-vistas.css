@@ -530,7 +530,7 @@
 }
 
 .linea-tick {
-    transition: left var(--dur-slow), opacity var(--dur-fast) ease, filter var(--dur-anim) ease;
+    transition: left var(--dur-slow), transform var(--dur-slow) var(--ease-conteo), opacity var(--dur-fast) ease, filter var(--dur-anim) ease;
 }
 
 /* Pulso del punto enfocado: anillo centrado en el punto de anclaje (24, -3) del svg de la marca; en los remates, un anillo alrededor */

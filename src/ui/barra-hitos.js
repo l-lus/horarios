@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import {
-    geometriaConector, geometriaDiagonal, repartirLados, entradaDebeSubir,
+    geometriaConector, geometriaDiagonal, leftEspejado, repartirLados, entradaDebeSubir,
     holguraDescripcion, nivelDescripcion, MARGEN_HORAS, MARGEN_DESCRIPCION_DERECHA
 } from '../core/geometria-etiquetas.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
@@ -42,16 +42,62 @@ const _horaDe = et => /** @type {HTMLElement} */ (et.querySelector('.linea-et-ho
 
 // Elige la versión de la descripción que entra en el lugar libre (completa, abreviada o ninguna) y deja en la etiqueta lo que necesita el CSS:
 // el texto, data-desc y el ancho que ocupa desplegada (--desc-ancho). Sin descripción (ninguna) la píldora del foco queda solo alrededor de la hora.
-function _ponerDescripcion(et, [larga, corta], holgura) {
+function _elegirDescripcion(et, [larga, corta], holgura) {
     const desc = et.querySelector('.linea-et-desc');
-    if (!desc) return;
+    if (!desc) return null;
     const medir = texto => { desc.textContent = texto; return desc.scrollWidth + 1; };
     const anchoLarga = medir(larga);
     const anchoCorta = corta === larga ? Infinity : medir(corta);
     const nivel = nivelDescripcion(holgura, anchoLarga, anchoCorta);
-    desc.textContent = nivel === 'corta' ? corta : larga;
-    et.dataset.desc = nivel;
-    et.style.setProperty('--desc-ancho', `${nivel === 'larga' ? anchoLarga : nivel === 'corta' ? anchoCorta : 0}px`);
+    return {
+        nivel,
+        texto: nivel === 'corta' ? corta : larga,
+        ancho: nivel === 'larga' ? anchoLarga : nivel === 'corta' ? anchoCorta : 0
+    };
+}
+
+function _aplicarDescripcion(et, d) {
+    const desc = et.querySelector('.linea-et-desc');
+    if (!desc || !d) return;
+    desc.textContent = d.texto;
+    et.dataset.desc = d.nivel;
+    et.style.setProperty('--desc-ancho', `${d.ancho}px`);
+}
+
+function _ponerDescripcion(et, textos, holgura) {
+    _aplicarDescripcion(et, _elegirDescripcion(et, textos, holgura));
+}
+
+// Vuelco del foco: si la descripción no entra a la izquierda de la marca (nivel "ninguna") pero a la derecha sobra lugar, mientras dura el foco
+// la etiqueta pasa al lado derecho del conector (marca y etiqueta espejadas) y al terminar vuelve a su lugar natural.
+// `_vuelcos` guarda por etiqueta ambos estados ya resueltos al medir; `volcar` solo los intercambia.
+/** @type {WeakMap<HTMLElement, { tick: HTMLElement, natural: { left: string, desc: any }, volcado: { left: string, desc: any }, activo: boolean }>} */
+const _vuelcos = new WeakMap();
+
+function _prepararVuelco(et, tick, textos, x, ancho, descNatural) {
+    _vuelcos.delete(et);
+    if (!descNatural || descNatural.nivel !== 'ninguna' || tick.classList.contains('espejado')) return;
+    const left = leftEspejado(x);
+    const desc = _elegirDescripcion(et, textos, holguraDescripcion('derecha', left + et.offsetWidth, ancho + MARGEN_DESCRIPCION_DERECHA));
+    _aplicarDescripcion(et, descNatural);   // _elegirDescripcion deja puesto el texto de la última medición
+    if (!desc || desc.nivel === 'ninguna') return;
+    _vuelcos.set(et, { tick, natural: { left: et.style.left, desc: descNatural }, volcado: { left: `${left}px`, desc }, activo: false });
+}
+
+/**
+ * Pasa la etiqueta al lado derecho de su marca (`activo`) o la devuelve a su lugar natural; sin vuelco posible no hace nada.
+ * @param {HTMLElement} et
+ * @param {boolean} activo
+ */
+function volcar(et, activo) {
+    const v = _vuelcos.get(et);
+    if (!v || v.activo === activo) return;
+    v.activo = activo;
+    const estado = activo ? v.volcado : v.natural;
+    et.style.left = estado.left;
+    v.tick.classList.toggle('espejado', activo);
+    et.classList.toggle('linea-etiqueta--espejada', activo);
+    _aplicarDescripcion(et, estado.desc);
 }
 
 // La descripción de cada hora se despliega hacia la izquierda (hacia la derecha si la marca está espejada; la entrada, que está pegada al comienzo, siempre a la derecha)
@@ -72,11 +118,21 @@ function _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSa
         ? holguraDescripcion('derecha', izq(et) + et.offsetWidth, limiteDerecho)
         : holguraDescripcion('izquierda', izq(et), limiteIzquierdo);
     const espejadaSalida = !L.cerrado && tickSalida.classList.contains('espejado');
-    _ponerDescripcion(etSalida, L.cerrado ? ['Salida', 'Salida'] : ['Salida estimada', 'Estim.'],
+    /** @type {[string, string]} */
+    const textosSalida = L.cerrado ? ['Salida', 'Salida'] : ['Salida estimada', 'Estim.'];
+    const descSalida = _elegirDescripcion(etSalida, textosSalida,
         hacia(etSalida, espejadaSalida, entradaArriba ? 0 : finEntrada + MARGEN_HORAS));
+    _aplicarDescripcion(etSalida, descSalida);
+    if (!L.cerrado) _prepararVuelco(etSalida, tickSalida, textosSalida, parseFloat(tickSalida.style.left) / 100 * ancho, ancho, descSalida);
     if (L.hayBanda) {
-        _ponerDescripcion(etBuffer, ['Con banco de horas', 'Con banco'],
+        /** @type {[string, string]} */
+        const textosBuffer = ['Con banco de horas', 'Con banco'];
+        const descBuffer = _elegirDescripcion(etBuffer, textosBuffer,
             hacia(etBuffer, tickBuffer.classList.contains('espejado'), entradaArriba ? finEntrada + MARGEN_HORAS : 0));
+        _aplicarDescripcion(etBuffer, descBuffer);
+        _prepararVuelco(etBuffer, tickBuffer, textosBuffer, parseFloat(tickBuffer.style.left) / 100 * ancho, ancho, descBuffer);
+    } else {
+        _vuelcos.delete(etBuffer);
     }
 }
 
@@ -164,6 +220,8 @@ function _renderLinea(vista, pista, fill) {
     _ponerEntradaArriba(etEntrada, entradaArriba);
     // sin ancho medido (pista oculta) no hay con qué decidir qué versión de la descripción entra
     if (ancho > 0) _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSalida, tickBuffer, entradaArriba });
+    // un re-render con el foco activo recalcula todo en su lugar natural: se vuelve a volcar lo que corresponda
+    if (ancho > 0) [etSalida, etBuffer].forEach(et => { if (et.classList.contains('foco')) volcar(et, true); });
 
     // relleno: azul hasta la primera salida, color del tramo entre ambas y verde al superar la última
     if (!L.cerrado) {
@@ -306,6 +364,7 @@ function redibujar() {
 }
 
 export const BarraHitos = {
+    volcar,
     render,
     redibujar,
     escalaLinea: _escalaLinea,

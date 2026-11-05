@@ -685,7 +685,10 @@ test('GeometriaEtiquetas: conector, reparto de lados y cuándo la entrada pasa a
 });
 
 test('GeometriaEtiquetas: lugar libre y versión de la descripción del hito enfocado (sin DOM)', async () => {
-    const { holguraDescripcion, nivelDescripcion, primeroQueEntra, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
+    const { holguraDescripcion, nivelDescripcion, primeroQueEntra, leftEspejado, geometriaConector, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
+
+    // la posición espejada es la misma que usa el conector cuando no hay lugar a la izquierda (el foco la usa para pasar la etiqueta a la derecha)
+    assert.equal(geometriaConector(10, 40).left, leftEspejado(10));
 
     // hacia la izquierda cuenta desde el borde izquierdo de la etiqueta; hacia la derecha, hasta el límite a su derecha
     assert.equal(holguraDescripcion('izquierda', 180, 62), 118);

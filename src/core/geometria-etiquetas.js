@@ -98,7 +98,7 @@ export function entradaDebeSubir({ ancho, entradaLeft, entradaAncho, salidaLeft,
 // DESCRIPCIÓN DEL HITO ENFOCADO — texto que se despliega junto a la hora mientras el ciclo del número grande muestra esa fase
 // ====================================================================
 export const SEPARACION_DESCRIPCION = 6;           // de la descripción a la hora
-export const MARGEN_DESCRIPCION_DERECHA = 20;      // lo que puede sobresalir una descripción desplegada a la derecha del final de la pista (la tarjeta tiene aire a ese lado)
+export const MARGEN_DESCRIPCION_DERECHA = 0;       // lo que puede sobresalir una descripción desplegada a la derecha del final de la pista (la píldora ya suma ~7 px más y la tarjeta tiene ~8 px de aire a ese lado)
 
 /**
  * Lugar libre (px) para la descripción de un hito: desde el borde de su etiqueta hasta el primer obstáculo en la dirección en que se despliega.

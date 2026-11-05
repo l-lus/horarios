@@ -684,6 +684,32 @@ test('GeometriaEtiquetas: conector, reparto de lados y cuándo la entrada pasa a
     assert.equal(entradaDebeSubir({ ...base, ancho: 0, salidaLeft: 0 }), false);
 });
 
+test('GeometriaEtiquetas: lugar libre y versión de la descripción del hito enfocado (sin DOM)', async () => {
+    const { holguraDescripcion, nivelDescripcion, primeroQueEntra, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
+
+    // hacia la izquierda cuenta desde el borde izquierdo de la etiqueta; hacia la derecha, hasta el límite a su derecha
+    assert.equal(holguraDescripcion('izquierda', 180, 62), 118);
+    assert.equal(holguraDescripcion('derecha', 90, 310), 220);
+    // sin lugar la holgura es negativa
+    assert.ok(holguraDescripcion('izquierda', 40, 62) < 0);
+
+    // larga si entra con su separación, abreviada si solo entra esa y ninguna si ni siquiera esa
+    assert.equal(nivelDescripcion(100 + SEPARACION_DESCRIPCION, 100, 50), 'larga');
+    assert.equal(nivelDescripcion(100 + SEPARACION_DESCRIPCION - 1, 100, 50), 'corta');
+    assert.equal(nivelDescripcion(50 + SEPARACION_DESCRIPCION, 100, 50), 'corta');
+    assert.equal(nivelDescripcion(50 + SEPARACION_DESCRIPCION - 1, 100, 50), 'ninguna');
+    // sin versión abreviada nunca devuelve 'corta'
+    assert.equal(nivelDescripcion(80, 100), 'ninguna');
+
+    // texto del número grande: el más largo que entre; si ninguno entra, el último
+    const medir = t => t.length * 10;
+    const opciones = ['Salida estimada 20:55', 'Salida estim. 20:55', 'Estim. 20:55'];
+    assert.equal(primeroQueEntra(opciones, 400, medir), opciones[0]);
+    assert.equal(primeroQueEntra(opciones, 190, medir), opciones[1]);
+    assert.equal(primeroQueEntra(opciones, 120, medir), opciones[2]);
+    assert.equal(primeroQueEntra(opciones, 10, medir), opciones[2]);
+});
+
 test('BusquedaTexto: coincidencias sin distinguir mayúsculas ni acentos y rangos sobre el texto original (sin DOM)', async () => {
     const { normalizarBusqueda, terminosDeBusqueda, textoCoincide, rangosCoincidencia, teclaIniciaBusqueda } = await import('../src/core/busqueda-texto.js');
 

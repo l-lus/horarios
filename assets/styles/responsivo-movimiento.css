@@ -575,6 +575,13 @@ button.campo-flash-color {
 }
 
 
+/* El pulso del hito enfocado es un anillo en bucle corto: sin movimiento queda solo el resalte de la píldora */
+:root[data-motion="reduce"] .linea-tick.foco::after,
+:root[data-motion="reduce"] .progress-punto.foco::after {
+    animation: none;
+    opacity: 0;
+}
+
 /* Con un modal abierto el brillo y el latido de la barra quedan detrás del overlay: se pausan para no mantener el pipeline de frames (ni el desenfoque del overlay) trabajando por algo que no se ve */
 body.modal-open .progress-fill.shimmer::after,
 body.modal-open .progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado),

@@ -16,6 +16,7 @@ import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { esHtmlSeguro, montar } from '../core/html.js';
 import { CicloStats } from './tarjeta-ciclo-stats.js';
+import { FocoHitos } from './foco-hitos.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD MODULE
@@ -115,7 +116,12 @@ function _renderStats(vista, est, conteo = null) {
     const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';
     const tiempoFueraHoy = (esDiaria && regHoy && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00' && !esEspecial) ? regHoy.tiempoFuera : '';
 
-    CicloStats.actualizarDatos({ valorHoras: vista.stats, entrada: entradaHoy, salida: salidaHoy, tiempoFuera: tiempoFueraHoy });
+    // con el hint integrado y la jornada abierta el ciclo suma la salida estimada y, si hay banda, la salida con banco (sus hitos se resaltan en la barra)
+    const linea = _hintIntegradoActivo() && esDiaria && !esEspecial ? vista.linea : null;
+    const salidaEstimada = linea && !linea.cerrado ? linea.horaSalida : '';
+    const salidaBanco = linea && !linea.cerrado && linea.hayBanda ? linea.horaBuffer : '';
+
+    CicloStats.actualizarDatos({ valorHoras: vista.stats, entrada: entradaHoy, salida: salidaHoy, tiempoFuera: tiempoFueraHoy, salidaEstimada, salidaBanco });
 
     const fase = CicloStats.tomarFasePendiente();
     if (fase && CicloStats.iniciarEnFase(fase)) return;
@@ -348,6 +354,9 @@ function alternarVista() {
 }
 
 function bindEventos() {
+    // el ciclo del número grande avisa qué fase muestra y la barra resalta su hito
+    CicloStats.alCambiarFase(tipo => FocoHitos.enfocar(tipo));
+
     (function () {
         const header = /** @type {HTMLElement} */ (document.querySelector('.header'));
         const statsCard = $('stats-card');

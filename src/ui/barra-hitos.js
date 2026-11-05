@@ -1,5 +1,8 @@
 import { $ } from '../core/dom.js';
-import { geometriaConector, geometriaDiagonal, repartirLados, entradaDebeSubir } from '../core/geometria-etiquetas.js';
+import {
+    geometriaConector, geometriaDiagonal, repartirLados, entradaDebeSubir,
+    holguraDescripcion, nivelDescripcion, MARGEN_HORAS, MARGEN_DESCRIPCION_DERECHA
+} from '../core/geometria-etiquetas.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { Animaciones } from './animaciones.js';
 
@@ -30,7 +33,51 @@ function _colocarEtiquetaConector(et, tick, pct, ancho) {
     if (!et) return;
     const { espejado, left } = geometriaConector((pct / 100) * ancho, et.offsetWidth);
     tick.classList.toggle('espejado', espejado);
+    et.classList.toggle('linea-etiqueta--espejada', espejado);   // la descripción del foco se despliega hacia el lado contrario
     et.style.left = `${left}px`;
+}
+
+// Cada etiqueta lleva su hora en .linea-et-hora y, aparte, su descripción (.linea-et-desc, absoluta: no cambia el ancho de la etiqueta ni su posición)
+const _horaDe = et => /** @type {HTMLElement} */ (et.querySelector('.linea-et-hora'));
+
+// Elige la versión de la descripción que entra en el lugar libre (completa, abreviada o ninguna) y deja en la etiqueta lo que necesita el CSS:
+// el texto, data-desc y el ancho que ocupa desplegada (--desc-ancho). Sin descripción (ninguna) la píldora del foco queda solo alrededor de la hora.
+function _ponerDescripcion(et, [larga, corta], holgura) {
+    const desc = et.querySelector('.linea-et-desc');
+    if (!desc) return;
+    const medir = texto => { desc.textContent = texto; return desc.scrollWidth + 1; };
+    const anchoLarga = medir(larga);
+    const anchoCorta = corta === larga ? Infinity : medir(corta);
+    const nivel = nivelDescripcion(holgura, anchoLarga, anchoCorta);
+    desc.textContent = nivel === 'corta' ? corta : larga;
+    et.dataset.desc = nivel;
+    et.style.setProperty('--desc-ancho', `${nivel === 'larga' ? anchoLarga : nivel === 'corta' ? anchoCorta : 0}px`);
+}
+
+// La descripción de cada hora se despliega hacia la izquierda (hacia la derecha si la marca está espejada; la entrada, que está pegada al comienzo, siempre a la derecha)
+// y no puede pisar a otra etiqueta del mismo lado: la de entrada abajo a la izquierda, la de salida abajo y la del buffer arriba (la entrada va arriba si la salida la pisa).
+function _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSalida, tickBuffer, entradaArriba }) {
+    const izq = et => parseFloat(et.style.left) || 0;
+    const finEntrada = izq(etEntrada) + etEntrada.offsetWidth;
+    const limiteDerecho = ancho + MARGEN_DESCRIPCION_DERECHA;
+    const salidaIzq = izq(etSalida);
+    const bufferIzq = L.hayBanda ? izq(etBuffer) : null;
+
+    // entrada: hacia la derecha hasta la primera etiqueta de su lado
+    const vecino = entradaArriba ? (bufferIzq !== null ? bufferIzq - MARGEN_HORAS : limiteDerecho) : salidaIzq - MARGEN_HORAS;
+    _ponerDescripcion(etEntrada, ['Entrada', 'Entrada'], holguraDescripcion('derecha', finEntrada, vecino));
+
+    // salida y buffer: a la izquierda hasta la entrada (si está de su lado) o el comienzo; espejadas, a la derecha hasta el final de la pista
+    const hacia = (et, espejada, limiteIzquierdo) => espejada
+        ? holguraDescripcion('derecha', izq(et) + et.offsetWidth, limiteDerecho)
+        : holguraDescripcion('izquierda', izq(et), limiteIzquierdo);
+    const espejadaSalida = !L.cerrado && tickSalida.classList.contains('espejado');
+    _ponerDescripcion(etSalida, L.cerrado ? ['Salida', 'Salida'] : ['Salida estimada', 'Estim.'],
+        hacia(etSalida, espejadaSalida, entradaArriba ? 0 : finEntrada + MARGEN_HORAS));
+    if (L.hayBanda) {
+        _ponerDescripcion(etBuffer, ['Con banco de horas', 'Con banco'],
+            hacia(etBuffer, tickBuffer.classList.contains('espejado'), entradaArriba ? finEntrada + MARGEN_HORAS : 0));
+    }
 }
 
 // Cambia la hora de entrada de lado (abajo/arriba de la barra): la copia sale en el lugar anterior y la etiqueta real reaparece en el nuevo
@@ -90,26 +137,33 @@ function _renderLinea(vista, pista, fill) {
     const etEntrada = $('linea-et-entrada');
     const etSalida = $('linea-et-salida');
     const etBuffer = $('linea-et-buffer');
-    etEntrada.textContent = L.horaEntrada;
-    etSalida.textContent = L.horaSalida;
-    etBuffer.textContent = L.horaBuffer;
+    _horaDe(etEntrada).textContent = L.horaEntrada;
+    _horaDe(etSalida).textContent = L.horaSalida;
+    _horaDe(etBuffer).textContent = L.horaBuffer;
     etBuffer.style.opacity = L.hayBanda ? '1' : '0';
     etBuffer.classList.toggle('positivo', L.bufferPositivo);
     etBuffer.classList.toggle('negativo', !L.bufferPositivo);
     _colocarEtiquetaLinea(etEntrada, 0, ancho);
     // cerrada no hay conector (queda solo la hora, centrada bajo el remate)
-    if (L.cerrado) _colocarEtiquetaLinea(etSalida, pMarca, ancho);
-    else _colocarEtiquetaConector(etSalida, tickSalida, pMarca, ancho);
+    if (L.cerrado) {
+        _colocarEtiquetaLinea(etSalida, pMarca, ancho);
+        etSalida.classList.remove('linea-etiqueta--espejada');
+    } else {
+        _colocarEtiquetaConector(etSalida, tickSalida, pMarca, ancho);
+    }
     _colocarEtiquetaConector(etBuffer, tickBuffer, pBuffer ?? pSalida, ancho);
     // si la hora de salida (abierta o cerrada) pisa o queda pegada a la de entrada, esta pasa arriba de la barra,
     // salvo que arriba esté la etiqueta del buffer en ese mismo tramo (sin ancho medido no se decide nada)
-    _ponerEntradaArriba(etEntrada, entradaDebeSubir({
+    const entradaArriba = entradaDebeSubir({
         ancho,
         entradaLeft: parseFloat(etEntrada.style.left),
         entradaAncho: etEntrada.offsetWidth,
         salidaLeft: parseFloat(etSalida.style.left),
         bufferLeft: L.hayBanda ? parseFloat(etBuffer.style.left) : null
-    }));
+    });
+    _ponerEntradaArriba(etEntrada, entradaArriba);
+    // sin ancho medido (pista oculta) no hay con qué decidir qué versión de la descripción entra
+    if (ancho > 0) _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSalida, tickBuffer, entradaArriba });
 
     // relleno: azul hasta la primera salida, color del tramo entre ambas y verde al superar la última
     if (!L.cerrado) {

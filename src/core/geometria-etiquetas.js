@@ -85,3 +85,45 @@ export function entradaDebeSubir({ ancho, entradaLeft, entradaAncho, salidaLeft,
     const arribaOcupado = bufferLeft !== null && bufferLeft < finEntrada;
     return salidaChoca && !arribaOcupado;
 }
+
+// ====================================================================
+// DESCRIPCIÓN DEL HITO ENFOCADO — texto que se despliega junto a la hora mientras el ciclo del número grande muestra esa fase
+// ====================================================================
+export const SEPARACION_DESCRIPCION = 6;           // de la descripción a la hora
+export const MARGEN_DESCRIPCION_DERECHA = 20;      // lo que puede sobresalir una descripción desplegada a la derecha del final de la pista (la tarjeta tiene aire a ese lado)
+
+/**
+ * Lugar libre (px) para la descripción de un hito: desde el borde de su etiqueta hasta el primer obstáculo en la dirección en que se despliega.
+ * Hacia la izquierda `borde` es el borde izquierdo de la etiqueta y `limite` lo que hay a su izquierda (0 o el final de la hora de entrada);
+ * hacia la derecha `borde` es el borde derecho y `limite` lo que hay a su derecha (otra etiqueta o el final de la pista).
+ * @param {'izquierda' | 'derecha'} direccion
+ * @param {number} borde
+ * @param {number} limite
+ */
+export function holguraDescripcion(direccion, borde, limite) {
+    return direccion === 'izquierda' ? borde - limite : limite - borde;
+}
+
+/**
+ * Qué versión de la descripción entra en `holgura`: la larga, la abreviada o ninguna (queda solo la hora resaltada; el número grande ya dice qué es).
+ * Sin versión abreviada, pasar `Infinity` en `anchoCorta`.
+ * @param {number} holgura
+ * @param {number} anchoLarga
+ * @param {number} [anchoCorta]
+ * @returns {'larga' | 'corta' | 'ninguna'}
+ */
+export function nivelDescripcion(holgura, anchoLarga, anchoCorta = Infinity) {
+    if (holgura >= anchoLarga + SEPARACION_DESCRIPCION) return 'larga';
+    if (holgura >= anchoCorta + SEPARACION_DESCRIPCION) return 'corta';
+    return 'ninguna';
+}
+
+/**
+ * Primer texto de `opciones` (de más largo a más corto) cuyo ancho entra en `libre`; si ninguno entra, el último.
+ * @param {string[]} opciones
+ * @param {number} libre
+ * @param {(texto: string) => number} medir
+ */
+export function primeroQueEntra(opciones, libre, medir) {
+    return opciones.find(texto => medir(texto) <= libre) ?? opciones[opciones.length - 1];
+}

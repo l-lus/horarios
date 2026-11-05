@@ -685,19 +685,10 @@ test('GeometriaEtiquetas: conector, reparto de lados y cuándo la entrada pasa a
 });
 
 test('GeometriaEtiquetas: lugar libre y versión de la descripción del hito enfocado (sin DOM)', async () => {
-    const { holguraDescripcion, nivelDescripcion, primeroQueEntra, leftEspejado, geometriaConector, opcionesColocacion, ANCHO_CONECTOR, MARGEN_DESCRIPCION_DERECHA, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
+    const { holguraDescripcion, nivelDescripcion, primeroQueEntra, holguraHaciaDerecha, MARGEN_DESCRIPCION_DERECHA, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
 
-    // la posición espejada es la misma que usa el conector cuando no hay lugar a la izquierda (el foco la usa para pasar la etiqueta a la derecha)
-    assert.equal(geometriaConector(10, 40).left, leftEspejado(10));
-
-    // alternativas del foco: volcada a la derecha del conector o centrada sobre el final de la diagonal; la descripción va a la derecha en las dos
-    const [volcada, centrada] = opcionesColocacion(200, 40, 300);
-    assert.equal(volcada.left, leftEspejado(200));
-    assert.equal(volcada.holgura, 300 + MARGEN_DESCRIPCION_DERECHA - (volcada.left + 40));
-    assert.equal(centrada.left, 200 - ANCHO_CONECTOR - 20);
-    assert.ok(centrada.holgura > volcada.holgura);
-    // sin lugar a la izquierda del comienzo de la pista, la centrada se descarta
-    assert.deepEqual(opcionesColocacion(30, 40, 300).map(o => o.tipo), ['volcada']);
+    // lugar a la derecha de una hora que no se mueve: hasta el final de la pista (más el margen permitido)
+    assert.equal(holguraHaciaDerecha(100, 40, 300), 300 + MARGEN_DESCRIPCION_DERECHA - 140);
 
     // hacia la izquierda cuenta desde el borde izquierdo de la etiqueta; hacia la derecha, hasta el límite a su derecha
     assert.equal(holguraDescripcion('izquierda', 180, 62), 118);

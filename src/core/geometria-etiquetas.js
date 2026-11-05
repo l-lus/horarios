@@ -12,14 +12,6 @@ export const ANCHO_PASO_DIAGONAL = 24;   // ancho de pista que ocupa cada sigla 
 const MEDIO_ANCHO_MARCA = 3;
 
 /**
- * `left` de una etiqueta colgada de la marca en `x` cuando va espejada a la derecha del conector.
- * @param {number} x
- */
-export function leftEspejado(x) {
-    return x + ANCHO_CONECTOR + SEPARACION_ETIQUETA;
-}
-
-/**
  * Posición de una etiqueta de ancho `w` colgada de una marca ubicada en `x` (px desde el borde izquierdo de la pista).
  * `left` es donde va la etiqueta; `desde`/`hasta` es el tramo horizontal que ocupa el conector con su etiqueta
  * (más `margen / 2` a cada lado de la etiqueta), para detectar choques con otras marcas del mismo lado.
@@ -29,7 +21,7 @@ export function leftEspejado(x) {
  */
 export function geometriaConector(x, w, margen = 0) {
     const espejado = x - ANCHO_CONECTOR - SEPARACION_ETIQUETA - w < 0;
-    const left = espejado ? leftEspejado(x) : x - ANCHO_CONECTOR - SEPARACION_ETIQUETA - w;
+    const left = espejado ? x + ANCHO_CONECTOR + SEPARACION_ETIQUETA : x - ANCHO_CONECTOR - SEPARACION_ETIQUETA - w;
     return {
         espejado,
         left,
@@ -137,31 +129,13 @@ export function primeroQueEntra(opciones, libre, medir) {
 }
 
 /**
- * Lugares alternativos de una etiqueta de ancho `w` colgada de la marca en `x` para cuando su descripción no entra en el natural (a la izquierda del conector):
- * `volcada` (a la derecha del conector, con la marca espejada) y `centrada` (la etiqueta centrada sobre el final de la línea diagonal, que deja la marca como está).
- * Ambas despliegan la descripción hacia la derecha, y `holgura` es lo que queda hasta el final de la pista (más `MARGEN_DESCRIPCION_DERECHA`).
- * Se descartan las que dejarían la etiqueta fuera del comienzo de la pista. Solo cuenta el espacio de la pista: las otras etiquetas están atenuadas durante el foco y se pueden tapar.
- * @param {number} x
+ * Lugar libre (px) para desplegar la descripción hacia la derecha de una etiqueta que no se mueve (borde izquierdo `left`, ancho `w`) en una pista de ancho `ancho`.
+ * La etiqueta cuelga a la izquierda de su conector, así que a la derecha de la hora siempre queda más lugar que en cualquier otra posición de la misma marca
+ * (la descripción cruza el conector); es también lo único posible en el registro cerrado, donde la hora no tiene conector.
+ * @param {number} left
  * @param {number} w
- * @param {number} ancho ancho de la pista
- * @returns {{ tipo: 'volcada' | 'centrada', left: number, tickEspejado: boolean, holgura: number }[]}
+ * @param {number} ancho
  */
-export function opcionesColocacion(x, w, ancho) {
-    const limite = ancho + MARGEN_DESCRIPCION_DERECHA;
-    return [
-        { tipo: /** @type {const} */ ('volcada'), left: leftEspejado(x), tickEspejado: true },
-        { tipo: /** @type {const} */ ('centrada'), left: x - ANCHO_CONECTOR - w / 2, tickEspejado: false }
-    ].filter(o => o.left >= 0).map(o => ({ ...o, holgura: holguraDescripcion('derecha', o.left + w, limite) }));
-}
-
-/**
- * Alternativa que no mueve nada: la hora y su marca quedan donde están y solo la descripción se despliega hacia la derecha (la etiqueta cuelga a la izquierda del conector
- * y la descripción lo cruza). Es la única posible en el registro cerrado, donde la hora queda centrada bajo el remate y no tiene conector.
- * Mismo formato que `opcionesColocacion`.
- * @param {number} left borde izquierdo de la etiqueta
- * @param {number} w
- * @param {number} ancho ancho de la pista
- */
-export function opcionDerechaSinConector(left, w, ancho) {
-    return { tipo: /** @type {const} */ ('derecha'), left, tickEspejado: false, holgura: holguraDescripcion('derecha', left + w, ancho + MARGEN_DESCRIPCION_DERECHA) };
+export function holguraHaciaDerecha(left, w, ancho) {
+    return holguraDescripcion('derecha', left + w, ancho + MARGEN_DESCRIPCION_DERECHA);
 }

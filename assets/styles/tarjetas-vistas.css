@@ -239,7 +239,7 @@
 }
 
 .progress-pista {
-    --centro-etiqueta: 17.5px;   /* distancia del borde de la barra al centro de las etiquetas de la vista diaria (donde termina la línea diagonal) */
+    --centro-etiqueta: 25.5px;   /* distancia del borde de la barra al centro de las etiquetas de la vista diaria (donde termina la línea diagonal) */
     transition: margin var(--dur-slow) var(--ease-conteo);
 }
 
@@ -403,6 +403,12 @@
 #hito-ancla circle {
     stroke: var(--bg-card);
     stroke-width: 1.2;
+}
+
+/* Las marcas de la vista diaria tienen la diagonal 8 px más larga que las de la semanal (svg de 26 x 28 en vez de 26 x 20): así la hora queda más separada de la barra */
+#linea-tick-salida,
+#linea-tick-buffer {
+    height: 28px;
 }
 
 .linea-tick--buffer {

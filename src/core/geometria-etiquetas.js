@@ -3,7 +3,7 @@
 // ====================================================================
 // Cada marca de la barra es una "T" con flecha: sale hacia su lado y termina en el medio de su etiqueta.
 // La etiqueta queda a la izquierda del conector; si no entra, se espeja a la derecha.
-export const ANCHO_CONECTOR = 19;        // de la marca al final de la línea diagonal
+export const ANCHO_CONECTOR = 27;        // de la marca al final de la línea diagonal (vista diaria; coincide con el path de las marcas de index.html)
 export const SEPARACION_ETIQUETA = 2;    // del final de la línea a la etiqueta
 export const MARGEN_HORAS = 12;          // separación mínima entre horas del mismo lado antes de reubicar la entrada
 export const MARGEN_SIGLAS = 8;          // separación mínima entre siglas del mismo lado en la vista semanal

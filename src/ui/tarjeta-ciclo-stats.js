@@ -1,5 +1,4 @@
-import { $, anchoDeTexto } from '../core/dom.js';
-import { primeroQueEntra } from '../core/geometria-etiquetas.js';
+import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Animaciones } from './animaciones.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
@@ -8,14 +7,14 @@ import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 //              UI CLOCK-IN CARD STATS CYCLE (#stats-semana)
 // ====================================================================
 // Ciclo de textos del número grande de la tarjeta en la vista diaria: horas → "Entrada 08:30" → "Tiempo fuera 25m"
-// → "Salida 17:00" (registro cerrado) o "Salida estimada 17:00" → "Con banco 16:52" (registro abierto) → horas.
-// Cada 2 s (las fases con hito sobre la barra, un poco más). tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
+// → "Salida 17:00" (registro cerrado) → horas. Con el registro abierto, la salida estimada y la salida con banco no cambian el texto (queda el de las horas):
+// solo resaltan su hito en la barra (`soloHito`), que lleva la descripción. Cada 2 s (las fases con hito sobre la barra, un poco más). tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
 // Cada vez que cambia la fase avisa su tipo (o null al terminar) a quien se registre con `alCambiarFase`: así la barra resalta el hito correspondiente
 // sin que este módulo conozca el DOM de la barra.
 const { _animarMutacion } = Animaciones;
 const { _formatearMinutosCorto } = TarjetaTiempoFuera;
 
-/** @typedef {{ tipo: string, texto: (el: HTMLElement) => string, ms?: number }} FaseCiclo */
+/** @typedef {{ tipo: string, texto: () => string, ms?: number }} FaseCiclo */
 
 let _cicloStatsInterval = null;
 let _cicloStatsValorHoras = '';
@@ -30,6 +29,7 @@ let _alCambiarFase = null;
 
 const _CICLO_DURACION_MS = 2000;
 // El resalte de la hora y su descripción tarda ~0,5 s en desplegarse: estas fases se quedan un poco más para que se lea
+// (y como su texto es el de las horas, no hay animación de cambio de texto si ya se está mostrando)
 const _CICLO_DURACION_HITO_MS = 2600;
 
 function _emitirFase(tipo) {
@@ -48,13 +48,6 @@ function _prepararMostrarFaseAlRenderizar(tipo) {
     _cicloStatsFaseAlRenderizar = tipo;
 }
 
-// "Salida estimada 17:00" se abrevia ("Salida estim.", "Estim.") solo si no entra en una línea del número grande
-function _textoSalidaEstimada(el, hora) {
-    const opciones = [`Salida estimada ${hora}`, `Salida estim. ${hora}`, `Estim. ${hora}`];
-    if (!(el.clientWidth > 0)) return opciones[0];
-    return primeroQueEntra(opciones, el.clientWidth, texto => anchoDeTexto(el, texto));
-}
-
 /** @returns {FaseCiclo[]} */
 function _fasesCiclo() {
     /** @type {FaseCiclo[]} */
@@ -69,10 +62,10 @@ function _fasesCiclo() {
         fases.push({ tipo: 'salida', texto: () => `Salida ${_cicloStatsSalida}` });
     }
     if (_cicloStatsSalidaEstimada) {
-        fases.push({ tipo: 'salidaEstimada', ms: _CICLO_DURACION_HITO_MS, texto: el => _textoSalidaEstimada(el, _cicloStatsSalidaEstimada) });
+        fases.push({ tipo: 'salidaEstimada', ms: _CICLO_DURACION_HITO_MS, texto: () => _cicloStatsValorHoras });
     }
     if (_cicloStatsSalidaBanco) {
-        fases.push({ tipo: 'banco', ms: _CICLO_DURACION_HITO_MS, texto: () => `Con banco ${_cicloStatsSalidaBanco}` });
+        fases.push({ tipo: 'banco', ms: _CICLO_DURACION_HITO_MS, texto: () => _cicloStatsValorHoras });
     }
     return fases;
 }
@@ -82,14 +75,18 @@ function _crearCicloTick(fases, estado) {
         const el = $('stats-semana');
         if (!el) { _detenerCicloStats(); return; }
 
-        _animarMutacion(el, () => {
+        const aplicar = () => {
             estado.idx++;
             const terminado = estado.idx >= fases.length;
-            el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx].texto(el);
+            el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx].texto();
             if (terminado) { _detenerCicloStats(); return; }
             _emitirFase(fases[estado.idx].tipo);
             _cicloStatsInterval = setTimeout(_cicloTick, fases[estado.idx].ms ?? _CICLO_DURACION_MS);
-        });
+        };
+        // si el texto que sigue es el que ya se ve (fases solo de hito) no hay nada que animar
+        const siguiente = estado.idx + 1 >= fases.length ? _cicloStatsValorHoras : fases[estado.idx + 1].texto();
+        if (siguiente === el.textContent) aplicar();
+        else _animarMutacion(el, aplicar);
     };
     return _cicloTick;
 }
@@ -123,7 +120,7 @@ function _iniciarCicloEnFase(tipo) {
     const tick = _crearCicloTick(fases, estado);
 
     const el = $('stats-semana');
-    if (el) el.textContent = fases[idx].texto(el);
+    if (el) el.textContent = fases[idx].texto();
     _emitirFase(fases[idx].tipo);
 
     _cicloStatsInterval = setTimeout(tick, fases[idx].ms ?? _CICLO_DURACION_MS);

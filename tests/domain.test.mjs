@@ -685,7 +685,7 @@ test('GeometriaEtiquetas: conector, reparto de lados y cuándo la entrada pasa a
 });
 
 test('GeometriaEtiquetas: lugar libre y versión de la descripción del hito enfocado (sin DOM)', async () => {
-    const { holguraDescripcion, nivelDescripcion, primeroQueEntra, holguraHaciaDerecha, MARGEN_DESCRIPCION_DERECHA, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
+    const { holguraDescripcion, nivelDescripcion, holguraHaciaDerecha, MARGEN_DESCRIPCION_DERECHA, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
 
     // lugar a la derecha de una hora que no se mueve: hasta el final de la pista (más el margen permitido)
     assert.equal(holguraHaciaDerecha(100, 40, 300), 300 + MARGEN_DESCRIPCION_DERECHA - 140);
@@ -703,14 +703,6 @@ test('GeometriaEtiquetas: lugar libre y versión de la descripción del hito enf
     assert.equal(nivelDescripcion(50 + SEPARACION_DESCRIPCION - 1, 100, 50), 'ninguna');
     // sin versión abreviada nunca devuelve 'corta'
     assert.equal(nivelDescripcion(80, 100), 'ninguna');
-
-    // texto del número grande: el más largo que entre; si ninguno entra, el último
-    const medir = t => t.length * 10;
-    const opciones = ['Salida estimada 20:55', 'Salida estim. 20:55', 'Estim. 20:55'];
-    assert.equal(primeroQueEntra(opciones, 400, medir), opciones[0]);
-    assert.equal(primeroQueEntra(opciones, 190, medir), opciones[1]);
-    assert.equal(primeroQueEntra(opciones, 120, medir), opciones[2]);
-    assert.equal(primeroQueEntra(opciones, 10, medir), opciones[2]);
 });
 
 test('BusquedaTexto: coincidencias sin distinguir mayúsculas ni acentos y rangos sobre el texto original (sin DOM)', async () => {

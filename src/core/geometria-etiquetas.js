@@ -119,16 +119,6 @@ export function nivelDescripcion(holgura, anchoLarga, anchoCorta = Infinity) {
 }
 
 /**
- * Primer texto de `opciones` (de más largo a más corto) cuyo ancho entra en `libre`; si ninguno entra, el último.
- * @param {string[]} opciones
- * @param {number} libre
- * @param {(texto: string) => number} medir
- */
-export function primeroQueEntra(opciones, libre, medir) {
-    return opciones.find(texto => medir(texto) <= libre) ?? opciones[opciones.length - 1];
-}
-
-/**
  * Lugar libre (px) para desplegar la descripción hacia la derecha de una etiqueta que no se mueve (borde izquierdo `left`, ancho `w`) en una pista de ancho `ancho`.
  * La etiqueta cuelga a la izquierda de su conector, así que a la derecha de la hora siempre queda más lugar que en cualquier otra posición de la misma marca
  * (la descripción cruza el conector); es también lo único posible en el registro cerrado, donde la hora no tiene conector.

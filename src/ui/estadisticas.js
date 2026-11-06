@@ -233,15 +233,8 @@ const AJUSTE_POR_STAT = {
 
 let _popupStatEl = null;
 
-function _popupStat(event, statId) {
-    event.stopPropagation();
-    if (_popupStatEl) {
-        const el = _popupStatEl;
-        _popupStatEl = null;
-        if (el._cerrar) el._cerrar();
-        else el.remove();
-    }
-
+/** Título y descripción del popup de una estadística, con los datos actuales (modo, días hábiles, objetivo...) agregados al final. */
+function _infoPopupStat(statId) {
     let info = DESCRIPCIONES_STATS[statId];
     const conExtra = (partes) => ({ titulo: info.titulo, desc: html`${info.desc}${partes}` });
     const nota = (texto) => html`<hr class="stat-popup-sep"><strong>${texto}</strong>`;
@@ -292,6 +285,19 @@ function _popupStat(event, statId) {
                 : 'Detalle de esta estadística.'
         };
     }
+    return info;
+}
+
+function _popupStat(event, statId) {
+    event.stopPropagation();
+    if (_popupStatEl) {
+        const el = _popupStatEl;
+        _popupStatEl = null;
+        if (el._cerrar) el._cerrar();
+        else el.remove();
+    }
+
+    const info = _infoPopupStat(statId);
 
     const ajusteId = AJUSTE_POR_STAT[statId];
     const btnModificarHtml = ajusteId ? html`

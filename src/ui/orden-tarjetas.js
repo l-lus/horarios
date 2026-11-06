@@ -193,6 +193,35 @@ function evaluarNuevasColumnas(arrastrado, columnas, clientX, clientY) {
 const _SELECTOR_ENCABEZADOS = '#stats-card, #card-registrar .card-registrar-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable';
 const _SELECTOR_CARDS = '#stats-card, #card-registrar, #card-estadisticas, #card-historico';
 
+/**
+ * Columnas nuevas al mover una tarjeta con Alt + flecha: arriba/abajo cambia de lugar dentro de la columna; izquierda/derecha pasa a la columna
+ * de al lado (a la derecha de la última abre una columna nueva si todavía entra). En móvil, con una sola columna, las cuatro flechas recorren la pila.
+ * Devuelve null si no hay movimiento posible.
+ * @param {string} id
+ * @param {string} tecla
+ */
+function columnasTrasTecla(id, tecla) {
+    const columnas = _columnasActuales();
+    const visibles = _tarjetasVisibles();
+    const colActual = columnas.findIndex(c => c.includes(id));
+    if (colActual === -1) return null;
+    const enColumna = (i) => columnas[i].filter(c => visibles.has(c));
+    const pos = enColumna(colActual).indexOf(id);
+    const opciones = { max: _maxColumnas(), visibles, exigirDosColumnas: _esEscritorio() };
+
+    const vertical = tecla === 'ArrowUp' || tecla === 'ArrowDown' || _maxColumnas() === 1;
+    const atras = tecla === 'ArrowLeft' || tecla === 'ArrowUp';
+
+    if (vertical) {
+        const propias = enColumna(colActual);
+        if (atras ? pos <= 0 : pos >= propias.length - 1) return null;
+        return moverCard(columnas, id, colActual, atras ? propias[pos - 1] : (propias[pos + 2] ?? null), opciones);
+    }
+    const destino = colActual + (atras ? -1 : 1);
+    if (destino < 0) return null;
+    return moverCard(columnas, id, destino, destino < columnas.length ? (enColumna(destino)[pos] ?? null) : null, opciones);
+}
+
 function iniciarDragTarjetas() {
     let columnasInicial = null;
     let columnasEnCurso = null;
@@ -257,8 +286,7 @@ function iniciarDragTarjetas() {
         }
     });
 
-    // Con teclado (Alt + flechas sobre el encabezado): arriba/abajo cambia de lugar dentro de la columna; izquierda/derecha pasa a la columna
-    // de al lado (a la derecha de la última abre una columna nueva si todavía entra). En móvil, con una sola columna, las cuatro flechas recorren la pila.
+    // Con teclado (Alt + flechas sobre el encabezado), ver columnasTrasTecla
     const headers = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(_SELECTOR_ENCABEZADOS));
     headers.forEach(header => {
         header.addEventListener('keydown', (e) => {
@@ -266,28 +294,7 @@ function iniciarDragTarjetas() {
             const card = header.closest(_SELECTOR_CARDS);
             if (!card) return;
 
-            const id = _idDeCard(card);
-            const columnas = _columnasActuales();
-            const visibles = _tarjetasVisibles();
-            const colActual = columnas.findIndex(c => c.includes(id));
-            if (colActual === -1) return;
-            const enColumna = (i) => columnas[i].filter(c => visibles.has(c));
-            const pos = enColumna(colActual).indexOf(id);
-
-            const unaColumna = _maxColumnas() === 1;
-            const vertical = e.key === 'ArrowUp' || e.key === 'ArrowDown' || unaColumna;
-            const atras = e.key === 'ArrowLeft' || e.key === 'ArrowUp';
-
-            let nuevas = null;
-            if (vertical) {
-                const propias = enColumna(colActual);
-                if (atras ? pos <= 0 : pos >= propias.length - 1) return;
-                nuevas = moverCard(columnas, id, colActual, atras ? propias[pos - 1] : (propias[pos + 2] ?? null), { max: _maxColumnas(), visibles, exigirDosColumnas: _esEscritorio() });
-            } else {
-                const destino = colActual + (atras ? -1 : 1);
-                if (destino < 0) return;
-                nuevas = moverCard(columnas, id, destino, destino < columnas.length ? (enColumna(destino)[pos] ?? null) : null, { max: _maxColumnas(), visibles, exigirDosColumnas: _esEscritorio() });
-            }
+            const nuevas = columnasTrasTecla(_idDeCard(card), e.key);
             if (!nuevas) return;
 
             e.preventDefault();

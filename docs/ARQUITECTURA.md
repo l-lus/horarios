@@ -1,6 +1,6 @@
 # Arquitectura del Frontend — Horarios
 
-**Última actualización:** 2026-11-01  
+**Última actualización:** 2026-11-05  
 **Estado:** Arquitectura modularizada y saneada (74 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
@@ -127,6 +127,19 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 
 ---
 
+## 3.3. Diseño libre de tarjetas por columnas
+
+En escritorio (≥ 1024 px) las tarjetas (`estado`, `registrar`, `estadisticas`, `historico`) se ubican donde las suelta el usuario, en hasta **3 columnas** (3 solo desde 1200 px; con menos ancho el máximo es 2). En móvil van apiladas en una sola columna.
+
+| Pieza | Dónde | Qué hace |
+|---|---|---|
+| Modelo | `STORAGE_KEYS.ORDEN_CARDS` (lista plana, todas las tarjetas, ocultas incluidas) y `STORAGE_KEYS.COLUMNAS_CARDS` (cuántas tarjetas hay en cada columna, ej. `[2, 1, 1]`) | La lista se corta según los tamaños. Sin tamaños válidos (o con una cantidad de tarjetas distinta) se usa el reparto por defecto: las dos últimas en la segunda columna. En móvil solo se usa `ORDEN_CARDS_MOVIL`. |
+| Reglas (sin DOM) | [`services/orden-cards.js`](../src/services/orden-cards.js) | `columnasDesdeOrden`, `prepararColumnas` (funde columnas sin tarjetas visibles y respeta el máximo, sin tocar lo guardado), `moverCard` (columna nueva si el destino es `columnas.length`; las vacías desaparecen; con `exigirDosColumnas` un movimiento nunca deja una sola columna). Cubierto por `tests/orden-cards.test.mjs`. |
+| UI | [`ui/orden-tarjetas.js`](../src/ui/orden-tarjetas.js) | Tres contenedores (`#columna-1`, `#right-column`, `#columna-3`); `--columnas` y `data-columnas` en `.container` los fija el JS (con 3 columnas el CSS ensancha la página a 1900 px). El arrastre decide la columna por la posición horizontal del puntero y la posición por la vertical; pegada al borde derecho abre una columna nueva, sin ningún indicador previo. |
+| Respaldo | `importar-exportar.js` | Exporta/importa `columnasCards`; un respaldo sin esa clave vuelve al reparto por defecto. |
+
+La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las demás pero **no se puede ocultar**; el resto se oculta con la clase `.hidden` (`CARDS`).
+
 ## 4. Catálogo completo de módulos (`src/`)
 
 ### 4.1. Datos estáticos (`src/data/`)
@@ -141,7 +154,7 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | Archivo | Export | Responsabilidad |
 |---|---|---|
 | [`src/core/tema-inicial.js`](../src/core/tema-inicial.js) | *(script clásico en `<head>`)* | Aplica el tema oscuro y modo de animaciones (`horarios_temaOscuro`, `horarios_reducirAnimaciones` con fallback legado) antes del primer pintado (anti-FOUC) y protege contra clickjacking. |
-| [`src/core/constantes.js`](../src/core/constantes.js) | `APP_NOMBRE`, `APP_VERSION`, `APP_STORAGE_PREFIX`, `STORAGE_KEYS`, `horasGte`, `horasEq` | Prefijo de aplicación (`horarios_`), claves de `localStorage`, comparadores de punto flotante con tolerancia y constantes globales. |
+| [`src/core/constantes.js`](../src/core/constantes.js) | `APP_NOMBRE`, `APP_VERSION`, `APP_STORAGE_PREFIX`, `STORAGE_KEYS`, `CARDS`, `CARDS_ORDEN`, `TOAST_MS`, `DEMORA_ARRANQUE_MS`, `horasGte`, `horasEq` | Prefijo de aplicación (`horarios_`), claves de `localStorage`, tarjetas (`CARDS` = ocultables, `CARDS_ORDEN` = ubicables, con la de estado), duraciones de toasts y demoras de arranque, comparadores de punto flotante con tolerancia y constantes globales. |
 | [`src/core/html.js`](../src/core/html.js) | ``html`...` ``, `crudo`, `montar`, `esHtmlSeguro`, `icono`, `aHtmlConfiable`, `urlScriptConfiable` | Plantillas HTML con escape automático de cada interpolación (ver 3.2) e `icono(href, clase)` para los íconos del sprite SVG (`'#icon-…'`). |
 | [`src/core/dom.js`](../src/core/dom.js) | `$`, `setColapsable` | `$` (`getElementById` tipado) y helper de contenedores colapsables. |
 | [`src/core/eventos.js`](../src/core/eventos.js) | `EventosApp` | Bus de eventos pub/sub (`on`, `off`, `emit`) (`on` devuelve la función para desuscribirse). |
@@ -212,7 +225,7 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/ui/gist-respaldo.js`](../src/ui/gist-respaldo.js) | `GistRespaldo` | Configuración de token/ID de GitHub Gist, sincronización manual/automática y resolución de conflictos. |
 | [`src/ui/gist-resumen-merge.js`](../src/ui/gist-resumen-merge.js) | `GistResumenMerge` | Resumen previo a aplicar lo bajado del Gist: selector Combinar/Reemplazar, registros resultantes, cambios de configuración y alerta de registros locales que se pierden. |
 | [`src/ui/respaldo-local.js`](../src/ui/respaldo-local.js) | `RespaldoLocal` | Modales y flujo de exportación (completa, mensual o por rango) e importación de archivos `.json` locales. |
-| [`src/ui/orden-tarjetas.js`](../src/ui/orden-tarjetas.js) | `OrdenTarjetas` | Visibilidad de tarjetas principales y reordenamiento drag-and-drop. |
+| [`src/ui/orden-tarjetas.js`](../src/ui/orden-tarjetas.js) | `OrdenTarjetas` | Visibilidad de tarjetas principales y diseño libre por columnas (ver 3.3): arrastre con pulsación larga, teclado (Alt + flechas) y lista de Ajustes. |
 | [`src/ui/arrastre.js`](../src/ui/arrastre.js) | `uiArrastreLargo`, `uiAnimarReubicacion`, `REUBICACION_MS` | Arrastre con pulsación larga (puntero capturado, cancelación) y reubicación animada FLIP; genéricos, sin conocer qué se arrastra. |
 | [`src/ui/notificaciones.js`](../src/ui/notificaciones.js) | `Notificaciones` | Modal y controles de configuración de avisos Web Push (anticipación, uso de saldo semanal). |
 | [`src/ui/bienvenida-modal.js`](../src/ui/bienvenida-modal.js) | `BienvenidaModal` | Onboarding inicial para configurar horas diarias y días hábiles en el primer uso. |
@@ -284,6 +297,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 | **ARQ-12** | Saneamiento: código muerto eliminado, ~50 funciones de reenvío y reexportaciones quitadas, `GestionDatos` (75 → 14 miembros) y `UIBase` (53 → 18) sin pasamanos, cálculo de estadísticas y de la tarjeta movidos a `services/` (`EstadisticasPeriodo`, `EstadoTarjeta`) con tests sin DOM, `tarjeta-fichaje.js` (1.012 → 540 líneas) dividido con `tarjeta-fichaje-vista.js`, helper `icono()` y reportes con ``html`...` `` | ✅ Aplicado |
 | **ARQ-13** | Unificación y endurecimiento: archivo local y Gist restauran por el mismo camino (`prepararRespaldo`/`restaurarRespaldo`), carga del perfil (`cargarPerfilActivo`) y alta/baja/renombre de perfiles movidos a `services/`, datos guardados reparados al cargar, `sanitizeString` reemplazado por `limpiarTexto` + listas blancas, `montar` como único sink de `innerHTML` y CSP con Trusted Types | ✅ Aplicado |
 | **ARQ-14** | Módulos de UI por debajo de 500 líneas (`calendario-popups`, `historico-items`, `gist-resumen-merge`, `arrastre`, `tarjeta-ciclo-stats`), aviso de fin de jornada en `services/aviso-jornada.js`, tramos de días hábiles y armado de respaldos (`armarRespaldo`) en servicios, fechas del lote y filtros validadas en el servicio, claves heredadas y 60 exportaciones internas eliminadas | ✅ Aplicado |
+| **ARQ-15** | Tarjeta de atajos eliminada; diseño libre de tarjetas en hasta 3 columnas (3.3) con la tarjeta de estado reubicable; `style.display` reemplazado por `.hidden` en los casos aislados; duraciones, tamaño compacto y esperas pasadas a tokens/constantes (`--dur-*`, `--control-sm`, `TOAST_MS`, `DEMORA_ARRANQUE_MS`); `calcularEstadoCard`, `derivarVistaHoy`, `_renderizarCalendario`, `_popupStat` e `iniciarDragTarjetas` divididos en funciones menores | ✅ Aplicado |
 
 ---
 

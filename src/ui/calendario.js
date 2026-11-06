@@ -101,6 +101,67 @@ function _activarVistaCalendarioHistorico() {
 
 let _calendarioMes = null;
 
+/** Celda de un día del calendario: su clase de estado, resaltado de "hoy" o "nuevo" y los eventos de click/hover si tiene registro. */
+function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario, asignaciones }) {
+    const cell = document.createElement('div');
+    let clases = `calendario-dia ${clase}`;
+    if (esHoy) clases += ' hoy';
+    if (clase === 'dia-sin-registro' && !TiempoUtils.esFechaHabil(fecha, Compensatorios.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
+    if (esNuevo) {
+        clases += ' nuevo-registro-animacion';
+        cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
+    }
+    if (reg) clases += ' cursor-pointer';
+    if (conComentario) clases += ' tiene-comentario';
+    cell.className = clases;
+    cell.textContent = String(dia);
+    cell.dataset.dia = fecha;
+
+    if (reg) {
+        cell.dataset.regId = reg.id;
+        cell.addEventListener('click', (e) => CalendarioPopups.onclickDia(e, reg.id, asignaciones));
+        cell.addEventListener('mouseenter', (e) => CalendarioPopups.hoverDia(e, reg.id, asignaciones));
+        cell.addEventListener('mouseleave', (e) => CalendarioPopups.cerrarHoverDia(e));
+    } else if (clase === 'dia-sin-registro') {
+        cell.classList.add('cursor-pointer');
+        cell.dataset.fecha = fecha;
+        cell.addEventListener('click', (e) => CalendarioPopups.diaSinRegistro(e, fecha));
+    }
+    return cell;
+}
+
+/** Bandas que marcan en el calendario los días laborables de la semana actual (una por fila de la grilla). */
+function _bandasSemanaActual(anio, mes, offsetInicio, diasDelMes) {
+    const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
+    const esLaborable = (f) => TiempoUtils.esFechaHabil(f, Compensatorios.diasHabilesEnFecha(f));
+    const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
+    const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
+    const segmentosSemana = [];
+    for (let d = 1; d <= diasDelMes; d++) {
+        const f = fechaStr(anio, mes, d);
+        if (f < semIni || f > semFin || !esLaborable(f)) continue;
+        const idx = offsetInicio + d - 1;
+        const fila = 2 + Math.floor(idx / 7);
+        const col = 1 + (idx % 7);
+        const ultimo = segmentosSemana[segmentosSemana.length - 1];
+        if (ultimo && ultimo.fila === fila && ultimo.hasta === col - 1) {
+            ultimo.hasta = col;
+            ultimo.diaFin = d;
+        } else {
+            segmentosSemana.push({ fila, desde: col, hasta: col, diaIni: d, diaFin: d });
+        }
+    }
+    return segmentosSemana.map(seg => {
+        const banda = document.createElement('div');
+        banda.className = 'calendario-semana-actual';
+        if (seg.desde === 1 && esLaborable(fechaDeDia(seg.diaIni - 1))) banda.classList.add('abierta-izq');
+        if (seg.hasta === 7 && esLaborable(fechaDeDia(seg.diaFin + 1))) banda.classList.add('abierta-der');
+        banda.setAttribute('aria-hidden', 'true');
+        banda.style.gridArea = `${seg.fila} / ${seg.desde} / ${seg.fila + 1} / ${seg.hasta + 1}`;
+        return banda;
+    });
+}
+
 /** @param {any} [idResaltar] @param {any} [asignacionesPrecalculadas] */
 function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = null) {
     const grid = $('calendario-grid');
@@ -166,61 +227,10 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
         const idsNuevos = _aArray(idResaltar);
         const esNuevo = reg && idsNuevos.includes(reg.id);
 
-        const cell = document.createElement('div');
-        let clases = `calendario-dia ${clase}`;
-        if (esHoy) clases += ' hoy';
-        if (clase === 'dia-sin-registro' && !TiempoUtils.esFechaHabil(fecha, Compensatorios.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
-        if (esNuevo) {
-            clases += ' nuevo-registro-animacion';
-            cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
-        }
-        if (reg) clases += ' cursor-pointer';
-        if (reg && notasDelMes.has(reg.id)) clases += ' tiene-comentario';
-        cell.className = clases;
-        cell.textContent = String(dia);
-        cell.dataset.dia = fecha;
-
-        if (reg) {
-            cell.dataset.regId = reg.id;
-            cell.addEventListener('click', (e) => CalendarioPopups.onclickDia(e, reg.id, asignacionesCompensatorio));
-            cell.addEventListener('mouseenter', (e) => CalendarioPopups.hoverDia(e, reg.id, asignacionesCompensatorio));
-            cell.addEventListener('mouseleave', (e) => CalendarioPopups.cerrarHoverDia(e));
-        } else if (clase === 'dia-sin-registro') {
-            cell.classList.add('cursor-pointer');
-            cell.dataset.fecha = fecha;
-            cell.addEventListener('click', (e) => CalendarioPopups.diaSinRegistro(e, fecha));
-        }
-
-        frag.appendChild(cell);
+        frag.appendChild(_crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario: !!reg && notasDelMes.has(reg.id), asignaciones: asignacionesCompensatorio }));
     }
 
-    const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
-    const esLaborable = (f) => TiempoUtils.esFechaHabil(f, Compensatorios.diasHabilesEnFecha(f));
-    const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
-    const segmentosSemana = [];
-    for (let d = 1; d <= ultimoDia.getDate(); d++) {
-        const f = fechaStr(anio, mes, d);
-        if (f < semIni || f > semFin || !esLaborable(f)) continue;
-        const idx = offsetInicio + d - 1;
-        const fila = 2 + Math.floor(idx / 7);
-        const col = 1 + (idx % 7);
-        const ultimo = segmentosSemana[segmentosSemana.length - 1];
-        if (ultimo && ultimo.fila === fila && ultimo.hasta === col - 1) {
-            ultimo.hasta = col;
-            ultimo.diaFin = d;
-        } else {
-            segmentosSemana.push({ fila, desde: col, hasta: col, diaIni: d, diaFin: d });
-        }
-    }
-    segmentosSemana.forEach(seg => {
-        const banda = document.createElement('div');
-        banda.className = 'calendario-semana-actual';
-        if (seg.desde === 1 && esLaborable(fechaDeDia(seg.diaIni - 1))) banda.classList.add('abierta-izq');
-        if (seg.hasta === 7 && esLaborable(fechaDeDia(seg.diaFin + 1))) banda.classList.add('abierta-der');
-        banda.setAttribute('aria-hidden', 'true');
-        banda.style.gridArea = `${seg.fila} / ${seg.desde} / ${seg.fila + 1} / ${seg.hasta + 1}`;
-        frag.appendChild(banda);
-    });
+    _bandasSemanaActual(anio, mes, offsetInicio, ultimoDia.getDate()).forEach(banda => frag.appendChild(banda));
 
     grid.classList.toggle('calendario-filtro-activo', filtroActivo);
 

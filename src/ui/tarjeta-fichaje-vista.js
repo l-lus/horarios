@@ -340,69 +340,83 @@ function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, la
     return bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
 }
 
+/** Vista de hoy cuando todavía no hay entrada pero ayer quedó una jornada abierta que cruza la medianoche. */
+function _vistaAyerAbierto(est) {
+    const { tiempoHoy, bufferSemanalBase, diasHabiles, horasDiarias, regHoy } = est;
+    const objetivoDiario = regHoy ? Compensatorios.objetivoDeRegistro(regHoy) : horasDiarias;
+    const objetivoDiarioAyerAplica = TiempoUtils.esFechaHabil(est.ayerStr, diasHabiles)
+        ? (est.regAyer ? Compensatorios.objetivoDeRegistro(est.regAyer) : objetivoDiario)
+        : 0;
+    const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
+    const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAyerAplica);
+    const colorBarra = objetivoDiarioAyerAplica === 0 ? 'blue' : (cumplido ? 'green' : 'blue');
+    const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase, 'En curso (cruce de medianoche)');
+
+    const nombreDiaAyer = TiempoUtils.obtenerNombreDia(est.ayerStr);
+    const linea = _calcularLinea(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles);
+    const { hint } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
+
+    return {
+        titulo: html`${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false, undefined, objetivoDiarioAyerAplica > 0 && cumplido)}`,
+        stats: _sinMinutos(tiempoHoy) ? _TEXTO_COMENZANDO : _horasTextoStats(tiempoHoy),
+        mensaje, mostrarMensaje: true,
+        colorBarra, anchoBarra: prog,
+        colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
+        colorCierre: _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase),
+        cerrado: false,
+        hint,
+        linea,
+    };
+}
+
+/** Vista de hoy sin ningún registro (ni jornada de ayer abierta). */
+function _vistaSinRegistro(est) {
+    const { horasDiarias, esDiaHabil } = est;
+    return {
+        titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
+        stats: esDiaHabil ? '🎒' : '🌞',
+        mensaje: esDiaHabil
+            ? (horasDiarias === 0 ? '' : 'Esperando registro...')
+            : (horasDiarias === 0 ? '' : 'Día libre'),
+        mostrarMensaje: horasDiarias > 0,
+        colorBarra: 'blue', anchoBarra: 0,
+        colorBorde: 'transparent', estadoFondo: 'esperando',
+        cerrado: false,
+        hint: 'Tocá para ver la Semana',
+    };
+}
+
+/** Vista de hoy cuando el registro es un día especial (licencia, feriado...). */
+function _vistaEspecial(tipoEspecialHoy) {
+    return {
+        titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
+        stats: `${tipoEspecialHoy.emoji} ${tipoEspecialHoy.label}`,
+        mensaje: `¡${tipoEspecialHoy.descripcion}!`,
+        mostrarMensaje: true,
+        colorBarra: tipoEspecialHoy.color, anchoBarra: 100,
+        colorBorde: tipoEspecialHoy.color,
+        estadoFondo: 'especial', estadoFondoColor: tipoEspecialHoy.color,
+        cerrado: false,
+        hint: 'Tocá para ver la Semana',
+    };
+}
+
 function derivarVistaHoy(est) {
     const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanalBase, diasHabiles } = est;
     const objetivoDiario = regHoy ? Compensatorios.objetivoDeRegistro(regHoy) : horasDiarias;
 
     if (!regHoy || !regHoy.entrada) {
 
-        if (est.ayerAbierto) {
-            const objetivoDiarioAyerAplica = TiempoUtils.esFechaHabil(est.ayerStr, diasHabiles)
-                ? (est.regAyer ? Compensatorios.objetivoDeRegistro(est.regAyer) : objetivoDiario)
-                : 0;
-            const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
-            const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAyerAplica);
-            const colorBarra = objetivoDiarioAyerAplica === 0 ? 'blue' : (cumplido ? 'green' : 'blue');
-            const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase, 'En curso (cruce de medianoche)');
+        if (est.ayerAbierto) return _vistaAyerAbierto(est);
 
-            const nombreDiaAyer = TiempoUtils.obtenerNombreDia(est.ayerStr);
-            const linea = _calcularLinea(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles);
-            const { hint } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
-
-            return {
-                titulo: html`${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false, undefined, objetivoDiarioAyerAplica > 0 && cumplido)}`,
-                stats: _sinMinutos(tiempoHoy) ? _TEXTO_COMENZANDO : _horasTextoStats(tiempoHoy),
-                mensaje, mostrarMensaje: true,
-                colorBarra, anchoBarra: prog,
-                colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
-                colorCierre: _colorSiCerraraAhora(tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase),
-                cerrado: false,
-                hint,
-                linea,
-            };
-        }
-
-        return {
-            titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
-            stats: esDiaHabil ? '🎒' : '🌞',
-            mensaje: esDiaHabil
-                ? (horasDiarias === 0 ? '' : 'Esperando registro...')
-                : (horasDiarias === 0 ? '' : 'Día libre'),
-            mostrarMensaje: horasDiarias > 0,
-            colorBarra: 'blue', anchoBarra: 0,
-            colorBorde: 'transparent', estadoFondo: 'esperando',
-            cerrado: false,
-            hint: 'Tocá para ver la Semana',
-        };
+        return _vistaSinRegistro(est);
     }
 
     const avisoAyerHint = est.ayerAbierto
         ? { hint: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, aviso: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar` }
         : null;
 
-    if (tipoEspecialHoy) {
-        return _conAvisoAyer({
-            titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
-            stats: `${tipoEspecialHoy.emoji} ${tipoEspecialHoy.label}`,
-            mensaje: `¡${tipoEspecialHoy.descripcion}!`,
-            mostrarMensaje: true,
-            colorBarra: tipoEspecialHoy.color, anchoBarra: 100,
-            colorBorde: tipoEspecialHoy.color,
-            estadoFondo: 'especial', estadoFondoColor: tipoEspecialHoy.color,
-            cerrado: false,
-            hint: 'Tocá para ver la Semana',
-        }, avisoAyerHint);
-    }
+    if (tipoEspecialHoy) return _conAvisoAyer(_vistaEspecial(tipoEspecialHoy), avisoAyerHint);
 
     const dayClosed = !!regHoy.salida;
     const objetivoDiarioAplica = esDiaHabil ? objetivoDiario : 0;

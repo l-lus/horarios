@@ -92,13 +92,32 @@ const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRu
         onAfterToggle: () => { EventosApp.emit('config:rueda-calendario'); }
     });
 
-const { toggle: toggleHintIntegrado, actualizarEstado: actualizarEstadoBotonHintIntegrado } =
-    _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, v),
-        btnId: 'btn-toggle-hint-integrado',
-        onAfterToggle: () => { EventosApp.emit('config:hint-integrado'); actualizarUI(); }
-    });
+// "Hint integrado" tiene tres estados en un solo botón: No (la información va en el texto de abajo), Barra (hitos sobre la barra, con su descripción
+// desplegada) y Número (hitos sobre la barra y el nombre de cada uno en el número grande). Se guardan en dos opciones: HINT_INTEGRADO y DESC_HITOS_NUMERO.
+const _MODOS_HINT = ['no', 'barra', 'numero'];
+const _ETIQUETAS_HINT = { no: 'No', barra: 'Barra', numero: 'Número' };
+
+function _modoHintIntegrado() {
+    if (!Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO)) return 'no';
+    return Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO) ? 'numero' : 'barra';
+}
+
+function actualizarEstadoBotonHintIntegrado() {
+    const lbl = $('hint-integrado-label');
+    if (lbl) lbl.textContent = _ETIQUETAS_HINT[_modoHintIntegrado()];
+}
+
+// Al restaurar un respaldo o bajar de Gist cambia la opción: se actualiza la etiqueta
+EventosApp.on('config:hint-integrado', () => actualizarEstadoBotonHintIntegrado());
+
+function toggleHintIntegrado() {
+    const siguiente = _MODOS_HINT[(_MODOS_HINT.indexOf(_modoHintIntegrado()) + 1) % _MODOS_HINT.length];
+    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, siguiente !== 'no');
+    Almacenamiento.setItem(STORAGE_KEYS.DESC_HITOS_NUMERO, siguiente === 'numero');
+    actualizarEstadoBotonHintIntegrado();
+    EventosApp.emit('config:hint-integrado');
+    actualizarUI();
+}
 
 const { toggle: toggleMetricaUso, actualizarEstado: actualizarEstadoBotonMetricaUso } =
     _crearToggleConfig({

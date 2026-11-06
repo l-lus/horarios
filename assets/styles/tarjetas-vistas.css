@@ -533,6 +533,16 @@
     transition: left var(--dur-slow), opacity var(--dur-fast) ease, filter var(--dur-anim) ease;
 }
 
+/* Variante "Número" del hint integrado: el número grande lleva el nombre del hito enfocado y la barra solo resalta la hora, sin desplegar su descripción */
+.stats-card.desc-en-numero .linea-et-desc {
+    display: none;
+}
+
+.stats-card.desc-en-numero .linea-etiqueta {
+    --desc-ancho: 0px !important;
+    --separacion-desc: 0px !important;
+}
+
 /* Pulso del punto enfocado: anillo centrado en el punto de anclaje (24, -3) del svg de la marca; en los remates, un anillo alrededor */
 @keyframes hito-pulso {
     from { transform: scale(1); opacity: 0.75; }

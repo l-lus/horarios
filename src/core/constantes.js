@@ -17,6 +17,7 @@ export const STORAGE_KEYS = Object.freeze({
     FORMATO_CORTO_STATS: 'formatoCortoStats',
     ESTILO_CALENDARIO: 'estiloCalendario',
     HINT_INTEGRADO: 'hintIntegrado',
+    DESC_HITOS_NUMERO: 'descHitosNumero',   // con el hint integrado: el nombre del hito enfocado va en el número grande en vez de desplegarse en la barra
     DIAS_HABILES: 'diasHabiles',
     HISTORIAL_DIAS_HABILES: 'historialDiasHabiles',
     HORAS_DIARIAS: 'horasDiarias',
@@ -66,6 +67,7 @@ export const CARDS_ORDEN = Object.freeze(['estado', ...CARDS]);
 // Valores por defecto de opciones booleanas que se leen desde varios módulos (un solo lugar para que no se desincronicen)
 export const DEFAULTS = Object.freeze({
     HINT_INTEGRADO: true,
+    DESC_HITOS_NUMERO: false,
     RUEDA_CALENDARIO: true,
 });
 

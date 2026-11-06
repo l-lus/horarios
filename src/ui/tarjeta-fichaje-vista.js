@@ -31,8 +31,11 @@ EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
 
 // "Hint integrado": la salida estimada y la salida con buffer se dibujan sobre la barra en vez de en el texto inferior
 let _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
+// y su variante: el nombre del hito enfocado va en el número grande en vez de desplegarse en la barra
+let _descHitosNumero = Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO);
 EventosApp.on('config:hint-integrado', () => {
     _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
+    _descHitosNumero = Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO);
 });
 
 // Solo se activa mientras se deriva la variante corta del mensaje de la tarjeta (ver _conMensajeCorto): no toca la opción del usuario
@@ -486,5 +489,6 @@ export const TarjetaFichajeVista = {
     _cantidadHorasCorta,
     _modoTextoStats,
     _hintIntegradoActivo: () => _hintIntegrado,
+    _descHitosEnNumero: () => _hintIntegrado && _descHitosNumero,
     _refrescarFormatoCortoStatsCache
 };

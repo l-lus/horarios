@@ -25,7 +25,7 @@ const {
     _renderConFirma, _conRendersSinAnimar, _rendersSinAnimarActivos, _animarFadeSwap,
     _animarMutacion, _animarConteo, _conteoEnCurso, _cancelarConteo, _durSiAnima
 } = Animaciones;
-const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo } = TarjetaFichajeVista;
+const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo, _descHitosEnNumero } = TarjetaFichajeVista;
 
 const { setProgressBarColor, toggleFondoCard, actualizarFondoCard } = TarjetaFondos;
 const {
@@ -122,7 +122,10 @@ function _renderStats(vista, est, conteo = null) {
     const salidaEstimada = linea && !linea.cerrado ? linea.horaSalida : '';
     const salidaBanco = linea && !linea.cerrado && linea.hayBanda ? linea.horaBuffer : '';
 
-    CicloStats.actualizarDatos({ valorHoras: vista.stats, entrada: entradaHoy, salida: salidaHoy, tiempoFuera: tiempoFueraHoy, salidaEstimada, salidaBanco, hitosEnBarra: !!linea });
+    // variante "Número": el nombre del hito va en el número grande y el CSS oculta su descripción en la barra
+    const nombreEnNumero = !!linea && _descHitosEnNumero();
+    $('stats-card')?.classList.toggle('desc-en-numero', nombreEnNumero);
+    CicloStats.actualizarDatos({ valorHoras: vista.stats, entrada: entradaHoy, salida: salidaHoy, tiempoFuera: tiempoFueraHoy, salidaEstimada, salidaBanco, hitosEnBarra: !!linea, nombreEnNumero });
 
     const fase = CicloStats.tomarFasePendiente();
     if (fase && CicloStats.iniciarEnFase(fase)) return;

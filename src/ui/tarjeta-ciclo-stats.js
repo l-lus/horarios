@@ -9,14 +9,14 @@ import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 // Ciclo de textos del número grande de la tarjeta en la vista diaria: horas → "Entrada 08:30" → "Salida 17:00" (registro cerrado)
 // → (con el registro abierto: salida estimada → salida con banco) → "Tiempo fuera 25m" → horas. Con el hint integrado (`hitosEnBarra`) la barra ya muestra la entrada, la salida y, con el registro abierto,
 // la salida estimada y la salida con banco, cada una con su descripción: esas fases no cambian el texto (queda el de las horas) y solo resaltan su hito.
-// El tiempo fuera no tiene hito en la barra, siempre se muestra como texto y cierra el ciclo. Sin el hint integrado, entrada y salida se muestran como texto.
+// Con la variante "Número" del hint integrado (Ajustes) cada hito escribe su nombre y su hora en el número grande ("Entrada 08:30", "Salida estimada 17:00" —"Salida est." si no entra en una línea—, "Con banco 16:52") en lugar de desplegarlos en la barra. El tiempo fuera no tiene hito en la barra, siempre se muestra como texto y cierra el ciclo. Sin el hint integrado, entrada y salida se muestran como texto.
 // Cada 2 s. tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
 // Cada vez que cambia la fase avisa su tipo (o null al terminar) a quien se registre con `alCambiarFase`: así la barra resalta el hito correspondiente
 // sin que este módulo conozca el DOM de la barra.
 const { _animarMutacion } = Animaciones;
 const { _formatearMinutosCorto } = TarjetaTiempoFuera;
 
-/** @typedef {{ tipo: string, texto: () => string }} FaseCiclo */
+/** @typedef {{ tipo: string, texto: () => string, corto?: () => string }} FaseCiclo */
 
 let _cicloStatsInterval = null;
 let _cicloStatsValorHoras = '';
@@ -26,6 +26,7 @@ let _cicloStatsSalidaEstimada = '';
 let _cicloStatsSalidaBanco = '';
 let _cicloStatsTiempoFuera = '';
 let _cicloStatsHitosEnBarra = false;
+let _cicloStatsNombreEnNumero = false;
 let _cicloStatsFaseAlRenderizar = null;
 /** @type {((tipo: string | null) => void) | null} */
 let _alCambiarFase = null;
@@ -50,16 +51,26 @@ function _prepararMostrarFaseAlRenderizar(tipo) {
 }
 
 /**
- * Fase de un hito de la barra: con el hint integrado deja el texto de las horas (se despliega la descripción del hito);
- * sin él muestra `texto`.
+ * Fase de un hito de la barra: con el hint integrado deja el texto de las horas (se despliega la descripción del hito en la barra);
+ * con la variante "Número" (o sin el hint integrado) el número grande muestra `texto`.
  * @param {string} tipo
  * @param {() => string} texto
+ * @param {() => string} [corto] variante abreviada, para cuando `texto` no entra en una línea
  * @returns {FaseCiclo}
  */
-function _faseHito(tipo, texto) {
-    return _cicloStatsHitosEnBarra
+function _faseHito(tipo, texto, corto) {
+    return _cicloStatsHitosEnBarra && !_cicloStatsNombreEnNumero
         ? { tipo, texto: () => _cicloStatsValorHoras }
-        : { tipo, texto };
+        : { tipo, texto, corto };
+}
+
+/** Escribe el texto de la fase en el número grande; si tiene variante corta y la completa no entra en una línea, usa la corta. */
+function _escribirTextoFase(el, fase) {
+    el.textContent = fase.texto();
+    if (!fase.corto) return;
+    const estilo = getComputedStyle(el);
+    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
+    if (Math.max(el.scrollHeight, el.getBoundingClientRect().height) > alto * 1.5) el.textContent = fase.corto();
 }
 
 /** @returns {FaseCiclo[]} */
@@ -72,8 +83,8 @@ function _fasesCiclo() {
     if (_cicloStatsSalida) {
         fases.push(_faseHito('salida', () => `Salida ${_cicloStatsSalida}`));
     }
-    if (_cicloStatsSalidaEstimada) fases.push(_faseHito('salidaEstimada', () => ''));
-    if (_cicloStatsSalidaBanco) fases.push(_faseHito('banco', () => ''));
+    if (_cicloStatsSalidaEstimada) fases.push(_faseHito('salidaEstimada', () => `Salida estimada ${_cicloStatsSalidaEstimada}`, () => `Salida est. ${_cicloStatsSalidaEstimada}`));
+    if (_cicloStatsSalidaBanco) fases.push(_faseHito('banco', () => `Con banco ${_cicloStatsSalidaBanco}`));
     // El tiempo fuera va al final: no es un hito de la barra, y así no corta la secuencia de hitos
     if (_cicloStatsTiempoFuera) {
         fases.push({ tipo: 'tiempoFuera', texto: () => `Tiempo fuera ${_formatearMinutosCorto(TiempoUtils.horaAMinutos(_cicloStatsTiempoFuera))}` });
@@ -89,7 +100,8 @@ function _crearCicloTick(fases, estado) {
         const aplicar = () => {
             estado.idx++;
             const terminado = estado.idx >= fases.length;
-            el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx].texto();
+            if (terminado) el.textContent = _cicloStatsValorHoras;
+            else _escribirTextoFase(el, fases[estado.idx]);
             if (terminado) { _detenerCicloStats(); return; }
             _emitirFase(fases[estado.idx].tipo);
             _cicloStatsInterval = setTimeout(_cicloTick, _CICLO_DURACION_MS);
@@ -131,7 +143,7 @@ function _iniciarCicloEnFase(tipo) {
     const tick = _crearCicloTick(fases, estado);
 
     const el = $('stats-semana');
-    if (el) el.textContent = fases[idx].texto();
+    if (el) _escribirTextoFase(el, fases[idx]);
     _emitirFase(fases[idx].tipo);
 
     _cicloStatsInterval = setTimeout(tick, _CICLO_DURACION_MS);
@@ -139,7 +151,7 @@ function _iniciarCicloEnFase(tipo) {
 }
 
 /** Datos del registro de hoy que muestran las fases (strings vacíos si no corresponde). */
-function _actualizarDatos({ valorHoras, entrada, salida, tiempoFuera, salidaEstimada = '', salidaBanco = '', hitosEnBarra = false }) {
+function _actualizarDatos({ valorHoras, entrada, salida, tiempoFuera, salidaEstimada = '', salidaBanco = '', hitosEnBarra = false, nombreEnNumero = false }) {
     _cicloStatsValorHoras = valorHoras;
     _cicloStatsEntrada = entrada;
     _cicloStatsSalida = salida;
@@ -147,6 +159,7 @@ function _actualizarDatos({ valorHoras, entrada, salida, tiempoFuera, salidaEsti
     _cicloStatsSalidaEstimada = salidaEstimada;
     _cicloStatsSalidaBanco = salidaBanco;
     _cicloStatsHitosEnBarra = hitosEnBarra;
+    _cicloStatsNombreEnNumero = hitosEnBarra && nombreEnNumero;
 }
 
 /** Fase pedida para el próximo render (tras fichar), o null; la consume. */

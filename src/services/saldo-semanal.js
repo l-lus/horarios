@@ -2,7 +2,8 @@ import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from './tipos-registro.js';
-import { GestionDatos as D } from './gestion-datos.js';
+import { Compensatorios } from './compensatorios.js';
+import { EstadoApp } from './estado-app.js';
 
 // ====================================================================
 // SALDO SEMANAL MODULE — (pool de horas)
@@ -11,13 +12,14 @@ function logicaCubiertoActiva() {
     return !Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
     const lunesDate = TiempoUtils.parsearFechaLocal(lunes);
     lunesDate.setDate(lunesDate.getDate() + 6);
     const domingo = TiempoUtils.formatearFechaLocal(lunesDate);
     const limite = domingo < hasta ? domingo : hasta;
 
-    const registrosSemana = D.registros().filter(r => r.fecha >= lunes && r.fecha <= limite);
+    const registrosSemana = EstadoApp.registros().filter(r => r.fecha >= lunes && r.fecha <= limite);
     const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
 
     const EPS = 1e-6;
@@ -39,15 +41,15 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
     for (const isoDate of TiempoUtils.generarRangoFechas(lunes, limite)) {
         const r = registrosMap.get(isoDate);
         const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-        const esRemoto = esEspecial && D.esTipoRemoto(r);
+        const esRemoto = esEspecial && Compensatorios.esTipoRemoto(r);
         let deltaBruto = 0;
         let montoCompensado = 0;
         if (esRemoto) {
             deltaBruto = 0;
         } else if (r && !esEspecial && r.salida) {
-            const objetivo = TiempoUtils.esFechaHabil(isoDate, D.diasHabilesEnFecha(isoDate)) ? D.objetivoDeRegistro(r) : 0;
+            const objetivo = TiempoUtils.esFechaHabil(isoDate, Compensatorios.diasHabilesEnFecha(isoDate)) ? Compensatorios.objetivoDeRegistro(r) : 0;
             deltaBruto = r.total - objetivo;
-            if (deltaBruto > EPS) montoCompensado = D.montoCompensadoDeReferencia(r, asignacionesPrecalculadas);
+            if (deltaBruto > EPS) montoCompensado = Compensatorios.montoCompensadoDeReferencia(r, asignacionesPrecalculadas);
         }
         const deltaDisponible = deltaBruto - montoCompensado;
 
@@ -74,6 +76,7 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
     return { pendientes, excedentes, poolGenerado, poolUsado };
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
     if (!logicaCubiertoActiva()) return false;
     const lunes = TiempoUtils.obtenerLunesSemanaISO(fecha);
@@ -84,13 +87,14 @@ function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
     return deuda ? deuda.restante <= EPS : false;
 }
 
+/** @param {any} [asignacionesPrecalculadas] */
 function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null) {
     if (!logicaCubiertoActiva()) return null;
     const hoy = TiempoUtils.obtenerFechaHoy();
     const topeReal = hasta < hoy ? hasta : hoy;
     if (desde > topeReal) return null;
 
-    const asignaciones = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
+    const asignaciones = asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio();
     let lunes = TiempoUtils.obtenerLunesSemanaISO(desde);
     let generado = 0, usado = 0;
 
@@ -114,20 +118,21 @@ function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null)
     };
 }
 
+/** @param {any} [asignaciones] */
 function estadoDeRegistro(r, asignaciones = null) {
     const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
     if (tipo) {
         return {
             estado: 'especial', tipo, diffText: '', fechaCompensado: null,
-            fechaCompensada: tipo.id === 'compensatorio' ? D.fechaCompensadaPorRegistro(r, asignaciones) : null
+            fechaCompensada: tipo.id === 'compensatorio' ? Compensatorios.fechaCompensadaPorRegistro(r, asignaciones) : null
         };
     }
-    const base = { tipo: null, diffText: '', fechaCompensada: null, fechaCompensado: D.fechaCompensadoDeRegistro(r, asignaciones) };
+    const base = { tipo: null, diffText: '', fechaCompensada: null, fechaCompensado: Compensatorios.fechaCompensadoDeRegistro(r, asignaciones) };
     if (r.entrada && !r.salida) return { ...base, estado: 'en-curso' };
     if (!r.entrada) return { ...base, estado: 'sin-datos' };
-    const objetivo = D.objetivoDeRegistro(r);
+    const objetivo = Compensatorios.objetivoDeRegistro(r);
     const total = r.total || 0;
-    if (!(objetivo > 0 && TiempoUtils.esFechaHabil(r.fecha, D.diasHabilesEnFecha(r.fecha)))) {
+    if (!(objetivo > 0 && TiempoUtils.esFechaHabil(r.fecha, Compensatorios.diasHabilesEnFecha(r.fecha)))) {
         return { ...base, estado: 'neutro' };
     }
     const estado = horasGte(total, objetivo) ? 'cumplido' : (cubiertoPorSaldo(r.fecha, asignaciones) ? 'cubierto' : 'incompleto');

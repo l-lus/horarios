@@ -1,149 +1,29 @@
 import { Reportes } from './reportes.js';
-import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { SaldoSemanal } from '../services/saldo-semanal.js';
+import { EstadisticasPeriodo } from '../services/estadisticas-periodo.js';
 import { UIBase } from './base.js';
 import { Configuracion } from './configuracion.js';
-import { SeguridadYUtils as S } from '../core/seguridad.js';
-import { GestionDatos as D } from '../services/gestion-datos.js';
+import { html, icono } from '../core/html.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { registrarSwipe } from './gestos.js';
+import { _crearPopupFlotante } from './popups.js';
+import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 //                     UI STATISTICS MODULE
 // ====================================================================
-const {
-    mostrarToast, _poblarSelect,
-    _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante,
-    toggleSeccionGen, registrarSwipe, _animarFadeSwap, descargarArchivo
-} = UIBase;
+const { _poblarSelect, toggleSeccionGen } = UIBase;
+const { _animarSlideElemento, _animarFadeSwap } = Animaciones;
 
 let modoEstadisticas = 'mensual';
 let _ultimosStatsRenderizados = null;
 
-function calcularRegularidad(desviacionMinutos) {
-    if (desviacionMinutos === null) return '--:--';
-    const mins = Math.round(desviacionMinutos);
-    return mins <= 20 ? 'Alta' : mins <= 40 ? 'Media' : 'Baja';
-}
+const { calcularEstadisticasMes, calcularEstadisticasAnio, calcularEstadisticasSemana } = EstadisticasPeriodo;
 
-function desviacionEstandar(valores) {
-    if (valores.length < 2) return null;
-    const media = valores.reduce((a, b) => a + b, 0) / valores.length;
-    const varianza = valores.reduce((sum, v) => sum + Math.pow(v - media, 2), 0) / valores.length;
-    return Math.sqrt(varianza);
-}
-
-function _fechaDesdeEfectiva(registros, fechaDesdeDefault) {
-    if (registros.length === 0) return fechaDesdeDefault;
-    const primerRegistro = registros.reduce((min, r) => r.fecha < min ? r.fecha : min, registros[0].fecha);
-    return primerRegistro > fechaDesdeDefault ? primerRegistro : fechaDesdeDefault;
-}
-
-
-function _calcularRegularidadRango(registrosValidos, regularidadPorMes) {
-    if (regularidadPorMes) {
-        const meses = [...new Set(registrosValidos.map(r => r.fecha.substring(0, 7)))];
-        const desE = [], desJ = [];
-        meses.forEach(mes => {
-            const regs = registrosValidos.filter(r => r.fecha.startsWith(mes));
-            if (regs.length < 2) return;
-            const dE = desviacionEstandar(regs.map(r => TiempoUtils.horaAMinutos(r.entrada)));
-            const dJ = desviacionEstandar(regs.map(r => Math.round(r.total * 60)));
-            if (dE !== null) desE.push(dE);
-            if (dJ !== null) desJ.push(dJ);
-        });
-        const avg = arr => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
-        return {
-            regEntrada: calcularRegularidad(avg(desE)),
-            regJornada: calcularRegularidad(avg(desJ))
-        };
-    }
-    return {
-        regEntrada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => TiempoUtils.horaAMinutos(r.entrada)))),
-        regJornada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => Math.round(r.total * 60))))
-    };
-}
-
-function _calcularEstadisticasRango(registrosRango, opciones = {}) {
-    const { regularidadPorMes = false } = opciones;
-
-    const conteosPorTipo = {};
-    const claveTipoPorCodigo = new Map(TiposRegistro.obtenerTodosLosTipos().map(t => [t.codigo, TiposRegistro.claveStat(t)]));
-    claveTipoPorCodigo.forEach(clave => { conteosPorTipo[clave] = 0; });
-    registrosRango.forEach(r => {
-        if (r.entrada && r.entrada === r.salida) {
-            const clave = claveTipoPorCodigo.get(r.entrada);
-            if (clave) conteosPorTipo[clave]++;
-        }
-    });
-
-    const compensaciones = registrosRango.filter(r => r.credito && r.credito !== '00:00').length;
-
-    let tiempoFueraTotalMinutos = 0;
-    registrosRango.forEach(r => {
-        if (r.tiempoFuera && r.tiempoFuera !== '00:00') {
-            tiempoFueraTotalMinutos += TiempoUtils.horaAMinutos(r.tiempoFuera);
-        }
-    });
-
-    const registrosValidos = registrosRango.filter(r =>
-        r.entrada && r.salida && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
-    );
-
-    const vacios = {
-        entradaPromedio: '--:--', salidaPromedio: '--:--',
-        diasTrabajados: 0, promedioDiario: '--:--',
-        tiempoFueraTotal: '--:--', tiempoTotal: '--:--',
-        ...conteosPorTipo, compensaciones,
-        regularidadEntrada: '--:--', regularidadJornada: '--:--',
-        bufferPeriodo: null, aprovechamientoSaldo: null
-    };
-    const totalHoras = _sumarHorasEfectivas(registrosRango);
-    const horasDiariasObj = D.horasDiarias();
-    const hayPeriodo = horasDiariasObj > 0 && opciones.desde && opciones.hasta;
-    const asignacionesCompensatorio = hayPeriodo ? D.calcularAsignacionesCompensatorio() : null;
-    const bufferPeriodo = hayPeriodo
-        ? D.calcularBufferPeriodo(opciones.desde, opciones.hasta, true, 0, asignacionesCompensatorio)
-        : null;
-    const aprovechamientoSaldo = hayPeriodo
-        ? SaldoSemanal.calcularAprovechamiento(opciones.desde, opciones.hasta, asignacionesCompensatorio)
-        : null;
-
-    if (registrosValidos.length === 0) {
-        if (registrosRango.length === 0) return vacios;
-        return {
-            ...vacios,
-            tiempoFueraTotal: tiempoFueraTotalMinutos > 0 ? TiempoUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short') : '--:--',
-            tiempoTotal: totalHoras > 0 ? TiempoUtils.horasATexto(totalHoras, 'short') : '--:--',
-            bufferPeriodo, aprovechamientoSaldo
-        };
-    }
-
-    const avgMin = arr => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
-    const promedioEntrada = avgMin(registrosValidos.map(r => TiempoUtils.horaAMinutos(r.entrada)));
-    const promedioSalida = avgMin(registrosValidos.map(r => TiempoUtils.horaAMinutos(r.salida)));
-
-    const totalHorasTrabajadas = registrosValidos.reduce((s, r) => s + r.total, 0);
-    const promDiario = totalHorasTrabajadas / registrosValidos.length;
-
-    const { regEntrada, regJornada } = _calcularRegularidadRango(registrosValidos, regularidadPorMes);
-
-    return {
-        entradaPromedio: TiempoUtils.minutosAHora(promedioEntrada),
-        salidaPromedio: TiempoUtils.minutosAHora(promedioSalida),
-        diasTrabajados: registrosValidos.length,
-        promedioDiario: TiempoUtils.horasATexto(promDiario, 'short'),
-        tiempoFueraTotal: TiempoUtils.horasATexto(tiempoFueraTotalMinutos / 60, 'short'),
-        tiempoTotal: TiempoUtils.horasATexto(totalHoras, 'short'),
-        ...conteosPorTipo, compensaciones,
-        regularidadEntrada: regEntrada,
-        regularidadJornada: regJornada,
-        bufferPeriodo, aprovechamientoSaldo
-    };
-}
 
 function _renderizarStats(stats, opciones = {}) {
     const { mostrarBtnReporte = true } = opciones;
@@ -156,8 +36,8 @@ function _renderizarStats(stats, opciones = {}) {
 
     const toggleStatItem = (id, value) => {
         const el = $(id); if (!el) return;
-        const si = el.closest('.stat-item');
-        if (si) { if (value === 0) { si.style.display = 'none'; } else { si.style.display = ''; el.textContent = value; } }
+        const si = /** @type {HTMLElement} */ (el.closest('.stat-item'));
+        if (si) { si.classList.toggle('hidden', value === 0); if (value !== 0) el.textContent = value; }
     };
     toggleStatItem('stat-dias-trabajados', stats.diasTrabajados);
 
@@ -176,7 +56,7 @@ function _renderizarStats(stats, opciones = {}) {
     const elRegJor = $('stat-regularidad-jornada');
     if (elRegJor) elRegJor.textContent = stats.regularidadJornada || '--:--';
 
-    const btnReporte = document.getElementById('btn-reporte');
+    const btnReporte = $('btn-reporte');
     if (btnReporte) {
         btnReporte.disabled = !mostrarBtnReporte;
     }
@@ -184,9 +64,9 @@ function _renderizarStats(stats, opciones = {}) {
     const itemSaldo = $('stat-item-saldo');
     if (elSaldo && itemSaldo) {
         if (stats.bufferPeriodo === null) {
-            itemSaldo.style.display = 'none';
+            itemSaldo.classList.add('hidden');
         } else {
-            itemSaldo.style.display = '';
+            itemSaldo.classList.remove('hidden');
             const b = stats.bufferPeriodo;
             elSaldo.textContent = b === 0 ? '0h' : TiempoUtils.horasATexto(b, 'short');
             elSaldo.classList.remove('saldo-positivo', 'saldo-negativo', 'saldo-neutro');
@@ -197,30 +77,13 @@ function _renderizarStats(stats, opciones = {}) {
     _ultimosStatsRenderizados = stats;
 }
 
-function calcularEstadisticasMes(mesAnio = null, registrosPeriodo = null) {
-    let mesActual, añoActual;
-    if (mesAnio) {
-        const [año, mes] = mesAnio.split('-').map(Number);
-        añoActual = año; mesActual = mes - 1;
-    } else {
-        const hoy = new Date();
-        mesActual = hoy.getMonth(); añoActual = hoy.getFullYear();
-    }
-    const registros = registrosPeriodo ?? D.registros().filter(r => {
-        const [a, m] = r.fecha.split('-').map(Number);
-        return a === añoActual && m === mesActual + 1;
-    });
-    const ultimoDia = TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
-    const fechaDesde = _fechaDesdeEfectiva(registros, TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1)));
-    return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: fechaDesde, hasta: ultimoDia });
-}
-
+/** @param {any} [mesAnio] */
 function actualizarEstadisticas(mesAnio = null) {
     const selectMes = $('select-mes-stats');
     if (!mesAnio && selectMes) mesAnio = selectMes.value;
     if (mesAnio && selectMes) {
         const [año, mes] = mesAnio.split('-').map(Number);
-        const tieneRegs = D.registros().some(r => { const [a, m] = r.fecha.split('-').map(Number); return a === año && m === mes; });
+        const tieneRegs = EstadoApp.registros().some(r => { const [a, m] = r.fecha.split('-').map(Number); return a === año && m === mes; });
         if (!tieneRegs) {
             mesAnio = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
             if (selectMes) selectMes.value = mesAnio;
@@ -257,21 +120,8 @@ function _renderSelectorStats() {
     }
 }
 
-function calcularEstadisticasAnio(anio, registrosPeriodo = null) {
-    const anioNum = parseInt(anio);
-    const registros = registrosPeriodo ?? D.registros().filter(r => parseInt(r.fecha.substring(0, 4)) === anioNum);
-    const fechaDesde = _fechaDesdeEfectiva(registros, `${anioNum}-01-01`);
-
-    return _calcularEstadisticasRango(registros, {
-        regularidadPorMes: true,
-        desde: fechaDesde,
-        hasta: `${anioNum}-12-31`
-    });
-}
-
-
 function poblarSelectorAnios() {
-    const anios = [...new Set(D.registros().map(r => r.fecha.substring(0, 4)))].sort().reverse();
+    const anios = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 4)))].sort().reverse();
     const anioActual = String(new Date().getFullYear());
     _poblarSelect('select-anio-stats', anios, a => a, anioActual, actualizarEstadisticasAnio);
 }
@@ -283,7 +133,7 @@ function actualizarEstadisticasAnio(anio) {
 
 function _obtenerSemanas() {
     const semanas = new Map();
-    D.registros().forEach(r => {
+    EstadoApp.registros().forEach(r => {
         const d = new Date(r.fecha + 'T00:00:00');
         const lunes = TiempoUtils.obtenerLunes(d);
         const key = TiempoUtils.formatearFechaLocal(lunes);
@@ -296,16 +146,6 @@ function poblarSelectorSemanas() {
     const semanas = _obtenerSemanas();
     const lunesISO = TiempoUtils.formatearFechaLocal(TiempoUtils.obtenerLunes());
     _poblarSelect('select-semana-stats', semanas, TiempoUtils.formatearRangoSemana, lunesISO, actualizarEstadisticasSemana, TiempoUtils.agruparMesesPorAnio);
-}
-
-function calcularEstadisticasSemana(lunesISO) {
-    if (!lunesISO) return _calcularEstadisticasRango([], { regularidadPorMes: false });
-    const lunes = new Date(lunesISO + 'T00:00:00');
-    const domingo = new Date(lunes);
-    domingo.setDate(lunes.getDate() + 6);
-    const hasta = TiempoUtils.formatearFechaLocal(domingo);
-    const registros = D.registros().filter(r => r.fecha >= lunesISO && r.fecha <= hasta);
-    return _calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: lunesISO, hasta });
 }
 
 function actualizarEstadisticasSemana(lunesISO) {
@@ -343,7 +183,7 @@ function togglePeriodoStats(direccion = 1) {
     modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
     Almacenamiento.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas);
 
-    _animarSlideElemento(document.getElementById('stats-inner'), direccion, () => {
+    _animarSlideElemento($('stats-inner'), direccion, () => {
         selectMes.classList.add('hidden');
         selectAnio.classList.add('hidden');
         if (selectSemana) selectSemana.classList.add('hidden');
@@ -364,22 +204,14 @@ function togglePeriodoStats(direccion = 1) {
 }
 
 function poblarSelectorMeses() {
-    const meses = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
+    const meses = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
     const mesActual = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
     _poblarSelect('select-mes-stats', meses, TiempoUtils.nombreMesCapitalizado, mesActual, actualizarEstadisticas, TiempoUtils.agruparMesesPorAnio);
 }
 
-const _sumarHorasEfectivas = (...args) => Reportes._sumarHorasEfectivas(...args);
-const generarReporte = (...args) => Reportes.generarReporte(...args);
-const abrirModalReporteSecciones = (...args) => Reportes.abrirModalReporteSecciones(...args);
-const cerrarModalReporteSecciones = (...args) => Reportes.cerrarModalReporteSecciones(...args);
-const toggleSeccionReporte = (...args) => Reportes.toggleSeccionReporte(...args);
-const confirmarGenerarReporte = (...args) => Reportes.confirmarGenerarReporte(...args);
-Reportes.configurarStatsProvider({
-    calcularEstadisticasAnio,
-    calcularEstadisticasMes,
-    getModoEstadisticas: () => modoEstadisticas
-});
+const {
+    abrirModalReporteSecciones, cerrarModalReporteSecciones, toggleSeccionReporte, confirmarGenerarReporte
+} = Reportes;
 const DESCRIPCIONES_STATS = {
     'stat-tiempo-total': { titulo: 'Tiempo Total', desc: 'Suma de todas las horas trabajadas en el período seleccionado.' },
     'stat-promedio-diario': { titulo: 'Promedio Diario', desc: 'Promedio de horas trabajadas por jornada en el período.' },
@@ -401,25 +233,21 @@ const AJUSTE_POR_STAT = {
 
 let _popupStatEl = null;
 
-function _popupStat(event, statId) {
-    event.stopPropagation();
-    if (_popupStatEl) {
-        const el = _popupStatEl;
-        _popupStatEl = null;
-        if (el._cerrar) el._cerrar();
-        else el.remove();
-    }
-
+/** Título y descripción del popup de una estadística, con los datos actuales (modo, días hábiles, objetivo...) agregados al final. */
+function _infoPopupStat(statId) {
     let info = DESCRIPCIONES_STATS[statId];
+    const conExtra = (partes) => ({ titulo: info.titulo, desc: html`${info.desc}${partes}` });
+    const nota = (texto) => html`<hr class="stat-popup-sep"><strong>${texto}</strong>`;
+
     if (statId === 'stat-saldo' && info) {
-        let descExtra = '';
+        const partes = [];
 
         const stats = _ultimosStatsRenderizados;
         if (stats && stats.aprovechamientoSaldo) {
             const { horas: horasUtil, generado: saldoGenerado } = stats.aprovechamientoSaldo;
-            descExtra += `<hr class="stat-popup-sep">`
-                + `<div class="stat-popup-metric"><span>Generado</span><strong>${S.escapeHtml(TiempoUtils.horasATexto(saldoGenerado, 'short'))}</strong></div>`
-                + `<div class="stat-popup-metric"><span>Utilizado</span><strong>${S.escapeHtml(TiempoUtils.horasATexto(horasUtil, 'short'))}</strong></div>`;
+            partes.push(html`<hr class="stat-popup-sep">`
+                , html`<div class="stat-popup-metric"><span>Generado</span><strong>${TiempoUtils.horasATexto(saldoGenerado, 'short')}</strong></div>`
+                , html`<div class="stat-popup-metric"><span>Utilizado</span><strong>${TiempoUtils.horasATexto(horasUtil, 'short')}</strong></div>`);
         }
 
         const modoTexto = modoEstadisticas === 'anual'
@@ -429,40 +257,52 @@ function _popupStat(event, statId) {
                 : modoEstadisticas === 'semanal'
                     ? 'Se calcula a partir del PRIMER DÍA LABORAL de la semana.'
                     : null;
-        if (modoTexto) descExtra += `<hr class="stat-popup-sep"><strong>${modoTexto}</strong>`;
+        if (modoTexto) partes.push(nota(modoTexto));
 
-        if (descExtra) info = { titulo: info.titulo, desc: `${info.desc}${descExtra}` };
+        if (partes.length) info = conExtra(partes);
     }
     if (statId === 'stat-dias-trabajados' && info) {
-        const diasTexto = [...D.diasHabiles()].sort((a, b) => a - b).map(d => TiempoUtils.nombreDiaPorIndice(d)).join(', ');
-        info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Días hábiles: ${diasTexto}.</strong>` };
+        const diasTexto = [...EstadoApp.diasHabiles()].sort((a, b) => a - b).map(d => TiempoUtils.nombreDiaPorIndice(d)).join(', ');
+        info = conExtra(nota(`Días hábiles: ${diasTexto}.`));
     }
     if (statId === 'stat-tiempo-fuera-total' && info) {
         const ignorarTF = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
-        const modoTexto = ignorarTF
+        info = conExtra(nota(ignorarTF
             ? 'Actualmente NO SE RESTA el tiempo fuera del tiempo total.'
-            : 'Actualmente SE RESTA el tiempo fuera del tiempo total.';
-        info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>${modoTexto}</strong>` };
+            : 'Actualmente SE RESTA el tiempo fuera del tiempo total.'));
     }
     if (statId === 'stat-promedio-diario' && info) {
-        info = { titulo: info.titulo, desc: `${info.desc}<hr class="stat-popup-sep"><strong>Actualmente las horas diarias objetivo son ${D.horasDiarias()}h.</strong>` };
+        info = conExtra(nota(`Actualmente las horas diarias objetivo son ${EstadoApp.horasDiarias()}h.`));
     }
     if (!info) {
         const valueEl = $(statId);
         const label = valueEl?.closest('.stat-item')?.querySelector('.stat-label');
         const tipoMatch = TiposRegistro.obtenerTodosLosTipos().find(t => statId === `stat-${TiposRegistro.claveStat(t)}`);
         info = {
-            titulo: S.escapeHtml(label ? label.textContent : 'Estadística'),
+            titulo: label ? label.textContent : 'Estadística',
             desc: tipoMatch
-                ? `Cantidad de jornadas registradas como "${S.escapeHtml(tipoMatch.label)}" en el período.`
+                ? `Cantidad de jornadas registradas como "${tipoMatch.label}" en el período.`
                 : 'Detalle de esta estadística.'
         };
     }
+    return info;
+}
+
+function _popupStat(event, statId) {
+    event.stopPropagation();
+    if (_popupStatEl) {
+        const el = _popupStatEl;
+        _popupStatEl = null;
+        if (el._cerrar) el._cerrar();
+        else el.remove();
+    }
+
+    const info = _infoPopupStat(statId);
 
     const ajusteId = AJUSTE_POR_STAT[statId];
-    const btnModificarHtml = ajusteId ? `
+    const btnModificarHtml = ajusteId ? html`
         <button class="cal-popup-btn-edit" id="_stat-popup-btn-modificar">
-            <svg class="icon"><use href="#icon-settings"/></svg>
+            ${icono('#icon-settings')}
             Modificar
         </button>` : '';
 
@@ -470,8 +310,8 @@ function _popupStat(event, statId) {
         className: 'stat-popup',
         id: '_stat-popup',
         dataset: { statId },
-        html: `
-        <div class="stat-popup-titulo">${S.escapeHtml(info.titulo)}</div>
+        html: html`
+        <div class="stat-popup-titulo">${info.titulo}</div>
         <div class="stat-popup-desc">${info.desc}</div>
         ${btnModificarHtml}`,
         event,
@@ -530,9 +370,9 @@ function bindEventos() {
     $('select-anio-stats')?.addEventListener('change', () => cambiarAnioStats());
     $('select-semana-stats')?.addEventListener('change', () => cambiarSemanaStats());
     $('btn-toggle-periodo')?.addEventListener('click', () => togglePeriodoStats());
-    $('btn-reporte')?.addEventListener('click', () => abrirModalReporteSecciones());
+    $('btn-reporte')?.addEventListener('click', () => abrirModalReporteSecciones(modoEstadisticas));
     $('reporte-secciones-lista')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-seccion-reporte');
+        const btn = /** @type {HTMLElement} */ (e.target).closest('.btn-seccion-reporte');
         if (btn) toggleSeccionReporte(btn);
     });
     $('btn-confirmar-reporte')?.addEventListener('click', () => confirmarGenerarReporte());
@@ -542,31 +382,8 @@ function bindEventos() {
 
 export const Estadisticas = {
     bindEventos,
-    _calcularEstadisticasRango,
-    _renderizarStats,
-    calcularEstadisticasMes,
-    actualizarEstadisticas,
     _renderSelectorStats,
-    calcularEstadisticasAnio,
-    poblarSelectorAnios,
-    actualizarEstadisticasAnio,
-    poblarSelectorSemanas,
-    calcularEstadisticasSemana,
-    actualizarEstadisticasSemana,
-    cambiarMesStats,
-    cambiarSemanaStats,
-    cambiarAnioStats,
-    togglePeriodoStats,
-    poblarSelectorMeses,
-    generarReporte,
-    abrirModalReporteSecciones,
-    cerrarModalReporteSecciones,
-    toggleSeccionReporte,
-    confirmarGenerarReporte,
-    _popupStat,
-    _onclickStatItem,
     _bindStatItemPopups,
     toggleStats,
-    getModoEstadisticas: () => modoEstadisticas,
     setModoEstadisticas: (v) => { modoEstadisticas = v; }
 };

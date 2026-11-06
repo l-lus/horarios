@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { SeguridadYUtils } from '../core/seguridad.js';
+import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 
 // ====================================================================
@@ -17,6 +18,7 @@ function deepClone(obj) {
     }
 }
 
+/** @param {any} [descripcion] */
 function saveState(registros, descripcion = null) {
     const copiaSegura = deepClone(registros);
     if (currentIndex < _stack.length - 1) _stack.splice(currentIndex + 1);
@@ -56,10 +58,7 @@ function canUndo() { return currentIndex > 0; }
 function canRedo() { return currentIndex < _stack.length - 1; }
 
 function updateButtons() {
-    const undoBtn = document.getElementById('btn-undo');
-    const redoBtn = document.getElementById('btn-redo');
-    if (undoBtn) undoBtn.disabled = !canUndo();
-    if (redoBtn) redoBtn.disabled = !canRedo();
+    EventosApp.emit('historial:cambio', { canUndo: canUndo(), canRedo: canRedo() });
 }
 
 function saveToLocalStorage() {
@@ -118,6 +117,14 @@ function parchearRegistrosEnHistorial(parchadorFn) {
 }
 
 export const GestorHistorial = {
-    saveState, undo, redo, canUndo, canRedo, updateButtons, clear,
-    saveToLocalStorage, loadFromLocalStorage, getCurrentState, parchearRegistrosEnHistorial
+    saveState,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    updateButtons,
+    clear,
+    loadFromLocalStorage,
+    getCurrentState,
+    parchearRegistrosEnHistorial
 };

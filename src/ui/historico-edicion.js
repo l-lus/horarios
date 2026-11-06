@@ -1,24 +1,25 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
+import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
 import { Calendario } from './calendario.js';
 import { Configuracion } from './configuracion.js';
-import { SeguridadYUtils as S } from '../core/seguridad.js';
-const D = GestionDatos;
+import { html, icono } from '../core/html.js';
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
+import { setIconoBtn } from './boton-fichar.js';
+import { _crearPopupFlotante } from './popups.js';
+import { mostrarToast } from './toast.js';
 
 // ====================================================================
 //           UI HISTORY EDIT, FILTERS & HEADER ACTIONS MODULE
 // ====================================================================
-const {
-    mostrarToast, _setBtnActivo, _actualizarOffsetsStickyMes,
-    _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante,
-    setIconoBtn, toggleSeccionGen
-} = UIBase;
+const { _setBtnActivo } = UIBase;
 
 let edicionBloqueada = true;
 
@@ -30,7 +31,7 @@ let timerAutoCierreBotones = null;
 function cerrarEdicion() {
     Configuracion.pressHoldObjetivoEdicion.detener();
     GestorModales.cerrar('modal-editar', () => {
-        D.setEditandoId(null);
+        EstadoApp.setEditandoId(null);
         document.dispatchEvent(new Event('scroll'));
         setBloqueoEdicion(true);
     });
@@ -83,7 +84,7 @@ function toggleBloqueoEdicion() {
 }
 
 function toggleCredito() {
-    const btn = document.getElementById('btn-toggle-credito');
+    const btn = $('btn-toggle-credito');
     const estaActivo = btn.dataset.activo === "true";
 
     btn.dataset.activo = estaActivo ? "false" : "true";
@@ -92,17 +93,17 @@ function toggleCredito() {
 }
 
 function _actualizarHintEdicion() {
-    const hint = document.getElementById('edit-hint-resumen');
-    const e = document.getElementById('edit-entrada')?.value.trim();
-    const s = document.getElementById('edit-salida')?.value.trim();
-    let tf = document.getElementById('edit-tiempo-fuera')?.value.trim();
+    const hint = $('edit-hint-resumen');
+    const e = $('edit-entrada')?.value.trim();
+    const s = $('edit-salida')?.value.trim();
+    let tf = $('edit-tiempo-fuera')?.value.trim();
     if (tf) tf = TiempoUtils.normalizarMinutosSueltos(tf);
 
     const tipoEspecial = (e || s) ? TiposRegistro.obtenerTipoPorCodigo(e, s) : null;
-    const elRef = document.getElementById('edit-referencia-compensatorio');
+    const elRef = $('edit-referencia-compensatorio');
     if (elRef) {
         const esCompensatorio = tipoEspecial?.id === 'compensatorio';
-        setColapsable(document.getElementById('grupo-referencia-compensatorio'), esCompensatorio);
+        setColapsable($('grupo-referencia-compensatorio'), esCompensatorio);
         if (!esCompensatorio) elRef.value = '';
     }
 
@@ -110,7 +111,7 @@ function _actualizarHintEdicion() {
     if (!e && !s) { hint.textContent = ''; return; }
     if (tipoEspecial) { hint.textContent = tipoEspecial.label; return; }
     if (e?.length === 5 && s?.length === 5) {
-        const t = D.calcularHoras(e, s, tf || null, null, false);
+        const t = EstadoApp.calcularHoras(e, s, tf || null, null, false);
         hint.textContent = t ? `Total: ${t.horas}h ${t.minutos}m` : '';
     } else {
         hint.textContent = '';
@@ -119,10 +120,10 @@ function _actualizarHintEdicion() {
 
 
 function actualizarHintGrupo() {
-    const hint = document.getElementById('edit-grupo-hint');
+    const hint = $('edit-grupo-hint');
     if (!hint) return;
-    const desde = document.getElementById('edit-grupo-desde')?.value;
-    const hasta = document.getElementById('edit-grupo-hasta')?.value;
+    const desde = $('edit-grupo-desde')?.value;
+    const hasta = $('edit-grupo-hasta')?.value;
     if (!desde && !hasta) { hint.textContent = ''; return; }
     if (desde && !hasta) {
         hint.textContent = `1 día`;
@@ -134,23 +135,44 @@ function actualizarHintGrupo() {
     }
     const fechaInicio = TiempoUtils.parsearFechaLocal(desde);
     const fechaFin = TiempoUtils.parsearFechaLocal(hasta);
-    const diasTotales = Math.ceil(Math.abs(fechaFin - fechaInicio) / (1000 * 60 * 60 * 24)) + 1;
+    const diasTotales = Math.ceil(Math.abs(fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     hint.textContent = `${diasTotales} día${TiempoUtils.pluralizar(diasTotales)}`;
 }
+EventosApp.on('grupo:editar', ({ subtipo, desde, hasta }) => {
+    $('edit-grupo-tipo').value = subtipo;
+    $('edit-grupo-desde').value = desde;
+    $('edit-grupo-hasta').value = hasta;
+});
+
+async function guardarEdicionGrupoDesdeFormulario() {
+    const btnGuardar = /** @type {HTMLButtonElement} */ ($('modal-editar-grupo').querySelector('.btn-edit'));
+    btnGuardar.disabled = true;
+    try {
+        await FiltrosYPeriodos.guardarEdicionGrupo({
+            tipo: $('edit-grupo-tipo').value,
+            desde: $('edit-grupo-desde').value,
+            hasta: $('edit-grupo-hasta').value,
+        });
+    } finally {
+        btnGuardar.disabled = false;
+    }
+}
+
 ['edit-grupo-desde', 'edit-grupo-hasta'].forEach(id => {
-    const el = document.getElementById(id);
+    const el = $(id);
     if (el) el.addEventListener('change', actualizarHintGrupo);
 });
 
 let _popupFiltrosEl = null;
 
 function mostrarFiltros(event) {
-    if (D.obtenerRegistrosFiltrados().length !== D.registros().length) {
-        D.limpiarFiltros();
+    if (FiltrosYPeriodos.obtenerRegistrosFiltrados().length !== EstadoApp.registros().length) {
+        ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => { if ($(id)) $(id).value = ''; });
+        FiltrosYPeriodos.limpiarFiltros();
         return;
     }
 
-    const btnFiltro = document.getElementById('btn-filtro');
+    const btnFiltro = $('btn-filtro');
     if (!btnFiltro) return;
 
     if (_popupFiltrosEl) {
@@ -162,14 +184,14 @@ function mostrarFiltros(event) {
     }
 
     const tipos = TiposRegistro.obtenerTodosLosTipos();
-    const opcionesTipo = tipos.map(t => `<option value="${S.escapeHtml(t.id)}">${S.escapeHtml(t.emoji)} ${S.escapeHtml(t.labelPlural)}</option>`).join('');
+    const opcionesTipo = tipos.map(t => html`<option value="${t.id}">${t.emoji} ${t.labelPlural}</option>`);
 
     const popup = _crearPopupFlotante({
         className: 'filtro-popup',
         id: '_filtro-popup',
-        html: `
+        html: html`
         <div class="filtro-popup-titulo">
-            <svg class="icon"><use href="#icon-filter" /></svg>
+            ${icono('#icon-filter')}
             Filtrar Registros
         </div>
         <div class="form-group form-group-mb-half">
@@ -199,7 +221,7 @@ function mostrarFiltros(event) {
         const desde = $('filtro-fecha-desde').value;
         const hasta = $('filtro-fecha-hasta').value;
         const tipo = $('filtro-tipo').value;
-        D.aplicarFiltrosInmediato(desde, hasta, tipo);
+        FiltrosYPeriodos.aplicarFiltrosInmediato(desde, hasta, tipo);
     };
 
     ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => {
@@ -272,7 +294,6 @@ function iniciarTimerAutoCierreBotones() {
 
     timerAutoCierreBotones = setTimeout(() => {
         const botones = $('botones-historico');
-        const contenido = $('contenido-historico');
         const icon = $('icon-indicator-historico');
 
         if (botones && botones.classList.contains('expanded')) {
@@ -301,7 +322,7 @@ function cancelarTimerAutoCierreBotones() {
 }
 
 function verificarBloqueoCredito() {
-    const btnCredito = document.getElementById('btn-toggle-credito');
+    const btnCredito = $('btn-toggle-credito');
     if (!btnCredito) return;
 
     const _bloquear = () => {
@@ -311,11 +332,11 @@ function verificarBloqueoCredito() {
         btnCredito.disabled = false;
     };
 
-    if (document.getElementById('edit-fecha').disabled) return _bloquear();
+    if ($('edit-fecha').disabled) return _bloquear();
 
-    const e = document.getElementById('edit-entrada').value.trim();
-    const s = document.getElementById('edit-salida').value.trim();
-    const tf = document.getElementById('edit-tiempo-fuera').value.trim() || null;
+    const e = $('edit-entrada').value.trim();
+    const s = $('edit-salida').value.trim();
+    const tf = $('edit-tiempo-fuera').value.trim() || null;
 
     const horarioCompleto = e.length === 5 && s.length === 5;
     if (!horarioCompleto) {
@@ -325,8 +346,8 @@ function verificarBloqueoCredito() {
 
     if (TiposRegistro.esRegistroEspecial(e, s)) return _bloquear();
 
-    const calcTemp = D.calcularHoras(e, s, tf, null);
-    const objetivoEdicion = D.objetivoEdicionEnVivo();
+    const calcTemp = EstadoApp.calcularHoras(e, s, tf, null);
+    const objetivoEdicion = Compensatorios.objetivoEdicionEnVivo();
     if (!calcTemp || calcTemp.total >= objetivoEdicion) return _bloquear();
 
     _habilitar();
@@ -348,7 +369,7 @@ function toggleBloqueoEdicionGrupo() {
 
 function cerrarEdicionGrupo() {
     GestorModales.cerrar('modal-editar-grupo', () => {
-        D.setGrupoEnEdicion(null);
+        EstadoApp.setGrupoEnEdicion(null);
         document.dispatchEvent(new Event('scroll'));
         setBloqueoEdicionGrupo(true);
     });
@@ -362,11 +383,11 @@ export const HistoricoEdicion = {
     toggleCredito,
     _actualizarHintEdicion,
     actualizarHintGrupo,
+    guardarEdicionGrupoDesdeFormulario,
     mostrarFiltros,
     cerrarFiltros,
     toggleHistorico,
     iniciarTimerAutoCierreBotones,
-    cancelarTimerAutoCierreBotones,
     verificarBloqueoCredito,
     setBloqueoEdicionGrupo,
     toggleBloqueoEdicionGrupo,

@@ -39,6 +39,28 @@ test('SeguridadYUtils: escapeHtml, validarRegistroSeguro y calcularHashSHA256', 
     assert.equal(hash.length, 64);
 });
 
+test('SeguridadYUtils.limpiarTexto: quita caracteres de control y conserva comillas (y saltos de línea si se pide)', () => {
+    const { limpiarTexto } = SeguridadYUtils;
+    assert.equal(limpiarTexto('Salida \nTiempo fuera: "x" data: 1\u0000', 200, { saltos: true }), 'Salida \nTiempo fuera: "x" data: 1');
+    assert.equal(limpiarTexto('a\nb\tc'), 'abc');
+    assert.equal(limpiarTexto('  abcdef  ', 3), 'abc');
+    assert.equal(limpiarTexto(null), '');
+});
+
+test('SeguridadYUtils.normalizarNotas: lista blanca, largo máximo y vacía → null', () => {
+    const { normalizarNotas, SECURITY_LIMITS } = SeguridadYUtils;
+    assert.equal(normalizarNotas(' Reunión <b>&amp; "x" '), 'Reunión bamp x');
+    assert.equal(normalizarNotas('a'.repeat(50)).length, SECURITY_LIMITS.MAX_NOTAS_LENGTH);
+    assert.equal(normalizarNotas('<>'), null);
+    assert.equal(normalizarNotas(undefined), null);
+});
+
+test('SeguridadYUtils.esObjetivoHorasValido: número finito entre 0 y 24', () => {
+    const { esObjetivoHorasValido: ok } = SeguridadYUtils;
+    assert.deepEqual([0, 7.5, 24].map(ok), [true, true, true]);
+    assert.deepEqual([-1, 25, NaN, Infinity, '7', null, undefined].map(ok), [false, false, false, false, false, false, false]);
+});
+
 test('EventosApp: suscripción, desuscripción y registro de handlers', () => {
     let recibido = null;
     const off = EventosApp.on('test:evento', (payload) => { recibido = payload; });
@@ -48,9 +70,6 @@ test('EventosApp: suscripción, desuscripción y registro de handlers', () => {
     off();
     EventosApp.emit('test:evento', { ok: 99 });
     assert.deepEqual(recibido, { ok: 42 });
-
-    EventosApp.register('test:sumar', (a, b) => a + b);
-    assert.equal(EventosApp.call('test:sumar', 10, 15), 25);
 });
 
 test('EstadoApp.calcularHoras y Compensatorios: cálculo de jornada, cruce de medianoche y asignación de compensatorios', () => {
@@ -98,14 +117,17 @@ test('EstadoApp.calcularHoras y Compensatorios: cálculo de jornada, cruce de me
         }
     ];
     EstadoApp._setRegistros(lista);
-    const asignaciones = Compensatorios._calcularAsignacionesCompensatorio(lista);
+    const asignaciones = Compensatorios.calcularAsignacionesCompensatorio(lista);
     assert.equal(asignaciones.length, 1);
     assert.equal(asignaciones[0].compensatorioId, 'reg-comp-1');
     assert.equal(asignaciones[0].referenciaId, 'reg-excedente-1');
     assert.equal(asignaciones[0].excedente, 2);
 });
 
-test('Integración: Arranque completo de OrquestadorUI.init() sin errores de ejecución', async () => {
+test('Integración: Arranque completo de OrquestadorUI.init() sin errores de ejecución', async (t) => {
+    // Fecha fija (miércoles 28/10/2026 10:00, día hábil): el arranque recorre caminos distintos según el día y
+    // el resultado no puede depender de cuándo se corren los tests. Solo se simula Date (los timers son reales).
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 28, 10, 0) });
     const noop = () => { };
     const fakeEl = () => ({
         style: { setProperty: noop, removeProperty: noop },
@@ -115,7 +137,10 @@ test('Integración: Arranque completo de OrquestadorUI.init() sin errores de eje
         removeEventListener: noop,
         querySelector: () => fakeEl(),
         querySelectorAll: () => [],
+        children: [],
         appendChild: noop,
+        append: noop,
+        replaceChildren: noop,
         insertBefore: noop,
         remove: noop,
         setAttribute: noop,
@@ -152,7 +177,6 @@ test('Integración: Arranque completo de OrquestadorUI.init() sin errores de eje
     globalThis.location = { origin: 'http://localhost:8080', reload: noop, href: 'http://localhost:8080/' };
     globalThis.matchMedia = () => ({ matches: false, addEventListener: noop });
     Object.defineProperty(globalThis, 'navigator', { value: { standalone: false, onLine: true }, configurable: true });
-    globalThis.Storage = function () { };
     const store = new Map();
     globalThis.localStorage = {
         getItem: k => (store.has(k) ? store.get(k) : null),
@@ -200,6 +224,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
     Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, false, true);
     Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
     Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, false);
     Movimiento.setModo('auto');
 
     // Simular un registro importado inicialmente con ignorarTiempoFuera = false (descarga 30m de tiempo fuera -> 7.5h)
@@ -224,10 +249,12 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarTiempoFuera: true,
         ignorarLogicaCubierto: true,
         ignorarObjetivoPorRegistro: true,
-        reducirAnimaciones: 'on'
+        reducirAnimaciones: 'on',
+        hintIntegrado: true
     };
 
     assert.equal(ImportarExportar.validarCamposConfigImport(backupData), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...backupData, hintIntegrado: 'si' }), false);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...backupData, reducirAnimaciones: 'invalido' }), false);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...backupData, ignorarTiempoFuera: 'si' }), false);
 
@@ -236,6 +263,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
     assert.ok(cambios.includes('banco de horas'));
     assert.ok(cambios.includes('objetivo diario global'));
     assert.ok(cambios.includes('animaciones'));
+    assert.ok(cambios.includes('hint integrado'));
 
     // Al aplicar la configuración importada en modo replace, debe recalcular el registro con ignorarTiempoFuera = true (-> 8h)
     ImportarExportar.aplicarConfigImportada(backupData, registros);
@@ -243,6 +271,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true), true);
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true), true);
     assert.equal(Movimiento.modo(), 'on');
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, false), true);
     assert.equal(registros[0].total, 8);
 
     const exportado = ImportarExportar.obtenerConfigExportable();
@@ -250,8 +279,78 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarTiempoFuera: true,
         ignorarLogicaCubierto: true,
         ignorarObjetivoPorRegistro: true,
-        reducirAnimaciones: 'on'
+        reducirAnimaciones: 'on',
+        hintIntegrado: true,
+        descHitosNumero: true,
+        ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
+        ordenCardsMovil: ['estado', 'registrar', 'estadisticas', 'historico'],
+        columnasCards: [3, 1],
+        tarjetasVisibles: { registrar: true, estadisticas: true, historico: true }
     });
+});
+
+test('ImportarExportar: el diseño de la interfaz (orden y tarjetas visibles) se exporta, valida, compara y restaura', async () => {
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+    const limpiar = () => {
+        Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS, true);
+        Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
+        ['registrar', 'estadisticas', 'historico'].forEach(c => Almacenamiento.removeItem(STORAGE_KEYS.CARD_VISIBLE(c), true));
+    };
+    limpiar();
+    try {
+        const eventos = { tarjetas: 0 };
+        const offT = EventosApp.on('config:tarjetas', () => { eventos.tarjetas++; });
+
+        // Un respaldo viejo (sin estas claves) es válido y no toca nada
+        assert.equal(ImportarExportar.validarCamposConfigImport({ registros: [] }), true);
+        assert.deepEqual(ImportarExportar.calcularCambiosConfigImport({}), []);
+        ImportarExportar.aplicarConfigImportada({});
+        assert.deepEqual(eventos, { tarjetas: 0 });
+
+        // Forma inválida: se rechaza todo el archivo (como el resto de la configuración)
+        const malos = [
+            { ordenCards: 'historico' }, { ordenCards: ['historico', 3] }, { ordenCards: [''] }, { ordenCards: ['x'.repeat(41)] },
+            { ordenCards: Array.from({ length: 65 }, (_, i) => `a${i}`) }, { ordenCards: [{}] },
+            { tarjetasVisibles: { registrar: 'si' } }, { tarjetasVisibles: [true] }, { tarjetasVisibles: null }
+        ];
+        malos.forEach(m => assert.equal(ImportarExportar.validarCamposConfigImport(m), false, JSON.stringify(m).slice(0, 60)));
+
+        // Ids que esta versión no conoce (de un archivo más nuevo) se aceptan
+        const diseno = {
+            ordenCards: ['historico', 'registrar', 'tarjeta-del-futuro'],
+            tarjetasVisibles: { estadisticas: false, historico: true, 'tarjeta-del-futuro': false }
+        };
+        assert.equal(ImportarExportar.validarCamposConfigImport(diseno), true);
+        assert.deepEqual(ImportarExportar.calcularCambiosConfigImport(diseno), ['orden de tarjetas', 'tarjetas visibles']);
+
+        ImportarExportar.aplicarConfigImportada(diseno);
+        assert.deepEqual(eventos, { tarjetas: 1 });
+        // el orden queda completo (las tarjetas que faltaban entran en su lugar por defecto, las desconocidas se descartan)
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true), ['estado', 'historico', 'estadisticas', 'registrar']);
+        assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE('estadisticas'), true, true), false);
+        assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE('registrar'), true, true), true);
+
+        // Aplicado, ya no hay diferencias, y exportar devuelve lo mismo que se aplicó
+        assert.deepEqual(ImportarExportar.calcularCambiosConfigImport(diseno), []);
+        const exportado = ImportarExportar.obtenerConfigExportable();
+        assert.deepEqual(exportado.ordenCards, ['estado', 'historico', 'estadisticas', 'registrar']);
+        // Sin orden propio para móvil, usa el de escritorio; con uno propio, cada modo conserva el suyo
+        assert.deepEqual(exportado.ordenCardsMovil, ['estado', 'historico', 'estadisticas', 'registrar']);
+        ImportarExportar.aplicarConfigImportada({ ordenCardsMovil: ['estadisticas', 'registrar'] });
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true), ['estado', 'estadisticas', 'registrar', 'historico']);
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['estado', 'historico', 'estadisticas', 'registrar']);
+        Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
+        assert.deepEqual(exportado.tarjetasVisibles, { registrar: true, estadisticas: false, historico: true });
+
+        // Una clave que esta versión no conoce se rechaza como sospechosa
+        assert.notEqual(ImportarExportar.errorEstructuraRespaldo({ registros: [], claveRara: 1 }), null);
+
+        offT();
+    } finally {
+        limpiar();
+    }
 });
 
 test('Almacenamiento: prefijo horarios_ (APP_STORAGE_PREFIX) y migración automática de claves legadas sin tocar otras apps', async () => {
@@ -309,4 +408,365 @@ test('Almacenamiento: prefijo horarios_ (APP_STORAGE_PREFIX) y migración autom�
     assert.equal(rawStore.has(`${APP_STORAGE_PREFIX}gestion_servicios_config`), false);
 });
 
+test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado cerrado y colorCierre', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
 
+    // Semana cerrada cumpliendo objetivo
+    const vistaSemanaOk = TarjetaFichajeVista.derivarVistaSemana({
+        totalSemana: 35,
+        totalSemanaProgreso: 35,
+        objetivoSemana: 35,
+        semanaAbierta: false,
+        horasDiarias: 7,
+        todosEspeciales: false
+    });
+    assert.equal(vistaSemanaOk.cerrado, true);
+    assert.equal(vistaSemanaOk.colorCierre, 'green');
+    // el número grande trae su variante corta para cuando el texto largo no entra en una línea (la tarjeta decide al medir)
+    assert.equal(vistaSemanaOk.stats, '35 horas');
+    assert.equal(vistaSemanaOk.statsCorto, '35h');
+
+    // Semana cerrada con faltante
+    const vistaSemanaFail = TarjetaFichajeVista.derivarVistaSemana({
+        totalSemana: 28,
+        totalSemanaProgreso: 28,
+        objetivoSemana: 35,
+        semanaAbierta: false,
+        horasDiarias: 7,
+        todosEspeciales: false
+    });
+    assert.equal(vistaSemanaFail.cerrado, true);
+    assert.equal(vistaSemanaFail.colorCierre, 'red');
+
+    // Semana en curso (abierta)
+    const vistaSemanaEnCurso = TarjetaFichajeVista.derivarVistaSemana({
+        totalSemana: 14,
+        totalSemanaProgreso: 14,
+        objetivoSemana: 35,
+        semanaAbierta: true,
+        horasDiarias: 7,
+        todosEspeciales: false
+    });
+    assert.equal(vistaSemanaEnCurso.cerrado, false);
+
+    // Franjas por día: la pista es el objetivo semanal y cada día ocupa un tramo proporcional a las horas que trabajó, relleno entero con el color de su estado
+    const base = { totalSemana: 14, totalSemanaProgreso: 14, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false };
+    const dia = (fecha, estado, extra = {}) => ({ fecha, objetivo: 7, total: 0, activo: false, estado, ...extra });
+    const vistaFranjas = TarjetaFichajeVista.derivarVistaSemana({
+        ...base,
+        diasSemana: [
+            dia('2026-10-26', 'cerrado', { total: 7, cumplimiento: 'cumplido', entrada: '08:00', salida: '15:00' }),   // lun: cumplió
+            dia('2026-10-27', 'cerrado', { total: 3.5, cumplimiento: 'faltante' }),   // mar: faltó, pero su tramo es más angosto y va entero rojo
+            dia('2026-10-28', 'especial', { objetivo: 0, especial: 'purple' }),
+            dia('2026-10-29', 'sin-registro'),
+            dia('2026-10-30', 'sin-registro'),
+            dia('2026-10-31', 'futuro')
+        ]
+    });
+    // el relleno solo existe si el hint integrado está activo (por defecto lo está)
+    assert.ok(vistaFranjas.tramosSemana, 'con el hint integrado hay franjas');
+    // pista = objetivo (35) + 3 tramos fijos de 1 h (mié, jue, vie) = 38; el futuro (sáb) no entra
+    const f = n => Number((n / 38).toFixed(4));
+    assert.deepEqual(vistaFranjas.tramosSemana.map(t => [t.color, Number(t.desde.toFixed(4)), Number(t.hasta.toFixed(4))]), [
+        ['green', 0, f(7)],
+        ['red', f(7), f(10.5)],
+        ['purple', f(10.5), f(11.5)]
+    ]);
+    // los días seguidos del mismo tipo se fusionan: jue–vie (sin registro) es un solo hito; cada hito trae también su inicial para móviles (L M X J V S D)
+    assert.deepEqual(vistaFranjas.hitosSemana.map(h => [h.sigla, h.inicial, Number(h.fraccion.toFixed(4))]), [
+        ['lun', 'L', f(7)], ['mar', 'M', f(10.5)], ['mié', 'X', f(11.5)], ['jue–vie', 'J–V', f(13.5)]
+    ]);
+    // cada hito lleva su descripción para lectores de pantalla (con el nombre abreviado del día, no la inicial)
+    assert.deepEqual(vistaFranjas.hitosSemana.map(h => h.descripcion), ['lun cumplido', 'mar con faltante', 'mié día especial', 'jue–vie sin registro']);
+    assert.equal(vistaFranjas.colorInicioSemana, 'green');
+    // al pasar el cursor por el tramo (solo escritorio): con horas, el total y "Lunes · entrada – salida"; sin horas (o fusionado), solo el estado
+    const [hoverLun, hoverMar, , hoverFusion] = vistaFranjas.hitosSemana.map(h => h.hover);
+    assert.deepEqual(hoverLun, { stats: '7 horas', mensaje: 'Lunes · 08:00 – 15:00' });
+    assert.deepEqual(hoverMar, { stats: null, mensaje: 'Martes: con faltante' });
+    assert.deepEqual(hoverFusion, { stats: null, mensaje: 'jue–vie: sin registro' });
+    assert.equal(typeof vistaFranjas.siglasCortas, 'boolean', 'la vista informa si el formato de tiempo corto pide las iniciales');
+    // si la primera franja está vacía, el remate del comienzo es neutro aunque más adelante haya rellenos
+    const vistaPrimeraVacia = TarjetaFichajeVista.derivarVistaSemana({
+        ...base,
+        diasSemana: [dia('2026-10-26', 'sin-registro'), dia('2026-10-27', 'especial', { objetivo: 0, especial: 'orange' })]
+    });
+    assert.equal(vistaPrimeraVacia.colorInicioSemana, 'vacio');
+    assert.equal(vistaPrimeraVacia.colorFinSemana, 'orange');
+    assert.equal(vistaFranjas.colorFinSemana, 'purple');
+    // la parte llena termina donde termina el último relleno: lo que falta del objetivo queda vacío al final
+    assert.ok(Math.abs(vistaFranjas.anchoBarra - f(11.5) * 100) < 0.01);
+
+    // solo lunes y martes con el objetivo sin cumplir: sus tramos son proporcionales a las horas y el resto de la pista queda vacío
+    const vistaDosDias = TarjetaFichajeVista.derivarVistaSemana({
+        ...base,
+        diasSemana: [dia('2026-10-26', 'cerrado', { total: 7, cumplimiento: 'cumplido' }), dia('2026-10-27', 'cerrado', { total: 3.5, cumplimiento: 'faltante' }), dia('2026-10-28', 'futuro')]
+    });
+    assert.deepEqual(vistaDosDias.hitosSemana.map(h => [h.sigla, Number(h.fraccion.toFixed(6))]), [['lun', 0.2], ['mar', 0.3]]);
+    assert.ok(Math.abs(vistaDosDias.anchoBarra - 30) < 1e-6);
+
+    // hoy lleva el badge, no se fusiona con el día anterior del mismo tipo y entra aunque todavía no tenga registro (los demás futuros no)
+    const vistaHoy = TarjetaFichajeVista.derivarVistaSemana({
+        ...base,
+        hoy: '2026-10-28',
+        diasSemana: [dia('2026-10-26', 'especial', { objetivo: 0, especial: 'purple' }), dia('2026-10-27', 'especial', { objetivo: 0, especial: 'purple' }),
+            dia('2026-10-28', 'especial', { objetivo: 0, especial: 'purple' }), dia('2026-10-29', 'futuro')]
+    });
+    assert.deepEqual(vistaHoy.hitosSemana.map(h => [h.sigla, !!h.hoy]), [['lun–mar', false], ['mié', true]]);
+    assert.equal(vistaHoy.hitosSemana[1].descripcion, 'mié (hoy) día especial');
+    const vistaHoySinRegistro = TarjetaFichajeVista.derivarVistaSemana({
+        ...base,
+        hoy: '2026-10-28',
+        diasSemana: [dia('2026-10-26', 'cerrado', { total: 7, cumplimiento: 'cumplido' }), dia('2026-10-27', 'cerrado', { total: 7, cumplimiento: 'cumplido' }), dia('2026-10-28', 'futuro'), dia('2026-10-29', 'futuro')]
+    });
+    assert.deepEqual(vistaHoySinRegistro.hitosSemana.map(h => [h.sigla, !!h.hoy]), [['lun', false], ['mar', false], ['mié', true]]);
+    assert.equal(vistaHoySinRegistro.hitosSemana[2].prioridad, 3);
+
+    // un día sin salida pesa un tramo fijo, no se fusiona y no se rellena
+    const vistaSinSalida = TarjetaFichajeVista.derivarVistaSemana({
+        ...base,
+        diasSemana: [dia('2026-10-26', 'sin-salida'), dia('2026-10-27', 'sin-salida'), dia('2026-10-28', 'cerrado', { total: 7, cumplimiento: 'cumplido' })]
+    });
+    assert.deepEqual(vistaSinSalida.hitosSemana.map(h => [h.sigla, h.prioridad]), [['lun', 1], ['mar', 1], ['mié', 2]]);
+    assert.equal(vistaSinSalida.colorInicioSemana, 'vacio');
+
+    // con más horas que el objetivo la pista se estira hasta lo trabajado: la barra queda llena y el último hito llega al final
+    const vistaDeMas = TarjetaFichajeVista.derivarVistaSemana({
+        ...base, objetivoSemana: 10,
+        diasSemana: [dia('2026-10-26', 'cerrado', { total: 8, cumplimiento: 'cumplido' }), dia('2026-10-27', 'cerrado', { total: 8, cumplimiento: 'cumplido' })]
+    });
+    assert.deepEqual(vistaDeMas.hitosSemana.map(h => [h.sigla, h.fraccion]), [['lun', 0.5], ['mar', 1]]);
+    assert.equal(vistaDeMas.anchoBarra, 100);
+
+    // Día cerrado (con salida registrada)
+    const vistaDiaCerrado = TarjetaFichajeVista.derivarVistaHoy({
+        regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: '15:00', total: 7, objetivoHoras: 7 },
+        tiempoHoy: 7,
+        horasDiarias: 7,
+        esDiaHabil: true,
+        tipoEspecialHoy: null,
+        bufferSemanalBase: 0,
+        diasHabiles: [1, 2, 3, 4, 5]
+    });
+    assert.equal(vistaDiaCerrado.cerrado, true);
+    assert.equal(vistaDiaCerrado.colorCierre, 'green');
+
+    // Día cerrado con faltante
+    const vistaDiaFalto = TarjetaFichajeVista.derivarVistaHoy({
+        regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: '09:07', total: 1.12, objetivoHoras: 7 },
+        tiempoHoy: 1.12,
+        horasDiarias: 7,
+        esDiaHabil: true,
+        tipoEspecialHoy: null,
+        bufferSemanalBase: 0,
+        diasHabiles: [1, 2, 3, 4, 5]
+    });
+    assert.equal(vistaDiaFalto.cerrado, true);
+    assert.equal(vistaDiaFalto.colorCierre, 'red');
+
+    // Día en curso (sin salida)
+    const vistaDiaEnCurso = TarjetaFichajeVista.derivarVistaHoy({
+        regHoy: { fecha: '2026-10-30', entrada: '08:00', salida: null, objetivoHoras: 7 },
+        tiempoHoy: 2,
+        horasDiarias: 7,
+        esDiaHabil: true,
+        tipoEspecialHoy: null,
+        bufferSemanalBase: 0,
+        diasHabiles: [1, 2, 3, 4, 5]
+    });
+    assert.equal(vistaDiaEnCurso.cerrado, false);
+});
+
+test('TarjetaFichajeVista: el badge "En curso" parpadea rápido solo con el objetivo cumplido y la jornada abierta', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const estBase = (tiempoHoy, objetivoHoras) => ({
+        regHoy: { fecha: '2026-10-29', entrada: '08:00', salida: null, objetivoHoras },
+        tiempoHoy, horasDiarias: 7, esDiaHabil: true, tipoEspecialHoy: null,
+        bufferSemanalBase: 0, diasHabiles: [1, 2, 3, 4, 5], esRetenido: false
+    });
+
+    // objetivo de 7 h todavía sin cumplir: parpadeo normal
+    assert.ok(!String(TarjetaFichajeVista.derivarVistaHoy(estBase(3, 7)).titulo).includes('estado-badge--cumplido'));
+    // objetivo cumplido con la jornada abierta: parpadeo rápido
+    const cumplido = TarjetaFichajeVista.derivarVistaHoy(estBase(7.5, 7));
+    assert.ok(String(cumplido.titulo).includes('estado-badge--en-curso'));
+    assert.ok(String(cumplido.titulo).includes('estado-badge--cumplido'));
+});
+
+test('TarjetaFichajeVista: la línea del día abierta ubica la salida estimada y, cerrada, la mueve a la salida real', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const est = (salida) => ({
+        regHoy: { fecha: '2026-10-29', entrada: '09:00', salida, total: salida ? 3 : 0, objetivoHoras: 7 },
+        tiempoHoy: salida ? 3 : 1, horasDiarias: 7, esDiaHabil: true, tipoEspecialHoy: null,
+        bufferSemanalBase: 0, diasHabiles: [1, 2, 3, 4, 5], esRetenido: false
+    });
+
+    const abierta = TarjetaFichajeVista.derivarVistaHoy(est(null)).linea;
+    assert.equal(abierta.cerrado, false);
+    assert.equal(abierta.horaEntrada, '09:00');
+    assert.equal(abierta.marcaSalidaRel, abierta.salidaRel);   // la marca queda en la salida estimada
+
+    const cerrada = TarjetaFichajeVista.derivarVistaHoy(est('12:00')).linea;
+    assert.equal(cerrada.cerrado, true);
+    assert.equal(cerrada.horaSalida, '12:00');                 // la etiqueta muestra la hora real
+    assert.equal(cerrada.marcaSalidaRel, cerrada.ahoraRel);    // la marca se mueve a donde cerró
+    assert.equal(cerrada.marcaSalidaRel, 180);
+    assert.ok(cerrada.salidaRel > cerrada.marcaSalidaRel, 'la escala de la barra sigue basada en la salida estimada');
+});
+
+test('TarjetaFichajeVista: con 0 minutos se muestra "Comenzando" o "Sin horas todavía" en lugar del cero', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const estDia = (salida, tiempoHoy) => ({
+        regHoy: { fecha: '2026-10-29', entrada: '09:00', salida, total: tiempoHoy, objetivoHoras: 7 },
+        tiempoHoy, horasDiarias: 7, esDiaHabil: true, tipoEspecialHoy: null,
+        bufferSemanalBase: 0, diasHabiles: [1, 2, 3, 4, 5], esRetenido: false
+    });
+
+    // Hoy: jornada abierta en su primer minuto -> "Comenzando"; con minutos o ya cerrada se mantiene el tiempo real
+    assert.equal(TarjetaFichajeVista.derivarVistaHoy(estDia(null, 0)).stats, 'Comenzando...');
+    assert.notEqual(TarjetaFichajeVista.derivarVistaHoy(estDia(null, 0.5)).stats, 'Comenzando...');
+    const cerradaEnCero = TarjetaFichajeVista.derivarVistaHoy(estDia('09:00', 0)).stats;
+    assert.notEqual(cerradaEnCero, 'Comenzando...');
+    assert.match(cerradaEnCero, /^0/);
+
+    // Día libre (no laborable) con registro: no hay objetivo, pero el mensaje aclara por qué; sin objetivo configurado o en un día hábil sin objetivo sigue oculto
+    const noLaborable = TarjetaFichajeVista.derivarVistaHoy({ ...estDia('16:00', 7), esDiaHabil: false });
+    assert.equal(noLaborable.mensaje, 'Día libre');
+    assert.equal(noLaborable.mostrarMensaje, true);
+    assert.equal(TarjetaFichajeVista.derivarVistaHoy({ ...estDia(null, 2), esDiaHabil: false }).mensaje, 'Día libre');
+    assert.equal(TarjetaFichajeVista.derivarVistaHoy({ ...estDia('16:00', 7), esDiaHabil: false, horasDiarias: 0 }).mostrarMensaje, false);
+
+    // Semana: 0 minutos con jornada abierta -> "Comenzando"; sin jornada y semana abierta -> "Sin horas todavía"; semana terminada -> el 0 real
+    const estSemana = (extra) => ({
+        totalSemana: 0, totalSemanaProgreso: 0, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false,
+        regHoy: null, ayerAbierto: false, tipoEspecialHoy: null, ...extra
+    });
+    assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({ regHoy: { entrada: '09:00', salida: null } })).stats, 'Comenzando...');
+    assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({})).stats, 'Sin horas todavía');
+    assert.match(TarjetaFichajeVista.derivarVistaSemana(estSemana({ semanaAbierta: false })).stats, /^0/);
+    // con horas trabajadas no cambia nada, y una semana de solo días especiales conserva su 🌞
+    assert.notEqual(TarjetaFichajeVista.derivarVistaSemana(estSemana({ totalSemana: 3, totalSemanaProgreso: 3 })).stats, 'Sin horas todavía');
+    assert.equal(TarjetaFichajeVista.derivarVistaSemana(estSemana({ todosEspeciales: true })).stats, '🌞');
+});
+
+test('GeometriaEtiquetas: conector, reparto de lados y cuándo la entrada pasa arriba (sin DOM)', async () => {
+    const { geometriaConector, repartirLados, entradaDebeSubir, ANCHO_CONECTOR, SEPARACION_ETIQUETA } = await import('../src/core/geometria-etiquetas.js');
+
+    // con lugar a la izquierda la etiqueta va a la izquierda del conector; sin lugar se espeja a la derecha
+    const normal = geometriaConector(200, 30);
+    assert.equal(normal.espejado, false);
+    assert.equal(normal.left, 200 - ANCHO_CONECTOR - SEPARACION_ETIQUETA - 30);
+    assert.equal(normal.hasta, 203);
+    const espejada = geometriaConector(20, 30);
+    assert.equal(espejada.espejado, true);
+    assert.equal(espejada.left, 20 + ANCHO_CONECTOR + SEPARACION_ETIQUETA);
+    assert.equal(espejada.desde, 17);
+    // el margen ensancha el tramo ocupado por la etiqueta
+    assert.equal(geometriaConector(200, 30, 8).desde, normal.left - 4);
+
+    // reparto de lados: la segunda prueba el lado contrario, la tercera ya no entra y queda como solo punto
+    const it = (orden, desde, hasta, preferido, prioridad) => ({ orden, desde, hasta, preferido, prioridad });
+    const a = it(0, 100, 150, 'abajo', 2);
+    const b = it(1, 120, 170, 'abajo', 2);
+    const c = it(2, 130, 180, 'abajo', 2);
+    const lados = repartirLados([a, b, c]);
+    assert.deepEqual([lados.get(a), lados.get(b), lados.get(c)], ['abajo', 'arriba', null]);
+    // con la misma superposición, la de mayor prioridad se queda con su lado
+    const baja = it(0, 100, 150, 'abajo', 0);
+    const alta = it(1, 110, 160, 'abajo', 2);
+    const prioridad = repartirLados([baja, alta]);
+    assert.equal(prioridad.get(alta), 'abajo');
+    assert.equal(prioridad.get(baja), 'arriba');
+
+    // la entrada sube si la salida la pisa, salvo que arriba esté el buffer en el mismo tramo; sin ancho medido no se decide
+    const base = { ancho: 300, entradaLeft: 0, entradaAncho: 40 };
+    assert.equal(entradaDebeSubir({ ...base, salidaLeft: 45 }), true);
+    assert.equal(entradaDebeSubir({ ...base, salidaLeft: 200 }), false);
+    assert.equal(entradaDebeSubir({ ...base, salidaLeft: 45, bufferLeft: 30 }), false);
+    assert.equal(entradaDebeSubir({ ...base, salidaLeft: 45, bufferLeft: 250 }), true);
+    assert.equal(entradaDebeSubir({ ...base, ancho: 0, salidaLeft: 0 }), false);
+});
+
+test('GeometriaEtiquetas: lugar libre y versión de la descripción del hito enfocado (sin DOM)', async () => {
+    const { holguraDescripcion, nivelDescripcion, holguraHaciaDerecha, MARGEN_DESCRIPCION_DERECHA, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
+
+    // lugar a la derecha de una hora que no se mueve: hasta el final de la pista (más el margen permitido)
+    assert.equal(holguraHaciaDerecha(100, 40, 300), 300 + MARGEN_DESCRIPCION_DERECHA - 140);
+
+    // hacia la izquierda cuenta desde el borde izquierdo de la etiqueta; hacia la derecha, hasta el límite a su derecha
+    assert.equal(holguraDescripcion('izquierda', 180, 62), 118);
+    assert.equal(holguraDescripcion('derecha', 90, 310), 220);
+    // sin lugar la holgura es negativa
+    assert.ok(holguraDescripcion('izquierda', 40, 62) < 0);
+
+    // larga si entra con su separación, abreviada si solo entra esa y ninguna si ni siquiera esa
+    assert.equal(nivelDescripcion(100 + SEPARACION_DESCRIPCION, 100, 50), 'larga');
+    assert.equal(nivelDescripcion(100 + SEPARACION_DESCRIPCION - 1, 100, 50), 'corta');
+    assert.equal(nivelDescripcion(50 + SEPARACION_DESCRIPCION, 100, 50), 'corta');
+    assert.equal(nivelDescripcion(50 + SEPARACION_DESCRIPCION - 1, 100, 50), 'ninguna');
+    // sin versión abreviada nunca devuelve 'corta'
+    assert.equal(nivelDescripcion(80, 100), 'ninguna');
+});
+
+test('BusquedaTexto: coincidencias sin distinguir mayúsculas ni acentos y rangos sobre el texto original (sin DOM)', async () => {
+    const { normalizarBusqueda, terminosDeBusqueda, textoCoincide, rangosCoincidencia, teclaIniciaBusqueda } = await import('../src/core/busqueda-texto.js');
+
+    assert.equal(normalizarBusqueda('Compensación ÁÉÍ'), 'compensacion aei');
+    // las palabras de un solo carácter se ignoran
+    assert.deepEqual(terminosDeBusqueda('  Tiempo   a fuera '), ['tiempo', 'fuera']);
+
+    // todas las palabras deben estar, en cualquier orden y sin importar acentos
+    const texto = 'El tipo Compensatorio sirve para tomarte un día libre';
+    assert.equal(textoCoincide(texto, terminosDeBusqueda('compensatorio dia')), true);
+    assert.equal(textoCoincide(texto, terminosDeBusqueda('compensatorio vacaciones')), false);
+    assert.equal(textoCoincide(texto, []), false);
+
+    // los rangos apuntan al texto original (con acentos) y se unen si se superponen
+    const rangos = rangosCoincidencia(texto, ['dia', 'libre', 'ia li']);
+    assert.deepEqual(rangos.map(([i, f]) => texto.slice(i, f)), ['día libre']);
+    assert.deepEqual(rangosCoincidencia('Banco de horas, banco', ['banco']).map(([i, f]) => [i, f]), [[0, 5], [16, 21]]);
+
+    // escribir una letra suelta empieza la búsqueda; con modificadores, con otras teclas o con el foco ya en un campo, no
+    assert.equal(teclaIniciaBusqueda({ key: 'a' }, false), true);
+    assert.equal(teclaIniciaBusqueda({ key: 'Ñ' }, false), true);
+    assert.equal(teclaIniciaBusqueda({ key: 'é' }, false), true);
+    assert.equal(teclaIniciaBusqueda({ key: 'c', ctrlKey: true }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: 'a', altKey: true }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: 'Enter' }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: ' ' }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: '5' }, false), false);
+    assert.equal(teclaIniciaBusqueda({ key: 'a' }, true), false);
+});
+
+test('AvisoActualizacion: porcentajeValido acota y redondea el avance que informa el Service Worker', async () => {
+    const { porcentajeValido } = await import('../src/ui/aviso-actualizacion.js');
+    assert.equal(porcentajeValido(45.6), 46);
+    assert.equal(porcentajeValido(0), 0);
+    assert.equal(porcentajeValido(150), 100);
+    assert.equal(porcentajeValido(-3), 0);
+    assert.equal(porcentajeValido('72'), 72);
+    assert.equal(porcentajeValido(undefined), null);
+    assert.equal(porcentajeValido(null), null);
+    assert.equal(porcentajeValido('abc'), null);
+});
+
+test('EstiloCalendario: el ciclo recorre todos los estilos, vuelve al original y tolera ids desconocidos', async () => {
+    const { ESTILOS_CALENDARIO, siguienteEstilo, etiquetaEstilo } = await import('../src/core/estilo-calendario.js');
+    const ids = ESTILOS_CALENDARIO.map(e => e.id);
+    assert.equal(ids[0], 'legacy', 'el estilo original es el primero y el valor por defecto');
+    assert.equal(new Set(ids).size, ids.length, 'sin ids repetidos');
+    assert.deepEqual(ids, ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto']);
+
+    // dando la vuelta completa se vuelve al punto de partida y se pasa por todos
+    const visitados = [];
+    let id = 'legacy';
+    for (let i = 0; i < ids.length; i++) { visitados.push(id); id = siguienteEstilo(id); }
+    assert.deepEqual(visitados, ids);
+    assert.equal(id, 'legacy');
+
+    // un valor guardado que ya no existe se trata como el original
+    assert.equal(siguienteEstilo('inventado'), 'relleno-aro');
+    assert.equal(etiquetaEstilo('inventado'), 'Legacy');
+    // el estilo que se quitó ('solo-contorno') guardado por una versión anterior vuelve al original
+    assert.equal(etiquetaEstilo('solo-contorno'), 'Legacy');
+    assert.equal(etiquetaEstilo('aro-grueso'), 'Aro grueso');
+});

@@ -1,9 +1,9 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { FERIADOS_AR } from '../data/feriados.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { SeguridadYUtils } from '../core/seguridad.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { GestionDatos } from './gestion-datos.js';
+import { EstadoApp } from './estado-app.js';
+import { FiltrosYPeriodos } from './filtros-periodos.js';
 
 // ====================================================================
 // HOLIDAYS MODULE
@@ -12,13 +12,9 @@ const SK_PROCESADOS = STORAGE_KEYS.FERIADOS_PROCESADOS;
 const FERIADOS = FERIADOS_AR || {};
 
 function _cargarProcesados() {
-    const raw = Almacenamiento.getItem(SK_PROCESADOS, null, true);
-    try {
-        if (!raw) return new Set();
-        const parsed = JSON.parse(raw, SeguridadYUtils.reviverJSONSeguro);
-        if (!Array.isArray(parsed)) return new Set();
-        return new Set(parsed.filter(f => typeof f === 'string' && TiempoUtils.validarFecha(f)));
-    } catch { return new Set(); }
+    const guardados = Almacenamiento.getObject(SK_PROCESADOS, null, true);
+    if (!Array.isArray(guardados)) return new Set();
+    return new Set(guardados.filter(f => typeof f === 'string' && TiempoUtils.validarFecha(f)));
 }
 
 function _marcarProcesado(fecha) {
@@ -45,7 +41,7 @@ async function chequearYNotificar() {
     if (!candidatos.length) return;
 
     const procesados = _cargarProcesados();
-    const yaExisteRegistro = fecha => GestionDatos.existeRegistroEnFecha(fecha);
+    const yaExisteRegistro = fecha => EstadoApp.existeRegistroEnFecha(fecha);
 
     const pendientes = candidatos.filter(f => {
         if (procesados.has(f.fecha)) return false;
@@ -55,10 +51,7 @@ async function chequearYNotificar() {
 
     if (!pendientes.length) return;
 
-    while (
-        document.querySelector('.modal.show') ||
-        document.body.classList.contains('config-onboarding')
-    ) {
+    while (EstadoApp._notify().hayUIBloqueante()) {
         await TiempoUtils.esperar(2000);
     }
 
@@ -67,7 +60,7 @@ async function chequearYNotificar() {
     const pregunta = pendientes.length > 1 ? `¿Querés agregar estos ${pendientes.length} días como Feriado?` : '¿Querés agregar este día como Feriado?';
     const texto = `${lineas.join('\n')}\n\n${pregunta}`;
 
-    const confirmo = await GestionDatos._notify().confirmarModal(texto, 'Sí', '#icon-check', {
+    const confirmo = await EstadoApp._notify().confirmarModal(texto, 'Sí', '#icon-check', {
         titulo: pendientes.length > 1 ? `Feriados de ${nombreMes}` : `Feriado de ${nombreMes}`,
         labelCancel: 'No'
     });
@@ -76,7 +69,7 @@ async function chequearYNotificar() {
 
     if (confirmo) {
         for (const feriado of pendientes) {
-            try { await GestionDatos.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { console.error('Error registrando feriado:', e); }
+            try { await FiltrosYPeriodos.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { console.error('Error registrando feriado:', e); }
         }
     }
 }

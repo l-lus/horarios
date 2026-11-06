@@ -91,6 +91,27 @@
     }
 }
 
+/* Latido del remate de la barra, sincronizado con el paso del brillo (ver "shimmer"): sube mientras el brillo lo cruza y vuelve despacio */
+@keyframes remate-latido {
+    0%, 11.4% { scale: 1; }
+    14% { scale: 1.1; }
+    22%, 100% { scale: 1; }
+}
+
+/* Onda que sale del remate con el latido */
+@keyframes remate-onda {
+    0%, 12.6% { scale: 1; opacity: 0; }
+    13.4% { scale: 1; opacity: 0.55; }
+    25% { scale: 2; opacity: 0; }
+    100% { scale: 2; opacity: 0; }
+}
+
+/* Aro del botón de instalar: crece y se desvanece (la misma idea que el pulso de un hito, más contenido porque el botón es grande) */
+@keyframes instalar-pulso {
+    from { transform: scale(1); opacity: 0.75; }
+    to { transform: scale(1.6); opacity: 0; }
+}
+
 @keyframes campo-flash {
 
     0%,
@@ -110,27 +131,50 @@
 input.campo-flash,
 select.campo-flash,
 button.campo-flash {
-    animation: campo-flash 500ms ease-in-out 2;
+    animation: campo-flash var(--dur-flash) ease-in-out 2;
 }
 
+/* Destello de "hoy" en el calendario (botón Hoy). Sin registro no hay nada de color que resaltar: un aro del color del texto que aparece y se apaga
+   alrededor del día. Con registro ver calendario-hoy-pulso más abajo */
 @keyframes calendario-hoy-flash {
 
     0%,
     60%,
     100% {
-        outline-color: var(--text-muted);
-        outline-width: 2px;
+        outline: 2px solid transparent;
+        outline-offset: 1px;
     }
 
     20%,
     40% {
-        outline-color: var(--bg-card);
-        outline-width: 4px;
+        outline: 2px solid var(--text-main);
+        outline-offset: 1px;
     }
 }
 
 .calendario-dia.hoy.campo-flash {
-    animation: calendario-hoy-flash 500ms ease-in-out 2;
+    animation: calendario-hoy-flash var(--dur-flash) ease-in-out 2;
+}
+
+/* Con registro el destello es un pulso de la parte de color de cada estilo (el relleno, el aro, la barra o el punto): crece un poco y brilla con el color
+   del día. El resplandor (drop-shadow) sigue lo que cada estilo dibuja, así que no hace falta una versión por estilo; solo transform y filter */
+@keyframes calendario-hoy-pulso {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0 transparent) brightness(1);
+    }
+
+    50% {
+        transform: scale(1.16);
+        filter: drop-shadow(0 0 3px var(--cal-color)) drop-shadow(0 0 7px var(--cal-color)) brightness(1.3);
+    }
+}
+
+.calendario-dia.hoy.campo-flash:not(.dia-sin-registro, .dia-filtrado) {
+    z-index: 2;
+    animation: calendario-hoy-pulso var(--dur-pulso-hoy) ease-in-out 2;
 }
 
 /* Filas de ajustes: sin borde propio y dentro de un contenedor con overflow hidden,
@@ -174,18 +218,18 @@ button.campo-flash {
 }
 
 .settings-list>.campo-flash {
-    animation: ajuste-flash 500ms ease-in-out 2;
+    animation: ajuste-flash var(--dur-flash) ease-in-out 2;
 }
 
 /* La sombra interna sigue el radio de la fila, no el del contenedor */
 .settings-list>.campo-flash:first-child {
-    border-top-left-radius: var(--radius);
-    border-top-right-radius: var(--radius);
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
 }
 
 .settings-list>.campo-flash:last-child {
-    border-bottom-left-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
 }
 
 @keyframes campo-flash-color {
@@ -205,7 +249,66 @@ button.campo-flash {
 }
 
 button.campo-flash-color {
-    animation: campo-flash-color 500ms ease-in-out 2;
+    animation: campo-flash-color var(--dur-flash) ease-in-out 2;
+}
+
+/* ─── FICHAJE OK (check de éxito en el botón Fichar) ─────────────────────────── */
+/* Entrada con rebote (0-28%), pausa y salida (86-100%) en una sola animación de
+   --dur-fichaje-ok. Solo transform/opacity. La salida anticipada (error al fichar
+   rápido) y el reemplazo del ícono los resuelve base.js. */
+@keyframes fichaje-ok {
+    0% {
+        transform: scale(0.3) rotate(-25deg);
+        opacity: 0;
+        animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+
+    19% {
+        transform: scale(1.22) rotate(6deg);
+        opacity: 1;
+        animation-timing-function: ease-in-out;
+    }
+
+    28% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+        animation-timing-function: linear;
+    }
+
+    86% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+        animation-timing-function: ease-in;
+    }
+
+    100% {
+        transform: scale(0.4) rotate(0deg);
+        opacity: 0;
+    }
+}
+
+@keyframes fichaje-ok-vuelta {
+    from {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.btn-register .icon.fichaje-ok {
+    color: var(--c-green);
+    transform-origin: center;
+    animation: fichaje-ok var(--dur-fichaje-ok) both;
+}
+
+/* Se deja puesta a propósito: evita que vuelva el llamarAtencion recién fichado */
+.btn-register .icon.fichaje-ok-vuelta {
+    transform-origin: center;
+    animation: fichaje-ok-vuelta var(--dur-fichaje-vuelta) ease-out;
 }
 
 @keyframes icono-spin {
@@ -219,7 +322,14 @@ button.campo-flash-color {
 }
 
 .icono-spin {
-    animation: icono-spin 900ms linear infinite;
+    animation: icono-spin var(--dur-giro) linear infinite;
+}
+
+/* Opciones que solo tienen sentido con mouse: se ocultan en dispositivos táctiles (mismo criterio que usa calendario.js) */
+@media not all and (hover: hover) and (pointer: fine) {
+    .config-solo-pc {
+        display: none !important;
+    }
 }
 
 /* ─── HOVER (pointer: fine) ──────────────────────────────────────────────────── */
@@ -245,8 +355,9 @@ button.campo-flash-color {
         filter: var(--hover);
     }
 
+    /* Con el mouse se suma el brillo al pasar por encima, sin perder las transiciones del estilo (--cal-dia-transicion, ver tarjetas-vistas.css) */
     .calendario-dia:not(.vacio, .dia-sin-registro) {
-        transition: filter var(--transition-ui);
+        transition: var(--cal-dia-transicion), filter var(--transition-ui);
     }
 
     .calendario-dia:not(.vacio, .dia-sin-registro):hover {
@@ -271,6 +382,10 @@ button.campo-flash-color {
     .modal-scrollable>.modal-content {
         max-height: 100%;
     }
+
+    #modal-ayuda .modal-content {
+        height: 100%;
+    }
 }
 
 /* ─── ESCRITORIO (min-width: 1024px) ─────────────────────────────────────────── */
@@ -278,10 +393,15 @@ button.campo-flash-color {
 @media (min-width: 1024px) {
     .container {
         display: grid;
-        grid-template-columns: minmax(350px, 1fr) minmax(400px, 1fr);
+        grid-template-columns: repeat(var(--columnas, 2), minmax(350px, 1fr));
         gap: var(--space-xl);
         align-items: start;
         padding: var(--space-xl);
+    }
+
+    /* Con 3 columnas la página gana ancho (en pantallas más chicas el límite lo pone la ventana) */
+    .container[data-columnas="3"] {
+        max-width: 1900px;
     }
 
     .calendario-semana-actual {
@@ -289,7 +409,7 @@ button.campo-flash-color {
     }
 
     .calendario-dia {
-        font-size: var(--text-base);
+        --cal-dia-tam: var(--text-base);
     }
 
     .left-column {
@@ -413,16 +533,20 @@ button.campo-flash-color {
     --dur-cal-espera: 1ms;
     --dur-cal-entrada: 1ms;
     --dur-cal-numero: 1ms;
+    --dur-fichaje-salida: 1ms;
+    --dur-fichaje-vuelta: 1ms;
+    /* Sin movimiento el check queda fijo: este es solo el tiempo que se muestra */
+    --dur-fichaje-ok: 1500ms;
 }
 
 :root[data-motion="reduce"] :is(.modal-content, .cal-popup, .stat-popup, .filtro-popup) {
     transform: none;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--dur-fade) ease;
 }
 
 /* Overlay de los modales: mismo fade corto que .modal-content */
 :root[data-motion="reduce"] .modal {
-    transition: opacity 0.15s ease, visibility 0.15s ease;
+    transition: opacity var(--dur-fade) ease, visibility var(--dur-fade) ease;
 }
 
 /* Decorativas o llamadores de atención en bucle: se quitan. El estado sigue
@@ -446,3 +570,28 @@ button.campo-flash-color {
     display: none;
 }
 
+/* Sin brillo no hay latido del remate (el selector repite el del latido para ganarle en especificidad) */
+:root[data-motion="reduce"] .progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado),
+:root[data-motion="reduce"] .progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado)::after {
+    animation: none;
+}
+
+
+/* El pulso del hito enfocado es un anillo en bucle corto: sin movimiento queda solo el resalte de la píldora */
+:root[data-motion="reduce"] .linea-tick.foco::after,
+:root[data-motion="reduce"] .progress-punto.foco::after {
+    animation: none;
+    opacity: 0;
+}
+
+/* Con un modal abierto el brillo y el latido de la barra quedan detrás del overlay: se pausan para no mantener el pipeline de frames (ni el desenfoque del overlay) trabajando por algo que no se ve */
+body.modal-open .progress-fill.shimmer::after,
+body.modal-open .progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado),
+body.modal-open .progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado)::after {
+    animation-play-state: paused;
+}
+
+/* Reducir animaciones: la barra indeterminada del toast de progreso queda quieta */
+:root[data-motion="reduce"] .toast-progreso:indeterminate {
+    animation: none;
+}

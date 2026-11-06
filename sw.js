@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261029.2349-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261106.0226-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const urlsToCache = [
   './assets/icons/icon.svg',
   './assets/icons/icon-192.png',
   './assets/icons/badge-96.png',
+  './assets/fonts/inter-latin.woff2',
   './assets/styles/tokens.css',
   './assets/styles/base.css',
   './assets/styles/tarjetas-vistas.css',
@@ -17,41 +18,70 @@ const urlsToCache = [
   './src/core/dom.js',
   './src/core/eventos.js',
   './src/core/movimiento.js',
+  './src/core/recarga.js',
+  './src/core/estilo-calendario.js',
   './src/core/tiempo-utils.js',
   './src/core/seguridad.js',
+  './src/core/html.js',
+  './src/core/geometria-etiquetas.js',
+  './src/core/busqueda-texto.js',
   './src/core/almacenamiento.js',
   './src/data/fondos.js',
   './src/data/feriados.js',
   './src/services/estado-app.js',
-  './src/services/instalador-pwa.js',
   './src/services/recordatorio-push.js',
   './src/services/gestor-perfiles.js',
+  './src/services/orden-cards.js',
   './src/services/gestor-historial.js',
   './src/services/tipos-registro.js',
   './src/services/compensatorios.js',
   './src/services/importar-exportar.js',
   './src/services/filtros-periodos.js',
   './src/services/gestion-datos.js',
+  './src/services/edicion-registro.js',
+  './src/services/aviso-jornada.js',
   './src/services/saldo-semanal.js',
+  './src/services/estadisticas-periodo.js',
+  './src/services/estado-tarjeta.js',
   './src/services/sincronizacion-gist.js',
   './src/services/feriados-ar.js',
   './src/ui/gestor-temas.js',
+  './src/ui/instalador-pwa.js',
   './src/ui/gestor-modales.js',
+  './src/ui/formularios.js',
   './src/ui/animaciones.js',
+  './src/ui/gestos.js',
+  './src/ui/recarga-gesto.js',
+  './src/ui/toast.js',
+  './src/ui/boton-fichar.js',
+  './src/ui/popups.js',
+  './src/ui/scroll.js',
   './src/ui/base.js',
   './src/ui/perfiles.js',
   './src/ui/calendario.js',
+  './src/ui/calendario-popups.js',
   './src/ui/respaldo-local.js',
   './src/ui/gist-respaldo.js',
+  './src/ui/gist-resumen-merge.js',
   './src/ui/historico-edicion.js',
   './src/ui/historico.js',
+  './src/ui/historico-items.js',
   './src/ui/reportes.js',
   './src/ui/estadisticas.js',
   './src/ui/tarjeta-fondos.js',
   './src/ui/tarjeta-tiempo-fuera.js',
   './src/ui/tarjeta-lote.js',
+  './src/ui/barra-hitos.js',
+  './src/ui/foco-hitos.js',
+  './src/ui/hover-barra.js',
+  './src/ui/iconos-animados.js',
+  './src/ui/ayuda-buscador.js',
+  './src/ui/aviso-actualizacion.js',
   './src/ui/tarjeta-fichaje.js',
+  './src/ui/tarjeta-ciclo-stats.js',
+  './src/ui/tarjeta-fichaje-vista.js',
   './src/ui/orden-tarjetas.js',
+  './src/ui/arrastre.js',
   './src/ui/notificaciones.js',
   './src/ui/configuracion.js',
   './src/ui/historial-dias.js',
@@ -61,18 +91,43 @@ const urlsToCache = [
   './src/main.js',
 ];
 
-// Instalación
+// Avisa a las pestañas abiertas cómo va la descarga de la versión nueva (la página muestra el aviso con barra de progreso)
+function avisarAClientes(mensaje) {
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then(clientes => clientes.forEach(c => c.postMessage(mensaje)))
+    .catch(() => { });
+}
+
+// Instalación: descarga todos los archivos en paralelo (sin usar la caché HTTP) e informa el avance.
+// Es todo o nada: si falla uno, la instalación falla y se conserva la versión anterior.
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache.map(u => new Request(u, { cache: 'reload' }))).catch(err => {
-          console.error('CRÍTICO: Falló la carga de archivos en el install:', err);
-          throw err;
-        });
-      })
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const total = urlsToCache.length;
+    let descargados = 0;
+    let ultimoAviso = -1;
+    const informar = () => {
+      const porcentaje = Math.floor((descargados / total) * 100);
+      if (porcentaje === ultimoAviso) return;
+      ultimoAviso = porcentaje;
+      avisarAClientes({ tipo: 'sw-progreso', progreso: porcentaje, version: CACHE_NAME });
+    };
+    try {
+      informar();
+      await Promise.all(urlsToCache.map(async url => {
+        const respuesta = await fetch(new Request(url, { cache: 'reload' }));
+        if (!respuesta.ok) throw new Error(`${url}: HTTP ${respuesta.status}`);
+        await cache.put(url, respuesta);
+        descargados++;
+        informar();
+      }));
+    } catch (err) {
+      console.error('CRÍTICO: Falló la carga de archivos en el install:', err);
+      await avisarAClientes({ tipo: 'sw-error', version: CACHE_NAME });
+      throw err;
+    }
+    await self.skipWaiting();
+  })());
 });
 
 // Activación — limpieza de cachés viejas
@@ -120,13 +175,30 @@ self.addEventListener('fetch', event => {
             return networkResponse;
           })
           .catch(async () => {
+            // Sin conexión: una navegación cae a la app precacheada; cualquier otro recurso falla como error de red
             if (event.request.mode === 'navigate') {
-              return (await caches.match('./index.html', matchOpts)) || caches.match('./', matchOpts);
+              const app = (await caches.match('./index.html', matchOpts)) || (await caches.match('./', matchOpts));
+              if (app) return app;
             }
+            return Response.error();
           });
       })
   );
 });
+
+// Muestra el recordatorio de fin de jornada (lo usan el push real y la notificación de prueba)
+// El payload puede llegar como cualquier JSON (null, un número, un array): se toman solo title y body como texto acotado.
+function mostrarRecordatorio(data) {
+  const d = data && typeof data === 'object' ? data : {};
+  const texto = (v, max) => (typeof v === 'string' && v.trim() ? v.slice(0, max) : '');
+  return self.registration.showNotification(texto(d.title, 100) || 'Horarios', {
+    body: texto(d.body, 300) || 'Se cumplió tu horario de hoy',
+    icon: './assets/icons/icon-192.png',
+    badge: './assets/icons/badge-96.png',
+    tag: 'horarios-recordatorio',
+    renotify: true,
+  });
+}
 
 // Push — recordatorio de fin de jornada (viene del Worker de Cloudflare)
 self.addEventListener('push', event => {
@@ -137,14 +209,17 @@ self.addEventListener('push', event => {
     data = { title: 'Horarios', body: event.data ? event.data.text() : '' };
   }
 
+  event.waitUntil(mostrarRecordatorio(data));
+});
+
+// Notificación de prueba pedida desde Ajustes → Notificaciones. Se muestra con una demora
+// (máx. 60 s) para poder cerrar la app antes y comprobar qué abre el click.
+self.addEventListener('message', event => {
+  if (!event.data || event.data.tipo !== 'notificacion-prueba') return;
+  const demora = Math.min(Math.max(Number(event.data.demoraMs) || 0, 0), 60000);
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Horarios', {
-      body: data.body || 'Se cumplió tu horario de hoy',
-      icon: './assets/icons/icon-192.png',
-      badge: './assets/icons/badge-96.png',
-      tag: 'horarios-recordatorio',
-      renotify: true,
-    })
+    new Promise(resolve => setTimeout(resolve, demora))
+      .then(() => mostrarRecordatorio({ title: 'Notificación de prueba', body: 'Tocá para comprobar que se abre la app' }))
   );
 });
 

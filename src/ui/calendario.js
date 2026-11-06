@@ -1,25 +1,33 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Movimiento } from '../core/movimiento.js';
+import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { GestionDatos } from '../services/gestion-datos.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UIBase } from './base.js';
-import { TarjetaLote } from './tarjeta-lote.js';
-import { SeguridadYUtils as S } from '../core/seguridad.js';
-const D = GestionDatos;
+import { html, icono, montar } from '../core/html.js';
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
+import { registrarSwipe } from './gestos.js';
+import { _crearPopupFlotante } from './popups.js';
+import { Animaciones } from './animaciones.js';
+import { CalendarioPopups } from './calendario-popups.js';
 
 // ====================================================================
 //                     UI CALENDAR MODULE
 // ====================================================================
-const { registrarSwipe, _animarFadeSwap, _animarMutacion, _animarSlideElemento, _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante, formatoDiferencia, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible, _aArray, _estaColapsado, _durSiAnima } = UIBase;
+const {
+    _animarMutacion, _animarSlideElemento, _flashElemento, DUR_CALENDARIO, _crearFantasmaSiVisible,
+    _aArray, _estaColapsado, _durSiAnima
+} = Animaciones;
 
+/** @param {any} [idResaltar] */
 function _cerrarSelectorMeses(idResaltar = null) {
-    const grid = document.getElementById('calendario-grid');
-    const selector = document.getElementById('calendario-selector-meses');
-    const navBotones = document.getElementById('calendario-nav-botones');
+    const grid = $('calendario-grid');
+    const selector = $('calendario-selector-meses');
+    const navBotones = $('calendario-nav-botones');
     _animarMutacion([selector, grid], () => {
         selector.style.display = 'none';
         navBotones.style.display = 'flex';
@@ -29,15 +37,15 @@ function _cerrarSelectorMeses(idResaltar = null) {
 }
 
 function abrirSelectorMesesCalendario() {
-    const grid = document.getElementById('calendario-grid');
-    const selector = document.getElementById('calendario-selector-meses');
-    const navBotones = document.getElementById('calendario-nav-botones');
-    const titulo = document.getElementById('calendario-titulo-mes');
+    const grid = $('calendario-grid');
+    const selector = $('calendario-selector-meses');
+    const navBotones = $('calendario-nav-botones');
+    const titulo = $('calendario-titulo-mes');
 
     if (selector.style.display !== 'none') { _cerrarSelectorMeses(); return; }
 
-    const mesesOrdenados = [...new Set(D.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
-    selector.innerHTML = '';
+    const mesesOrdenados = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
+    selector.replaceChildren();
 
     if (mesesOrdenados.length === 0) {
         const emptyEl = Object.assign(document.createElement('div'), {
@@ -75,16 +83,16 @@ function abrirSelectorMesesCalendario() {
     _animarMutacion([grid, selector], () => {
         grid.style.display = 'none';
         navBotones.style.display = 'none';
-        titulo.innerHTML = '<svg class="icon"><use href="#icon-back" /></svg> Volver';
+        montar(titulo, html`${icono('#icon-back')} Volver`);
         selector.style.display = 'grid';
     });
 }
 
 function _activarVistaCalendarioHistorico() {
     if (!_vistaHistoricoCalendario) return;
-    const lista = document.getElementById('lista-registros');
-    const cal = document.getElementById('vista-calendario-historico');
-    const btnFiltro = document.getElementById('btn-filtro');
+    const lista = $('lista-registros');
+    const cal = $('vista-calendario-historico');
+    const btnFiltro = $('btn-filtro');
     if (lista) lista.classList.add('hidden');
     if (cal) cal.classList.remove('hidden');
     if (btnFiltro) btnFiltro.disabled = false;
@@ -93,9 +101,71 @@ function _activarVistaCalendarioHistorico() {
 
 let _calendarioMes = null;
 
+/** Celda de un día del calendario: su clase de estado, resaltado de "hoy" o "nuevo" y los eventos de click/hover si tiene registro. */
+function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario, asignaciones }) {
+    const cell = document.createElement('div');
+    let clases = `calendario-dia ${clase}`;
+    if (esHoy) clases += ' hoy';
+    if (clase === 'dia-sin-registro' && !TiempoUtils.esFechaHabil(fecha, Compensatorios.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
+    if (esNuevo) {
+        clases += ' nuevo-registro-animacion';
+        cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
+    }
+    if (reg) clases += ' cursor-pointer';
+    if (conComentario) clases += ' tiene-comentario';
+    cell.className = clases;
+    cell.textContent = String(dia);
+    cell.dataset.dia = fecha;
+
+    if (reg) {
+        cell.dataset.regId = reg.id;
+        cell.addEventListener('click', (e) => CalendarioPopups.onclickDia(e, reg.id, asignaciones));
+        cell.addEventListener('mouseenter', (e) => CalendarioPopups.hoverDia(e, reg.id, asignaciones));
+        cell.addEventListener('mouseleave', (e) => CalendarioPopups.cerrarHoverDia(e));
+    } else if (clase === 'dia-sin-registro') {
+        cell.classList.add('cursor-pointer');
+        cell.dataset.fecha = fecha;
+        cell.addEventListener('click', (e) => CalendarioPopups.diaSinRegistro(e, fecha));
+    }
+    return cell;
+}
+
+/** Bandas que marcan en el calendario los días laborables de la semana actual (una por fila de la grilla). */
+function _bandasSemanaActual(anio, mes, offsetInicio, diasDelMes) {
+    const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
+    const esLaborable = (f) => TiempoUtils.esFechaHabil(f, Compensatorios.diasHabilesEnFecha(f));
+    const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
+    const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
+    const segmentosSemana = [];
+    for (let d = 1; d <= diasDelMes; d++) {
+        const f = fechaStr(anio, mes, d);
+        if (f < semIni || f > semFin || !esLaborable(f)) continue;
+        const idx = offsetInicio + d - 1;
+        const fila = 2 + Math.floor(idx / 7);
+        const col = 1 + (idx % 7);
+        const ultimo = segmentosSemana[segmentosSemana.length - 1];
+        if (ultimo && ultimo.fila === fila && ultimo.hasta === col - 1) {
+            ultimo.hasta = col;
+            ultimo.diaFin = d;
+        } else {
+            segmentosSemana.push({ fila, desde: col, hasta: col, diaIni: d, diaFin: d });
+        }
+    }
+    return segmentosSemana.map(seg => {
+        const banda = document.createElement('div');
+        banda.className = 'calendario-semana-actual';
+        if (seg.desde === 1 && esLaborable(fechaDeDia(seg.diaIni - 1))) banda.classList.add('abierta-izq');
+        if (seg.hasta === 7 && esLaborable(fechaDeDia(seg.diaFin + 1))) banda.classList.add('abierta-der');
+        banda.setAttribute('aria-hidden', 'true');
+        banda.style.gridArea = `${seg.fila} / ${seg.desde} / ${seg.fila + 1} / ${seg.hasta + 1}`;
+        return banda;
+    });
+}
+
+/** @param {any} [idResaltar] @param {any} [asignacionesPrecalculadas] */
 function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = null) {
-    const grid = document.getElementById('calendario-grid');
-    const titulo = document.getElementById('calendario-titulo-mes');
+    const grid = $('calendario-grid');
+    const titulo = $('calendario-titulo-mes');
     if (!grid) return;
 
     if (grid.parentNode) {
@@ -103,19 +173,19 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     } else {
         registrarSwipe(grid, dir => navegarCalendario(dir));
     }
-    _registrarLongPressSemana(grid);
+    CalendarioPopups.registrarLongPressSemana(grid);
 
     const hoy = new Date();
     const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
     const mes = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
     if (titulo) titulo.textContent = `${TiempoUtils.nombreMesPorIndice(mes)} ${anio}`;
     const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
-    const registrosFiltrados = D.obtenerRegistrosFiltrados();
-    const todosLosRegistros = D.registros();
+    const registrosFiltrados = FiltrosYPeriodos.obtenerRegistrosFiltrados();
+    const todosLosRegistros = EstadoApp.registros();
     const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
     const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
     const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
-    const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
+    const asignacionesCompensatorio = asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio();
     const claveMes = `${anio}-${TiempoUtils._pad2(mes + 1)}`;
     const notasDelMes = TiposRegistro.mapaNotasPorRegistro(todosLosRegistros.filter(r => r.fecha.startsWith(claveMes)));
     const claseDelDia = (fecha) => {
@@ -123,7 +193,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
         if (!r && filtroActivo && todosRegsPorFecha[fecha]) return 'dia-filtrado';
         if (!r) return 'dia-sin-registro';
         const { estado, tipo } = SaldoSemanal.estadoDeRegistro(r, asignacionesCompensatorio);
-        if (estado === 'especial') return `dia-especial-${tipo.color}`;
+        if (estado === 'especial') return `dia-especial-${tipo?.color}`;
         if (estado === 'en-curso') return 'dia-en-curso';
         if (estado === 'cubierto') return 'dia-cubierto';
         if (estado === 'incompleto' || estado === 'sin-datos') return 'dia-incompleto';
@@ -157,72 +227,21 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
         const idsNuevos = _aArray(idResaltar);
         const esNuevo = reg && idsNuevos.includes(reg.id);
 
-        const cell = document.createElement('div');
-        let clases = `calendario-dia ${clase}`;
-        if (esHoy) clases += ' hoy';
-        if (clase === 'dia-sin-registro' && !TiempoUtils.esFechaHabil(fecha, D.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
-        if (esNuevo) {
-            clases += ' nuevo-registro-animacion';
-            cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
-        }
-        if (reg) clases += ' cursor-pointer';
-        if (reg && notasDelMes.has(reg.id)) clases += ' tiene-comentario';
-        cell.className = clases;
-        cell.textContent = dia;
-        cell.dataset.dia = fecha;
-
-        if (reg) {
-            cell.dataset.regId = reg.id;
-            cell.addEventListener('click', (e) => _onclickCalendarioDia(e, reg.id, asignacionesCompensatorio));
-            cell.addEventListener('mouseenter', (e) => _popupCalendarioHover(e, reg.id, asignacionesCompensatorio));
-            cell.addEventListener('mouseleave', (e) => _cerrarPopupCalendarioHover(e));
-        } else if (clase === 'dia-sin-registro') {
-            cell.classList.add('cursor-pointer');
-            cell.dataset.fecha = fecha;
-            cell.addEventListener('click', (e) => _popupCalendarioDiaSinRegistro(e, fecha));
-        }
-
-        frag.appendChild(cell);
+        frag.appendChild(_crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario: !!reg && notasDelMes.has(reg.id), asignaciones: asignacionesCompensatorio }));
     }
 
-    const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
-    const esLaborable = (f) => TiempoUtils.esFechaHabil(f, D.diasHabilesEnFecha(f));
-    const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
-    const segmentosSemana = [];
-    for (let d = 1; d <= ultimoDia.getDate(); d++) {
-        const f = fechaStr(anio, mes, d);
-        if (f < semIni || f > semFin || !esLaborable(f)) continue;
-        const idx = offsetInicio + d - 1;
-        const fila = 2 + Math.floor(idx / 7);
-        const col = 1 + (idx % 7);
-        const ultimo = segmentosSemana[segmentosSemana.length - 1];
-        if (ultimo && ultimo.fila === fila && ultimo.hasta === col - 1) {
-            ultimo.hasta = col;
-            ultimo.diaFin = d;
-        } else {
-            segmentosSemana.push({ fila, desde: col, hasta: col, diaIni: d, diaFin: d });
-        }
-    }
-    segmentosSemana.forEach(seg => {
-        const banda = document.createElement('div');
-        banda.className = 'calendario-semana-actual';
-        if (seg.desde === 1 && esLaborable(fechaDeDia(seg.diaIni - 1))) banda.classList.add('abierta-izq');
-        if (seg.hasta === 7 && esLaborable(fechaDeDia(seg.diaFin + 1))) banda.classList.add('abierta-der');
-        banda.setAttribute('aria-hidden', 'true');
-        banda.style.gridArea = `${seg.fila} / ${seg.desde} / ${seg.fila + 1} / ${seg.hasta + 1}`;
-        frag.appendChild(banda);
-    });
+    _bandasSemanaActual(anio, mes, offsetInicio, ultimoDia.getDate()).forEach(banda => frag.appendChild(banda));
 
     grid.classList.toggle('calendario-filtro-activo', filtroActivo);
 
     if (idResaltar) {
         const idsAnimados = _aArray(idResaltar).map(String);
-        grid.querySelectorAll('.calendario-dia[data-reg-id]').forEach(celdaVieja => {
-            if (idsAnimados.includes(celdaVieja.dataset.regId)) _crearFantasmaSiVisible(celdaVieja);
+        /** @type {NodeListOf<HTMLElement>} */ (grid.querySelectorAll('.calendario-dia[data-reg-id]')).forEach(celdaVieja => {
+            if (idsAnimados.includes(celdaVieja.dataset.regId ?? '')) _crearFantasmaSiVisible(celdaVieja);
         });
     }
 
-    grid.innerHTML = '';
+    grid.replaceChildren();
     grid.appendChild(frag);
 
 }
@@ -239,20 +258,20 @@ function _limpiarEntradaCalendario(grid) {
 }
 
 function animarEntradaInicial() {
-    const grid = document.getElementById('calendario-grid');
+    const grid = $('calendario-grid');
     if (!grid || Movimiento.reducido() || !grid.offsetParent || _estaColapsado(grid)) return;
-    const celdas = grid.querySelectorAll('.calendario-dia[data-reg-id]');
+    const celdas = /** @type {NodeListOf<HTMLElement>} */ (grid.querySelectorAll('.calendario-dia[data-reg-id]'));
     if (!celdas.length) return;
 
     const paso = Math.min(ENTRADA_PASO_MS, Math.floor(ENTRADA_TOTAL_MAX_MS / celdas.length));
-    grid.style.setProperty('--cal-n', celdas.length);
+    grid.style.setProperty('--cal-n', String(celdas.length));
     grid.style.setProperty('--cal-paso', paso + 'ms');
     celdas.forEach((celda, i) => {
         const num = document.createElement('span');
         num.className = 'calendario-dia-num';
         num.textContent = celda.textContent;
         celda.replaceChildren(num);
-        celda.style.setProperty('--i', i);
+        celda.style.setProperty('--i', String(i));
         celda.classList.add('cal-entrada');
     });
     grid.querySelector('.calendario-dia.hoy:not([data-reg-id])')?.classList.add('cal-entrada-remate');
@@ -267,16 +286,17 @@ let _vistaHistoricoCalendario = false;
 function toggleVistaHistorico() {
     _vistaHistoricoCalendario = !_vistaHistoricoCalendario;
     Almacenamiento.setItem(STORAGE_KEYS.VISTA_HISTORICO_CAL, _vistaHistoricoCalendario);
+    EventosApp.emit('historico:vista');
 
-    const lista = document.getElementById('lista-registros');
-    const cal = document.getElementById('vista-calendario-historico');
+    const lista = $('lista-registros');
+    const cal = $('vista-calendario-historico');
     if (lista) {
         lista.querySelectorAll('.nuevo-registro-animacion').forEach(el => el.classList.remove('nuevo-registro-animacion'));
     }
     if (cal) {
         cal.querySelectorAll('.nuevo-registro-animacion').forEach(el => el.classList.remove('nuevo-registro-animacion'));
     }
-    const btnFiltro = document.getElementById('btn-filtro');
+    const btnFiltro = $('btn-filtro');
     const saliente = _vistaHistoricoCalendario ? lista : cal;
     const entrante = _vistaHistoricoCalendario ? cal : lista;
     _animarMutacion([saliente, entrante], () => {
@@ -287,9 +307,9 @@ function toggleVistaHistorico() {
         if (_vistaHistoricoCalendario) _renderizarCalendario();
     });
 
-    const selector = document.getElementById('calendario-selector-meses');
-    const grid = document.getElementById('calendario-grid');
-    const navBotones = document.getElementById('calendario-nav-botones');
+    const selector = $('calendario-selector-meses');
+    const grid = $('calendario-grid');
+    const navBotones = $('calendario-nav-botones');
     if (selector && !selector.classList.contains('hidden') && selector.style.display !== 'none') {
         selector.style.display = 'none';
         if (grid) grid.style.display = 'grid';
@@ -297,341 +317,12 @@ function toggleVistaHistorico() {
     }
 }
 
-let _popupCalendarioEl = null;
-
-function _buildInfoHtmlRegistro(reg, asignaciones = null) {
-    const est = SaldoSemanal.estadoDeRegistro(reg, asignaciones || D.calcularAsignacionesCompensatorio());
-    if (est.estado === 'especial') {
-        const { tipo } = est;
-        const emoji = S.escapeHtml(tipo.emoji ?? '');
-        const label = S.escapeHtml(tipo.label);
-        const colorSafe = /^[a-z]+$/.test(tipo.color || '') ? tipo.color : 'purple';
-        const fechaCompensadaHtml = est.fechaCompensada
-            ? ` <span class="cal-popup-badge cal-popup-badge--${colorSafe}">${S.escapeHtml(TiempoUtils.fechaCorta(est.fechaCompensada))}</span>`
-            : '';
-        return `<span class="cal-popup-badge cal-popup-badge--${colorSafe}">${emoji} ${label}</span>${fechaCompensadaHtml}`;
-    }
-    if (est.estado === 'en-curso') {
-        const esHoy = reg.fecha === TiempoUtils.obtenerFechaHoy();
-        return `<div class="cal-popup-info cal-popup-info--blue">${esHoy ? 'En curso' : 'Incompleto'}</div>
-            <div class="cal-popup-3l">Entrada: ${S.escapeHtml(reg.entrada)}</div>`;
-    }
-    let tfStr = '';
-    if (reg.tiempoFuera && reg.tiempoFuera !== '00:00') {
-        tfStr = `${TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(reg.tiempoFuera) / 60, 'short')} fuera`;
-    }
-    const diffClase = { cumplido: 'cal-popup-info--green', cubierto: 'cal-popup-info--gold', incompleto: 'cal-popup-info--red' }[est.estado] || '';
-    const totalConDiff = TiempoUtils.horasATexto(reg.total || 0, 'short') + (est.diffText ? ` (${est.diffText})` : '');
-    const cubiertoLineaHtml = est.estado === 'cubierto' ? `<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>` : '';
-    const compensadoLineaHtml = est.fechaCompensado
-        ? `<span class="cal-popup-badge cal-popup-badge--purple">→ ${S.escapeHtml(TiempoUtils.fechaCorta(est.fechaCompensado))}</span>`
-        : '';
-    return `<div class="cal-popup-info${diffClase ? ' ' + diffClase : ''}">${totalConDiff}</div>
-        ${cubiertoLineaHtml}
-        ${compensadoLineaHtml}
-        <div class="cal-popup-3l">${S.escapeHtml(reg.entrada)} → ${S.escapeHtml(reg.salida)}</div>
-        ${tfStr ? _cajaPopupHtml('#icon-exit', tfStr) : ''}`;
-}
-
-function _cerrarPopupCalendario() {
-    if (!_popupCalendarioEl) return;
-    const el = _popupCalendarioEl;
-    _popupCalendarioEl = null;
-    if (el._cerrar) el._cerrar();
-    else el.remove();
-}
-
-function _cajaPopupHtml(icono, texto) {
-    return `<div class="cal-popup-caja">
-        <svg class="icon cal-popup-caja-icono"><use href="${icono}"/></svg>
-        <span class="cal-popup-caja-texto">${S.escapeHtml(texto)}</span>
-    </div>`;
-}
-
-function _formatearFechaLabelPopup(fecha) {
-    const d = new Date(fecha + 'T12:00:00');
-    const diaSemana = TiempoUtils.obtenerNombreDia(fecha).toLowerCase();
-    const mes = TiempoUtils.nombreMesPorIndice(d.getMonth());
-    return S.escapeHtml(`${diaSemana}, ${d.getDate()} de ${mes}`);
-}
-
-function _popupCalendario(event, registroId, asignaciones = null) {
-    event.stopPropagation();
-
-    _cerrarPopupCalendario();
-
-    const reg = D.registroPorId(registroId);
-    if (!reg) return;
-
-    const claveMes = reg.fecha.substring(0, 7);
-    const registrosDelMes = D.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
-    const grupos = TiposRegistro.agruparConsecutivos(registrosDelMes);
-    const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
-
-    const fechaLabel = _formatearFechaLabelPopup(reg.fecha);
-    const infoHtml = _buildInfoHtmlRegistro(reg, asignaciones);
-    const notasTexto = reg.notas || (grupoDelRegistro && TiposRegistro.notaDeGrupo(grupoDelRegistro));
-    const comentarioHtml = notasTexto ? _cajaPopupHtml('#icon-comment', notasTexto) : '';
-    const btnGrupoHtml = grupoDelRegistro ? `
-        <button class="cal-popup-btn-edit" id="_cal-popup-btn-grupo">
-            <svg class="icon"><use href="#icon-grid-group"/></svg>
-            Editar grupo
-        </button>` : '';
-
-    const { popup, cerrar } = _crearPopupFlotante({
-        className: 'cal-popup',
-        id: '_cal-popup',
-        dataset: { registroId: reg.id },
-        html: `
-        <div class="cal-popup-fecha">${fechaLabel}</div>
-        ${infoHtml}
-        ${comentarioHtml}
-        <button class="cal-popup-btn-edit" id="_cal-popup-btn-edit">
-            <svg class="icon"><use href="#icon-edit"/></svg>
-            Editar
-        </button>
-        ${btnGrupoHtml}`,
-        event,
-        selectorTrigger: '.calendario-dia',
-        esMismoTrigger: dia => dia.dataset.regId === reg.id,
-        alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
-    });
-    _popupCalendarioEl = popup;
-
-    popup.querySelector('#_cal-popup-btn-edit')?.addEventListener('click', () => {
-        cerrar();
-        GestionDatos.editarRegistro(reg.id);
-    });
-    popup.querySelector('#_cal-popup-btn-grupo')?.addEventListener('click', () => {
-        cerrar();
-        GestionDatos.editarGrupo(grupoDelRegistro);
-    });
-
-    popup.addEventListener('mouseenter', () => clearTimeout(_popupCalendarioHoverTimer));
-    popup.addEventListener('mouseleave', () => {
-        if (_popupCalendarioEsHover) {
-            _popupCalendarioHoverTimer = setTimeout(() => {
-                _cerrarPopupCalendario();
-                _popupCalendarioEsHover = false;
-            }, 500);
-        }
-    });
-}
-
-// ── Popup de la semana: long press en móvil, click secundario en PC ──────────
-const LONG_PRESS_MS = 500;
-const LONG_PRESS_TOLERANCIA_PX = 10;
-let _ultimoToqueTs = 0;
-let _longPressDisparadoTs = 0;
-
-function _registrarLongPressSemana(grid) {
-    if (!grid || grid.dataset.semanaInit) return;
-    grid.dataset.semanaInit = '1';
-    let timer = null, x0 = 0, y0 = 0;
-    const cancelar = () => { clearTimeout(timer); timer = null; };
-
-    grid.addEventListener('pointerdown', (e) => {
-        if (e.pointerType === 'mouse') return;
-        const celda = e.target.closest('.calendario-dia[data-dia]');
-        if (!celda) return;
-        _ultimoToqueTs = performance.now();
-        x0 = e.clientX; y0 = e.clientY;
-        cancelar();
-        timer = setTimeout(() => {
-            timer = null;
-            _longPressDisparadoTs = performance.now();
-            const puedeVibrar = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
-            if (puedeVibrar && 'vibrate' in navigator) { try { navigator.vibrate(15); } catch (_) { } }
-            _popupSemana(celda);
-        }, LONG_PRESS_MS);
-    }, { passive: true });
-
-    grid.addEventListener('pointermove', (e) => {
-        if (timer && Math.hypot(e.clientX - x0, e.clientY - y0) > LONG_PRESS_TOLERANCIA_PX) cancelar();
-    }, { passive: true });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(tipo => grid.addEventListener(tipo, cancelar, { passive: true }));
-
-    grid.addEventListener('contextmenu', (e) => {
-        const celda = e.target.closest('.calendario-dia[data-dia]');
-        if (!celda) return;
-        e.preventDefault();
-        if (performance.now() - _ultimoToqueTs < 1500) return;
-        _popupSemana(celda);
-    });
-
-    grid.addEventListener('click', (e) => {
-        if (performance.now() - _longPressDisparadoTs < 600) { e.stopPropagation(); e.preventDefault(); }
-    }, true);
-}
-
-function _filaSemana(r, asignaciones) {
-    const est = SaldoSemanal.estadoDeRegistro(r, asignaciones);
-    const color = SaldoSemanal.colorDeEstado(est);
-    const colorSafe = /^[a-z]+$/.test(color || '') ? color : 'neutro';
-    const diaTxt = `${TiempoUtils.obtenerNombreDia(r.fecha).slice(0, 3)} ${parseInt(r.fecha.substring(8), 10)}`;
-    let medio = '', totalHtml = '', diffHtml = '';
-    if (est.estado === 'especial') {
-        medio = `${est.tipo.emoji ?? ''} ${est.tipo.label}`.trim();
-    } else if (est.estado === 'en-curso') {
-        medio = `${r.entrada} → …`;
-        totalHtml = `<span class="cal-semana-hs cal-popup-info--blue">${r.fecha === TiempoUtils.obtenerFechaHoy() ? 'En curso' : 'Incompleto'}</span>`;
-    } else if (est.estado === 'sin-datos') {
-        medio = '-';
-    } else {
-        medio = `${r.entrada} → ${r.salida}`;
-        totalHtml = `<span class="cal-semana-hs">${TiempoUtils.horasATexto(r.total || 0, 'short')}</span>`;
-        if (est.diffText) diffHtml = `<span class="cal-semana-diff cal-popup-info--${colorSafe}">${est.diffText}</span>`;
-    }
-    return `<span class="cal-semana-punto cal-semana-punto--${colorSafe}"></span>
-        <span class="cal-semana-dia">${S.escapeHtml(diaTxt)}</span>
-        <span class="cal-popup-3l">${S.escapeHtml(medio)}</span>
-        ${totalHtml || '<span></span>'}
-        ${diffHtml || '<span></span>'}`;
-}
-
-function _htmlPopupSemana(lunes) {
-    const d = TiempoUtils.parsearFechaLocal(lunes);
-    d.setDate(d.getDate() + 6);
-    const domingo = TiempoUtils.formatearFechaLocal(d);
-    const asignaciones = D.calcularAsignacionesCompensatorio();
-    const registros = D.registros()
-        .filter(r => r.fecha >= lunes && r.fecha <= domingo)
-        .sort((a, b) => a.fecha.localeCompare(b.fecha));
-
-    const titulo = `<div class="cal-popup-fecha">${S.escapeHtml(TiempoUtils.formatearRangoSemana(lunes))}</div>`;
-    if (!registros.length) return `${titulo}<div class="cal-popup-sin-reg">Sin registros</div>`;
-
-    const total = registros.reduce((sum, r) => sum + D.horasEfectivasDeRegistro(r), 0);
-    const buffer = D.calcularBufferPeriodo(lunes, domingo, false, 0, asignaciones);
-    const bufferTxt = TiempoUtils.formatoDiferencia(buffer, 0);
-    const chip = bufferTxt
-        ? `<span class="registro-total ${buffer > 0 ? 'green-text' : 'red-text'}">${bufferTxt}</span>`
-        : '';
-    const filas = registros.map(r => _filaSemana(r, asignaciones)).join('');
-    return `${titulo}
-        <div class="cal-semana-total">
-            <span class="cal-popup-info">${TiempoUtils.horasATexto(total, 'short')}</span>
-            ${chip}
-        </div>
-        <div class="cal-semana-lista">${filas}</div>`;
-}
-
-function _popupSemana(celda) {
-    const fecha = celda?.dataset.dia;
-    if (!fecha) return;
-    clearTimeout(_popupCalendarioHoverTimer);
-    _popupCalendarioEsHover = false;
-    _cerrarPopupCalendario();
-    
-    const ancla = celda.isConnected
-        ? celda
-        : document.querySelector(`#calendario-grid .calendario-dia[data-dia="${fecha}"]`);
-    if (!ancla) return;
-
-    const lunes = TiempoUtils.obtenerLunesSemanaISO(fecha);
-    const { popup } = _crearPopupFlotante({
-        className: 'cal-popup cal-popup-semana',
-        id: '_cal-popup',
-        dataset: { semana: lunes },
-        html: _htmlPopupSemana(lunes),
-        event: { currentTarget: ancla },
-        selectorTrigger: '.calendario-dia',
-        esMismoTrigger: dia => dia.dataset.dia === fecha,
-        alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
-    });
-    _popupCalendarioEl = popup;
-}
-
-let _popupCalendarioEsHover = false;
-let _popupCalendarioHoverTimer = null;
-
-function _popupCalendarioDiaSinRegistro(event, fecha) {
-    event.stopPropagation();
-    clearTimeout(_popupCalendarioHoverTimer);
-    _popupCalendarioEsHover = false;
-
-    const mismaFecha = _popupCalendarioEl?.dataset.fecha === fecha;
-    _cerrarPopupCalendario();
-    if (mismaFecha) return;
-
-    const esFechaFutura = fecha > TiempoUtils.obtenerFechaHoy();
-    const fechaLabel = _formatearFechaLabelPopup(fecha);
-
-    const { popup, cerrar } = _crearPopupFlotante({
-        className: 'cal-popup',
-        id: '_cal-popup',
-        dataset: { fecha },
-        html: `
-        <div class="cal-popup-fecha">${fechaLabel}</div>
-        <div class="cal-popup-sin-reg">Sin registros</div>
-        ${esFechaFutura ? '' : `<button class="cal-popup-btn-edit cal-popup-btn-accion cal-popup-btn-accion--normal" id="_cal-popup-btn-normal">
-            <svg class="icon"><use href="#icon-clock"/></svg>
-            Jornada regular
-        </button>`}
-        <button class="cal-popup-btn-edit cal-popup-btn-accion cal-popup-btn-accion--especial" id="_cal-popup-btn-especial">
-            <svg class="icon"><use href="#icon-calendar-simple"/></svg>
-            Jornada especial
-        </button>`,
-        event,
-        selectorTrigger: '.calendario-dia',
-        esMismoTrigger: dia => dia.dataset.fecha === fecha,
-        alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
-    });
-    _popupCalendarioEl = popup;
-
-    popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => { cerrar(); TarjetaLote._irAFicharConFecha(fecha, false); });
-    popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrar(); TarjetaLote._irAFicharConFecha(fecha, true); });
-}
-
-function _popupCalendarioHover(event, registroId, asignaciones = null) {
-    if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
-    if (!window.matchMedia('(hover: hover)').matches) return;
-    const stored = Almacenamiento.getItem(STORAGE_KEYS.HOVER_POPUP, null);
-    if (stored !== 'true') return;
-    if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
-    if (_popupCalendarioEl && !_popupCalendarioEsHover) return;
-    clearTimeout(_popupCalendarioHoverTimer);
-    _popupCalendarioHoverTimer = setTimeout(() => {
-        _popupCalendarioEsHover = true;
-        _popupCalendario(event, registroId, asignaciones);
-    }, 150);
-}
-
-function _onclickCalendarioDia(event, registroId, asignaciones = null) {
-    const esDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    const stored = Almacenamiento.getItem(STORAGE_KEYS.HOVER_POPUP, null);
-    const hoverActivo = esDesktop && stored === 'true';
-
-    if (hoverActivo) {
-        _cerrarPopupCalendario();
-        clearTimeout(_popupCalendarioHoverTimer);
-        GestionDatos.editarRegistro(registroId);
-    } else {
-        if (_popupCalendarioEl?.dataset.registroId === registroId) {
-            _cerrarPopupCalendario();
-            return;
-        }
-        _popupCalendario(event, registroId, asignaciones);
-    }
-}
-
-function _cerrarPopupCalendarioHover(event) {
-    if (!_popupCalendarioEsHover) return;
-    const related = event.relatedTarget;
-    if (related && _popupCalendarioEl && _popupCalendarioEl.contains(related)) return;
-    clearTimeout(_popupCalendarioHoverTimer);
-    _popupCalendarioHoverTimer = setTimeout(() => {
-        _cerrarPopupCalendario();
-        _popupCalendarioEsHover = false;
-    }, 500);
-}
-
 function _animarCalendario(delta, renderFn) {
-    _animarSlideElemento(document.getElementById('calendario-grid'), delta, renderFn);
+    _animarSlideElemento($('calendario-grid'), delta, renderFn);
 }
 
 function navegarCalendario(delta) {
-    _cerrarPopupCalendario();
+    CalendarioPopups.cerrar();
 
     const hoy = new Date();
     const base = _calendarioMes || { anio: hoy.getFullYear(), mes: hoy.getMonth() };
@@ -662,11 +353,20 @@ function irHoyCalendario() {
     setTimeout(_flashDiaHoyCalendario, DUR_CALENDARIO() + 20);
 }
 
-// ── Atajo PC: rueda del mouse / trackpad sobre los días para cambiar de mes ──
+// ── Atajo PC: rueda del mouse / trackpad sobre los días (o Alt + rueda sobre el calendario) para cambiar de mes ──
 const RUEDA_UMBRAL_PX = 40;          // acumulado mínimo para disparar el cambio
 const RUEDA_PAUSA_TRACKPAD_MS = 120; // pausa que cierra una ráfaga de trackpad (inercia)
 const RUEDA_COOLDOWN_EXTRA_MS = 60;  // margen sobre la animación de deslizamiento
 const RUEDA_LINEA_PX = 33;           // equivalencia de deltaMode "línea" en px
+
+// La opción se lee del almacenamiento una sola vez: el evento de configuración invalida el valor guardado (el handler de la rueda corre en cada ráfaga)
+/** @type {boolean | null} */
+let _ruedaHabilitada = null;
+EventosApp.on('config:rueda-calendario', () => { _ruedaHabilitada = null; });
+function _ruedaActiva() {
+    _ruedaHabilitada ??= Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO);
+    return _ruedaHabilitada;
+}
 
 function _registrarRuedaCalendario(grid) {
     const contenedor = grid?.parentNode;
@@ -682,18 +382,21 @@ function _registrarRuedaCalendario(grid) {
     const esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
     contenedor.addEventListener('wheel', (e) => {
-        if (e.ctrlKey || e.metaKey || e.altKey) return;   // zoom del navegador / atajos
+        if (e.ctrlKey || e.metaKey) return;   // zoom del navegador / atajos
         if (!esPC()) return;
+        // Alt + rueda cambia de mes sobre cualquier parte del calendario, aunque la rueda sola esté desactivada en configuración
+        const conAlt = e.altKey;
+        if (!conAlt && !_ruedaActiva()) return;   // desactivado: la rueda desplaza la página
 
         const ahora = performance.now();
         const bloqueado = ahora < bloqueadoHasta;
         const animando = grid.offsetParent === null;   // durante el deslizamiento la grilla real está oculta
-        const sobreDias = (bloqueado || animando)
+        const sobreDias = conAlt || ((bloqueado || animando)
             ? dentroDeZona(e.clientX, e.clientY)
-            : !!e.target.closest?.('#calendario-grid');
+            : !!e.target.closest?.('#calendario-grid'));
         if (!sobreDias) return;
 
-        e.preventDefault();   // el scroll de la página queda quieto mientras el cursor está sobre los días
+        e.preventDefault();   // el scroll de la página queda quieto mientras el cursor está sobre los días (o con Alt, sobre el calendario)
 
         const factor = e.deltaMode === 1 ? RUEDA_LINEA_PX : e.deltaMode === 2 ? 400 : 1;
         const dx = e.deltaX * factor, dy = e.deltaY * factor;
@@ -741,19 +444,11 @@ function bindEventos() {
 
 export const Calendario = {
     bindEventos,
-    abrirSelectorMesesCalendario,
     _cerrarSelectorMeses,
     _activarVistaCalendarioHistorico,
     _renderizarCalendario,
     animarEntradaInicial,
     toggleVistaHistorico,
-    _popupCalendario,
-    _popupCalendarioDiaSinRegistro,
-    _popupCalendarioHover,
-    _onclickCalendarioDia,
-    _cerrarPopupCalendarioHover,
-    navegarCalendario,
-    irHoyCalendario,
     getVistaHistoricoCalendario: () => _vistaHistoricoCalendario,
     setVistaHistoricoCalendario: (v) => { _vistaHistoricoCalendario = v; }
 };

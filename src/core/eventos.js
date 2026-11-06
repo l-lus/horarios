@@ -1,8 +1,7 @@
 // ====================================================================
-// APPLICATION EVENT BUS & HANDLER REGISTRY MODULE
+// APPLICATION EVENT BUS MODULE
 // ====================================================================
 const _listeners = new Map();
-const _handlers = new Map();
 
 function on(event, listener) {
     if (typeof listener !== 'function') return () => { };
@@ -30,24 +29,8 @@ function emit(event, payload) {
     }
 }
 
-function register(action, handler) {
-    if (typeof handler === 'function') {
-        _handlers.set(action, handler);
-    }
-}
-
-function call(action, ...args) {
-    const fn = _handlers.get(action);
-    if (typeof fn === 'function') {
-        return fn(...args);
-    }
-    return undefined;
-}
-
 export const EventosApp = {
     on,
     off,
-    emit,
-    register,
-    call
+    emit
 };

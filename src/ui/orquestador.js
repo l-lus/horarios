@@ -1,7 +1,10 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
+import { Formularios } from './formularios.js';
+import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
-import { InstaladorPWA } from '../services/instalador-pwa.js';
+import { EstiloCalendario } from '../core/estilo-calendario.js';
+import { InstaladorPWA } from './instalador-pwa.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -15,22 +18,35 @@ import { Perfiles } from './perfiles.js';
 import { Calendario } from './calendario.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
 import { GistRespaldo } from './gist-respaldo.js';
+import { RespaldoLocal } from './respaldo-local.js';
 import { Historico } from './historico.js';
+import { HistoricoEdicion } from './historico-edicion.js';
 import { Estadisticas } from './estadisticas.js';
+import { Reportes } from './reportes.js';
 import { TarjetaFichaje } from './tarjeta-fichaje.js';
+import { TarjetaFichajeVista } from './tarjeta-fichaje-vista.js';
+import { CicloStats } from './tarjeta-ciclo-stats.js';
+import { TarjetaFondos } from './tarjeta-fondos.js';
+import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
+import { TarjetaLote } from './tarjeta-lote.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
 import { Notificaciones } from './notificaciones.js';
 import { Configuracion } from './configuracion.js';
 import { HistorialDias } from './historial-dias.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
-import { GestionDatos as D } from '../services/gestion-datos.js';
+import { GestionDatos } from '../services/gestion-datos.js';
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { resetearBoton, restaurarBotonGuardarEdicion, animarExitoFichaje } from './boton-fichar.js';
+import { registrarSwipe, debounce } from './gestos.js';
+import { mostrarToast, _habilitarCierreToast } from './toast.js';
+import { Animaciones } from './animaciones.js';
 
 const {
-    registrarSwipe, debounce, _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced,
-    mostrarError, limpiarError, obtenerNombrePerfilSafe, descargarJSON, mostrarToast,
-    _habilitarCierreToast, resetearBoton, restaurarBotonGuardarEdicion, _esperarAnim, _avisarFichaje,
-    aplicarFeedbackCampos
+    _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced, mostrarError, limpiarError,
+    obtenerNombrePerfilSafe, descargarJSON, _avisarFichaje, aplicarFeedbackCampos
 } = UIBase;
+const { _esperarAnim } = Animaciones;
 
 const {
     crearPerfilDesdeSelector, cerrarSelectorPerfiles, cerrarEditorPerfil
@@ -41,27 +57,37 @@ const {
 } = Calendario;
 
 const {
-    mostrarImportar, cerrarImportar, cerrarExportar, toggleCamposRangoExport,
     actualizarBotonesHistorico, cerrarModalGist, gistMergeCancelar, gistSubir, gistBajar
 } = GistRespaldo;
 
+const { cerrarImportar, cerrarExportar, toggleCamposRangoExport } = RespaldoLocal;
+
 const {
-    cerrarEdicion, setBloqueoEdicion, _actualizarHintEdicion, _initListenerAccionesLista,
-    _initListenerToggleAnio, _initListenerToggleMes, actualizarHintGrupo, cerrarFiltros,
-    iniciarTimerAutoCierreBotones, verificarBloqueoCredito, setBloqueoEdicionGrupo, cerrarEdicionGrupo,
-    setTiempoExpansionBotones
+    _initListenerAccionesLista, _initListenerToggleAnio, _initListenerToggleMes
 } = Historico;
 
 const {
-    cerrarModalReporteSecciones, _bindStatItemPopups, toggleStats, setModoEstadisticas
-} = Estadisticas;
+    cerrarEdicion, setBloqueoEdicion, _actualizarHintEdicion, actualizarHintGrupo, cerrarFiltros,
+    iniciarTimerAutoCierreBotones, verificarBloqueoCredito, setBloqueoEdicionGrupo, cerrarEdicionGrupo,
+    setTiempoExpansionBotones
+} = HistoricoEdicion;
 
 const {
-    setFondoCard, actualizarUI, alternarVista, _forzarVista, actualizarEstadoBotonTimerMain,
-    toggleModoLote, poblarSelectoresTipos, actualizarBotonLote, toggleFormulario, setTimerAutoVista,
-    _iniciarCicloStats, _detenerCicloStats, _prepararMostrarFaseAlRenderizar,
-    _refrescarFormatoCortoStatsCache
+    _bindStatItemPopups, toggleStats, setModoEstadisticas
+} = Estadisticas;
+
+const { cerrarModalReporteSecciones } = Reportes;
+
+const {
+    actualizarUI, alternarVista, _forzarVista, setTimerAutoVista, _retenerRegistroAyer
 } = TarjetaFichaje;
+const { iniciar: _iniciarCicloStats, detener: _detenerCicloStats, prepararFase: _prepararMostrarFaseAlRenderizar } = CicloStats;
+
+const { _refrescarFormatoCortoStatsCache } = TarjetaFichajeVista;
+
+const { setFondoCard } = TarjetaFondos;
+const { actualizarEstadoBotonTimerMain } = TarjetaTiempoFuera;
+const { toggleModoLote, poblarSelectoresTipos, actualizarBotonLote, toggleFormulario } = TarjetaLote;
 
 const {
     aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards, iniciarDragOrdenCards, iniciarDragTarjetas
@@ -74,9 +100,9 @@ const {
 } = Notificaciones;
 
 const {
-    actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
+    actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
     cerrarModalAyuda, refrescarConfigSiVisible, formatearInput
 } = Configuracion;
 
@@ -84,19 +110,39 @@ const {
     cerrarModalHistorialDias, cerrarEditorTramoDias
 } = HistorialDias;
 
+function _suscribirEventosServicios() {
+    EventosApp.on('historial:cambio', ({ canUndo, canRedo }) => {
+        const undoBtn = $('btn-undo');
+        const redoBtn = $('btn-redo');
+        if (undoBtn) undoBtn.disabled = !canUndo;
+        if (redoBtn) redoBtn.disabled = !canRedo;
+    });
+    EventosApp.on('perfil:cambio', ({ nombre }) => {
+        const el = $('nombre-perfil-header');
+        if (el) el.textContent = nombre;
+    });
+    EventosApp.on('filtros:cambio', ({ activo }) => {
+        $('btn-filtro')?.classList.toggle('filtro-activo', activo);
+    });
+}
+
 function _initGlobales() {
+    _suscribirEventosServicios();
     GestorPerfiles.inicializar();
     
-    D.configurarNotificaciones({
+    EstadoApp.configurarNotificaciones({
         abrirModal: GestorModales.abrir,
         actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
-        aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
+        animarExitoFichaje, aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
         cerrarTodosModales: GestorModales.cerrarTodos,
         confirmarModal: GestorModales.confirmar,
         descargarJSON, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
         obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
         setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado, verificarBloqueoCredito,
-        forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, refrescarConfigSiVisible
+        formularioRegistro: Formularios.registro, formularioEdicion: Formularios.edicion,
+        leerObjetivoEdicion: () => parseFloat($('edit-objetivo')?.dataset.valor ?? ''),
+        hayUIBloqueante: () => !!document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding'),
+        forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, retenerRegistroAyer: _retenerRegistroAyer, refrescarConfigSiVisible
     });
     Almacenamiento.configurarNotificaciones({ mostrarToast });
     RecordatorioPush.configurarNotificaciones({ mostrarToast });
@@ -128,7 +174,7 @@ function _initListenersFormulario() {
     $('fecha')?.addEventListener('change', () => limpiarError('fecha', null));
 
     ['edit-entrada', 'edit-salida'].forEach(id => {
-        const el = document.getElementById(id);
+        const el = $(id);
         if (!el) return;
         el.addEventListener('input', (e) => { formatearInput(e); verificarBloqueCreditoDebounced(); });
         el.addEventListener('change', verificarBloqueoCredito);
@@ -138,34 +184,34 @@ function _initListenersFormulario() {
         if (e.target === e.currentTarget) _cerrarSelectorMeses();
     });
 
-    const tf = document.getElementById('edit-tiempo-fuera');
+    const tf = $('edit-tiempo-fuera');
     if (tf) tf.addEventListener('input', (e) => { formatearInput(e); verificarBloqueCreditoDebounced(); });
 
-    const notasEl = document.getElementById('edit-notas');
+    const notasEl = $('edit-notas');
     if (notasEl) notasEl.addEventListener('input', () => {
         const v = notasEl.value;
         const filtrado = S.sanitizeNotas(v);
         if (filtrado !== v) {
-            const pos = notasEl.selectionStart - (v.length - filtrado.length);
+            const pos = (notasEl.selectionStart ?? 0) - (v.length - filtrado.length);
             notasEl.value = filtrado;
             notasEl.setSelectionRange(pos, pos);
         }
     });
 
     ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => {
-        const el = document.getElementById(id);
+        const el = $(id);
         if (el) el.addEventListener('input', formatearInput);
     });
 
     ['edit-entrada', 'edit-salida', 'edit-tiempo-fuera'].forEach(id => {
-        const el = document.getElementById(id);
+        const el = $(id);
         if (el) el.addEventListener('input', _actualizarHintEdicion);
     });
 }
 
 function _initListenersTeclado() {
     const bindEnter = (id, handler) => {
-        const el = document.getElementById(id);
+        const el = $(id);
         if (!el) return;
         el.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter') return;
@@ -173,24 +219,24 @@ function _initListenersTeclado() {
             handler(el);
         });
     };
-    bindEnter('entrada', () => document.getElementById('salida')?.focus());
-    bindEnter('salida', (el) => { el.blur(); const b = document.getElementById('btn-agregar'); if (b && !b.disabled) b.click(); });
-    bindEnter('edit-entrada', () => document.getElementById('edit-salida')?.focus());
-    bindEnter('edit-salida', () => document.getElementById('edit-tiempo-fuera')?.focus());
-    bindEnter('edit-tiempo-fuera', (el) => { el.blur(); const b = document.querySelector('#modal-editar .btn-edit'); if (b && !b.disabled) b.click(); });
+    bindEnter('entrada', () => $('salida')?.focus());
+    bindEnter('salida', (el) => { el.blur(); const b = $('btn-agregar'); if (b && !b.disabled) b.click(); });
+    bindEnter('edit-entrada', () => $('edit-salida')?.focus());
+    bindEnter('edit-salida', () => $('edit-tiempo-fuera')?.focus());
+    bindEnter('edit-tiempo-fuera', (el) => { el.blur(); const b = /** @type {HTMLButtonElement} */ (document.querySelector('#modal-editar .btn-edit')); if (b && !b.disabled) b.click(); });
     bindEnter('nombre-nuevo-perfil-selector', (el) => { el.blur(); crearPerfilDesdeSelector(); });
-    bindEnter('nombre-perfil-editar', (el) => { el.blur(); const b = document.querySelector('#modal-editar-perfil .btn-edit'); if (b && !b.disabled) b.click(); });
+    bindEnter('nombre-perfil-editar', (el) => { el.blur(); const b = /** @type {HTMLButtonElement} */ (document.querySelector('#modal-editar-perfil .btn-edit')); if (b && !b.disabled) b.click(); });
 }
 
 function _initSwipesYStats() {
     _habilitarCierreToast();
-    registrarSwipe(document.getElementById('stats-card'), () => alternarVista());
-    registrarSwipe(document.getElementById('form-registro'), dir => {
-        document.activeElement?.blur?.();
+    registrarSwipe($('stats-card'), () => alternarVista());
+    registrarSwipe($('form-registro'), dir => {
+        /** @type {HTMLElement} */ (document.activeElement)?.blur?.();
         toggleModoLote(dir);
     });
 
-    const anchor = document.getElementById('stat-items-tipos-anchor');
+    const anchor = $('stat-items-tipos-anchor');
     if (anchor) {
         TiposRegistro.obtenerTodosLosTipos().forEach(t => {
             const item = document.createElement('div');
@@ -199,22 +245,24 @@ function _initSwipesYStats() {
             const value = Object.assign(document.createElement('div'), { className: 'stat-value', id: `stat-${TiposRegistro.claveStat(t)}`, textContent: '0' });
             item.appendChild(label);
             item.appendChild(value);
-            anchor.parentNode.insertBefore(item, anchor);
+            anchor.parentNode?.insertBefore(item, anchor);
         });
     }
     _bindStatItemPopups(document.querySelector('.stats-grid'));
 }
 
-function _initDatosYConfig() {
-    const config = D.cargarConfiguracion();
-    D.setVistaActual(config.vistaActual);
-    D.setIgnorarTiempoFuera(config.ignorarTiempoFuera || false);
+function _initDatosYConfig(config) {
+    EstadoApp.setVistaActual(config.vistaActual);
+    EstadoApp.setIgnorarTiempoFuera(config.ignorarTiempoFuera || false);
     actualizarEstadoBotonIgnorarTF();
     poblarSelectoresTipos();
     actualizarEstadoBotonHoverPopup();
+    actualizarEstadoBotonRuedaCalendario();
     actualizarEstadoBotonLogicaCubierto();
     actualizarEstadoBotonObjetivoPorRegistro();
     actualizarEstadoBotonFormatoCortoStats();
+    actualizarEstadoBotonHintIntegrado();
+    actualizarEstadoBotonMetricaUso();
     _refrescarFormatoCortoStatsCache();
     actualizarEstadoBotonAplicarHoras();
     actualizarEstadoBotonPushBuffer();
@@ -228,53 +276,15 @@ function _initDatosYConfig() {
     setFondoCard(config.fondoCard || 'golden-gate');
     setModoEstadisticas(config.modoEstadisticas || 'mensual');
 
-    const perfilActual = GestorPerfiles.obtenerDatosPerfil();
-    D.setDiasHabiles(Array.isArray(perfilActual.diasHabiles) ? perfilActual.diasHabiles : [1, 2, 3, 4, 5]);
-    const hdPerfil = parseFloat(perfilActual.horasDiarias);
-    D.setHorasDiarias(Number.isFinite(hdPerfil) && hdPerfil >= 0 && hdPerfil <= 24 ? hdPerfil : 7);
-    const historialGuardado = D.sanitizarHistorialDiasHabiles(perfilActual.historialDiasHabiles);
-    D.setHistorialDiasHabiles(
-        historialGuardado && historialGuardado.length > 0
-            ? historialGuardado
-            : [{ desde: '0001-01-01', dias: D.diasHabiles() }]
-    );
-    D.registros().splice(0, D.registros().length, ...(perfilActual.registros || []));
-
-    const historialCargado = GestorHistorial.loadFromLocalStorage();
-    if (historialCargado) {
-        const estadoActual = GestorHistorial.getCurrentState();
-        if (estadoActual !== null && estadoActual !== undefined) {
-            D.registros().splice(0, D.registros().length, ...estadoActual);
-        } else {
-            console.warn('Historial corrupto, descartado. Usando registros del perfil.');
-            GestorHistorial.clear();
-        }
-    }
-    D.recalcularTotalesEnMemoria();
-    if (!historialCargado) {
-        GestorHistorial.saveState(D.registros());
-    }
-
-    const migrados = D.migrarObjetivoHorasFaltante();
-    if (migrados > 0) {
-        console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${D.horasDiarias()}h).`);
-        GestorHistorial.parchearRegistrosEnHistorial(r => {
-            if (typeof r.objetivoHoras !== 'number' || !Number.isFinite(r.objetivoHoras)) {
-                r.objetivoHoras = D.horasDiarias();
-                return true;
-            }
-            return false;
-        });
-        if (GestorPerfiles) GestorPerfiles.guardarDatosPerfilActual();
-    }
+    GestionDatos.cargarPerfilActivo();
 
     GestorHistorial.updateButtons();
 }
 
-function _restaurarEstadoVisual() {
-    const config = D.cargarConfiguracion();
+function _restaurarEstadoVisual(config) {
     GestorTemas.aplicarTema(config.tema);
     Movimiento.init();
+    EstiloCalendario.init();
 
     $('fecha').value = TiempoUtils.obtenerFechaHoy();
 
@@ -360,15 +370,16 @@ function _initListenerEscape() {
 function _initListenerUndoRedo() {
     document.addEventListener('keydown', (e) => {
         if (!(e.ctrlKey || e.metaKey)) return;
-        const tag = e.target.tagName;
-        const esCampoEditable = tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable;
+        const objetivo = /** @type {HTMLElement} */ (e.target);
+        const tag = objetivo.tagName;
+        const esCampoEditable = tag === 'INPUT' || tag === 'TEXTAREA' || objetivo.isContentEditable;
         if (esCampoEditable) return;
         if (e.key === 'z' || e.key === 'Z') {
             e.preventDefault();
-            document.getElementById('btn-undo')?.click();
+            $('btn-undo')?.click();
         } else if (e.key === 'y' || e.key === 'Y') {
             e.preventDefault();
-            document.getElementById('btn-redo')?.click();
+            $('btn-redo')?.click();
         }
     });
 }
@@ -380,24 +391,24 @@ function _initListenersOtros() {
         el.addEventListener('change', () => actualizarBotonLote());
         el.addEventListener('input', () => actualizarBotonLoteDebounced());
     };
-    agregarListenersFecha(document.getElementById('lote-fecha-desde'));
-    agregarListenersFecha(document.getElementById('lote-fecha-hasta'));
+    agregarListenersFecha($('lote-fecha-desde'));
+    agregarListenersFecha($('lote-fecha-hasta'));
 
-    document.getElementById('tipo-exportacion')?.addEventListener('change', () => toggleCamposRangoExport());
+    $('tipo-exportacion')?.addEventListener('change', () => toggleCamposRangoExport());
 
-    const fileInput = document.getElementById('file-import');
+    const fileInput = $('file-import');
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
-            const nombreEl = document.getElementById('nombre-archivo-seleccionado');
-            const btnCombinar = document.getElementById('btn-combinar');
-            const btnReemplazar = document.getElementById('btn-reemplazar');
-            const hayArchivo = e.target.files.length > 0;
+            const nombreEl = $('nombre-archivo-seleccionado');
+            const btnCombinar = $('btn-combinar');
+            const btnReemplazar = $('btn-reemplazar');
+            const hayArchivo = (/** @type {HTMLInputElement} */ (e.target).files?.length ?? 0) > 0;
             if (hayArchivo) {
-                if (nombreEl) { nombreEl.textContent = `✓ ${e.target.files[0].name}`; nombreEl.style.display = 'block'; }
+                if (nombreEl) { nombreEl.textContent = `✓ ${/** @type {HTMLInputElement} */ (e.target).files?.[0].name}`; nombreEl.classList.remove('hidden'); }
                 if (btnCombinar) btnCombinar.disabled = false;
                 if (btnReemplazar) btnReemplazar.disabled = false;
             } else {
-                if (nombreEl) { nombreEl.style.display = 'none'; nombreEl.textContent = ''; }
+                if (nombreEl) { nombreEl.classList.add('hidden'); nombreEl.textContent = ''; }
                 if (btnCombinar) btnCombinar.disabled = true;
                 if (btnReemplazar) btnReemplazar.disabled = true;
             }
@@ -406,15 +417,15 @@ function _initListenersOtros() {
 }
 
 async function init() {
-    if (typeof Storage === 'undefined') { alert('Tu navegador no soporta localStorage.'); return; }
     Almacenamiento.migrarClavesLegadas();
 
     _initGlobales();
     _initListenersFormulario();
     _initListenersTeclado();
     _initSwipesYStats();
-    _initDatosYConfig();
-    _restaurarEstadoVisual();
+    const config = GestionDatos.cargarConfiguracion();
+    _initDatosYConfig(config);
+    _restaurarEstadoVisual(config);
     setBloqueoEdicion(true);
     setBloqueoEdicionGrupo(true);
     const btnEliminarPerfil = $('btn-eliminar-perfil-editor');
@@ -428,8 +439,8 @@ async function init() {
     actualizarBotonesHistorico();
 
     const hoy = TiempoUtils.obtenerFechaHoy();
-    const hoyEsLaborable = TiempoUtils.esFechaHabil(hoy, D.diasHabilesEnFecha(hoy));
-    if (D.vistaActual() === 'semana' && hoyEsLaborable) {
+    const hoyEsLaborable = TiempoUtils.esFechaHabil(hoy, Compensatorios.diasHabilesEnFecha(hoy));
+    if (EstadoApp.vistaActual() === 'semana' && hoyEsLaborable) {
         setTimerAutoVista(setTimeout(() => {
             setTimerAutoVista(null);
             alternarVista();
@@ -443,7 +454,7 @@ async function init() {
 
     _initListenerEscape();
     _initListenerUndoRedo();
-    const lista = document.getElementById('lista-registros');
+    const lista = $('lista-registros');
     if (lista) {
         _initListenerAccionesLista(lista);
         _initListenerToggleAnio(lista);

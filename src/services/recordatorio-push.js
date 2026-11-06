@@ -1,6 +1,5 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { SeguridadYUtils } from '../core/seguridad.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from './gestor-perfiles.js';
 import { TiposRegistro } from './tipos-registro.js';
@@ -19,6 +18,7 @@ const REINTENTO_ESPERA_MS = 60 * 1000;
 let _generacionProgramacion = 0;
 let _generacionCancelada = 0;
 
+/** @type {{ mostrarToast: (mensaje: string, tipo?: string, duracion?: number, detalle?: string|null) => void }} */
 let notify = { mostrarToast: () => { } };
 function configurarNotificaciones(handlers) { notify = { ...notify, ...handlers }; }
 
@@ -36,7 +36,7 @@ function _avisarFallo(accion, status) {
     const mensaje = accion === 'cancelar'
         ? 'No se pudo cancelar el aviso de hoy (puede que igual te llegue)'
         : 'No se pudo programar el aviso de fin de jornada';
-    notify.mostrarToast(mensaje, 'warning', 5000, motivo);
+    notify.mostrarToast(mensaje, 'warning', TOAST_MS.AVISO, motivo);
 }
 
 function _headersWorker() {
@@ -97,7 +97,7 @@ function _ownerToken() {
 }
 
 function _perfilActivo() {
-    return (GestorPerfiles ? GestorPerfiles.obtenerPerfilActual() : null) || 'default';
+    return GestorPerfiles.obtenerPerfilActual() || 'default';
 }
 
 function _claveRecordatorio(fechaISO, perfilId) {
@@ -182,19 +182,21 @@ function _borrarInfoActiva(perfilId) {
         }
     } catch { /* noop */ }
 }
+/** Vigente si es de hoy, o de ayer con el aviso todavía pendiente (jornada que cruza la medianoche). */
+function _infoVigente(info) {
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    if (info.fechaISO === hoy) return true;
+    const ayer = TiempoUtils.parsearFechaLocal(hoy);
+    ayer.setDate(ayer.getDate() - 1);
+    return info.fechaISO === TiempoUtils.formatearFechaLocal(ayer) && Number(info.targetTimeMs) + MARGEN_CRON_MS >= Date.now();
+}
+
 function obtenerInfoActiva(perfilId) {
-    const raw = perfilId
-        ? Almacenamiento.getItem(`${STORAGE_KEYS.PUSH_INFO_ACTIVA}_${perfilId}`)
-        : (Almacenamiento.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, true)
-            ?? Almacenamiento.getItem(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, false));
-    if (!raw) return null;
-    try {
-        const info = JSON.parse(raw, SeguridadYUtils.reviverJSONSeguro);
-        if (!info || info.fechaISO !== TiempoUtils.obtenerFechaHoy()) return null;
-        return info;
-    } catch {
-        return null;
-    }
+    const info = perfilId
+        ? Almacenamiento.getObject(`${STORAGE_KEYS.PUSH_INFO_ACTIVA}_${perfilId}`)
+        : (Almacenamiento.getObject(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, true)
+            ?? Almacenamiento.getObject(STORAGE_KEYS.PUSH_INFO_ACTIVA, null, false));
+    return info && typeof info === 'object' && _infoVigente(info) ? info : null;
 }
 async function _asegurarSuscripcion() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
@@ -218,8 +220,12 @@ async function _asegurarSuscripcion() {
     }
 }
 
-function _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
-    if (!entradaHHMM || !objetivoHoras) return null;
+/**
+ * Momento (ms) en que corresponde avisar. La entrada se ubica en `fechaISO` (no en "hoy"),
+ * así una jornada abierta ayer que cruza la medianoche se programa bien.
+ */
+function _calcularTarget(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
+    if (!fechaISO || !entradaHHMM || !objetivoHoras) return null;
     const [h, m] = entradaHHMM.split(':').map(Number);
     if (Number.isNaN(h) || Number.isNaN(m)) return null;
 
@@ -228,7 +234,7 @@ function _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, min
         objetivoAjustado = Math.max(0, objetivoHoras - bufferSemanalHoras);
     }
     const anticipacionMin = getAnticipacionMin();
-    const target = new Date();
+    const target = TiempoUtils.parsearFechaLocal(fechaISO);
     target.setHours(h, m, 0, 0);
     const extraMs = Number.isFinite(minutosTiempoFuera) ? minutosTiempoFuera * 60 * 1000 : 0;
     target.setTime(target.getTime() + objetivoAjustado * 60 * 60 * 1000 + extraMs - anticipacionMin * 60 * 1000 - MARGEN_CRON_MS);
@@ -259,7 +265,7 @@ function _construirMensajeNotificacion(anticipacionMin, bufferSemanalHoras) {
 
 async function programarFinDeJornada(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras = 0, minutosTiempoFuera = 0) {
     if (!getHabilitado()) return;
-    const targetMs = _calcularTarget(entradaHHMM, objetivoHoras, bufferSemanalHoras, minutosTiempoFuera);
+    const targetMs = _calcularTarget(fechaISO, entradaHHMM, objetivoHoras, bufferSemanalHoras, minutosTiempoFuera);
     if (targetMs == null) return;
 
     const generacion = ++_generacionProgramacion;
@@ -323,9 +329,11 @@ function cancelarFinDeJornada(fechaISO, perfilId) {
     const esPerfilActivo = !perfilId || perfilId === _perfilActivo();
     if (esPerfilActivo) limpiarNotificacionVisible();
 
-    const esHoy = fechaISO === TiempoUtils.obtenerFechaHoy();
+    // "Jornada vigente": la de hoy o la de ayer que sigue programada (cruce de medianoche)
+    const infoVigente = obtenerInfoActiva(perfilId);
+    const esHoy = fechaISO === TiempoUtils.obtenerFechaHoy() || infoVigente?.fechaISO === fechaISO;
     if (esHoy && esPerfilActivo) _generacionCancelada = ++_generacionProgramacion;
-    const activa = esHoy ? obtenerInfoActiva(perfilId) : null;
+    const activa = esHoy ? infoVigente : null;
     if (esHoy) _borrarInfoActiva(perfilId);
 
     // Sin info local igual se cancela: el Worker pudo guardar el aviso aunque la
@@ -383,26 +391,55 @@ async function _versionApp() {
     }
 }
 
+/**
+ * Pide al Service Worker una notificación de prueba (la misma que usa el push real).
+ * @param {number} [demoraMs] espera antes de mostrarla, para poder cerrar la app
+ * @returns {Promise<'ok'|'denegado'|'no-soportado'>}
+ */
+async function enviarNotificacionPrueba(demoraMs = 10000) {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return 'no-soportado';
+    if (Notification.permission === 'denied') return 'denegado';
+    if (Notification.permission !== 'granted' && (await Notification.requestPermission()) !== 'granted') return 'denegado';
+    const reg = await navigator.serviceWorker.ready;
+    if (!reg.active) return 'no-soportado';
+    reg.active.postMessage({ tipo: 'notificacion-prueba', demoraMs });
+    return 'ok';
+}
+
 async function registrarUso() {
     if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
+    if (!Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true)) return;
     const KEY = STORAGE_KEYS.STATS_ULTIMO_PING;
     const ahora = Date.now();
     if (ahora - Number(Almacenamiento.getItem(KEY, 0)) < USO_INTERVALO_MS) return;
     const id = _idEstadisticas();
     if (!id) return;
     Almacenamiento.setItem(KEY, String(ahora));
-    const pwa = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const pwa = window.matchMedia('(display-mode: standalone)').matches || /** @type {any} */ (window.navigator).standalone === true;
     try {
         await _postWorker('/api/hola', { id, modo: pwa ? 'pwa' : 'navegador', version: await _versionApp() });
     } catch { /* sin estadística esta vez, no afecta a la app */ }
 }
 
 export const RecordatorioPush = {
-    configurarNotificaciones, registrarUso,
-    programarFinDeJornada, cancelarFinDeJornada, limpiarNotificacionVisible,
-    getAnticipacionMin, setAnticipacionMin, setBufferSoloUltimoDia,
-    getUsarBufferSemanal, setUsarBufferSemanal, getHabilitado, setHabilitado, puedeHabilitarse, avisoPendiente, consumirAviso,
-    getBufferSoloUltimoDia, calcularTarget: _calcularTarget,
+    configurarNotificaciones,
+    registrarUso,
+    enviarNotificacionPrueba,
+    programarFinDeJornada,
+    cancelarFinDeJornada,
+    getAnticipacionMin,
+    setAnticipacionMin,
+    setBufferSoloUltimoDia,
+    getUsarBufferSemanal,
+    setUsarBufferSemanal,
+    getHabilitado,
+    setHabilitado,
+    puedeHabilitarse,
+    avisoPendiente,
+    consumirAviso,
+    getBufferSoloUltimoDia,
+    calcularTarget: _calcularTarget,
     targetProgramadoParaHoy: () => obtenerInfoActiva()?.targetTimeMs ?? null,
-    restablecer,
+    fechaProgramadaActiva: () => obtenerInfoActiva()?.fechaISO ?? null,
+    restablecer
 };

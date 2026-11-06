@@ -1,5 +1,6 @@
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
+import { esHtmlSeguro, montar } from '../core/html.js';
 
 // ====================================================================
 //                     UI ANIMATIONS MODULE
@@ -11,10 +12,6 @@ function _aArray(valor) {
 
 function _estaColapsado(el) { return !!el.closest('.collapsible:not(.expanded)'); }
 
-function _scrollA(el, block = 'nearest') {
-    if (el) el.scrollIntoView({ behavior: Movimiento.scrollBehavior(), block });
-}
-
 function _esperarAnim(extra = 50) { return TiempoUtils.esperar(DUR_ANIM() + extra); }
 
 function _getCSSdur(varName) {
@@ -22,16 +19,22 @@ function _getCSSdur(varName) {
     if (!raw) return 300;
     return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
 }
+/** @param {any} [el] */
 function _durSiAnima(varName, el = null) {
     return (Movimiento.reducido() || (el && !el.offsetParent)) ? 0 : _getCSSdur(varName);
 }
 const DUR_ANIM = () => _getCSSdur('--dur-anim');
 const DUR_CALENDARIO = () => _getCSSdur('--dur-calendario');
+const DUR_FICHAJE_OK = () => _getCSSdur('--dur-fichaje-ok');
+const DUR_FICHAJE_SALIDA = () => _getCSSdur('--dur-fichaje-salida');
+const DUR_RECARGA = () => _getCSSdur('--dur-recarga');
 
 function _fantasmaDe(el) {
     const rect = el.getBoundingClientRect();
     const clon = el.cloneNode(true);
     clon.classList.add('mutacion-saliente');
+    // El destello de un botón recién fichado no se copia al fantasma: duplicaba el borde/halo
+    clon.classList.remove(..._CLASES_FLASH);
 
     Object.assign(clon.style, {
         position: 'fixed',
@@ -57,6 +60,56 @@ function _fantasmaDe(el) {
 }
 
 const _mutacionAnimEstado = new WeakMap();
+const _CLASES_FLASH = ['campo-flash', 'campo-flash-color'];
+
+// ─── Destello (campo-flash / campo-flash-color) ─────────────────────────────
+// Ambas clases fijan `animation` con más especificidad que .mutacion-entrante, así que
+// si coinciden pisan el fundido de entrada del elemento (el texto nuevo "aparece de golpe")
+// y además el fantasma saliente heredaba el borde. Mientras un elemento tiene una mutación
+// en curso el destello se difiere y arranca recién cuando termina el cambio de texto.
+const _flashDiferido = new WeakMap();
+
+/** @param {any} [colorVar] */
+function _aplicarFlash(el, clase, colorVar = null) {
+    clearTimeout(el._flashTimeout);
+    el.classList.remove(clase);
+    if (colorVar) el.style.setProperty('--flash-color', colorVar);
+    void el.offsetWidth;
+    el.classList.add(clase);
+
+    const cs = getComputedStyle(el);
+    const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
+    const iteraciones = parseFloat(cs.animationIterationCount) || 1;
+    el._flashTimeout = setTimeout(() => el.classList.remove(clase), duracionMs * iteraciones);
+}
+
+/** @param {any} [colorVar] */
+function _flashElemento(el, clase, colorVar = null) {
+    if (!el) return;
+    if (_mutacionAnimEstado.has(el) || _flashDiferido.has(el)) { _diferirFlash(el, clase, colorVar); return; }
+    _aplicarFlash(el, clase, colorVar);
+}
+
+function _diferirFlash(el, clase, colorVar) {
+    clearTimeout(el._flashTimeout);
+    el.classList.remove(clase);
+    const pendiente = _flashDiferido.get(el) ?? new Map();
+    pendiente.set(clase, colorVar);
+    _flashDiferido.set(el, pendiente);
+}
+
+// Saca del elemento el destello en curso (para que no se copie al fantasma ni pise el fundido)
+function _pausarFlash(el) {
+    _CLASES_FLASH.filter(c => el.classList.contains(c)).forEach(c => _diferirFlash(el, c, null));
+}
+
+function _reanudarFlash(el) {
+    const pendiente = _flashDiferido.get(el);
+    if (!pendiente || !el.isConnected) { _flashDiferido.delete(el); return; }
+    _flashDiferido.delete(el);
+    pendiente.forEach((colorVar, clase) => _aplicarFlash(el, clase, colorVar));
+}
+
 
 function _finalizarMutacionPendiente(el) {
     const estado = _mutacionAnimEstado.get(el);
@@ -69,6 +122,7 @@ function _finalizarMutacionPendiente(el) {
     _mutacionAnimEstado.delete(el);
 }
 
+/** @param {any} [duracion] */
 function _animarMutacion(elementos, fn, duracion = null) {
     const els = _aArray(elementos).filter(Boolean);
     const dur = duracion ?? DUR_ANIM();
@@ -76,6 +130,7 @@ function _animarMutacion(elementos, fn, duracion = null) {
     els.forEach(_finalizarMutacionPendiente);
     if (els.length === 0 || Movimiento.reducido()) { return Promise.resolve(fn()); }
 
+    els.forEach(_pausarFlash);
     const fantasmasMap = [];
     els.forEach(el => {
         const rect = el.getBoundingClientRect();
@@ -98,6 +153,7 @@ function _animarMutacion(elementos, fn, duracion = null) {
             els.forEach(el => {
                 el.classList.remove('mutacion-entrante');
                 _mutacionAnimEstado.delete(el);
+                _reanudarFlash(el);
             });
         }, dur);
 
@@ -158,7 +214,7 @@ function _animarValor(el, texto, dir = 0) {
     roll.append(saliente, entrante);
     el.replaceChildren(roll);
 
-    const opts = { duration: dur, easing: 'ease-out', fill: 'both' };
+    const opts = { duration: dur, easing: 'ease-out', fill: /** @type {FillMode} */ ('both') };
     const sgn = dir > 0 ? 1 : -1;
     const anims = [
         saliente.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(${-70 * sgn}%)`, opacity: 0 }], opts),
@@ -277,7 +333,7 @@ function _animarSlideElemento(el, delta, mutarFn) {
 
     const timeout = setTimeout(() => {
         el.style.display = '';
-        wrapper.parentNode.insertBefore(el, wrapper);
+        wrapper.parentNode?.insertBefore(el, wrapper);
         wrapper.remove();
         _slideAnimEstado.delete(el);
     }, dur + 20);
@@ -285,17 +341,57 @@ function _animarSlideElemento(el, delta, mutarFn) {
     _slideAnimEstado.set(el, { timeout, wrapper });
 }
 
+// Mientras está activa (p. ej. al cambiar de vista la tarjeta), _renderConFirma reemplaza sin animar.
+let _rendersSinAnimar = false;
+
+async function _conRendersSinAnimar(fn) {
+    _rendersSinAnimar = true;
+    try {
+        return await fn();
+    } finally {
+        _rendersSinAnimar = false;
+    }
+}
+
+function _rendersSinAnimarActivos() { return _rendersSinAnimar; }
+
+/**
+ * Reemplaza el contenido de `el` por un html`...` solo si cambió (dataset.firma) y lo anima; `forzar` lo aplica siempre sin animar.
+ * Como montar(), rechaza strings comunes.
+ * @param {(() => void) | null} [alAplicar]
+ */
+function _renderConFirma(el, contenido, alAplicar = null, { forzar = false } = {}) {
+    if (!esHtmlSeguro(contenido)) throw new TypeError('_renderConFirma: el contenido debe ser un html`...` (core/html.js)');
+    if (!el) { if (alAplicar) alAplicar(); return; }
+    const nuevoHTML = String(contenido);
+    const aplicar = () => {
+        montar(el, contenido);
+        el.dataset.firma = nuevoHTML;
+        if (alAplicar) alAplicar();
+    };
+    if (forzar) { aplicar(); return; }
+    if (el.dataset.firma === nuevoHTML) { if (alAplicar) alAplicar(); return; }
+    if (_rendersSinAnimar) { aplicar(); return; }
+    _animarMutacion(el, aplicar);
+}
+
 export const Animaciones = {
     _durSiAnima,
     DUR_ANIM,
     DUR_CALENDARIO,
+    DUR_FICHAJE_OK,
+    DUR_FICHAJE_SALIDA,
+    DUR_RECARGA,
     _aArray,
     _estaColapsado,
     _esperarAnim,
-    _finalizarSlidePendiente,
     _animarSlideElemento,
     _animarFadeSwap,
     _animarMutacion,
+    _conRendersSinAnimar,
+    _rendersSinAnimarActivos,
+    _renderConFirma,
+    _flashElemento,
     _crearFantasmaSiVisible,
     _animarValor,
     _animarConteo,

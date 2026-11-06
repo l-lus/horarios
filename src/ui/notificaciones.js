@@ -1,14 +1,16 @@
 import { $ } from '../core/dom.js';
+import { TOAST_MS } from '../core/constantes.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { UIBase } from './base.js';
-import { GestionDatos as D } from '../services/gestion-datos.js';
+import { debounce } from './gestos.js';
+import { mostrarToast } from './toast.js';
+import { AvisoJornada } from '../services/aviso-jornada.js';
 
 // ====================================================================
 // UI NOTIFICATIONS MODULE (push y permisos de notificaciones)
 // ====================================================================
 const {
-    debounce, _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnActivo,
-    _setBtnDisabled
+    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnActivo, _setBtnDisabled
 } = UIBase;
 
 function _actualizarDisponibilidadBotonesPush() {
@@ -22,7 +24,7 @@ function actualizarEstadoBotonNotificaciones() {
     _setBtnActivo('btn-toggle-notification', RecordatorioPush.getHabilitado());
 }
 
-const _sincronizarPushHoyDebounced = debounce(() => D.sincronizarPushHoy(), 400);
+const _sincronizarPushHoyDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 400);
 
 const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuffer } =
     _crearToggleConfig({
@@ -81,7 +83,7 @@ async function _suscribirCambiosPermisoNotificaciones() {
 function actualizarEstadoPermisoNotificaciones() {
     const el = $('push-permiso-estado');
     if (!el) return;
-    el.innerHTML = '';
+    el.replaceChildren();
 
     if (!('Notification' in window)) return;
 
@@ -110,6 +112,17 @@ function actualizarEstadoPermisoNotificaciones() {
     el.appendChild(span);
 }
 
+async function enviarNotificacionPrueba() {
+    const mensajes = {
+        ok: ['Cerrá la app: la notificación llega en 10 segundos', 'info'],
+        denegado: ['El permiso de notificaciones está bloqueado', 'error'],
+        'no-soportado': ['Este navegador no admite notificaciones', 'error'],
+    };
+    const [texto, tipo] = mensajes[await RecordatorioPush.enviarNotificacionPrueba(10000)];
+    mostrarToast(texto, tipo, TOAST_MS.AVISO);
+    actualizarEstadoPermisoNotificaciones();
+}
+
 function abrirModalNotificaciones() {
     _abrirModalConPadre('modal-notificaciones', () => {
         actualizarEstadoBotonPushHabilitado();
@@ -130,7 +143,8 @@ function bindEventos() {
     $('btn-toggle-push-buffer')?.addEventListener('click', () => togglePushBuffer());
     $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => togglePushBufferUltimoDia());
     $('btn-toggle-push-habilitado')?.addEventListener('click', () => togglePushHabilitado());
-    $('config-push-anticipacion')?.addEventListener('change', (e) => cambiarPushAnticipacion(e.target.value));
+    $('config-push-anticipacion')?.addEventListener('change', (e) => cambiarPushAnticipacion(/** @type {HTMLInputElement} */ (e.target).value));
+    $('btn-probar-notificacion')?.addEventListener('click', () => enviarNotificacionPrueba());
     $('btn-toggle-notification')?.addEventListener('click', () => abrirModalNotificaciones());
     document.querySelector('#modal-notificaciones .btn-cancel')?.addEventListener('click', () => cerrarModalNotificaciones());
 }

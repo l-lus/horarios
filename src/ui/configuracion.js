@@ -1,10 +1,10 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
+import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorTemas } from './gestor-temas.js';
-import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
@@ -12,25 +12,31 @@ import { TarjetaFondos } from './tarjeta-fondos.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
 import { Notificaciones } from './notificaciones.js';
 import { EventosApp } from '../core/eventos.js';
-const D = GestionDatos;
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { _crearPressHold, debounce } from './gestos.js';
+import { _scrollHastaVisible, _scrollA } from './scroll.js';
+import { mostrarToast } from './toast.js';
+import { Animaciones } from './animaciones.js';
+import { AyudaBuscador } from './ayuda-buscador.js';
+import { AvisoJornada } from '../services/aviso-jornada.js';
 
 // ====================================================================
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
 // ====================================================================
 const {
-    _crearPressHold, _abrirModalConPadre, _cerrarModalConPadre, mostrarToast, _esperarAnim,
-    _crearToggleConfig, _setBtnDisabled, _animarValor, _flashCampo, _scrollHastaVisible, _scrollA, debounce
+    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnDisabled, _flashCampo
 } = UIBase;
+const { _esperarAnim, _animarValor } = Animaciones;
 
-const _reprogramarPushDebounced = debounce(() => D.sincronizarPushHoy(), 400);
+const _reprogramarPushDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 400);
 
-const verificarBloqueoCredito = (...args) => D._notify().verificarBloqueoCredito(...args);
-const actualizarUI = (...args) => D._notify().actualizarUI(...args);
-const getFondoCard = (...args) => TarjetaFondos.getFondoCard(...args);
-const _getLabelFondo = (...args) => TarjetaFondos._getLabelFondo(...args);
+const verificarBloqueoCredito = (...args) => EstadoApp._notify().verificarBloqueoCredito(...args);
+const actualizarUI = (...args) => EstadoApp._notify().actualizarUI(...args);
+const { getFondoCard, _getLabelFondo } = TarjetaFondos;
 const _refrescarFormatoCortoStatsCache = () => EventosApp.emit('config:formato-corto-stats');
-const actualizarEstadoBotonPersistir = (...args) => OrdenTarjetas.actualizarEstadoBotonPersistir(...args);
-const actualizarEstadoBotonNotificaciones = (...args) => Notificaciones.actualizarEstadoBotonNotificaciones(...args);
+const { actualizarEstadoBotonPersistir } = OrdenTarjetas;
+const { actualizarEstadoBotonNotificaciones } = Notificaciones;
 
 function alternarTema() {
     const temaActual = GestorTemas.temaGuardado();
@@ -41,10 +47,10 @@ function alternarTema() {
 
 const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
     _crearToggleConfig({
-        getVal: () => D.getIgnorarTiempoFuera(),
-        setVal: (v) => { D.setIgnorarTiempoFuera(v); Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
+        getVal: () => EstadoApp.getIgnorarTiempoFuera(),
+        setVal: (v) => { EstadoApp.setIgnorarTiempoFuera(v); Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
         btnId: 'btn-toggle-ignorar-tf',
-        onAfterToggle: () => { D.recalcularTotalesEnMemoria(true); D.guardarYActualizar(); D.sincronizarPushHoy(); },
+        onAfterToggle: () => { GestionDatos.recalcularTotalesEnMemoria(true); EstadoApp.guardarYActualizar(); AvisoJornada.sincronizarHoy(); },
     });
 
 const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
@@ -78,6 +84,48 @@ const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBoton
         onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
     });
 
+const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRuedaCalendario } =
+    _crearToggleConfig({
+        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO),
+        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.RUEDA_CALENDARIO, v),
+        btnId: 'btn-toggle-rueda-calendario',
+        onAfterToggle: () => { EventosApp.emit('config:rueda-calendario'); }
+    });
+
+// "Hint integrado" tiene tres estados en un solo botón: No (la información va en el texto de abajo), A (hitos sobre la barra, con su descripción
+// desplegada) y B (hitos sobre la barra y el nombre de cada uno en el número grande, el predeterminado). Se guardan en dos opciones: HINT_INTEGRADO y DESC_HITOS_NUMERO.
+const _MODOS_HINT = ['no', 'barra', 'numero'];
+const _ETIQUETAS_HINT = { no: 'No', barra: 'A', numero: 'B' };
+
+function _modoHintIntegrado() {
+    if (!Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO)) return 'no';
+    return Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO) ? 'numero' : 'barra';
+}
+
+function actualizarEstadoBotonHintIntegrado() {
+    const lbl = $('hint-integrado-label');
+    if (lbl) lbl.textContent = _ETIQUETAS_HINT[_modoHintIntegrado()];
+}
+
+// Al restaurar un respaldo o bajar de Gist cambia la opción: se actualiza la etiqueta
+EventosApp.on('config:hint-integrado', () => actualizarEstadoBotonHintIntegrado());
+
+function toggleHintIntegrado() {
+    const siguiente = _MODOS_HINT[(_MODOS_HINT.indexOf(_modoHintIntegrado()) + 1) % _MODOS_HINT.length];
+    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, siguiente !== 'no');
+    Almacenamiento.setItem(STORAGE_KEYS.DESC_HITOS_NUMERO, siguiente === 'numero');
+    actualizarEstadoBotonHintIntegrado();
+    EventosApp.emit('config:hint-integrado');
+    actualizarUI();
+}
+
+const { toggle: toggleMetricaUso, actualizarEstado: actualizarEstadoBotonMetricaUso } =
+    _crearToggleConfig({
+        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true),
+        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.STATS_HABILITADO, v),
+        btnId: 'btn-toggle-metrica-uso',
+    });
+
 function actualizarEstadoBotonAplicarHoras() {
     const modoGlobal = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
     _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
@@ -87,8 +135,8 @@ async function aplicarHorasConfiguradasATodos() {
     const btn = $('btn-aplicar-horas-todos');
     if (btn && btn.disabled) return;
 
-    const horas = D.horasDiarias();
-    const totalRegistros = D.registros().length;
+    const horas = EstadoApp.horasDiarias();
+    const totalRegistros = EstadoApp.registros().length;
     if (totalRegistros === 0) {
         mostrarToast('No hay registros para actualizar', 'info');
         return;
@@ -101,8 +149,8 @@ async function aplicarHorasConfiguradasATodos() {
     );
     if (!confirmado) return;
 
-    const { aplicados, creditosRecalculados } = D.aplicarHorasATodosLosRegistros();
-    const guardado = await D.guardarYActualizar();
+    const { aplicados, creditosRecalculados } = Compensatorios.aplicarHorasATodosLosRegistros();
+    const guardado = await EstadoApp.guardarYActualizar();
     if (guardado) {
         actualizarUI();
         _reprogramarPushDebounced();
@@ -136,6 +184,7 @@ function cerrarConfig() {
 }
 
 function abrirModalAyuda() {
+    AyudaBuscador.limpiar();
     _abrirModalConPadre('modal-ayuda');
 }
 
@@ -155,21 +204,33 @@ function toggleReducirAnimaciones() {
     actualizarHintAnimaciones();
 }
 
+function actualizarHintEstiloCalendario() {
+    const lbl = $('hint-estilo-calendario-label');
+    if (lbl) lbl.textContent = EstiloCalendario.etiqueta();
+}
+
+// Cada toque pasa al estilo siguiente; el CSS reacciona solo al atributo de <html>, así que el calendario cambia al instante
+function toggleEstiloCalendario() {
+    EstiloCalendario.siguiente();
+    actualizarHintEstiloCalendario();
+}
+
 function _refrescarTogglesConfig() {
     actualizarEstadoBotonIgnorarTF();
     actualizarEstadoBotonLogicaCubierto();
     actualizarEstadoBotonObjetivoPorRegistro();
     actualizarEstadoBotonAplicarHoras();
     actualizarHintAnimaciones();
+    actualizarHintEstiloCalendario();
 }
 
 function _precargarCamposConfig() {
     const elHoras = $('config-horas-diarias');
-    elHoras.dataset.valor = D.horasDiarias();
-    elHoras.textContent = TiempoUtils.horasATexto(D.horasDiarias(), 'short');
+    elHoras.dataset.valor = String(EstadoApp.horasDiarias());
+    elHoras.textContent = TiempoUtils.horasATexto(EstadoApp.horasDiarias(), 'short');
 
-    const diasActivos = D.diasHabiles();
-    const checkboxes = document.querySelectorAll('input[name="dia-habil"]');
+    const diasActivos = EstadoApp.diasHabiles();
+    const checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]'));
     checkboxes.forEach(cb => {
         cb.checked = diasActivos.includes(parseInt(cb.value));
         cb.onchange = actualizarFeedbackConfig;
@@ -182,6 +243,11 @@ function _precargarCamposConfig() {
     if (lbl) lbl.textContent = _getLabelFondo(getFondoCard());
 }
 
+// Abre los ajustes directamente (sin pasar por el selector de perfiles)
+function abrirConfig() {
+    GestorModales.abrir('modal-config', _precargarCamposConfig);
+}
+
 function mostrarconfig() {
     GestorModales.alternar('modal-selector-perfiles', 'modal-config', null, _precargarCamposConfig);
 }
@@ -190,7 +256,7 @@ function mostrarConfigEnAjuste(id) {
     GestorModales.abrir('modal-config', _precargarCamposConfig);
     setTimeout(async () => {
         const el = $(id);
-        const cuerpo = el?.closest('.modal-panel-body');
+        const cuerpo = /** @type {HTMLElement|null} */ (el?.closest('.modal-panel-body'));
         if (!el || !cuerpo) return;
         await _scrollHastaVisible(el, { contenedor: cuerpo });
         _flashCampo(id);
@@ -199,7 +265,7 @@ function mostrarConfigEnAjuste(id) {
 
 function refrescarConfigSiVisible() {
     _refrescarTogglesConfig();
-    if (document.getElementById('modal-config')?.classList.contains('show')) {
+    if ($('modal-config')?.classList.contains('show')) {
         _precargarCamposConfig();
     }
 }
@@ -211,15 +277,15 @@ function mostrarConfigOnboarding() {
 }
 
 function actualizarFeedbackConfig() {
-    let checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+    let checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]:checked'));
     if (checkboxes.length === 0) {
-        const vigentes = D.diasHabiles();
-        document.querySelectorAll('input[name="dia-habil"]').forEach(cb => { cb.checked = vigentes.includes(parseInt(cb.value)); });
+        const vigentes = EstadoApp.diasHabiles();
+        /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]')).forEach(cb => { cb.checked = vigentes.includes(parseInt(cb.value)); });
         mostrarToast('Seleccioná al menos un día', 'error');
-        checkboxes = document.querySelectorAll('input[name="dia-habil"]:checked');
+        checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil"]:checked'));
     }
     const seleccionados = checkboxes.length;
-    const horas = parseFloat($('config-horas-diarias').dataset.valor) || 0;
+    const horas = parseFloat($('config-horas-diarias').dataset.valor ?? '') || 0;
     const total = seleccionados * horas;
 
     const el = $('config-total-feedback');
@@ -230,23 +296,19 @@ function actualizarFeedbackConfig() {
 
     if (seleccionados > 0) {
         const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-        const diasVigentes = [...D.diasHabiles()].sort((a, b) => a - b);
+        const diasVigentes = [...EstadoApp.diasHabiles()].sort((a, b) => a - b);
         const huboCambio = nuevosDias.length !== diasVigentes.length
             || nuevosDias.some((d, i) => d !== diasVigentes[i]);
-        if (huboCambio) D.registrarCambioDiasHabiles(nuevosDias);
-        const esDefault = GestorPerfiles && GestorPerfiles.esPerfilDefault();
-        if (esDefault) Almacenamiento.setItem(STORAGE_KEYS.DIAS_HABILES, nuevosDias);
-        D.guardarYActualizar();
+        if (huboCambio) Compensatorios.registrarCambioDiasHabiles(nuevosDias);
+        EstadoApp.guardarYActualizar();
         if (huboCambio) _reprogramarPushDebounced();
     }
-    if (typeof actualizarEstadoBotonPersistir === 'function') {
-        actualizarEstadoBotonPersistir();
-    }
+    actualizarEstadoBotonPersistir();
 }
 
 function _ajustarStepperHoras(el, incremento) {
     let valorActual = parseFloat(el.dataset.valor);
-    if (isNaN(valorActual)) valorActual = D.horasDiarias();
+    if (isNaN(valorActual)) valorActual = EstadoApp.horasDiarias();
     const nuevoValor = Math.min(24, Math.max(0, valorActual + incremento));
     if (isNaN(nuevoValor)) return nuevoValor;
     el.dataset.valor = nuevoValor;
@@ -260,9 +322,7 @@ function cambiarHorasDiarias(incremento) {
     const nuevoValor = _ajustarStepperHoras($('config-horas-diarias'), incremento);
     if (isNaN(nuevoValor)) return;
 
-    D.setHorasDiarias(nuevoValor);
-    const esDefault = GestorPerfiles && GestorPerfiles.esPerfilDefault();
-    if (esDefault) Almacenamiento.setItem(STORAGE_KEYS.HORAS_DIARIAS, nuevoValor);
+    EstadoApp.setHorasDiarias(nuevoValor);
     actualizarFeedbackConfig();
     _reprogramarPushDebounced();
 }
@@ -290,17 +350,22 @@ function bindEventos() {
     $('btn-toggle-ignorar-tf')?.addEventListener('click', () => toggleIgnorarTiempoFuera());
     $('btn-toggle-hover-popup')?.addEventListener('click', () => toggleHoverPopupCalendario());
     $('btn-toggle-animaciones')?.addEventListener('click', () => toggleReducirAnimaciones());
+    $('btn-estilo-calendario')?.addEventListener('click', () => toggleEstiloCalendario());
     $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
+    $('btn-toggle-rueda-calendario')?.addEventListener('click', () => toggleRuedaCalendario());
+    $('btn-toggle-hint-integrado')?.addEventListener('click', () => toggleHintIntegrado());
+    $('btn-toggle-metrica-uso')?.addEventListener('click', () => toggleMetricaUso());
     $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());
-    document.getElementById('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
-    document.getElementById('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
+    $('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
+    $('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
     document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => cerrarModalAyuda());
-    document.getElementById('ayuda-indice')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.ayuda-indice-item');
+    AyudaBuscador.bindEventos();
+    $('ayuda-indice')?.addEventListener('click', (e) => {
+        const btn = /** @type {HTMLElement} */ (/** @type {HTMLElement} */ (e.target).closest('.ayuda-indice-item'));
         if (!btn) return;
-        _scrollA(document.getElementById(btn.dataset.target), 'start');
+        _scrollA($(btn.dataset.target ?? ''), 'start');
     });
     document.querySelector('.config-actions .btn-delete')?.addEventListener('click', () => GestionDatos.borrarTodoHistorial());
     document.querySelector('#modal-config .modal-panel-footer .btn-cancel')?.addEventListener('click', () => cerrarConfig());
@@ -321,9 +386,9 @@ function bindEventos() {
 }
 
 export const Configuracion = {
-    actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup,
+    actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonAplicarHoras, cerrarConfig,
-    cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
+    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+    abrirModalAyuda, abrirConfig, alternarTema, cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
     pressHoldObjetivoEdicion, formatearInput, bindEventos
 };

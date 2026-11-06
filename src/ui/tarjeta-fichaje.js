@@ -1,459 +1,95 @@
 import { TarjetaFondos } from './tarjeta-fondos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
-import { STORAGE_KEYS, horasGte, horasEq } from '../core/constantes.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
-import { EventosApp } from '../core/eventos.js';
-import { FONDOS_SVG } from '../data/fondos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { GestorPerfiles } from '../services/gestor-perfiles.js';
-import { GestorHistorial } from '../services/gestor-historial.js';
-import { TiposRegistro } from '../services/tipos-registro.js';
-import { GestionDatos } from '../services/gestion-datos.js';
-import { SaldoSemanal } from '../services/saldo-semanal.js';
-import { UIBase } from './base.js';
+import { BarraHitos } from './barra-hitos.js';
+import { Animaciones } from './animaciones.js';
+import { TarjetaFichajeVista } from './tarjeta-fichaje-vista.js';
+import { EstadoTarjeta } from '../services/estado-tarjeta.js';
 import { Calendario } from './calendario.js';
 import { Historico } from './historico.js';
 import { Estadisticas } from './estadisticas.js';
-const D = GestionDatos;
+import { Compensatorios } from '../services/compensatorios.js';
+import { EstadoApp } from '../services/estado-app.js';
+import { esHtmlSeguro, montar } from '../core/html.js';
+import { CicloStats } from './tarjeta-ciclo-stats.js';
+import { FocoHitos } from './foco-hitos.js';
+import { HoverBarra } from './hover-barra.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD MODULE
 // ====================================================================
 const {
-    formatoDiferencia, mostrarToast, resetearBoton, restaurarBotonGuardarEdicion,
-    _setBtnActivo, _setBtnDisabled, _flashCampo, _avisarFichaje, registrarSwipe, _animarFadeSwap,
-    _animarMutacion, _animarSlideElemento, toggleSeccionGen, _crearOpcion, setIconoBtn,
-    aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible,
-    _animarConteo, _conteoEnCurso, _cancelarConteo, _durSiAnima
-} = UIBase;
+    _renderConFirma, _conRendersSinAnimar, _rendersSinAnimarActivos, _animarFadeSwap,
+    _animarMutacion, _animarConteo, _conteoEnCurso, _cancelarConteo, _durSiAnima
+} = Animaciones;
+const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo, _descHitosEnNumero } = TarjetaFichajeVista;
 
-const { setProgressBarColor, getFondoCard, setFondoCard, toggleFondoCard, _getLabelFondo, actualizarFondoCard } = TarjetaFondos;
-const _breakStorageKey = (...args) => TarjetaTiempoFuera._breakStorageKey(...args);
-const _minutosBreakActivo = (...args) => TarjetaTiempoFuera._minutosBreakActivo(...args);
-const _minutosAHoraWrap = (...args) => TarjetaTiempoFuera._minutosAHoraWrap(...args);
-const _formatearMinutosCorto = (...args) => TarjetaTiempoFuera._formatearMinutosCorto(...args);
-const _obtenerOCrearLabelTF = (...args) => TarjetaTiempoFuera._obtenerOCrearLabelTF(...args);
-const _quitarLabelTF = (...args) => TarjetaTiempoFuera._quitarLabelTF(...args);
-const _actualizarCardTimerRunning = (...args) => TarjetaTiempoFuera._actualizarCardTimerRunning(...args);
-const actualizarEstadoBotonTimerMain = (...args) => TarjetaTiempoFuera.actualizarEstadoBotonTimerMain(...args);
-const toggleTimerBreakMain = (...args) => TarjetaTiempoFuera.toggleTimerBreakMain(...args);
-const pegarHoraActual = (...args) => TarjetaLote.pegarHoraActual(...args);
-const limpiarCampo = (...args) => TarjetaLote.limpiarCampo(...args);
-const toggleModoLote = (...args) => TarjetaLote.toggleModoLote(...args);
-const ejecutarAccionRegistro = (...args) => TarjetaLote.ejecutarAccionRegistro(...args);
-const registrarLoteDesdeCard = (...args) => TarjetaLote.registrarLoteDesdeCard(...args);
-const poblarSelectoresTipos = (...args) => TarjetaLote.poblarSelectoresTipos(...args);
-const actualizarBotonLote = (...args) => TarjetaLote.actualizarBotonLote(...args);
-const toggleFormulario = (...args) => TarjetaLote.toggleFormulario(...args);
-const _irAFicharConFecha = (...args) => TarjetaLote._irAFicharConFecha(...args);
-const _scrollACardFichar = (...args) => TarjetaLote._scrollACardFichar(...args);
-const alternarFechaActual = (...args) => TarjetaLote.alternarFechaActual(...args);
+const { setProgressBarColor, toggleFondoCard, actualizarFondoCard } = TarjetaFondos;
+const {
+    _breakStorageKey, _minutosBreakActivo, _formatearMinutosCorto,
+    _obtenerOCrearLabelTF, _quitarLabelTF, actualizarEstadoBotonTimerMain, toggleTimerBreakMain
+} = TarjetaTiempoFuera;
+const {
+    pegarHoraActual, limpiarCampo, toggleModoLote, ejecutarAccionRegistro, actualizarBotonLote,
+    toggleFormulario, alternarFechaActual
+} = TarjetaLote;
 let _timerAutoVista = null;
-let _suprimirAnimacionInterna = false;
 
-function _estadoDiasHabiles(diasHabiles) {
-    const hoy = TiempoUtils.obtenerFechaHoy();
-    const diaSemana = new Date().getDay();
-    const hoyIndex = diaSemana === 0 ? 7 : diaSemana;
-    const esDiaHabil = TiempoUtils.esFechaHabil(hoy, diasHabiles);
-    let quedanDiasFuturos;
-    if (Array.isArray(diasHabiles)) {
-        quedanDiasFuturos = false;
-        for (let d = hoyIndex + 1; d <= 7; d++) {
-            if (diasHabiles.includes(d === 7 ? 0 : d)) { quedanDiasFuturos = true; break; }
-        }
-    } else {
-        quedanDiasFuturos = hoyIndex < diasHabiles;
-    }
-    return { esDiaHabil, quedanDiasFuturos };
+// Al cerrar la jornada abierta de ayer, la tarjeta sigue mostrando ese registro (salida y total) antes de pasar a hoy.
+// Dura lo que un ciclo completo de la salida (fase "Salida" + total); fichar de nuevo lo anula y pasa a hoy al instante.
+let _retencionAyer = null;
+const _RETENCION_AYER_MS = 4000;
+
+function _cancelarRetencionAyer() {
+    if (!_retencionAyer) return;
+    clearTimeout(_retencionAyer.timer);
+    _retencionAyer = null;
 }
 
-function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
-    if (!Array.isArray(diasHabiles) || diasHabiles.length === 0 || horasDiarias <= 0) return false;
-    const fechasLaborables = TiempoUtils.generarRangoFechas(ini, fn)
-        .filter(f => D.diasHabilesEnFecha(f).includes(TiempoUtils.parsearFechaLocal(f).getDay()));
-    if (fechasLaborables.length === 0) return false;
-    return fechasLaborables.every(fecha => {
-        const r = registros.find(x => x.fecha === fecha);
-        if (!r) return false;
-        const tipo = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-        return tipo && tipo.id !== 'remoto';
+/** @param {string | null} id registro de ayer recién cerrado; null anula la retención */
+function _retenerRegistroAyer(id) {
+    _cancelarRetencionAyer();
+    if (id === null) return;
+    _retencionAyer = {
+        id,
+        timer: setTimeout(() => { _retencionAyer = null; actualizarUI(null, false, true); }, _RETENCION_AYER_MS),
+    };
+}
+
+function _registroRetenidoAyer(registros, regHoy) {
+    if (!_retencionAyer) return null;
+    const reg = registros.find(r => r.id === _retencionAyer?.id);
+    if (regHoy?.entrada || !reg?.salida) { _cancelarRetencionAyer(); return null; }
+    return reg;
+}
+
+/** @param {any} [asignacionesPrecalculadas] */
+function _calcularEstadoCard(asignacionesPrecalculadas = null) {
+    return EstadoTarjeta.calcularEstadoCard({
+        asignacionesPrecalculadas,
+        minutosBreakActivo: _minutosBreakActivo(),
+        resolverRetenido: _registroRetenidoAyer
     });
-}
-
-function calcularEstadoCard(asignacionesPrecalculadas = null) {
-    const hoy = TiempoUtils.obtenerFechaHoy();
-    const { inicio: ini, fin: fn } = TiempoUtils.obtenerSemanaRangoActual();
-    const registros = D.registros();
-    const horasDiarias = D.horasDiarias();
-    const horasSemanales = D.horasSemanales();
-    const diasHabiles = D.diasHabiles();
-    const { ayerStr: ayer, regAyer, ayerAbierto } = D.detectarAyerAbierto(hoy, registros);
-
-    const { esDiaHabil, quedanDiasFuturos } = _estadoDiasHabiles(diasHabiles);
-    const regHoy = registros.find(r => r.fecha === hoy) ?? null;
-    const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoy && regHoy.salida));
-    const minutosBreakActivo = _minutosBreakActivo();
-    const asignacionesCompensatorio = asignacionesPrecalculadas || D.calcularAsignacionesCompensatorio();
-    const bufferSemanalBase = D.calcularBufferPeriodo(ini, hoy, false, 0, asignacionesCompensatorio);
-    const bufferSemanal = D.calcularBufferPeriodo(ini, hoy, true, minutosBreakActivo, asignacionesCompensatorio);
-
-    const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
-
-    let tiempoHoy = 0;
-    const regActivo = (ayerAbierto && !regHoy?.entrada) ? regAyer
-        : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
-    if (regActivo) {
-        const t = D.calcularHoras(regActivo.entrada, TiempoUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
-        tiempoHoy = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
-    } else if (!tipoEspecialHoy && regHoy?.salida) {
-        tiempoHoy = regHoy.total;
-    }
-
-    const fechaLimite = hoy < fn ? hoy : fn;
-    const registrosSemana = registros.filter(r => r.fecha >= ini && r.fecha <= fechaLimite);
-    let totalSemana = 0;
-    let descuentoCompensatorioSemana = 0;
-    registrosSemana.forEach(r => {
-        if (regActivo && r.fecha === regActivo.fecha) { totalSemana += tiempoHoy; return; }
-        totalSemana += D.horasEfectivasDeRegistro(r);
-        const tipoDia = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
-        if (!tipoDia) {
-            descuentoCompensatorioSemana += D.montoCompensadoDeReferencia(r, asignacionesCompensatorio);
-        }
-    });
-    const totalSemanaProgreso = totalSemana - descuentoCompensatorioSemana;
-
-    const registrosSemanaCompletaPorFecha = new Map(
-        registros.filter(r => r.fecha >= ini && r.fecha <= fn).map(r => [r.fecha, r])
-    );
-    let objetivoSemana = 0;
-    for (const isoDate of TiempoUtils.generarRangoFechas(ini, fn)) {
-        if (!D.diasHabilesEnFecha(isoDate).includes(TiempoUtils.parsearFechaLocal(isoDate).getDay())) continue;
-        const rDia = registrosSemanaCompletaPorFecha.get(isoDate);
-        if (!rDia) { objetivoSemana += horasDiarias; continue; }
-        const tipoDia = TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida);
-        if (tipoDia && tipoDia.id !== 'remoto') continue;
-        objetivoSemana += D.objetivoDeRegistro(rDia);
-    }
-    const todosEspeciales = _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias);
-
-    return {
-        hoy, ini, fn,
-        registros, regHoy,
-        horasDiarias, horasSemanales,
-        diasHabiles, esDiaHabil,
-        semanaAbierta, bufferSemanal, bufferSemanalBase,
-        totalSemana, totalSemanaProgreso, objetivoSemana,
-        tipoEspecialHoy, tiempoHoy,
-        todosEspeciales,
-        ayerAbierto, ayerStr: ayer, regAyer
-    };
-}
-
-function _calcularProgreso(valor, objetivo) {
-    return objetivo > 0 ? Math.min((valor / objetivo) * 100, 100) : 100;
-}
-
-function _estaCumplido(valor, objetivo) {
-    return objetivo === 0 || horasGte(valor, objetivo);
-}
-
-let _formatoCortoStatsCache = false;
-
-function _refrescarFormatoCortoStatsCache() {
-    _formatoCortoStatsCache = Almacenamiento.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false);
-}
-EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
-
-function _modoTextoStats() {
-    return _formatoCortoStatsCache ? 'short' : 'long';
-}
-
-function _horasTextoStats(horasDecimales) {
-    return TiempoUtils.horasATexto(horasDecimales, _modoTextoStats());
-}
-
-function _cantidadHoras(horasDecimales) {
-    const { horas, minutos } = TiempoUtils.descomponerHorasDecimales(horasDecimales);
-    const texto = _horasTextoStats(horasDecimales);
-    const singular = horas === 1 || (horas === 0 && minutos === 1);
-    return { texto, singular };
-}
-
-function _fraseCantidad(horasDecimales, singular, plural) {
-    const { texto, singular: esSingular } = _cantidadHoras(horasDecimales);
-    return `${esSingular ? singular : plural} ${texto}`;
-}
-
-function _fraseCantidadSufijo(horasDecimales, singular, plural) {
-    const { texto, singular: esSingular } = _cantidadHoras(horasDecimales);
-    return `${texto} ${esSingular ? singular : plural}`;
-}
-
-function _hintSalidaODefault(reg, objetivoAplica, bufferSemanal, diasHabiles, hintDefault, permiteEstimado) {
-    if (permiteEstimado && reg && reg.entrada && objetivoAplica > 0 && !TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida)) {
-        return _calcularHintSalidaEstimada(reg, objetivoAplica, bufferSemanal, diasHabiles);
-    }
-    return { hint: hintDefault, hintEsHTML: false };
-}
-
-function _tituloDia(nombreDia) {
-    return `<svg class="icon"><use href="#icon-clock" /></svg>${nombreDia}`;
-}
-
-function _badgeEstadoHoy(dayClosed, colorFinal) {
-    if (!dayClosed) {
-        return `<span class="estado-badge estado-badge--en-curso">En curso</span>`;
-    }
-    const color = colorFinal || 'green';
-    return `<span class="estado-badge estado-badge--finalizado estado-badge--${color}">Finalizado</span>`;
-}
-
-function _conAvisoAyer(vista, avisoAyerHint) {
-    return avisoAyerHint ? { ...vista, ...avisoAyerHint } : vista;
-}
-
-function derivarVistaSemana(est) {
-    const { totalSemana: tot, totalSemanaProgreso, objetivoSemana, semanaAbierta, horasDiarias, todosEspeciales } = est;
-    const prog = totalSemanaProgreso ?? tot;
-
-    const progreso = _calcularProgreso(prog, objetivoSemana);
-
-    let colorBarra, colorBorde, estadoFondo, mensaje, mostrarMensaje;
-
-    if (horasDiarias === 0) {
-        colorBarra = 'blue'; colorBorde = 'transparent';
-        estadoFondo = 'esperando';
-        mensaje = `Total fichado: ${_horasTextoStats(tot)}`;
-        mostrarMensaje = false;
-    } else if (todosEspeciales) {
-        colorBarra = 'blue'; colorBorde = 'transparent';
-        estadoFondo = 'esperando';
-        mensaje = 'Semana sin días laborables';
-        mostrarMensaje = true;
-    } else if (semanaAbierta) {
-        estadoFondo = 'en_curso';
-        if (horasGte(prog, objetivoSemana)) {
-            colorBarra = 'green'; colorBorde = 'green';
-            const dif = prog - objetivoSemana;
-            mensaje = horasEq(dif, 0) ? 'Vas justo' : `Vas ${_horasTextoStats(dif)} de más`;
-        } else {
-            colorBarra = 'blue'; colorBorde = 'blue';
-            mensaje = objetivoSemana === 0
-                ? `${_horasTextoStats(prog)} (Sin objetivo)`
-                : _fraseCantidad(objetivoSemana - prog, 'Falta', 'Faltan');
-        }
-        mostrarMensaje = true;
-    } else if (horasGte(prog, objetivoSemana)) {
-        colorBarra = 'green'; colorBorde = 'green';
-        estadoFondo = 'finalizado_ok';
-        const dif = prog - objetivoSemana;
-        mensaje = horasEq(dif, 0) ? 'Perfecto' : `Hiciste ${_horasTextoStats(dif)} de más`;
-        mostrarMensaje = true;
-    } else {
-        colorBarra = 'red'; colorBorde = 'red';
-        estadoFondo = 'finalizado_fail';
-        mensaje = _fraseCantidad(objetivoSemana - prog, 'Faltó', 'Faltaron');
-        mostrarMensaje = true;
-    }
-
-    return {
-        titulo: `<svg class="icon"><use href="#icon-calendar-simple" /></svg> Esta Semana`,
-        stats: todosEspeciales ? '🌞' : _horasTextoStats(tot),
-        mensaje, mostrarMensaje,
-        colorBarra, anchoBarra: progreso,
-        colorBorde, estadoFondo,
-        hint: 'Tocá para ver Hoy',
-        hintEsHTML: false,
-    };
-}
-
-function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHabiles) {
-    let minutosTotal = TiempoUtils.horaAMinutos(reg.entrada) + (objetivoDiario * 60);
-
-    if (reg.tiempoFuera && !D.getIgnorarTiempoFuera()) {
-        minutosTotal += TiempoUtils.horaAMinutos(reg.tiempoFuera);
-    }
-
-    minutosTotal += _minutosBreakActivo();
-
-    const horaSalida = _minutosAHoraWrap(minutosTotal);
-
-    const esLaborable = TiempoUtils.esFechaHabil(reg.fecha, diasHabiles);
-    const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
-
-    if (mostrarBuffer) {
-        const minutosConBuffer = minutosTotal - (bufferSemanal * 60);
-        const horaBuf = _minutosAHoraWrap(minutosConBuffer);
-        const claseBuffer = bufferSemanal > 0 ? ' hint-buffer-color--green' : bufferSemanal < 0 ? ' hint-buffer-color--red' : '';
-        return {
-            hint: `Salida estimada: <strong>${horaSalida}</strong> | <span class="hint-buffer-color${claseBuffer}"><strong>${horaBuf}</strong></span>`,
-            hintEsHTML: true
-        };
-    }
-
-    return {
-        hint: `Salida estimada: <strong>${horaSalida}</strong>`,
-        hintEsHTML: true
-    };
-}
-
-function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, labelCero = '') {
-    if (objetivoDiario === 0) return labelCero;
-    if (cumplido) {
-        const extra = tiempoHoy - objetivoDiario;
-        if (bufferSemanal < 0 && Math.abs(bufferSemanal) > extra) return 'Te podés ir, pero debés tiempo';
-        return extra > 0 ? `Te podés ir (+${_horasTextoStats(extra)})` : 'Te podés ir';
-    }
-    const faltante = objetivoDiario - tiempoHoy;
-    const faltanteTexto = _fraseCantidad(faltante, 'Falta', 'Faltan');
-
-    return bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
-}
-
-function derivarVistaHoy(est) {
-    const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanalBase, diasHabiles } = est;
-    const objetivoDiario = regHoy ? D.objetivoDeRegistro(regHoy) : horasDiarias;
-
-    if (!regHoy || !regHoy.entrada) {
-
-        if (est.ayerAbierto) {
-            const objetivoDiarioAyerAplica = TiempoUtils.esFechaHabil(est.ayerStr, diasHabiles)
-                ? (est.regAyer ? D.objetivoDeRegistro(est.regAyer) : objetivoDiario)
-                : 0;
-            const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
-            const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAyerAplica);
-            const colorBarra = objetivoDiarioAyerAplica === 0 ? 'blue' : (cumplido ? 'green' : 'blue');
-            const mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase, 'En curso (cruce de medianoche)');
-
-            const nombreDiaAyer = TiempoUtils.obtenerNombreDia(est.ayerStr);
-            const { hint, hintEsHTML } = _hintSalidaODefault(est.regAyer, objetivoDiarioAyerAplica, bufferSemanalBase, diasHabiles, 'Tocá Fichar para registrar salida', true);
-
-            return {
-                titulo: `${_tituloDia(nombreDiaAyer)} (ayer)${_badgeEstadoHoy(false)}`,
-                stats: _horasTextoStats(tiempoHoy),
-                mensaje, mostrarMensaje: true,
-                colorBarra, anchoBarra: prog,
-                colorBorde: colorBarra, estadoFondo: 'en_curso', estadoFondoColor: null,
-                hint, hintEsHTML,
-            };
-        }
-
-        return {
-            titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
-            stats: esDiaHabil ? '🎒' : '🌞',
-            mensaje: esDiaHabil
-                ? (horasDiarias === 0 ? '' : 'Esperando registro...')
-                : (horasDiarias === 0 ? '' : 'Día libre'),
-            mostrarMensaje: horasDiarias > 0,
-            colorBarra: 'blue', anchoBarra: 0,
-            colorBorde: 'transparent', estadoFondo: 'esperando',
-            hint: 'Tocá para ver la Semana', hintEsHTML: false,
-        };
-    }
-
-    const avisoAyerHint = est.ayerAbierto
-        ? { hint: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, hintEsHTML: false }
-        : null;
-
-    if (tipoEspecialHoy) {
-        return _conAvisoAyer({
-            titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
-            stats: `${tipoEspecialHoy.emoji} ${tipoEspecialHoy.label}`,
-            mensaje: `¡${tipoEspecialHoy.descripcion}!`,
-            mostrarMensaje: true,
-            colorBarra: tipoEspecialHoy.color, anchoBarra: 100,
-            colorBorde: tipoEspecialHoy.color,
-            estadoFondo: 'especial', estadoFondoColor: tipoEspecialHoy.color,
-            hint: 'Tocá para ver la Semana', hintEsHTML: false,
-        }, avisoAyerHint);
-    }
-
-    const dayClosed = !!regHoy.salida;
-    const objetivoDiarioAplica = esDiaHabil ? objetivoDiario : 0;
-    const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAplica);
-    const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAplica);
-    let colorBarra, colorBorde, estadoFondo, estadoFondoColor = null, mensaje, mostrarMensaje;
-
-    if (objetivoDiarioAplica === 0) {
-        colorBarra = dayClosed ? 'green' : 'blue';
-        colorBorde = dayClosed ? 'green' : 'blue';
-        estadoFondo = dayClosed ? 'finalizado_ok' : 'en_curso';
-        mensaje = ''; mostrarMensaje = false;
-    } else if (dayClosed) {
-        const dif = tiempoHoy - objetivoDiarioAplica;
-
-        if (horasGte(dif, 0)) {
-            colorBarra = 'green'; colorBorde = 'green';
-            estadoFondo = 'finalizado_ok';
-            mensaje = horasEq(dif, 0) ? 'Perfecto' : _fraseCantidadSufijo(dif, 'extra', 'extras');
-        } else {
-            const faltoTexto = _fraseCantidad(Math.abs(dif), 'Faltó', 'Faltaron');
-
-            if (SaldoSemanal.cubiertoPorSaldo(est.hoy)) {
-                colorBarra = 'gold'; colorBorde = 'gold';
-                estadoFondo = 'especial';
-                estadoFondoColor = 'gold';
-                mensaje = `${faltoTexto} (Cubierto)`;
-            } else {
-                colorBarra = 'red'; colorBorde = 'red';
-                estadoFondo = 'finalizado_fail';
-                mensaje = faltoTexto;
-            }
-        }
-        mostrarMensaje = true;
-    } else {
-        colorBarra = cumplido ? 'green' : 'blue';
-        colorBorde = cumplido ? 'green' : 'blue';
-        estadoFondo = 'en_curso';
-        mostrarMensaje = true;
-        mensaje = _mensajeProgreso(cumplido, tiempoHoy, objetivoDiarioAplica, bufferSemanalBase);
-    }
-
-    const { hint, hintEsHTML } = _hintSalidaODefault(regHoy, objetivoDiarioAplica, bufferSemanalBase, diasHabiles, 'Tocá para ver la Semana', !dayClosed);
-
-    const colorFinal = estadoFondoColor || (estadoFondo === 'finalizado_fail' ? 'red' : 'green');
-
-    return _conAvisoAyer({
-        titulo: `${_tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy()))}${_badgeEstadoHoy(dayClosed, colorFinal)}`,
-        stats: _horasTextoStats(tiempoHoy),
-        mensaje, mostrarMensaje,
-        colorBarra, anchoBarra: prog,
-        colorBorde, estadoFondo, estadoFondoColor,
-        hint, hintEsHTML,
-    }, avisoAyerHint);
 }
 
 const _COLORES_BORDE = ['blue', 'green', 'red', 'purple', 'orange', 'gold', 'transparent'];
 
-function _renderTituloAnimado(el, nuevoHTML, aplicarExtra) {
-    if (!el) { if (aplicarExtra) aplicarExtra(); return; }
-    const aplicarCambio = () => {
-        el.innerHTML = nuevoHTML;
-        el.dataset.firma = nuevoHTML;
-        if (aplicarExtra) aplicarExtra();
-    };
-    if (el.dataset.firma === nuevoHTML) { if (aplicarExtra) aplicarExtra(); return; }
-    if (_suprimirAnimacionInterna) { aplicarCambio(); return; }
-    _animarMutacion(el, aplicarCambio);
-}
-TarjetaTiempoFuera.configurarRenderTitulo(_renderTituloAnimado);
-
+/** @param {any} [est] */
 function _renderTitulo(vista, sinAnimar = false, est = null) {
     const el = $('stats-titulo');
     const aplicarExtra = () => _actualizarTiempoFueraConsolidado(el, est);
-    if (sinAnimar && el) { el.innerHTML = vista.titulo; el.dataset.firma = vista.titulo; aplicarExtra(); return; }
-    _renderTituloAnimado(el, vista.titulo, aplicarExtra);
+    _renderConFirma(el, vista.titulo, aplicarExtra, { forzar: sinAnimar });
 }
 
 function _actualizarTiempoFueraConsolidado(el, est) {
     if (!el) return;
 
     const regHoy = (est?.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est?.regHoy;
-    const mostrar = !!regHoy && D.vistaActual() !== 'semana'
+    const mostrar = !!regHoy && EstadoApp.vistaActual() !== 'semana'
         && Almacenamiento.getItem(_breakStorageKey()) === null
         && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
 
@@ -469,111 +105,65 @@ function _actualizarTiempoFueraConsolidado(el, est) {
     label.title = 'Tiempo fuera registrado hoy';
 }
 
-let _cicloStatsInterval = null;
-let _cicloStatsValorHoras = '';
-let _cicloStatsEntrada = '';
-let _cicloStatsSalida = '';
-let _cicloStatsTiempoFuera = '';
-let _cicloStatsFaseAlRenderizar = null;
+// Texto del número grande del último render: lo que se restaura al salir el cursor de un tramo de la vista semanal (ver HoverBarra)
+let _statsActual = '';
 
-const _CICLO_DURACION_MS = 2000;
-const _CICLO_PREFIJOS = { entrada: 'Entrada', salida: 'Salida', tiempoFuera: 'Tiempo fuera' };
-
-function _detenerCicloStats() {
-    clearTimeout(_cicloStatsInterval);
-    _cicloStatsInterval = null;
+/**
+ * Si el número grande en formato largo ("19 horas 59 minutos") no entra en una línea, pasa a la variante corta ("19h 59m"). Se mide en una copia oculta
+ * para no tocar el número mientras se anima. Parte siempre del texto largo (`statsLargo`), así vuelve solo cuando vuelve a entrar (ej. al girar el celular).
+ * @param {any} vista
+ */
+function _ajustarStatsAlAncho(vista) {
+    vista.statsLargo ??= vista.stats;
+    vista.stats = vista.statsLargo;
+    vista.statsAjustado = false;
     const el = $('stats-semana');
-    if (el) el.classList.remove('mutacion-entrante');
+    const ancho = el?.clientWidth;
+    if (!vista.statsCorto || !el?.parentElement || !(ancho > 0)) return;
+    const sonda = document.createElement('div');
+    sonda.className = 'stats-number';
+    Object.assign(sonda.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none', width: `${ancho}px`, minHeight: '0' });
+    sonda.textContent = vista.statsLargo;
+    el.parentElement.appendChild(sonda);
+    const estilo = getComputedStyle(sonda);
+    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
+    const entra = sonda.getBoundingClientRect().height <= alto * 1.5;
+    sonda.remove();
+    if (!entra) { vista.stats = vista.statsCorto; vista.statsAjustado = true; }
 }
 
-function _prepararMostrarFaseAlRenderizar(tipo) {
-    _cicloStatsFaseAlRenderizar = tipo;
-}
+// Último estado y vista renderizados, para reevaluar si el número entra en una línea al cambiar el ancho (rotar, redimensionar)
+let _statsVista = null;
+let _statsEst = null;
 
-function _fasesCiclo() {
-    return [
-        _cicloStatsValorHoras,
-        `Entrada ${_cicloStatsEntrada}`,
-        _cicloStatsTiempoFuera ? `Tiempo fuera ${_formatearMinutosCorto(TiempoUtils.horaAMinutos(_cicloStatsTiempoFuera))}` : null,
-        _cicloStatsSalida ? `Salida ${_cicloStatsSalida}` : null,
-    ].filter(Boolean);
-}
-
-function _crearCicloTick(fases, estado) {
-    const _cicloTick = () => {
-        const el = $('stats-semana');
-        if (!el) { _detenerCicloStats(); return; }
-
-        _animarMutacion(el, () => {
-            estado.idx++;
-            const terminado = estado.idx >= fases.length;
-            el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx];
-            if (terminado) { _detenerCicloStats(); return; }
-            _cicloStatsInterval = setTimeout(_cicloTick, _CICLO_DURACION_MS);
-        });
-    };
-    return _cicloTick;
-}
-
-function _cicloStatsActivo() {
-    return !!_cicloStatsInterval;
-}
-
-function _iniciarCicloStats(inmediato = false) {
-    if (_cicloStatsInterval) return true;
-    _detenerCicloStats();
-    if (!_cicloStatsEntrada) return false;
-
-    const fases = _fasesCiclo();
-    const estado = { idx: 0 };
-    const tick = _crearCicloTick(fases, estado);
-
-    _cicloStatsInterval = setTimeout(tick, inmediato ? 0 : _CICLO_DURACION_MS);
-    return true;
-}
-
-function _iniciarCicloEnFase(tipo) {
-    if (!_cicloStatsEntrada) return false;
-    clearTimeout(_cicloStatsInterval);
-
-    const fases = _fasesCiclo();
-    const prefijo = _CICLO_PREFIJOS[tipo];
-    const idx = prefijo ? fases.findIndex(f => f.startsWith(prefijo)) : -1;
-    if (idx === -1) return false;
-
-    const estado = { idx };
-    const tick = _crearCicloTick(fases, estado);
-
-    const el = $('stats-semana');
-    if (el) el.textContent = fases[idx];
-
-    _cicloStatsInterval = setTimeout(tick, _CICLO_DURACION_MS);
-    return true;
-}
-
+/** @param {any} [conteo] */
 function _renderStats(vista, est, conteo = null) {
     const el = $('stats-semana');
     if (!el) return;
+    _statsActual = vista.stats;
 
-    const esDiaria = D.vistaActual() !== 'semana';
-    const regHoy = est.regHoy;
+    const esDiaria = EstadoApp.vistaActual() !== 'semana';
+    // En el cruce de medianoche (ayer sigue abierto y hoy aún no tiene entrada) la barra muestra los hitos de esa jornada, y el ciclo también
+    const regHoy = (est.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est.regHoy;
     const esEspecial = !!est.tipoEspecialHoy;
     const entradaHoy = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
     const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';
     const tiempoFueraHoy = (esDiaria && regHoy && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00' && !esEspecial) ? regHoy.tiempoFuera : '';
 
-    _cicloStatsValorHoras = vista.stats;
-    _cicloStatsEntrada = entradaHoy;
-    _cicloStatsSalida = salidaHoy;
-    _cicloStatsTiempoFuera = tiempoFueraHoy;
+    // con el hint integrado la barra muestra los hitos: el ciclo los resalta en lugar de repetir su texto, y con la jornada abierta suma la salida estimada y, si hay banda, la salida con banco
+    const linea = _hintIntegradoActivo() && esDiaria && !esEspecial ? vista.linea : null;
+    const salidaEstimada = linea && !linea.cerrado ? linea.horaSalida : '';
+    const salidaBanco = linea && !linea.cerrado && linea.hayBanda ? linea.horaBuffer : '';
 
-    if (_cicloStatsFaseAlRenderizar) {
-        const tipo = _cicloStatsFaseAlRenderizar;
-        _cicloStatsFaseAlRenderizar = null;
-        if (_iniciarCicloEnFase(tipo)) return;
-    }
+    // variante B: el nombre del hito va en el número grande y el CSS oculta su descripción en la barra
+    const nombreEnNumero = !!linea && _descHitosEnNumero();
+    $('stats-card')?.classList.toggle('desc-en-numero', nombreEnNumero);
+    CicloStats.actualizarDatos({ valorHoras: vista.stats, entrada: entradaHoy, salida: salidaHoy, tiempoFuera: tiempoFueraHoy, salidaEstimada, salidaBanco, hitosEnBarra: !!linea, nombreEnNumero });
 
-    if (!_cicloStatsInterval) {
+    const fase = CicloStats.tomarFasePendiente();
+    if (fase && CicloStats.iniciarEnFase(fase)) return;
+
+    if (!CicloStats.activo()) {
         if (conteo) {
             _animarConteo(el, conteo.texto);
         } else if (_conteoEnCurso(el) === vista.stats) {
@@ -589,24 +179,69 @@ function _renderBarra(vista, desdeCero = false) {
     const el = $('progress-bar');
     if (!el) return;
     const card = $('stats-card');
+    const punto = $('progress-punto');
+    const pista = el.closest('.progress-pista');
+    const esDiaria = EstadoApp.vistaActual() !== 'semana';
+    const conLinea = !!(_hintIntegradoActivo() && esDiaria && vista.linea && pista);
+    const conSemana = !!(_hintIntegradoActivo() && !esDiaria && vista.tramosSemana?.length && vista.anchoBarra > 0 && pista);
+    pista?.classList.toggle('con-linea', conLinea || conSemana);
+    pista?.classList.toggle('linea-semanal', conSemana);
+    // con el hint integrado la pista reserva siempre el alto de la línea (vista diaria o semanal), así nada se corre al cambiar de vista o crear el registro
+    pista?.classList.toggle('reserva-linea', _hintIntegradoActivo());
+    const anchoBarra = conLinea ? BarraHitos.escalaLinea(vista.linea)(vista.linea.ahoraRel) : vista.anchoBarra;
     const dur = desdeCero && card ? _durSiAnima('--dur-conteo') : 0;
     if (dur > 1) {
         card.classList.add('conteo-inicial');
         el.style.width = '0%';
+        if (punto) punto.style.left = '0%';
         void el.offsetWidth;
         TiempoUtils.esperar(dur + 100).then(() => card.classList.remove('conteo-inicial'));
     }
-    el.style.width = `${vista.anchoBarra}%`;
-    const esDiaria = D.vistaActual() !== 'semana';
+    el.style.width = `${anchoBarra}%`;
+    // vista semanal con hint integrado: la parte llena es un degradé a cortes netos por día (el relleno de cada franja con el color de su estado, huecos transparentes)
+    el.style.backgroundImage = conSemana ? BarraHitos.gradienteSemana(vista.tramosSemana, vista.anchoBarra / 100) : '';
+    el.style.backgroundColor = conSemana ? 'transparent' : '';   // los tramos sin color dejan ver la pista
+    if (punto) {
+        punto.style.left = `${anchoBarra}%`;
+        const esVisible = (vista.estadoFondo === 'en_curso' || !!vista.cerrado) && anchoBarra > 0;
+        punto.classList.toggle('visible', esVisible);
+        punto.classList.toggle('cerrado', !!vista.cerrado);
+        // abierto: el remate toma el color del tramo donde está; cerrado: el color final del registro
+        punto.dataset.color = conSemana ? vista.colorFinSemana : vista.cerrado ? (vista.colorCierre ?? vista.colorBarra) : vista.colorBarra;
+        // el último tramo de la barra se degrada hacia el color del remate
+        el.style.setProperty('--color-remate', `var(--c-${punto.dataset.color})`);
+        el.style.setProperty('--color-barra', `var(--c-${vista.colorBarra})`);
+    }
+    // remate del comienzo: acompaña al del final y toma el color del primer tramo
+    const inicio = $('progress-punto-inicio');
+    if (inicio && punto) {
+        inicio.classList.toggle('visible', punto.classList.contains('visible'));
+        inicio.classList.add('cerrado'); // siempre relleno: marca el hito del comienzo
+        inicio.dataset.color = conSemana ? vista.colorInicioSemana : (conLinea && !vista.cerrado ? 'blue' : vista.colorBarra);
+    }
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
+    const colorTramo = BarraHitos.render({ vista, pista: /** @type {HTMLElement} */ (pista), fill: el, conLinea, conSemana });
+    if (colorTramo && punto && !vista.cerrado) punto.dataset.color = colorTramo(anchoBarra);
+    el.classList.toggle('con-remate', !conLinea && !conSemana && vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
+    HoverBarra.actualizarDatos(conSemana ? { hitos: vista.hitosSemana ?? [], fin: vista.anchoBarra / 100 } : null);
 }
 
-function _renderMensaje(vista) {
+// Último mensaje renderizado, para reevaluar si entra en una línea al cambiar el ancho (rotar, redimensionar)
+let _mensajeActual = null;
+
+// Muestra el mensaje completo y, solo si se parte en dos líneas, la variante corta. Cada render parte del texto completo,
+// así que si en el minuto siguiente entra, vuelve solo; sin variante corta (o con el formato corto activo) no cambia nada.
+function _renderMensaje(vista = _mensajeActual) {
     const el = $('stats-mensaje');
-    if (!el) return;
+    if (!el || !vista) return;
+    _mensajeActual = vista;
+    el.classList.toggle('hidden', !vista.mostrarMensaje);
     el.textContent = vista.mensaje;
-    el.style.display = vista.mostrarMensaje ? 'block' : 'none';
+    if (!vista.mostrarMensaje || !vista.mensajeCorto || vista.mensajeCorto === vista.mensaje) return;
+    const estilo = getComputedStyle(el);
+    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
+    if (el.scrollHeight > alto * 1.5) el.textContent = vista.mensajeCorto;
 }
 
 function _renderCard(vista) {
@@ -620,14 +255,18 @@ function _renderCard(vista) {
 function _renderHint(vista) {
     const el = $('toggle-hint');
     if (!el) return;
-    if (vista.hintEsHTML) { el.innerHTML = vista.hint; }
+    if (_hintIntegradoActivo()) { el.textContent = vista.aviso || ''; return; }
+    if (esHtmlSeguro(vista.hint)) montar(el, vista.hint);
     else el.textContent = vista.hint;
 }
 
-function _renderBuffer(est) {
+// Último estado renderizado, para reevaluar si entra en una línea al cambiar el ancho (rotar, redimensionar)
+let _bufferActual = null;
+
+function _dibujarBuffer(est, corto) {
     const el = $('stats-buffer');
     if (!el) return;
-    el.innerHTML = '';
+    el.replaceChildren();
     const { bufferSemanal, horasDiarias, semanaAbierta } = est;
     if (horasDiarias > 0 && Math.abs(bufferSemanal) > 0.01 && semanaAbierta) {
         const esPositivo = bufferSemanal > 0;
@@ -636,12 +275,26 @@ function _renderBuffer(est) {
         punto.className = `buffer-semanal-punto ${claseColor}`;
         const span = document.createElement('span');
         span.className = `buffer-semanal-texto ${claseColor}`;
-        const { texto: textoBuffer, singular } = _cantidadHoras(Math.abs(bufferSemanal));
+        const { texto: textoBuffer, singular } = (corto ? _cantidadHorasCorta : _cantidadHoras)(Math.abs(bufferSemanal));
         const adjetivo = esPositivo ? (singular ? 'extra' : 'extras') : (singular ? 'faltante' : 'faltantes');
-        span.textContent = `${textoBuffer} ${adjetivo} esta semana`;
+        span.textContent = `${textoBuffer} ${adjetivo}`;
         span.insertBefore(punto, span.firstChild);
-        el.appendChild(span);
+        // " esta semana" va aparte: si ni con el tiempo abreviado entra en la misma línea, se oculta (ver #stats-buffer)
+        const sufijo = document.createElement('span');
+        sufijo.className = `buffer-semanal-texto buffer-semanal-sufijo ${claseColor}`;
+        sufijo.textContent = 'esta semana';
+        el.append(span, sufijo);
     }
+}
+
+// Muestra el tiempo completo y, solo si " esta semana" no entra en la línea, lo abrevia ("2h 48m"). Cada render parte del texto completo,
+// así que si luego entra, vuelve solo.
+function _renderBuffer(est = _bufferActual) {
+    const el = $('stats-buffer');
+    if (!el || !est) return;
+    _bufferActual = est;
+    _dibujarBuffer(est, false);
+    if (el.scrollHeight > el.clientHeight + 1) _dibujarBuffer(est, true);
 }
 
 function _animarCambioCard(renderFn) {
@@ -652,12 +305,12 @@ function _animarCambioCard(renderFn) {
         $('toggle-hint'),
     ];
 
-    _detenerCicloStats();
+    CicloStats.detener();
     _animarMutacion(els, renderFn);
 }
 
 function _planConteoInicial(vista, est) {
-    const esSemana = D.vistaActual() === 'semana';
+    const esSemana = EstadoApp.vistaActual() === 'semana';
     if (!esSemana) {
         const reg = est.regHoy;
         if (!reg || !reg.entrada || est.tipoEspecialHoy) return null;
@@ -665,24 +318,28 @@ function _planConteoInicial(vista, est) {
     const valor = esSemana ? est.totalSemana : est.tiempoHoy;
     if (!(valor > 0)) return null;
     const { horas, minutos } = TiempoUtils.descomponerHorasDecimales(valor);
-    const modo = _modoTextoStats();
+    const modo = vista.statsAjustado ? 'short' : _modoTextoStats();
     const texto = e => TiempoUtils.partesATexto(Math.round(horas * e), Math.round(minutos * e), modo, { horas, minutos });
     if (texto(1) !== vista.stats) return null;
     return { texto };
 }
 
+/** @param {any} [idNuevo] */
 function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false, conteoInicial = false) {
-    const asignacionesCompensatorio = D.calcularAsignacionesCompensatorio();
+    const asignacionesCompensatorio = Compensatorios.calcularAsignacionesCompensatorio();
 
     if (!soloReloj) {
         const idNuevoLista = Calendario.getVistaHistoricoCalendario() ? null : idNuevo;
-        Historico.actualizarListaRegistros(D.registros(), idNuevoLista, asignacionesCompensatorio);
+        Historico.actualizarListaRegistros(EstadoApp.registros(), idNuevoLista, asignacionesCompensatorio);
     }
 
-    const est = calcularEstadoCard(asignacionesCompensatorio);
-    const vista = D.vistaActual() === 'semana'
-        ? derivarVistaSemana(est)
-        : derivarVistaHoy(est);
+    const est = _calcularEstadoCard(asignacionesCompensatorio);
+    const vista = EstadoApp.vistaActual() === 'semana'
+        ? TarjetaFichajeVista.derivarVistaSemana(est)
+        : TarjetaFichajeVista.derivarVistaHoy(est);
+    _ajustarStatsAlAncho(vista);
+    _statsVista = vista;
+    _statsEst = est;
 
     const conteo = conteoInicial ? _planConteoInicial(vista, est) : null;
 
@@ -702,7 +359,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
         }
     }
 
-    const debeAnimar = !_suprimirAnimacionInterna && (animarCard || (idNuevo !== null && !soloReloj));
+    const debeAnimar = !_rendersSinAnimarActivos() && (animarCard || (idNuevo !== null && !soloReloj));
     const renderResto = () => {
         _renderStats(vista, est, conteo);
         _renderMensaje(vista);
@@ -717,35 +374,48 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
 }
 
 function _forzarVista(nuevaVista, renderFn) {
-    if (D.vistaActual() === nuevaVista) { return Promise.resolve(renderFn()); }
+    if (EstadoApp.vistaActual() === nuevaVista) { return Promise.resolve(renderFn()); }
     if (_timerAutoVista) { clearTimeout(_timerAutoVista); _timerAutoVista = null; }
     const card = $('stats-card');
     const content = $('stats-card-content');
     if (card) card.classList.add('cambiando-vista');
     return _animarFadeSwap(content, async () => {
-        D.setVistaActual(nuevaVista);
+        EstadoApp.setVistaActual(nuevaVista);
         Almacenamiento.setItem(STORAGE_KEYS.VISTA_ACTUAL, nuevaVista);
-        _detenerCicloStats();
-        _suprimirAnimacionInterna = true;
-        let resultado;
-        try {
-            resultado = await renderFn();
-        } finally {
-            _suprimirAnimacionInterna = false;
-        }
+        CicloStats.detener();
+        const resultado = await _conRendersSinAnimar(renderFn);
         if (card) card.classList.remove('cambiando-vista');
         return resultado;
     });
 }
 
 function alternarVista() {
-    const nuevaVista = D.vistaActual() === 'semana' ? 'diaria' : 'semana';
+    const nuevaVista = EstadoApp.vistaActual() === 'semana' ? 'diaria' : 'semana';
     _forzarVista(nuevaVista, () => actualizarUI());
 }
 
 function bindEventos() {
+    // el ciclo del número grande avisa qué fase muestra y la barra resalta su hito
+    CicloStats.alCambiarFase(tipo => FocoHitos.enfocar(tipo));
+
+    // al pasar el cursor por el tramo de un día de la vista semanal (solo escritorio) se escribe su total y su rango horario; al salir vuelve lo de siempre
+    HoverBarra.conectarTextos({
+        mostrar: (stats, mensaje) => {
+            const num = $('stats-semana');
+            if (num && stats !== null) num.textContent = stats;
+            const msg = $('stats-mensaje');
+            if (msg && mensaje !== null) { msg.classList.remove('hidden'); msg.textContent = mensaje; }
+        },
+        restaurar: () => {
+            const num = $('stats-semana');
+            if (num && !CicloStats.activo()) num.textContent = _statsActual;
+            _renderMensaje();
+        }
+    });
+    HoverBarra.bindEventos();
+
     (function () {
-        const header = document.querySelector('.header');
+        const header = /** @type {HTMLElement} */ (document.querySelector('.header'));
         const statsCard = $('stats-card');
         if (!header || !statsCard) return;
 
@@ -767,14 +437,20 @@ function bindEventos() {
         let resizeTimer = null;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(crearObserver, 200);
+            resizeTimer = setTimeout(() => {
+                crearObserver();
+                BarraHitos.redibujar();
+                _renderMensaje();
+                _renderBuffer();
+                if (_statsVista && _statsEst) { _ajustarStatsAlAncho(_statsVista); _renderStats(_statsVista, _statsEst); }
+            }, 200);
         });
     })();
 
     $('stats-card')?.addEventListener('click', (e) => {
-        const enStatsNumber = e.target.closest('#stats-semana');
-        if (enStatsNumber && D.vistaActual() !== 'semana' && !_cicloStatsActivo()) {
-            const ciclado = _iniciarCicloStats(true);
+        const enStatsNumber = /** @type {HTMLElement} */ (e.target).closest('#stats-semana');
+        if (enStatsNumber && EstadoApp.vistaActual() !== 'semana' && !CicloStats.activo()) {
+            const ciclado = CicloStats.iniciar(true);
             if (ciclado) {
                 e.stopPropagation();
                 return;
@@ -807,34 +483,9 @@ function bindEventos() {
 
 export const TarjetaFichaje = {
     bindEventos,
-    setFondoCard,
-    toggleFondoCard,
-    calcularEstadoCard,
-    derivarVistaSemana,
-    derivarVistaHoy,
     actualizarUI,
     alternarVista,
     _forzarVista,
-    _renderTituloAnimado,
-    actualizarEstadoBotonTimerMain,
-    toggleTimerBreakMain,
-    toggleModoLote,
-    ejecutarAccionRegistro,
-    registrarLoteDesdeCard,
-    poblarSelectoresTipos,
-    actualizarBotonLote,
-    toggleFormulario,
-    _irAFicharConFecha,
-    _scrollACardFichar,
-    alternarFechaActual,
-    pegarHoraActual,
-    limpiarCampo,
-    getFondoCard,
     setTimerAutoVista: (v) => { _timerAutoVista = v; },
-    _getLabelFondo,
-    _iniciarCicloStats,
-    _detenerCicloStats,
-    _cicloStatsActivo,
-    _prepararMostrarFaseAlRenderizar,
-    _refrescarFormatoCortoStatsCache,
+    _retenerRegistroAyer,
 };

@@ -1,23 +1,26 @@
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
-const D = GestionDatos;
+import { EstadoApp } from '../services/estado-app.js';
+import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
+import { resetearBoton, setIconoBtn, cancelarExitoFichaje, animarExitoFichaje, obtenerIconoBtn } from './boton-fichar.js';
+import { _scrollHastaVisible } from './scroll.js';
+import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 //           UI CARD BATCH / FORM & INPUT HELPERS MODULE
 // ====================================================================
-const {
-    mostrarToast, resetearBoton, _setBtnDisabled, _flashCampo, _avisarFichaje,
-    _animarFadeSwap, _animarSlideElemento, toggleSeccionGen, _crearOpcion,
-    setIconoBtn, aplicarFeedbackCampos, _esperarAnim, _scrollHastaVisible
-} = UIBase;
-const actualizarEstadoBotonTimerMain = (...args) => D._notify().actualizarEstadoBotonTimerMain(...args);
+const ESPERA_SALIR_LOTE_MS = 350;   // deja terminar el cierre del modal antes de salir del modo lote
+
+const { _flashCampo, _avisarFichaje, toggleSeccionGen, _crearOpcion, aplicarFeedbackCampos } = UIBase;
+const { _animarFadeSwap, _animarSlideElemento, _esperarAnim, _animarValor, _durSiAnima } = Animaciones;
+const actualizarEstadoBotonTimerMain = (...args) => EstadoApp._notify().actualizarEstadoBotonTimerMain(...args);
 
 let modoLoteActivo = false;
+let _pintandoSinAnimar = false;
 
 function _alternarValorCampo(id, obtenerValor) {
     const input = $(id);
@@ -42,7 +45,6 @@ function toggleModoLote(deltaSwipe, conAnimacion = true) {
     const modoContenedor = $('modo-contenedor');
     const modoNormal = $('modo-normal');
     const modoLote = $('modo-lote');
-    const btnTexto = $('btn-registrar-texto');
     const btnTimer = $('btn-timer-main');
     const btn = $('btn-agregar');
 
@@ -50,26 +52,31 @@ function toggleModoLote(deltaSwipe, conAnimacion = true) {
     const delta = deltaSwipe !== undefined ? deltaSwipe : (modoLoteActivo ? 1 : -1);
 
     const aplicarCambiosLote = () => {
-        modoNormal.style.display = 'none';
-        modoLote.style.display = 'block';
+        modoNormal.classList.add('hidden');
+        modoLote.classList.remove('hidden');
 
         $('lote-tipo').value = 'feriado';
         $('lote-fecha-desde').value = '';
         $('lote-fecha-hasta').value = '';
 
-        btn.classList.remove('btn-color-muted', 'btn-color-red');
-
-        setIconoBtn(btn, '#icon-save');
-
         btnTimer.disabled = true;
 
-        actualizarBotonLote();
+        _animarFadeSwap(btn, () => {
+            btn.classList.remove('btn-color-muted', 'btn-color-red');
+            cancelarExitoFichaje(btn);
+            setIconoBtn(btn, '#icon-calendar-simple');
+            _pintandoSinAnimar = true;
+            try { actualizarBotonLote(); } finally { _pintandoSinAnimar = false; }
+        });
     };
 
     const aplicarCambiosNormal = () => {
-        modoLote.style.display = 'none';
-        modoNormal.style.display = 'block';
-        resetearBoton(btn);
+        modoLote.classList.add('hidden');
+        modoNormal.classList.remove('hidden');
+        _animarFadeSwap(btn, () => {
+            cancelarExitoFichaje(btn);
+            resetearBoton(btn);
+        });
         actualizarEstadoBotonTimerMain();
     };
 
@@ -94,14 +101,15 @@ function _limpiarCamposLote() {
 }
 
 async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
-    if (D.existeRegistroEnFecha(fecha)) {
+    if (EstadoApp.existeRegistroEnFecha(fecha)) {
         _avisarFichaje(mensajeDuplicado, 'warning'); return;
     }
     try {
-        await GestionDatos.registrarDiaEspecial(fecha, tipo);
+        await FiltrosYPeriodos.registrarDiaEspecial(fecha, tipo);
         alExito?.();
         _limpiarCamposLote();
         actualizarBotonLote();
+        animarExitoFichaje($('btn-agregar'));
     } catch (e) { console.error('Error al registrar:', e); }
 }
 
@@ -142,8 +150,8 @@ async function registrarLoteDesdeCard() {
     }
 
     try {
-        if (tipo === 'normal') await GestionDatos.borrarPeriodoDirecto(desde, hasta);
-        else await GestionDatos.registrarVacacionesDirecto(desde, hasta, tipo);
+        if (tipo === 'normal') await FiltrosYPeriodos.borrarPeriodoDirecto(desde, hasta);
+        else await FiltrosYPeriodos.registrarVacacionesDirecto(desde, hasta, tipo);
         aplicarFeedbackCampos(
             [
                 { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
@@ -154,6 +162,7 @@ async function registrarLoteDesdeCard() {
         );
         _limpiarCamposLote();
         actualizarBotonLote();
+        animarExitoFichaje($('btn-agregar'));
     } catch (e) { console.error('Error en operación de lote:', e); }
 }
 
@@ -163,24 +172,97 @@ function poblarSelectoresTipos() {
 
     const cfg = [
         { id: 'lote-tipo', getLabel: t => `${t.emoji} ${t.label}`, extra: [{ value: 'normal', text: '🕒 Jornadas (borrar)' }] },
-        { id: 'filtro-tipo', getLabel: t => `${t.emoji} ${t.labelPlural}`, prefix: '<option value="">Todos</option><option value="normal">🕒 Jornadas</option>' },
+        { id: 'filtro-tipo', getLabel: t => `${t.emoji} ${t.labelPlural}`, prefix: [{ value: '', text: 'Todos' }, { value: 'normal', text: '🕒 Jornadas' }] },
         { id: 'edit-grupo-tipo', getLabel: t => `${t.emoji} ${t.label}` },
     ];
 
-    cfg.forEach(({ id, getLabel, prefix = '', extra = [] }) => {
+    cfg.forEach(({ id, getLabel, prefix = [], extra = [] }) => {
         const sel = $(id);
         if (!sel) return;
-        sel.innerHTML = prefix;
+        sel.replaceChildren(...prefix.map(e => _crearOpcion(e.value, e.text)));
         tipos.forEach(t => sel.appendChild(_crearOpcion(t.id, getLabel(t))));
         extra.forEach(e => sel.appendChild(_crearOpcion(e.value, e.text)));
     });
 }
 
-function _pintarBotonLote(btn, btnTexto, texto, claseColor = '', icono = '#icon-save') {
-    btnTexto.textContent = texto;
-    btn.classList.remove('btn-color-muted', 'btn-color-red');
-    if (claseColor) btn.classList.add(claseColor);
-    setIconoBtn(btn, icono);
+// Ícono por defecto del botón en modo lote: escoba al borrar jornadas, calendario en el resto
+const _iconoLoteDefecto = () => ($('lote-tipo')?.value === 'normal' ? '#icon-broom' : '#icon-calendar-simple');
+
+const _CLASES_COLOR_LOTE = ['btn-color-muted', 'btn-color-red'];
+
+// "Fichar (3 - 1)" → { base: 'Fichar', cont: '3 - 1' }; sin paréntesis → cont: null
+const _partesTexto = t => {
+    const m = /^(.*?)\s*\((.*)\)$/.exec(t);
+    return m ? { base: m[1], cont: m[2] } : { base: t, cont: null };
+};
+
+// Dibuja el texto separando el contador (textContent sigue dando el texto completo)
+function _renderTextoLote(el, texto) {
+    const { base, cont } = _partesTexto(texto);
+    el.textContent = base;
+    if (cont !== null) {
+        const c = document.createElement('span');
+        const n = document.createElement('span');
+        c.className = 'btn-cont';
+        n.className = 'btn-num';
+        n.textContent = cont;
+        c.append('(', n, ')');
+        el.append(' ', c);
+    }
+    el.dataset.texto = texto;
+}
+
+const _ANIM_CONT_OPTS = dur => ({ duration: dur, easing: 'ease-out', fill: 'both' });
+
+function _entrarContador(el) {
+    const dur = _durSiAnima('--dur-valor', el);
+    const c = el.querySelector('.btn-cont');
+    if (dur && c) c.animate([{ opacity: 0, transform: 'translateY(40%)' }, { opacity: 1, transform: 'translateY(0)' }], _ANIM_CONT_OPTS(dur));
+}
+
+function _salirContador(el, texto) {
+    const dur = _durSiAnima('--dur-valor', el);
+    const c = el.querySelector('.btn-cont');
+    if (!dur || !c) { _renderTextoLote(el, texto); return; }
+    c.classList.add('btn-cont--sale');
+    c.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-40%)' }], _ANIM_CONT_OPTS(dur));
+    el.dataset.texto = texto;
+    setTimeout(() => { if (c.isConnected) c.remove(); }, dur);
+}
+
+// Cambia texto/ícono/color del botón en modo lote con animación:
+// - solo cambia el valor del contador ("Fichar (3)" → "Fichar (5)"): se desplaza solo el número
+// - aparece o desaparece el contador: entra/sale solo el contador
+// - cambia el texto o el estado (ícono/color): cross-fade del botón
+// - sin cambios: no hace nada, así no parpadea mientras se escribe en los campos
+function _pintarBotonLote(btn, btnTexto, texto, claseColor = '', icono = _iconoLoteDefecto()) {
+    const aplicarEstilo = () => {
+        btn.classList.remove(..._CLASES_COLOR_LOTE);
+        if (claseColor) btn.classList.add(claseColor);
+        setIconoBtn(btn, icono);
+    };
+    const textoActual = btnTexto.dataset.texto ?? btnTexto.textContent;
+    const mismoEstilo = (_CLASES_COLOR_LOTE.find(c => btn.classList.contains(c)) || '') === claseColor
+        && obtenerIconoBtn(btn) === icono;
+
+    if (texto === textoActual && mismoEstilo) return;
+    btnTexto.querySelectorAll('.btn-cont--sale').forEach(n => n.remove());
+
+    if (_pintandoSinAnimar) { _renderTextoLote(btnTexto, texto); aplicarEstilo(); return; }
+
+    const antes = _partesTexto(textoActual), ahora = _partesTexto(texto);
+    if (mismoEstilo && antes.base === ahora.base) {
+        if (antes.cont !== null && ahora.cont !== null) {
+            const num = btnTexto.querySelector('.btn-num');
+            if (num) {
+                btnTexto.dataset.texto = texto;
+                _animarValor(num, ahora.cont, Math.sign((parseInt(ahora.cont, 10) || 0) - (parseInt(antes.cont, 10) || 0)) || 1);
+                return;
+            }
+        } else if (antes.cont !== null) { _salirContador(btnTexto, texto); return; }
+        else if (ahora.cont !== null) { _renderTextoLote(btnTexto, texto); _entrarContador(btnTexto); return; }
+    }
+    _animarFadeSwap(btn, () => { _renderTextoLote(btnTexto, texto); aplicarEstilo(); });
 }
 
 function _setBtnError(btn, btnTexto, mensaje) {
@@ -188,7 +270,7 @@ function _setBtnError(btn, btnTexto, mensaje) {
 }
 
 function _actualizarBtnNormal(btn, btnTexto, desde, hasta) {
-    const n = GestionDatos.registros().filter(r =>
+    const n = EstadoApp.registros().filter(r =>
         r.fecha >= desde && r.fecha <= hasta && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
     ).length;
     n > 0
@@ -200,11 +282,11 @@ function _actualizarBtnEspecial(btn, btnTexto, desde, hasta, tipo, diasTotales) 
     const codigosTipo = TiposRegistro.obtenerCodigosPorTipo(tipo);
     if (!codigosTipo) return _pintarBotonLote(btn, btnTexto, 'Fichar');
 
-    const yaRegistrados = GestionDatos.registros().filter(r =>
+    const yaRegistrados = EstadoApp.registros().filter(r =>
         r.fecha >= desde && r.fecha <= hasta &&
         r.entrada === codigosTipo.entrada && r.salida === codigosTipo.salida
     ).length;
-    const diasOcupados = GestionDatos.registros().filter(r => r.fecha >= desde && r.fecha <= hasta).length;
+    const diasOcupados = EstadoApp.registros().filter(r => r.fecha >= desde && r.fecha <= hasta).length;
     const disponibles = diasTotales - diasOcupados;
     const sobreescribirOtros = diasOcupados - yaRegistrados;
 
@@ -225,7 +307,7 @@ function actualizarBotonLote() {
         if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Completar rango');
 
         const hoy = TiempoUtils.obtenerFechaHoy();
-        const existeHoy = D.existeRegistroEnFecha(hoy);
+        const existeHoy = EstadoApp.existeRegistroEnFecha(hoy);
         return existeHoy
             ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
             : _pintarBotonLote(btn, btnTexto, 'Fichar');
@@ -235,7 +317,7 @@ function actualizarBotonLote() {
     if (!TiempoUtils.validarFecha(desde)) return _setBtnError(btn, btnTexto, 'Fecha Inicial Inválida');
     if (desde && !hasta) {
         if (tipo === 'normal') return _setBtnError(btn, btnTexto, 'Rango incompleto');
-        const existe = D.existeRegistroEnFecha(desde);
+        const existe = EstadoApp.existeRegistroEnFecha(desde);
         return existe
             ? _pintarBotonLote(btn, btnTexto, 'Fichado', 'btn-color-muted')
             : _pintarBotonLote(btn, btnTexto, 'Fichar');
@@ -244,7 +326,7 @@ function actualizarBotonLote() {
     if (!TiempoUtils.validarFecha(hasta)) return _setBtnError(btn, btnTexto, 'Fecha Final Inválida');
     if (desde > hasta) return _setBtnError(btn, btnTexto, 'Rango Inválido');
 
-    const diasTotales = Math.ceil(Math.abs(TiempoUtils.parsearFechaLocal(hasta) - TiempoUtils.parsearFechaLocal(desde)) / 864e5) + 1;
+    const diasTotales = Math.ceil(Math.abs(TiempoUtils.parsearFechaLocal(hasta).getTime() - TiempoUtils.parsearFechaLocal(desde).getTime()) / 864e5) + 1;
 
     return tipo === 'normal'
         ? _actualizarBtnNormal(btn, btnTexto, desde, hasta)
@@ -275,7 +357,7 @@ function toggleFormulario() {
                 if (modoLoteActivo) {
                     toggleModoLote(undefined, false);
                 }
-            }, 350);
+            }, ESPERA_SALIR_LOTE_MS);
         } else {
             actualizarEstadoBotonTimerMain();
         }
@@ -314,7 +396,7 @@ async function _irAFicharConFecha(fecha, esEspecial) {
 }
 
 function _scrollACardFichar(el) {
-    const headerEl = document.querySelector('.header');
+    const headerEl = /** @type {HTMLElement} */ (document.querySelector('.header'));
     const margen = (headerEl ? headerEl.offsetHeight : 0) + 8;
     return _scrollHastaVisible(el, { margenSuperior: margen });
 }
@@ -335,11 +417,9 @@ export const TarjetaLote = {
     limpiarCampo,
     toggleModoLote,
     ejecutarAccionRegistro,
-    registrarLoteDesdeCard,
     poblarSelectoresTipos,
     actualizarBotonLote,
     toggleFormulario,
     _irAFicharConFecha,
-    _scrollACardFichar,
     alternarFechaActual
 };

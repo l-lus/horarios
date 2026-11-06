@@ -5,11 +5,73 @@ import { TiposRegistro } from './tipos-registro.js';
 // ====================================================================
 // CENTRAL APPLICATION STATE & BASE RECORD CALCULATIONS MODULE
 // ====================================================================
+/**
+ * Formulario "Fichar": los servicios lo leen/escriben sin conocer el DOM (lo implementa ui/formularios.js).
+ * Los valores de `leer` son crudos: el servicio los sanitiza.
+ * @typedef {Object} FormularioRegistro
+ * @property {() => { fecha: string, entrada: string, salida: string }} leer
+ * @property {(campos: { fecha?: string, entrada?: string, salida?: string }) => void} escribir
+ * @property {() => any} bloquearBoton deshabilita el botón de fichar y devuelve un handle opaco para notify.avisarFichaje/resetearBoton
+ */
+
+/**
+ * Formulario del modal de edición de un registro (implementado en ui/formularios.js).
+ * @typedef {Object} FormularioEdicion
+ * @property {() => { fecha: string, entrada: string, salida: string, tiempoFuera: string, notas: string, objetivo: number, referencia: string, creditoActivo: boolean }} leer
+ * @property {(datos: { fecha: string, entrada: string, salida: string, tiempoFuera: string, notas: string, objetivo: number, esCompensatorio: boolean, referencia: string, creditoActivo: boolean }) => void} poblar
+ * @property {() => void} refrescarHintResumen
+ * @property {() => boolean} tieneCampoReferencia
+ * @property {(valor: string) => void} escribirReferencia
+ * @property {() => any} bloquearGuardar devuelve handle opaco para notify.restaurarBotonGuardarEdicion
+ * @property {() => any} bloquearEliminar
+ * @property {(handle: any) => void} liberarEliminar
+ */
+
+/**
+ * Puerto hacia la UI: lo que los servicios pueden pedirle (la UI lo implementa en orquestador.js).
+ * @typedef {Object} Notificaciones
+ * @property {(mensaje: string, tipo?: string, duracion?: number, detalle?: string|null, accion?: Function|null) => void} mostrarToast
+ * @property {(texto: string, etiqueta?: string, icono?: string, opciones?: object) => Promise<boolean>} confirmarModal
+ * @property {FormularioRegistro} formularioRegistro
+ * @property {FormularioEdicion} formularioEdicion
+ * @property {() => boolean} hayUIBloqueante
+ * @property {() => number} leerObjetivoEdicion objetivo (horas) mostrado en el formulario de edición; NaN si no hay
+ * @property {() => string} temaGuardado
+ * @property {() => string} obtenerNombrePerfilSafe
+ * @property {(vista: string, fn: () => any) => any} forzarVista
+ * @property {(...args: any[]) => void} abrirModal
+ * @property {(...args: any[]) => void} actualizarEstadoBotonTimerMain
+ * @property {(...args: any[]) => void} actualizarHintGrupo
+ * @property {(...args: any[]) => void} actualizarUI
+ * @property {(...args: any[]) => void} animarExitoFichaje
+ * @property {(...args: any[]) => void} aplicarFeedbackCampos
+ * @property {(...args: any[]) => void} avisarFichaje
+ * @property {(...args: any[]) => void} cerrarEdicion
+ * @property {(...args: any[]) => void} cerrarEdicionGrupo
+ * @property {(...args: any[]) => void} cerrarFiltros
+ * @property {(...args: any[]) => void} cerrarImportar
+ * @property {(...args: any[]) => void} cerrarTodosModales
+ * @property {(...args: any[]) => void} descargarJSON
+ * @property {(...args: any[]) => void} iniciarTimerAutoCierreBotones
+ * @property {(...args: any[]) => void} limpiarError
+ * @property {(...args: any[]) => void} mostrarError
+ * @property {(...args: any[]) => void} prepararMostrarFaseAlRenderizar
+ * @property {(...args: any[]) => void} refrescarConfigSiVisible
+ * @property {(id: string | null) => void} retenerRegistroAyer
+ * @property {(...args: any[]) => void} resetearBoton
+ * @property {(...args: any[]) => void} restaurarBotonGuardarEdicion
+ * @property {(...args: any[]) => void} setBloqueoEdicion
+ * @property {(...args: any[]) => void} setBloqueoEdicionGrupo
+ * @property {(...args: any[]) => void} verificarBloqueoCredito
+ */
+
+/** @type {Notificaciones} */
 let notify = {
     abrirModal: () => { },
     actualizarEstadoBotonTimerMain: () => { },
     actualizarHintGrupo: () => { },
     actualizarUI: () => { },
+    animarExitoFichaje: () => { },
     aplicarFeedbackCampos: () => { },
     avisarFichaje: () => { },
     cerrarEdicion: () => { },
@@ -20,6 +82,23 @@ let notify = {
     confirmarModal: async () => false,
     descargarJSON: () => { },
     forzarVista: (vista, fn) => fn(),
+    formularioRegistro: {
+        leer: () => ({ fecha: '', entrada: '', salida: '' }),
+        escribir: () => { },
+        bloquearBoton: () => null,
+    },
+    formularioEdicion: {
+        leer: () => ({ fecha: '', entrada: '', salida: '', tiempoFuera: '', notas: '', objetivo: NaN, referencia: '', creditoActivo: false }),
+        poblar: () => { },
+        refrescarHintResumen: () => { },
+        tieneCampoReferencia: () => false,
+        escribirReferencia: () => { },
+        bloquearGuardar: () => null,
+        bloquearEliminar: () => null,
+        liberarEliminar: () => { },
+    },
+    hayUIBloqueante: () => false,
+    leerObjetivoEdicion: () => NaN,
     iniciarTimerAutoCierreBotones: () => { },
     limpiarError: () => { },
     mostrarError: () => { },
@@ -27,6 +106,7 @@ let notify = {
     obtenerNombrePerfilSafe: () => '',
     prepararMostrarFaseAlRenderizar: () => { },
     refrescarConfigSiVisible: () => { },
+    retenerRegistroAyer: () => { },
     resetearBoton: () => { },
     restaurarBotonGuardarEdicion: () => { },
     setBloqueoEdicion: () => { },
@@ -35,6 +115,7 @@ let notify = {
     verificarBloqueoCredito: () => { },
 };
 
+/** @param {Partial<Notificaciones>} handlers */
 function configurarNotificaciones(handlers) {
     notify = { ...notify, ...handlers };
 }
@@ -52,10 +133,12 @@ let filtroHasta = null;
 let filtroTipo = null;
 let grupoEnEdicion = null;
 
+/** @type {{ obtenerPerfilActual: () => string, guardarDatosPerfilActual: (() => boolean) | null }} */
 let _perfilHooks = {
     obtenerPerfilActual: () => 'default',
     guardarDatosPerfilActual: null
 };
+/** @type {(...args: any[]) => any} */
 let _sincronizarPushHoyFn = () => { };
 
 function setPerfilHooks(hooks) {
@@ -89,6 +172,7 @@ function _fechaFuturaInvalida(fecha, entrada, salida) {
     return fecha > TiempoUtils.obtenerFechaHoy() && !TiposRegistro.esRegistroEspecial(entrada, salida);
 }
 
+/** @param {any} [tf] @param {any} [cr] */
 function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
     const tfEfectivo = ignorarTiempoFuera ? null : tf;
     const tfMinutos = tfEfectivo ? TiempoUtils.horaAMinutos(tfEfectivo) : 0;
@@ -119,6 +203,7 @@ function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
     return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
 }
 
+/** @param {any} [tf] @param {any} [cr] */
 function _aplicarCalculoHoras(r, e, s, tf = null, cr = null, calcularFn = calcularHoras) {
     const t = calcularFn(e, s, tf, cr);
     r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
@@ -140,6 +225,7 @@ function _construirRegistro(fecha, entrada, salida) {
     };
 }
 
+/** @param {any} [idNuevo] */
 async function guardarYActualizar(idNuevo = null, animarCard = false) {
     let saveSuccessful = false;
     try {
@@ -157,6 +243,7 @@ async function guardarYActualizar(idNuevo = null, animarCard = false) {
     return saveSuccessful;
 }
 
+/** @param {any} [fase] */
 async function _guardarConCicloSiHoy(idOrIds, esHoy, fase = null) {
     const ejecutar = async () => {
         if (esHoy && fase) notify.prepararMostrarFaseAlRenderizar(fase);
@@ -201,7 +288,6 @@ export const EstadoApp = {
     getGrupoEnEdicion: () => grupoEnEdicion,
     setGrupoEnEdicion: (val) => { grupoEnEdicion = val; },
     ordenarRegistros,
-    _ordenarRegistros: ordenarRegistros,
     registroPorFecha,
     registroPorId,
     existeRegistroEnFecha,

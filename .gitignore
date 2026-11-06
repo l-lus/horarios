@@ -7,3 +7,6 @@ docs/
 *.json
 !assets/manifest.json
 .env
+!package.json
+!tsconfig.json
+!package-lock.json

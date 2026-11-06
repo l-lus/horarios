@@ -145,11 +145,6 @@ function horasATexto(totalHoras, modo = 'long') {
     return (esNegativo ? '-' : '') + partesATexto(horas, minutos, modo);
 }
 
-function _esCantidadSingular(textoHoras) {
-    const t = textoHoras.startsWith('-') ? textoHoras.slice(1) : textoHoras;
-    return t.startsWith('1 hora') || t === '1 minuto';
-}
-
 function formatoDiferencia(totalHoras, horasDiariasObjetivo) {
     const diffMinutos = Math.round(totalHoras * 60) - (horasDiariasObjetivo * 60);
     if (diffMinutos === 0) return '';
@@ -234,6 +229,6 @@ export const TiempoUtils = {
     obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
     horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
     obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
-    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, _esCantidadSingular, pluralizar,
+    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, pluralizar,
     generarRangoFechas, fechaCorta, segundosAMinutosRedondeado, _pad2, esperar
 };

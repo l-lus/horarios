@@ -46,14 +46,14 @@ function mostrarError(inputId, errorId) {
     const input = $(inputId);
     const error = $(errorId);
     if (input) input.classList.add('error');
-    if (error) error.style.display = 'block';
+    if (error) error.classList.remove('hidden');
 }
 
 function limpiarError(inputId, errorId) {
     const input = $(inputId);
     const error = $(errorId);
     if (input) input.classList.remove('error');
-    if (error) error.style.display = 'none';
+    if (error) error.classList.add('hidden');
 }
 
 function obtenerNombrePerfilSafe() {

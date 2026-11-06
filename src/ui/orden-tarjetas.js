@@ -30,7 +30,7 @@ function toggleVisibilidadCard(cual) {
 
 function aplicarVisibilidadCard(cual, visible) {
     const card = $('card-' + cual);
-    if (card) card.style.display = visible ? '' : 'none';
+    if (card) card.classList.toggle('hidden', !visible);
 }
 
 function aplicarVisibilidadCards() {
@@ -87,7 +87,7 @@ function _contenedores() {
 /** Muestra solo las columnas que tienen tarjetas visibles y fija cuántas hay (el CSS ensancha la página con 3). */
 function _actualizarColumnas() {
     const contenedores = _contenedores();
-    const hayTarjetaVisible = (c) => /** @type {HTMLElement[]} */ (Array.from(c.children)).some(el => _esCard(el) && el.style.display !== 'none');
+    const hayTarjetaVisible = (c) => /** @type {HTMLElement[]} */ (Array.from(c.children)).some(el => _esCard(el) && !el.classList.contains('hidden'));
     let n = 1;
     contenedores.forEach((c, i) => {
         if (!c || i === 0) return;
@@ -145,7 +145,7 @@ function obtenerCardsVisibles() {
     _contenedores().forEach(columna => {
         if (!columna) return;
         /** @type {HTMLElement[]} */ (Array.from(columna.children)).forEach(el => {
-            if (el.id && _esCard(el) && el.style.display !== 'none' && !el.classList.contains('d-none')) {
+            if (el.id && _esCard(el) && !el.classList.contains('hidden')) {
                 cards.push(el);
             }
         });
@@ -182,7 +182,7 @@ function evaluarNuevasColumnas(arrastrado, columnas, clientX, clientY) {
 
     // Delante de la primera tarjeta visible de la columna (sin contar la arrastrada) cuya mitad quede por debajo del puntero
     const antes = /** @type {HTMLElement[]} */ (Array.from(zona.el.children))
-        .filter(el => _esCard(el) && el !== arrastrado && el.style.display !== 'none')
+        .filter(el => _esCard(el) && el !== arrastrado && !el.classList.contains('hidden'))
         .find(el => { const r = el.getBoundingClientRect(); return clientY < r.top + r.height / 2; });
 
     return moverCard(columnas, id, zona.indice, antes ? _idDeCard(antes) : null, opciones);

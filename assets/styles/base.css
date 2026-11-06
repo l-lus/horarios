@@ -1058,8 +1058,7 @@ mark.ayuda-resaltado--activa {
 
 .svg-sprite,
 #btn-install,
-#file-import,
-#modo-lote {
+#file-import {
     display: none;
 }
 

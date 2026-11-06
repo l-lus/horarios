@@ -50,8 +50,8 @@ function toggleModoLote(deltaSwipe, conAnimacion = true) {
     const delta = deltaSwipe !== undefined ? deltaSwipe : (modoLoteActivo ? 1 : -1);
 
     const aplicarCambiosLote = () => {
-        modoNormal.style.display = 'none';
-        modoLote.style.display = 'block';
+        modoNormal.classList.add('hidden');
+        modoLote.classList.remove('hidden');
 
         $('lote-tipo').value = 'feriado';
         $('lote-fecha-desde').value = '';
@@ -69,8 +69,8 @@ function toggleModoLote(deltaSwipe, conAnimacion = true) {
     };
 
     const aplicarCambiosNormal = () => {
-        modoLote.style.display = 'none';
-        modoNormal.style.display = 'block';
+        modoLote.classList.add('hidden');
+        modoNormal.classList.remove('hidden');
         _animarFadeSwap(btn, () => {
             cancelarExitoFichaje(btn);
             resetearBoton(btn);

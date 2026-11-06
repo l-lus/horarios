@@ -43,7 +43,7 @@ function mostrarImportar(desdeLista = false) {
 
         const nombreEl = $('nombre-archivo-seleccionado');
         if (nombreEl) {
-            nombreEl.style.display = 'none';
+            nombreEl.classList.add('hidden');
             nombreEl.textContent = '';
         }
 

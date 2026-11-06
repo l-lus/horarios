@@ -37,7 +37,7 @@ function _renderizarStats(stats, opciones = {}) {
     const toggleStatItem = (id, value) => {
         const el = $(id); if (!el) return;
         const si = /** @type {HTMLElement} */ (el.closest('.stat-item'));
-        if (si) { if (value === 0) { si.style.display = 'none'; } else { si.style.display = ''; el.textContent = value; } }
+        if (si) { si.classList.toggle('hidden', value === 0); if (value !== 0) el.textContent = value; }
     };
     toggleStatItem('stat-dias-trabajados', stats.diasTrabajados);
 
@@ -64,9 +64,9 @@ function _renderizarStats(stats, opciones = {}) {
     const itemSaldo = $('stat-item-saldo');
     if (elSaldo && itemSaldo) {
         if (stats.bufferPeriodo === null) {
-            itemSaldo.style.display = 'none';
+            itemSaldo.classList.add('hidden');
         } else {
-            itemSaldo.style.display = '';
+            itemSaldo.classList.remove('hidden');
             const b = stats.bufferPeriodo;
             elSaldo.textContent = b === 0 ? '0h' : TiempoUtils.horasATexto(b, 'short');
             elSaldo.classList.remove('saldo-positivo', 'saldo-negativo', 'saldo-neutro');

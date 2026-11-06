@@ -404,11 +404,11 @@ function _initListenersOtros() {
             const btnReemplazar = $('btn-reemplazar');
             const hayArchivo = (/** @type {HTMLInputElement} */ (e.target).files?.length ?? 0) > 0;
             if (hayArchivo) {
-                if (nombreEl) { nombreEl.textContent = `✓ ${/** @type {HTMLInputElement} */ (e.target).files?.[0].name}`; nombreEl.style.display = 'block'; }
+                if (nombreEl) { nombreEl.textContent = `✓ ${/** @type {HTMLInputElement} */ (e.target).files?.[0].name}`; nombreEl.classList.remove('hidden'); }
                 if (btnCombinar) btnCombinar.disabled = false;
                 if (btnReemplazar) btnReemplazar.disabled = false;
             } else {
-                if (nombreEl) { nombreEl.style.display = 'none'; nombreEl.textContent = ''; }
+                if (nombreEl) { nombreEl.classList.add('hidden'); nombreEl.textContent = ''; }
                 if (btnCombinar) btnCombinar.disabled = true;
                 if (btnReemplazar) btnReemplazar.disabled = true;
             }

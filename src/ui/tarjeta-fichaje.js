@@ -198,7 +198,7 @@ function _renderMensaje(vista = _mensajeActual) {
     const el = $('stats-mensaje');
     if (!el || !vista) return;
     _mensajeActual = vista;
-    el.style.display = vista.mostrarMensaje ? 'block' : 'none';
+    el.classList.toggle('hidden', !vista.mostrarMensaje);
     el.textContent = vista.mensaje;
     if (!vista.mostrarMensaje || !vista.mensajeCorto || vista.mensajeCorto === vista.mensaje) return;
     const estilo = getComputedStyle(el);

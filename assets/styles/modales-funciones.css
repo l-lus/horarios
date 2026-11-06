@@ -774,7 +774,6 @@ body.tarjeta-arrastrando-activa * {
     text-align: center;
     margin-top: var(--space-sm);
     color: var(--c-green);
-    display: none;
 }
 
 .importar-btns {

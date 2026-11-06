@@ -340,7 +340,11 @@ function iniciarDragOrdenCards() {
     function moveDrag(clientY) {
         if (!dragClone || !draggingEl) return;
 
-        dragClone.style.top = `${clientY - initialYOffset}px`;
+        // El clon no sale del área de la lista: se frena en el borde de arriba y de abajo
+        const area = lista.getBoundingClientRect();
+        const alto = dragClone.getBoundingClientRect().height;
+        const top = Math.min(Math.max(clientY - initialYOffset, area.top), Math.max(area.top, area.bottom - alto));
+        dragClone.style.top = `${top}px`;
 
         const target = [...lista.querySelectorAll('.orden-card-item')].find(item => {
             if (item === draggingEl) return false;

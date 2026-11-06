@@ -16,6 +16,7 @@ import { _scrollA } from './scroll.js';
 import { Animaciones } from './animaciones.js';
 import { icono, html, montar } from '../core/html.js';
 import { HistoricoItems } from './historico-items.js';
+import { IconosAnimados } from './iconos-animados.js';
 import { EdicionRegistro } from '../services/edicion-registro.js';
 
 // ====================================================================
@@ -401,8 +402,8 @@ function bindEventos() {
         Calendario.toggleVistaHistorico();
     });
     $('btn-filtro')?.addEventListener('click', (e) => mostrarFiltros(e));
-    $('btn-undo')?.addEventListener('click', () => GestionDatos.undoAction());
-    $('btn-redo')?.addEventListener('click', () => GestionDatos.redoAction());
+    $('btn-undo')?.addEventListener('click', () => { IconosAnimados.girarIcono($('btn-undo'), -1); GestionDatos.undoAction(); });
+    $('btn-redo')?.addEventListener('click', () => { IconosAnimados.girarIcono($('btn-redo'), 1); GestionDatos.redoAction(); });
 
     $('btn-toggle-credito')?.addEventListener('click', () => toggleCredito());
     $('btn-lock-toggle')?.addEventListener('click', () => toggleBloqueoEdicion());

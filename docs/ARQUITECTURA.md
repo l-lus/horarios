@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
 **Última actualización:** 2026-11-05  
-**Estado:** Arquitectura modularizada y saneada (75 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Estado:** Arquitectura modularizada y saneada (76 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -39,7 +39,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (75 módulos)
+├── src/                        # Código fuente en ES Modules (76 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
@@ -235,6 +235,7 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | [`src/ui/barra-hitos.js`](../src/ui/barra-hitos.js) | `BarraHitos` | Marcas de la barra de progreso con el hint integrado: hora (vista diaria) o sigla (vista semanal). Solo dibuja; los datos vienen de `tarjeta-fichaje-vista.js`. En la vista diaria mide cada etiqueta y elige qué versión de su descripción entra (`data-desc`, `--desc-ancho`) para el foco; si a la izquierda de la hora no entra completa pero a la derecha sí, prepara el despliegue (`desplegarADerecha`) que abre la descripción hacia ese lado mientras dura el foco, sin mover la hora (con el registro cerrado es el único lado posible). Las etiquetas vecinas están atenuadas durante el foco, así que no cuentan como obstáculo. |
 | [`src/ui/foco-hitos.js`](../src/ui/foco-hitos.js) | `FocoHitos` | Resalta en la barra el hito de la fase que muestra el ciclo del número grande (clase `foco` en la etiqueta y la marca, `hay-foco` en la pista). Solo alterna clases; el dibujo (píldora, descripción, pulso) es CSS. `tarjeta-fichaje.js` lo conecta con `CicloStats.alCambiarFase`. |
 | [`src/ui/hover-barra.js`](../src/ui/hover-barra.js) | `HoverBarra` | Solo escritorio (puntero con hover): cursor sobre un hito de la vista diaria = su texto con foco (`CicloStats.fijarFase`); sobre el tramo de un día de la vista semanal = total, entrada y salida con el tramo enfocado (`FocoHitos.enfocarDia`). |
+| [`src/ui/iconos-animados.js`](../src/ui/iconos-animados.js) | `IconosAnimados` | Animación de íconos al activar un botón: la flecha de subir/bajar (nube o bandeja, dibujadas como base + flecha en el sprite) sale y vuelve a entrar, y deshacer/rehacer dan una vuelta. Respeta «reducir animaciones». |
 
 ---
 

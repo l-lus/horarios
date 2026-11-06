@@ -107,6 +107,30 @@
             <path
                 d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
         </symbol>
+        <symbol id="icon-bandeja" viewBox="0 0 16 16">
+            <path
+                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+        </symbol>
+        <symbol id="icon-flecha-bandeja-bajar" viewBox="0 0 16 16">
+            <path
+                d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z" />
+        </symbol>
+        <symbol id="icon-flecha-bandeja-subir" viewBox="0 0 16 16">
+            <path
+                d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+        </symbol>
+        <symbol id="icon-nube" viewBox="0 0 16 16">
+            <path
+                d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+        </symbol>
+        <symbol id="icon-flecha-nube-subir" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+        </symbol>
+        <symbol id="icon-flecha-nube-bajar" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                d="M7.646 10.854a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L8.5 9.293V5.5a.5.5 0 0 0-1 0v3.793L6.354 8.146a.5.5 0 1 0-.708.708z" />
+        </symbol>
         <symbol id="icon-edit" viewBox="0 0 16 16">
             <path
                 d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
@@ -568,12 +592,14 @@
                                 </button>
                                 <button class="filter-btn" id="btn-hist-restaurar" title="Restaurar">
                                     <svg class="icon">
-                                        <use href="#icon-upload" />
+                                        <use href="#icon-bandeja" />
+                                        <use class="icon-flecha" href="#icon-flecha-bandeja-subir" />
                                     </svg>
                                 </button>
                                 <button class="filter-btn" id="btn-hist-respaldar" title="Respaldar">
                                     <svg class="icon">
-                                        <use href="#icon-download" />
+                                        <use href="#icon-bandeja" />
+                                        <use class="icon-flecha" href="#icon-flecha-bandeja-bajar" />
                                     </svg>
                                 </button>
                             </div>
@@ -1558,14 +1584,16 @@
                 <div class="gist-acciones">
                     <button id="btn-gist-subir">
                         <svg class="icon">
-                            <use href="#icon-cloud-upload" />
-                        </svg>
+                                        <use href="#icon-nube" />
+                                        <use class="icon-flecha" href="#icon-flecha-nube-subir" />
+                                    </svg>
                         <span>Subir</span>
                     </button>
                     <button id="btn-gist-bajar">
                         <svg class="icon">
-                            <use href="#icon-cloud-download" />
-                        </svg>
+                                        <use href="#icon-nube" />
+                                        <use class="icon-flecha" href="#icon-flecha-nube-bajar" />
+                                    </svg>
                         <span>Bajar</span>
                     </button>
                 </div>

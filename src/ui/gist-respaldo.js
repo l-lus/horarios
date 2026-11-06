@@ -1,4 +1,5 @@
 import { RespaldoLocal } from './respaldo-local.js';
+import { IconosAnimados } from './iconos-animados.js';
 import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { EventosApp } from '../core/eventos.js';
@@ -167,20 +168,20 @@ function actualizarBotonesHistorico() {
 
     if (tieneGist) {
         newRespaldar.title = 'Subir a Gist';
-        newRespaldar.addEventListener('click', () => { autoCierre(); gistSubir(); });
-        setIconoBtn(newRespaldar, '#icon-cloud-upload');
+        newRespaldar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRespaldar, 'subir'); gistSubir(); });
+        IconosAnimados.ponerIconoFlecha(newRespaldar, 'nube', 'subir');
 
         newRestaurar.title = 'Bajar de Gist';
-        newRestaurar.addEventListener('click', () => { autoCierre(); gistBajar(); });
-        setIconoBtn(newRestaurar, '#icon-cloud-download');
+        newRestaurar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRestaurar, 'bajar'); gistBajar(); });
+        IconosAnimados.ponerIconoFlecha(newRestaurar, 'nube', 'bajar');
     } else {
         newRespaldar.title = 'Respaldar';
-        newRespaldar.addEventListener('click', () => { autoCierre(); mostrarExportar(true); });
-        setIconoBtn(newRespaldar, '#icon-download');
+        newRespaldar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRespaldar, 'bajar'); mostrarExportar(true); });
+        IconosAnimados.ponerIconoFlecha(newRespaldar, 'bandeja', 'bajar');
 
         newRestaurar.title = 'Restaurar';
-        newRestaurar.addEventListener('click', () => { autoCierre(); mostrarImportar(true); });
-        setIconoBtn(newRestaurar, '#icon-upload');
+        newRestaurar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRestaurar, 'subir'); mostrarImportar(true); });
+        IconosAnimados.ponerIconoFlecha(newRestaurar, 'bandeja', 'subir');
     }
     EventosApp.emit('historico:botones');
 }
@@ -421,8 +422,8 @@ function bindEventos() {
     $('btn-toggle-token')?.addEventListener('click', () => toggleVerToken());
     $('btn-crear-token')?.addEventListener('click', () => window.open('https://github.com/settings/tokens/new?description=Horarios+sync&scopes=gist', '_blank', 'noopener,noreferrer'));
     $('btn-gist-abrir')?.addEventListener('click', () => abrirGistEnBrowser());
-    $('btn-gist-subir')?.addEventListener('click', () => gistSubir());
-    $('btn-gist-bajar')?.addEventListener('click', () => gistBajar());
+    $('btn-gist-subir')?.addEventListener('click', () => { IconosAnimados.animarFlecha($('btn-gist-subir'), 'subir'); gistSubir(); });
+    $('btn-gist-bajar')?.addEventListener('click', () => { IconosAnimados.animarFlecha($('btn-gist-bajar'), 'bajar'); gistBajar(); });
     $('btn-toggle-gist-backup')?.addEventListener('click', () => toggleGistBackup());
     $('btn-toggle-gist-merge')?.addEventListener('click', () => toggleGistMerge());
     document.querySelectorAll('.gist-panel-toggle').forEach(b => b.addEventListener('click', () => toggleGistPanel(b.id)));

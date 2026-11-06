@@ -10,13 +10,13 @@ import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 // → (con el registro abierto: salida estimada → salida con banco) → "Tiempo fuera 25m" → horas. Con el hint integrado (`hitosEnBarra`) la barra ya muestra la entrada, la salida y, con el registro abierto,
 // la salida estimada y la salida con banco, cada una con su descripción: esas fases no cambian el texto (queda el de las horas) y solo resaltan su hito.
 // El tiempo fuera no tiene hito en la barra, siempre se muestra como texto y cierra el ciclo. Sin el hint integrado, entrada y salida se muestran como texto.
-// Cada 2 s (las fases con hito sobre la barra, un poco más). tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
+// Cada 2 s. tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
 // Cada vez que cambia la fase avisa su tipo (o null al terminar) a quien se registre con `alCambiarFase`: así la barra resalta el hito correspondiente
 // sin que este módulo conozca el DOM de la barra.
 const { _animarMutacion } = Animaciones;
 const { _formatearMinutosCorto } = TarjetaTiempoFuera;
 
-/** @typedef {{ tipo: string, texto: () => string, ms?: number }} FaseCiclo */
+/** @typedef {{ tipo: string, texto: () => string }} FaseCiclo */
 
 let _cicloStatsInterval = null;
 let _cicloStatsValorHoras = '';
@@ -30,10 +30,8 @@ let _cicloStatsFaseAlRenderizar = null;
 /** @type {((tipo: string | null) => void) | null} */
 let _alCambiarFase = null;
 
+// Todas las fases duran lo mismo (el resalte de un hito tarda ~0,5 s en desplegarse y sobra para leerlo)
 const _CICLO_DURACION_MS = 2000;
-// El resalte de la hora y su descripción tarda ~0,5 s en desplegarse: estas fases se quedan un poco más para que se lea
-// (y como su texto es el de las horas, no hay animación de cambio de texto si ya se está mostrando)
-const _CICLO_DURACION_HITO_MS = 2600;
 
 function _emitirFase(tipo) {
     if (_alCambiarFase) _alCambiarFase(tipo);
@@ -52,7 +50,7 @@ function _prepararMostrarFaseAlRenderizar(tipo) {
 }
 
 /**
- * Fase de un hito de la barra: con el hint integrado deja el texto de las horas y se queda más tiempo (se despliega la descripción);
+ * Fase de un hito de la barra: con el hint integrado deja el texto de las horas (se despliega la descripción del hito);
  * sin él muestra `texto`.
  * @param {string} tipo
  * @param {() => string} texto
@@ -60,7 +58,7 @@ function _prepararMostrarFaseAlRenderizar(tipo) {
  */
 function _faseHito(tipo, texto) {
     return _cicloStatsHitosEnBarra
-        ? { tipo, ms: _CICLO_DURACION_HITO_MS, texto: () => _cicloStatsValorHoras }
+        ? { tipo, texto: () => _cicloStatsValorHoras }
         : { tipo, texto };
 }
 
@@ -94,7 +92,7 @@ function _crearCicloTick(fases, estado) {
             el.textContent = terminado ? _cicloStatsValorHoras : fases[estado.idx].texto();
             if (terminado) { _detenerCicloStats(); return; }
             _emitirFase(fases[estado.idx].tipo);
-            _cicloStatsInterval = setTimeout(_cicloTick, fases[estado.idx].ms ?? _CICLO_DURACION_MS);
+            _cicloStatsInterval = setTimeout(_cicloTick, _CICLO_DURACION_MS);
         };
         // si el texto que sigue es el que ya se ve (fases solo de hito) no hay nada que animar
         const siguiente = estado.idx + 1 >= fases.length ? _cicloStatsValorHoras : fases[estado.idx + 1].texto();
@@ -136,7 +134,7 @@ function _iniciarCicloEnFase(tipo) {
     if (el) el.textContent = fases[idx].texto();
     _emitirFase(fases[idx].tipo);
 
-    _cicloStatsInterval = setTimeout(tick, fases[idx].ms ?? _CICLO_DURACION_MS);
+    _cicloStatsInterval = setTimeout(tick, _CICLO_DURACION_MS);
     return true;
 }
 

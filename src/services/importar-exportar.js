@@ -277,7 +277,9 @@ async function exportarJSON() {
 }
 
 // Claves que puede traer un respaldo (archivo local o Gist): cualquier otra se considera sospechosa
-const CLAVES_RAIZ_RESPALDO = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
+// Claves de versiones anteriores que ya no se usan: los respaldos viejos las traen y se aceptan, pero se ignoran (ej. la tarjeta de atajos, eliminada)
+const CLAVES_LEGADAS_IGNORADAS = ['atajosRapidos'];
+const CLAVES_RAIZ_RESPALDO = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...KEYS_CONFIG_EXPORTABLE, ...CLAVES_LEGADAS_IGNORADAS, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
 const _NOMBRE_ORIGEN = { archivo: 'archivo', gist: 'Gist' };
 
 /** Chequeo estructural de un respaldo ya parseado. Devuelve el mensaje de error o null si es válido. */

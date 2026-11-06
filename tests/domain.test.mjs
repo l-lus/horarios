@@ -283,7 +283,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         hintIntegrado: true,
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
         ordenCardsMovil: ['estado', 'registrar', 'estadisticas', 'historico'],
-        columnasCards: [2, 2],
+        columnasCards: [3, 1],
         tarjetasVisibles: { registrar: true, estadisticas: true, historico: true }
     });
 });

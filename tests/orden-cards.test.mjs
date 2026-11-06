@@ -6,14 +6,14 @@ import {
 
 const ORDEN = ['registrar', 'estadisticas', 'historico'];
 
-test('Columnas: sin tamaños guardados se usa el reparto por defecto (la primera con 1 tarjeta, la segunda con 2)', () => {
-    assert.deepEqual(columnasDesdeOrden(ORDEN), [['registrar'], ['estadisticas', 'historico']]);
+test('Columnas: sin tamaños guardados se usa el reparto por defecto (todas a la izquierda salvo la última, que va a la derecha)', () => {
+    assert.deepEqual(columnasDesdeOrden(ORDEN), [['registrar', 'estadisticas'], ['historico']]);
     assert.deepEqual(columnasDesdeOrden(ORDEN, [2, 1]), [['registrar', 'estadisticas'], ['historico']]);
     assert.deepEqual(columnasDesdeOrden(ORDEN, [1, 1, 1]), [['registrar'], ['estadisticas'], ['historico']]);
     assert.deepEqual(columnasDesdeOrden(ORDEN, [0, 3]), [ORDEN]);   // una columna vacía no existe
     // tamaños que no suman el total (ej. una versión con otra cantidad de tarjetas) o inválidos: reparto por defecto
-    assert.deepEqual(columnasDesdeOrden(ORDEN, [4]), [['registrar'], ['estadisticas', 'historico']]);
-    assert.deepEqual(columnasDesdeOrden(ORDEN, 'x'), [['registrar'], ['estadisticas', 'historico']]);
+    assert.deepEqual(columnasDesdeOrden(ORDEN, [4]), [['registrar', 'estadisticas'], ['historico']]);
+    assert.deepEqual(columnasDesdeOrden(ORDEN, 'x'), [['registrar', 'estadisticas'], ['historico']]);
 });
 
 test('Columnas: validación de tamaños (hasta 3, enteros; la primera puede ser 0 por compatibilidad)', () => {
@@ -89,5 +89,5 @@ test('Columnas: tamaños guardados antes de que la tarjeta de estado fuera movib
     assert.deepEqual(columnasDesdeOrden(orden, [1, 2]), [['estado', 'registrar'], ['estadisticas', 'historico']]);
     assert.deepEqual(columnasDesdeOrden(orden, [1, 1, 1]), [['estado', 'registrar'], ['estadisticas'], ['historico']]);
     assert.deepEqual(columnasDesdeOrden(orden, [0, 3]), [['estado'], ['registrar', 'estadisticas', 'historico']]);
-    assert.deepEqual(columnasDesdeOrden(orden), [['estado', 'registrar'], ['estadisticas', 'historico']]);
+    assert.deepEqual(columnasDesdeOrden(orden), [['estado', 'registrar', 'estadisticas'], ['historico']]);
 });

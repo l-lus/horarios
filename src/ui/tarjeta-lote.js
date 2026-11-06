@@ -13,6 +13,8 @@ import { Animaciones } from './animaciones.js';
 // ====================================================================
 //           UI CARD BATCH / FORM & INPUT HELPERS MODULE
 // ====================================================================
+const ESPERA_SALIR_LOTE_MS = 350;   // deja terminar el cierre del modal antes de salir del modo lote
+
 const { _flashCampo, _avisarFichaje, toggleSeccionGen, _crearOpcion, aplicarFeedbackCampos } = UIBase;
 const { _animarFadeSwap, _animarSlideElemento, _esperarAnim, _animarValor, _durSiAnima } = Animaciones;
 const actualizarEstadoBotonTimerMain = (...args) => EstadoApp._notify().actualizarEstadoBotonTimerMain(...args);
@@ -355,7 +357,7 @@ function toggleFormulario() {
                 if (modoLoteActivo) {
                     toggleModoLote(undefined, false);
                 }
-            }, 350);
+            }, ESPERA_SALIR_LOTE_MS);
         } else {
             actualizarEstadoBotonTimerMain();
         }

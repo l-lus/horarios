@@ -164,7 +164,7 @@ function _registrarLongPressSemana(grid) {
             timer = null;
             _longPressDisparadoTs = performance.now();
             const puedeVibrar = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
-            if (puedeVibrar && 'vibrate' in navigator) { try { navigator.vibrate(15); } catch (_) { } }
+            if (puedeVibrar && 'vibrate' in navigator) { try { navigator.vibrate(15); } catch (_) { /* la vibración es opcional */ } }
             _popupSemana(celda);
         }, LONG_PRESS_MS);
     }, { passive: true });

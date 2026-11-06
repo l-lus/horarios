@@ -168,7 +168,7 @@ button.campo-flash {
 
 .calendario-dia.hoy.campo-flash:not(.dia-sin-registro, .dia-filtrado) {
     z-index: 2;
-    animation: calendario-hoy-pulso 600ms ease-in-out 2;
+    animation: calendario-hoy-pulso var(--dur-pulso-hoy) ease-in-out 2;
 }
 
 /* Filas de ajustes: sin borde propio y dentro de un contenedor con overflow hidden,
@@ -316,7 +316,7 @@ button.campo-flash-color {
 }
 
 .icono-spin {
-    animation: icono-spin 900ms linear infinite;
+    animation: icono-spin var(--dur-giro) linear infinite;
 }
 
 /* Opciones que solo tienen sentido con mouse: se ocultan en dispositivos táctiles (mismo criterio que usa calendario.js) */

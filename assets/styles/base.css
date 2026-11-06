@@ -48,7 +48,7 @@ html.cargando body::after {
     border: 3px solid var(--border);
     border-top-color: var(--text-muted);
     border-radius: 50%;
-    animation: girarCarga .8s linear infinite;
+    animation: girarCarga var(--dur-giro) linear infinite;
 }
 
 html[data-motion="reduce"].cargando body::after {
@@ -358,9 +358,9 @@ h2.mutacion-saliente.no-margin,
 }
 
 .input-number-group--pill .btn-increment {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
+    width: var(--control-sm);
+    min-width: var(--control-sm);
+    height: var(--control-sm);
     padding: 0;
     background: transparent;
     border: none;
@@ -395,8 +395,8 @@ h2.mutacion-saliente.no-margin,
 .input-number-group--embed .btn-increment {
     background: transparent;
     border: none;
-    min-width: 36px;
-    width: 36px;
+    min-width: var(--control-sm);
+    width: var(--control-sm);
     height: 100%;
     padding: 0;
     color: var(--text-main);
@@ -1033,7 +1033,7 @@ mark.ayuda-resaltado--activa {
 .toast-progreso:indeterminate {
     background: linear-gradient(90deg, transparent 0 30%, var(--c-blue) 30% 60%, transparent 60%) 0 0 / 200% 100% no-repeat,
         color-mix(in srgb, var(--text-muted) 24%, transparent);
-    animation: toastBarraIndeterminada 1.2s linear infinite;
+    animation: toastBarraIndeterminada var(--dur-barra-indeterminada) linear infinite;
 }
 
 @keyframes toastBarraIndeterminada {

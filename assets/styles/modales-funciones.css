@@ -643,9 +643,9 @@ body.config-onboarding #theme-toggle-config {
     top: 0;
     left: 50%;
     z-index: 3;
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
+    width: var(--control-sm);
+    min-width: var(--control-sm);
+    height: var(--control-sm);
     padding: 0;
     transform: translate(-50%, -50%);
     background: var(--input-bg);
@@ -802,4 +802,10 @@ body.tarjeta-arrastrando-activa * {
 #stats-card {
     touch-action: pan-y;
     -webkit-touch-callout: none;
+    outline: none;   /* sin aro al tocarla; con teclado (Alt + flechas la mueve) sí se ve */
+}
+
+#stats-card:focus-visible {
+    outline: 2px solid var(--c-blue);
+    outline-offset: 2px;
 }

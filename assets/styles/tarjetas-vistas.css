@@ -553,7 +553,7 @@
 }
 
 .linea-tick.foco::after {
-    animation: hito-pulso 1.1s ease-out 2;
+    animation: hito-pulso var(--dur-pulso) ease-out 2;
 }
 
 .progress-punto.foco::after {
@@ -563,7 +563,7 @@
     box-sizing: border-box;
     border: 2px solid var(--text-main);
     border-radius: 50%;
-    animation: hito-pulso 1.1s ease-out 2;
+    animation: hito-pulso var(--dur-pulso) ease-out 2;
 }
 
 .progress-punto--inicio.foco::after {
@@ -1665,7 +1665,7 @@
 
 /* Objetivo diario cumplido con la jornada todavía abierta: el mismo parpadeo, más rápido */
 .estado-badge--en-curso.estado-badge--cumplido {
-    animation-duration: 1.2s;
+    animation-duration: var(--dur-parpadeo-rapido);
 }
 
 .estado-badge--finalizado {

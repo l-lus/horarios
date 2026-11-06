@@ -17,6 +17,7 @@ const UMBRAL_PX = 90;          // distancia (ya amortiguada) a partir de la cual
 const AMORTIGUACION = 0.5;     // el dedo recorre el doble que el progreso visual
 const MARGEN_INICIO_PX = 10;   // movimiento mínimo hacia abajo antes de reaccionar
 const MAX_ESPERA_GESTO_MS = 350; // un pulsado largo (arrastre de tarjetas) no es un gesto de recarga
+const LIMPIEZA_ENTRADA_MS = 1500; // red de seguridad para quitar la clase de entrada si no llega animationend
 const CLASE_ANIMANDO = 'recarga-animando';
 const CLASE_RECARGANDO = 'recargando';
 const CLASE_ENTRADA = 'entrada-pagina';
@@ -104,7 +105,7 @@ function entrar() {
     html.classList.add(CLASE_ENTRADA);
     const limpiar = () => html.classList.remove(CLASE_ENTRADA);
     document.querySelector('.container')?.addEventListener('animationend', limpiar, { once: true });
-    setTimeout(limpiar, 1500); // red de seguridad (pestaña en segundo plano, sin animationend)
+    setTimeout(limpiar, LIMPIEZA_ENTRADA_MS); // red de seguridad (pestaña en segundo plano, sin animationend)
 }
 
 function bindEventos() {

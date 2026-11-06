@@ -170,11 +170,11 @@ export function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar
             timer = null;
             arrastrando = true;
             if (targetCaptura) {
-                try { targetCaptura.setPointerCapture(pointerId); } catch (_) { }
+                try { targetCaptura.setPointerCapture(pointerId); } catch (_) { /* el puntero ya no está activo */ }
             }
-            try { capturar(el).setPointerCapture(pointerId); } catch (_) { }
+            try { capturar(el).setPointerCapture(pointerId); } catch (_) { /* el puntero ya no está activo */ }
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                try { navigator.vibrate(35); } catch (_) { }
+                try { navigator.vibrate(35); } catch (_) { /* la vibración es opcional */ }
             }
             alEmpezar(el, inicio);
         }, PULSACION_LARGA_MS);

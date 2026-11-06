@@ -11,6 +11,8 @@ import { mostrarToast } from './toast.js';
 // ====================================================================
 //                     UI LOCAL BACKUP MODULE (Import / Export JSON)
 // ====================================================================
+const ESPERA_MODAL_MS = 50;   // deja abrir el modal antes de lanzar el selector de archivos
+
 const { descargarJSON, obtenerNombrePerfilSafe } = UIBase;
 
 let _modalAbiertoDesdeLista = false;
@@ -58,7 +60,7 @@ function mostrarImportar(desdeLista = false) {
         }
 
         _actualizarBotonVolver('btn-volver-importar', desdeLista);
-        setTimeout(() => $('file-import').click(), 50);
+        setTimeout(() => $('file-import').click(), ESPERA_MODAL_MS);
     });
 }
 

@@ -89,7 +89,7 @@ function _migrarClaveIndividual(legacyKey) {
             localStorage.setItem(newKey, legacyVal);
             return true;
         } catch (errRestore) {
-            try { localStorage.setItem(legacyKey, legacyVal); } catch (_) { }
+            try { localStorage.setItem(legacyKey, legacyVal); } catch (_) { /* el almacenamiento puede estar bloqueado o lleno: se sigue sin guardar */ }
             return false;
         }
     }
@@ -106,7 +106,7 @@ function migrarClavesLegadas() {
                 if (parsed && typeof parsed === 'object') {
                     Object.keys(parsed).forEach(id => idsPerfiles.add(id));
                 }
-            } catch (_) { }
+            } catch (_) { /* el almacenamiento puede estar bloqueado o lleno: se sigue sin guardar */ }
         }
 
         const candidatas = new Set(CLAVES_ESTATICAS_HORARIOS);
@@ -124,7 +124,7 @@ function migrarClavesLegadas() {
         }
         try {
             Object.keys(localStorage).forEach(k => candidatas.add(k));
-        } catch (_) { }
+        } catch (_) { /* el almacenamiento puede estar bloqueado o lleno: se sigue sin guardar */ }
 
         let migradas = 0;
         for (const key of candidatas) {
@@ -198,7 +198,7 @@ function borrarClavesDePerfil(perfilId) {
 function removeItem(key, useProfile = false) {
     try {
         localStorage.removeItem(_getKey(key, useProfile));
-    } catch (e) { }
+    } catch (e) { /* el almacenamiento puede estar bloqueado o lleno: se sigue sin guardar */ }
 }
 
 export const Almacenamiento = {

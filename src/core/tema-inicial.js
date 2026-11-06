@@ -3,7 +3,7 @@
 // Se oculta siempre: un <iframe sandbox> bloquea la navegación del top sin lanzar excepción.
 if (window.top !== window.self) {
     document.documentElement.style.display = 'none';
-    try { /** @type {Window} */ (window.top).location = window.self.location.href; } catch (e) { }
+    try { /** @type {Window} */ (window.top).location = window.self.location.href; } catch (e) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }
 
 // Listas válidas (copias de TEMAS en ui/gestor-temas.js y de ESTILOS_CALENDARIO en core/estilo-calendario.js: este
@@ -29,7 +29,7 @@ var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-
             html.setAttribute('data-theme', s);
         }
         // s === 'light' -> no se aplica nada, queda el tema claro por defecto
-    } catch (e) { }
+    } catch (e) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }());
 
 // Estilo de los días del calendario (ver EstiloCalendario): el CSS solo mira <html data-estilo-calendario>; sin valor guardado queda el original ('legacy').
@@ -37,7 +37,7 @@ var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-
     try {
         var e = localStorage.getItem('horarios_estiloCalendario') || 'legacy';
         document.documentElement.setAttribute('data-estilo-calendario', ESTILOS_CALENDARIO_VALIDOS.indexOf(e) === -1 ? 'legacy' : e);
-    } catch (err) { }
+    } catch (err) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }());
 
 // Reducir animaciones: 'on' | 'off' | 'auto' (sin valor = auto, sigue al sistema).
@@ -48,7 +48,7 @@ var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-
         if (m === null) m = localStorage.getItem('reducirAnimaciones');
         var reducir = m === 'on' || (m !== 'off' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
         document.documentElement.setAttribute('data-motion', reducir ? 'reduce' : 'full');
-    } catch (e) { }
+    } catch (e) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }());
 
 // Pantalla de carga: oculta el HTML estático (CSS: html.cargando) hasta que main.js lo quita al terminar de iniciar la UI.

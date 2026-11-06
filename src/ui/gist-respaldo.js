@@ -176,11 +176,11 @@ function actualizarBotonesHistorico() {
         IconosAnimados.ponerIconoFlecha(newRestaurar, 'nube', 'bajar');
     } else {
         newRespaldar.title = 'Respaldar';
-        newRespaldar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRespaldar, 'bajar'); mostrarExportar(true); });
+        newRespaldar.addEventListener('click', () => { autoCierre(); mostrarExportar(true); });
         IconosAnimados.ponerIconoFlecha(newRespaldar, 'bandeja', 'bajar');
 
         newRestaurar.title = 'Restaurar';
-        newRestaurar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRestaurar, 'subir'); mostrarImportar(true); });
+        newRestaurar.addEventListener('click', () => { autoCierre(); mostrarImportar(true); });
         IconosAnimados.ponerIconoFlecha(newRestaurar, 'bandeja', 'subir');
     }
     EventosApp.emit('historico:botones');

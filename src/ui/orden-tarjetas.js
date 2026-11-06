@@ -80,9 +80,10 @@ function _contenedores() {
     return [primero, $('right-column'), $('columna-3')];
 }
 
-let _arrastrando = false;
+// Mientras se arrastra, el hueco de columna nueva solo se pide cuando el puntero se acerca al borde derecho (ver iniciarDragTarjetas)
+let _huecoPedido = false;
 
-/** Muestra solo las columnas que tienen tarjetas visibles (más el hueco de columna nueva mientras se arrastra) y fija cuántas hay. */
+/** Muestra solo las columnas que tienen tarjetas visibles (más el hueco de columna nueva si se pidió) y fija cuántas hay. */
 function _actualizarColumnas() {
     const contenedores = _contenedores();
     const hayTarjetaVisible = (c) => /** @type {HTMLElement[]} */ (Array.from(c.children)).some(el => el.id.startsWith('card-') && el.style.display !== 'none');
@@ -93,7 +94,7 @@ function _actualizarColumnas() {
         c.classList.toggle('columna-vacia', vacia);
         if (!vacia) n++;
     });
-    const hueco = _arrastrando && _esEscritorio() && n < _maxColumnas();
+    const hueco = _huecoPedido && _esEscritorio() && n < _maxColumnas();
     const raiz = /** @type {HTMLElement | null} */ (document.querySelector('.container'));
     if (!raiz) return;
     raiz.classList.toggle('arrastrando-columnas', hueco);
@@ -153,6 +154,29 @@ function obtenerCardsVisibles() {
 }
 
 const _idDeCard = (el) => el.id.replace('card-', '');
+
+/**
+ * ¿Hay que mostrar u ocultar el hueco de columna nueva según dónde está el puntero? Se pide al entrar en la franja del borde derecho
+ * (solo si abrir una columna cambiaría algo) y se retira al volver a la izquierda del lugar que ocuparía el hueco. Devuelve true si cambió.
+ */
+function _actualizarPedidoHueco(clientX, arrastrado, columnas) {
+    const raiz = document.querySelector('.container');
+    if (!raiz) return false;
+    const r = raiz.getBoundingClientRect();
+    const n = _contenedores().filter((c, i) => c && (i === 0 || !c.classList.contains('columna-vacia'))).length;
+    let pedido = _huecoPedido;
+    if (!pedido) {
+        if (clientX > r.right - Math.min(140, r.width * 0.12)) {
+            pedido = n < _maxColumnas()
+                && moverCard(columnas, _idDeCard(arrastrado), columnas.length, null, { max: _maxColumnas(), visibles: _tarjetasVisibles() }) !== null;
+        }
+    } else if (clientX < r.left + r.width * (n / (n + 1)) - 40) {
+        pedido = false;
+    }
+    if (pedido === _huecoPedido) return false;
+    _huecoPedido = pedido;
+    return true;
+}
 
 /**
  * Dónde cae la tarjeta arrastrada según el puntero: la columna sobre la que está (o el hueco de columna nueva) y delante de qué tarjeta visible
@@ -219,11 +243,16 @@ function iniciarDragTarjetas() {
             card.classList.add('reordenando');
             document.body.classList.add('tarjeta-arrastrando-activa');
             /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.animated-card')).forEach(c => c.style.animation = 'none');
-            _arrastrando = true;
-            uiAnimarReubicacion(() => obtenerCardsVisibles(), c => c.id, () => _actualizarColumnas(), { encima: card });
+            _huecoPedido = false;
         },
         alMover: (e, card) => {
             if (performance.now() < deslizandoHasta || !columnasEnCurso) return;
+            // Recién al acercarse al borde derecho se muestra el hueco (y las columnas se angostan); se retira al volver hacia la izquierda
+            if (_esEscritorio() && _actualizarPedidoHueco(e.clientX, card, columnasEnCurso)) {
+                uiAnimarReubicacion(() => obtenerCardsVisibles(), c => c.id, () => _actualizarColumnas(), { encima: card });
+                deslizandoHasta = performance.now() + REUBICACION_MS;
+                return;
+            }
             const nuevas = evaluarNuevasColumnas(card, columnasEnCurso, e.clientX, e.clientY);
             if (!nuevas) return;
 
@@ -234,7 +263,7 @@ function iniciarDragTarjetas() {
         alTerminar: (card, confirmar) => {
             card.classList.remove('reordenando');
             document.body.classList.remove('tarjeta-arrastrando-activa');
-            _arrastrando = false;
+            _huecoPedido = false;
             const destino = confirmar ? columnasEnCurso : columnasInicial;
             if (destino) {
                 // Sin el hueco de columna nueva (y sin columnas que hayan quedado vacías) y guardando el diseño elegido

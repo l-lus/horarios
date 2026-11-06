@@ -67,7 +67,7 @@ export const CARDS_ORDEN = Object.freeze(['estado', ...CARDS]);
 // Valores por defecto de opciones booleanas que se leen desde varios módulos (un solo lugar para que no se desincronicen)
 export const DEFAULTS = Object.freeze({
     HINT_INTEGRADO: true,
-    DESC_HITOS_NUMERO: false,
+    DESC_HITOS_NUMERO: true,
     RUEDA_CALENDARIO: true,
 });
 

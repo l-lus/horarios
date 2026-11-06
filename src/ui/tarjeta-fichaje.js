@@ -122,7 +122,7 @@ function _renderStats(vista, est, conteo = null) {
     const salidaEstimada = linea && !linea.cerrado ? linea.horaSalida : '';
     const salidaBanco = linea && !linea.cerrado && linea.hayBanda ? linea.horaBuffer : '';
 
-    // variante "Número": el nombre del hito va en el número grande y el CSS oculta su descripción en la barra
+    // variante B: el nombre del hito va en el número grande y el CSS oculta su descripción en la barra
     const nombreEnNumero = !!linea && _descHitosEnNumero();
     $('stats-card')?.classList.toggle('desc-en-numero', nombreEnNumero);
     CicloStats.actualizarDatos({ valorHoras: vista.stats, entrada: entradaHoy, salida: salidaHoy, tiempoFuera: tiempoFueraHoy, salidaEstimada, salidaBanco, hitosEnBarra: !!linea, nombreEnNumero });

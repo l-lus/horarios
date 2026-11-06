@@ -281,7 +281,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarObjetivoPorRegistro: true,
         reducirAnimaciones: 'on',
         hintIntegrado: true,
-        descHitosNumero: false,
+        descHitosNumero: true,
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
         ordenCardsMovil: ['estado', 'registrar', 'estadisticas', 'historico'],
         columnasCards: [3, 1],

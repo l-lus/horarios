@@ -92,10 +92,10 @@ const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRu
         onAfterToggle: () => { EventosApp.emit('config:rueda-calendario'); }
     });
 
-// "Hint integrado" tiene tres estados en un solo botón: No (la información va en el texto de abajo), Barra (hitos sobre la barra, con su descripción
-// desplegada) y Número (hitos sobre la barra y el nombre de cada uno en el número grande). Se guardan en dos opciones: HINT_INTEGRADO y DESC_HITOS_NUMERO.
+// "Hint integrado" tiene tres estados en un solo botón: No (la información va en el texto de abajo), A (hitos sobre la barra, con su descripción
+// desplegada) y B (hitos sobre la barra y el nombre de cada uno en el número grande, el predeterminado). Se guardan en dos opciones: HINT_INTEGRADO y DESC_HITOS_NUMERO.
 const _MODOS_HINT = ['no', 'barra', 'numero'];
-const _ETIQUETAS_HINT = { no: 'No', barra: 'Barra', numero: 'Número' };
+const _ETIQUETAS_HINT = { no: 'No', barra: 'A', numero: 'B' };
 
 function _modoHintIntegrado() {
     if (!Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO)) return 'no';

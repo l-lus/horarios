@@ -306,7 +306,7 @@
     text-align: left;
 }
 
-#modal-config .config-actions button>span:not(.toggle-switch, #hint-fondo-label, #hint-animaciones-label, #hint-estilo-calendario-label),
+#modal-config .config-actions button>span:not(.toggle-switch, #hint-fondo-label, #hint-animaciones-label, #hint-estilo-calendario-label, #hint-integrado-label),
 .drag-handle>span:not(.toggle-switch),
 #modal-reporte-secciones .config-actions button>span:not(.toggle-switch),
 #modal-notificaciones .form-group button>span:not(.toggle-switch) {
@@ -315,7 +315,8 @@
 
 #hint-fondo-label,
 #hint-animaciones-label,
-#hint-estilo-calendario-label {
+#hint-estilo-calendario-label,
+#hint-integrado-label {
     flex: none;
     margin-left: auto;
     color: var(--text-muted);

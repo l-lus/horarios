@@ -10,13 +10,13 @@ test('Columnas: sin tamaños guardados se usa el reparto por defecto (la primera
     assert.deepEqual(columnasDesdeOrden(ORDEN), [['registrar'], ['estadisticas', 'historico']]);
     assert.deepEqual(columnasDesdeOrden(ORDEN, [2, 1]), [['registrar', 'estadisticas'], ['historico']]);
     assert.deepEqual(columnasDesdeOrden(ORDEN, [1, 1, 1]), [['registrar'], ['estadisticas'], ['historico']]);
-    assert.deepEqual(columnasDesdeOrden(ORDEN, [0, 3]), [[], ORDEN]);
+    assert.deepEqual(columnasDesdeOrden(ORDEN, [0, 3]), [ORDEN]);   // una columna vacía no existe
     // tamaños que no suman el total (ej. una versión con otra cantidad de tarjetas) o inválidos: reparto por defecto
-    assert.deepEqual(columnasDesdeOrden(ORDEN, [1, 1]), [['registrar'], ['estadisticas', 'historico']]);
+    assert.deepEqual(columnasDesdeOrden(ORDEN, [4]), [['registrar'], ['estadisticas', 'historico']]);
     assert.deepEqual(columnasDesdeOrden(ORDEN, 'x'), [['registrar'], ['estadisticas', 'historico']]);
 });
 
-test('Columnas: validación de tamaños (hasta 3, enteros, solo la primera puede ser 0)', () => {
+test('Columnas: validación de tamaños (hasta 3, enteros; la primera puede ser 0 por compatibilidad)', () => {
     assert.equal(esTamanosColumnasValidos([1, 2]), true);
     assert.equal(esTamanosColumnasValidos([0, 3]), true);
     assert.equal(esTamanosColumnasValidos([1, 0]), false);
@@ -29,7 +29,7 @@ test('Columnas: validación de tamaños (hasta 3, enteros, solo la primera puede
 
 test('Columnas: mover una tarjeta a otra columna, entre dos tarjetas o al final', () => {
     const base = [['registrar'], ['estadisticas', 'historico']];
-    assert.deepEqual(moverCard(base, 'registrar', 1, 'historico'), [[], ['estadisticas', 'registrar', 'historico']]);
+    assert.deepEqual(moverCard(base, 'registrar', 1, 'historico'), [['estadisticas', 'registrar', 'historico']]);
     assert.deepEqual(moverCard(base, 'historico', 0), [['registrar', 'historico'], ['estadisticas']]);
     assert.deepEqual(moverCard(base, 'historico', 1, 'estadisticas'), [['registrar'], ['historico', 'estadisticas']]);
     assert.equal(moverCard(base, 'estadisticas', 1, 'historico'), null);   // ya está ahí: sin cambio
@@ -44,8 +44,8 @@ test('Columnas: soltar en el hueco de la derecha abre una columna nueva, y una c
     assert.equal(moverCard(tres, 'historico', 3), null);
     // vaciar una columna del medio la quita
     assert.deepEqual(moverCard(tres, 'estadisticas', 0), [['registrar', 'estadisticas'], ['historico']]);
-    // la primera columna puede quedar sin tarjetas propias (comparte lugar con la tarjeta de fichaje)
-    assert.deepEqual(moverCard([['registrar'], ['estadisticas', 'historico']], 'registrar', 1)[0], []);
+    // la primera columna también desaparece si se vacía: la segunda pasa a ser la primera
+    assert.deepEqual(moverCard([['registrar'], ['estadisticas', 'historico']], 'registrar', 1), [['estadisticas', 'historico', 'registrar']]);
 });
 
 test('Columnas: nunca más de 3 columnas con tarjetas visibles', () => {
@@ -54,7 +54,7 @@ test('Columnas: nunca más de 3 columnas con tarjetas visibles', () => {
     assert.equal(moverCard([['registrar', 'estadisticas'], ['historico']], 'estadisticas', 2, null, { max: 2 }), null);
     // una columna de tarjetas ocultas no cuenta
     const visibles = new Set(['registrar', 'estadisticas']);
-    assert.deepEqual(moverCard([['registrar'], ['estadisticas'], ['historico']], 'registrar', 3, null, { max: 3, visibles }), [[], ['estadisticas'], ['historico'], ['registrar']]);
+    assert.deepEqual(moverCard([['registrar'], ['estadisticas'], ['historico']], 'registrar', 3, null, { max: 3, visibles }), [['estadisticas'], ['historico'], ['registrar']]);
 });
 
 test('Columnas: preparar para dibujar funde columnas sin tarjetas visibles y respeta el máximo', () => {
@@ -62,21 +62,32 @@ test('Columnas: preparar para dibujar funde columnas sin tarjetas visibles y res
     assert.deepEqual(prepararColumnas(cols), cols);
     assert.deepEqual(prepararColumnas(cols, 2), [['registrar'], ['estadisticas', 'historico']]);
     assert.deepEqual(prepararColumnas(cols, 3, new Set(['registrar', 'historico'])), [['registrar', 'estadisticas'], ['historico']]);
-    assert.deepEqual(prepararColumnas([[], ['estadisticas']], 3), [[], ['estadisticas']]);
+    // una primera columna sin tarjetas visibles se funde con la siguiente
+    assert.deepEqual(prepararColumnas(cols, 3, new Set(['estadisticas', 'historico'])), [['registrar', 'estadisticas'], ['historico']]);
     // no modifica lo que recibe
     assert.deepEqual(cols, [['registrar'], ['estadisticas'], ['historico']]);
 });
 
-test('Columnas: en escritorio nunca se deja la derecha sin tarjetas visibles', () => {
-    const opc = { exigirDerecha: true };
-    // la única tarjeta de la derecha no puede volver a la izquierda
+test('Columnas: en escritorio un movimiento nunca deja una sola columna', () => {
+    const opc = { exigirDosColumnas: true };
+    // la única tarjeta de una columna no puede pasar a la otra (quedaría una sola)
     assert.equal(moverCard([['registrar', 'estadisticas'], ['historico']], 'historico', 0, null, opc), null);
     // pero sí se puede cambiar de lugar dentro de la derecha o pasar de una columna derecha a otra
     assert.deepEqual(moverCard([['registrar'], ['estadisticas', 'historico']], 'historico', 1, 'estadisticas', opc), [['registrar'], ['historico', 'estadisticas']]);
     assert.deepEqual(moverCard([['registrar'], ['estadisticas'], ['historico']], 'historico', 1, null, opc), [['registrar'], ['estadisticas', 'historico']]);
-    // si la derecha solo tiene tarjetas ocultas, la restricción cuenta las visibles
+    // las tarjetas ocultas no cuentan: si 'historico' está oculta, la derecha tiene una sola visible
     const visibles = new Set(['registrar', 'estadisticas']);
     assert.equal(moverCard([['registrar'], ['estadisticas', 'historico']], 'estadisticas', 0, null, { ...opc, visibles }), null);
+    // si ya había una sola columna, se puede mover libremente
+    assert.deepEqual(moverCard([['registrar', 'estadisticas']], 'estadisticas', 0, 'registrar', opc), [['estadisticas', 'registrar']]);
     // sin la restricción (móvil) se permite
     assert.deepEqual(moverCard([['registrar', 'estadisticas'], ['historico']], 'historico', 0), [['registrar', 'estadisticas', 'historico']]);
+});
+
+test('Columnas: tamaños guardados antes de que la tarjeta de estado fuera movible suman una al primer grupo', () => {
+    const orden = ['estado', 'registrar', 'estadisticas', 'historico'];
+    assert.deepEqual(columnasDesdeOrden(orden, [1, 2]), [['estado', 'registrar'], ['estadisticas', 'historico']]);
+    assert.deepEqual(columnasDesdeOrden(orden, [1, 1, 1]), [['estado', 'registrar'], ['estadisticas'], ['historico']]);
+    assert.deepEqual(columnasDesdeOrden(orden, [0, 3]), [['estado'], ['registrar', 'estadisticas', 'historico']]);
+    assert.deepEqual(columnasDesdeOrden(orden), [['estado', 'registrar'], ['estadisticas', 'historico']]);
 });

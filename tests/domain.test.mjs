@@ -281,9 +281,9 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarObjetivoPorRegistro: true,
         reducirAnimaciones: 'on',
         hintIntegrado: true,
-        ordenCards: ['registrar', 'estadisticas', 'historico'],
-        ordenCardsMovil: ['registrar', 'estadisticas', 'historico'],
-        columnasCards: [1, 2],
+        ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
+        ordenCardsMovil: ['estado', 'registrar', 'estadisticas', 'historico'],
+        columnasCards: [2, 2],
         tarjetasVisibles: { registrar: true, estadisticas: true, historico: true }
     });
 });
@@ -327,19 +327,19 @@ test('ImportarExportar: el diseño de la interfaz (orden y tarjetas visibles) se
         ImportarExportar.aplicarConfigImportada(diseno);
         assert.deepEqual(eventos, { tarjetas: 1 });
         // el orden queda completo (las tarjetas que faltaban entran en su lugar por defecto, las desconocidas se descartan)
-        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true), ['historico', 'estadisticas', 'registrar']);
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true), ['estado', 'historico', 'estadisticas', 'registrar']);
         assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE('estadisticas'), true, true), false);
         assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE('registrar'), true, true), true);
 
         // Aplicado, ya no hay diferencias, y exportar devuelve lo mismo que se aplicó
         assert.deepEqual(ImportarExportar.calcularCambiosConfigImport(diseno), []);
         const exportado = ImportarExportar.obtenerConfigExportable();
-        assert.deepEqual(exportado.ordenCards, ['historico', 'estadisticas', 'registrar']);
+        assert.deepEqual(exportado.ordenCards, ['estado', 'historico', 'estadisticas', 'registrar']);
         // Sin orden propio para móvil, usa el de escritorio; con uno propio, cada modo conserva el suyo
-        assert.deepEqual(exportado.ordenCardsMovil, ['historico', 'estadisticas', 'registrar']);
+        assert.deepEqual(exportado.ordenCardsMovil, ['estado', 'historico', 'estadisticas', 'registrar']);
         ImportarExportar.aplicarConfigImportada({ ordenCardsMovil: ['estadisticas', 'registrar'] });
-        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true), ['estadisticas', 'registrar', 'historico']);
-        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['historico', 'estadisticas', 'registrar']);
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true), ['estado', 'estadisticas', 'registrar', 'historico']);
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['estado', 'historico', 'estadisticas', 'registrar']);
         Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
         assert.deepEqual(exportado.tarjetasVisibles, { registrar: true, estadisticas: false, historico: true });
 

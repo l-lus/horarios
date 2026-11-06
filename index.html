@@ -865,6 +865,15 @@
                         <div class="form-group config-actions config-onboarding-hide">
                             <label id="label-orden-cards">Tarjetas y posición</label>
                             <div id="lista-orden-cards">
+                                <div class="orden-card-item" id="orden-item-estado">
+                                    <button type="button" class="drag-handle flex-1" data-card="estado">
+                                        <svg class="icon">
+                                            <use href="#icon-activity" />
+                                        </svg>
+                                        <span>Estado</span>
+                                        <span class="orden-card-fija">Siempre visible</span>
+                                    </button>
+                                </div>
                                 <div class="orden-card-item" id="orden-item-registrar">
                                     <button id="btn-toggle-card-registrar" class="drag-handle flex-1"
                                         data-card="registrar">
@@ -1300,7 +1309,7 @@
                                 Reducir animaciones (Auto sigue la configuración del dispositivo, o se fuerza activada o
                                 desactivada). Las opciones de PC se ocultan en dispositivos táctiles.</p>
                             <p><strong>Tarjetas y posición:</strong> mostrá u ocultá Fichar, Estadísticas y
-                                Registros, y arrastralas (mantené presionado el encabezado) para cambiar el orden. En PC
+                                Registros (la tarjeta de estado, la de "Hoy", no se puede ocultar), y arrastralas (mantené presionado el encabezado) para cambiar el orden. En PC
                                 las ubicás donde sueltes: en cualquier columna y entre las tarjetas que ya hay. Si la
                                 llevás hasta el borde derecho se abre una columna nueva (hasta 3, en pantallas
                                 anchas, y la página se ensancha); la columna que se queda sin tarjetas desaparece y

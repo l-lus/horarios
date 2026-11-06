@@ -6,7 +6,7 @@ import { BarraHitos } from './barra-hitos.js';
 // ====================================================================
 // Mientras el ciclo del número grande (tarjeta-ciclo-stats.js) muestra una fase, resalta en la barra el hito al que se refiere:
 // su hora pasa a una píldora con la descripción desplegada, el resto se atenúa y el punto pulsa.
-// Solo alterna clases (`foco` en la etiqueta y en la marca, `hay-foco` en la pista). El dibujo es CSS (tarjetas-vistas.css) y
+// Solo alterna clases (`foco` en la etiqueta y en la marca, `hay-foco` en la pista; en la semana, `foco-tramo` y el rango en el relleno). El dibujo es CSS (tarjetas-vistas.css) y
 // qué versión de la descripción entra en cada etiqueta (y si conviene abrirla hacia la derecha de la hora mientras dura el foco) lo decide barra-hitos.js al medir;
 // así este módulo no conoce geometría ni textos.
 
@@ -41,4 +41,31 @@ function enfocar(tipo) {
     });
 }
 
-export const FocoHitos = { enfocar };
+/** @type {HTMLElement[]} */
+let _enfocadosDia = [];
+
+/**
+ * Vista semanal (cursor sobre el tramo de un día): enfoca las marcas de esa fecha, atenúa las demás y deja a plena opacidad solo ese tramo de la barra.
+ * `rango` son las fracciones (0–1) del relleno donde empieza y termina el tramo; sin fecha (null) quita el foco.
+ * @param {string | null} fecha
+ * @param {{ desde: number, hasta: number } | null} [rango]
+ */
+function enfocarDia(fecha, rango = null) {
+    _enfocadosDia.forEach(el => el.classList.remove('foco'));
+    _enfocadosDia = [];
+    const fill = $('progress-bar');
+    const pista = fill?.closest('.progress-pista');
+    pista?.classList.toggle('hay-foco', !!fecha);
+    fill?.classList.toggle('foco-tramo', !!(fecha && rango));
+    if (!fecha) return;
+    if (fill && rango) {
+        fill.style.setProperty('--foco-desde', `${(rango.desde * 100).toFixed(3)}%`);
+        fill.style.setProperty('--foco-hasta', `${(rango.hasta * 100).toFixed(3)}%`);
+    }
+    $('linea-semana')?.querySelectorAll(`[data-fecha="${CSS.escape(fecha)}"]`).forEach(el => {
+        el.classList.add('foco');
+        _enfocadosDia.push(/** @type {HTMLElement} */ (el));
+    });
+}
+
+export const FocoHitos = { enfocar, enfocarDia };

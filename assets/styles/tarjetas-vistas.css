@@ -1757,3 +1757,28 @@
     font-weight: var(--fw-semibold);
 }
 
+
+/* ─── HOVER SOBRE LA BARRA (solo escritorio: ver hover-barra.js) ─────────────────
+   Los hitos y remates ignoran el puntero (pointer-events: none); con un puntero que puede hacer hover pasan a recibirlo.
+   En la vista semanal la zona sensible se amplía unos px sobre y bajo la barra (por detrás del contenido: z-index -1). */
+@media (hover: hover) and (pointer: fine) {
+    .progress-pista.con-linea .linea-etiqueta:not(.linea-etiqueta--oculta),
+    .progress-pista.con-linea .linea-tick,
+    .progress-pista.con-linea #progress-punto-inicio,
+    .progress-pista.con-linea #progress-punto.visible {
+        pointer-events: auto;
+    }
+
+    .progress-pista.linea-semanal::after {
+        content: '';
+        position: absolute;
+        inset: -14px 0;
+        z-index: -1;
+    }
+}
+
+/* Vista semanal: el tramo del día enfocado queda a plena opacidad y el resto de la barra se atenúa (la máscara usa el rango que escribe foco-hitos.js) */
+.progress-fill.foco-tramo {
+    -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.3) var(--foco-desde), #000 var(--foco-desde) var(--foco-hasta), rgba(0, 0, 0, 0.3) var(--foco-hasta));
+    mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.3) var(--foco-desde), #000 var(--foco-desde) var(--foco-hasta), rgba(0, 0, 0, 0.3) var(--foco-hasta));
+}

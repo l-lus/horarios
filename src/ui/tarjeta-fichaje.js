@@ -17,6 +17,7 @@ import { EstadoApp } from '../services/estado-app.js';
 import { esHtmlSeguro, montar } from '../core/html.js';
 import { CicloStats } from './tarjeta-ciclo-stats.js';
 import { FocoHitos } from './foco-hitos.js';
+import { HoverBarra } from './hover-barra.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD MODULE
@@ -104,10 +105,14 @@ function _actualizarTiempoFueraConsolidado(el, est) {
     label.title = 'Tiempo fuera registrado hoy';
 }
 
+// Texto del número grande del último render: lo que se restaura al salir el cursor de un tramo de la vista semanal (ver HoverBarra)
+let _statsActual = '';
+
 /** @param {any} [conteo] */
 function _renderStats(vista, est, conteo = null) {
     const el = $('stats-semana');
     if (!el) return;
+    _statsActual = vista.stats;
 
     const esDiaria = EstadoApp.vistaActual() !== 'semana';
     // En el cruce de medianoche (ayer sigue abierto y hoy aún no tiene entrada) la barra muestra los hitos de esa jornada, y el ciclo también
@@ -191,6 +196,7 @@ function _renderBarra(vista, desdeCero = false) {
     const colorTramo = BarraHitos.render({ vista, pista: /** @type {HTMLElement} */ (pista), fill: el, conLinea, conSemana });
     if (colorTramo && punto && !vista.cerrado) punto.dataset.color = colorTramo(anchoBarra);
     el.classList.toggle('con-remate', !conLinea && !conSemana && vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
+    HoverBarra.actualizarDatos(conSemana ? { hitos: vista.hitosSemana ?? [], fin: vista.anchoBarra / 100 } : null);
 }
 
 // Último mensaje renderizado, para reevaluar si entra en una línea al cambiar el ancho (rotar, redimensionar)
@@ -360,6 +366,22 @@ function alternarVista() {
 function bindEventos() {
     // el ciclo del número grande avisa qué fase muestra y la barra resalta su hito
     CicloStats.alCambiarFase(tipo => FocoHitos.enfocar(tipo));
+
+    // al pasar el cursor por el tramo de un día de la vista semanal (solo escritorio) se escribe su total y su rango horario; al salir vuelve lo de siempre
+    HoverBarra.conectarTextos({
+        mostrar: (stats, mensaje) => {
+            const num = $('stats-semana');
+            if (num && stats !== null) num.textContent = stats;
+            const msg = $('stats-mensaje');
+            if (msg && mensaje !== null) { msg.classList.remove('hidden'); msg.textContent = mensaje; }
+        },
+        restaurar: () => {
+            const num = $('stats-semana');
+            if (num && !CicloStats.activo()) num.textContent = _statsActual;
+            _renderMensaje();
+        }
+    });
+    HoverBarra.bindEventos();
 
     (function () {
         const header = /** @type {HTMLElement} */ (document.querySelector('.header'));

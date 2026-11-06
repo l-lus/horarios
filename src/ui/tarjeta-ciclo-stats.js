@@ -27,6 +27,8 @@ let _cicloStatsSalidaBanco = '';
 let _cicloStatsTiempoFuera = '';
 let _cicloStatsHitosEnBarra = false;
 let _cicloStatsNombreEnNumero = false;
+/** Fase que se muestra fija mientras el cursor está sobre su hito (solo escritorio), o null. */
+let _faseFija = null;
 let _cicloStatsFaseAlRenderizar = null;
 /** @type {((tipo: string | null) => void) | null} */
 let _alCambiarFase = null;
@@ -41,6 +43,7 @@ function _emitirFase(tipo) {
 function _detenerCicloStats() {
     clearTimeout(_cicloStatsInterval);
     _cicloStatsInterval = null;
+    _faseFija = null;
     const el = $('stats-semana');
     if (el) el.classList.remove('mutacion-entrante');
     _emitirFase(null);
@@ -115,7 +118,7 @@ function _crearCicloTick(fases, estado) {
 }
 
 function _cicloStatsActivo() {
-    return !!_cicloStatsInterval;
+    return !!_cicloStatsInterval || _faseFija !== null;
 }
 
 function _iniciarCicloStats(inmediato = false) {
@@ -150,6 +153,33 @@ function _iniciarCicloEnFase(tipo) {
     return true;
 }
 
+/**
+ * Muestra y mantiene la fase del primer tipo de `tipos` que exista (cursor sobre su hito): detiene el ciclo, escribe su texto en el número grande
+ * (con la variante B) y resalta el hito en la barra. Devuelve true si había una fase para mostrar.
+ * @param {string[]} tipos
+ */
+function _fijarFase(tipos) {
+    if (!_cicloStatsEntrada) return false;
+    const fase = _fasesCiclo().find(f => tipos.includes(f.tipo));
+    if (!fase) return false;
+    clearTimeout(_cicloStatsInterval);
+    _cicloStatsInterval = null;
+    _faseFija = fase.tipo;
+    const el = $('stats-semana');
+    if (el) _escribirTextoFase(el, fase);
+    _emitirFase(fase.tipo);
+    return true;
+}
+
+/** El cursor salió del hito: vuelve el número de las horas y se quita el foco. No relanza el ciclo. */
+function _soltarFase() {
+    if (_faseFija === null) return;
+    _faseFija = null;
+    const el = $('stats-semana');
+    if (el) el.textContent = _cicloStatsValorHoras;
+    _emitirFase(null);
+}
+
 /** Datos del registro de hoy que muestran las fases (strings vacíos si no corresponde). */
 function _actualizarDatos({ valorHoras, entrada, salida, tiempoFuera, salidaEstimada = '', salidaBanco = '', hitosEnBarra = false, nombreEnNumero = false }) {
     _cicloStatsValorHoras = valorHoras;
@@ -181,6 +211,8 @@ export const CicloStats = {
     iniciar: _iniciarCicloStats,
     iniciarEnFase: _iniciarCicloEnFase,
     detener: _detenerCicloStats,
+    fijarFase: _fijarFase,
+    soltarFase: _soltarFase,
     activo: _cicloStatsActivo,
     alCambiarFase: _registrarAlCambiarFase,
 };

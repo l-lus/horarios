@@ -452,7 +452,7 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
     const vistaFranjas = TarjetaFichajeVista.derivarVistaSemana({
         ...base,
         diasSemana: [
-            dia('2026-10-26', 'cerrado', { total: 7, cumplimiento: 'cumplido' }),   // lun: cumplió
+            dia('2026-10-26', 'cerrado', { total: 7, cumplimiento: 'cumplido', entrada: '08:00', salida: '15:00' }),   // lun: cumplió
             dia('2026-10-27', 'cerrado', { total: 3.5, cumplimiento: 'faltante' }),   // mar: faltó, pero su tramo es más angosto y va entero rojo
             dia('2026-10-28', 'especial', { objetivo: 0, especial: 'purple' }),
             dia('2026-10-29', 'sin-registro'),
@@ -476,6 +476,11 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
     // cada hito lleva su descripción para lectores de pantalla (con el nombre abreviado del día, no la inicial)
     assert.deepEqual(vistaFranjas.hitosSemana.map(h => h.descripcion), ['lun cumplido', 'mar con faltante', 'mié día especial', 'jue–vie sin registro']);
     assert.equal(vistaFranjas.colorInicioSemana, 'green');
+    // al pasar el cursor por el tramo (solo escritorio): con horas, el total y "Lunes · entrada – salida"; sin horas (o fusionado), solo el estado
+    const [hoverLun, hoverMar, , hoverFusion] = vistaFranjas.hitosSemana.map(h => h.hover);
+    assert.deepEqual(hoverLun, { stats: '7 horas', mensaje: 'Lunes · 08:00 – 15:00' });
+    assert.deepEqual(hoverMar, { stats: null, mensaje: 'Martes: con faltante' });
+    assert.deepEqual(hoverFusion, { stats: null, mensaje: 'jue–vie: sin registro' });
     assert.equal(typeof vistaFranjas.siglasCortas, 'boolean', 'la vista informa si el formato de tiempo corto pide las iniciales');
     // si la primera franja está vacía, el remate del comienzo es neutro aunque más adelante haya rellenos
     const vistaPrimeraVacia = TarjetaFichajeVista.derivarVistaSemana({

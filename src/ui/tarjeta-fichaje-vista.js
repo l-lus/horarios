@@ -143,6 +143,15 @@ function _palabraEstadoDia(d) {
 // Los días futuros no entran, salvo hoy aunque todavía no tenga registro. Los días sin horas (especial, sin salida, sin registro) ocupan un tramo fijo y chico para poder marcarlos;
 // los seguidos del mismo tipo (sin registro o especiales del mismo color) se fusionan en un solo hito con rango (L–X). Hoy nunca se fusiona: lleva el badge.
 // Cada hito trae su sigla (lun, mar...) y su inicial (L, M, X...) para que el dibujo use la que entre mejor.
+// Texto que se ve al pasar el cursor por el tramo de un día (solo escritorio): con horas, el total en el número grande y "Lunes · 13:55 – 21:01" en el mensaje;
+// sin horas (especial, sin registro...) solo el mensaje con su estado. `stats` null = el número no cambia.
+function _textoHoverDia(d, esHoy, conRegistro) {
+    const nombre = `${TiempoUtils.obtenerNombreDia(d.fecha)}${esHoy ? ' (hoy)' : ''}`;
+    if (!conRegistro || !d.entrada) return { stats: null, mensaje: `${nombre}: ${_palabraEstadoDia(d)}` };
+    const rango = d.salida ? `${d.entrada} – ${d.salida}` : `${d.entrada} – en curso`;
+    return { stats: _horasTextoStats(d.total), mensaje: `${nombre} · ${rango}` };
+}
+
 const _PESO_DIA_SIN_HORAS = 1;   // en horas
 function _franjasSemana(todosLosDias, horasDiarias, objetivoSemana, hoy) {
     const diasSemana = (todosLosDias ?? []).filter(d => d.estado !== ESTADO_DIA.FUTURO || d.fecha === hoy);
@@ -179,10 +188,12 @@ function _franjasSemana(todosLosDias, horasDiarias, objetivoSemana, hoy) {
             previo.hito.sigla = `${previo.primera}–${nombre(d)}`;
             previo.hito.inicial = `${previo.inicialPrimera}–${inicial(d)}`;
             previo.hito.descripcion = `${previo.hito.sigla} ${_palabraEstadoDia(d)}`;
+            previo.hito.hover = { stats: null, mensaje: `${previo.hito.sigla}: ${_palabraEstadoDia(d)}` };
         } else {
             const hito = {
                 fecha: d.fecha, sigla: nombre(d), inicial: inicial(d), fraccion: fin, hoy: esHoy(d),
                 descripcion: `${nombre(d)}${esHoy(d) ? ' (hoy)' : ''} ${_palabraEstadoDia(d)}`,
+                hover: _textoHoverDia(d, esHoy(d), conRegistro(d)),
                 prioridad: esHoy(d) ? 3 : conRegistro(d) ? 2 : d.estado === ESTADO_DIA.ESPECIAL || d.estado === ESTADO_DIA.SIN_SALIDA ? 1 : 0   // si no entran todas las siglas se conservan primero hoy y los días con horas
             };
             hitos.push(hito);

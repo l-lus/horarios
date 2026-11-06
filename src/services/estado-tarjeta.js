@@ -73,7 +73,7 @@ function _objetivoSemana(ini, fn, porFecha, horasDiarias) {
  * @param {{ ini: string, fn: string, hoy: string, horasDiarias: number, porFecha: Map<string, any>, regActivo: any, tiempoHoy: number, asignaciones: any }} p
  */
 function _franjasSemana({ ini, fn, hoy, horasDiarias, porFecha, regActivo, tiempoHoy, asignaciones }) {
-    /** @type {{ fecha: string, objetivo: number, total: number, activo: boolean, estado: (typeof ESTADO_DIA)[keyof typeof ESTADO_DIA], especial?: string, cumplimiento?: (typeof CUMPLIMIENTO)[keyof typeof CUMPLIMIENTO] }[]} */
+    /** @type {{ fecha: string, objetivo: number, total: number, activo: boolean, estado: (typeof ESTADO_DIA)[keyof typeof ESTADO_DIA], especial?: string, cumplimiento?: (typeof CUMPLIMIENTO)[keyof typeof CUMPLIMIENTO], entrada?: string, salida?: string }[]} */
     const diasSemana = [];
     for (const isoDate of TiempoUtils.generarRangoFechas(ini, fn)) {
         const rDia = porFecha.get(isoDate) ?? null;
@@ -96,7 +96,10 @@ function _franjasSemana({ ini, fn, hoy, horasDiarias, porFecha, regActivo, tiemp
         const cumplimiento = estado !== ESTADO_DIA.CERRADO ? undefined
             : (objetivo === 0 || horasGte(total, objetivo)) ? CUMPLIMIENTO.CUMPLIDO
                 : SaldoSemanal.cubiertoPorSaldo(isoDate, asignaciones) ? CUMPLIMIENTO.CUBIERTO : CUMPLIMIENTO.FALTANTE;
-        diasSemana.push({ fecha: isoDate, objetivo, total, activo, estado, especial, cumplimiento });
+        // entrada y salida reales del día (los días especiales y remotos no las tienen como horas)
+        const entrada = rDia && !tipo ? rDia.entrada : undefined;
+        const salida = rDia && !tipo && rDia.salida ? rDia.salida : undefined;
+        diasSemana.push({ fecha: isoDate, objetivo, total, activo, estado, especial, cumplimiento, entrada, salida });
     }
     return diasSemana;
 }

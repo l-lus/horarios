@@ -469,7 +469,6 @@
     transition: left var(--dur-slow), opacity var(--dur-fast) ease, color var(--dur-anim) ease, filter var(--dur-anim) ease;
 }
 
-#linea-et-entrada { --foco-color: var(--c-blue); }
 .linea-etiqueta--arriba.positivo { --foco-color: var(--c-green); }
 .linea-etiqueta--arriba.negativo { --foco-color: var(--c-red); }
 .linea-etiqueta[data-desc="ninguna"] { --separacion-desc: 0px; }

@@ -178,7 +178,7 @@ function _vibrarFichar(tipo) {
         } else {
             navigator.vibrate([50, 60, 50]);
         }
-    } catch (_) { }
+    } catch (_) { /* la vibración es opcional: algunos navegadores la bloquean */ }
 }
 
 function _flashCampoTipo(tipo, ...ids) {

@@ -151,9 +151,9 @@ function evaluarNuevoOrdenCards(arrastrado, visibles, clientX, clientY) {
     return nuevaLista;
 }
 
-// Desde dónde se arrastra cada tarjeta: su encabezado, o la tarjeta entera en la de atajos (no tiene encabezado)
-const _SELECTOR_ENCABEZADOS = '#card-registrar .card-registrar-header, #card-atajos, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable';
-const _SELECTOR_CARDS = '#card-registrar, #card-atajos, #card-estadisticas, #card-historico';
+// Desde dónde se arrastra cada tarjeta: su encabezado
+const _SELECTOR_ENCABEZADOS = '#card-registrar .card-registrar-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable';
+const _SELECTOR_CARDS = '#card-registrar, #card-estadisticas, #card-historico';
 
 function iniciarDragTarjetas() {
     let ordenInicial = null;
@@ -243,8 +243,7 @@ function iniciarDragTarjetas() {
             reubicar(nuevaLista, card);
             guardarOrdenCards(ordenEnCurso);
             ordenEnCurso = null;
-            // en la tarjeta de atajos el foco estaba en uno de sus botones
-            (header === card ? /** @type {HTMLElement} */ (e.target) : header).focus();
+            header.focus();
         });
     });
 }
@@ -349,7 +348,6 @@ function bindEventos() {
     $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => togglePersistirTarjetas());
     $('btn-toggle-card-registrar')?.addEventListener('click', () => toggleVisibilidadCard('registrar'));
     $('btn-toggle-card-estadisticas')?.addEventListener('click', () => toggleVisibilidadCard('estadisticas'));
-    $('btn-toggle-card-atajos')?.addEventListener('click', () => toggleVisibilidadCard('atajos'));
     $('btn-toggle-card-historico')?.addEventListener('click', () => toggleVisibilidadCard('historico'));
 }
 

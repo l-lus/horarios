@@ -1,4 +1,4 @@
-import { APP_NOMBRE, APP_VERSION } from './core/constantes.js';
+import { APP_NOMBRE, APP_VERSION, DEMORA_ARRANQUE_MS } from './core/constantes.js';
 import { InstaladorPWA } from './ui/instalador-pwa.js';
 import { RecordatorioPush } from './services/recordatorio-push.js';
 import { FeriadosAR } from './services/feriados-ar.js';
@@ -9,7 +9,6 @@ import { Historico } from './ui/historico.js';
 import { Estadisticas } from './ui/estadisticas.js';
 import { TarjetaFichaje } from './ui/tarjeta-fichaje.js';
 import { OrdenTarjetas } from './ui/orden-tarjetas.js';
-import { Atajos } from './ui/atajos.js';
 import { Notificaciones } from './ui/notificaciones.js';
 import { Configuracion } from './ui/configuracion.js';
 import { HistorialDias } from './ui/historial-dias.js';
@@ -38,7 +37,6 @@ function _iniciarEventosDOM() {
     Estadisticas.bindEventos();
     TarjetaFichaje.bindEventos();
     OrdenTarjetas.bindEventos();
-    Atajos.bindEventos();
     Notificaciones.bindEventos();
     Configuracion.bindEventos();
     HistorialDias.bindEventos();
@@ -61,8 +59,8 @@ requestAnimationFrame(() => {
 
 (async () => {
     await BienvenidaModal.chequearYMostrar();
-    setTimeout(() => FeriadosAR.chequearYNotificar(), 4000);
-    setTimeout(() => AvisoPush.chequearYAvisar(), 2000);
-    setTimeout(() => RecordatorioPush.registrarUso(), 3000);
+    setTimeout(() => FeriadosAR.chequearYNotificar(), DEMORA_ARRANQUE_MS.FERIADOS);
+    setTimeout(() => AvisoPush.chequearYAvisar(), DEMORA_ARRANQUE_MS.AVISO_PUSH);
+    setTimeout(() => RecordatorioPush.registrarUso(), DEMORA_ARRANQUE_MS.REGISTRAR_USO);
     document.addEventListener('visibilitychange', () => RecordatorioPush.registrarUso());
 })();

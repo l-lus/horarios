@@ -572,7 +572,7 @@ button:disabled {
 }
 
 .btn-register .icon {
-    animation: llamarAtencion 5s ease-in-out 1.2s 2;
+    animation: llamarAtencion var(--dur-ambiente) ease-in-out 1.2s 2;
     transform-origin: bottom;
 }
 

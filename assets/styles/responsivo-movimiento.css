@@ -125,7 +125,7 @@
 input.campo-flash,
 select.campo-flash,
 button.campo-flash {
-    animation: campo-flash 500ms ease-in-out 2;
+    animation: campo-flash var(--dur-flash) ease-in-out 2;
 }
 
 /* Destello de "hoy" en el calendario (botón Hoy). Sin registro no hay nada de color que resaltar: un aro del color del texto que aparece y se apaga
@@ -147,7 +147,7 @@ button.campo-flash {
 }
 
 .calendario-dia.hoy.campo-flash {
-    animation: calendario-hoy-flash 500ms ease-in-out 2;
+    animation: calendario-hoy-flash var(--dur-flash) ease-in-out 2;
 }
 
 /* Con registro el destello es un pulso de la parte de color de cada estilo (el relleno, el aro, la barra o el punto): crece un poco y brilla con el color
@@ -212,7 +212,7 @@ button.campo-flash {
 }
 
 .settings-list>.campo-flash {
-    animation: ajuste-flash 500ms ease-in-out 2;
+    animation: ajuste-flash var(--dur-flash) ease-in-out 2;
 }
 
 /* La sombra interna sigue el radio de la fila, no el del contenedor */
@@ -243,7 +243,7 @@ button.campo-flash {
 }
 
 button.campo-flash-color {
-    animation: campo-flash-color 500ms ease-in-out 2;
+    animation: campo-flash-color var(--dur-flash) ease-in-out 2;
 }
 
 /* ─── FICHAJE OK (check de éxito en el botón Fichar) ─────────────────────────── */
@@ -406,15 +406,6 @@ button.campo-flash-color {
         flex-direction: column;
     }
 
-    .atajos-grid {
-        grid-template-columns: repeat(10, 1fr);
-    }
-
-    .atajo-btn {
-        height: auto;
-        aspect-ratio: 1;
-    }
-
     #lista-registros {
         max-height: 1100px;
         overflow-y: auto;
@@ -539,12 +530,12 @@ button.campo-flash-color {
 
 :root[data-motion="reduce"] :is(.modal-content, .cal-popup, .stat-popup, .filtro-popup) {
     transform: none;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--dur-fade) ease;
 }
 
 /* Overlay de los modales: mismo fade corto que .modal-content */
 :root[data-motion="reduce"] .modal {
-    transition: opacity 0.15s ease, visibility 0.15s ease;
+    transition: opacity var(--dur-fade) ease, visibility var(--dur-fade) ease;
 }
 
 /* Decorativas o llamadores de atención en bucle: se quitan. El estado sigue

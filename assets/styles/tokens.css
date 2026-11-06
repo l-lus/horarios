@@ -84,6 +84,12 @@
     --dur-fichaje-vuelta: 200ms;
     --dur-recarga: 150ms;   /* fundido de salida al recargar (solo opacidad: se mantiene con "reducir animaciones") */
     --dur-entrada: 150ms;   /* fundido de entrada de la página al abrirla */
+    --dur-fade: 150ms;      /* fundidos cortos de opacidad */
+    --dur-flash: 500ms;     /* parpadeo de aviso sobre un campo (2 iteraciones) */
+    --dur-ambiente: 5s;     /* animaciones decorativas lentas en bucle */
+    --dur-parpadeo: 3s;     /* parpadeo del badge de estado */
+    --delay-linea: 0.3s;    /* escalonado de entrada de la línea del día */
+    --delay-linea-arriba: 0.45s;
     --ease-anim: ease;
     --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-conteo: cubic-bezier(0.215, 0.61, 0.355, 1);

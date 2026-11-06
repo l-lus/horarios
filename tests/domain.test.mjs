@@ -280,80 +280,68 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarObjetivoPorRegistro: true,
         reducirAnimaciones: 'on',
         hintIntegrado: true,
-        atajosRapidos: ['deshacer', 'rehacer', 'tema', 'estilo-calendario', 'ayuda'],
-        ordenCards: ['registrar', 'estadisticas', 'historico', 'atajos'],
-        ordenCardsMovil: ['registrar', 'estadisticas', 'historico', 'atajos'],
-        tarjetasVisibles: { registrar: true, atajos: true, estadisticas: true, historico: true }
+        ordenCards: ['registrar', 'estadisticas', 'historico'],
+        ordenCardsMovil: ['registrar', 'estadisticas', 'historico'],
+        tarjetasVisibles: { registrar: true, estadisticas: true, historico: true }
     });
 });
 
-test('ImportarExportar: el diseño de la interfaz (atajos, orden y tarjetas visibles) se exporta, valida, compara y restaura', async () => {
+test('ImportarExportar: el diseño de la interfaz (orden y tarjetas visibles) se exporta, valida, compara y restaura', async () => {
     const { ImportarExportar } = await import('../src/services/importar-exportar.js');
     const { Almacenamiento } = await import('../src/core/almacenamiento.js');
     const { STORAGE_KEYS } = await import('../src/core/constantes.js');
     const limpiar = () => {
-        Almacenamiento.removeItem(STORAGE_KEYS.ATAJOS);
         Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS, true);
         Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
-        ['registrar', 'atajos', 'estadisticas', 'historico'].forEach(c => Almacenamiento.removeItem(STORAGE_KEYS.CARD_VISIBLE(c), true));
+        ['registrar', 'estadisticas', 'historico'].forEach(c => Almacenamiento.removeItem(STORAGE_KEYS.CARD_VISIBLE(c), true));
     };
     limpiar();
     try {
-        const eventos = { atajos: 0, tarjetas: 0 };
-        const offA = EventosApp.on('config:atajos', () => { eventos.atajos++; });
+        const eventos = { tarjetas: 0 };
         const offT = EventosApp.on('config:tarjetas', () => { eventos.tarjetas++; });
 
         // Un respaldo viejo (sin estas claves) es válido y no toca nada
         assert.equal(ImportarExportar.validarCamposConfigImport({ registros: [] }), true);
         assert.deepEqual(ImportarExportar.calcularCambiosConfigImport({}), []);
         ImportarExportar.aplicarConfigImportada({});
-        assert.deepEqual(eventos, { atajos: 0, tarjetas: 0 });
-        assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ATAJOS, null), null);
+        assert.deepEqual(eventos, { tarjetas: 0 });
 
         // Forma inválida: se rechaza todo el archivo (como el resto de la configuración)
         const malos = [
-            { atajosRapidos: 'tema' }, { atajosRapidos: ['tema', 3] }, { atajosRapidos: [''] }, { atajosRapidos: ['x'.repeat(41)] },
-            { atajosRapidos: Array.from({ length: 65 }, (_, i) => `a${i}`) }, { ordenCards: [{}] },
+            { ordenCards: 'historico' }, { ordenCards: ['historico', 3] }, { ordenCards: [''] }, { ordenCards: ['x'.repeat(41)] },
+            { ordenCards: Array.from({ length: 65 }, (_, i) => `a${i}`) }, { ordenCards: [{}] },
             { tarjetasVisibles: { registrar: 'si' } }, { tarjetasVisibles: [true] }, { tarjetasVisibles: null }
         ];
         malos.forEach(m => assert.equal(ImportarExportar.validarCamposConfigImport(m), false, JSON.stringify(m).slice(0, 60)));
 
         // Ids que esta versión no conoce (de un archivo más nuevo) se aceptan
         const diseno = {
-            atajosRapidos: ['tema', 'bajar', 'tema', 'atajo-del-futuro'],
             ordenCards: ['historico', 'registrar', 'tarjeta-del-futuro'],
-            tarjetasVisibles: { atajos: false, historico: true, 'tarjeta-del-futuro': false }
+            tarjetasVisibles: { estadisticas: false, historico: true, 'tarjeta-del-futuro': false }
         };
         assert.equal(ImportarExportar.validarCamposConfigImport(diseno), true);
-        assert.deepEqual(ImportarExportar.calcularCambiosConfigImport(diseno), ['atajos', 'orden de tarjetas', 'tarjetas visibles']);
+        assert.deepEqual(ImportarExportar.calcularCambiosConfigImport(diseno), ['orden de tarjetas', 'tarjetas visibles']);
 
         ImportarExportar.aplicarConfigImportada(diseno);
-        assert.deepEqual(eventos, { atajos: 1, tarjetas: 1 });
-        // atajos sin repetidos; el orden queda completo (las tarjetas que faltaban entran en su lugar por defecto, las desconocidas se descartan)
-        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ATAJOS, null), ['tema', 'bajar', 'atajo-del-futuro']);
-        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true), ['historico', 'estadisticas', 'registrar', 'atajos']);
-        assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE('atajos'), true, true), false);
+        assert.deepEqual(eventos, { tarjetas: 1 });
+        // el orden queda completo (las tarjetas que faltaban entran en su lugar por defecto, las desconocidas se descartan)
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true), ['historico', 'estadisticas', 'registrar']);
+        assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE('estadisticas'), true, true), false);
         assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE('registrar'), true, true), true);
 
         // Aplicado, ya no hay diferencias, y exportar devuelve lo mismo que se aplicó
         assert.deepEqual(ImportarExportar.calcularCambiosConfigImport(diseno), []);
         const exportado = ImportarExportar.obtenerConfigExportable();
-        assert.deepEqual(exportado.atajosRapidos, ['tema', 'bajar', 'atajo-del-futuro']);
-        assert.deepEqual(exportado.ordenCards, ['historico', 'estadisticas', 'registrar', 'atajos']);
+        assert.deepEqual(exportado.ordenCards, ['historico', 'estadisticas', 'registrar']);
         // Sin orden propio para móvil, usa el de escritorio; con uno propio, cada modo conserva el suyo
-        assert.deepEqual(exportado.ordenCardsMovil, ['historico', 'estadisticas', 'registrar', 'atajos']);
-        ImportarExportar.aplicarConfigImportada({ ordenCardsMovil: ['atajos', 'registrar'] });
-        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true), ['atajos', 'estadisticas', 'historico', 'registrar']);
-        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['historico', 'estadisticas', 'registrar', 'atajos']);
+        assert.deepEqual(exportado.ordenCardsMovil, ['historico', 'estadisticas', 'registrar']);
+        ImportarExportar.aplicarConfigImportada({ ordenCardsMovil: ['estadisticas', 'registrar'] });
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true), ['estadisticas', 'registrar', 'historico']);
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['historico', 'estadisticas', 'registrar']);
         Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
-        assert.deepEqual(exportado.tarjetasVisibles, { registrar: true, atajos: false, estadisticas: true, historico: true });
+        assert.deepEqual(exportado.tarjetasVisibles, { registrar: true, estadisticas: false, historico: true });
 
-        // Una lista de atajos vacía es una elección válida y se restaura vacía
-        ImportarExportar.aplicarConfigImportada({ atajosRapidos: [] });
-        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ATAJOS, null), []);
-        assert.deepEqual(ImportarExportar.obtenerConfigExportable().atajosRapidos, []);
-
-        offA(); offT();
+        offT();
     } finally {
         limpiar();
     }

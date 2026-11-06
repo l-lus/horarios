@@ -321,12 +321,9 @@ function toggleVerToken() {
 }
 
 function abrirGistEnBrowser() {
-    const gistIdRaw = $('gist-id')?.value.trim() || SincronizacionGist.getGistId();
-    if (gistIdRaw && SincronizacionGist.esGistIdValido(gistIdRaw)) {
-        window.open(`https://gist.github.com/${gistIdRaw.trim()}`, '_blank', 'noopener,noreferrer');
-    } else {
-        window.open('https://gist.github.com', '_blank', 'noopener,noreferrer');
-    }
+    const gistId = ($('gist-id')?.value || SincronizacionGist.getGistId() || '').trim();
+    const url = SincronizacionGist.esGistIdValido(gistId) ? `https://gist.github.com/${gistId}` : 'https://gist.github.com';
+    window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function _tipoSyncActual() {

@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -104,7 +104,7 @@ async function eliminarGrupoActual() {
     if (!grupoEnEdicion) return;
     const notify = EstadoApp._notify();
     if (grupoEnEdicion.registros.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) {
-        notify.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} registros por operación.`, 'error', 4000);
+        notify.mostrarToast(`Este grupo contiene ${grupoEnEdicion.registros.length} registros.\nMáximo permitido: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} registros por operación.`, 'error', TOAST_MS.LARGO);
         return;
     }
     const idsAEliminar = grupoEnEdicion.registros.map(r => r.id);
@@ -284,7 +284,7 @@ async function registrarVacacionesDirecto(desde, hasta, tipo) {
     const fechasARegistrar = TiempoUtils.generarRangoFechas(desde, hasta);
 
     if (fechasARegistrar.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) {
-        notify.avisarFichaje(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación.`, 'error', { duracion: 4000 });
+        notify.avisarFichaje(`El rango seleccionado contiene ${fechasARegistrar.length} días.\n Máximo permitido: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación.`, 'error', { duracion: TOAST_MS.LARGO });
         throw new Error('Límite de días excedido');
     }
 

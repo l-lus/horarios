@@ -8,7 +8,6 @@ import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp as D } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
-import { ATAJOS_POR_DEFECTO, MAX_ATAJOS } from './atajos.js';
 import { normalizarOrdenCards } from './orden-cards.js';
 
 // ====================================================================
@@ -23,25 +22,18 @@ const KEYS_CONFIG_EXPORTABLE = [
     STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
     STORAGE_KEYS.REDUCIR_ANIMACIONES,
     STORAGE_KEYS.HINT_INTEGRADO,
-    STORAGE_KEYS.ATAJOS,
     STORAGE_KEYS.ORDEN_CARDS,
     STORAGE_KEYS.ORDEN_CARDS_MOVIL,
     CLAVE_TARJETAS_VISIBLES
 ];
 
-// Diseño de la interfaz (atajos, orden y visibilidad de tarjetas). Un archivo de otra versión puede traer ids que esta no conoce:
-// se aceptan mientras sean textos cortos y pocos, y al aplicarlos se descartan los desconocidos (la tarjeta de atajos y el orden vuelven a filtrar al leer).
+// Diseño de la interfaz (orden y visibilidad de tarjetas). Un archivo de otra versión puede traer ids que esta no conoce:
+// se aceptan mientras sean textos cortos y pocos, y al aplicarlos se descartan los desconocidos (el orden vuelve a filtrar al leer).
 const MAX_ITEMS_LISTA_UI = 64;
 const MAX_LARGO_ID_UI = 40;
 const _esListaDeIds = (v) => Array.isArray(v) && v.length <= MAX_ITEMS_LISTA_UI && v.every(x => typeof x === 'string' && x.length > 0 && x.length <= MAX_LARGO_ID_UI);
 const _esMapaDeBooleanos = (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= MAX_ITEMS_LISTA_UI && Object.values(v).every(x => typeof x === 'boolean');
 
-// Sin lista guardada el usuario nunca tocó los atajos: lo que ve son los de por defecto, y eso es lo que se exporta
-function _atajosActuales() {
-    const guardado = Almacenamiento.getObject(STORAGE_KEYS.ATAJOS, null);
-    return Array.isArray(guardado) ? guardado.filter(id => typeof id === 'string') : [...ATAJOS_POR_DEFECTO];
-}
-const _atajosSaneados = (lista) => [...new Set(lista)].slice(0, MAX_ATAJOS);
 const _ordenActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
 // Sin orden propio para móvil se usa el de escritorio (así era antes de separarlos)
 const _ordenMovilActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true) ?? Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
@@ -54,7 +46,6 @@ function obtenerConfigExportable() {
         [STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
         [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Movimiento.modo(),
         [STORAGE_KEYS.HINT_INTEGRADO]: Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO),
-        [STORAGE_KEYS.ATAJOS]: _atajosActuales(),
         [STORAGE_KEYS.ORDEN_CARDS]: _ordenActual(),
         [STORAGE_KEYS.ORDEN_CARDS_MOVIL]: _ordenMovilActual(),
         [CLAVE_TARJETAS_VISIBLES]: _visiblesActuales()
@@ -76,7 +67,6 @@ function validarCamposConfigImport(data) {
         !['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES])) {
         return false;
     }
-    if (data[STORAGE_KEYS.ATAJOS] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ATAJOS])) return false;
     if (data[STORAGE_KEYS.ORDEN_CARDS] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ORDEN_CARDS])) return false;
     if (data[STORAGE_KEYS.ORDEN_CARDS_MOVIL] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL])) return false;
     if (data[CLAVE_TARJETAS_VISIBLES] !== undefined && !_esMapaDeBooleanos(data[CLAVE_TARJETAS_VISIBLES])) return false;
@@ -116,10 +106,6 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
         EventosApp.emit('config:hint-integrado');
     }
     // Diseño de la interfaz: lo que el archivo no trae no se toca (los respaldos viejos no lo incluyen). La UI se redibuja al recibir los eventos
-    if (Array.isArray(data[STORAGE_KEYS.ATAJOS])) {
-        Almacenamiento.setItem(STORAGE_KEYS.ATAJOS, _atajosSaneados(data[STORAGE_KEYS.ATAJOS]));
-        EventosApp.emit('config:atajos');
-    }
     let cambioTarjetas = false;
     if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS])) {
         Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS]), true);
@@ -174,9 +160,6 @@ function calcularCambiosConfigImport(data) {
     if (typeof data[STORAGE_KEYS.HINT_INTEGRADO] === 'boolean' &&
         data[STORAGE_KEYS.HINT_INTEGRADO] !== Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO)) {
         cambios.push('hint integrado');
-    }
-    if (Array.isArray(data[STORAGE_KEYS.ATAJOS]) && _atajosSaneados(data[STORAGE_KEYS.ATAJOS]).join() !== _atajosActuales().join()) {
-        cambios.push('atajos');
     }
     if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS]) && normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS]).join() !== _ordenActual().join()) {
         cambios.push('orden de tarjetas');

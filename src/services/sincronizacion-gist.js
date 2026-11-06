@@ -14,7 +14,7 @@ const RANGO_HORARIO_DEFAULT = { desde: '21:00', hasta: '00:00' };
 // Tokens de GitHub (clásicos ghp_…, fine-grained github_pat_… y los viejos de 40 hex): solo letras, números y '_'
 const TOKEN_REGEX = /^[A-Za-z0-9_]{20,255}$/;
 
-function esGistIdValido(id) { return id && GIST_ID_REGEX.test(id.trim()); }
+function esGistIdValido(id) { return typeof id === 'string' && GIST_ID_REGEX.test(id.trim()); }
 function esTokenValido(token) { return typeof token === 'string' && TOKEN_REGEX.test(token.trim()); }
 
 function _conPerfil(fn) {
@@ -118,17 +118,14 @@ function saveLastSync(gistId) {
     const ahoraISO = new Date().toISOString();
     _conPerfil(perfil => {
         perfil.gistLastSync = ahoraISO;
-        if (gistId && esGistIdValido(gistId)) perfil.gistId = gistId;
+        if (gistId && esGistIdValido(gistId)) perfil.gistId = gistId.trim();
     });
 }
 
 function formatLastSync(isoOrLegacy) {
     if (!isoOrLegacy) return null;
-    try {
-        const d = new Date(isoOrLegacy);
-        if (!isNaN(d.getTime())) return d.toLocaleString('es-AR');
-    } catch (e) { }
-    return isoOrLegacy;
+    const d = new Date(isoOrLegacy);
+    return isNaN(d.getTime()) ? isoOrLegacy : d.toLocaleString('es-AR');
 }
 
 async function _gistFetch(url, options = {}) {

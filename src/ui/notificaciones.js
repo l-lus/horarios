@@ -1,4 +1,5 @@
 import { $ } from '../core/dom.js';
+import { TOAST_MS } from '../core/constantes.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { UIBase } from './base.js';
 import { debounce } from './gestos.js';
@@ -118,7 +119,7 @@ async function enviarNotificacionPrueba() {
         'no-soportado': ['Este navegador no admite notificaciones', 'error'],
     };
     const [texto, tipo] = mensajes[await RecordatorioPush.enviarNotificacionPrueba(10000)];
-    mostrarToast(texto, tipo, 5000);
+    mostrarToast(texto, tipo, TOAST_MS.AVISO);
     actualizarEstadoPermisoNotificaciones();
 }
 

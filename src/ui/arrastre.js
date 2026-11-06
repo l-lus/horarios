@@ -86,9 +86,9 @@ export function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar
         el = null;
         if (arrastrado) {
             if (targetCaptura) {
-                try { targetCaptura.releasePointerCapture(pointerId); } catch (_) { }
+                try { targetCaptura.releasePointerCapture(pointerId); } catch (_) { /* la captura ya se liberó */ }
             }
-            try { capturar(arrastrado).releasePointerCapture(pointerId); } catch (_) { }
+            try { capturar(arrastrado).releasePointerCapture(pointerId); } catch (_) { /* la captura ya se liberó */ }
             tragarClic = true;
             setTimeout(() => { tragarClic = false; }, 120);
             alTerminar(arrastrado, confirmar);

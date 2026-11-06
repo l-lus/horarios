@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
 **Última actualización:** 2026-11-01  
-**Estado:** Arquitectura modularizada y saneada (73 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Estado:** Arquitectura modularizada y saneada (74 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -39,7 +39,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (73 módulos)
+├── src/                        # Código fuente en ES Modules (74 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
@@ -173,7 +173,6 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/services/feriados-ar.js`](../src/services/feriados-ar.js) | `FeriadosAR` | Detección de feriados nacionales del mes en curso y sugerencia automática de carga. |
 | [`src/services/sincronizacion-gist.js`](../src/services/sincronizacion-gist.js) | `SincronizacionGist` | Cliente HTTP de la API de GitHub Gist (crear, subir, descargar respaldos en la nube y verificar hashes). |
 | [`src/services/recordatorio-push.js`](../src/services/recordatorio-push.js) | `RecordatorioPush` | Suscripción Web Push (VAPID), programación y cancelación de recordatorios de fin de jornada con el Worker, y ping diario anónimo de uso (`registrarUso` → `/api/hola`). |
-| [`src/services/atajos.js`](../src/services/atajos.js) | `normalizarAtajos`, `alternarAtajo`, `MAX_ATAJOS`, `ATAJOS_POR_DEFECTO` | Lista de atajos rápidos elegida por el usuario: normalización y alta/baja, sin DOM. |
 | [`src/services/orden-cards.js`](../src/services/orden-cards.js) | `normalizarOrdenCards`, `fusionarOrdenVisibles`, `columnaDeCard` | Orden de las tarjetas (ocultas incluidas) y columna de escritorio de cada una, sin DOM. |
 
 ### 4.4. Interfaz de usuario (`src/ui/`)
@@ -217,7 +216,6 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/ui/notificaciones.js`](../src/ui/notificaciones.js) | `Notificaciones` | Modal y controles de configuración de avisos Web Push (anticipación, uso de saldo semanal). |
 | [`src/ui/bienvenida-modal.js`](../src/ui/bienvenida-modal.js) | `BienvenidaModal` | Onboarding inicial para configurar horas diarias y días hábiles en el primer uso. |
 | [`src/ui/aviso-push.js`](../src/ui/aviso-push.js) | `AvisoPush` | Banner sugerido para activar notificaciones de fin de jornada luego de alcanzar el umbral de uso. |
-| [`src/ui/atajos.js`](../src/ui/atajos.js) | `Atajos` | Tarjeta de atajos rápidos: catálogo de acciones (ícono, estado, acción), render de los botones y modal para elegirlos. |
 | [`src/ui/aviso-actualizacion.js`](../src/ui/aviso-actualizacion.js) | `AvisoActualizacion` | Toast con barra de progreso mientras el Service Worker descarga una versión nueva. |
 | [`src/ui/ayuda-buscador.js`](../src/ui/ayuda-buscador.js) | `AyudaBuscador` | Buscador del modal de ayuda: filtra secciones y resalta coincidencias (Enter recorre). |
 | [`src/ui/barra-hitos.js`](../src/ui/barra-hitos.js) | `BarraHitos` | Marcas de la barra de progreso con el hint integrado: hora (vista diaria) o sigla (vista semanal). Solo dibuja; los datos vienen de `tarjeta-fichaje-vista.js`. En la vista diaria mide cada etiqueta y elige qué versión de su descripción entra (`data-desc`, `--desc-ancho`) para el foco; si a la izquierda de la hora no entra completa pero a la derecha sí, prepara el despliegue (`desplegarADerecha`) que abre la descripción hacia ese lado mientras dura el foco, sin mover la hora (con el registro cerrado es el único lado posible). Las etiquetas vecinas están atenuadas durante el foco, así que no cuentan como obstáculo. |

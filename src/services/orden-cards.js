@@ -7,7 +7,7 @@ import { CARDS } from '../core/constantes.js';
 export const CARDS_EN_DERECHA = 2;
 
 /**
- * Orden guardado → orden válido. Descarta lo desconocido y repetido; una tarjeta que no estaba cuando se guardó (ej. "atajos", agregada después)
+ * Orden guardado → orden válido. Descarta lo desconocido y repetido; una tarjeta que no estaba cuando se guardó (agregada en una versión posterior)
  * entra en el lugar que le toca por defecto, sin tocar el orden que ya había elegido el usuario.
  * @param {unknown} guardado
  * @param {readonly string[]} [cards]

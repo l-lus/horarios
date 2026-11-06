@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from './gestor-perfiles.js';
@@ -36,7 +36,7 @@ function _avisarFallo(accion, status) {
     const mensaje = accion === 'cancelar'
         ? 'No se pudo cancelar el aviso de hoy (puede que igual te llegue)'
         : 'No se pudo programar el aviso de fin de jornada';
-    notify.mostrarToast(mensaje, 'warning', 5000, motivo);
+    notify.mostrarToast(mensaje, 'warning', TOAST_MS.AVISO, motivo);
 }
 
 function _headersWorker() {

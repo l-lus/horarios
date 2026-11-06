@@ -28,7 +28,6 @@ export const STORAGE_KEYS = Object.freeze({
     PERSISTIR_TARJETAS: 'persistirTarjetas',
     ORDEN_CARDS: 'ordenCards',
     ORDEN_CARDS_MOVIL: 'ordenCardsMovil',
-    ATAJOS: 'atajosRapidos',
     FORMULARIO_EXPANDIDO: 'formularioExpandido',
     STATS_EXPANDIDO: 'statsExpandido',
     HISTORICO_EXPANDIDO: 'historicoExpandido',
@@ -59,7 +58,7 @@ export const STORAGE_KEYS = Object.freeze({
 
 // Tarjetas que se pueden ocultar y reordenar, en su orden por defecto (la de fichaje con la barra de progreso va siempre arriba y no cuenta).
 // En escritorio las dos últimas pasan a la columna derecha.
-export const CARDS = Object.freeze(['registrar', 'estadisticas', 'historico', 'atajos']);
+export const CARDS = Object.freeze(['registrar', 'estadisticas', 'historico']);
 
 // Valores por defecto de opciones booleanas que se leen desde varios módulos (un solo lugar para que no se desincronicen)
 export const DEFAULTS = Object.freeze({
@@ -67,6 +66,20 @@ export const DEFAULTS = Object.freeze({
     RUEDA_CALENDARIO: true,
 });
 
+
+// Duración (ms) de los toasts según la importancia del mensaje
+export const TOAST_MS = Object.freeze({
+    NORMAL: 3000,
+    LARGO: 4000,
+    AVISO: 5000,
+});
+
+// Demora (ms) de las tareas que se lanzan al arrancar la app, para no competir con el primer render
+export const DEMORA_ARRANQUE_MS = Object.freeze({
+    AVISO_PUSH: 2000,
+    REGISTRAR_USO: 3000,
+    FERIADOS: 4000,
+});
 
 // Estado de cada día de la semana en la tarjeta de fichaje (lo calcula el servicio; la vista lo traduce a colores y textos)
 export const ESTADO_DIA = Object.freeze({

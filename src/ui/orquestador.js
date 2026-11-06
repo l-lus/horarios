@@ -30,7 +30,6 @@ import { TarjetaFondos } from './tarjeta-fondos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
-import { Atajos } from './atajos.js';
 import { Notificaciones } from './notificaciones.js';
 import { Configuracion } from './configuracion.js';
 import { HistorialDias } from './historial-dias.js';
@@ -161,7 +160,6 @@ function _initGlobales() {
     GestorModales.registrarAccionVolver('modal-ayuda', cerrarModalAyuda);
     GestorModales.registrarAccionVolver('modal-historial-dias', cerrarModalHistorialDias);
     GestorModales.registrarAccionVolver('modal-notificaciones', cerrarModalNotificaciones);
-    GestorModales.registrarAccionVolver('modal-atajos', Atajos.cerrarModalAtajos);
     GestorModales.registrarAccionVolver('modal-editar-tramo-dias', cerrarEditorTramoDias);
 }
 
@@ -273,7 +271,6 @@ function _initDatosYConfig(config) {
     actualizarSelectPushAnticipacion();
     aplicarVisibilidadCards();
     aplicarOrdenCards(obtenerOrdenCards());
-    Atajos.renderizar();
     iniciarDragOrdenCards();
     iniciarDragTarjetas();
     setFondoCard(config.fondoCard || 'golden-gate');

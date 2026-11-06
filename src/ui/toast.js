@@ -1,4 +1,5 @@
 import { $ } from '../core/dom.js';
+import { TOAST_MS } from '../core/constantes.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { Animaciones } from './animaciones.js';
 import { registrarSwipe } from './gestos.js';
@@ -23,8 +24,8 @@ let _timerProgreso = null;
 let _progreso = null;
 let _progresoVisible = false;
 
-/** @param {any} [detalle] @param {any} [accion] */
-export function mostrarToast(mensaje, tipo = 'info', duracion = 3000, detalle = null, accion = null) {
+/** @param {string} mensaje @param {string} [tipo] @param {number} [duracion] @param {any} [detalle] @param {any} [accion] */
+export function mostrarToast(mensaje, tipo = 'info', duracion = TOAST_MS.NORMAL, detalle = null, accion = null) {
     const texto = detalle ? `${mensaje}, ${detalle}` : mensaje;
     const textoLimpio = S.limpiarTexto(texto, 200, { saltos: true });
     const ultimo = _toastQueue[_toastQueue.length - 1];

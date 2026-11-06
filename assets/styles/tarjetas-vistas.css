@@ -133,8 +133,9 @@
    suma esa diferencia (medida: 12 px) para que la distancia visual de la barra a ambos textos sea la misma */
 .progress-pista {
     --ajuste-optico: 0.75rem;
+    --margen-x: var(--space-sm);   /* los puntos de los extremos sobresalen medio círculo de la barra: sin este margen quedaban casi pegados al borde de la tarjeta */
     position: relative;
-    margin: var(--space-lg) 0 calc(var(--space-lg) + var(--ajuste-optico));
+    margin: var(--space-lg) var(--margen-x) calc(var(--space-lg) + var(--ajuste-optico));
 }
 
 .progress-punto {
@@ -246,7 +247,7 @@
 /* Hint integrado: la pista reserva el alto de la línea (vista diaria o semanal) */
 .progress-pista.reserva-linea,
 .progress-pista.con-linea {
-    margin: calc(var(--space-lg) + 1.2rem) 0 calc(var(--space-lg) + 1.2rem + var(--ajuste-optico));
+    margin: calc(var(--space-lg) + 1.2rem) var(--margen-x) calc(var(--space-lg) + 1.2rem + var(--ajuste-optico));
 }
 
 /* Al aparecer (display none → block) los elementos de la línea entran con fundido; el estado final es el natural de cada uno */

@@ -789,19 +789,3 @@ body.tarjeta-arrastrando-activa * {
 .columna-vacia {
     display: none;
 }
-
-/* Hueco para abrir una columna nueva: solo existe mientras se arrastra una tarjeta (y si todavía entra otra columna) */
-.columna-nueva {
-    display: none;
-}
-
-@media (min-width: 1024px) {
-    .container.arrastrando-columnas .columna-nueva {
-        display: block;
-        align-self: stretch;
-        min-height: 12rem;
-        border: 2px dashed color-mix(in srgb, var(--text-muted) 45%, transparent);
-        border-radius: var(--radius-md);
-        background: color-mix(in srgb, var(--text-muted) 6%, transparent);
-    }
-}

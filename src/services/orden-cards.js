@@ -77,15 +77,16 @@ export function prepararColumnas(columnas, max = MAX_COLUMNAS, visibles = null) 
 /**
  * Mueve una tarjeta a `colDestino` (si es igual a la cantidad de columnas, abre una nueva), delante de `antesDe` o al final.
  * Las columnas que quedan vacías desaparecen (salvo la primera). Devuelve las columnas nuevas, o null si no hay cambio
- * o el resultado superaría `max` columnas con tarjetas visibles.
+ * o el resultado superaría `max` columnas con tarjetas visibles. Con `exigirDerecha` tampoco deja sin tarjetas visibles a las columnas
+ * de la derecha si antes tenían alguna (la página nunca queda en una sola columna por un movimiento).
  * @param {readonly (readonly string[])[]} columnas
  * @param {string} id
  * @param {number} colDestino
  * @param {string | null} [antesDe]
- * @param {{ max?: number, visibles?: ReadonlySet<string> | null }} [opciones]
+ * @param {{ max?: number, visibles?: ReadonlySet<string> | null, exigirDerecha?: boolean }} [opciones]
  * @returns {string[][] | null}
  */
-export function moverCard(columnas, id, colDestino, antesDe = null, { max = MAX_COLUMNAS, visibles = null } = {}) {
+export function moverCard(columnas, id, colDestino, antesDe = null, { max = MAX_COLUMNAS, visibles = null, exigirDerecha = false } = {}) {
     const nuevas = columnas.map(c => c.filter(x => x !== id));
     if (colDestino >= nuevas.length) {
         nuevas.push([id]);
@@ -95,6 +96,9 @@ export function moverCard(columnas, id, colDestino, antesDe = null, { max = MAX_
         destino.splice(i === -1 ? destino.length : i, 0, id);
     }
     const resultado = nuevas.filter((c, i) => i === 0 || c.length > 0);
-    if (resultado.filter((c, i) => i === 0 || c.some(x => !visibles || visibles.has(x))).length > max) return null;
+    const esVisible = (x) => !visibles || visibles.has(x);
+    if (resultado.filter((c, i) => i === 0 || c.some(esVisible)).length > max) return null;
+    const hayDerecha = (cols) => cols.slice(1).some(c => c.some(esVisible));
+    if (exigirDerecha && hayDerecha(columnas) && !hayDerecha(resultado)) return null;
     return JSON.stringify(resultado) === JSON.stringify(columnas) ? null : resultado;
 }

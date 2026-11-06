@@ -66,3 +66,17 @@ test('Columnas: preparar para dibujar funde columnas sin tarjetas visibles y res
     // no modifica lo que recibe
     assert.deepEqual(cols, [['registrar'], ['estadisticas'], ['historico']]);
 });
+
+test('Columnas: en escritorio nunca se deja la derecha sin tarjetas visibles', () => {
+    const opc = { exigirDerecha: true };
+    // la única tarjeta de la derecha no puede volver a la izquierda
+    assert.equal(moverCard([['registrar', 'estadisticas'], ['historico']], 'historico', 0, null, opc), null);
+    // pero sí se puede cambiar de lugar dentro de la derecha o pasar de una columna derecha a otra
+    assert.deepEqual(moverCard([['registrar'], ['estadisticas', 'historico']], 'historico', 1, 'estadisticas', opc), [['registrar'], ['historico', 'estadisticas']]);
+    assert.deepEqual(moverCard([['registrar'], ['estadisticas'], ['historico']], 'historico', 1, null, opc), [['registrar'], ['estadisticas', 'historico']]);
+    // si la derecha solo tiene tarjetas ocultas, la restricción cuenta las visibles
+    const visibles = new Set(['registrar', 'estadisticas']);
+    assert.equal(moverCard([['registrar'], ['estadisticas', 'historico']], 'estadisticas', 0, null, { ...opc, visibles }), null);
+    // sin la restricción (móvil) se permite
+    assert.deepEqual(moverCard([['registrar', 'estadisticas'], ['historico']], 'historico', 0), [['registrar', 'estadisticas', 'historico']]);
+});

@@ -393,6 +393,11 @@ button.campo-flash-color {
         padding: var(--space-xl);
     }
 
+    /* Con 3 columnas la página gana ancho (en pantallas más chicas el límite lo pone la ventana) */
+    .container[data-columnas="3"] {
+        max-width: 1900px;
+    }
+
     .calendario-semana-actual {
     inset: 15px -6px;
     }

@@ -80,10 +80,7 @@ function _contenedores() {
     return [primero, $('right-column'), $('columna-3')];
 }
 
-// Mientras se arrastra, el hueco de columna nueva solo se pide cuando el puntero se acerca al borde derecho (ver iniciarDragTarjetas)
-let _huecoPedido = false;
-
-/** Muestra solo las columnas que tienen tarjetas visibles (más el hueco de columna nueva si se pidió) y fija cuántas hay. */
+/** Muestra solo las columnas que tienen tarjetas visibles y fija cuántas hay (el CSS ensancha la página con 3). */
 function _actualizarColumnas() {
     const contenedores = _contenedores();
     const hayTarjetaVisible = (c) => /** @type {HTMLElement[]} */ (Array.from(c.children)).some(el => el.id.startsWith('card-') && el.style.display !== 'none');
@@ -94,11 +91,10 @@ function _actualizarColumnas() {
         c.classList.toggle('columna-vacia', vacia);
         if (!vacia) n++;
     });
-    const hueco = _huecoPedido && _esEscritorio() && n < _maxColumnas();
     const raiz = /** @type {HTMLElement | null} */ (document.querySelector('.container'));
     if (!raiz) return;
-    raiz.classList.toggle('arrastrando-columnas', hueco);
-    raiz.style.setProperty('--columnas', String(n + (hueco ? 1 : 0)));
+    raiz.dataset.columnas = String(n);
+    raiz.style.setProperty('--columnas', String(n));
 }
 
 /** @param {string[]} orden @param {string[][] | null} [columnas] columnas ya preparadas (si no, salen de lo guardado) */
@@ -156,42 +152,27 @@ function obtenerCardsVisibles() {
 const _idDeCard = (el) => el.id.replace('card-', '');
 
 /**
- * ¿Hay que mostrar u ocultar el hueco de columna nueva según dónde está el puntero? Se pide al entrar en la franja del borde derecho
- * (solo si abrir una columna cambiaría algo) y se retira al volver a la izquierda del lugar que ocuparía el hueco. Devuelve true si cambió.
- */
-function _actualizarPedidoHueco(clientX, arrastrado, columnas) {
-    const raiz = document.querySelector('.container');
-    if (!raiz) return false;
-    const r = raiz.getBoundingClientRect();
-    const n = _contenedores().filter((c, i) => c && (i === 0 || !c.classList.contains('columna-vacia'))).length;
-    let pedido = _huecoPedido;
-    if (!pedido) {
-        if (clientX > r.right - Math.min(140, r.width * 0.12)) {
-            pedido = n < _maxColumnas()
-                && moverCard(columnas, _idDeCard(arrastrado), columnas.length, null, { max: _maxColumnas(), visibles: _tarjetasVisibles() }) !== null;
-        }
-    } else if (clientX < r.left + r.width * (n / (n + 1)) - 40) {
-        pedido = false;
-    }
-    if (pedido === _huecoPedido) return false;
-    _huecoPedido = pedido;
-    return true;
-}
-
-/**
- * Dónde cae la tarjeta arrastrada según el puntero: la columna sobre la que está (o el hueco de columna nueva) y delante de qué tarjeta visible
- * de esa columna. Devuelve las columnas nuevas, o null si no cambia nada.
+ * Dónde cae la tarjeta arrastrada según el puntero: la columna sobre la que está (si llegó al borde derecho y todavía entra otra columna,
+ * una columna nueva) y delante de qué tarjeta visible de esa columna. Devuelve las columnas nuevas, o null si no cambia nada.
  */
 function evaluarNuevasColumnas(arrastrado, columnas, clientX, clientY) {
     const contenedores = _contenedores();
-    const hueco = $('columna-nueva');
     /** @type {{ indice: number, el: HTMLElement }[]} */
     const zonas = [];
     contenedores.forEach((c, i) => {
         if (c && (i === 0 || !c.classList.contains('columna-vacia'))) zonas.push({ indice: i, el: c });
     });
-    if (hueco && getComputedStyle(hueco).display !== 'none') zonas.push({ indice: columnas.length, el: hueco });
     if (!zonas.length) return null;
+
+    const opciones = { max: _maxColumnas(), visibles: _tarjetasVisibles(), exigirDerecha: _esEscritorio() };
+    const id = _idDeCard(arrastrado);
+
+    // Pegada al borde derecho (o más allá): abre una columna nueva. No se muestra nada; la columna aparece al mover la tarjeta
+    const raiz = document.querySelector('.container');
+    if (raiz && _esEscritorio() && columnas.length < _maxColumnas()) {
+        const r = raiz.getBoundingClientRect();
+        if (clientX > r.right - Math.min(100, r.width * 0.08)) return moverCard(columnas, id, columnas.length, null, opciones);
+    }
 
     // La columna cuyo ancho contiene al puntero, o la más cercana en horizontal
     const distancia = (z) => { const r = z.el.getBoundingClientRect(); return clientX < r.left ? r.left - clientX : clientX > r.right ? clientX - r.right : 0; };
@@ -202,7 +183,7 @@ function evaluarNuevasColumnas(arrastrado, columnas, clientX, clientY) {
         .filter(el => el.id.startsWith('card-') && el !== arrastrado && el.style.display !== 'none')
         .find(el => { const r = el.getBoundingClientRect(); return clientY < r.top + r.height / 2; });
 
-    return moverCard(columnas, _idDeCard(arrastrado), zona.indice, antes ? _idDeCard(antes) : null, { max: _maxColumnas(), visibles: _tarjetasVisibles() });
+    return moverCard(columnas, id, zona.indice, antes ? _idDeCard(antes) : null, opciones);
 }
 
 // Desde dónde se arrastra cada tarjeta: su encabezado
@@ -243,16 +224,9 @@ function iniciarDragTarjetas() {
             card.classList.add('reordenando');
             document.body.classList.add('tarjeta-arrastrando-activa');
             /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.animated-card')).forEach(c => c.style.animation = 'none');
-            _huecoPedido = false;
         },
         alMover: (e, card) => {
             if (performance.now() < deslizandoHasta || !columnasEnCurso) return;
-            // Recién al acercarse al borde derecho se muestra el hueco (y las columnas se angostan); se retira al volver hacia la izquierda
-            if (_esEscritorio() && _actualizarPedidoHueco(e.clientX, card, columnasEnCurso)) {
-                uiAnimarReubicacion(() => obtenerCardsVisibles(), c => c.id, () => _actualizarColumnas(), { encima: card });
-                deslizandoHasta = performance.now() + REUBICACION_MS;
-                return;
-            }
             const nuevas = evaluarNuevasColumnas(card, columnasEnCurso, e.clientX, e.clientY);
             if (!nuevas) return;
 
@@ -263,10 +237,9 @@ function iniciarDragTarjetas() {
         alTerminar: (card, confirmar) => {
             card.classList.remove('reordenando');
             document.body.classList.remove('tarjeta-arrastrando-activa');
-            _huecoPedido = false;
             const destino = confirmar ? columnasEnCurso : columnasInicial;
             if (destino) {
-                // Sin el hueco de columna nueva (y sin columnas que hayan quedado vacías) y guardando el diseño elegido
+                // Sin columnas que hayan quedado vacías, y guardando el diseño elegido
                 uiAnimarReubicacion(
                     () => obtenerCardsVisibles(),
                     c => c.id,
@@ -306,11 +279,11 @@ function iniciarDragTarjetas() {
             if (vertical) {
                 const propias = enColumna(colActual);
                 if (atras ? pos <= 0 : pos >= propias.length - 1) return;
-                nuevas = moverCard(columnas, id, colActual, atras ? propias[pos - 1] : (propias[pos + 2] ?? null), { max: _maxColumnas(), visibles });
+                nuevas = moverCard(columnas, id, colActual, atras ? propias[pos - 1] : (propias[pos + 2] ?? null), { max: _maxColumnas(), visibles, exigirDerecha: _esEscritorio() });
             } else {
                 const destino = colActual + (atras ? -1 : 1);
                 if (destino < 0) return;
-                nuevas = moverCard(columnas, id, destino, destino < columnas.length ? (enColumna(destino)[pos] ?? null) : null, { max: _maxColumnas(), visibles });
+                nuevas = moverCard(columnas, id, destino, destino < columnas.length ? (enColumna(destino)[pos] ?? null) : null, { max: _maxColumnas(), visibles, exigirDerecha: _esEscritorio() });
             }
             if (!nuevas) return;
 

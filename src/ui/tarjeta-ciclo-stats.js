@@ -6,10 +6,10 @@ import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 // ====================================================================
 //              UI CLOCK-IN CARD STATS CYCLE (#stats-semana)
 // ====================================================================
-// Ciclo de textos del número grande de la tarjeta en la vista diaria: horas → "Entrada 08:30" → "Tiempo fuera 25m"
-// → "Salida 17:00" (registro cerrado) → horas. Con el hint integrado (`hitosEnBarra`) la barra ya muestra la entrada, la salida y, con el registro abierto,
+// Ciclo de textos del número grande de la tarjeta en la vista diaria: horas → "Entrada 08:30" → "Salida 17:00" (registro cerrado)
+// → (con el registro abierto: salida estimada → salida con banco) → "Tiempo fuera 25m" → horas. Con el hint integrado (`hitosEnBarra`) la barra ya muestra la entrada, la salida y, con el registro abierto,
 // la salida estimada y la salida con banco, cada una con su descripción: esas fases no cambian el texto (queda el de las horas) y solo resaltan su hito.
-// El tiempo fuera no tiene hito en la barra y siempre se muestra como texto. Sin el hint integrado, entrada y salida se muestran como texto.
+// El tiempo fuera no tiene hito en la barra, siempre se muestra como texto y cierra el ciclo. Sin el hint integrado, entrada y salida se muestran como texto.
 // Cada 2 s (las fases con hito sobre la barra, un poco más). tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
 // Cada vez que cambia la fase avisa su tipo (o null al terminar) a quien se registre con `alCambiarFase`: así la barra resalta el hito correspondiente
 // sin que este módulo conozca el DOM de la barra.
@@ -71,14 +71,15 @@ function _fasesCiclo() {
         { tipo: 'horas', texto: () => _cicloStatsValorHoras },
         _faseHito('entrada', () => `Entrada ${_cicloStatsEntrada}`),
     ];
-    if (_cicloStatsTiempoFuera) {
-        fases.push({ tipo: 'tiempoFuera', texto: () => `Tiempo fuera ${_formatearMinutosCorto(TiempoUtils.horaAMinutos(_cicloStatsTiempoFuera))}` });
-    }
     if (_cicloStatsSalida) {
         fases.push(_faseHito('salida', () => `Salida ${_cicloStatsSalida}`));
     }
     if (_cicloStatsSalidaEstimada) fases.push(_faseHito('salidaEstimada', () => ''));
     if (_cicloStatsSalidaBanco) fases.push(_faseHito('banco', () => ''));
+    // El tiempo fuera va al final: no es un hito de la barra, y así no corta la secuencia de hitos
+    if (_cicloStatsTiempoFuera) {
+        fases.push({ tipo: 'tiempoFuera', texto: () => `Tiempo fuera ${_formatearMinutosCorto(TiempoUtils.horaAMinutos(_cicloStatsTiempoFuera))}` });
+    }
     return fases;
 }
 

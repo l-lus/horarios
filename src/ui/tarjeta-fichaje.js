@@ -108,6 +108,34 @@ function _actualizarTiempoFueraConsolidado(el, est) {
 // Texto del número grande del último render: lo que se restaura al salir el cursor de un tramo de la vista semanal (ver HoverBarra)
 let _statsActual = '';
 
+/**
+ * Si el número grande en formato largo ("19 horas 59 minutos") no entra en una línea, pasa a la variante corta ("19h 59m"). Se mide en una copia oculta
+ * para no tocar el número mientras se anima. Parte siempre del texto largo (`statsLargo`), así vuelve solo cuando vuelve a entrar (ej. al girar el celular).
+ * @param {any} vista
+ */
+function _ajustarStatsAlAncho(vista) {
+    vista.statsLargo ??= vista.stats;
+    vista.stats = vista.statsLargo;
+    vista.statsAjustado = false;
+    const el = $('stats-semana');
+    const ancho = el?.clientWidth;
+    if (!vista.statsCorto || !el?.parentElement || !(ancho > 0)) return;
+    const sonda = document.createElement('div');
+    sonda.className = 'stats-number';
+    Object.assign(sonda.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none', width: `${ancho}px`, minHeight: '0' });
+    sonda.textContent = vista.statsLargo;
+    el.parentElement.appendChild(sonda);
+    const estilo = getComputedStyle(sonda);
+    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
+    const entra = sonda.getBoundingClientRect().height <= alto * 1.5;
+    sonda.remove();
+    if (!entra) { vista.stats = vista.statsCorto; vista.statsAjustado = true; }
+}
+
+// Último estado y vista renderizados, para reevaluar si el número entra en una línea al cambiar el ancho (rotar, redimensionar)
+let _statsVista = null;
+let _statsEst = null;
+
 /** @param {any} [conteo] */
 function _renderStats(vista, est, conteo = null) {
     const el = $('stats-semana');
@@ -290,7 +318,7 @@ function _planConteoInicial(vista, est) {
     const valor = esSemana ? est.totalSemana : est.tiempoHoy;
     if (!(valor > 0)) return null;
     const { horas, minutos } = TiempoUtils.descomponerHorasDecimales(valor);
-    const modo = _modoTextoStats();
+    const modo = vista.statsAjustado ? 'short' : _modoTextoStats();
     const texto = e => TiempoUtils.partesATexto(Math.round(horas * e), Math.round(minutos * e), modo, { horas, minutos });
     if (texto(1) !== vista.stats) return null;
     return { texto };
@@ -309,6 +337,9 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
     const vista = EstadoApp.vistaActual() === 'semana'
         ? TarjetaFichajeVista.derivarVistaSemana(est)
         : TarjetaFichajeVista.derivarVistaHoy(est);
+    _ajustarStatsAlAncho(vista);
+    _statsVista = vista;
+    _statsEst = est;
 
     const conteo = conteoInicial ? _planConteoInicial(vista, est) : null;
 
@@ -411,6 +442,7 @@ function bindEventos() {
                 BarraHitos.redibujar();
                 _renderMensaje();
                 _renderBuffer();
+                if (_statsVista && _statsEst) { _ajustarStatsAlAncho(_statsVista); _renderStats(_statsVista, _statsEst); }
             }, 200);
         });
     })();

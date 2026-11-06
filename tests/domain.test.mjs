@@ -422,6 +422,9 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
     });
     assert.equal(vistaSemanaOk.cerrado, true);
     assert.equal(vistaSemanaOk.colorCierre, 'green');
+    // el número grande trae su variante corta para cuando el texto largo no entra en una línea (la tarjeta decide al medir)
+    assert.equal(vistaSemanaOk.stats, '35 horas');
+    assert.equal(vistaSemanaOk.statsCorto, '35h');
 
     // Semana cerrada con faltante
     const vistaSemanaFail = TarjetaFichajeVista.derivarVistaSemana({

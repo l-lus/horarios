@@ -52,14 +52,18 @@ function _cantidadHorasCorta(horasDecimales) {
     try { return _cantidadHoras(horasDecimales); } finally { _forzarCorto = false; }
 }
 
-// Agrega vista.mensajeCorto (el mismo mensaje con el tiempo abreviado: "2h 26m") para que el render la use solo si el largo no entra en una línea.
-// Con el formato corto ya activo el mensaje ya es corto y no hace falta variante.
+// Agrega vista.mensajeCorto y vista.statsCorto (el mismo mensaje y número grande con el tiempo abreviado: "2h 26m", "19h 59m") para que el render las use solo si
+// la larga no entra en una línea. Con el formato corto ya activo ya son cortas y no hace falta variante.
 function _conMensajeCorto(derivar) {
     return (est) => {
         const vista = derivar(est);
-        if (_formatoCortoStatsCache || !vista.mostrarMensaje) return vista;
+        if (_formatoCortoStatsCache) return vista;
         _forzarCorto = true;
-        try { vista.mensajeCorto = derivar(est).mensaje; } finally { _forzarCorto = false; }
+        try {
+            const corta = derivar(est);
+            if (vista.mostrarMensaje) vista.mensajeCorto = corta.mensaje;
+            if (corta.stats !== vista.stats) vista.statsCorto = corta.stats;
+        } finally { _forzarCorto = false; }
         return vista;
     };
 }

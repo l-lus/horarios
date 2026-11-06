@@ -106,6 +106,12 @@
     100% { scale: 2; opacity: 0; }
 }
 
+/* Aro del botón de instalar: crece y se desvanece (la misma idea que el pulso de un hito, más contenido porque el botón es grande) */
+@keyframes instalar-pulso {
+    from { transform: scale(1); opacity: 0.75; }
+    to { transform: scale(1.6); opacity: 0; }
+}
+
 @keyframes campo-flash {
 
     0%,

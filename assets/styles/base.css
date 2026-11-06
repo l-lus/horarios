@@ -613,6 +613,21 @@ button:disabled {
     background: transparent;
 }
 
+/* Llamado de atención del botón de instalar (ver instalador-pwa.js): un aro que pulsa a su alrededor */
+#btn-install {
+    position: relative;
+}
+
+#btn-install.llamando::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--c-blue);
+    border-radius: var(--radius-full);
+    pointer-events: none;
+    animation: instalar-pulso var(--dur-pulso) ease-out;
+}
+
 #btn-lock-toggle.bloqueado,
 #btn-lock-grupo-toggle.bloqueado {
     background: var(--c-red);

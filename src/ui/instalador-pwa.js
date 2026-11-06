@@ -2,12 +2,44 @@ import { $ } from '../core/dom.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { AvisoActualizacion } from './aviso-actualizacion.js';
 import { urlScriptConfiable } from '../core/html.js';
+import { Movimiento } from '../core/movimiento.js';
+import { IconosAnimados } from './iconos-animados.js';
 
 // ====================================================================
 // PWA INSTALLER MODULE
 // ====================================================================
 let deferredPrompt = null;
 const btnInstall = $('btn-install');
+
+// Llamado de atención del botón de instalar (solo cuando el navegador permite instalar): un aro que pulsa a su alrededor y la flecha que rebota.
+// Pocos ciclos y espaciados (una ronda al abrir y otra unos segundos después), para que no moleste; se corta si el usuario se acerca al botón.
+const RONDAS_LLAMADO_MS = [1500, 15000];   // cuándo empieza cada ronda
+const CICLOS_POR_RONDA = 3;
+const PAUSA_ENTRE_CICLOS_MS = 2200;
+/** @type {ReturnType<typeof setTimeout>[]} */
+let _timersLlamado = [];
+
+function _detenerLlamado() {
+    _timersLlamado.forEach(clearTimeout);
+    _timersLlamado = [];
+    btnInstall?.classList.remove('llamando');
+}
+
+function _cicloLlamado() {
+    if (!btnInstall) return;
+    btnInstall.classList.remove('llamando');
+    void btnInstall.offsetWidth;   // reinicia la animación del aro
+    btnInstall.classList.add('llamando');
+    IconosAnimados.rebotarFlecha(btnInstall);
+}
+
+function _iniciarLlamado() {
+    _detenerLlamado();
+    if (Movimiento.reducido()) return;
+    RONDAS_LLAMADO_MS.forEach(inicio => {
+        for (let i = 0; i < CICLOS_POR_RONDA; i++) _timersLlamado.push(setTimeout(_cicloLlamado, inicio + i * PAUSA_ENTRE_CICLOS_MS));
+    });
+}
 
 function init() {
     if (window.matchMedia('(display-mode: standalone)').matches ||
@@ -21,10 +53,12 @@ function init() {
         deferredPrompt = e;
         if (btnInstall) {
             btnInstall.style.display = 'flex';
+            _iniciarLlamado();
         }
     });
 
     window.addEventListener('appinstalled', () => {
+        _detenerLlamado();
         if (btnInstall) btnInstall.style.display = 'none';
         deferredPrompt = null;
         EstadoApp._notify().mostrarToast('¡App instalada con éxito!', 'success');
@@ -40,7 +74,8 @@ async function instalarApp() {
 }
 
 function bindEventos() {
-    $('btn-install')?.addEventListener('click', () => instalarApp());
+    $('btn-install')?.addEventListener('click', () => { _detenerLlamado(); instalarApp(); });
+    ['pointerenter', 'focus'].forEach(ev => $('btn-install')?.addEventListener(ev, _detenerLlamado));
 }
 
 // Mínimo entre búsquedas de versión nueva al volver a la app (el navegador por sí solo revisa poco si la PWA queda abierta en segundo plano)

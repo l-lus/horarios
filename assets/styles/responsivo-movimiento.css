@@ -387,7 +387,7 @@ button.campo-flash-color {
 @media (min-width: 1024px) {
     .container {
         display: grid;
-        grid-template-columns: minmax(350px, 1fr) minmax(400px, 1fr);
+        grid-template-columns: repeat(var(--columnas, 2), minmax(350px, 1fr));
         gap: var(--space-xl);
         align-items: start;
         padding: var(--space-xl);

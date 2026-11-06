@@ -1,5 +1,5 @@
 import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
-import { normalizarOrdenCards, fusionarOrdenVisibles, columnaDeCard } from '../services/orden-cards.js';
+import { normalizarOrdenCards, columnasDesdeOrden, prepararColumnas, moverCard, tamanosDeColumnas, MAX_COLUMNAS } from '../services/orden-cards.js';
 import { $ } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -24,6 +24,7 @@ function toggleVisibilidadCard(cual) {
     Almacenamiento.setItem(key, nuevo, true);
     aplicarVisibilidadCard(cual, nuevo);
     _setBtnActivo('btn-toggle-card-' + cual, nuevo);
+    aplicarOrdenCards(obtenerOrdenCards());   // una columna sin tarjetas visibles deja de ocupar lugar
     EventosApp.emit('tarjetas:visibilidad');
 }
 
@@ -41,10 +42,12 @@ function aplicarVisibilidadCards() {
     EventosApp.emit('tarjetas:visibilidad');
 }
 
-// Escritorio (2 columnas) y móvil (1 columna apilada) tienen cada uno su orden. Mismo corte que el CSS (@media min-width: 1024px).
+// Escritorio (hasta 3 columnas) y móvil (1 columna apilada) tienen cada uno su orden. Mismo corte que el CSS (@media min-width: 1024px).
 // Mientras no se haya ordenado en móvil, se parte del orden de escritorio.
 const _consultaEscritorio = window.matchMedia('(min-width: 1024px)');
+const _consultaAncha = window.matchMedia('(min-width: 1200px)');   // con menos ancho no entran 3 columnas de 350px
 const _esEscritorio = () => _consultaEscritorio.matches;
+const _maxColumnas = () => (!_esEscritorio() ? 1 : _consultaAncha.matches ? MAX_COLUMNAS : 2);
 const _claveOrden = () => (_esEscritorio() ? STORAGE_KEYS.ORDEN_CARDS : STORAGE_KEYS.ORDEN_CARDS_MOVIL);
 
 function obtenerOrdenCards() {
@@ -57,33 +60,68 @@ function guardarOrdenCards(orden) {
     Almacenamiento.setItem(_claveOrden(), orden, true);
 }
 
-// Columnas de escritorio: la izquierda es la que tiene la tarjeta de fichaje con la barra, la derecha es la que sigue (en móvil se apilan en ese orden)
-function _columnas() {
-    const statsCard = $('stats-card');
-    const izquierda = statsCard ? statsCard.parentElement : null;
-    const derecha = $('right-column') ?? (izquierda ? izquierda.parentElement : null);
-    return { izquierda, derecha };
+const _tarjetasVisibles = () => new Set(CARDS.filter(c => Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(c), true, true)));
+
+/** Columnas tal como se dibujan ahora: en móvil una sola; en escritorio el orden cortado según los tamaños guardados. */
+function _columnasActuales(orden = obtenerOrdenCards()) {
+    if (!_esEscritorio()) return [orden];
+    const tamanos = Almacenamiento.getObject(STORAGE_KEYS.COLUMNAS_CARDS, null, true);
+    return prepararColumnas(columnasDesdeOrden(orden, tamanos), _maxColumnas(), _tarjetasVisibles());
 }
 
-function aplicarOrdenCards(orden) {
-    const { izquierda, derecha } = _columnas();
-    if (!izquierda || !derecha) return;
+function _guardarColumnas(columnas) {
+    guardarOrdenCards(columnas.flat());
+    if (_esEscritorio()) Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS, tamanosDeColumnas(columnas), true);
+}
 
+// Contenedores de escritorio: el primero tiene la tarjeta de fichaje con la barra (siempre arriba); en móvil todo se apila en él, en el orden elegido
+function _contenedores() {
+    const primero = $('columna-1');
+    return [primero, $('right-column'), $('columna-3')];
+}
+
+let _arrastrando = false;
+
+/** Muestra solo las columnas que tienen tarjetas visibles (más el hueco de columna nueva mientras se arrastra) y fija cuántas hay. */
+function _actualizarColumnas() {
+    const contenedores = _contenedores();
+    const hayTarjetaVisible = (c) => /** @type {HTMLElement[]} */ (Array.from(c.children)).some(el => el.id.startsWith('card-') && el.style.display !== 'none');
+    let n = 1;
+    contenedores.forEach((c, i) => {
+        if (!c || i === 0) return;
+        const vacia = !hayTarjetaVisible(c);
+        c.classList.toggle('columna-vacia', vacia);
+        if (!vacia) n++;
+    });
+    const hueco = _arrastrando && _esEscritorio() && n < _maxColumnas();
+    const raiz = /** @type {HTMLElement | null} */ (document.querySelector('.container'));
+    if (!raiz) return;
+    raiz.classList.toggle('arrastrando-columnas', hueco);
+    raiz.style.setProperty('--columnas', String(n + (hueco ? 1 : 0)));
+}
+
+/** @param {string[]} orden @param {string[][] | null} [columnas] columnas ya preparadas (si no, salen de lo guardado) */
+function aplicarOrdenCards(orden, columnas = null) {
+    const contenedores = _contenedores();
+    if (contenedores.some(c => !c)) return;
+
+    const cols = columnas ?? _columnasActuales(orden);
     const delays = [0.10, 0.15, 0.20, 0.25];
-    orden.forEach((cual, idx) => {
+    let idx = 0;
+    cols.forEach((col, ci) => col.forEach(cual => {
         const card = $('card-' + cual);
         if (!card) return;
-        card.style.animationDelay = `${delays[idx] ?? 0.25}s`;
-        // En móvil todo va apilado en la primera columna (la de la tarjeta de fichaje), en el orden elegido
-        (_esEscritorio() && columnaDeCard(idx, orden.length) ? derecha : izquierda).appendChild(card);
-    });
+        card.style.animationDelay = `${delays[idx++] ?? 0.25}s`;
+        contenedores[Math.min(ci, contenedores.length - 1)]?.appendChild(card);
+    }));
+    _actualizarColumnas();
 
     const etiqueta = $('label-orden-cards');
     if (etiqueta) etiqueta.textContent = `Tarjetas y posición (${_esEscritorio() ? 'PC' : 'celular'})`;
 
     const lista = $('lista-orden-cards');
     if (lista) {
-        orden.forEach(cual => {
+        cols.flat().forEach(cual => {
             const item = $('orden-item-' + cual);
             if (item) lista.appendChild(item);
         });
@@ -98,12 +136,12 @@ EventosApp.on('config:tarjetas', () => {
 
 // Al pasar de escritorio a móvil (o al revés, ej. girar la pantalla o redimensionar) se arma el diseño del modo nuevo
 _consultaEscritorio.addEventListener('change', () => aplicarOrdenCards(obtenerOrdenCards()));
+_consultaAncha.addEventListener('change', () => aplicarOrdenCards(obtenerOrdenCards()));
 
 
 function obtenerCardsVisibles() {
-    const { izquierda, derecha } = _columnas();
     const cards = [];
-    [izquierda, derecha].forEach(columna => {
+    _contenedores().forEach(columna => {
         if (!columna) return;
         /** @type {HTMLElement[]} */ (Array.from(columna.children)).forEach(el => {
             if (el.id && el.id.startsWith('card-') && el.style.display !== 'none' && !el.classList.contains('d-none')) {
@@ -114,41 +152,33 @@ function obtenerCardsVisibles() {
     return cards;
 }
 
-// Con el arrastre, la tarjeta se intercambia de lugar con la que tiene al lado (en su columna) o, si el puntero pasó a la otra columna,
-// con la que está a la altura del puntero. Devuelve las tarjetas visibles en su nuevo orden, o null si no hay cambio.
-function evaluarNuevoOrdenCards(arrastrado, visibles, clientX, clientY) {
-    const idxActual = visibles.indexOf(arrastrado);
-    if (idxActual === -1 || visibles.length <= 1) return null;
+const _idDeCard = (el) => el.id.replace('card-', '');
 
-    const rects = visibles.map(c => c.getBoundingClientRect());
-    const enDerecha = rects.map(r => Math.abs(r.left - rects[0].left) > 50);
-    const dosColumnas = enDerecha.some(Boolean);
-    const mitad = (i) => rects[i].top + rects[i].height / 2;
-    const indicesDe = (derecha) => visibles.map((_, i) => i).filter(i => enDerecha[i] === derecha);
+/**
+ * Dónde cae la tarjeta arrastrada según el puntero: la columna sobre la que está (o el hueco de columna nueva) y delante de qué tarjeta visible
+ * de esa columna. Devuelve las columnas nuevas, o null si no cambia nada.
+ */
+function evaluarNuevasColumnas(arrastrado, columnas, clientX, clientY) {
+    const contenedores = _contenedores();
+    const hueco = $('columna-nueva');
+    /** @type {{ indice: number, el: HTMLElement }[]} */
+    const zonas = [];
+    contenedores.forEach((c, i) => {
+        if (c && (i === 0 || !c.classList.contains('columna-vacia'))) zonas.push({ indice: i, el: c });
+    });
+    if (hueco && getComputedStyle(hueco).display !== 'none') zonas.push({ indice: columnas.length, el: hueco });
+    if (!zonas.length) return null;
 
-    let columnaCursor = enDerecha[idxActual];
-    if (dosColumnas) {
-        const finIzq = Math.max(...indicesDe(false).map(i => rects[i].right));
-        const inicioDer = Math.min(...indicesDe(true).map(i => rects[i].left));
-        columnaCursor = clientX >= (finIzq + inicioDer) / 2;
-    }
+    // La columna cuyo ancho contiene al puntero, o la más cercana en horizontal
+    const distancia = (z) => { const r = z.el.getBoundingClientRect(); return clientX < r.left ? r.left - clientX : clientX > r.right ? clientX - r.right : 0; };
+    const zona = zonas.reduce((mejor, z) => (distancia(z) < distancia(mejor) ? z : mejor), zonas[0]);
 
-    let targetIdx = null;
-    if (columnaCursor === enDerecha[idxActual]) {
-        const misma = indicesDe(columnaCursor);
-        const pos = misma.indexOf(idxActual);
-        if (pos > 0 && clientY < mitad(misma[pos - 1])) targetIdx = misma[pos - 1];
-        else if (pos < misma.length - 1 && clientY > mitad(misma[pos + 1])) targetIdx = misma[pos + 1];
-    } else {
-        const otra = indicesDe(columnaCursor);
-        targetIdx = otra.reduce((mejor, i) => (Math.abs(clientY - mitad(i)) < Math.abs(clientY - mitad(mejor)) ? i : mejor), otra[0]);
-    }
+    // Delante de la primera tarjeta visible de la columna (sin contar la arrastrada) cuya mitad quede por debajo del puntero
+    const antes = /** @type {HTMLElement[]} */ (Array.from(zona.el.children))
+        .filter(el => el.id.startsWith('card-') && el !== arrastrado && el.style.display !== 'none')
+        .find(el => { const r = el.getBoundingClientRect(); return clientY < r.top + r.height / 2; });
 
-    if (targetIdx === null || targetIdx === idxActual) return null;
-
-    const nuevaLista = [...visibles];
-    [nuevaLista[idxActual], nuevaLista[targetIdx]] = [nuevaLista[targetIdx], nuevaLista[idxActual]];
-    return nuevaLista;
+    return moverCard(columnas, _idDeCard(arrastrado), zona.indice, antes ? _idDeCard(antes) : null, { max: _maxColumnas(), visibles: _tarjetasVisibles() });
 }
 
 // Desde dónde se arrastra cada tarjeta: su encabezado
@@ -156,18 +186,17 @@ const _SELECTOR_ENCABEZADOS = '#card-registrar .card-registrar-header, #card-est
 const _SELECTOR_CARDS = '#card-registrar, #card-estadisticas, #card-historico';
 
 function iniciarDragTarjetas() {
-    let ordenInicial = null;
-    let ordenEnCurso = null;
+    let columnasInicial = null;
+    let columnasEnCurso = null;
     let deslizandoHasta = 0;
 
-    // Reubica las tarjetas visibles en `visiblesNuevo` (las ocultas conservan su lugar) con la animación de deslizamiento
-    const reubicar = (visiblesNuevo, encima) => {
-        const nuevoOrden = fusionarOrdenVisibles(ordenEnCurso ?? obtenerOrdenCards(), visiblesNuevo.map(c => c.id.replace('card-', '')));
-        ordenEnCurso = nuevoOrden;
+    // Dibuja las columnas nuevas con la animación de deslizamiento (las tarjetas ocultas viajan con su columna)
+    const reubicar = (columnas, encima) => {
+        columnasEnCurso = columnas;
         return uiAnimarReubicacion(
             () => obtenerCardsVisibles(),
             c => c.id,
-            () => aplicarOrdenCards(nuevoOrden),
+            () => aplicarOrdenCards(columnas.flat(), columnas),
             { encima }
         );
     };
@@ -185,41 +214,46 @@ function iniciarDragTarjetas() {
         },
         capturar: (card) => card.querySelector('.card-registrar-header, .card-header-clickable') || card,
         alEmpezar: (card) => {
-            ordenInicial = obtenerOrdenCards();
-            ordenEnCurso = ordenInicial;
+            columnasInicial = _columnasActuales();
+            columnasEnCurso = columnasInicial;
             card.classList.add('reordenando');
             document.body.classList.add('tarjeta-arrastrando-activa');
             /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.animated-card')).forEach(c => c.style.animation = 'none');
+            _arrastrando = true;
+            uiAnimarReubicacion(() => obtenerCardsVisibles(), c => c.id, () => _actualizarColumnas(), { encima: card });
         },
         alMover: (e, card) => {
-            if (performance.now() < deslizandoHasta) return;
-            const visiblesNuevo = evaluarNuevoOrdenCards(card, obtenerCardsVisibles(), e.clientX, e.clientY);
-            if (!visiblesNuevo) return;
+            if (performance.now() < deslizandoHasta || !columnasEnCurso) return;
+            const nuevas = evaluarNuevasColumnas(card, columnasEnCurso, e.clientX, e.clientY);
+            if (!nuevas) return;
 
-            if (reubicar(visiblesNuevo, card).length > 0) {
+            if (reubicar(nuevas, card).length > 0) {
                 deslizandoHasta = performance.now() + REUBICACION_MS;
             }
         },
         alTerminar: (card, confirmar) => {
             card.classList.remove('reordenando');
             document.body.classList.remove('tarjeta-arrastrando-activa');
-            if (confirmar) {
-                guardarOrdenCards(ordenEnCurso);
-                aplicarOrdenCards(ordenEnCurso);
-            } else if (ordenInicial) {
+            _arrastrando = false;
+            const destino = confirmar ? columnasEnCurso : columnasInicial;
+            if (destino) {
+                // Sin el hueco de columna nueva (y sin columnas que hayan quedado vacías) y guardando el diseño elegido
                 uiAnimarReubicacion(
                     () => obtenerCardsVisibles(),
                     c => c.id,
-                    () => aplicarOrdenCards(ordenInicial)
+                    () => aplicarOrdenCards(destino.flat(), prepararColumnas(destino, _maxColumnas(), _tarjetasVisibles()))
                 );
-                guardarOrdenCards(ordenInicial);
+                if (confirmar) _guardarColumnas(destino);
+            } else {
+                _actualizarColumnas();
             }
-            ordenInicial = null;
-            ordenEnCurso = null;
+            columnasInicial = null;
+            columnasEnCurso = null;
         }
     });
 
-    // Con teclado (Alt + flechas sobre el encabezado), el mismo recorrido: intercambia con la visible anterior o siguiente
+    // Con teclado (Alt + flechas sobre el encabezado): arriba/abajo cambia de lugar dentro de la columna; izquierda/derecha pasa a la columna
+    // de al lado (a la derecha de la última abre una columna nueva si todavía entra). En móvil, con una sola columna, las cuatro flechas recorren la pila.
     const headers = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(_SELECTOR_ENCABEZADOS));
     headers.forEach(header => {
         header.addEventListener('keydown', (e) => {
@@ -227,22 +261,34 @@ function iniciarDragTarjetas() {
             const card = header.closest(_SELECTOR_CARDS);
             if (!card) return;
 
-            const visibles = obtenerCardsVisibles();
-            const idx = visibles.indexOf(card);
-            if (idx === -1) return;
+            const id = _idDeCard(card);
+            const columnas = _columnasActuales();
+            const visibles = _tarjetasVisibles();
+            const colActual = columnas.findIndex(c => c.includes(id));
+            if (colActual === -1) return;
+            const enColumna = (i) => columnas[i].filter(c => visibles.has(c));
+            const pos = enColumna(colActual).indexOf(id);
 
+            const unaColumna = _maxColumnas() === 1;
+            const vertical = e.key === 'ArrowUp' || e.key === 'ArrowDown' || unaColumna;
             const atras = e.key === 'ArrowLeft' || e.key === 'ArrowUp';
-            if (atras ? idx <= 0 : idx >= visibles.length - 1) return;
+
+            let nuevas = null;
+            if (vertical) {
+                const propias = enColumna(colActual);
+                if (atras ? pos <= 0 : pos >= propias.length - 1) return;
+                nuevas = moverCard(columnas, id, colActual, atras ? propias[pos - 1] : (propias[pos + 2] ?? null), { max: _maxColumnas(), visibles });
+            } else {
+                const destino = colActual + (atras ? -1 : 1);
+                if (destino < 0) return;
+                nuevas = moverCard(columnas, id, destino, destino < columnas.length ? (enColumna(destino)[pos] ?? null) : null, { max: _maxColumnas(), visibles });
+            }
+            if (!nuevas) return;
 
             e.preventDefault();
-            const nuevaLista = [...visibles];
-            const otro = atras ? idx - 1 : idx + 1;
-            [nuevaLista[idx], nuevaLista[otro]] = [nuevaLista[otro], nuevaLista[idx]];
-
-            ordenEnCurso = obtenerOrdenCards();
-            reubicar(nuevaLista, card);
-            guardarOrdenCards(ordenEnCurso);
-            ordenEnCurso = null;
+            reubicar(nuevas, card);
+            _guardarColumnas(nuevas);
+            columnasEnCurso = null;
             header.focus();
         });
     });

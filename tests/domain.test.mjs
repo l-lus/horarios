@@ -137,6 +137,7 @@ test('Integración: Arranque completo de OrquestadorUI.init() sin errores de eje
         removeEventListener: noop,
         querySelector: () => fakeEl(),
         querySelectorAll: () => [],
+        children: [],
         appendChild: noop,
         append: noop,
         replaceChildren: noop,
@@ -282,6 +283,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         hintIntegrado: true,
         ordenCards: ['registrar', 'estadisticas', 'historico'],
         ordenCardsMovil: ['registrar', 'estadisticas', 'historico'],
+        columnasCards: [1, 2],
         tarjetasVisibles: { registrar: true, estadisticas: true, historico: true }
     });
 });

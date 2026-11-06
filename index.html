@@ -338,7 +338,7 @@
 
     <div class="container">
 
-        <div class="left-column">
+        <div class="left-column" id="columna-1">
             <div class="card stats-card animated-card" id="stats-card">
                 <div class="stats-card-bg" id="stats-card-bg" aria-hidden="true"></div>
                 <div class="stats-card-content" id="stats-card-content">
@@ -644,6 +644,8 @@
             </div><!-- #contenido-historico -->
         </div>
         </div><!-- #right-column -->
+        <div class="right-column" id="columna-3"></div>
+        <div class="columna-nueva" id="columna-nueva" aria-hidden="true"></div>
     </div>
     <div class="modal modal-scrollable" id="modal-config" role="dialog" aria-modal="true"
         aria-labelledby="modal-config-titulo">
@@ -1299,9 +1301,12 @@
                                 Reducir animaciones (Auto sigue la configuración del dispositivo, o se fuerza activada o
                                 desactivada). Las opciones de PC se ocultan en dispositivos táctiles.</p>
                             <p><strong>Tarjetas y posición:</strong> mostrá u ocultá Fichar, Estadísticas y
-                                Registros, y arrastralas para cambiar el orden. En PC las dos últimas quedan en la
-                                columna derecha. El orden de PC y el del celular son independientes: el que ves
-                                acá es el del modo en el que estás ahora.</p>
+                                Registros, y arrastralas (mantené presionado el encabezado) para cambiar el orden. En PC
+                                las ubicás donde sueltes: en cualquier columna y entre las tarjetas que ya hay. Si la
+                                soltás en el hueco que aparece a la derecha se abre una columna nueva (hasta 3, en
+                                pantallas anchas) y la columna que se queda sin tarjetas desaparece. Con teclado,
+                                Alt + flechas sobre el encabezado. El orden de PC y el del celular son independientes:
+                                el que ves acá es el del modo en el que estás ahora.</p>
                             <p><strong>Estadísticas:</strong> "No descontar tiempo fuera" (las salidas no restan del
                                 total), "No cubrir con banco de horas" (el banco no compensa automáticamente lo que
                                 falta para el objetivo) y "Objetivo diario global" (aplica el mismo objetivo a todos los

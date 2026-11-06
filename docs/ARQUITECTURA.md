@@ -49,6 +49,7 @@ horarios/
 │   ├── architecture.test.mjs   # Capas, ciclos, extensiones .js, precache de sw.js, versión APP_VERSION/CACHE_NAME y services sin DOM
 │   ├── domain.test.mjs         # Cálculos horarios, seguridad, compensatorios y arranque completo de la UI
 │   ├── html.test.mjs           # Escape automático de core/html.js
+│   ├── orden-cards.test.mjs    # Columnas libres de escritorio: reparto, mover, columna nueva y límites
 │   ├── edicion-registro.test.mjs # Edición de un registro (modal) sin DOM: guardar, validaciones, crédito, compensatorio, eliminar
 │   └── servicios-sin-dom.test.mjs # Servicios ejecutados en Node sin `document`, con formularios simulados
 ├── docs/                       # Documentación técnica, seguridad y arquitectura
@@ -173,7 +174,7 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 | [`src/services/feriados-ar.js`](../src/services/feriados-ar.js) | `FeriadosAR` | Detección de feriados nacionales del mes en curso y sugerencia automática de carga. |
 | [`src/services/sincronizacion-gist.js`](../src/services/sincronizacion-gist.js) | `SincronizacionGist` | Cliente HTTP de la API de GitHub Gist (crear, subir, descargar respaldos en la nube y verificar hashes). |
 | [`src/services/recordatorio-push.js`](../src/services/recordatorio-push.js) | `RecordatorioPush` | Suscripción Web Push (VAPID), programación y cancelación de recordatorios de fin de jornada con el Worker, y ping diario anónimo de uso (`registrarUso` → `/api/hola`). |
-| [`src/services/orden-cards.js`](../src/services/orden-cards.js) | `normalizarOrdenCards`, `fusionarOrdenVisibles`, `columnaDeCard` | Orden de las tarjetas (ocultas incluidas) y columna de escritorio de cada una, sin DOM. |
+| [`src/services/orden-cards.js`](../src/services/orden-cards.js) | `normalizarOrdenCards`, `columnasDesdeOrden`, `prepararColumnas`, `moverCard` | Orden de las tarjetas (ocultas incluidas) y su corte en hasta 3 columnas de escritorio (diseño libre), sin DOM. |
 
 ### 4.4. Interfaz de usuario (`src/ui/`)
 

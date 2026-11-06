@@ -8,7 +8,7 @@ import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp as D } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
-import { normalizarOrdenCards } from './orden-cards.js';
+import { normalizarOrdenCards, columnasDesdeOrden, tamanosDeColumnas, esTamanosColumnasValidos } from './orden-cards.js';
 
 // ====================================================================
 //           IMPORT / EXPORT & BACKUP NORMALIZATION MODULE
@@ -24,6 +24,7 @@ const KEYS_CONFIG_EXPORTABLE = [
     STORAGE_KEYS.HINT_INTEGRADO,
     STORAGE_KEYS.ORDEN_CARDS,
     STORAGE_KEYS.ORDEN_CARDS_MOVIL,
+    STORAGE_KEYS.COLUMNAS_CARDS,
     CLAVE_TARJETAS_VISIBLES
 ];
 
@@ -37,6 +38,8 @@ const _esMapaDeBooleanos = (v) => !!v && typeof v === 'object' && !Array.isArray
 const _ordenActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
 // Sin orden propio para móvil se usa el de escritorio (así era antes de separarlos)
 const _ordenMovilActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true) ?? Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
+// Tamaños de las columnas de escritorio (sin tamaños guardados, el reparto por defecto)
+const _columnasActuales = () => tamanosDeColumnas(columnasDesdeOrden(_ordenActual(), Almacenamiento.getObject(STORAGE_KEYS.COLUMNAS_CARDS, null, true)));
 const _visiblesActuales = () => Object.fromEntries(CARDS.map(c => [c, Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(c), true, true)]));
 
 function obtenerConfigExportable() {
@@ -48,6 +51,7 @@ function obtenerConfigExportable() {
         [STORAGE_KEYS.HINT_INTEGRADO]: Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO),
         [STORAGE_KEYS.ORDEN_CARDS]: _ordenActual(),
         [STORAGE_KEYS.ORDEN_CARDS_MOVIL]: _ordenMovilActual(),
+        [STORAGE_KEYS.COLUMNAS_CARDS]: _columnasActuales(),
         [CLAVE_TARJETAS_VISIBLES]: _visiblesActuales()
     };
 }
@@ -69,6 +73,7 @@ function validarCamposConfigImport(data) {
     }
     if (data[STORAGE_KEYS.ORDEN_CARDS] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ORDEN_CARDS])) return false;
     if (data[STORAGE_KEYS.ORDEN_CARDS_MOVIL] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL])) return false;
+    if (data[STORAGE_KEYS.COLUMNAS_CARDS] !== undefined && !esTamanosColumnasValidos(data[STORAGE_KEYS.COLUMNAS_CARDS])) return false;
     if (data[CLAVE_TARJETAS_VISIBLES] !== undefined && !_esMapaDeBooleanos(data[CLAVE_TARJETAS_VISIBLES])) return false;
     return true;
 }
@@ -109,6 +114,12 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
     let cambioTarjetas = false;
     if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS])) {
         Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS]), true);
+        // Un respaldo sin columnas (versiones anteriores) usa el reparto por defecto; si no, los tamaños viejos no corresponderían al orden nuevo
+        if (!Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS])) Almacenamiento.removeItem(STORAGE_KEYS.COLUMNAS_CARDS, true);
+        cambioTarjetas = true;
+    }
+    if (Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS])) {
+        Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS, data[STORAGE_KEYS.COLUMNAS_CARDS], true);
         cambioTarjetas = true;
     }
     if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL])) {
@@ -166,6 +177,9 @@ function calcularCambiosConfigImport(data) {
     }
     if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL]) && normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL]).join() !== _ordenMovilActual().join()) {
         cambios.push('orden de tarjetas (móvil)');
+    }
+    if (Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS]) && data[STORAGE_KEYS.COLUMNAS_CARDS].join() !== _columnasActuales().join()) {
+        cambios.push('columnas de tarjetas');
     }
     const visibles = data[CLAVE_TARJETAS_VISIBLES];
     if (visibles && typeof visibles === 'object') {

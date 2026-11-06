@@ -34,7 +34,7 @@ let _cicloStatsFaseAlRenderizar = null;
 let _alCambiarFase = null;
 
 // Todas las fases duran lo mismo (el resalte de un hito tarda ~0,5 s en desplegarse y sobra para leerlo)
-const _CICLO_DURACION_MS = 2000;
+const _CICLO_DURACION_MS = 1500;
 
 function _emitirFase(tipo) {
     if (_alCambiarFase) _alCambiarFase(tipo);

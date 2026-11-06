@@ -110,7 +110,8 @@ function _renderStats(vista, est, conteo = null) {
     if (!el) return;
 
     const esDiaria = EstadoApp.vistaActual() !== 'semana';
-    const regHoy = est.regHoy;
+    // En el cruce de medianoche (ayer sigue abierto y hoy aún no tiene entrada) la barra muestra los hitos de esa jornada, y el ciclo también
+    const regHoy = (est.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est.regHoy;
     const esEspecial = !!est.tipoEspecialHoy;
     const entradaHoy = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
     const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';

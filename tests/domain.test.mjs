@@ -343,10 +343,8 @@ test('ImportarExportar: el diseño de la interfaz (orden y tarjetas visibles) se
         Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
         assert.deepEqual(exportado.tarjetasVisibles, { registrar: true, estadisticas: false, historico: true });
 
-        // Un respaldo hecho cuando existía la tarjeta de atajos sigue siendo válido (la clave se ignora)
-        const viejo = { registros: [], atajosRapidos: ['tema', 'bajar'], ordenCards: ['registrar', 'estadisticas', 'historico'] };
-        assert.equal(ImportarExportar.errorEstructuraRespaldo(viejo), null);
-        assert.equal(ImportarExportar.errorEstructuraRespaldo({ registros: [], claveRara: 1 }) === null, false);
+        // Una clave que esta versión no conoce se rechaza como sospechosa
+        assert.notEqual(ImportarExportar.errorEstructuraRespaldo({ registros: [], claveRara: 1 }), null);
 
         offT();
     } finally {

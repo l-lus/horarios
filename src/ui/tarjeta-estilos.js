@@ -379,7 +379,7 @@ function pintarNodosDias(r, dias, enCurso) {
 function pintarNodosPendientes(r) {
     r.nodos.classList.remove('en-curso');
     for (const h of Object.values(r.hitos)) mostrar(h.raiz, false);
-    const pendientes = [['entrada', 'Entrada · pendiente'], ['salida', 'Salida estimada · se calcula al fichar']];
+    const pendientes = [['entrada', 'Entrada · pendiente'], ['salida', 'Salida estimada · pendiente']];
     pendientes.forEach(([tipo, texto], i) => {
         const nodo = r.hitos[tipo];
         mostrar(nodo.raiz, true);

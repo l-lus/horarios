@@ -80,6 +80,10 @@ function obtenerFechaHoy() {
     return formatearFechaLocal(new Date());
 }
 
+function msHastaProximoMinuto(ahora = Date.now()) {
+    return 60000 - (ahora % 60000);
+}
+
 function fechaLocalISOFull() {
     const d = new Date();
     return `${formatearFechaLocal(d)} ${_pad2(d.getHours())}:${_pad2(d.getMinutes())}:${_pad2(d.getSeconds())}`;
@@ -231,7 +235,7 @@ function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 export const TiempoUtils = {
     esFechaHabil, esDiaAnterior, agruparMesesPorAnio, nombreMesCapitalizado,
     validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
-    obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
+    obtenerFechaHoy, obtenerHoraActual, msHastaProximoMinuto, minutosAHora, fechaLocalISOFull,
     horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
     obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
     horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, pluralizar,

@@ -1,6 +1,7 @@
 import { HistoricoEdicion } from './historico-edicion.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
+import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -251,8 +252,16 @@ function _prepararAnimacionLista(lista, idNuevo) {
     };
 }
 
+// Con el calendario a la vista la lista está oculta: no se dibuja hasta que se muestre
+let _listaPendiente = false;
+EventosApp.on('historico:vista', () => {
+    if (_listaPendiente && !Calendario.getVistaHistoricoCalendario()) actualizarListaRegistros(EstadoApp.registros());
+});
+
 /** @param {any} [idNuevo] @param {any} [asignacionesPrecalculadas] */
 function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalculadas = null) {
+    if (Calendario.getVistaHistoricoCalendario()) { _listaPendiente = true; return; }
+    _listaPendiente = false;
     const lista = $('lista-registros');
     const animacionLista = _prepararAnimacionLista(lista, idNuevo);
     lista.replaceChildren();

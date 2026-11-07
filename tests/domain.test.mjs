@@ -783,3 +783,11 @@ test('EstiloCalendario: el ciclo recorre todos los estilos, vuelve al original y
     assert.equal(etiquetaEstilo('solo-contorno'), 'Legacy');
     assert.equal(etiquetaEstilo('aro-grueso'), 'Aro grueso');
 });
+
+test('TiempoUtils.msHastaProximoMinuto: lo que falta para el próximo cambio de minuto', () => {
+    const { msHastaProximoMinuto: ms } = TiempoUtils;
+    assert.equal(ms(0), 60000);
+    assert.equal(ms(1000), 59000);
+    assert.equal(ms(59999), 1);
+    assert.equal(ms(60000), 60000);
+});

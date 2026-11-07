@@ -334,16 +334,25 @@ function _initAutoSync() {
     }
 }
 
-let _relojUIInterval = null;
+// Lo que muestra la tarjeta cambia de minuto en minuto: el reloj actualiza justo después de cada cambio de minuto
+const RELOJ_MARGEN_MS = 50;
+let _relojUITimer = null;
+
+function _programarTickReloj() {
+    _relojUITimer = setTimeout(() => {
+        _programarTickReloj();
+        actualizarUI(null, true);
+    }, TiempoUtils.msHastaProximoMinuto() + RELOJ_MARGEN_MS);
+}
 
 function _iniciarRelojUI() {
-    if (_relojUIInterval) return;
-    _relojUIInterval = setInterval(() => actualizarUI(null, true), 20000);
+    if (_relojUITimer) return;
+    _programarTickReloj();
 }
 
 function _detenerRelojUI() {
-    clearInterval(_relojUIInterval);
-    _relojUIInterval = null;
+    clearTimeout(_relojUITimer);
+    _relojUITimer = null;
 }
 
 function _initListenerVisibility() {

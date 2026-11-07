@@ -38,7 +38,9 @@ function _actualizarOffsetsStickyMes() {
     const mesHeader = document.querySelector('.registro-mes-header');
     const root = document.documentElement.style;
     if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
-    if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
+    // con la lista oculta mide 0: se conserva el valor anterior
+    const altoMes = mesHeader?.getBoundingClientRect().height;
+    if (altoMes) root.setProperty('--mes-header-h', altoMes + 'px');
 }
 const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
 

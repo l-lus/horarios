@@ -127,6 +127,8 @@ function _activarVistaCalendarioHistorico() {
 }
 
 let _calendarioMes = null;
+/** @type {string | null} día en que se dibujó por última vez: al cambiar el día hay que redibujar (marca de hoy, semana actual) */
+let _fechaDibujado = null;
 
 /** Celda de un día del calendario: su clase de estado, resaltado de "hoy" o "nuevo" y los eventos de click/hover si tiene registro. */
 function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario, asignaciones }) {
@@ -202,6 +204,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     }
     CalendarioPopups.registrarLongPressSemana(grid);
 
+    _fechaDibujado = TiempoUtils.obtenerFechaHoy();
     const hoy = new Date();
     const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
     const mes = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
@@ -480,6 +483,7 @@ export const Calendario = {
     _selectorMesesProtegido,
     _activarVistaCalendarioHistorico,
     _renderizarCalendario,
+    _dibujadoOtroDia: () => _fechaDibujado !== TiempoUtils.obtenerFechaHoy(),
     animarEntradaInicial,
     toggleVistaHistorico,
     getVistaHistoricoCalendario: () => _vistaHistoricoCalendario,

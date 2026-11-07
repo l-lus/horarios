@@ -332,10 +332,7 @@ function _planConteoInicial(vista, est) {
 function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false, conteoInicial = false) {
     const asignacionesCompensatorio = Compensatorios.calcularAsignacionesCompensatorio();
 
-    if (!soloReloj) {
-        const idNuevoLista = Calendario.getVistaHistoricoCalendario() ? null : idNuevo;
-        Historico.actualizarListaRegistros(EstadoApp.registros(), idNuevoLista, asignacionesCompensatorio);
-    }
+    if (!soloReloj) Historico.actualizarListaRegistros(EstadoApp.registros(), idNuevo, asignacionesCompensatorio);
 
     const est = _calcularEstadoCard(asignacionesCompensatorio);
     const vista = EstadoApp.vistaActual() === 'semana'
@@ -359,7 +356,8 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
         if (selector && selector.style.display !== 'none') {
             // el reloj no cierra el selector: de eso se encarga su propio temporizador de inactividad (ver calendario.js)
             if (!soloReloj && !Calendario._selectorMesesProtegido()) Calendario._cerrarSelectorMeses(idNuevo);
-        } else {
+        } else if (!soloReloj || Calendario._dibujadoOtroDia()) {
+            // lo que muestra el calendario no depende de la hora: al reloj solo le importa el cambio de día
             Calendario._renderizarCalendario(idNuevo, asignacionesCompensatorio);
         }
     }

@@ -127,3 +127,60 @@ test('El selector de meses se cierra solo tras 15 s sin tocarlo, y cada interacc
     t.mock.timers.tick(1000);
     assert.equal(selector.style.display, 'none');
 });
+
+test('La lista se dibuja solo si se ve: oculta queda pendiente y se dibuja al mostrarla', async (t) => {
+    const { TarjetaFichaje } = await import('../src/ui/tarjeta-fichaje.js');
+    const { Calendario } = await import('../src/ui/calendario.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    GestorPerfiles.inicializar();
+    const lista = porId('lista-registros');
+    const dibujos = t.mock.method(lista, 'replaceChildren', noop);
+    const veces = () => dibujos.mock.callCount();
+    Calendario.setVistaHistoricoCalendario(true);
+
+    TarjetaFichaje.actualizarUI();
+    assert.equal(veces(), 0, 'con el calendario a la vista no se dibuja');
+
+    Calendario.toggleVistaHistorico();   // pasa a la lista
+    assert.equal(veces(), 1, 'al mostrarla se dibuja lo pendiente');
+
+    TarjetaFichaje.actualizarUI();
+    assert.equal(veces(), 2, 'a la vista se dibuja en cada render');
+
+    Calendario.toggleVistaHistorico();   // al calendario
+    Calendario.toggleVistaHistorico();   // de nuevo a la lista, sin cambios en el medio
+    assert.equal(veces(), 2, 'sin cambios no hace falta volver a dibujarla');
+
+    Calendario.toggleVistaHistorico();
+    TarjetaFichaje.actualizarUI();
+    Calendario.toggleVistaHistorico();
+    assert.equal(veces(), 3, 'un cambio con la lista oculta se dibuja una sola vez al mostrarla');
+    Calendario.setVistaHistoricoCalendario(true);
+});
+
+test('El reloj solo redibuja el calendario cuando cambia el día; un render normal siempre', async (t) => {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 28, 10, 0) });
+    const { TarjetaFichaje } = await import('../src/ui/tarjeta-fichaje.js');
+    const { Calendario } = await import('../src/ui/calendario.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    GestorPerfiles.inicializar();
+    Calendario.setVistaHistoricoCalendario(true);
+    porId('calendario-selector-meses').style.display = 'none';
+    const dibujos = t.mock.method(porId('calendario-grid'), 'replaceChildren', noop);
+    const veces = () => dibujos.mock.callCount();
+
+    TarjetaFichaje.actualizarUI();
+    assert.equal(veces(), 1);
+
+    TarjetaFichaje.actualizarUI(null, true);
+    assert.equal(veces(), 1, 'el tick del mismo día no lo redibuja');
+
+    TarjetaFichaje.actualizarUI();
+    assert.equal(veces(), 2, 'un render normal sí');
+
+    t.mock.timers.tick(24 * 60 * 60 * 1000);
+    TarjetaFichaje.actualizarUI(null, true);
+    assert.equal(veces(), 3, 'el primer tick del día siguiente lo redibuja');
+    TarjetaFichaje.actualizarUI(null, true);
+    assert.equal(veces(), 3);
+});

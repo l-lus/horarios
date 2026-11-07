@@ -1,5 +1,5 @@
 import { Preferencias } from '../core/preferencias.js';
-import { EstiloTarjeta, ESTILOS_TARJETA } from '../core/estilo-tarjeta.js';
+import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA } from '../core/estilo-tarjeta.js';
 import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE } from '../core/constantes.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -80,6 +80,13 @@ const CONFIG_RESPALDO = [
         esValido: (v) => ESTILOS_TARJETA.some(e => e.id === v),
         actual: EstiloTarjeta.actual,
         aplicar: (v) => { EstiloTarjeta.setEstilo(v); _avisarHint(); },
+    },
+    {
+        clave: STORAGE_KEYS.LINEA_DISPOSICION,
+        etiqueta: 'disposición de la línea de tiempo',
+        esValido: (v) => DISPOSICIONES_LINEA.some(d => d.id === v),
+        actual: EstiloTarjeta.disposicion,
+        aplicar: (v) => { EstiloTarjeta.setDisposicion(v); _avisarHint(); },
     },
     _opcion(Preferencias.DESC_HITOS_NUMERO, 'nombre del hito en el número', _avisarHint),
     _opcion(Preferencias.CICLO_HINT_AUTO, 'ciclo automático del hint', _avisarHint),

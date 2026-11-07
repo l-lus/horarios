@@ -23,6 +23,26 @@ const ESTILOS_PROPIOS = Object.freeze(['anillo', 'linea', 'filas', 'tipografica'
 
 const _esValido = id => ESTILOS_TARJETA.some(e => e.id === id);
 
+// Subvariante del estilo "Línea de tiempo": en una tarjeta ancha (PC) el tiempo trabajado puede ir arriba de la línea, como en el móvil, o a su izquierda o su derecha.
+// El CSS solo mira <html data-disposicion-linea> (y el ancho de la tarjeta), así que cambiarla no redibuja nada.
+export const DISPOSICIONES_LINEA = Object.freeze([
+    { id: 'arriba', label: 'Arriba' },
+    { id: 'izquierda', label: 'A la izquierda' },
+    { id: 'derecha', label: 'A la derecha' }
+]);
+
+const _disposicionValida = id => DISPOSICIONES_LINEA.some(d => d.id === id);
+
+/** Disposición que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */
+export function siguienteDisposicion(id) {
+    const idx = DISPOSICIONES_LINEA.findIndex(d => d.id === id);
+    return DISPOSICIONES_LINEA[(idx + 1) % DISPOSICIONES_LINEA.length].id;
+}
+
+export function etiquetaDisposicion(id) {
+    return (DISPOSICIONES_LINEA.find(d => d.id === id) ?? DISPOSICIONES_LINEA[0]).label;
+}
+
 /** Estilo que sigue al `id` en el ciclo (vuelve al primero al terminar; un id desconocido cuenta como el primero). */
 export function siguienteEstilo(id) {
     const idx = ESTILOS_TARJETA.findIndex(e => e.id === id);
@@ -36,6 +56,7 @@ export function etiquetaEstilo(id) {
 export const esEstiloPropio = id => ESTILOS_PROPIOS.includes(id);
 
 let _estilo = null;
+let _disposicion = null;
 
 function actual() {
     if (_estilo === null) {
@@ -45,9 +66,25 @@ function actual() {
     return _estilo;
 }
 
+function disposicion() {
+    if (_disposicion === null) {
+        const guardado = Almacenamiento.getItem(STORAGE_KEYS.LINEA_DISPOSICION, null);
+        _disposicion = _disposicionValida(guardado) ? guardado : DISPOSICIONES_LINEA[0].id;
+    }
+    return _disposicion;
+}
+
 function _aplicar() {
     if (typeof document === 'undefined') return;
     document.documentElement.setAttribute('data-estilo-tarjeta', actual());
+    document.documentElement.setAttribute('data-disposicion-linea', disposicion());
+}
+
+function setDisposicion(id) {
+    if (!_disposicionValida(id)) return;
+    _disposicion = id;
+    Almacenamiento.setItem(STORAGE_KEYS.LINEA_DISPOSICION, id);
+    _aplicar();
 }
 
 function init() {
@@ -68,6 +105,7 @@ function siguiente() {
 /** Vuelve a leer el estilo guardado (después de restaurar un respaldo, que escribe el almacenamiento por su cuenta). */
 function releer() {
     _estilo = null;
+    _disposicion = null;
     _aplicar();
 }
 
@@ -77,7 +115,9 @@ function desdeHintIntegrado(activo) {
 }
 
 export const EstiloTarjeta = {
-    init, actual, setEstilo, siguiente, releer, desdeHintIntegrado,
+    init, actual, setEstilo, siguiente, releer, desdeHintIntegrado, disposicion, setDisposicion,
+    siguienteDisposicion: () => setDisposicion(siguienteDisposicion(disposicion())),
+    etiquetaDisposicion: () => etiquetaDisposicion(disposicion()),
     etiqueta: () => etiquetaEstilo(actual()),
     /** ¿La barra lleva los hitos dibujados encima (el antiguo hint integrado)? */
     hintIntegrado: () => actual() === 'hitos',

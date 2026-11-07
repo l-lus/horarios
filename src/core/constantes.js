@@ -16,6 +16,7 @@ export const STORAGE_KEYS = Object.freeze({
     REDUCIR_ANIMACIONES: 'reducirAnimaciones',
     FORMATO_CORTO_STATS: 'formatoCortoStats',
     ESTILO_CALENDARIO: 'estiloCalendario',
+    LINEA_DISPOSICION: 'lineaDisposicion',  // estilo línea de tiempo en pantallas anchas: dónde va el tiempo trabajado (arriba, a la izquierda o a la derecha de la línea)
     ESTILO_TARJETA: 'estiloTarjeta',        // aspecto de la tarjeta de estado (ver core/estilo-tarjeta.js); sin valor se deduce de HINT_INTEGRADO
     HINT_INTEGRADO: 'hintIntegrado',
     DESC_HITOS_NUMERO: 'descHitosNumero',   // con el hint integrado: el nombre del hito enfocado va en el número grande en vez de desplegarse en la barra

@@ -116,6 +116,12 @@ function actualizarEstadoBotonHintIntegrado(animar = false) {
     if (colapsable && colapsable.classList.contains('expanded') !== activo) setColapsable(colapsable, activo, { animar });
     const lbl = $('hint-animacion-label');
     if (lbl) lbl.textContent = _ETIQUETAS_ANIM_HINT[_modoAnimHint()];
+    // la disposición del tiempo trabajado es una subopción del estilo "Línea de tiempo"
+    const lineaActiva = EstiloTarjeta.actual() === 'linea';
+    const colapsableLinea = $('linea-disposicion-colapsable');
+    if (colapsableLinea && colapsableLinea.classList.contains('expanded') !== lineaActiva) setColapsable(colapsableLinea, lineaActiva, { animar });
+    const lblLinea = $('linea-disposicion-label');
+    if (lblLinea) lblLinea.textContent = EstiloTarjeta.etiquetaDisposicion();
 }
 
 // Al restaurar un respaldo o bajar de Gist cambia la opción: se actualiza la etiqueta
@@ -127,6 +133,12 @@ function toggleEstiloTarjeta() {
     actualizarEstadoBotonHintIntegrado(true);
     EventosApp.emit('config:hint-integrado');
     actualizarUI();
+}
+
+// Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
+function toggleDisposicionLinea() {
+    EstiloTarjeta.siguienteDisposicion();
+    actualizarEstadoBotonHintIntegrado();
 }
 
 function toggleAnimacionHint() {
@@ -370,6 +382,7 @@ function bindEventos() {
         'btn-toggle-objetivo-registro': () => toggleObjetivoPorRegistro(),
         'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
         'btn-estilo-tarjeta': () => toggleEstiloTarjeta(),
+        'btn-linea-disposicion': () => toggleDisposicionLinea(),
         'btn-toggle-hint-animacion': () => toggleAnimacionHint(),
         'btn-toggle-metrica-uso': () => toggleMetricaUso(),
         'btn-toggle-formato-corto-stats': () => toggleFormatoCortoStats(),

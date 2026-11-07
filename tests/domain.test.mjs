@@ -284,6 +284,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         reducirAnimaciones: 'on',
         hintIntegrado: true,
         estiloTarjeta: 'hitos',
+        lineaDisposicion: 'arriba',
         descHitosNumero: true,
         cicloHintAuto: true,
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
@@ -912,8 +913,28 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
     assert.equal(ImportarExportar.validarCamposConfigImport({ estiloTarjeta: 'filas' }), true);
     assert.equal(ImportarExportar.validarCamposConfigImport({ estiloTarjeta: 'otro' }), false);
 
+    // disposición del tiempo trabajado en la línea de tiempo (subvariante para tarjetas anchas)
+    const { DISPOSICIONES_LINEA, siguienteDisposicion, etiquetaDisposicion } = await import('../src/core/estilo-tarjeta.js');
+    assert.deepEqual(DISPOSICIONES_LINEA.map(d => d.id), ['arriba', 'izquierda', 'derecha']);
+    assert.equal(siguienteDisposicion('arriba'), 'izquierda');
+    assert.equal(siguienteDisposicion('derecha'), 'arriba');
+    assert.equal(siguienteDisposicion('x'), 'arriba');
+    assert.equal(etiquetaDisposicion('x'), 'Arriba');
+    Almacenamiento.removeItem(STORAGE_KEYS.LINEA_DISPOSICION);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.disposicion(), 'arriba', 'por defecto el tiempo va arriba, como en el móvil');
+    EstiloTarjeta.siguienteDisposicion();
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.LINEA_DISPOSICION), 'izquierda');
+    EstiloTarjeta.setDisposicion('inválida');
+    assert.equal(EstiloTarjeta.disposicion(), 'izquierda');
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, lineaDisposicion: 'derecha' });
+    assert.equal(EstiloTarjeta.disposicion(), 'derecha');
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'derecha' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'abajo' }), false);
+
     // se deja como estaba para no alterar los demás tests
     Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_TARJETA);
+    Almacenamiento.removeItem(STORAGE_KEYS.LINEA_DISPOSICION);
     EstiloTarjeta.releer();
 });
 

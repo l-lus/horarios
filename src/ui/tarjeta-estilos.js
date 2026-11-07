@@ -257,7 +257,10 @@ function crearLinea() {
     const fuera = crearDato('Tiempo fuera', 'est-dato est-mosaico');
     mosaicos.append(balance.raiz, banco.raiz, fuera.raiz);
     const nota = el('div', 'est-linea-nota');
-    raiz.append(cabecera, nodos, nodosDias, mosaicos, nota);
+    // cabecera (tiempo trabajado) y cuerpo (línea, mosaicos y nota): en una tarjeta ancha pueden ir lado a lado (ver la disposición en estilo-tarjeta.js)
+    const cuerpo = el('div', 'est-linea-cuerpo');
+    cuerpo.append(nodos, nodosDias, mosaicos, nota);
+    raiz.append(cabecera, cuerpo);
     return { raiz, etiqueta, duracion, titulo, emoji, texto, nodos, hitos, nodosDias, dias, mosaicos, balance, banco, fuera, nota };
 }
 

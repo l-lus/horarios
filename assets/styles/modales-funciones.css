@@ -925,3 +925,9 @@ body.tarjeta-arrastrando-activa * {
 body.vista-previa-activa {
     padding-bottom: var(--vp-panel-h, 0px);
 }
+
+/* Las copias que se desvanecen en las animaciones de cambio (.mutacion-saliente, colgadas del body con z-index 80) quedaban por debajo del velo y de la tarjeta elevada:
+   durante la vista previa la salida del contenido anterior no se veía y solo se notaba la entrada del nuevo. */
+body.vista-previa-activa .mutacion-saliente {
+    z-index: calc(var(--z-header) + 2) !important;
+}

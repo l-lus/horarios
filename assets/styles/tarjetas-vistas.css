@@ -2046,9 +2046,12 @@
         gap: var(--space-md) var(--space-sm);
     }
 
+    /* Con los mosaicos a la izquierda, el tiempo y la línea forman un bloque centrado en el espacio que queda a su derecha: dos espacios iguales (1fr) a los lados
+       de una columna del ancho justo del contenido, así los textos de la cabecera y de los días siguen arrancando en la misma vertical */
     html[data-disposicion-linea="mosaicos-izquierda"] .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) {
-        grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
-        grid-template-areas: "pie cabecera" "pie linea";
+        grid-template-columns: minmax(9rem, 12rem) minmax(var(--space-sm), 1fr) minmax(0, max-content) minmax(var(--space-sm), 1fr);
+        grid-template-areas: "pie . cabecera ." "pie . linea .";
+        column-gap: 0;
     }
 
     html:is([data-disposicion-linea="mosaicos-izquierda"], [data-disposicion-linea="mosaicos-derecha"]) .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) .est-linea-cabecera { grid-area: cabecera; }

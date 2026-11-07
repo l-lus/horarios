@@ -189,9 +189,12 @@ html.entrada-pagina .container {
     --header-borde: var(--c-blue);
 }
 
-.header h1,
+.header h1 {
+    transition: transform var(--transition-ui), margin-left var(--transition-ui);
+}
+
 .header-actions {
-    transition: transform var(--transition-ui);
+    transition: transform var(--transition-ui), opacity var(--transition-ui), visibility var(--transition-ui);
 }
 
 .header.scrolled h1 {
@@ -213,6 +216,35 @@ html.entrada-pagina .container {
 
     .header.scrolled {
         padding-inline: calc(25% + var(--space-sm));
+    }
+}
+
+/* Móvil: la píldora también ocupa el 50%, pero solo muestra el título centrado.
+   Las acciones (instalar y perfil) salen del flujo y se desvanecen en su sitio; el título se centra
+   con margin-left:50% + translateX(-50%), que sí se pueden animar (justify-content no) */
+@media (max-width: 767px) {
+    .header {
+        --header-inset-x: 25%;
+    }
+
+    .header.scrolled {
+        padding-inline: calc(25% + var(--space-sm));
+    }
+
+    .header.scrolled h1 {
+        margin-left: 50%;
+        transform: translateX(-50%) scale(0.95);
+        transform-origin: center;
+    }
+
+    .header.scrolled .header-actions {
+        position: absolute;
+        right: var(--space-smd);
+        top: 50%;
+        transform: translateY(-50%) scale(0.95);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
     }
 }
 

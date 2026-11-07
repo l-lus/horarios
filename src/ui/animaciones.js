@@ -375,7 +375,25 @@ function _renderConFirma(el, contenido, alAplicar = null, { forzar = false } = {
     _animarMutacion(el, aplicar);
 }
 
+/**
+ * Cambio de texto de hover (hitos de la tarjeta de estado): como _animarMutacion pero rápido (--dur-valor) y sin animar si el texto no cambia.
+ * `fn` escribe el texto; `el` es el elemento cuyo contenido cambia.
+ * @param {HTMLElement | null} el @param {() => void} fn
+ */
+function _animarTextoHover(el, fn) {
+    if (!el) { fn(); return; }
+    const antes = el.textContent;
+    const dur = _getCSSdur('--dur-valor');
+    el.classList.add('mutacion-rapida');
+    const quitar = () => setTimeout(() => el.classList.remove('mutacion-rapida'), dur + 30);
+    const p = _animarMutacion(el, fn, dur);
+    if (el.textContent === antes) { el.classList.remove('mutacion-rapida'); return; }
+    quitar();
+    return p;
+}
+
 export const Animaciones = {
+    _animarTextoHover,
     _durSiAnima,
     DUR_ANIM,
     DUR_CALENDARIO,

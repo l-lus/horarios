@@ -65,6 +65,11 @@
     }
 }
 
+/* Cambios de texto al pasar el cursor por los hitos: más cortos que la mutación normal */
+.mutacion-entrante.mutacion-rapida {
+    animation-duration: var(--dur-valor);
+}
+
 @keyframes mutacionEntrada {
     from {
         opacity: 0;

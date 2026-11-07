@@ -166,7 +166,7 @@ function _fijarFase(tipos) {
     _cicloStatsInterval = null;
     _faseFija = fase.tipo;
     const el = $('stats-semana');
-    if (el) _escribirTextoFase(el, fase);
+    if (el) Animaciones._animarTextoHover(el, () => _escribirTextoFase(el, fase));
     _emitirFase(fase.tipo);
     return true;
 }
@@ -176,7 +176,7 @@ function _soltarFase() {
     if (_faseFija === null) return;
     _faseFija = null;
     const el = $('stats-semana');
-    if (el) el.textContent = _cicloStatsValorHoras;
+    if (el) Animaciones._animarTextoHover(el, () => { el.textContent = _cicloStatsValorHoras; });
     _emitirFase(null);
 }
 

@@ -402,14 +402,14 @@ function bindEventos() {
     HoverBarra.conectarTextos({
         mostrar: (stats, mensaje) => {
             const num = $('stats-semana');
-            if (num && stats !== null) num.textContent = stats;
+            if (num && stats !== null) Animaciones._animarTextoHover(num, () => { num.textContent = stats; });
             const msg = $('stats-mensaje');
-            if (msg && mensaje !== null) { msg.classList.remove('hidden'); msg.textContent = mensaje; }
+            if (msg && mensaje !== null) Animaciones._animarTextoHover(msg, () => { msg.classList.remove('hidden'); msg.textContent = mensaje; });
         },
         restaurar: () => {
             const num = $('stats-semana');
-            if (num && !CicloStats.activo()) num.textContent = _statsActual;
-            _renderMensaje();
+            if (num && !CicloStats.activo()) Animaciones._animarTextoHover(num, () => { num.textContent = _statsActual; });
+            Animaciones._animarTextoHover($('stats-mensaje'), () => _renderMensaje());
         }
     });
     HoverBarra.bindEventos();

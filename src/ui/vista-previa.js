@@ -86,6 +86,38 @@ function _construirFilas(defs) {
     });
 }
 
+/** Ancho que tendría el valor con `texto` (se mide con una copia oculta que hereda la misma tipografía). @param {HTMLElement} el @param {string} texto */
+function _anchoConTexto(el, texto) {
+    const medidor = /** @type {HTMLElement} */ (el.cloneNode(false));
+    medidor.removeAttribute('style');
+    medidor.textContent = texto;
+    Object.assign(medidor.style, { position: 'absolute', visibility: 'hidden', width: 'auto', pointerEvents: 'none' });
+    el.parentElement?.append(medidor);
+    const ancho = medidor.getBoundingClientRect().width;
+    medidor.remove();
+    return ancho;
+}
+
+/**
+ * Cambia el valor de una fila con el desplazamiento vertical de siempre y, además, anima su ANCHO del anterior al nuevo: el texto de la izquierda (nombre y
+ * descripción, que se recortan con puntos suspensivos) gana o pierde lugar de a poco en vez de mostrarse o recortarse de golpe cuando el valor es más corto o más largo.
+ * @param {HTMLElement} el @param {string} texto
+ */
+function _cambiarValor(el, texto) {
+    const dur = Animaciones._durSiAnima('--dur-valor', el);
+    const antes = el.getBoundingClientRect().width;
+    if (!(dur > 1) || !(antes > 0) || el.textContent === texto) { Animaciones._animarValor(el, texto, 1); return; }
+    const despues = _anchoConTexto(el, texto);
+    el.style.width = `${antes}px`;
+    Animaciones._animarValor(el, texto, 1);
+    if (Math.abs(despues - antes) < 1) { el.style.width = ''; return; }
+    void el.offsetWidth;
+    el.style.transition = `width ${dur}ms ease-out`;
+    el.style.width = `${despues}px`;
+    clearTimeout(/** @type {any} */ (el).__finAncho);
+    /** @type {any} */ (el).__finAncho = setTimeout(() => { el.style.width = ''; el.style.transition = ''; }, dur + 60);
+}
+
 /** @param {boolean} [animar] con false (la primera vez) las filas quedan en su estado sin transición */
 function _refrescar(animar = true) {
     if (!_activa) return;
@@ -94,7 +126,8 @@ function _refrescar(animar = true) {
     const aplicar = () => {
         filas.forEach((f, i) => {
             // el valor cambia con el mismo desplazamiento vertical que los valores de Ajustes (la primera vez, sin animar)
-            Animaciones._animarValor(f.valor, f.def.valor(), animar ? 1 : 0);
+            if (animar) _cambiarValor(f.valor, f.def.valor());
+            else Animaciones._animarValor(f.valor, f.def.valor(), 0);
             if (f.envoltorio.classList.contains('expanded') !== visibles[i]) setColapsable(f.envoltorio, visibles[i], { animar });
         });
     };

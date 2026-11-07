@@ -883,6 +883,7 @@ body.tarjeta-arrastrando-activa * {
    en una o dos líneas según el largo del valor (por ejemplo "Contorno con brillo"), el panel cambiaba de tamaño cada vez que cambiaba el valor */
 .vista-previa-panel .settings-list-text {
     min-width: 0;
+    text-align: right;   /* el nombre y su descripción quedan pegados al valor */
 }
 
 .vista-previa-panel .settings-list-text>span {

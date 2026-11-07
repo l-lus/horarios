@@ -89,15 +89,18 @@
 }
 
 /* Deshabilitado: mismo criterio que #gist-limite-sync.disabled (todo el contenido atenuado) */
+.settings-list>.collapsible>.collapsible-inner>button>*,
 .settings-list>button>* {
     transition: opacity var(--transition-ui);
 }
 
+.settings-list>.collapsible>.collapsible-inner>button:disabled,
 .settings-list>button:disabled {
     color: var(--text-muted);
     background: transparent;
 }
 
+.settings-list>.collapsible>.collapsible-inner>button:disabled>*,
 .settings-list>button:disabled>* {
     opacity: var(--opacity-disabled);
 }
@@ -353,6 +356,7 @@
     overflow: hidden;
 }
 
+.settings-list>.collapsible>.collapsible-inner>button,
 .settings-list>button {
     width: 100%;
     background: transparent;
@@ -362,7 +366,8 @@
 }
 
 .settings-list>button:not(:last-child),
-.settings-list>.settings-list-row:not(:last-child) {
+.settings-list>.settings-list-row:not(:last-child),
+.settings-list>.collapsible>.collapsible-inner>button {
     border-bottom: 1px solid var(--border);
 }
 
@@ -390,10 +395,12 @@
     margin-bottom: 0;
 }
 
+.settings-list>.collapsible>.collapsible-inner>button:active:not(:disabled),
 .settings-list>button:active:not(:disabled) {
     background: var(--surface-row-hover);
 }
 
+.settings-list>.collapsible>.collapsible-inner>button .icon:first-child,
 .settings-list>button .icon:first-child,
 .settings-list-row .icon:first-child,
 .settings-list-row-head .icon:first-child,

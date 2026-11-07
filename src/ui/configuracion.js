@@ -1,5 +1,5 @@
 import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
+import { $, setColapsable } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -103,11 +103,11 @@ function _modoAnimHint() {
     return Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO) ? 'texto' : 'barra';
 }
 
-function actualizarEstadoBotonHintIntegrado() {
+function actualizarEstadoBotonHintIntegrado(animar = false) {
     const activo = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
     _setBtnActivo('btn-toggle-hint-integrado', activo);
-    // la animación solo tiene sentido con el hint integrado: sin él, la opción se oculta
-    $('btn-toggle-hint-animacion')?.classList.toggle('hidden', !activo);
+    // la animación solo tiene sentido con el hint integrado: sin él, la opción se pliega (sin animar al cargar o al restaurar un respaldo)
+    setColapsable($('hint-animacion-colapsable'), activo, { animar });
     const lbl = $('hint-animacion-label');
     if (lbl) lbl.textContent = _ETIQUETAS_ANIM_HINT[_modoAnimHint()];
 }
@@ -117,7 +117,7 @@ EventosApp.on('config:hint-integrado', () => actualizarEstadoBotonHintIntegrado(
 
 function toggleHintIntegrado() {
     Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, !Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO));
-    actualizarEstadoBotonHintIntegrado();
+    actualizarEstadoBotonHintIntegrado(true);
     EventosApp.emit('config:hint-integrado');
     actualizarUI();
 }

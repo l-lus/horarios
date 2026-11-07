@@ -372,6 +372,7 @@ button.campo-flash-color {
     }
 
     .settings-list>button:hover:not(:disabled),
+    .settings-list>.collapsible>.collapsible-inner>button:hover:not(:disabled),
     .btn-perfil-select:hover {
         background: var(--surface-row-hover);
     }

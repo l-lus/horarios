@@ -118,10 +118,14 @@ html.entrada-pagina .container {
     margin-bottom: 2rem;
 }
 
+/* Cabecera: el layout (altura, sticky) no cambia nunca; al hacer scroll solo se anima la capa de
+   fondo (::before) hasta formar una píldora flotante. Cambiar márgenes/padding del header movería el
+   contenido y haría oscilar el IntersectionObserver que alterna .scrolled */
 .header {
-    background: var(--bg-header);
+    --header-inset-x: 12px;
+    --header-inset-y: 8px;
+    --header-borde: transparent;
     padding: var(--space-smd);
-    box-shadow: var(--shadow);
     position: sticky;
     top: 0;
     z-index: var(--z-header);
@@ -129,31 +133,83 @@ html.entrada-pagina .container {
     justify-content: space-between;
     align-items: center;
     border-bottom: 3px solid transparent;
-    transition: border-bottom-color var(--transition-ui);
+}
+
+.header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--bg-header);
+    box-shadow: var(--shadow);
+    border: 1px solid transparent;
+    border-radius: 0;
+    pointer-events: none;
+    transition:
+        inset var(--transition-ui),
+        border-radius var(--transition-ui),
+        border-color var(--transition-ui),
+        box-shadow var(--transition-ui),
+        background-color var(--transition-ui);
+}
+
+.header.scrolled::before {
+    inset: var(--header-inset-y) var(--header-inset-x);
+    border-radius: 999px;
+    border-color: var(--header-borde);
+    box-shadow: var(--shadow-header-flotante, 0 4px 16px rgba(0, 0, 0, 0.18));
+}
+
+.header.scrolled {
+    --header-borde: var(--border, rgba(128, 128, 128, 0.35));
 }
 
 .header.scrolled.progress-green {
-    border-bottom-color: var(--c-green);
+    --header-borde: var(--c-green);
 }
 
 .header.scrolled.progress-red {
-    border-bottom-color: var(--c-red);
+    --header-borde: var(--c-red);
 }
 
 .header.scrolled.progress-purple {
-    border-bottom-color: var(--c-purple);
+    --header-borde: var(--c-purple);
 }
 
 .header.scrolled.progress-orange {
-    border-bottom-color: var(--c-orange);
+    --header-borde: var(--c-orange);
 }
 
 .header.scrolled.progress-gold {
-    border-bottom-color: var(--c-gold);
+    --header-borde: var(--c-gold);
 }
 
 .header.scrolled.progress-blue {
-    border-bottom-color: var(--c-blue);
+    --header-borde: var(--c-blue);
+}
+
+.header h1,
+.header-actions {
+    transition: transform var(--transition-ui);
+}
+
+.header.scrolled h1 {
+    transform: scale(0.95);
+    transform-origin: left center;
+}
+
+.header.scrolled .header-actions {
+    transform: scale(0.95);
+    transform-origin: right center;
+}
+
+/* Desktop: la píldora desenfoca lo que pasa por debajo. En móviles se omite (coste de rendimiento) */
+@media (hover: hover) and (pointer: fine) {
+    .header.scrolled::before {
+        background: color-mix(in srgb, var(--bg-header) 78%, transparent);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+    }
 }
 
 .header h1 {

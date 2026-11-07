@@ -3,7 +3,7 @@ import { FERIADOS_AR } from '../data/feriados.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EstadoApp } from './estado-app.js';
-import { FiltrosYPeriodos } from './filtros-periodos.js';
+import { OperacionesLote } from './operaciones-lote.js';
 
 // ====================================================================
 // HOLIDAYS MODULE
@@ -67,7 +67,7 @@ async function chequearYNotificar() {
 
     if (confirmo) {
         for (const feriado of pendientes) {
-            try { await FiltrosYPeriodos.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { console.error('Error registrando feriado:', e); }
+            try { await OperacionesLote.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { console.error('Error registrando feriado:', e); }
         }
     }
 }

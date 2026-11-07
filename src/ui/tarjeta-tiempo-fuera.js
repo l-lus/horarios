@@ -5,11 +5,11 @@ import { Cambios } from '../services/cambios.js';
 import { Animaciones } from './animaciones.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { mostrarToast } from './toast.js';
 import { icono, html, montar } from '../core/html.js';
 import { AvisoJornada } from '../services/aviso-jornada.js';
+import { Jornada } from '../services/jornada.js';
 
 // ====================================================================
 //                     UI CARD BREAK TIMER MODULE
@@ -78,7 +78,7 @@ function actualizarEstadoBotonTimerMain(sinAnimarTitulo = false) {
 
     if (TarjetaLote.getModoLoteActivo()) { btn.disabled = true; return; }
 
-    const registroHoy = FiltrosYPeriodos.registroParaTiempoFuera();
+    const registroHoy = Jornada.registroParaTiempoFuera();
     const isRunning = TiempoFuera.corriendo();
     const diaCerrado = registroHoy?.salida?.trim() !== '' && !!registroHoy?.salida;
 
@@ -151,7 +151,7 @@ async function _detenerTimerBreak(registroHoy) {
 }
 
 async function toggleTimerBreakMain() {
-    const registroHoy = FiltrosYPeriodos.registroParaTiempoFuera();
+    const registroHoy = Jornada.registroParaTiempoFuera();
 
     if (!TiempoFuera.corriendo() && !registroHoy) { mostrarToast('Debés crear un registro para hoy primero', 'warning'); return; }
 

@@ -13,7 +13,6 @@ import { TarjetaFondos } from './tarjeta-fondos.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
 import { Notificaciones } from './notificaciones.js';
 import { EventosApp } from '../core/eventos.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { _crearPressHold, debounce } from './gestos.js';
 import { _scrollHastaVisible, _scrollA } from './scroll.js';
@@ -21,6 +20,8 @@ import { mostrarToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
 import { AyudaBuscador } from './ayuda-buscador.js';
 import { AvisoJornada } from '../services/aviso-jornada.js';
+import { DiasHabiles } from '../services/dias-habiles.js';
+import { Objetivos } from '../services/objetivos.js';
 
 // ====================================================================
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
@@ -164,7 +165,7 @@ async function aplicarHorasConfiguradasATodos() {
     );
     if (!confirmado) return;
 
-    const { aplicados, creditosRecalculados } = Compensatorios.aplicarHorasATodosLosRegistros();
+    const { aplicados, creditosRecalculados } = Objetivos.aplicarHorasATodosLosRegistros();
     const guardado = await EstadoApp.guardarYActualizar();
     if (guardado) {
         actualizarUI();
@@ -309,7 +310,7 @@ function actualizarFeedbackConfig() {
         const diasVigentes = [...EstadoApp.diasHabiles()].sort((a, b) => a - b);
         const huboCambio = nuevosDias.length !== diasVigentes.length
             || nuevosDias.some((d, i) => d !== diasVigentes[i]);
-        if (huboCambio) Compensatorios.registrarCambioDiasHabiles(nuevosDias);
+        if (huboCambio) DiasHabiles.registrarCambioDiasHabiles(nuevosDias);
         EstadoApp.guardarYActualizar();
         if (huboCambio) _reprogramarPushDebounced();
     }

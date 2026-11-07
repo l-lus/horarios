@@ -1,9 +1,9 @@
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { EstadoApp } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
-import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SaldoSemanal } from './saldo-semanal.js';
+import { Objetivos } from './objetivos.js';
 
 // ====================================================================
 // ESTADÍSTICAS POR PERÍODO MODULE (semana, mes y año, sin DOM)
@@ -22,7 +22,7 @@ function desviacionEstandar(valores) {
 }
 
 function sumarHorasEfectivas(regs) {
-    return regs.reduce((sum, r) => sum + Compensatorios.horasEfectivasDeRegistro(r), 0);
+    return regs.reduce((sum, r) => sum + Objetivos.horasEfectivasDeRegistro(r), 0);
 }
 
 function _fechaDesdeEfectiva(registros, fechaDesdeDefault) {
@@ -95,7 +95,7 @@ function calcularEstadisticasRango(registrosRango, opciones = {}) {
     const hayPeriodo = horasDiariasObj > 0 && opciones.desde && opciones.hasta;
     const asignacionesCompensatorio = hayPeriodo ? Compensatorios.calcularAsignacionesCompensatorio() : null;
     const bufferPeriodo = hayPeriodo
-        ? FiltrosYPeriodos.calcularBufferPeriodo(opciones.desde, opciones.hasta, true, 0, asignacionesCompensatorio)
+        ? SaldoSemanal.calcularBufferPeriodo(opciones.desde, opciones.hasta, true, 0, asignacionesCompensatorio)
         : null;
     const aprovechamientoSaldo = hayPeriodo
         ? SaldoSemanal.calcularAprovechamiento(opciones.desde, opciones.hasta, asignacionesCompensatorio)

@@ -2,10 +2,12 @@ import { horasGte, ESTADO_DIA, CUMPLIMIENTO } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { EstadoApp } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
-import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SaldoSemanal } from './saldo-semanal.js';
 import { TiempoFuera } from './tiempo-fuera.js';
+import { DiasHabiles } from './dias-habiles.js';
+import { Objetivos } from './objetivos.js';
+import { Jornada } from './jornada.js';
 
 // ====================================================================
 // ESTADO DE LA TARJETA DE FICHAJE MODULE (cálculo del día y la semana, sin DOM)
@@ -25,7 +27,7 @@ function _estadoDiasHabiles(diasHabiles) {
 function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
     if (diasHabiles.length === 0 || horasDiarias <= 0) return false;
     const fechasLaborables = TiempoUtils.generarRangoFechas(ini, fn)
-        .filter(f => Compensatorios.esDiaLaboral(f));
+        .filter(f => DiasHabiles.esDiaLaboral(f));
     if (fechasLaborables.length === 0) return false;
     return fechasLaborables.every(fecha => {
         const r = registros.find(x => x.fecha === fecha);
@@ -41,7 +43,7 @@ function _totalesSemana(registrosSemana, regActivo, tiempoHoy, asignaciones) {
     let descuentoCompensatorioSemana = 0;
     registrosSemana.forEach(r => {
         if (regActivo && r.fecha === regActivo.fecha) { totalSemana += tiempoHoy; return; }
-        totalSemana += Compensatorios.horasEfectivasDeRegistro(r);
+        totalSemana += Objetivos.horasEfectivasDeRegistro(r);
         const tipoDia = TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida);
         if (!tipoDia) {
             descuentoCompensatorioSemana += Compensatorios.montoCompensadoDeReferencia(r, asignaciones);
@@ -54,12 +56,12 @@ function _totalesSemana(registrosSemana, regActivo, tiempoHoy, asignaciones) {
 function _objetivoSemana(ini, fn, porFecha, horasDiarias) {
     let objetivoSemana = 0;
     for (const isoDate of TiempoUtils.generarRangoFechas(ini, fn)) {
-        if (!Compensatorios.esDiaLaboral(isoDate)) continue;
+        if (!DiasHabiles.esDiaLaboral(isoDate)) continue;
         const rDia = porFecha.get(isoDate);
         if (!rDia) { objetivoSemana += horasDiarias; continue; }
         const tipoDia = TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida);
         if (tipoDia && tipoDia.id !== 'remoto') continue;
-        objetivoSemana += Compensatorios.objetivoDeRegistro(rDia);
+        objetivoSemana += Objetivos.objetivoDeRegistro(rDia);
     }
     return objetivoSemana;
 }
@@ -73,11 +75,11 @@ function _franjasSemana({ ini, fn, hoy, horasDiarias, porFecha, regActivo, tiemp
     const diasSemana = [];
     for (const isoDate of TiempoUtils.generarRangoFechas(ini, fn)) {
         const rDia = porFecha.get(isoDate) ?? null;
-        const esLaborable = Compensatorios.esDiaLaboral(isoDate);
+        const esLaborable = DiasHabiles.esDiaLaboral(isoDate);
         if (!esLaborable && !rDia) continue;
         const tipo = rDia ? TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida) : null;
         const especial = tipo && tipo.id !== 'remoto' ? tipo.color : undefined;
-        const objetivo = rDia ? (esLaborable ? Compensatorios.objetivoDeRegistro(rDia) : 0) : horasDiarias;
+        const objetivo = rDia ? (esLaborable ? Objetivos.objetivoDeRegistro(rDia) : 0) : horasDiarias;
         const activo = !!regActivo && isoDate === regActivo.fecha;
         let estado;
         if (isoDate > hoy) estado = ESTADO_DIA.FUTURO;
@@ -87,7 +89,7 @@ function _franjasSemana({ ini, fn, hoy, horasDiarias, porFecha, regActivo, tiemp
         else if (rDia) estado = ESTADO_DIA.CERRADO;
         else estado = isoDate < hoy ? ESTADO_DIA.SIN_REGISTRO : ESTADO_DIA.FUTURO;
         // lo mismo que cuenta para el total de la semana (un día remoto cuenta su objetivo completo)
-        const total = activo ? tiempoHoy : (rDia ? Compensatorios.horasEfectivasDeRegistro(rDia) : 0);
+        const total = activo ? tiempoHoy : (rDia ? Objetivos.horasEfectivasDeRegistro(rDia) : 0);
         // resultado de un día cerrado: cumplió su objetivo, faltó pero lo cubre el saldo, o faltó (se reutilizan las asignaciones ya calculadas)
         const cumplimiento = estado !== ESTADO_DIA.CERRADO ? undefined
             : (objetivo === 0 || horasGte(total, objetivo)) ? CUMPLIMIENTO.CUMPLIDO
@@ -113,7 +115,7 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, resolverRetenido
     const horasDiarias = EstadoApp.horasDiarias();
     const horasSemanales = EstadoApp.horasSemanales();
     const diasHabiles = EstadoApp.diasHabiles();
-    const { ayerStr: ayer, regAyer, ayerAbierto } = FiltrosYPeriodos.detectarAyerAbierto(hoy, registros);
+    const { ayerStr: ayer, regAyer, ayerAbierto } = Jornada.detectarAyerAbierto(hoy, registros);
 
     const { esDiaHabil, quedanDiasFuturos } = _estadoDiasHabiles(diasHabiles);
     const regHoyReal = registros.find(r => r.fecha === hoy) ?? null;
@@ -121,13 +123,13 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, resolverRetenido
     const regHoy = regRetenido ?? regHoyReal;
     const semanaAbierta = quedanDiasFuturos || (esDiaHabil && !(regHoyReal && regHoyReal.salida));
     const asignacionesCompensatorio = asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio();
-    const bufferSemanalBase = FiltrosYPeriodos.calcularBufferPeriodo(ini, hoy, false, 0, asignacionesCompensatorio);
-    const bufferSemanal = FiltrosYPeriodos.calcularBufferPeriodo(ini, hoy, true, minutosBreakActivo, asignacionesCompensatorio);
+    const bufferSemanalBase = SaldoSemanal.calcularBufferPeriodo(ini, hoy, false, 0, asignacionesCompensatorio);
+    const bufferSemanal = SaldoSemanal.calcularBufferPeriodo(ini, hoy, true, minutosBreakActivo, asignacionesCompensatorio);
 
     const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
 
     let tiempoHoy = 0;
-    const regActivo = FiltrosYPeriodos.jornadaActiva(regHoy, regAyer, ayerAbierto);
+    const regActivo = Jornada.jornadaActiva(regHoy, regAyer, ayerAbierto);
     if (regActivo) {
         tiempoHoy = EstadoApp.horasTranscurridas(regActivo, minutosBreakActivo);
     } else if (!tipoEspecialHoy && regHoy?.salida) {
@@ -158,7 +160,7 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, resolverRetenido
         tipoEspecialHoy, tiempoHoy,
         todosEspeciales,
         ayerAbierto, ayerStr: ayer, regAyer,
-        regVigente: FiltrosYPeriodos.jornadaVigente(regHoy, regAyer, ayerAbierto)
+        regVigente: Jornada.jornadaVigente(regHoy, regAyer, ayerAbierto)
     };
 }
 

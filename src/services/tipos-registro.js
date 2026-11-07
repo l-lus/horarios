@@ -124,6 +124,8 @@ function obtenerCodigosPorTipo(id) {
     return tipo ? { entrada: tipo.codigo, salida: tipo.codigo } : null;
 }
 
+const esTipoRemoto = (r) => obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+
 /** "00:00" es lo mismo que no tener tiempo fuera o salida temprana. */
 const tieneTiempoFuera = (r) => !!r.tiempoFuera && r.tiempoFuera !== '00:00';
 const tieneCredito = (r) => !!r.credito && r.credito !== '00:00';
@@ -173,6 +175,7 @@ function mapaNotasPorRegistro(registros) {
 }
 
 export const TiposRegistro = {
+    esTipoRemoto,
     tieneTiempoFuera,
     tieneCredito,
     agruparConsecutivos,

@@ -4,9 +4,9 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
 import { UIBase } from './base.js';
 import { Configuracion } from './configuracion.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { mostrarToast } from './toast.js';
 import { icono, montar } from '../core/html.js';
+import { DiasHabiles } from '../services/dias-habiles.js';
 
 // ====================================================================
 // UI WORKDAY HISTORY MODULE (historial de días hábiles y horas)
@@ -22,7 +22,7 @@ function _formatoFechaHistorial(iso) {
     return `Desde ${TiempoUtils.fechaCorta(iso)}`;
 }
 
-const _obtenerTramosOrdenados = () => Compensatorios.tramosDiasHabiles();
+const _obtenerTramosOrdenados = () => DiasHabiles.tramosDiasHabiles();
 
 function _renderizarListaHistorialDias() {
     const lista = $('lista-historial-dias');
@@ -106,7 +106,7 @@ async function guardarEdicionTramoDias() {
 
     const checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil-tramo"]:checked'));
     const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value));
-    const res = await Compensatorios.editarTramoDias(_tramoEnEdicionDesde, $('editar-tramo-desde')?.value, nuevosDias);
+    const res = await DiasHabiles.editarTramoDias(_tramoEnEdicionDesde, $('editar-tramo-desde')?.value, nuevosDias);
     if ('error' in res) { mostrarToast(res.error, 'error'); return; }
     if (!res.ok) return;
 
@@ -120,7 +120,7 @@ async function eliminarTramoDias() {
     if (tramos.length <= 1 || tramos[0].desde === _tramoEnEdicionDesde) return;   // el botón ya está deshabilitado
     if (!await GestorModales.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
 
-    const res = await Compensatorios.eliminarTramoDias(_tramoEnEdicionDesde);
+    const res = await DiasHabiles.eliminarTramoDias(_tramoEnEdicionDesde);
     if ('error' in res) { mostrarToast(res.error, 'error'); return; }
     if (!res.ok) return;
 

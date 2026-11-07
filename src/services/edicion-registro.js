@@ -3,11 +3,12 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
-import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { Cambios } from './cambios.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { AvisoJornada } from './aviso-jornada.js';
 import { TiempoFuera } from './tiempo-fuera.js';
+import { Objetivos } from './objetivos.js';
+import { Jornada } from './jornada.js';
 
 // ====================================================================
 //              RECORD EDITING (modal "Editar" de un registro)
@@ -17,10 +18,9 @@ import { TiempoFuera } from './tiempo-fuera.js';
 const {
     ordenarRegistros, registroPorId, _fechaFuturaInvalida, _aplicarCalculoHoras
 } = EstadoApp;
-const {
-    _esObjetivoValido, objetivoGuardado, calcularAsignacionesCompensatorio, _buscarAsignacionCompensatorio, objetivoEdicionEnVivo
-} = Compensatorios;
-const { registroParaTiempoFuera } = FiltrosYPeriodos;
+const { _esObjetivoValido, objetivoGuardado, objetivoEdicionEnVivo } = Objetivos;
+const { calcularAsignacionesCompensatorio, _buscarAsignacionCompensatorio } = Compensatorios;
+const { registroParaTiempoFuera } = Jornada;
 
 async function eliminarRegistroActual() {
     const editandoId = EstadoApp.editandoId();
@@ -139,7 +139,7 @@ function _validarCamposEdicion(f, e, s, tf) {
 
 function _calcularCredito(e, s, tf, objetivo = EstadoApp.horasDiarias()) {
     if (!EstadoApp._notify().formularioEdicion.leer().creditoActivo) return null;
-    return Compensatorios.creditoPara(e, s, tf, objetivo);
+    return Objetivos.creditoPara(e, s, tf, objetivo);
 }
 
 async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {

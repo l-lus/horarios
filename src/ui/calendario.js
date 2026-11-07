@@ -10,11 +10,12 @@ import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { html, icono, montar } from '../core/html.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { registrarSwipe } from './gestos.js';
 import { _crearPopupFlotante } from './popups.js';
 import { Animaciones } from './animaciones.js';
 import { CalendarioPopups } from './calendario-popups.js';
+import { DiasHabiles } from '../services/dias-habiles.js';
+import { Filtros } from '../services/filtros.js';
 
 // ====================================================================
 //                     UI CALENDAR MODULE
@@ -136,7 +137,7 @@ function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario,
     const cell = document.createElement('div');
     let clases = `calendario-dia ${clase}`;
     if (esHoy) clases += ' hoy';
-    if (clase === 'dia-sin-registro' && !Compensatorios.esDiaLaboral(fecha)) clases += ' no-laborable';
+    if (clase === 'dia-sin-registro' && !DiasHabiles.esDiaLaboral(fecha)) clases += ' no-laborable';
     if (esNuevo) {
         clases += ' nuevo-registro-animacion';
         cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
@@ -163,7 +164,7 @@ function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario,
 /** Bandas que marcan en el calendario los días laborables de la semana actual (una por fila de la grilla). */
 function _bandasSemanaActual(anio, mes, offsetInicio, diasDelMes) {
     const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
-    const esLaborable = (f) => Compensatorios.esDiaLaboral(f);
+    const esLaborable = (f) => DiasHabiles.esDiaLaboral(f);
     const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
     const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
     const segmentosSemana = [];
@@ -211,7 +212,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     const mes = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
     if (titulo) titulo.textContent = `${TiempoUtils.nombreMesPorIndice(mes)} ${anio}`;
     const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
-    const registrosFiltrados = FiltrosYPeriodos.obtenerRegistrosFiltrados();
+    const registrosFiltrados = Filtros.obtenerRegistrosFiltrados();
     const todosLosRegistros = EstadoApp.registros();
     const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
     const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));

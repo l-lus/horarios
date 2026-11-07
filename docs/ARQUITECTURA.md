@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
-**Última actualización:** 2026-11-05  
-**Estado:** Arquitectura modularizada y saneada (76 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Última actualización:** 2026-11-07  
+**Estado:** Arquitectura modularizada y saneada (84 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -39,7 +39,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (76 módulos)
+├── src/                        # Código fuente en ES Modules (84 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
@@ -99,7 +99,7 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 |---|---|---|---|---|
 | `src/data/` | `0` | Constantes y catálogos estáticos (`FERIADOS_AR`, `FONDOS_SVG`). | Nada (módulos hoja). | No accede a `document`, `window` ni `localStorage`. |
 | `src/core/` | `1` | Helpers de infraestructura base (`TiempoUtils`, `SeguridadYUtils`, `Almacenamiento`, `EventosApp`, `html.js`, `dom.js`, `movimiento.js`, `constantes.js`, `tema-inicial.js`, `busqueda-texto.js`, `estilo-calendario.js`, `geometria-etiquetas.js`). | Solo otros módulos de `src/core/` o `src/data/`. | No importa nada de `src/services/` ni `src/ui/`. |
-| `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Compensatorios`, `FiltrosYPeriodos`, `SaldoSemanal`, `EstadisticasPeriodo`, `EstadoTarjeta`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. **Prohibido acceder al DOM** (`document`, `$()`), verificado por test. Toda comunicación hacia la UI pasa por `EstadoApp._notify()`, los puertos de formulario o `EventosApp` (ver 3.1). |
+| `src/services/` | `2` | Estado central (`EstadoApp`), lógica de dominio (`GestionDatos`, `Cambios`, `Compensatorios`, `DiasHabiles`, `Objetivos`, `Jornada`, `Filtros`, `EdicionGrupo`, `OperacionesLote`, `TiempoFuera`, `SaldoSemanal`, `EstadisticasPeriodo`, `EstadoTarjeta`, `TiposRegistro`, `GestorHistorial`), respaldos (`ImportarExportar`, `SincronizacionGist`), perfiles (`GestorPerfiles`), feriados (`FeriadosAR`) y avisos (`RecordatorioPush`). | `src/core/`, `src/data/` y módulos inferiores de `src/services/` sin formar ciclos. | **Prohibido importar de `src/ui/`**. **Prohibido acceder al DOM** (`document`, `$()`), verificado por test. Toda comunicación hacia la UI pasa por `EstadoApp._notify()`, los puertos de formulario o `EventosApp` (ver 3.1). |
 | `src/ui/` | `3` | Lectura de inputs, renderizado de tablas/tarjetas/calendario, modales, temas y animaciones. | `src/ui/` (sin ciclos), `src/services/`, `src/core/`, `src/data/`. | No escribe directamente en `localStorage` para datos de registros (usa `GestionDatos` o `Almacenamiento`). No inserta HTML con datos sin pasar por ``html`...` `` (3.2). |
 | `src/main.js` | `4` | Arranque en `DOMContentLoaded`. | `OrquestadorUI`, los módulos de `ui/` que enlazan eventos, `InstaladorPWA`, `FeriadosAR` y `RecordatorioPush`. | No contiene lógica de negocio ni handlers extensos. |
 
@@ -177,10 +177,15 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | [`src/services/gestion-datos.js`](../src/services/gestion-datos.js) | `GestionDatos` | Carga del perfil activo al arrancar (`cargarPerfilActivo`, repara lo guardado con `SeguridadYUtils.repararRegistrosGuardados`; los registros siempre salen del perfil y una pila de deshacer que no coincide se descarta) y comandos de dominio: fichaje desde el formulario de la tarjeta (validación de los datos que llegan por el puerto), recálculo de totales, restablecer el perfil y undo/redo. La edición de un registro está en `EdicionRegistro`. No reexporta otros servicios: para leer estado o cálculos se importa el módulo dueño (`EstadoApp`, `Compensatorios`, `FiltrosYPeriodos`, `ImportarExportar`). |
 | [`src/services/edicion-registro.js`](../src/services/edicion-registro.js) | `EdicionRegistro` | Modal de edición de un registro: abrir (`editar`), guardar con validaciones, salida temprana y referencia de compensatorio (`guardar`), `eliminar` y `pegarReferencia`. Usa solo el puerto `formularioEdicion`. |
 | [`src/services/aviso-jornada.js`](../src/services/aviso-jornada.js) | `AvisoJornada` | Decide qué aviso de fin de jornada corresponde hoy (jornada abierta, objetivo, tiempo fuera y saldo semanal) y lo programa, reprograma o cancela con `RecordatorioPush`. Registra el hook `EstadoApp.sincronizarPushHoy` para los servicios que no pueden importarlo. |
-| [`src/services/compensatorios.js`](../src/services/compensatorios.js) | `Compensatorios` | Cálculo de banco de horas extras, asignación cronológica de horas a francos/compensatorios y tramos históricos de días hábiles (consulta y edición: `tramosDiasHabiles`, `editarTramoDias`, `eliminarTramoDias`). |
-| [`src/services/filtros-periodos.js`](../src/services/filtros-periodos.js) | `FiltrosYPeriodos` | Filtrado de registros, cálculo de buffer por período, detección de jornada nocturna de ayer, edición de grupos y carga/borrado por rango. |
+| [`src/services/compensatorios.js`](../src/services/compensatorios.js) | `Compensatorios` | Días compensatorios: a qué excedente de horas corresponde cada uno (asignación cronológica, por referencia o automática). |
+| [`src/services/dias-habiles.js`](../src/services/dias-habiles.js) | `DiasHabiles` | Historial de días hábiles por tramos: qué días rigen en una fecha (`diasHabilesEnFecha`, `esDiaLaboral`) y edición de tramos (`tramosDiasHabiles`, `editarTramoDias`, `eliminarTramoDias`). |
+| [`src/services/objetivos.js`](../src/services/objetivos.js) | `Objetivos` | Objetivo horario de cada registro, horas efectivas y salida temprana (`objetivoDeRegistro`, `horasEfectivasDeRegistro`, `creditoPara`, `aplicarHorasATodosLosRegistros`). |
+| [`src/services/filtros.js`](../src/services/filtros.js) | `Filtros` | Filtros de la lista de registros: aplicar, limpiar y obtener los registros filtrados. |
+| [`src/services/jornada.js`](../src/services/jornada.js) | `Jornada` | Jornada de hoy, incluida la de ayer que cruza la medianoche (`detectarAyerAbierto`, `jornadaVigente`, `jornadaActiva`, `registroParaTiempoFuera`). |
+| [`src/services/edicion-grupo.js`](../src/services/edicion-grupo.js) | `EdicionGrupo` | Edición de un grupo de días especiales consecutivos (`editarGrupo`, `guardarEdicionGrupo`, `eliminarGrupoActual`). |
+| [`src/services/operaciones-lote.js`](../src/services/operaciones-lote.js) | `OperacionesLote` | Alta de días especiales y operaciones por rango de fechas (`registrarDiaEspecial`, `registrarVacacionesDirecto`, `borrarPeriodoDirecto`). |
 | [`src/services/importar-exportar.js`](../src/services/importar-exportar.js) | `ImportarExportar` | Armado del respaldo (`armarRespaldo`, el mismo para archivo completo, rango y Gist) y camino único de restauración para archivo local y Gist: `prepararRespaldo` (estructura, versión, SHA-256 y normalización) y `restaurarRespaldo` (combinar o reemplazar y guardar). |
-| [`src/services/saldo-semanal.js`](../src/services/saldo-semanal.js) | `SaldoSemanal` | Cálculo de saldos por semana y mes para las vistas de calendario, resumen y estadísticas. |
+| [`src/services/saldo-semanal.js`](../src/services/saldo-semanal.js) | `SaldoSemanal` | Cálculo de saldos por semana y mes (`calcularBufferPeriodo`) para las vistas de calendario, resumen y estadísticas. |
 | [`src/services/estadisticas-periodo.js`](../src/services/estadisticas-periodo.js) | `EstadisticasPeriodo` | Métricas de un período (semana, mes o año): promedios de entrada/salida, regularidad, conteos por tipo, banco de horas y aprovechamiento del saldo. Lo usan `Estadisticas` y `Reportes`. |
 | [`src/services/estado-tarjeta.js`](../src/services/estado-tarjeta.js) | `EstadoTarjeta` | Estado de la tarjeta de fichaje (tiempo de hoy, totales y objetivo de la semana, buffer). Lo que depende de la UI (registro de ayer retenido) llega por parámetro. |
 | [`src/services/tipos-registro.js`](../src/services/tipos-registro.js) | `TiposRegistro` | Definición y consulta de tipos de registro especiales (feriado, vacaciones, enfermedad, compensatorio, remoto, etc.). |
@@ -258,6 +263,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 
 ### Caso C: Es una regla de negocio, cálculo sobre los registros o integración con una API/Storage
 - **¿Calcula saldos, filtra registros, transforma datos para guardar o habla con una API externa (Gist, Google Drive, Worker)?** → Va en `src/services/`.
+  - **Un cambio en los registros termina en [`Cambios.confirmar`](../src/services/cambios.js)** (pila de deshacer + guardado + UI). Una opción booleana nueva se declara en [`Preferencias`](../src/core/preferencias.js); si viaja en los respaldos, también en `CONFIG_RESPALDO`.
   - **Importante:** Si necesita leer el estado (`registros`, `diasHabiles`, `horasDiarias`), debe importar [`EstadoApp`](../src/services/estado-app.js) (`import { EstadoApp } from './estado-app.js'`), **no** `GestionDatos`, para no introducir ciclos. Lo mismo vale para `ui/`: se importa el módulo dueño de cada función (sin reexportaciones ni funciones de reenvío `(...args) => Otro.fn(...args)`).
   - *Ejemplo:* Regla para calcular francos compensatorios → [`src/services/compensatorios.js`](../src/services/compensatorios.js).
   - *Ejemplo:* Sincronización con Google Drive → Nuevo módulo `src/services/drive-sync.js`.
@@ -303,6 +309,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 | **ARQ-13** | Unificación y endurecimiento: archivo local y Gist restauran por el mismo camino (`prepararRespaldo`/`restaurarRespaldo`), carga del perfil (`cargarPerfilActivo`) y alta/baja/renombre de perfiles movidos a `services/`, datos guardados reparados al cargar, `sanitizeString` reemplazado por `limpiarTexto` + listas blancas, `montar` como único sink de `innerHTML` y CSP con Trusted Types | ✅ Aplicado |
 | **ARQ-14** | Módulos de UI por debajo de 500 líneas (`calendario-popups`, `historico-items`, `gist-resumen-merge`, `arrastre`, `tarjeta-ciclo-stats`), aviso de fin de jornada en `services/aviso-jornada.js`, tramos de días hábiles y armado de respaldos (`armarRespaldo`) en servicios, fechas del lote y filtros validadas en el servicio, claves heredadas y 60 exportaciones internas eliminadas | ✅ Aplicado |
 | **ARQ-15** | Tarjeta de atajos eliminada; diseño libre de tarjetas en hasta 3 columnas (3.3) con la tarjeta de estado reubicable; `style.display` reemplazado por `.hidden` en los casos aislados; duraciones, tamaño compacto y esperas pasadas a tokens/constantes (`--dur-*`, `--control-sm`, `TOAST_MS`, `DEMORA_ARRANQUE_MS`); `calcularEstadoCard`, `derivarVistaHoy`, `_renderizarCalendario`, `_popupStat` e `iniciarDragTarjetas` divididos en funciones menores | ✅ Aplicado |
+| **ARQ-16** | Refactor de helpers y división de servicios: `Cambios` (un solo camino para cerrar un cambio en los registros, guardando antes de la animación), `TiempoFuera`, `Jornada`, `Preferencias` (clave, valor por defecto y alcance de las opciones booleanas), tabla `CONFIG_RESPALDO` en `importar-exportar.js`; `filtros-periodos.js` se divide en `filtros`, `jornada`, `edicion-grupo`, `operaciones-lote` y `saldo-semanal`, y de `compensatorios.js` salen `dias-habiles` y `objetivos`. La lista se dibuja solo al mostrarla y el reloj corre por minuto | ✅ Aplicado |
 
 ---
 

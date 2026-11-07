@@ -6,9 +6,9 @@ import { TiposRegistro } from '../services/tipos-registro.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TiempoFuera } from '../services/tiempo-fuera.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { html, icono } from '../core/html.js';
+import { Objetivos } from '../services/objetivos.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD VIEW MODEL (textos, hints y colores de la tarjeta)
@@ -365,9 +365,9 @@ function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, la
 /** Vista de hoy cuando todavía no hay entrada pero ayer quedó una jornada abierta que cruza la medianoche. */
 function _vistaAyerAbierto(est) {
     const { tiempoHoy, bufferSemanalBase, diasHabiles, horasDiarias, regHoy } = est;
-    const objetivoDiario = regHoy ? Compensatorios.objetivoDeRegistro(regHoy) : horasDiarias;
+    const objetivoDiario = regHoy ? Objetivos.objetivoDeRegistro(regHoy) : horasDiarias;
     const objetivoDiarioAyerAplica = TiempoUtils.esFechaHabil(est.ayerStr, diasHabiles)
-        ? (est.regAyer ? Compensatorios.objetivoDeRegistro(est.regAyer) : objetivoDiario)
+        ? (est.regAyer ? Objetivos.objetivoDeRegistro(est.regAyer) : objetivoDiario)
         : 0;
     const prog = _calcularProgreso(tiempoHoy, objetivoDiarioAyerAplica);
     const cumplido = _estaCumplido(tiempoHoy, objetivoDiarioAyerAplica);
@@ -425,7 +425,7 @@ function _vistaEspecial(tipoEspecialHoy) {
 
 function derivarVistaHoy(est) {
     const { regHoy, tiempoHoy, horasDiarias, esDiaHabil, tipoEspecialHoy, bufferSemanalBase, diasHabiles } = est;
-    const objetivoDiario = regHoy ? Compensatorios.objetivoDeRegistro(regHoy) : horasDiarias;
+    const objetivoDiario = regHoy ? Objetivos.objetivoDeRegistro(regHoy) : horasDiarias;
 
     if (!regHoy || !regHoy.entrada) {
 

@@ -431,8 +431,8 @@ test('SincronizacionGist: el token se valida con lista blanca y uno inválido no
     assert.equal(G.getToken(), '');
 });
 
-test('FiltrosYPeriodos: día especial y operaciones por lote rechazan fechas inválidas sin tocar los registros', async () => {
-    const { FiltrosYPeriodos: F } = await import('../src/services/filtros-periodos.js');
+test('OperacionesLote: día especial y operaciones por lote rechazan fechas inválidas sin tocar los registros', async () => {
+    const { OperacionesLote: F } = await import('../src/services/operaciones-lote.js');
     const { EstadoApp } = await import('../src/services/estado-app.js');
     const avisos = [];
     EstadoApp.configurarNotificaciones({ avisarFichaje: m => avisos.push(m), mostrarToast: m => avisos.push(m) });
@@ -450,8 +450,8 @@ test('FiltrosYPeriodos: día especial y operaciones por lote rechazan fechas inv
     assert.equal(avisos.at(-1), 'Ya existe un registro para esa fecha');
 });
 
-test('FiltrosYPeriodos.aplicarFiltrosInmediato ignora fechas y tipos inválidos', async () => {
-    const { FiltrosYPeriodos: F } = await import('../src/services/filtros-periodos.js');
+test('Filtros.aplicarFiltrosInmediato ignora fechas y tipos inválidos', async () => {
+    const { Filtros: F } = await import('../src/services/filtros.js');
     const { EstadoApp } = await import('../src/services/estado-app.js');
     EstadoApp.configurarNotificaciones({ actualizarUI: () => { } });
     F.aplicarFiltrosInmediato('2026-10-01', 'x', '<b>');
@@ -477,8 +477,8 @@ test('ImportarExportar.armarRespaldo produce lo que prepararRespaldo acepta (ida
     assert.equal(confirmaciones, 0);   // el hash coincide: no pide confirmación
 });
 
-test('Compensatorios: editar y eliminar tramos de días hábiles validan y no permiten borrar el primero', async () => {
-    const { Compensatorios: C } = await import('../src/services/compensatorios.js');
+test('DiasHabiles: editar y eliminar tramos de días hábiles validan y no permiten borrar el primero', async () => {
+    const { DiasHabiles: C } = await import('../src/services/dias-habiles.js');
     const { EstadoApp } = await import('../src/services/estado-app.js');
     let sincronizaciones = 0;
     EstadoApp.configurarNotificaciones({ actualizarUI: () => { } });
@@ -646,8 +646,8 @@ test('TiempoFuera: menos de 30 s no cuenta, lo demás se suma al registro y la o
     assert.equal(F.corriendo(), false);
 });
 
-test('FiltrosYPeriodos: jornada vigente y activa, con el cruce de medianoche', async () => {
-    const { FiltrosYPeriodos: F } = await import('../src/services/filtros-periodos.js');
+test('Jornada: vigente y activa, con el cruce de medianoche', async () => {
+    const { Jornada: F } = await import('../src/services/jornada.js');
     const ayer = { entrada: '22:00', salida: null };
     const abierta = { entrada: '08:00', salida: null };
     const cerrada = { entrada: '08:00', salida: '15:00' };

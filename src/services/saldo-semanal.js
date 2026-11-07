@@ -4,6 +4,9 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { Compensatorios } from './compensatorios.js';
 import { EstadoApp } from './estado-app.js';
+import { Jornada } from './jornada.js';
+import { DiasHabiles } from './dias-habiles.js';
+import { Objetivos } from './objetivos.js';
 
 // ====================================================================
 // SALDO SEMANAL MODULE — (pool de horas)
@@ -38,13 +41,13 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
     for (const isoDate of TiempoUtils.generarRangoFechas(lunes, limite)) {
         const r = registrosMap.get(isoDate);
         const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-        const esRemoto = esEspecial && Compensatorios.esTipoRemoto(r);
+        const esRemoto = esEspecial && TiposRegistro.esTipoRemoto(r);
         let deltaBruto = 0;
         let montoCompensado = 0;
         if (esRemoto) {
             deltaBruto = 0;
         } else if (r && !esEspecial && r.salida) {
-            const objetivo = Compensatorios.esDiaLaboral(isoDate) ? Compensatorios.objetivoDeRegistro(r) : 0;
+            const objetivo = DiasHabiles.esDiaLaboral(isoDate) ? Objetivos.objetivoDeRegistro(r) : 0;
             deltaBruto = r.total - objetivo;
             if (deltaBruto > EPS) montoCompensado = Compensatorios.montoCompensadoDeReferencia(r, asignacionesPrecalculadas);
         }
@@ -124,9 +127,9 @@ function estadoDeRegistro(r, asignaciones = null) {
     const base = { tipo: null, diffText: '', fechaCompensada: null, fechaCompensado: Compensatorios.fechaCompensadoDeRegistro(r, asignaciones) };
     if (r.entrada && !r.salida) return { ...base, estado: 'en-curso' };
     if (!r.entrada) return { ...base, estado: 'sin-datos' };
-    const objetivo = Compensatorios.objetivoDeRegistro(r);
+    const objetivo = Objetivos.objetivoDeRegistro(r);
     const total = r.total || 0;
-    if (!(objetivo > 0 && Compensatorios.esDiaLaboral(r.fecha))) {
+    if (!(objetivo > 0 && DiasHabiles.esDiaLaboral(r.fecha))) {
         return { ...base, estado: 'neutro' };
     }
     const estado = horasGte(total, objetivo) ? 'cumplido' : (cubiertoPorSaldo(r.fecha, asignaciones) ? 'cubierto' : 'incompleto');
@@ -138,4 +141,44 @@ function colorDeEstado(est) {
     return { 'en-curso': 'blue', cumplido: 'green', cubierto: 'gold', incompleto: 'red' }[est.estado] || 'neutro';
 }
 
-export const SaldoSemanal = { logicaCubiertoActiva, cubiertoPorSaldo, calcularAprovechamiento, estadoDeRegistro, colorDeEstado };
+/** @param {any} [asignacionesPrecalculadas] */
+function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutosBreakActivo = 0, asignacionesPrecalculadas = null) {
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    const registros = EstadoApp.registros();
+    const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);
+    const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
+    const { ayerStr, regAyer, ayerAbierto } = Jornada.detectarAyerAbierto(hoy, regsPorFecha);
+    const asignacionesCompensatorio = asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio();
+
+    const regActivo = Jornada.jornadaActiva(regsPorFecha.get(hoy) ?? null, regAyer, ayerAbierto);
+
+    let objetivo = 0, hechas = 0;
+    const horasDiarias = EstadoApp.horasDiarias();
+    for (const iso of TiempoUtils.generarRangoFechas(desde, hasta)) {
+        if (iso > hoy) continue;
+        const esDiaHabil = DiasHabiles.esDiaLaboral(iso);
+        const r = regsPorFecha.get(iso);
+        const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
+        const esRemoto = esEspecial && TiposRegistro.esTipoRemoto(r);
+        const diaTerminado = iso === hoy ? !!(r && r.salida) : !(ayerAbierto && iso === ayerStr);
+        const objetivoDia = r ? Objetivos.objetivoDeRegistro(r) : horasDiarias;
+
+        if (esDiaHabil && (!esEspecial || esRemoto) && diaTerminado) objetivo += objetivoDia;
+        if (r && r.salida && !esEspecial && diaTerminado) {
+            hechas += r.total;
+            hechas -= Compensatorios.montoCompensadoDeReferencia(r, asignacionesCompensatorio);
+        }
+        if (esRemoto && esDiaHabil && diaTerminado) hechas += objetivoDia;
+
+        if (incluirActivoEnVivo && !diaTerminado && esDiaHabil && !esEspecial && r && r === regActivo) {
+            const transcurrido = EstadoApp.horasTranscurridas(regActivo, minutosBreakActivo);
+            if (transcurrido > objetivoDia) {
+                objetivo += objetivoDia;
+                hechas += transcurrido;
+            }
+        }
+    }
+    return Math.round((hechas - objetivo) * 1e6) / 1e6;
+}
+
+export const SaldoSemanal = { calcularBufferPeriodo, logicaCubiertoActiva, cubiertoPorSaldo, calcularAprovechamiento, estadoDeRegistro, colorDeEstado };

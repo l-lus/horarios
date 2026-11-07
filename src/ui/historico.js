@@ -12,13 +12,14 @@ import { Calendario } from './calendario.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { _scrollA } from './scroll.js';
 import { Animaciones } from './animaciones.js';
 import { icono, html, montar } from '../core/html.js';
 import { HistoricoItems } from './historico-items.js';
 import { IconosAnimados } from './iconos-animados.js';
 import { EdicionRegistro } from '../services/edicion-registro.js';
+import { EdicionGrupo } from '../services/edicion-grupo.js';
+import { Filtros } from '../services/filtros.js';
 
 // ====================================================================
 //                     UI HISTORY MODULE
@@ -266,7 +267,7 @@ function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalc
     const animacionLista = _prepararAnimacionLista(lista, idNuevo);
     lista.replaceChildren();
 
-    const registrosAMostrar = FiltrosYPeriodos.obtenerRegistrosFiltrados();
+    const registrosAMostrar = Filtros.obtenerRegistrosFiltrados();
     if (registrosAMostrar.length === 0) { _renderEmptyStateLista(lista); return; }
 
     const hoy = TiempoUtils.obtenerFechaHoy();
@@ -312,7 +313,7 @@ function _initListenerAccionesLista(lista) {
             const grupoData = HistoricoItems.grupoDeCabecera(target);
             if (!grupoData) return;
             const registrosCompletos = EstadoApp.registros().filter(r => grupoData.registros.includes(r.id));
-            FiltrosYPeriodos.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
+            EdicionGrupo.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
         }
     });
 }
@@ -427,7 +428,7 @@ function bindEventos() {
 
     $('btn-lock-grupo-toggle')?.addEventListener('click', () => toggleBloqueoEdicionGrupo());
     document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => guardarEdicionGrupoDesdeFormulario());
-    document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => FiltrosYPeriodos.eliminarGrupoActual());
+    document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => EdicionGrupo.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => cerrarEdicionGrupo());
 
 }

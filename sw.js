@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261107.0145-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261107.0149-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -33,16 +33,21 @@ const urlsToCache = [
   './src/services/aviso-jornada.js',
   './src/services/cambios.js',
   './src/services/compensatorios.js',
+  './src/services/dias-habiles.js',
+  './src/services/edicion-grupo.js',
   './src/services/edicion-registro.js',
   './src/services/estadisticas-periodo.js',
   './src/services/estado-app.js',
   './src/services/estado-tarjeta.js',
   './src/services/feriados-ar.js',
-  './src/services/filtros-periodos.js',
+  './src/services/filtros.js',
   './src/services/gestion-datos.js',
   './src/services/gestor-historial.js',
   './src/services/gestor-perfiles.js',
   './src/services/importar-exportar.js',
+  './src/services/jornada.js',
+  './src/services/objetivos.js',
+  './src/services/operaciones-lote.js',
   './src/services/orden-cards.js',
   './src/services/recordatorio-push.js',
   './src/services/saldo-semanal.js',

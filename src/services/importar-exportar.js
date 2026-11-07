@@ -8,8 +8,9 @@ import { Cambios } from './cambios.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp as D } from './estado-app.js';
-import { Compensatorios } from './compensatorios.js';
 import { normalizarOrdenCards, columnasDesdeOrden, tamanosDeColumnas, esTamanosColumnasValidos } from './orden-cards.js';
+import { DiasHabiles } from './dias-habiles.js';
+import { Objetivos } from './objetivos.js';
 
 // ====================================================================
 //           IMPORT / EXPORT & BACKUP NORMALIZATION MODULE
@@ -121,9 +122,9 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
         const h = typeof data.horasDiarias === 'string' ? parseFloat(data.horasDiarias) : data.horasDiarias;
         if (Number.isFinite(h) && h >= 0 && h <= 24) D.setHorasDiarias(h);
     }
-    const historialImportado = Compensatorios.sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
+    const historialImportado = DiasHabiles.sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
     D._setHistorialDiasHabilesRaw(historialImportado || [{ desde: DESDE_SIEMPRE, dias: D.diasHabiles() }]);
-    D.setDiasHabiles(Compensatorios.diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
+    D.setDiasHabiles(DiasHabiles.diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
 
     const aplicados = CONFIG_RESPALDO.filter(c => c.esValido(data[c.clave]));
     aplicados.forEach(c => c.aplicar(data[c.clave], data));
@@ -377,7 +378,7 @@ function importarDatos(file, modo = 'replace') {
 async function _guardarRegistrosImportados(registros, mensajeExito, descripcion, cerrarImportar) {
     D._setRegistros(registros);
     D.ordenarRegistros();
-    Compensatorios.migrarObjetivoHorasFaltante();
+    Objetivos.migrarObjetivoHorasFaltante();
     D.sincronizarPushHoy();
     if (!(await Cambios.confirmar(descripcion))) return false;
     const notify = D._notify();

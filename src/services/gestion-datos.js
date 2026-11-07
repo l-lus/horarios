@@ -1,6 +1,4 @@
 import { Preferencias } from '../core/preferencias.js';
-import { Compensatorios } from './compensatorios.js';
-import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { EstadoApp } from './estado-app.js';
 import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, DIAS_HABILES_DEFAULT, HORAS_DIARIAS_DEFAULT } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -14,6 +12,9 @@ import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { AvisoJornada } from './aviso-jornada.js';
 import { TiempoFuera } from './tiempo-fuera.js';
 import { Cambios } from './cambios.js';
+import { DiasHabiles } from './dias-habiles.js';
+import { Objetivos } from './objetivos.js';
+import { Jornada } from './jornada.js';
 
 // ====================================================================
 // DATA MANAGEMENT MODULE
@@ -25,9 +26,10 @@ const {
     guardarYActualizar
 } = EstadoApp;
 
-const { _esObjetivoValido, diasHabilesEnFecha, objetivoDeRegistro, _recalcularCreditoRegistro } = Compensatorios;
+const { _esObjetivoValido, objetivoDeRegistro, _recalcularCreditoRegistro } = Objetivos;
+const { diasHabilesEnFecha } = DiasHabiles;
 
-const { detectarAyerAbierto } = FiltrosYPeriodos;
+const { detectarAyerAbierto } = Jornada;
 
 /** Preferencias de interfaz guardadas (los días y horas del perfil los carga cargarPerfilActivo). */
 function cargarConfiguracion() {
@@ -72,7 +74,7 @@ function cargarPerfilActivo() {
     EstadoApp.setDiasHabiles(S.sanitizarDiasHabiles(perfil.diasHabiles) ?? [...DIAS_HABILES_DEFAULT]);
     const horas = parseFloat(perfil.horasDiarias);
     EstadoApp.setHorasDiarias(Number.isFinite(horas) && horas >= 0 && horas <= 24 ? horas : HORAS_DIARIAS_DEFAULT);
-    const historialDias = Compensatorios.sanitizarHistorialDiasHabiles(perfil.historialDiasHabiles);
+    const historialDias = DiasHabiles.sanitizarHistorialDiasHabiles(perfil.historialDiasHabiles);
     _setHistorialDiasHabiles(
         historialDias && historialDias.length > 0 ? historialDias : [{ desde: DESDE_SIEMPRE, dias: EstadoApp.diasHabiles() }]
     );
@@ -96,7 +98,7 @@ function cargarPerfilActivo() {
     recalcularTotalesEnMemoria();
     if (!pilaVigente) GestorHistorial.saveState(EstadoApp.registros());
 
-    const migrados = Compensatorios.migrarObjetivoHorasFaltante();
+    const migrados = Objetivos.migrarObjetivoHorasFaltante();
     if (migrados > 0) {
         console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${EstadoApp.horasDiarias()}h).`);
         GestorHistorial.parchearRegistrosEnHistorial(r => {
@@ -181,7 +183,7 @@ async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
         notify.avisarFichaje(null, 'error', { btn });
         return;
     }
-    if (esHoy && !s && Compensatorios.esDiaLaboral(f)) {
+    if (esHoy && !s && DiasHabiles.esDiaLaboral(f)) {
         const bufferSemanal = AvisoJornada.bufferSemanalPara(f);
         RecordatorioPush.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
     }

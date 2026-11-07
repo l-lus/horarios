@@ -5,10 +5,10 @@ import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { resetearBoton, setIconoBtn, cancelarExitoFichaje, animarExitoFichaje, obtenerIconoBtn } from './boton-fichar.js';
 import { _scrollHastaVisible } from './scroll.js';
 import { Animaciones } from './animaciones.js';
+import { OperacionesLote } from '../services/operaciones-lote.js';
 
 // ====================================================================
 //           UI CARD BATCH / FORM & INPUT HELPERS MODULE
@@ -105,7 +105,7 @@ async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
         _avisarFichaje(mensajeDuplicado, 'warning'); return;
     }
     try {
-        await FiltrosYPeriodos.registrarDiaEspecial(fecha, tipo);
+        await OperacionesLote.registrarDiaEspecial(fecha, tipo);
         alExito?.();
         _limpiarCamposLote();
         actualizarBotonLote();
@@ -150,8 +150,8 @@ async function registrarLoteDesdeCard() {
     }
 
     try {
-        if (tipo === 'normal') await FiltrosYPeriodos.borrarPeriodoDirecto(desde, hasta);
-        else await FiltrosYPeriodos.registrarVacacionesDirecto(desde, hasta, tipo);
+        if (tipo === 'normal') await OperacionesLote.borrarPeriodoDirecto(desde, hasta);
+        else await OperacionesLote.registrarVacacionesDirecto(desde, hasta, tipo);
         aplicarFeedbackCampos(
             [
                 { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },

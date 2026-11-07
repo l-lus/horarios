@@ -7,9 +7,9 @@ import { TiposRegistro } from '../services/tipos-registro.js';
 import { EstadisticasPeriodo } from '../services/estadisticas-periodo.js';
 import { UIBase } from './base.js';
 import { html, crudo, montar, icono } from '../core/html.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { mostrarToast } from './toast.js';
+import { Objetivos } from '../services/objetivos.js';
 
 // ====================================================================
 //                     UI REPORTS MODULE (HTML Report Generator)
@@ -117,7 +117,7 @@ function _seccionDetalleDiario(registrosPeriodo) {
             ? `${TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(r.tiempoFuera) / 60, 'short')} fuera`
             : '';
         const salidaTemprano = (TiposRegistro.tieneCredito(r)) ? html` <span class="tag tag-info">Salida temprana</span>` : '';
-        const cumplido = r.salida ? horasGte(r.total, Compensatorios.objetivoDeRegistro(r)) : null;
+        const cumplido = r.salida ? horasGte(r.total, Objetivos.objetivoDeRegistro(r)) : null;
         const indicador = cumplido === null ? '' : (cumplido ? html`<span class="tag tag-ok">✓</span>` : html`<span class="tag tag-bad">✗</span>`);
 
         return html`
@@ -302,7 +302,7 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
 
     const filas = semanasOrdenadas.map(([lunesOriginal, datos], index) => {
         let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
-        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + Compensatorios.objetivoDeRegistro(r), 0);
+        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + Objetivos.objetivoDeRegistro(r), 0);
 
         const domingo = TiempoUtils.sumarDias(lunesOriginal, 6);
 

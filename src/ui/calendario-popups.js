@@ -5,10 +5,11 @@ import { TiposRegistro } from '../services/tipos-registro.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { _crearPopupFlotante } from './popups.js';
 import { EdicionRegistro } from '../services/edicion-registro.js';
+import { Objetivos } from '../services/objetivos.js';
+import { EdicionGrupo } from '../services/edicion-grupo.js';
 
 // ====================================================================
 //              UI CALENDAR POPUPS (detalle del día y de la semana)
@@ -126,7 +127,7 @@ function _popupCalendario(event, registroId, asignaciones = null) {
     });
     popup.querySelector('#_cal-popup-btn-grupo')?.addEventListener('click', () => {
         cerrar();
-        FiltrosYPeriodos.editarGrupo(grupoDelRegistro);
+        EdicionGrupo.editarGrupo(grupoDelRegistro);
     });
 
     popup.addEventListener('mouseenter', () => clearTimeout(_popupCalendarioHoverTimer));
@@ -221,8 +222,8 @@ function _htmlPopupSemana(lunes) {
     const titulo = html`<div class="cal-popup-fecha">${TiempoUtils.formatearRangoSemana(lunes)}</div>`;
     if (!registros.length) return html`${titulo}<div class="cal-popup-sin-reg">Sin registros</div>`;
 
-    const total = registros.reduce((sum, r) => sum + Compensatorios.horasEfectivasDeRegistro(r), 0);
-    const buffer = FiltrosYPeriodos.calcularBufferPeriodo(lunes, domingo, false, 0, asignaciones);
+    const total = registros.reduce((sum, r) => sum + Objetivos.horasEfectivasDeRegistro(r), 0);
+    const buffer = SaldoSemanal.calcularBufferPeriodo(lunes, domingo, false, 0, asignaciones);
     const bufferTxt = TiempoUtils.formatoDiferencia(buffer, 0);
     const chip = bufferTxt
         ? html`<span class="registro-total ${buffer > 0 ? 'green-text' : 'red-text'}">${bufferTxt}</span>`

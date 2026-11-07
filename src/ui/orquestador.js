@@ -36,12 +36,12 @@ import { Configuracion } from './configuracion.js';
 import { HistorialDias } from './historial-dias.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { resetearBoton, restaurarBotonGuardarEdicion, animarExitoFichaje } from './boton-fichar.js';
 import { registrarSwipe, debounce } from './gestos.js';
 import { mostrarToast, _habilitarCierreToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
+import { DiasHabiles } from '../services/dias-habiles.js';
 
 const {
     _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced, mostrarError, limpiarError,
@@ -449,7 +449,7 @@ async function init() {
     actualizarBotonesHistorico();
 
     const hoy = TiempoUtils.obtenerFechaHoy();
-    const hoyEsLaborable = Compensatorios.esDiaLaboral(hoy);
+    const hoyEsLaborable = DiasHabiles.esDiaLaboral(hoy);
     if (EstadoApp.vistaActual() === 'semana' && hoyEsLaborable) {
         setTimerAutoVista(setTimeout(() => {
             setTimerAutoVista(null);

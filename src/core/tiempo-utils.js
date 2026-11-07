@@ -249,6 +249,15 @@ function nombreMesCapitalizado(mesAnio) {
     return nombre.charAt(0).toUpperCase() + nombre.slice(1);
 }
 
+/** Error de un rango de fechas (formato y orden) o null. */
+function errorRangoFechas(desde, hasta) {
+    if (!desde || !hasta) return 'Verificá ambas fechas';
+    if (!TiempoUtils.validarFecha(desde)) return 'Fecha "Desde" inválida';
+    if (!TiempoUtils.validarFecha(hasta)) return 'Fecha "Hasta" inválida';
+    if (desde > hasta) return 'La fecha inicial debe ser inferior a la final';
+    return null;
+}
+
 function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 export const TiempoUtils = {
@@ -258,5 +267,5 @@ export const TiempoUtils = {
     horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
     obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
     horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, claveMes, pluralizar, contar,
-    generarRangoFechas, fechaCorta, segundosAMinutosRedondeado, horasAMinutosRedondeados, _pad2, esperar
+    generarRangoFechas, errorRangoFechas, fechaCorta, segundosAMinutosRedondeado, horasAMinutosRedondeados, _pad2, esperar
 };

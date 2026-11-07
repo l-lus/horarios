@@ -37,6 +37,13 @@ html.cargando body>* {
     visibility: hidden;
 }
 
+/* Los modales no se dibujan durante la carga: con display:none no hay estilo previo del que partir, así que al quitar .cargando
+   no puede dispararse la transición de opacity/visibility de .modal (se vería un confirm o un editor un instante en Firefox móvil) */
+html.cargando .modal {
+    display: none;
+    transition: none;
+}
+
 html.cargando body::after {
     content: '';
     position: fixed;

@@ -1,7 +1,7 @@
-import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { horasGte } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { EstadisticasPeriodo } from '../services/estadisticas-periodo.js';
@@ -357,9 +357,9 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
 }
 
 function _seccionConfiguracion() {
-    const objetivoTexto = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)
+    const objetivoTexto = Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get()
         ? '' : ' (objetivo estampado por registro)';
-    const ignorarTF = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+    const ignorarTF = Preferencias.IGNORAR_TF.get();
     const tiempoFueraTexto = ignorarTF ? 'No se descuenta del total' : 'Se descuenta del total';
     return html`
 <section class="seccion">

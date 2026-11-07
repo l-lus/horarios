@@ -71,14 +71,6 @@ export const HORAS_DIARIAS_DEFAULT = 7;
 // Fecha del primer tramo del historial de días hábiles: rige "desde siempre"
 export const DESDE_SIEMPRE = '0001-01-01';
 
-// Valores por defecto de opciones booleanas que se leen desde varios módulos (un solo lugar para que no se desincronicen)
-export const DEFAULTS = Object.freeze({
-    HINT_INTEGRADO: true,
-    DESC_HITOS_NUMERO: true,
-    CICLO_HINT_AUTO: true,
-    RUEDA_CALENDARIO: true,
-});
-
 
 // Duración (ms) de los toasts según la importancia del mensaje
 export const TOAST_MS = Object.freeze({

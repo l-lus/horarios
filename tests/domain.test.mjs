@@ -842,3 +842,22 @@ test('alClic: enlaza cada id a su manejador e ignora los que no existen', async 
         globalThis.document = docOriginal;
     }
 });
+
+test('Preferencias: leen y guardan con su valor por defecto, por perfil solo las que corresponde', async () => {
+    const { Preferencias: P } = await import('../src/core/preferencias.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+    Almacenamiento.removeItem(STORAGE_KEYS.HOVER_POPUP);
+    Almacenamiento.removeItem(STORAGE_KEYS.PERSISTIR_TARJETAS);
+    assert.equal(P.HOVER_POPUP.get(), false);
+    assert.equal(P.PERSISTIR_TARJETAS.get(), true);
+    P.HOVER_POPUP.set(true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.HOVER_POPUP), true);
+    Almacenamiento.removeItem(STORAGE_KEYS.HOVER_POPUP);
+
+    Almacenamiento.removeItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, true);
+    P.IGNORAR_LOGICA_CUBIERTO.set(true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true), true, 'se guarda por perfil');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO), null, 'no en la clave global');
+    Almacenamiento.removeItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, true);
+});

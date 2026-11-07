@@ -1,3 +1,4 @@
+import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { Formularios } from './formularios.js';
@@ -291,7 +292,7 @@ function _restaurarEstadoVisual(config) {
     $('fecha').value = TiempoUtils.obtenerFechaHoy();
 
     try {
-        const persistir = Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true);
+        const persistir = Preferencias.PERSISTIR_TARJETAS.get();
         if (persistir && Almacenamiento.getBoolean(STORAGE_KEYS.FORMULARIO_EXPANDIDO)) toggleFormulario();
         if (persistir && Almacenamiento.getBoolean(STORAGE_KEYS.STATS_EXPANDIDO)) toggleStats();
 

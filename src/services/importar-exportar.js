@@ -1,4 +1,5 @@
-import { STORAGE_KEYS, DEFAULTS, CARDS, DESDE_SIEMPRE } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE } from '../core/constantes.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -47,12 +48,12 @@ const _visiblesActuales = () => Object.fromEntries(CARDS.map(c => [c, Almacenami
 function obtenerConfigExportable() {
     return {
         [STORAGE_KEYS.IGNORAR_TF]: D.getIgnorarTiempoFuera(),
-        [STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
-        [STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
+        [STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]: Preferencias.IGNORAR_LOGICA_CUBIERTO.get(),
+        [STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]: Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get(),
         [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Movimiento.modo(),
-        [STORAGE_KEYS.HINT_INTEGRADO]: Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO),
-        [STORAGE_KEYS.DESC_HITOS_NUMERO]: Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO),
-        [STORAGE_KEYS.CICLO_HINT_AUTO]: Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO),
+        [STORAGE_KEYS.HINT_INTEGRADO]: Preferencias.HINT_INTEGRADO.get(),
+        [STORAGE_KEYS.DESC_HITOS_NUMERO]: Preferencias.DESC_HITOS_NUMERO.get(),
+        [STORAGE_KEYS.CICLO_HINT_AUTO]: Preferencias.CICLO_HINT_AUTO.get(),
         [STORAGE_KEYS.ORDEN_CARDS]: _ordenActual(),
         [STORAGE_KEYS.ORDEN_CARDS_MOVIL]: _ordenMovilActual(),
         [STORAGE_KEYS.COLUMNAS_CARDS]: _columnasActuales(),
@@ -101,27 +102,27 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
 
     if (typeof data[STORAGE_KEYS.IGNORAR_TF] === 'boolean') {
         D.setIgnorarTiempoFuera(data[STORAGE_KEYS.IGNORAR_TF]);
-        Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, data[STORAGE_KEYS.IGNORAR_TF], true);
+        Preferencias.IGNORAR_TF.set(data[STORAGE_KEYS.IGNORAR_TF]);
     }
     if (typeof data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] === 'boolean') {
-        Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO], true);
+        Preferencias.IGNORAR_LOGICA_CUBIERTO.set(data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]);
     }
     if (typeof data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] === 'boolean') {
-        Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO], true);
+        Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.set(data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]);
     }
     if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES])) {
         Movimiento.setModo(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]);
     }
     if (typeof data[STORAGE_KEYS.HINT_INTEGRADO] === 'boolean') {
-        Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, data[STORAGE_KEYS.HINT_INTEGRADO]);
+        Preferencias.HINT_INTEGRADO.set(data[STORAGE_KEYS.HINT_INTEGRADO]);
         EventosApp.emit('config:hint-integrado');
     }
     if (typeof data[STORAGE_KEYS.DESC_HITOS_NUMERO] === 'boolean') {
-        Almacenamiento.setItem(STORAGE_KEYS.DESC_HITOS_NUMERO, data[STORAGE_KEYS.DESC_HITOS_NUMERO]);
+        Preferencias.DESC_HITOS_NUMERO.set(data[STORAGE_KEYS.DESC_HITOS_NUMERO]);
         EventosApp.emit('config:hint-integrado');
     }
     if (typeof data[STORAGE_KEYS.CICLO_HINT_AUTO] === 'boolean') {
-        Almacenamiento.setItem(STORAGE_KEYS.CICLO_HINT_AUTO, data[STORAGE_KEYS.CICLO_HINT_AUTO]);
+        Preferencias.CICLO_HINT_AUTO.set(data[STORAGE_KEYS.CICLO_HINT_AUTO]);
         EventosApp.emit('config:hint-integrado');
     }
     // Diseño de la interfaz: lo que el archivo no trae no se toca (los respaldos viejos no lo incluyen). La UI se redibuja al recibir los eventos
@@ -171,11 +172,11 @@ function calcularCambiosConfigImport(data) {
         cambios.push('tiempo fuera');
     }
     if (typeof data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] === 'boolean' &&
-        data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] !== Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true)) {
+        data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] !== Preferencias.IGNORAR_LOGICA_CUBIERTO.get()) {
         cambios.push('banco de horas');
     }
     if (typeof data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] === 'boolean' &&
-        data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] !== Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) {
+        data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] !== Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get()) {
         cambios.push('objetivo diario global');
     }
     if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]) &&
@@ -183,15 +184,15 @@ function calcularCambiosConfigImport(data) {
         cambios.push('animaciones');
     }
     if (typeof data[STORAGE_KEYS.HINT_INTEGRADO] === 'boolean' &&
-        data[STORAGE_KEYS.HINT_INTEGRADO] !== Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO)) {
+        data[STORAGE_KEYS.HINT_INTEGRADO] !== Preferencias.HINT_INTEGRADO.get()) {
         cambios.push('hint integrado');
     }
     if (typeof data[STORAGE_KEYS.DESC_HITOS_NUMERO] === 'boolean' &&
-        data[STORAGE_KEYS.DESC_HITOS_NUMERO] !== Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO)) {
+        data[STORAGE_KEYS.DESC_HITOS_NUMERO] !== Preferencias.DESC_HITOS_NUMERO.get()) {
         cambios.push('nombre del hito en el número');
     }
     if (typeof data[STORAGE_KEYS.CICLO_HINT_AUTO] === 'boolean' &&
-        data[STORAGE_KEYS.CICLO_HINT_AUTO] !== Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO)) {
+        data[STORAGE_KEYS.CICLO_HINT_AUTO] !== Preferencias.CICLO_HINT_AUTO.get()) {
         cambios.push('ciclo automático del hint');
     }
     if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS]) && normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS]).join() !== _ordenActual().join()) {

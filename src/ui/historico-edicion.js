@@ -1,3 +1,4 @@
+import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
@@ -68,7 +69,7 @@ function setBloqueoEdicion(bloqueado) {
         excluirBotones: 'button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)'
     });
 
-    const enModoGlobal = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+    const enModoGlobal = Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get();
     const elObjetivo = $('edit-objetivo');
     const objetivoDeshabilitado = bloqueado || enModoGlobal;
     [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {

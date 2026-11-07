@@ -1,3 +1,4 @@
+import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -403,7 +404,7 @@ async function enviarNotificacionPrueba(demoraMs = 10000) {
 
 async function registrarUso() {
     if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
-    if (!Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true)) return;
+    if (!Preferencias.STATS_HABILITADO.get()) return;
     const KEY = STORAGE_KEYS.STATS_ULTIMO_PING;
     const ahora = Date.now();
     if (ahora - Number(Almacenamiento.getItem(KEY, 0)) < USO_INTERVALO_MS) return;

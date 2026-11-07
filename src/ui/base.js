@@ -1,5 +1,5 @@
+import { Preferencias } from '../core/preferencias.js';
 import { Animaciones } from './animaciones.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
@@ -26,7 +26,7 @@ function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
         else icon.classList.remove('rotated');
     }
 
-    if (Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true)) {
+    if (Preferencias.PERSISTIR_TARJETAS.get()) {
         Almacenamiento.setItem(storageKey, isExpanded);
     }
     if (isExpanded && callback) callback();

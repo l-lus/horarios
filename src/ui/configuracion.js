@@ -1,4 +1,5 @@
-import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable, alClic } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
@@ -48,46 +49,46 @@ function alternarTema() {
 const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
     _crearToggleConfig({
         getVal: () => EstadoApp.getIgnorarTiempoFuera(),
-        setVal: (v) => { EstadoApp.setIgnorarTiempoFuera(v); Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
+        setVal: (v) => { EstadoApp.setIgnorarTiempoFuera(v); Preferencias.IGNORAR_TF.set(v); },
         btnId: 'btn-toggle-ignorar-tf',
         onAfterToggle: () => { GestionDatos.recalcularTotalesEnMemoria(true); EstadoApp.guardarYActualizar(); AvisoJornada.sincronizarHoy(); },
     });
 
 const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.HOVER_POPUP, v),
+        getVal: () => Preferencias.HOVER_POPUP.get(),
+        setVal: (v) => Preferencias.HOVER_POPUP.set(v),
         btnId: 'btn-toggle-hover-popup',
     });
 
 const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLogicaCubierto } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
+        getVal: () => Preferencias.IGNORAR_LOGICA_CUBIERTO.get(),
+        setVal: (v) => Preferencias.IGNORAR_LOGICA_CUBIERTO.set(v),
         btnId: 'btn-toggle-logica-cubierto',
         onAfterToggle: () => { actualizarUI(); }
     });
 
 const { toggle: toggleObjetivoPorRegistro, actualizarEstado: actualizarEstadoBotonObjetivoPorRegistro } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
+        getVal: () => Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get(),
+        setVal: (v) => Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.set(v),
         btnId: 'btn-toggle-objetivo-registro',
         onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); _reprogramarPushDebounced(); }
     });
 
 const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBotonFormatoCortoStats } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.FORMATO_CORTO_STATS, v),
+        getVal: () => Preferencias.FORMATO_CORTO_STATS.get(),
+        setVal: (v) => Preferencias.FORMATO_CORTO_STATS.set(v),
         btnId: 'btn-toggle-formato-corto-stats',
         onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
     });
 
 const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRuedaCalendario } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.RUEDA_CALENDARIO, v),
+        getVal: () => Preferencias.RUEDA_CALENDARIO.get(),
+        setVal: (v) => Preferencias.RUEDA_CALENDARIO.set(v),
         btnId: 'btn-toggle-rueda-calendario',
         onAfterToggle: () => { EventosApp.emit('config:rueda-calendario'); }
     });
@@ -99,12 +100,12 @@ const _MODOS_ANIM_HINT = ['off', 'barra', 'texto'];
 const _ETIQUETAS_ANIM_HINT = { off: 'Desactivado', barra: 'Barra', texto: 'Texto' };
 
 function _modoAnimHint() {
-    if (!Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO)) return 'off';
-    return Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO) ? 'texto' : 'barra';
+    if (!Preferencias.CICLO_HINT_AUTO.get()) return 'off';
+    return Preferencias.DESC_HITOS_NUMERO.get() ? 'texto' : 'barra';
 }
 
 function actualizarEstadoBotonHintIntegrado(animar = false) {
-    const activo = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
+    const activo = Preferencias.HINT_INTEGRADO.get();
     _setBtnActivo('btn-toggle-hint-integrado', activo);
     // la animación solo tiene sentido con el hint integrado: sin él, la opción se pliega (sin animar al cargar o al restaurar un respaldo)
     // si ya está en ese estado no se toca: el evento 'config:hint-integrado' que emite el toggle vuelve acá sin animar y cortaría la transición en curso
@@ -118,7 +119,7 @@ function actualizarEstadoBotonHintIntegrado(animar = false) {
 EventosApp.on('config:hint-integrado', () => actualizarEstadoBotonHintIntegrado());
 
 function toggleHintIntegrado() {
-    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, !Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO));
+    Preferencias.HINT_INTEGRADO.set(!Preferencias.HINT_INTEGRADO.get());
     actualizarEstadoBotonHintIntegrado(true);
     EventosApp.emit('config:hint-integrado');
     actualizarUI();
@@ -126,8 +127,8 @@ function toggleHintIntegrado() {
 
 function toggleAnimacionHint() {
     const siguiente = _MODOS_ANIM_HINT[(_MODOS_ANIM_HINT.indexOf(_modoAnimHint()) + 1) % _MODOS_ANIM_HINT.length];
-    Almacenamiento.setItem(STORAGE_KEYS.CICLO_HINT_AUTO, siguiente !== 'off');
-    if (siguiente !== 'off') Almacenamiento.setItem(STORAGE_KEYS.DESC_HITOS_NUMERO, siguiente === 'texto');
+    Preferencias.CICLO_HINT_AUTO.set(siguiente !== 'off');
+    if (siguiente !== 'off') Preferencias.DESC_HITOS_NUMERO.set(siguiente === 'texto');
     actualizarEstadoBotonHintIntegrado();
     EventosApp.emit('config:hint-integrado');
     actualizarUI();
@@ -135,13 +136,13 @@ function toggleAnimacionHint() {
 
 const { toggle: toggleMetricaUso, actualizarEstado: actualizarEstadoBotonMetricaUso } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.STATS_HABILITADO, v),
+        getVal: () => Preferencias.STATS_HABILITADO.get(),
+        setVal: (v) => Preferencias.STATS_HABILITADO.set(v),
         btnId: 'btn-toggle-metrica-uso',
     });
 
 function actualizarEstadoBotonAplicarHoras() {
-    const modoGlobal = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+    const modoGlobal = Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get();
     _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
 }
 

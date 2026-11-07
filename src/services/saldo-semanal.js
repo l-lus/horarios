@@ -1,6 +1,6 @@
-import { STORAGE_KEYS, horasGte, EPS_HORAS as EPS } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { horasGte, EPS_HORAS as EPS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { Compensatorios } from './compensatorios.js';
 import { EstadoApp } from './estado-app.js';
@@ -9,7 +9,7 @@ import { EstadoApp } from './estado-app.js';
 // SALDO SEMANAL MODULE — (pool de horas)
 // ====================================================================
 function logicaCubiertoActiva() {
-    return !Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
+    return !Preferencias.IGNORAR_LOGICA_CUBIERTO.get();
 }
 
 /** @param {any} [asignacionesPrecalculadas] */

@@ -1,3 +1,4 @@
+import { Preferencias } from '../core/preferencias.js';
 import { Compensatorios } from './compensatorios.js';
 import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { EstadoApp } from './estado-app.js';
@@ -33,7 +34,7 @@ function cargarConfiguracion() {
     return {
         tema: EstadoApp._notify().temaGuardado(),
         vistaActual: Almacenamiento.getItem(STORAGE_KEYS.VISTA_ACTUAL, 'diaria'),
-        ignorarTiempoFuera: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true),
+        ignorarTiempoFuera: Preferencias.IGNORAR_TF.get(),
         modoEstadisticas: Almacenamiento.getItem(STORAGE_KEYS.MODO_ESTADISTICAS, 'mensual'),
         fondoCard: Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, 'golden-gate', true)
     };

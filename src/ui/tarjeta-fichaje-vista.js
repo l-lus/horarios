@@ -1,7 +1,7 @@
-import { STORAGE_KEYS, DEFAULTS, ESTADO_DIA, CUMPLIMIENTO, horasGte, horasEq, MARGEN_HORAS } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { ESTADO_DIA, CUMPLIMIENTO, horasGte, horasEq, MARGEN_HORAS } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
@@ -26,20 +26,20 @@ function _estaCumplido(valor, objetivo) {
 let _formatoCortoStatsCache = false;
 
 function _refrescarFormatoCortoStatsCache() {
-    _formatoCortoStatsCache = Almacenamiento.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false);
+    _formatoCortoStatsCache = Preferencias.FORMATO_CORTO_STATS.get();
 }
 EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
 
 // "Hint integrado": la salida estimada y la salida con buffer se dibujan sobre la barra en vez de en el texto inferior
-let _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
+let _hintIntegrado = Preferencias.HINT_INTEGRADO.get();
 // y su variante: el nombre del hito enfocado va en el número grande en vez de desplegarse en la barra
-let _descHitosNumero = Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO);
+let _descHitosNumero = Preferencias.DESC_HITOS_NUMERO.get();
 // y si el ciclo automático de fases (al tocar el número o al fichar) sigue activo con el hint integrado
-let _cicloHintAuto = Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO);
+let _cicloHintAuto = Preferencias.CICLO_HINT_AUTO.get();
 EventosApp.on('config:hint-integrado', () => {
-    _cicloHintAuto = Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO);
-    _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
-    _descHitosNumero = Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO);
+    _cicloHintAuto = Preferencias.CICLO_HINT_AUTO.get();
+    _hintIntegrado = Preferencias.HINT_INTEGRADO.get();
+    _descHitosNumero = Preferencias.DESC_HITOS_NUMERO.get();
 });
 
 // Solo se activa mientras se deriva la variante corta del mensaje de la tarjeta (ver _conMensajeCorto): no toca la opción del usuario

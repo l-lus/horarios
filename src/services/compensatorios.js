@@ -1,6 +1,6 @@
-import { STORAGE_KEYS, DESDE_SIEMPRE, MARGEN_HORAS } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { DESDE_SIEMPRE, MARGEN_HORAS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
@@ -81,7 +81,7 @@ function registrarCambioDiasHabiles(nuevosDias) {
 }
 
 function objetivoDeRegistro(registro) {
-    if (Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return D.horasDiarias();
+    if (Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get()) return D.horasDiarias();
     const v = registro?.objetivoHoras;
     return _esObjetivoValido(v) ? v : D.horasDiarias();
 }
@@ -229,7 +229,7 @@ async function eliminarTramoDias(desde) {
 }
 
 function objetivoEdicionEnVivo() {
-    if (Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)) return D.horasDiarias();
+    if (Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get()) return D.horasDiarias();
     const v = D._notify().leerObjetivoEdicion();
     return _esObjetivoValido(v) ? v : D.horasDiarias();
 }

@@ -1,6 +1,5 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { html, icono } from '../core/html.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
@@ -308,8 +307,7 @@ function _popupCalendarioDiaSinRegistro(event, fecha) {
 function _popupCalendarioHover(event, registroId, asignaciones = null) {
     if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
     if (!window.matchMedia('(hover: hover)').matches) return;
-    const stored = Almacenamiento.getItem(STORAGE_KEYS.HOVER_POPUP, null);
-    if (stored !== 'true') return;
+    if (!Preferencias.HOVER_POPUP.get()) return;
     if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
     if (_popupCalendarioEl && !_popupCalendarioEsHover) return;
     clearTimeout(_popupCalendarioHoverTimer);
@@ -322,8 +320,7 @@ function _popupCalendarioHover(event, registroId, asignaciones = null) {
 /** @param {any} [asignaciones] */
 function _onclickCalendarioDia(event, registroId, asignaciones = null) {
     const esDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    const stored = Almacenamiento.getItem(STORAGE_KEYS.HOVER_POPUP, null);
-    const hoverActivo = esDesktop && stored === 'true';
+    const hoverActivo = esDesktop && Preferencias.HOVER_POPUP.get();
 
     if (hoverActivo) {
         _cerrarPopupCalendario();

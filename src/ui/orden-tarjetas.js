@@ -1,3 +1,4 @@
+import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
 import { normalizarOrdenCards, columnasDesdeOrden, prepararColumnas, moverCard, tamanosDeColumnas, MAX_COLUMNAS } from '../services/orden-cards.js';
 import { $, alClic } from '../core/dom.js';
@@ -13,8 +14,8 @@ const { _crearToggleConfig, _setBtnActivo } = UIBase;
 
 const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
+        getVal: () => Preferencias.PERSISTIR_TARJETAS.get(),
+        setVal: (v) => Preferencias.PERSISTIR_TARJETAS.set(v),
         btnId: 'btn-toggle-persistir-tarjetas',
     });
 

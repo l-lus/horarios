@@ -1,4 +1,5 @@
-import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -395,7 +396,7 @@ const RUEDA_LINEA_PX = 33;           // equivalencia de deltaMode "línea" en px
 let _ruedaHabilitada = null;
 EventosApp.on('config:rueda-calendario', () => { _ruedaHabilitada = null; });
 function _ruedaActiva() {
-    _ruedaHabilitada ??= Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO);
+    _ruedaHabilitada ??= Preferencias.RUEDA_CALENDARIO.get();
     return _ruedaHabilitada;
 }
 

@@ -107,7 +107,9 @@ function actualizarEstadoBotonHintIntegrado(animar = false) {
     const activo = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
     _setBtnActivo('btn-toggle-hint-integrado', activo);
     // la animación solo tiene sentido con el hint integrado: sin él, la opción se pliega (sin animar al cargar o al restaurar un respaldo)
-    setColapsable($('hint-animacion-colapsable'), activo, { animar });
+    // si ya está en ese estado no se toca: el evento 'config:hint-integrado' que emite el toggle vuelve acá sin animar y cortaría la transición en curso
+    const colapsable = $('hint-animacion-colapsable');
+    if (colapsable && colapsable.classList.contains('expanded') !== activo) setColapsable(colapsable, activo, { animar });
     const lbl = $('hint-animacion-label');
     if (lbl) lbl.textContent = _ETIQUETAS_ANIM_HINT[_modoAnimHint()];
 }

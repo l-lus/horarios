@@ -261,6 +261,8 @@ function crearLinea() {
 
     const mosaicos = el('div', 'est-mosaicos');
     const balance = crearDato('Faltan', 'est-dato est-mosaico');
+    // tercera línea del mosaico: "Cubierto" cuando el faltante de un día cerrado lo cubre el saldo
+    balance.raiz.append(el('span', 'est-dato-detalle'));
     const banco = crearDato('Banco de horas', 'est-dato est-mosaico');
     const fuera = crearDato('Tiempo fuera', 'est-dato est-mosaico');
     // tercera línea del mosaico: si ese tiempo se descuenta o no del total (opción "No descontar tiempo fuera" de Ajustes)
@@ -297,7 +299,10 @@ function pintarLinea(r, d) {
         mostrar(r.nodos, esRegistro);
         if (esRegistro) pintarNodos(r, d); else pintarNodosDias(r, d.dias, d.abierta);
         mostrar(r.balance.raiz, !!d.balance);
-        if (d.balance) pintarDato(r.balance, d.balance.etiqueta, d.balance.texto, d.balance.tono);
+        if (d.balance) {
+            pintarDato(r.balance, d.balance.etiqueta, d.balance.texto, d.balance.tono);
+            fijar(r.balance.raiz.querySelector('.est-dato-detalle'), d.balance.detalle ?? '');
+        }
         mostrar(r.banco.raiz, !!d.banco);
         if (d.banco) pintarDato(r.banco, 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
         mostrar(r.fuera.raiz, esRegistro && !!d.tiempoFuera);

@@ -420,7 +420,7 @@ function _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre) {
     const falta = TiempoUtils.horasAMinutosRedondeados(objetivo - tiempoHoy);
     if (falta > 0) {
         return cerrado
-            ? { etiqueta: 'Faltó', texto: duracionCompacta(falta), tono: colorCierre === 'gold' ? 'gold' : 'red' }
+            ? { etiqueta: 'Faltó', texto: duracionCompacta(falta), tono: colorCierre === 'gold' ? 'gold' : 'red', ...(colorCierre === 'gold' && { detalle: 'Cubierto' }) }
             : { etiqueta: 'Faltan', texto: duracionCompacta(falta), tono: 'neutro' };
     }
     return falta === 0

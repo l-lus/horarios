@@ -2290,6 +2290,10 @@
     line-height: 1.2;
 }
 
+.est-dato-detalle:empty {
+    display: none;
+}
+
 .est-mosaico .est-dato-valor {
     font-size: var(--text-sm);
     overflow: visible;   /* con tres mosaicos en un móvil angosto el valor tiene que entrar entero */

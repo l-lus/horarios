@@ -309,7 +309,7 @@ test('ImportarExportar: archivo y Gist comparten validación (prepararRespaldo) 
     assert.equal(IE.errorEstructuraRespaldo([], 'Gist'), 'Estructura del Gist inválida');
     assert.equal(IE.errorEstructuraRespaldo({ registros: [], extra: 1 }, 'Gist'), 'Gist con estructura sospechosa');
     assert.match(IE.errorEstructuraRespaldo({ registros: new Array(S.SECURITY_LIMITS.MAX_REGISTROS + 1) }), /Máximo/);
-    assert.equal(await IE.prepararRespaldo({ registros: [], _hashNoCoincide: true }, 'gist'), null);
+    assert.ok('error' in await IE.prepararRespaldo({ registros: [], _hashNoCoincide: true }, 'gist'));
 
     const base = { tiempoFuera: null, horas: 0, minutos: 0, total: 0 };
     const registros = [
@@ -317,7 +317,7 @@ test('ImportarExportar: archivo y Gist comparten validación (prepararRespaldo) 
         { ...base, id: 'bbbbbbbbbb2', fecha: '2026-10-21', entrada: '09:00', salida: '16:00' },
     ];
     const data = { registros, hash: await S.calcularHashSHA256(registros) };
-    const importados = await IE.prepararRespaldo(data, 'gist');
+    const { registros: importados } = await IE.prepararRespaldo(data, 'gist');
     assert.equal(importados.length, 2);
     assert.equal(confirmaciones, 0);   // hash correcto: no pide confirmación
 
@@ -438,15 +438,15 @@ test('OperacionesLote: día especial y operaciones por lote rechazan fechas inv�
     EstadoApp.configurarNotificaciones({ avisarFichaje: m => avisos.push(m), mostrarToast: m => avisos.push(m) });
     EstadoApp._setRegistros([]);
 
-    await assert.rejects(F.registrarDiaEspecial('2026-13-01', 'feriado'));
-    await assert.rejects(F.registrarVacacionesDirecto('no-fecha', '2026-10-20', 'vacaciones'));
-    await assert.rejects(F.registrarVacacionesDirecto('2026-10-20', '2026-10-10', 'vacaciones'));
-    await assert.rejects(F.borrarPeriodoDirecto('2026-10-01', ''));
+    assert.deepEqual(await F.registrarDiaEspecial('2026-13-01', 'feriado'), { error: 'Fecha inválida' });
+    assert.deepEqual(await F.registrarVacacionesDirecto('no-fecha', '2026-10-20', 'vacaciones'), { error: 'Fecha "Desde" inválida' });
+    assert.ok('error' in await F.registrarVacacionesDirecto('2026-10-20', '2026-10-10', 'vacaciones'));
+    assert.ok('error' in await F.borrarPeriodoDirecto('2026-10-01', ''));
     assert.equal(EstadoApp.registros().length, 0);
     assert.deepEqual(avisos, ['Fecha inválida', 'Fecha "Desde" inválida', 'La fecha inicial debe ser inferior a la final', 'Verificá ambas fechas']);
 
     EstadoApp._setRegistros([{ id: 'eeeeeeeeee1', fecha: '2026-10-05', entrada: '09:00', salida: '17:00', tiempoFuera: null, horas: 8, minutos: 0, total: 8 }]);
-    await assert.rejects(F.registrarDiaEspecial('2026-10-05', 'feriado'));
+    assert.deepEqual(await F.registrarDiaEspecial('2026-10-05', 'feriado'), { error: 'Ya existe un registro para esa fecha' });
     assert.equal(avisos.at(-1), 'Ya existe un registro para esa fecha');
 });
 
@@ -472,7 +472,7 @@ test('ImportarExportar.armarRespaldo produce lo que prepararRespaldo acepta (ida
     for (const extra of [undefined, { rangoExportado: '2026-10-01 a 2026-10-31' }]) {
         const data = await IE.armarRespaldo(registros, extra);
         assert.equal(IE.errorEstructuraRespaldo(data), null);
-        assert.equal((await IE.prepararRespaldo(JSON.parse(JSON.stringify(data)))).length, 1);
+        assert.equal((await IE.prepararRespaldo(JSON.parse(JSON.stringify(data)))).registros.length, 1);
     }
     assert.equal(confirmaciones, 0);   // el hash coincide: no pide confirmación
 });
@@ -703,5 +703,26 @@ test('EstadoApp._guardarConCicloSiHoy guarda el perfil antes de la animación de
     } finally {
         EstadoApp.setVistaActual('diaria');
         EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: GestorPerfiles.guardarDatosPerfilActual });
+    }
+});
+
+test('OperacionesLote: devuelve { ok: true } al registrar y { error } si no pudo guardar, sin lanzar', async () => {
+    const { OperacionesLote: L } = await import('../src/services/operaciones-lote.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    GestorPerfiles.inicializar();
+    EstadoApp.configurarNotificaciones({ avisarFichaje: () => { }, mostrarToast: () => { }, actualizarUI: () => { }, forzarVista: (_v, fn) => fn() });
+    EstadoApp._setRegistros([]);
+    try {
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-05', 'feriado'), { ok: true });
+        assert.deepEqual(await L.registrarVacacionesDirecto('2026-10-06', '2026-10-07', 'vacaciones'), { ok: true });
+        assert.equal(EstadoApp.registros().length, 3);
+        assert.deepEqual(await L.registrarVacacionesDirecto('2026-10-06', '2026-10-07', 'vacaciones'), { error: 'Todas las fechas ya están registradas' });
+
+        EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: () => false });
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-08', 'feriado'), { error: 'Error al guardar' });
+    } finally {
+        EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: GestorPerfiles.guardarDatosPerfilActual });
+        EstadoApp._setRegistros([]);
     }
 });

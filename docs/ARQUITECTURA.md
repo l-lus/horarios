@@ -118,6 +118,12 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 
 Los valores que devuelven los puertos son **crudos**: el servicio los sanitiza y valida. Gracias a esto los servicios se prueban sin DOM (ver `tests/servicios-sin-dom.test.mjs`).
 
+### Errores
+
+Un error esperado (dato inválido, límite, no se pudo guardar) **no se lanza**: el servicio devuelve `{ error: 'mensaje' }`, y si salió bien `{ ok: true }` o el resultado. Quien llama pregunta con `if ('error' in res)`. Si el servicio tiene el puerto `notify` puede avisar él al usuario, y entonces quien llama solo decide cómo seguir. `{ ok: false }` sin mensaje significa que no se pudo guardar y el aviso ya lo dio el guardado (`DiasHabiles`, `restaurarRespaldo`). Lo verifica `tests/architecture.test.mjs`.
+
+`throw` queda para lo inesperado y para el cliente de red (`SincronizacionGist`), donde la falla viene de afuera y la captura `gist-respaldo.js`. Un comando que nadie necesita consultar (ej. `EdicionGrupo.guardarEdicionGrupo`) puede avisar y no devolver nada.
+
 ## 3.2. HTML seguro (`core/html.js`)
 
 Para insertar HTML usá la etiqueta ``html`...` ``: escapa cada interpolación (también dentro de atributos entre comillas). Se inserta marcado sin escapar solo si es otro ``html`...` `` anidado o está envuelto en `crudo()`. Un string común **nunca** se interpreta como HTML: `montar(el, contenido)`, `_crearPopupFlotante` y `Animaciones._renderConFirma` rechazan strings comunes. `montar` es el **único** lugar que asigna `innerHTML` (lo verifica `tests/architecture.test.mjs`); para vaciar un elemento se usa `replaceChildren()`.

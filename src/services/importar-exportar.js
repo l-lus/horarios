@@ -265,21 +265,24 @@ async function _confirmarIntegridad(data, nombre) {
 
 /**
  * Valida un respaldo (estructura, versión e integridad, con confirmación del usuario si hace falta) y devuelve
- * sus registros normalizados, o null si no se puede usar (ya se avisó al usuario). Mismo camino para archivo y Gist.
+ * { registros } con los registros normalizados, o { error } si no se puede usar (ya se avisó al usuario). Mismo camino para archivo y Gist.
  * @param {'archivo'|'gist'} [origen]
  */
 async function prepararRespaldo(data, origen = 'archivo') {
     const notify = D._notify();
     const nombre = _NOMBRE_ORIGEN[origen] || 'archivo';
     const error = errorEstructuraRespaldo(data, nombre);
-    if (error) { notify.mostrarToast(error, 'error'); return null; }
+    if (error) { notify.mostrarToast(error, 'error'); return { error }; }
     if (data.version && data.version > S.SECURITY_LIMITS.SCHEMA_VERSION) {
         notify.mostrarToast(`El ${nombre} es de una versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
     }
-    if (!(await _confirmarIntegridad(data, nombre))) return null;
+    if (!(await _confirmarIntegridad(data, nombre))) return { error: 'Restauración cancelada' };
     const registros = normalizarRegistrosImportados(data.registros);
-    if (registros.length === 0) { notify.mostrarToast('No se encontraron registros válidos', 'warning'); return null; }
-    return registros;
+    if (registros.length === 0) {
+        notify.mostrarToast('No se encontraron registros válidos', 'warning');
+        return { error: 'No se encontraron registros válidos' };
+    }
+    return { registros };
 }
 
 // Un registro importado completa al local de la misma fecha si le aporta la salida o el tiempo fuera
@@ -363,9 +366,9 @@ function importarDatos(file, modo = 'replace') {
             if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) { D._notify().mostrarToast('Contenido del archivo demasiado grande', 'error'); return; }
 
             const data = JSON.parse(contenido, S.reviverJSONSeguro);
-            const registrosImportados = await prepararRespaldo(data, 'archivo');
-            if (!registrosImportados) return;
-            await restaurarRespaldo(data, registrosImportados, modo === 'merge' ? 'merge' : 'replace');
+            const preparado = await prepararRespaldo(data, 'archivo');
+            if ('error' in preparado) return;
+            await restaurarRespaldo(data, preparado.registros, modo === 'merge' ? 'merge' : 'replace');
         } catch (err) {
             console.error('Error en importación:', err);
             D._notify().mostrarToast(err instanceof SyntaxError ? 'Archivo JSON mal formado' : 'Error al procesar el archivo', 'error');

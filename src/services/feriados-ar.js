@@ -67,7 +67,7 @@ async function chequearYNotificar() {
 
     if (confirmo) {
         for (const feriado of pendientes) {
-            try { await OperacionesLote.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { console.error('Error registrando feriado:', e); }
+            await OperacionesLote.registrarDiaEspecial(feriado.fecha, 'feriado');
         }
     }
 }

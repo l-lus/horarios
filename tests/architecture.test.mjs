@@ -321,3 +321,10 @@ test('Ids: todo id que el código busca existe en index.html o lo crea el propio
     const faltantes = [...new Set(buscados.filter(b => !conocidos.has(b.id)).map(b => `${b.archivo}: ${b.id}`))];
     assert.deepEqual(faltantes, [], `Ids que no existen:\n${faltantes.join('\n')}`);
 });
+
+test('Errores: los servicios no lanzan por errores esperados, devuelven { error } (solo el cliente de red lanza)', () => {
+    const conThrow = srcFiles
+        .filter(a => a.startsWith('src/services/') && a !== 'src/services/sincronizacion-gist.js')
+        .filter(a => /\bthrow\b/.test(fs.readFileSync(a, 'utf8')));
+    assert.deepEqual(conThrow, []);
+});

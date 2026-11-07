@@ -396,8 +396,9 @@ async function gistBajar(modoAutomatico = false) {
     _gistMergeDesdeModal = $('modal-gist')?.classList.contains('show') ?? false;
     await _gistConSpinner('btn-gist-bajar', 'Error al bajar', async () => {
         const data = await SincronizacionGist.bajar();
-        const registrosNormalizados = await ImportarExportar.prepararRespaldo(data, 'gist');
-        if (!registrosNormalizados) return;
+        const preparado = await ImportarExportar.prepararRespaldo(data, 'gist');
+        if ('error' in preparado) return;
+        const registrosNormalizados = preparado.registros;
         _gistMergeData = { registrosNormalizados, data };
 
         if (modoAutomatico) {

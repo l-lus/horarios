@@ -104,13 +104,12 @@ async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
     if (EstadoApp.existeRegistroEnFecha(fecha)) {
         _avisarFichaje(mensajeDuplicado, 'warning'); return;
     }
-    try {
-        await OperacionesLote.registrarDiaEspecial(fecha, tipo);
-        alExito?.();
-        _limpiarCamposLote();
-        actualizarBotonLote();
-        animarExitoFichaje($('btn-agregar'));
-    } catch (e) { console.error('Error al registrar:', e); }
+    const res = await OperacionesLote.registrarDiaEspecial(fecha, tipo);
+    if ('error' in res) return;
+    alExito?.();
+    _limpiarCamposLote();
+    actualizarBotonLote();
+    animarExitoFichaje($('btn-agregar'));
 }
 
 async function registrarLoteDesdeCard() {
@@ -149,21 +148,21 @@ async function registrarLoteDesdeCard() {
         _avisarFichaje('Tipo de registro inválido'); return;
     }
 
-    try {
-        if (tipo === 'normal') await OperacionesLote.borrarPeriodoDirecto(desde, hasta);
-        else await OperacionesLote.registrarVacacionesDirecto(desde, hasta, tipo);
-        aplicarFeedbackCampos(
-            [
-                { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
-                { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
-            ],
-            tipo === 'normal' ? '✓ Borrado' : '✓ Agregado',
-            tipo === 'normal' ? 'label-feedback--red' : 'label-feedback--green'
-        );
-        _limpiarCamposLote();
-        actualizarBotonLote();
-        animarExitoFichaje($('btn-agregar'));
-    } catch (e) { console.error('Error en operación de lote:', e); }
+    const res = tipo === 'normal'
+        ? await OperacionesLote.borrarPeriodoDirecto(desde, hasta)
+        : await OperacionesLote.registrarVacacionesDirecto(desde, hasta, tipo);
+    if ('error' in res) return;
+    aplicarFeedbackCampos(
+        [
+            { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
+            { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
+        ],
+        tipo === 'normal' ? '✓ Borrado' : '✓ Agregado',
+        tipo === 'normal' ? 'label-feedback--red' : 'label-feedback--green'
+    );
+    _limpiarCamposLote();
+    actualizarBotonLote();
+    animarExitoFichaje($('btn-agregar'));
 }
 
 

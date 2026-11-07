@@ -133,7 +133,7 @@ function toggleEstiloTarjeta() {
     EstiloTarjeta.siguiente();
     actualizarEstadoBotonHintIntegrado(true);
     EventosApp.emit('config:hint-integrado');
-    actualizarUI();
+    actualizarUI(null, false, true);   // animarCard: el contenido se funde del estilo anterior al nuevo (y el alto, ver _animarAlturaCard)
 }
 
 /** Cierra Ajustes (sin volver al modal padre) para dejar la página libre durante la vista previa; al terminar se reabre. */

@@ -7,7 +7,8 @@
     cursor: pointer;
     border: 1px solid transparent;
     border-left: 3px solid transparent;
-    transition: transform var(--dur-fast) ease-out, opacity var(--dur-fast) ease-out, box-shadow var(--transition-ui), border-color var(--transition-ui);
+    transition: transform var(--dur-fast) ease-out, opacity var(--dur-fast) ease-out, box-shadow var(--transition-ui), border-color var(--transition-ui),
+        height var(--dur-collapse) ease-out;   /* el alto solo cambia al pasar de un estilo a otro: lo anima _animarAlturaCard (tarjeta-fichaje.js) */
     height: 16rem;
     position: relative;
     overflow: hidden;
@@ -1817,8 +1818,6 @@
 /* El alto sigue al contenido (el día, la semana y cada estado miden distinto) y los cambios se animan desde tarjeta-fichaje.js (_animarAlturaCard) */
 .stats-card.estilo-propio {
     height: auto;
-    transition: transform var(--dur-fast) ease-out, opacity var(--dur-fast) ease-out, box-shadow var(--transition-ui), border-color var(--transition-ui),
-        height var(--dur-collapse) ease-out;
 }
 
 .stats-card-content.estilo-propio :is(#stats-semana, .progress-pista, #stats-mensaje, #stats-buffer, #toggle-hint) {

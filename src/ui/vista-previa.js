@@ -6,7 +6,7 @@ import { Movimiento } from '../core/movimiento.js';
 // ====================================================================
 // Algunas opciones de Ajustes (el estilo de la tarjeta de estado, el del calendario) se entienden mejor viéndolas. Al tocarlas se cierra Ajustes, la tarjeta
 // se lleva a la vista (con scroll si hace falta) sobre un velo que atenúa el resto de la página, y abajo queda un panel con los mismos controles para ir
-// cambiando y ver el resultado al instante. "Listo" (o Escape, o el botón Atrás) cierra la vista previa y devuelve a Ajustes.
+// cambiando y ver el resultado al instante. "Listo" (o tocar el velo, Escape o el botón Atrás) cierra la vista previa y devuelve a Ajustes (tocar el velo también).
 //
 // Este módulo no conoce las opciones: quien lo llama pasa las filas del panel y, si la tarjeta necesita prepararse (p. ej. expandir el calendario del histórico),
 // un preparador registrado con `registrarPreparador` que devuelve cómo dejar todo como estaba.
@@ -190,6 +190,8 @@ function bindEventos() {
     if (_iniciada) return;
     _iniciada = true;
     $('vista-previa-listo')?.addEventListener('click', () => cerrar());
+    // tocar el velo (fuera de la tarjeta y del panel) cierra igual que Listo: el estilo elegido queda como está
+    $('vista-previa-velo')?.addEventListener('click', () => cerrar());
     window.addEventListener('popstate', () => { if (_activa && document.body.classList.contains('vista-previa-activa')) _finalizar(); });
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && _activa && document.body.classList.contains('vista-previa-activa')) { e.preventDefault(); cerrar(); }

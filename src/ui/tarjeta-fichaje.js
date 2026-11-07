@@ -21,6 +21,7 @@ import { CicloStats } from './tarjeta-ciclo-stats.js';
 import { FocoHitos } from './foco-hitos.js';
 import { HoverBarra } from './hover-barra.js';
 import { TarjetaEstilos } from './tarjeta-estilos.js';
+import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD MODULE
@@ -268,27 +269,35 @@ function _renderEstilo(vista) {
     TarjetaEstilos.actualizar(propio ? vista.resumen : null);
 }
 
-/** Alto actual de la tarjeta si ya usa un diseño propio (el que se anima al cambiar de contenido); 0 si no (primer dibujo o cambio de estilo: sin animación). */
-function _alturaCardPropia() {
+// Estilo con que se dibujó la tarjeta la última vez (null hasta el primer dibujo): sirve para animar el cambio de estilo y para no animar el primer dibujo
+/** @type {string | null} */
+let _estiloDibujado = null;
+
+/** Alto actual de la tarjeta (de donde parte la animación del alto); 0 antes del primer dibujo, para que al cargar no se anime. */
+function _alturaCard() {
     const card = $('stats-card');
-    return card && card.classList.contains('estilo-propio') ? card.offsetHeight : 0;
+    return card && _estiloDibujado !== null ? card.offsetHeight : 0;
 }
 
 /**
  * Anima el alto de la tarjeta, de `antes` al que tiene ahora con el contenido nuevo ya dibujado, igual que el colapsado de las otras tarjetas
- * (--dur-collapse, ease-out). Los diseños propios tienen alto según su contenido (el día, la semana y cada estado miden distinto), y `height: auto` no se anima:
- * se fija el alto de partida en px, se fuerza el reflujo y se pasa al de llegada; al terminar vuelve a automático.
+ * (--dur-collapse, ease-out). Los diseños propios tienen alto según su contenido (el día, la semana y cada estado miden distinto) y los estilos clásicos
+ * tienen el alto fijo de la barra: al pasar de uno a otro también cambia. `height: auto` no se anima: se fija el alto de partida en px, se fuerza el reflujo
+ * y se pasa al de llegada; al terminar vuelve al que mande el CSS.
  * @param {number} antes
  */
 function _animarAlturaCard(antes) {
     const card = $('stats-card');
-    if (!card || !(antes > 0) || !card.classList.contains('estilo-propio')) return;
+    if (!card || !(antes > 0)) return;
     const dur = _durSiAnima('--dur-collapse', card);
     card.style.height = '';   // alto natural del contenido nuevo (también corta una animación anterior que siguiera en curso)
     const despues = card.offsetHeight;
     if (!(dur > 1) || Math.abs(despues - antes) < 2) return;
+    // el alto de partida se fija sin transición (si no, con un alto fijo de por medio, como el de la barra, la transición arrancaría desde el alto nuevo hacia el viejo)
+    card.style.transition = 'none';
     card.style.height = `${antes}px`;
     void card.offsetHeight;
+    card.style.transition = '';
     card.style.height = `${despues}px`;
     const terminar = () => { card.style.height = ''; };
     card.addEventListener('transitionend', function alTerminar(e) {
@@ -344,13 +353,15 @@ function _renderBuffer(est = _bufferActual) {
     if (el.scrollHeight > el.clientHeight + 1) _dibujarBuffer(est, true);
 }
 
-function _animarCambioCard(renderFn) {
+/** @param {() => void} renderFn @param {(Element | null)[]} [extra] elementos que solo se animan en este cambio (la barra, al cambiar de estilo) */
+function _animarCambioCard(renderFn, extra = []) {
     const els = [
         $('stats-semana'),
         $('stats-mensaje'),
         $('stats-buffer'),
         $('toggle-hint'),
         $('stats-estilo'),
+        ...extra,
     ];
 
     CicloStats.detener();
@@ -374,7 +385,7 @@ function _planConteoInicial(vista, est) {
 
 /** @param {any} [idNuevo] */
 function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false, conteoInicial = false) {
-    const alturaAntes = _alturaCardPropia();   // antes de tocar nada: es de donde parte la animación del alto
+    const alturaAntes = _alturaCard();   // antes de tocar nada: es de donde parte la animación del alto
     const asignacionesCompensatorio = Compensatorios.calcularAsignacionesCompensatorio();
 
     if (!soloReloj) Historico.actualizarListaRegistros(EstadoApp.registros(), idNuevo, asignacionesCompensatorio);
@@ -391,7 +402,14 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
 
     if (!TiempoFuera.corriendo()) { _renderTitulo(vista, sinAnimarTitulo, est); }
     _renderCard(vista);
-    _renderBarra(vista, !!conteo);
+    // Al cambiar de estilo la barra también cambia (pierde o gana los hitos, o se oculta): se dibuja dentro de la mutación, después de sacar las copias de lo que se ve,
+    // y la animación la incluye; en cualquier otro caso se dibuja antes, como siempre
+    const estilo = EstiloTarjeta.actual();
+    const cambioEstilo = _estiloDibujado !== null && _estiloDibujado !== estilo;
+    _estiloDibujado = estilo;
+    const debeAnimar = !_rendersSinAnimarActivos() && (animarCard || (idNuevo !== null && !soloReloj));
+    const barraEnMutacion = cambioEstilo && debeAnimar;
+    if (!barraEnMutacion) _renderBarra(vista, !!conteo);
     Estadisticas._renderSelectorStats();
     actualizarEstadoBotonTimerMain(sinAnimarTitulo);
     if (TarjetaLote.getModoLoteActivo()) actualizarBotonLote();
@@ -406,8 +424,8 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
         }
     }
 
-    const debeAnimar = !_rendersSinAnimarActivos() && (animarCard || (idNuevo !== null && !soloReloj));
     const renderResto = () => {
+        if (barraEnMutacion) _renderBarra(vista, !!conteo);
         _renderStats(vista, est, conteo);
         _renderMensaje(vista);
         _renderHint(vista);
@@ -416,7 +434,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
         _animarAlturaCard(alturaAntes);
     };
     if (debeAnimar) {
-        _animarCambioCard(renderResto);
+        _animarCambioCard(renderResto, barraEnMutacion ? [document.querySelector('#stats-card .progress-pista')] : []);
     } else {
         renderResto();
     }

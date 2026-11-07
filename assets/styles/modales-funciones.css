@@ -817,3 +817,75 @@ body.tarjeta-arrastrando-activa * {
     outline: 2px solid var(--c-blue);
     outline-offset: 2px;
 }
+
+
+/* ─── VISTA PREVIA EN VIVO (ui/vista-previa.js) ──────────────────────────────────────────────────────────────────
+   Un velo atenúa la página, la tarjeta que se prueba queda por encima (.vista-previa-objetivo) y abajo flota el panel con los controles. */
+.vista-previa-velo {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-header) + 1);
+    background: var(--modal-overlay);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--transition-ui), visibility var(--transition-ui);
+}
+
+.vista-previa-velo.show {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.vista-previa-objetivo {
+    position: relative;
+    z-index: calc(var(--z-header) + 2);
+}
+
+.vista-previa-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: calc(var(--z-header) + 3);
+    box-sizing: border-box;
+    width: min(100%, 560px);
+    margin: 0 auto;
+    padding: var(--space-md) var(--space-md) calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+    background: var(--bg-card);
+    color: var(--text-main);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.25);
+    transform: translateY(105%);
+    visibility: hidden;
+    transition: transform var(--dur-collapse) ease-out, visibility var(--dur-collapse);
+}
+
+.vista-previa-panel.show {
+    transform: translateY(0);
+    visibility: visible;
+}
+
+.vista-previa-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+}
+
+.vista-previa-titulo {
+    font-weight: var(--fw-semibold);
+}
+
+.vista-previa-cabecera .btn-edit {
+    flex: none;
+    width: auto;
+    padding-inline: var(--space-lg);
+}
+
+/* Deja libre abajo lo que ocupa el panel para poder desplazar la página hasta ver la tarjeta entera */
+body.vista-previa-activa {
+    padding-bottom: var(--vp-panel-h, 0px);
+}

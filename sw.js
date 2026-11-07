@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261107.1532-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261107.1540-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -100,6 +100,7 @@ const urlsToCache = [
   './src/ui/tarjeta-lote.js',
   './src/ui/tarjeta-tiempo-fuera.js',
   './src/ui/toast.js',
+  './src/ui/vista-previa.js',
 ];
 
 // Avisa a las pestañas abiertas cómo va la descarga de la versión nueva (la página muestra el aviso con barra de progreso)

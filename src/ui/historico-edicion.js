@@ -17,6 +17,7 @@ import { mostrarToast } from './toast.js';
 import { Objetivos } from '../services/objetivos.js';
 import { EdicionGrupo } from '../services/edicion-grupo.js';
 import { Filtros } from '../services/filtros.js';
+import { VistaPrevia } from './vista-previa.js';
 
 // ====================================================================
 //           UI HISTORY EDIT, FILTERS & HEADER ACTIONS MODULE
@@ -287,6 +288,31 @@ function toggleHistorico() {
         console.warn('Error guardando estado histórico:', e);
     }
 }
+
+/**
+ * Para la vista previa del estilo del calendario (ver vista-previa.js): deja a la vista el calendario del histórico (expande la tarjeta si estaba cerrada y pasa
+ * de la lista al calendario) y devuelve cómo dejarlo como estaba.
+ */
+function _mostrarCalendarioTemporal() {
+    const contenido = $('contenido-historico');
+    const botones = $('botones-historico');
+    const icon = $('icon-indicator-historico');
+    if (!contenido) return undefined;
+    const estabaExpandido = contenido.classList.contains('expanded');
+    const eraCalendario = Calendario.getVistaHistoricoCalendario();
+    if (!estabaExpandido) toggleHistorico();   // al expandir activa solo el calendario si esa era la vista guardada
+    if (!Calendario.getVistaHistoricoCalendario()) Calendario.toggleVistaHistorico();
+    return () => {
+        if (Calendario.getVistaHistoricoCalendario() !== eraCalendario) Calendario.toggleVistaHistorico();
+        if (!estabaExpandido) {
+            contenido.classList.remove('expanded');
+            botones?.classList.remove('expanded');
+            _setIconHistorico(icon, 'cerrado');
+            Almacenamiento.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'cerrado');
+        }
+    };
+}
+VistaPrevia.registrarPreparador('calendario', _mostrarCalendarioTemporal);
 
 function iniciarTimerAutoCierreBotones() {
     if (timerAutoCierreBotones) {

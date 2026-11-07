@@ -330,6 +330,21 @@
 
     <div id="toast" class="toast"></div>
 
+    <!-- Vista previa en vivo de las opciones de apariencia (ver ui/vista-previa.js): velo que atenúa la página y panel con los controles -->
+    <div id="vista-previa-velo" class="vista-previa-velo" aria-hidden="true"></div>
+    <section id="vista-previa-panel" class="vista-previa-panel" role="region" aria-label="Vista previa" aria-hidden="true">
+        <div class="vista-previa-cabecera">
+            <span id="vista-previa-titulo" class="vista-previa-titulo"></span>
+            <button type="button" id="vista-previa-listo" class="btn-edit">
+                <svg class="icon">
+                    <use href="#icon-check" />
+                </svg>
+                Listo
+            </button>
+        </div>
+        <div id="vista-previa-filas" class="settings-list"></div>
+    </section>
+
     <div class="container">
 
         <div class="left-column" id="columna-1">
@@ -798,7 +813,7 @@
                                     </svg>
                                     <span class="settings-list-text">
                                         <span>Estilo del calendario</span>
-                                        <span class="settings-list-desc">Diseño de los dias</span>
+                                        <span class="settings-list-desc">Diseño de los días. Se prueba en vivo sobre el calendario</span>
                                     </span>
                                     <span id="hint-estilo-calendario-label">Legacy</span>
                                 </button>
@@ -835,7 +850,7 @@
                                     </svg>
                                     <span class="settings-list-text">
                                         <span>Estilo de la tarjeta</span>
-                                        <span class="settings-list-desc">Cómo se muestra el registro del día</span>
+                                        <span class="settings-list-desc">Cómo se muestra el registro del día. Se prueba en vivo sobre la tarjeta</span>
                                     </span>
                                     <span id="hint-estilo-tarjeta-label">Barra con hitos</span>
                                 </button>
@@ -1344,7 +1359,7 @@
                             <p><strong>Calendario:</strong> Estilo del calendario (cómo se dibujan los días con
                                 registro), Auto popup calendario (PC) y Rueda para cambiar de mes (PC). Las opciones de
                                 PC se ocultan en dispositivos táctiles.</p>
-                            <p><strong>Estilo de la tarjeta de estado:</strong> cada toque pasa al estilo siguiente.
+                            <p><strong>Estilo de la tarjeta de estado:</strong> al tocar la opción se cierra Ajustes y la tarjeta queda a la vista (con scroll si hace falta) con un panel abajo para ir probando los estilos en vivo; <em>Listo</em> o el botón Atrás vuelven a Ajustes. Lo mismo ocurre con <em>Estilo del calendario</em>, sobre el calendario de Registros. En el panel, cada toque pasa al estilo siguiente.
                                 <em>Barra con hitos</em> muestra la entrada, la salida estimada y la salida con banco de
                                 horas sobre la barra, o las siglas de cada día en la semana; <em>Clásica</em> es la barra
                                 con esos datos como texto debajo. <em>Anillo</em>, <em>Línea de tiempo</em>,

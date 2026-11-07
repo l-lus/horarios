@@ -19,6 +19,7 @@ import { _crearPressHold, debounce } from './gestos.js';
 import { _scrollHastaVisible, _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
+import { VistaPrevia } from './vista-previa.js';
 import { AyudaBuscador } from './ayuda-buscador.js';
 import { AvisoJornada } from '../services/aviso-jornada.js';
 import { DiasHabiles } from '../services/dias-habiles.js';
@@ -134,6 +135,54 @@ function toggleEstiloTarjeta() {
     EventosApp.emit('config:hint-integrado');
     actualizarUI();
 }
+
+/** Cierra Ajustes (sin volver al modal padre) para dejar la página libre durante la vista previa; al terminar se reabre. */
+function _cerrarAjustesParaVistaPrevia() {
+    GestorModales.cerrar('modal-config');
+}
+
+function _volverAAjustes() {
+    GestorModales.abrir('modal-config', _precargarCamposConfig);
+}
+
+// Tocar la opción del estilo de la tarjeta no lo cambia a ciegas: cierra Ajustes, lleva la tarjeta de estado a la vista y deja abajo los controles
+// para probar los estilos en vivo (la tarjeta se puede tocar para ver el día y la semana)
+function abrirVistaPreviaTarjeta() {
+    VistaPrevia.abrir({
+        id: 'tarjeta',
+        titulo: 'Tarjeta de estado',
+        idObjetivo: 'stats-card',
+        antes: _cerrarAjustesParaVistaPrevia,
+        alCerrar: _volverAAjustes,
+        filas: [
+            { etiqueta: 'Estilo de la tarjeta', descripcion: 'Tocá la tarjeta para ver el día y la semana', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta },
+            {
+                etiqueta: 'Animación de los hitos', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
+                alTocar: toggleAnimacionHint, visible: () => EstiloTarjeta.hintIntegrado()
+            },
+            {
+                etiqueta: 'Tiempo trabajado en la línea', descripcion: 'Solo en una tarjeta ancha (PC)', valor: () => EstiloTarjeta.etiquetaDisposicion(),
+                alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esTactil()
+            }
+        ]
+    });
+}
+
+function abrirVistaPreviaCalendario() {
+    VistaPrevia.abrir({
+        id: 'calendario',
+        titulo: 'Calendario',
+        idObjetivo: 'card-historico',
+        antes: _cerrarAjustesParaVistaPrevia,
+        alCerrar: _volverAAjustes,
+        filas: [
+            { etiqueta: 'Estilo del calendario', icono: '#icon-calendar-simple', valor: () => EstiloCalendario.etiqueta(), alTocar: toggleEstiloCalendario }
+        ]
+    });
+}
+
+/** Dispositivo táctil: ahí las opciones solo de PC (config-solo-pc) no tienen sentido. */
+const _esTactil = () => !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 // Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
 function toggleDisposicionLinea() {
@@ -373,15 +422,16 @@ function formatearInput(e) {
 }
 
 function bindEventos() {
+    VistaPrevia.bindEventos();
     alClic({
         'btn-toggle-ignorar-tf': () => toggleIgnorarTiempoFuera(),
         'btn-toggle-hover-popup': () => toggleHoverPopupCalendario(),
         'btn-toggle-animaciones': () => toggleReducirAnimaciones(),
-        'btn-estilo-calendario': () => toggleEstiloCalendario(),
+        'btn-estilo-calendario': () => abrirVistaPreviaCalendario(),
         'btn-toggle-logica-cubierto': () => toggleLogicaCubierto(),
         'btn-toggle-objetivo-registro': () => toggleObjetivoPorRegistro(),
         'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
-        'btn-estilo-tarjeta': () => toggleEstiloTarjeta(),
+        'btn-estilo-tarjeta': () => abrirVistaPreviaTarjeta(),
         'btn-linea-disposicion': () => toggleDisposicionLinea(),
         'btn-toggle-hint-animacion': () => toggleAnimacionHint(),
         'btn-toggle-metrica-uso': () => toggleMetricaUso(),

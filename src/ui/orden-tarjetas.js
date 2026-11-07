@@ -1,6 +1,6 @@
 import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
 import { normalizarOrdenCards, columnasDesdeOrden, prepararColumnas, moverCard, tamanosDeColumnas, MAX_COLUMNAS } from '../services/orden-cards.js';
-import { $ } from '../core/dom.js';
+import { $, alClic } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { UIBase } from './base.js';
@@ -407,10 +407,12 @@ function iniciarDragOrdenCards() {
 }
 
 function bindEventos() {
-    $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => togglePersistirTarjetas());
-    $('btn-toggle-card-registrar')?.addEventListener('click', () => toggleVisibilidadCard('registrar'));
-    $('btn-toggle-card-estadisticas')?.addEventListener('click', () => toggleVisibilidadCard('estadisticas'));
-    $('btn-toggle-card-historico')?.addEventListener('click', () => toggleVisibilidadCard('historico'));
+    alClic({
+        'btn-toggle-persistir-tarjetas': () => togglePersistirTarjetas(),
+        'btn-toggle-card-registrar': () => toggleVisibilidadCard('registrar'),
+        'btn-toggle-card-estadisticas': () => toggleVisibilidadCard('estadisticas'),
+        'btn-toggle-card-historico': () => toggleVisibilidadCard('historico'),
+    });
 }
 
 export const OrdenTarjetas = {

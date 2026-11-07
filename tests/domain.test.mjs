@@ -828,3 +828,17 @@ test('Helpers de presentación: contar, claveMes, tieneTiempoFuera y tieneCredit
     assert.deepEqual(['00:30', '00:00', '', null, undefined].map(v => TiposRegistro.tieneTiempoFuera({ tiempoFuera: v })), [true, false, false, false, false]);
     assert.deepEqual(['00:30', '00:00', '', null, undefined].map(v => TiposRegistro.tieneCredito({ credito: v })), [true, false, false, false, false]);
 });
+
+test('alClic: enlaza cada id a su manejador e ignora los que no existen', async () => {
+    const { alClic } = await import('../src/core/dom.js');
+    const docOriginal = globalThis.document;
+    const oyentes = {};
+    globalThis.document = { getElementById: id => (id === 'no-existe' ? null : { addEventListener: (tipo, fn) => { oyentes[`${id}:${tipo}`] = fn; } }) };
+    try {
+        const a = () => { }, b = () => { };
+        alClic({ 'btn-a': a, 'btn-b': b, 'no-existe': () => { } });
+        assert.deepEqual(oyentes, { 'btn-a:click': a, 'btn-b:click': b });
+    } finally {
+        globalThis.document = docOriginal;
+    }
+});

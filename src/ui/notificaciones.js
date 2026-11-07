@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, alClic } from '../core/dom.js';
 import { TOAST_MS } from '../core/constantes.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { UIBase } from './base.js';
@@ -140,9 +140,11 @@ function cerrarModalNotificaciones() {
 }
 
 function bindEventos() {
-    $('btn-toggle-push-buffer')?.addEventListener('click', () => togglePushBuffer());
-    $('btn-toggle-push-buffer-ultimo-dia')?.addEventListener('click', () => togglePushBufferUltimoDia());
-    $('btn-toggle-push-habilitado')?.addEventListener('click', () => togglePushHabilitado());
+    alClic({
+        'btn-toggle-push-buffer': () => togglePushBuffer(),
+        'btn-toggle-push-buffer-ultimo-dia': () => togglePushBufferUltimoDia(),
+        'btn-toggle-push-habilitado': () => togglePushHabilitado(),
+    });
     $('config-push-anticipacion')?.addEventListener('change', (e) => cambiarPushAnticipacion(/** @type {HTMLInputElement} */ (e.target).value));
     $('btn-probar-notificacion')?.addEventListener('click', () => enviarNotificacionPrueba());
     $('btn-toggle-notification')?.addEventListener('click', () => abrirModalNotificaciones());

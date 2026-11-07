@@ -1,6 +1,6 @@
 import { HistoricoEdicion } from './historico-edicion.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
+import { $, alClic } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -410,13 +410,17 @@ function bindEventos() {
         iniciarTimerAutoCierreBotones();
         Calendario.toggleVistaHistorico();
     });
-    $('btn-filtro')?.addEventListener('click', (e) => mostrarFiltros(e));
-    $('btn-undo')?.addEventListener('click', () => { IconosAnimados.girarIcono($('btn-undo'), -1); GestionDatos.undoAction(); });
-    $('btn-redo')?.addEventListener('click', () => { IconosAnimados.girarIcono($('btn-redo'), 1); GestionDatos.redoAction(); });
+    alClic({
+        'btn-filtro': (e) => mostrarFiltros(e),
+        'btn-undo': () => { IconosAnimados.girarIcono($('btn-undo'), -1); GestionDatos.undoAction(); },
+        'btn-redo': () => { IconosAnimados.girarIcono($('btn-redo'), 1); GestionDatos.redoAction(); },
+    });
 
-    $('btn-toggle-credito')?.addEventListener('click', () => toggleCredito());
-    $('btn-lock-toggle')?.addEventListener('click', () => toggleBloqueoEdicion());
-    $('btn-edit-referencia-compensatorio')?.addEventListener('click', () => EdicionRegistro.pegarReferencia());
+    alClic({
+        'btn-toggle-credito': () => toggleCredito(),
+        'btn-lock-toggle': () => toggleBloqueoEdicion(),
+        'btn-edit-referencia-compensatorio': () => EdicionRegistro.pegarReferencia(),
+    });
     document.querySelector('#modal-editar .btn-edit')?.addEventListener('click', () => EdicionRegistro.guardar());
     document.querySelector('#modal-editar .btn-delete')?.addEventListener('click', () => EdicionRegistro.eliminar());
     document.querySelector('#modal-editar .btn-cancel')?.addEventListener('click', () => cerrarEdicion());

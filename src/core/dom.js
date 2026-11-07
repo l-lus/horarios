@@ -30,3 +30,11 @@ export function superaUnaLinea(el, altura) {
     const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
     return altura > alto * 1.5;
 }
+
+/**
+ * Enlaza varios botones de una vez: `alClic({ 'btn-x': () => hacerAlgo() })`. Un id que no está en la página se ignora.
+ * @param {Record<string, (e: MouseEvent) => any>} manejadores
+ */
+export function alClic(manejadores) {
+    Object.entries(manejadores).forEach(([id, fn]) => $(id)?.addEventListener('click', fn));
+}

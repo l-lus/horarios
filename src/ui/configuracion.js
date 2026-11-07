@@ -1,5 +1,5 @@
 import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
-import { $, setColapsable } from '../core/dom.js';
+import { $, setColapsable, alClic } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -356,20 +356,22 @@ function formatearInput(e) {
 }
 
 function bindEventos() {
-    $('btn-toggle-ignorar-tf')?.addEventListener('click', () => toggleIgnorarTiempoFuera());
-    $('btn-toggle-hover-popup')?.addEventListener('click', () => toggleHoverPopupCalendario());
-    $('btn-toggle-animaciones')?.addEventListener('click', () => toggleReducirAnimaciones());
-    $('btn-estilo-calendario')?.addEventListener('click', () => toggleEstiloCalendario());
-    $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
-    $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
-    $('btn-toggle-rueda-calendario')?.addEventListener('click', () => toggleRuedaCalendario());
-    $('btn-toggle-hint-integrado')?.addEventListener('click', () => toggleHintIntegrado());
-    $('btn-toggle-hint-animacion')?.addEventListener('click', () => toggleAnimacionHint());
-    $('btn-toggle-metrica-uso')?.addEventListener('click', () => toggleMetricaUso());
-    $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
-    $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());
-    $('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
-    $('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
+    alClic({
+        'btn-toggle-ignorar-tf': () => toggleIgnorarTiempoFuera(),
+        'btn-toggle-hover-popup': () => toggleHoverPopupCalendario(),
+        'btn-toggle-animaciones': () => toggleReducirAnimaciones(),
+        'btn-estilo-calendario': () => toggleEstiloCalendario(),
+        'btn-toggle-logica-cubierto': () => toggleLogicaCubierto(),
+        'btn-toggle-objetivo-registro': () => toggleObjetivoPorRegistro(),
+        'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
+        'btn-toggle-hint-integrado': () => toggleHintIntegrado(),
+        'btn-toggle-hint-animacion': () => toggleAnimacionHint(),
+        'btn-toggle-metrica-uso': () => toggleMetricaUso(),
+        'btn-toggle-formato-corto-stats': () => toggleFormatoCortoStats(),
+        'btn-aplicar-horas-todos': () => aplicarHorasConfiguradasATodos(),
+        'btn-ayuda-perfiles': () => abrirModalAyuda(),
+        'btn-ayuda-config': () => abrirModalAyuda(),
+    });
     document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => cerrarModalAyuda());
     AyudaBuscador.bindEventos();
     $('ayuda-indice')?.addEventListener('click', (e) => {

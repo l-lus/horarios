@@ -2,7 +2,7 @@ import { TarjetaFondos } from './tarjeta-fondos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { STORAGE_KEYS, MARGEN_HORAS } from '../core/constantes.js';
-import { $, superaUnaLinea } from '../core/dom.js';
+import { $, superaUnaLinea, alClic } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -458,26 +458,34 @@ function bindEventos() {
         alternarVista();
     });
 
-    $('btn-timer-main')?.addEventListener('click', () => toggleTimerBreakMain());
-    $('btn-agregar')?.addEventListener('click', () => ejecutarAccionRegistro());
-    $('icon-indicator-form')?.addEventListener('click', () => toggleFormulario());
+    alClic({
+        'btn-timer-main': () => toggleTimerBreakMain(),
+        'btn-agregar': () => ejecutarAccionRegistro(),
+        'icon-indicator-form': () => toggleFormulario(),
+    });
 
-    $('btn-ir-modo-lote')?.addEventListener('click', () => toggleModoLote());
-    $('btn-pegar-entrada')?.addEventListener('click', () => pegarHoraActual('entrada'));
-    $('btn-pegar-salida')?.addEventListener('click', () => pegarHoraActual('salida'));
+    alClic({
+        'btn-ir-modo-lote': () => toggleModoLote(),
+        'btn-pegar-entrada': () => pegarHoraActual('entrada'),
+        'btn-pegar-salida': () => pegarHoraActual('salida'),
+    });
 
     $('lote-tipo')?.addEventListener('change', () => actualizarBotonLote());
-    $('btn-ir-modo-normal')?.addEventListener('click', () => toggleModoLote());
-    $('btn-lote-desde')?.addEventListener('click', () => alternarFechaActual('lote-fecha-desde'));
-    $('btn-lote-hasta')?.addEventListener('click', () => alternarFechaActual('lote-fecha-hasta'));
+    alClic({
+        'btn-ir-modo-normal': () => toggleModoLote(),
+        'btn-lote-desde': () => alternarFechaActual('lote-fecha-desde'),
+        'btn-lote-hasta': () => alternarFechaActual('lote-fecha-hasta'),
+    });
 
-    $('btn-toggle-fondo')?.addEventListener('click', () => toggleFondoCard());
-    $('btn-edit-entrada')?.addEventListener('click', () => pegarHoraActual('edit-entrada'));
-    $('btn-edit-salida')?.addEventListener('click', () => pegarHoraActual('edit-salida'));
-    $('btn-edit-tf')?.addEventListener('click', () => limpiarCampo('edit-tiempo-fuera'));
-    $('btn-edit-notas')?.addEventListener('click', () => limpiarCampo('edit-notas'));
-    $('btn-grupo-desde')?.addEventListener('click', () => alternarFechaActual('edit-grupo-desde'));
-    $('btn-grupo-hasta')?.addEventListener('click', () => alternarFechaActual('edit-grupo-hasta'));
+    alClic({
+        'btn-toggle-fondo': () => toggleFondoCard(),
+        'btn-edit-entrada': () => pegarHoraActual('edit-entrada'),
+        'btn-edit-salida': () => pegarHoraActual('edit-salida'),
+        'btn-edit-tf': () => limpiarCampo('edit-tiempo-fuera'),
+        'btn-edit-notas': () => limpiarCampo('edit-notas'),
+        'btn-grupo-desde': () => alternarFechaActual('edit-grupo-desde'),
+        'btn-grupo-hasta': () => alternarFechaActual('edit-grupo-hasta'),
+    });
 }
 
 export const TarjetaFichaje = {

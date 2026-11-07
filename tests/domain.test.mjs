@@ -614,6 +614,18 @@ test('TarjetaFichajeVista: la línea del día abierta ubica la salida estimada y
     assert.ok(cerrada.salidaRel > cerrada.marcaSalidaRel, 'la escala de la barra sigue basada en la salida estimada');
 });
 
+test('TarjetaFichajeVista: un saldo semanal de 1 minuto adelanta la salida ajustada exactamente 1 minuto', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const est = {
+        regHoy: { fecha: '2026-11-04', entrada: '00:28', salida: null, total: 0, objetivoHoras: 7 },
+        tiempoHoy: 0.02, horasDiarias: 7, esDiaHabil: true, tipoEspecialHoy: null,
+        bufferSemanalBase: 0.016667, diasHabiles: [1, 2, 3, 4, 5], esRetenido: false
+    };
+    const linea = TarjetaFichajeVista.derivarVistaHoy(est).linea;
+    assert.equal(linea.horaSalida, '07:28');
+    assert.equal(linea.horaBuffer, '07:27');
+});
+
 test('TarjetaFichajeVista: con 0 minutos se muestra "Comenzando" o "Sin horas todavía" en lugar del cero', async () => {
     const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
     const estDia = (salida, tiempoHoy) => ({

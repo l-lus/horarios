@@ -330,6 +330,13 @@ button.campo-flash-color {
     animation: icono-spin var(--dur-giro) linear infinite;
 }
 
+/* Lo contrario: opciones que solo tienen sentido en un dispositivo táctil (móvil) se ocultan cuando hay mouse */
+@media (hover: hover) and (pointer: fine) {
+    .config-solo-movil {
+        display: none !important;
+    }
+}
+
 /* Opciones que solo tienen sentido con mouse: se ocultan en dispositivos táctiles (mismo criterio que usa calendario.js) */
 @media not all and (hover: hover) and (pointer: fine) {
     .config-solo-pc {

@@ -160,12 +160,12 @@ function abrirVistaPreviaTarjeta() {
         // las subopciones arriba y la fila del estilo al final: el panel crece hacia arriba y esa fila (la que se toca) no cambia de lugar (ver VistaPrevia.abrir)
         filas: [
             {
-                etiqueta: 'Tiempo trabajado', descripcion: 'Con la tarjeta ancha (PC)', valor: () => EstiloTarjeta.etiquetaDisposicion(),
-                alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea'
+                etiqueta: 'Tiempo trabajado', descripcion: 'Solo en PC', valor: () => EstiloTarjeta.etiquetaDisposicion(),
+                alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea' && _esPC()
             },
             {
-                etiqueta: 'Faltan y banco', descripcion: 'Con la tarjeta angosta (móvil)', valor: () => EstiloTarjeta.etiquetaMosaicos(),
-                alTocar: toggleMosaicosLinea, visible: () => EstiloTarjeta.actual() === 'linea'
+                etiqueta: 'Faltan y banco', descripcion: 'Solo en móvil', valor: () => EstiloTarjeta.etiquetaMosaicos(),
+                alTocar: toggleMosaicosLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esPC()
             },
             {
                 etiqueta: 'Animación', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
@@ -188,6 +188,9 @@ function abrirVistaPreviaCalendario() {
         ]
     });
 }
+
+/** PC (mouse): mismo criterio que .config-solo-pc / .config-solo-movil en responsivo-movimiento.css. Las subopciones de la línea de tiempo se muestran según el dispositivo. */
+const _esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 // Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
 function toggleDisposicionLinea() {

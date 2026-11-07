@@ -309,6 +309,11 @@
     text-align: left;
 }
 
+/* Mismo radio que las listas de ajustes (el botón global es una píldora) */
+.drag-handle {
+    border-radius: var(--radius-md);
+}
+
 #modal-config .config-actions button>span:not(.toggle-switch, #hint-fondo-label, #hint-animaciones-label, #hint-estilo-calendario-label, #hint-animacion-label),
 .drag-handle>span:not(.toggle-switch),
 #modal-reporte-secciones .config-actions button>span:not(.toggle-switch),

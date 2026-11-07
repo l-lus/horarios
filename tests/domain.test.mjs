@@ -285,7 +285,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         hintIntegrado: true,
         estiloTarjeta: 'hitos',
         lineaDisposicion: 'arriba',
-        lineaMosaicos: 'abajo',
+        lineaMosaicos: 'derecha',
         descHitosNumero: true,
         cicloHintAuto: true,
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
@@ -962,16 +962,16 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
     assert.deepEqual(MOSAICOS_LINEA.map(m => m.id), ['abajo', 'derecha']);
     assert.equal(siguienteMosaicos('abajo'), 'derecha');
     assert.equal(siguienteMosaicos('derecha'), 'abajo');
-    assert.equal(etiquetaMosaicos('x'), 'Abajo');
+    assert.equal(etiquetaMosaicos('x'), 'Vertical', 'un id desconocido cuenta como la posición por defecto');
     Almacenamiento.removeItem(STORAGE_KEYS.LINEA_MOSAICOS);
     EstiloTarjeta.releer();
-    assert.equal(EstiloTarjeta.mosaicos(), 'abajo', 'por defecto abajo, como siempre');
+    assert.equal(EstiloTarjeta.mosaicos(), 'derecha', 'por defecto vertical (apilados a la derecha de la línea)');
     EstiloTarjeta.siguienteMosaicos();
-    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.LINEA_MOSAICOS), 'derecha');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.LINEA_MOSAICOS), 'abajo');
     EstiloTarjeta.setMosaicos('izquierda');
-    assert.equal(EstiloTarjeta.mosaicos(), 'derecha', 'un valor inválido no cambia nada');
-    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, lineaMosaicos: 'abajo' });
-    assert.equal(EstiloTarjeta.mosaicos(), 'abajo');
+    assert.equal(EstiloTarjeta.mosaicos(), 'abajo', 'un valor inválido no cambia nada');
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, lineaMosaicos: 'derecha' });
+    assert.equal(EstiloTarjeta.mosaicos(), 'derecha');
     assert.equal(ImportarExportar.validarCamposConfigImport({ lineaMosaicos: 'derecha' }), true);
     assert.equal(ImportarExportar.validarCamposConfigImport({ lineaMosaicos: 'izquierda' }), false);
 

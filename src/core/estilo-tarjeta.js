@@ -52,7 +52,8 @@ export function siguienteMosaicos(id) {
 }
 
 export function etiquetaMosaicos(id) {
-    return (MOSAICOS_LINEA.find(m => m.id === id) ?? MOSAICOS_LINEA.find(m => m.id === MOSAICOS_PREDETERMINADO)).label;
+    const posicion = MOSAICOS_LINEA.find(m => m.id === id) ?? MOSAICOS_LINEA.find(m => m.id === MOSAICOS_PREDETERMINADO);
+    return posicion?.label ?? '';
 }
 
 /** Disposición que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */

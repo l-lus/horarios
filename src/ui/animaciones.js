@@ -383,12 +383,14 @@ function _renderConFirma(el, contenido, alAplicar = null, { forzar = false } = {
 function _animarTextoHover(el, fn) {
     if (!el) { fn(); return; }
     const antes = el.textContent;
+    // se prueba primero sin animar: si el texto no cambia (p. ej. los hitos en la barra dejan el número de horas) no hay nada que animar y la mutación parpadearía
+    fn();
+    if (el.textContent === antes) return;
+    el.textContent = antes;
     const dur = _getCSSdur('--dur-valor');
     el.classList.add('mutacion-rapida');
-    const quitar = () => setTimeout(() => el.classList.remove('mutacion-rapida'), dur + 30);
     const p = _animarMutacion(el, fn, dur);
-    if (el.textContent === antes) { el.classList.remove('mutacion-rapida'); return; }
-    quitar();
+    setTimeout(() => el.classList.remove('mutacion-rapida'), dur + 30);
     return p;
 }
 

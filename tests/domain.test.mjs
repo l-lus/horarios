@@ -288,11 +288,59 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         lineaMosaicos: 'derecha',
         descHitosNumero: true,
         cicloHintAuto: true,
+        formatoCortoStats: false,
+        estiloCalendario: 'legacy',
+        hoverPopupCalendario: false,
+        ruedaCalendario: true,
+        persistirTarjetas: true,
+        fondoCard: 'golden-gate',
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
         ordenCardsMovil: ['estado', 'registrar', 'estadisticas', 'historico'],
         columnasCards: [3, 1],
         tarjetasVisibles: { registrar: true, estadisticas: true, historico: true }
     });
+});
+
+test('ImportarExportar: la apariencia (estilo del calendario, fondo, formato corto...) viaja en el respaldo y se restaura; Restablecer cubre los mismos ajustes', async () => {
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { EstiloCalendario } = await import('../src/core/estilo-calendario.js');
+    const { STORAGE_KEYS, CLAVES_AJUSTES_INSTALACION } = await import('../src/core/constantes.js');
+
+    // Todo ajuste de la instalación que "Restablecer" borra tiene que viajar también en el respaldo (y al revés: si se agrega uno a la lista, no se olvida ninguno de los dos lados)
+    const exportado = ImportarExportar.obtenerConfigExportable();
+    CLAVES_AJUSTES_INSTALACION.forEach(k => assert.ok(k in exportado, `${k} falta en el respaldo`));
+    assert.ok(STORAGE_KEYS.FONDO_CARD in exportado, 'el fondo de la tarjeta falta en el respaldo');
+
+    const base = { diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8 };
+    const cambios = { estiloCalendario: 'punto', fondoCard: 'ninguno', formatoCortoStats: true, hoverPopupCalendario: true, ruedaCalendario: false, persistirTarjetas: false };
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, ...cambios }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, estiloCalendario: 'inexistente' }), false);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, fondoCard: 'inexistente' }), false);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, formatoCortoStats: 'si' }), false);
+
+    const etiquetas = ImportarExportar.calcularCambiosConfigImport({ ...base, ...cambios });
+    ['estilo del calendario', 'fondo de la tarjeta de estado', 'formato de tiempo corto', 'popup del calendario (PC)', 'rueda del calendario (PC)', 'recordar estado de tarjetas']
+        .forEach(e => assert.ok(etiquetas.includes(e), `no se informa el cambio de ${e}`));
+
+    ImportarExportar.aplicarConfigImportada({ ...base, ...cambios });
+    assert.equal(EstiloCalendario.actual(), 'punto');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ESTILO_CALENDARIO, null), 'punto');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, null, true), 'ninguno');
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false), true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.HOVER_POPUP, false), true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, true), false);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true), false);
+
+    // un respaldo sin esos campos (versiones anteriores) no los toca
+    ImportarExportar.aplicarConfigImportada({ ...base });
+    assert.equal(EstiloCalendario.actual(), 'punto');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, null, true), 'ninguno');
+
+    // se deja como estaba para no alterar los demás tests
+    ImportarExportar.aplicarConfigImportada({ ...base, estiloCalendario: 'legacy', fondoCard: 'golden-gate', formatoCortoStats: false, hoverPopupCalendario: false, ruedaCalendario: true, persistirTarjetas: true });
+    CLAVES_AJUSTES_INSTALACION.forEach(k => Almacenamiento.removeItem(k));
+    Almacenamiento.removeItem(STORAGE_KEYS.FONDO_CARD, true);
 });
 
 test('ImportarExportar: el diseño de la interfaz (orden y tarjetas visibles) se exporta, valida, compara y restaura', async () => {

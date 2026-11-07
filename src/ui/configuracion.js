@@ -328,6 +328,11 @@ function _refrescarTogglesConfig() {
     actualizarEstadoBotonAplicarHoras();
     actualizarHintAnimaciones();
     actualizarHintEstiloCalendario();
+    // Un respaldo restaurado puede cambiarlos sin recargar la app
+    actualizarEstadoBotonFormatoCortoStats();
+    actualizarEstadoBotonHoverPopup();
+    actualizarEstadoBotonRuedaCalendario();
+    actualizarEstadoBotonPersistir();
 }
 
 function _precargarCamposConfig() {

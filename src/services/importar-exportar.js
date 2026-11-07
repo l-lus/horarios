@@ -1,6 +1,8 @@
 import { Preferencias } from '../core/preferencias.js';
 import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA, MOSAICOS_LINEA } from '../core/estilo-tarjeta.js';
-import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE } from '../core/constantes.js';
+import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, FONDO_CARD_POR_DEFECTO } from '../core/constantes.js';
+import { EstiloCalendario, ESTILOS_CALENDARIO } from '../core/estilo-calendario.js';
+import { FONDOS_SVG } from '../data/fondos.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -97,6 +99,26 @@ const CONFIG_RESPALDO = [
     },
     _opcion(Preferencias.DESC_HITOS_NUMERO, 'nombre del hito en el número', _avisarHint),
     _opcion(Preferencias.CICLO_HINT_AUTO, 'ciclo automático del hint', _avisarHint),
+    // Apariencia y comportamiento del resto de la app (ver CLAVES_AJUSTES_INSTALACION: lo que está ahí viaja acá y "Restablecer" lo borra)
+    _opcion(Preferencias.FORMATO_CORTO_STATS, 'formato de tiempo corto', () => EventosApp.emit('config:formato-corto-stats')),
+    {
+        clave: STORAGE_KEYS.ESTILO_CALENDARIO,
+        etiqueta: 'estilo del calendario',
+        esValido: (v) => ESTILOS_CALENDARIO.some(e => e.id === v),
+        actual: EstiloCalendario.actual,
+        aplicar: (v) => EstiloCalendario.setEstilo(v),
+    },
+    _opcion(Preferencias.HOVER_POPUP, 'popup del calendario (PC)'),
+    _opcion(Preferencias.RUEDA_CALENDARIO, 'rueda del calendario (PC)', () => EventosApp.emit('config:rueda-calendario')),
+    _opcion(Preferencias.PERSISTIR_TARJETAS, 'recordar estado de tarjetas'),
+    // El fondo es del perfil (cada perfil tiene el suyo); un id que esta versión no conoce se descarta
+    {
+        clave: STORAGE_KEYS.FONDO_CARD,
+        etiqueta: 'fondo de la tarjeta de estado',
+        esValido: (v) => v === 'ninguno' || FONDOS_SVG.some(f => f.id === v),
+        actual: () => Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, FONDO_CARD_POR_DEFECTO, true),
+        aplicar: (v) => { Almacenamiento.setItem(STORAGE_KEYS.FONDO_CARD, v, true); EventosApp.emit('config:fondo-card'); },
+    },
     // Un respaldo con orden pero sin columnas (versiones anteriores) usa el reparto por defecto: los tamaños viejos no corresponderían al orden nuevo
     _ordenDeTarjetas(STORAGE_KEYS.ORDEN_CARDS, 'orden de tarjetas', _ordenActual, (data) => {
         if (!Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS])) Almacenamiento.removeItem(STORAGE_KEYS.COLUMNAS_CARDS, true);

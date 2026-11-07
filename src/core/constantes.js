@@ -62,6 +62,26 @@ export const STORAGE_KEYS = Object.freeze({
     CARD_VISIBLE: (cual) => `cardVisible_${cual}`,
 });
 
+// Fondo de la tarjeta de estado de un perfil nuevo o restablecido
+export const FONDO_CARD_POR_DEFECTO = 'golden-gate';
+
+// Ajustes de apariencia y comportamiento de toda la instalación (no son de un perfil). Viajan en los respaldos (CONFIG_RESPALDO) y "Restablecer" los devuelve a su valor por defecto:
+// borrar la clave alcanza, sin valor guardado cada uno usa el suyo. Un ajuste nuevo de este tipo se agrega acá para que ninguna de las dos cosas lo olvide.
+export const CLAVES_AJUSTES_INSTALACION = Object.freeze([
+    STORAGE_KEYS.REDUCIR_ANIMACIONES,
+    STORAGE_KEYS.FORMATO_CORTO_STATS,
+    STORAGE_KEYS.ESTILO_CALENDARIO,
+    STORAGE_KEYS.HOVER_POPUP,
+    STORAGE_KEYS.RUEDA_CALENDARIO,
+    STORAGE_KEYS.ESTILO_TARJETA,
+    STORAGE_KEYS.HINT_INTEGRADO,
+    STORAGE_KEYS.LINEA_DISPOSICION,
+    STORAGE_KEYS.LINEA_MOSAICOS,
+    STORAGE_KEYS.DESC_HITOS_NUMERO,
+    STORAGE_KEYS.CICLO_HINT_AUTO,
+    STORAGE_KEYS.PERSISTIR_TARJETAS,
+]);
+
 // Tarjetas que se pueden ocultar y reordenar, en su orden por defecto (la de fichaje con la barra de progreso va siempre arriba y no cuenta).
 // En escritorio las dos últimas pasan a la columna derecha.
 export const CARDS = Object.freeze(['registrar', 'estadisticas', 'historico']);

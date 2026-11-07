@@ -1,6 +1,6 @@
 import { Preferencias } from '../core/preferencias.js';
 import { EstadoApp } from './estado-app.js';
-import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, DIAS_HABILES_DEFAULT, HORAS_DIARIAS_DEFAULT } from '../core/constantes.js';
+import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, DIAS_HABILES_DEFAULT, HORAS_DIARIAS_DEFAULT, CLAVES_AJUSTES_INSTALACION } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from './recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -253,7 +253,7 @@ async function agregarRegistro() {
 async function borrarTodoHistorial() {
     const registros = EstadoApp.registros();
     const totalRegistros = registros.length;
-    const confirmar = await EstadoApp._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${TiempoUtils.contar(totalRegistros, 'registro')} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
+    const confirmar = await EstadoApp._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${TiempoUtils.contar(totalRegistros, 'registro')} y la configuración, incluida la apariencia de la app, volverá a los valores por defecto. Los demás perfiles conservan sus registros.`, 'Restablecer');
     if (!confirmar) return;
 
     EstadoApp.setDiasHabiles([...DIAS_HABILES_DEFAULT]);
@@ -266,6 +266,7 @@ async function borrarTodoHistorial() {
     TiempoFuera.descartar();
     const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, ...CARDS.map(STORAGE_KEYS.CARD_VISIBLE), STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.ORDEN_CARDS_MOVIL, STORAGE_KEYS.COLUMNAS_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
     keys.forEach(k => Almacenamiento.removeItem(k, true));
+    CLAVES_AJUSTES_INSTALACION.forEach(k => Almacenamiento.removeItem(k));   // la apariencia no es de un perfil: vuelve a la de fábrica
 
     const perfil = GestorPerfiles.obtenerDatosPerfil();
     if (perfil) GestorPerfiles.CAMPOS_SYNC_GIST.forEach(k => delete perfil[k]);

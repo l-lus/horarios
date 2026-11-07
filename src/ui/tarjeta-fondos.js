@@ -1,5 +1,6 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, FONDO_CARD_POR_DEFECTO } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
+import { EventosApp } from '../core/eventos.js';
 import { FONDOS_SVG } from '../data/fondos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EstadoApp } from '../services/estado-app.js';
@@ -32,6 +33,15 @@ let _bgUltimaFirma = null;
 function setFondoCard(valor) {
     _fondoCard = valor;
 }
+
+// Al restaurar un respaldo el fondo cambia desde el servicio: se relee del almacenamiento y se redibuja
+EventosApp.on('config:fondo-card', () => {
+    _fondoCard = Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, FONDO_CARD_POR_DEFECTO, true);
+    const lbl = $('hint-fondo-label');
+    if (lbl) lbl.textContent = _getLabelFondo(_fondoCard);
+    const bg = $('stats-card-bg');
+    if (bg && bg.dataset.estado) actualizarFondoCard(bg.dataset.estado);
+});
 
 function toggleFondoCard() {
     const ids = [...FONDOS_SVG.map(f => f.id), 'ninguno'];

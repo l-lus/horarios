@@ -160,3 +160,22 @@ test('Aprovechamiento: qué parte de lo que sobró se usó para cubrir faltantes
     preparar(t, [reg(LUN, '08:00', '15:00')]);
     assert.equal(SaldoSemanal.calcularAprovechamiento(LUN, MIE), null, 'sin excedente no hay nada que medir');
 });
+
+test('Saldo con una pausa en curso: Estadísticas y la tarjeta de fichaje muestran lo mismo', async (t) => {
+    const { EstadisticasPeriodo } = await import('../src/services/estadisticas-periodo.js');
+    const { EstadoTarjeta } = await import('../src/services/estado-tarjeta.js');
+    const { TiempoFuera } = await import('../src/services/tiempo-fuera.js');
+    preparar(t, [reg(LUN, '08:00', '15:00'), reg(MAR, '08:00', '15:00'), reg(MIE, '08:00', null)], new Date(2026, 9, 28, 15, 30));
+    TiempoFuera.iniciar();
+    t.mock.timers.tick(30 * 60_000);   // son las 16:00: 8 h desde la entrada, 30 min de pausa
+    try {
+        assert.equal(EstadisticasPeriodo.calcularEstadisticasSemana(LUN).bufferPeriodo, 0.5);
+        assert.equal(EstadoTarjeta.calcularEstadoCard().bufferSemanal, 0.5);
+        EstadoApp.setIgnorarTiempoFuera(true);
+        assert.equal(EstadisticasPeriodo.calcularEstadisticasSemana(LUN).bufferPeriodo, 1, 'con la opción activa la pausa no se descuenta');
+        assert.equal(EstadoTarjeta.calcularEstadoCard().bufferSemanal, 1);
+    } finally {
+        EstadoApp.setIgnorarTiempoFuera(false);
+        TiempoFuera.descartar();
+    }
+});

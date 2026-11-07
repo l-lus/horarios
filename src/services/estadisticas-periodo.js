@@ -3,6 +3,7 @@ import { EstadoApp } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SaldoSemanal } from './saldo-semanal.js';
+import { TiempoFuera } from './tiempo-fuera.js';
 import { Objetivos } from './objetivos.js';
 
 // ====================================================================
@@ -95,7 +96,7 @@ function calcularEstadisticasRango(registrosRango, opciones = {}) {
     const hayPeriodo = horasDiariasObj > 0 && opciones.desde && opciones.hasta;
     const asignacionesCompensatorio = hayPeriodo ? Compensatorios.calcularAsignacionesCompensatorio() : null;
     const bufferPeriodo = hayPeriodo
-        ? SaldoSemanal.calcularBufferPeriodo(opciones.desde, opciones.hasta, true, 0, asignacionesCompensatorio)
+        ? SaldoSemanal.calcularBufferPeriodo(opciones.desde, opciones.hasta, true, TiempoFuera.minutosActivos(), asignacionesCompensatorio)
         : null;
     const aprovechamientoSaldo = hayPeriodo
         ? SaldoSemanal.calcularAprovechamiento(opciones.desde, opciones.hasta, asignacionesCompensatorio)

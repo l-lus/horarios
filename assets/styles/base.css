@@ -218,15 +218,15 @@ html.entrada-pagina .container {
     transform-origin: right center;
 }
 
-/* Pantallas anchas: la píldora ocupa el 50% centrado y el contenido se recoge hacia dentro.
-   Solo cambia el padding horizontal: la altura del header no varía */
+/* Pantallas anchas: la píldora ocupa el 30% centrado (con un mínimo de 340px para que entren el título y las acciones)
+   y el contenido se recoge hacia dentro. Solo cambia el padding horizontal: la altura del header no varía */
 @media (min-width: 768px) {
     .header {
-        --header-inset-x: 25%;
+        --header-inset-x: min(35%, calc(50% - 170px));
     }
 
     .header.scrolled {
-        padding-inline: calc(25% + var(--space-sm));
+        padding-inline: calc(min(35%, calc(50% - 170px)) + var(--space-sm));
     }
 }
 

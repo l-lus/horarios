@@ -6,6 +6,7 @@ import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { UIBase } from './base.js';
 import { uiAnimarReubicacion, uiArrastreLargo, REUBICACION_MS } from './arrastre.js';
+import { mostrarToast, _cerrarToastActual } from './toast.js';
 
 // ====================================================================
 // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
@@ -223,6 +224,14 @@ function columnasTrasTecla(id, tecla) {
     return moverCard(columnas, id, destino, destino < columnas.length ? (enColumna(destino)[pos] ?? null) : null, opciones);
 }
 
+// Atajo para personalizar el estilo: con la tarjeta ya levantada (modo reubicar), soltar sin mover el dedo dentro de este tiempo abre la vista previa de su estilo.
+// Pasado el tiempo, soltar en el mismo lugar no hace nada (evita aperturas accidentales). El aviso dura menos que la ventana para no pisarse con el panel,
+// que aparece en el mismo lugar de la pantalla.
+const VENTANA_PERSONALIZAR_MS = 1000;
+const AVISO_PERSONALIZAR_MS = 800;
+/** Tarjetas con estilo propio: la de estado y Registros (su calendario). Valor: lo que se avisa en 'tarjeta:personalizar'. */
+const PERSONALIZABLES = { 'stats-card': 'estado', 'card-historico': 'calendario' };
+
 function iniciarDragTarjetas() {
     let columnasInicial = null;
     let columnasEnCurso = null;
@@ -256,8 +265,11 @@ function iniciarDragTarjetas() {
             columnasEnCurso = columnasInicial;
             card.classList.add('reordenando');
             document.body.classList.add('tarjeta-arrastrando-activa');
+            if (card.id in PERSONALIZABLES) mostrarToast('Soltá para personalizar', 'info', AVISO_PERSONALIZAR_MS);
             /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.animated-card')).forEach(c => c.style.animation = 'none');
         },
+        // en cuanto el dedo se mueve es una reubicación: el aviso de personalizar ya no corresponde
+        alPrimerMovimiento: () => _cerrarToastActual(),
         alMover: (e, card) => {
             if (performance.now() < deslizandoHasta || !columnasEnCurso) return;
             const nuevas = evaluarNuevasColumnas(card, columnasEnCurso, e.clientX, e.clientY);
@@ -267,7 +279,7 @@ function iniciarDragTarjetas() {
                 deslizandoHasta = performance.now() + REUBICACION_MS;
             }
         },
-        alTerminar: (card, confirmar) => {
+        alTerminar: (card, confirmar, { movido, duracion }) => {
             card.classList.remove('reordenando');
             document.body.classList.remove('tarjeta-arrastrando-activa');
             const destino = confirmar ? columnasEnCurso : columnasInicial;
@@ -284,6 +296,12 @@ function iniciarDragTarjetas() {
             }
             columnasInicial = null;
             columnasEnCurso = null;
+            // mantener y soltar sin mover (y dentro de la ventana) = personalizar el estilo de la tarjeta
+            if (confirmar && !movido && duracion <= VENTANA_PERSONALIZAR_MS && card.id in PERSONALIZABLES) {
+                _cerrarToastActual();
+                if (navigator.vibrate) { try { navigator.vibrate(20); } catch (_) { /* la vibración es opcional */ } }
+                EventosApp.emit('tarjeta:personalizar', { tarjeta: PERSONALIZABLES[/** @type {keyof typeof PERSONALIZABLES} */ (card.id)] });
+            }
         }
     });
 

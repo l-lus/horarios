@@ -150,13 +150,14 @@ function _volverAAjustes() {
 
 // Tocar la opción del estilo de la tarjeta no lo cambia a ciegas: cierra Ajustes, lleva la tarjeta de estado a la vista y deja abajo los controles
 // para probar los estilos en vivo (la tarjeta se puede tocar para ver el día y la semana)
-function abrirVistaPreviaTarjeta() {
+/** @param {boolean} [desdeAjustes] con false (el atajo de mantener la tarjeta) no hay Ajustes que cerrar ni al que volver */
+function abrirVistaPreviaTarjeta(desdeAjustes = true) {
     VistaPrevia.abrir({
         id: 'tarjeta',
         titulo: 'Tarjeta de estado',
         idObjetivo: 'stats-card',
-        antes: _cerrarAjustesParaVistaPrevia,
-        alCerrar: _volverAAjustes,
+        antes: desdeAjustes ? _cerrarAjustesParaVistaPrevia : undefined,
+        alCerrar: desdeAjustes ? _volverAAjustes : undefined,
         // las subopciones arriba y la fila del estilo al final: el panel crece hacia arriba y esa fila (la que se toca) no cambia de lugar (ver VistaPrevia.abrir)
         filas: [
             {
@@ -176,13 +177,21 @@ function abrirVistaPreviaTarjeta() {
     });
 }
 
-function abrirVistaPreviaCalendario() {
+// Atajo desde las tarjetas (mantener y soltar sin mover, ver orden-tarjetas.js): abre la vista previa de su estilo, salvo que haya un modal u otra vista previa
+EventosApp.on('tarjeta:personalizar', (datos) => {
+    if (VistaPrevia.activa() || document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding')) return;
+    if (datos?.tarjeta === 'estado') abrirVistaPreviaTarjeta(false);
+    else if (datos?.tarjeta === 'calendario') abrirVistaPreviaCalendario(false);
+});
+
+/** @param {boolean} [desdeAjustes] */
+function abrirVistaPreviaCalendario(desdeAjustes = true) {
     VistaPrevia.abrir({
         id: 'calendario',
         titulo: 'Calendario',
         idObjetivo: 'card-historico',
-        antes: _cerrarAjustesParaVistaPrevia,
-        alCerrar: _volverAAjustes,
+        antes: desdeAjustes ? _cerrarAjustesParaVistaPrevia : undefined,
+        alCerrar: desdeAjustes ? _volverAAjustes : undefined,
         filas: [
             { etiqueta: 'Estilo', icono: '#icon-calendar-simple', valor: () => EstiloCalendario.etiqueta(), alTocar: toggleEstiloCalendario }
         ]

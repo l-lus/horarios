@@ -140,7 +140,7 @@ function _mostrar() {
     document.body.classList.add('vista-previa-activa');
     velo.classList.add('show');
     panel.classList.add('show');
-    panel.setAttribute('aria-hidden', 'false');
+    panel.inert = false;
     history.pushState({ vistaPrevia: true }, '');
 
     _medirPanel();
@@ -190,8 +190,10 @@ function _finalizar() {
     document.body.style.removeProperty('--vp-panel-h');
     $('vista-previa-velo')?.classList.remove('show');
     const panel = $('vista-previa-panel');
+    // el foco sale del panel antes de ocultarlo (un elemento oculto a los lectores de pantalla no puede conservarlo) y `inert` lo saca del orden de Tab
+    if (panel && document.activeElement instanceof HTMLElement && panel.contains(document.activeElement)) document.activeElement.blur();
     panel?.classList.remove('show');
-    panel?.setAttribute('aria-hidden', 'true');
+    if (panel) panel.inert = true;
     activa.restaurar?.();
     if (activa.cfg.alCerrar) setTimeout(() => activa.cfg.alCerrar?.(), DEMORA_CIERRE_MS);
 }

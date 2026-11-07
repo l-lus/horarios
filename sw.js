@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261107.1600-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261107.1601-cache`;
 const urlsToCache = [
   './',
   './index.html',

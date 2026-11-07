@@ -2278,6 +2278,14 @@
     gap: var(--space-sm);
 }
 
+/* Esperando registro: el único mosaico (el banco de horas de la semana) también se ajusta a su texto */
+.est-linea[data-tipo="espera"] .est-mosaicos {
+    width: fit-content;
+    max-width: 100%;
+    align-self: flex-start;
+    justify-self: start;
+}
+
 .est-mosaico {
     padding: var(--space-sm);
     border-radius: var(--radius-md);
@@ -2300,6 +2308,10 @@
 }
 
 .est-linea-nota {
+    width: fit-content;   /* el sombreado abarca solo el texto, no toda la fila */
+    max-width: 100%;
+    align-self: flex-start;
+    justify-self: start;
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
     font-weight: var(--fw-medium);

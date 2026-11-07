@@ -1998,6 +1998,28 @@
     gap: var(--space-sm);
 }
 
+/* Tarjeta ancha (PC): el aro ocupa la primera mitad y Faltan / Banco de horas empiezan justo en la mitad; el pie usa cuatro columnas iguales con el mismo espacio,
+   así la tercera ("Con banco") arranca en la misma vertical. Se mide el ancho de la tarjeta (#stats-estilo), no el de la ventana. */
+@container (min-width: 28rem) {
+    .est-anillo-principal {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--space-sm);
+    }
+
+    .est-anillo-pie {
+        display: grid;
+        grid-auto-flow: row;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: var(--space-sm);
+    }
+
+    .est-pie-1 { grid-column: 1; }
+    .est-pie-2 { grid-column: 2; }
+    .est-pie-3 { grid-column: 3; }
+    .est-pie-4 { grid-column: 4; }
+}
+
 /* ── C · Línea de tiempo vertical ── */
 .est-linea,
 .est-linea-cuerpo {

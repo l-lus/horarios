@@ -156,6 +156,8 @@ function crearAnillo() {
     const salida = crearDato('Salida');
     const conBanco = crearDato('Con banco');
     const fuera = crearDato('Tiempo fuera');
+    // cada dato tiene su columna fija en una tarjeta ancha (ver el CSS): así "Con banco" arranca en la mitad, donde empiezan Faltan y Banco de horas
+    [entrada, salida, conBanco, fuera].forEach((d, i) => d.raiz.classList.add(`est-pie-${i + 1}`));
     pie.append(entrada.raiz, salida.raiz, conBanco.raiz, fuera.raiz);
     const dias = crearDias();
     raiz.append(principal, pie, dias.raiz);

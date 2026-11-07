@@ -7,6 +7,7 @@ import { Almacenamiento } from '../core/almacenamiento.js';
 import { UIBase } from './base.js';
 import { uiAnimarReubicacion, uiArrastreLargo, REUBICACION_MS } from './arrastre.js';
 import { mostrarToast, _cerrarToastActual } from './toast.js';
+import { VistaPrevia } from './vista-previa.js';
 
 // ====================================================================
 // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
@@ -253,6 +254,8 @@ function iniciarDragTarjetas() {
             const el = e.target instanceof Element ? e.target : null;
             if (!el) return null;
             if (el.closest('#btn-timer-main')) return null;
+            // con la vista previa de estilo abierta no se puede reubicar: son modos excluyentes
+            if (VistaPrevia.activa()) return null;
 
             const header = el.closest(_SELECTOR_ENCABEZADOS);
             if (!header) return null;
@@ -310,6 +313,7 @@ function iniciarDragTarjetas() {
     headers.forEach(header => {
         header.addEventListener('keydown', (e) => {
             if (!e.altKey || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+            if (VistaPrevia.activa()) return;   // idem: sin reubicar con teclado durante la vista previa
             const card = header.closest(_SELECTOR_CARDS);
             if (!card) return;
 

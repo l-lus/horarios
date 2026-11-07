@@ -2012,15 +2012,20 @@
 @container (min-width: 28rem) {
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea {
         display: grid;
-        grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+        /* dos mitades iguales con el mismo espacio entre ellas que los mosaicos de abajo: el tiempo y la línea quedan alineados con "Faltan" y "Banco de horas" */
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         grid-template-areas: "cabecera linea" "pie pie";
         align-items: center;
-        gap: var(--space-md) var(--space-xl);
+        gap: var(--space-md) var(--space-sm);
     }
 
     html[data-disposicion-linea="derecha"] .est-linea {
-        grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
         grid-template-areas: "linea cabecera" "pie pie";
+    }
+
+    /* el mismo margen interno que el texto de los mosaicos, para que el texto de arriba y el de abajo arranquen en la misma vertical */
+    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea:not(.sin-cuerpo) :is(.est-linea-cabecera, .est-linea-cuerpo) {
+        padding-inline: var(--space-sm);
     }
 
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea.sin-cuerpo {

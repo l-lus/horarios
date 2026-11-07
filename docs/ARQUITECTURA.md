@@ -29,7 +29,7 @@ horarios/
 ├── scripts/
 │   └── release.mjs             # `npm run release`: sube APP_VERSION y CACHE_NAME
 ├── .github/workflows/
-│   └── tests.yml               # CI: npm ci, typecheck y tests en cada push/PR
+│   └── tests.yml               # CI: npm ci, typecheck y tests en cada push/PR (permisos mínimos, acciones fijadas por SHA)
 ├── assets/                     # Recursos estáticos (sin lógica de negocio)
 │   ├── manifest.json           # Web App Manifest (PWA)
 │   ├── styles/                 # Hojas de estilo divididas en 5 capas de cascada

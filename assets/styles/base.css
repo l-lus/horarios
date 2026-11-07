@@ -133,6 +133,7 @@ html.entrada-pagina .container {
     justify-content: space-between;
     align-items: center;
     border-bottom: 3px solid transparent;
+    transition: padding-inline var(--transition-ui);
 }
 
 .header::before {
@@ -201,6 +202,18 @@ html.entrada-pagina .container {
 .header.scrolled .header-actions {
     transform: scale(0.95);
     transform-origin: right center;
+}
+
+/* Pantallas anchas: la píldora ocupa el 50% centrado y el contenido se recoge hacia dentro.
+   Solo cambia el padding horizontal: la altura del header no varía */
+@media (min-width: 768px) {
+    .header {
+        --header-inset-x: 25%;
+    }
+
+    .header.scrolled {
+        padding-inline: calc(25% + var(--space-sm));
+    }
 }
 
 /* Desktop: la píldora desenfoca lo que pasa por debajo. En móviles se omite (coste de rendimiento) */

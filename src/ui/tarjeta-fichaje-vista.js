@@ -507,7 +507,8 @@ export const TarjetaFichajeVista = {
     _cantidadHorasCorta,
     _modoTextoStats,
     _hintIntegradoActivo: () => _hintIntegrado,
-    _descHitosEnNumero: () => _hintIntegrado && _descHitosNumero,
+    // Desactivado (sin ciclo automático) se comporta como Barra al pasar el cursor: la descripción se despliega en la barra y el número queda con las horas
+    _descHitosEnNumero: () => _hintIntegrado && _cicloHintAuto && _descHitosNumero,
     _cicloAutoActivo: () => !_hintIntegrado || _cicloHintAuto,
     _refrescarFormatoCortoStatsCache
 };

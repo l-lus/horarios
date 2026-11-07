@@ -123,7 +123,7 @@ html.entrada-pagina .container {
    contenido y haría oscilar el IntersectionObserver que alterna .scrolled */
 .header {
     --header-inset-x: 12px;
-    --header-inset-y: 8px;
+    --header-inset-y: 4px;
     --header-borde: transparent;
     padding: var(--space-smd);
     position: sticky;
@@ -219,16 +219,16 @@ html.entrada-pagina .container {
     }
 }
 
-/* Móvil: la píldora también ocupa el 50%, pero solo muestra el título centrado.
+/* Móvil: la píldora ocupa el 40%, pero solo muestra el título centrado.
    Las acciones (instalar y perfil) salen del flujo y se desvanecen en su sitio; el título se centra
    con margin-left:50% + translateX(-50%), que sí se pueden animar (justify-content no) */
 @media (max-width: 767px) {
     .header {
-        --header-inset-x: 25%;
+        --header-inset-x: 30%;
     }
 
     .header.scrolled {
-        padding-inline: calc(25% + var(--space-sm));
+        padding-inline: calc(30% + var(--space-sm));
     }
 
     .header.scrolled h1 {

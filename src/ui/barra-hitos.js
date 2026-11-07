@@ -127,13 +127,13 @@ function _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSa
         : holguraDescripcion('izquierda', izq(et), limiteIzquierdo);
     const espejadaSalida = !L.cerrado && tickSalida.classList.contains('espejado');
     /** @type {[string, string]} */
-    const textosSalida = L.cerrado ? ['Salida', 'Salida'] : ['Salida estimada', 'Estim.'];
+    const textosSalida = L.cerrado ? ['Salida', 'Salida'] : ['Salida estimada', 'S. estimada'];
     const descSalida = _elegirDescripcion(etSalida, textosSalida, hacia(etSalida, espejadaSalida, 0));
     _aplicarDescripcion(etSalida, descSalida);
     _prepararDespliegueDerecha(etSalida, textosSalida, holguraHaciaDerecha(izq(etSalida), etSalida.offsetWidth, ancho), descSalida);
     if (L.hayBanda) {
         /** @type {[string, string]} */
-        const textosBuffer = ['Con banco de horas', 'Con banco'];
+        const textosBuffer = ['Salida ajustada', 'S. ajustada'];
         const descBuffer = _elegirDescripcion(etBuffer, textosBuffer, hacia(etBuffer, tickBuffer.classList.contains('espejado'), 0));
         _aplicarDescripcion(etBuffer, descBuffer);
         _prepararDespliegueDerecha(etBuffer, textosBuffer, holguraHaciaDerecha(izq(etBuffer), etBuffer.offsetWidth, ancho), descBuffer);

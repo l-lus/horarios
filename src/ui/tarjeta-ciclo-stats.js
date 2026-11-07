@@ -9,7 +9,7 @@ import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 // Ciclo de textos del número grande de la tarjeta en la vista diaria: horas → "Entrada 08:30" → "Salida 17:00" (registro cerrado)
 // → (con el registro abierto: salida estimada → salida con banco) → "Tiempo fuera 25m" → horas. Con el hint integrado (`hitosEnBarra`) la barra ya muestra la entrada, la salida y, con el registro abierto,
 // la salida estimada y la salida con banco, cada una con su descripción: esas fases no cambian el texto (queda el de las horas) y solo resaltan su hito.
-// Con la variante B del hint integrado (Ajustes) cada hito escribe su nombre y su hora en el número grande ("Entrada 08:30", "Salida estimada 17:00" —"Salida est." si no entra en una línea—, "Con banco 16:52") en lugar de desplegarlos en la barra. El tiempo fuera no tiene hito en la barra, siempre se muestra como texto y cierra el ciclo. Sin el hint integrado, entrada y salida se muestran como texto.
+// Con la variante B del hint integrado (Ajustes) cada hito escribe su nombre y su hora en el número grande ("Entrada 08:30", "Salida estimada 17:00" —"S. estimada" si no entra en una línea—, "Salida ajustada 16:52" —"S. ajustada"—) en lugar de desplegarlos en la barra. El tiempo fuera no tiene hito en la barra, siempre se muestra como texto y cierra el ciclo. Sin el hint integrado, entrada y salida se muestran como texto.
 // Cada 2 s. tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
 // Cada vez que cambia la fase avisa su tipo (o null al terminar) a quien se registre con `alCambiarFase`: así la barra resalta el hito correspondiente
 // sin que este módulo conozca el DOM de la barra.
@@ -86,8 +86,8 @@ function _fasesCiclo() {
     if (_cicloStatsSalida) {
         fases.push(_faseHito('salida', () => `Salida ${_cicloStatsSalida}`));
     }
-    if (_cicloStatsSalidaEstimada) fases.push(_faseHito('salidaEstimada', () => `Salida estimada ${_cicloStatsSalidaEstimada}`, () => `Salida est. ${_cicloStatsSalidaEstimada}`));
-    if (_cicloStatsSalidaBanco) fases.push(_faseHito('banco', () => `Con banco ${_cicloStatsSalidaBanco}`));
+    if (_cicloStatsSalidaEstimada) fases.push(_faseHito('salidaEstimada', () => `Salida estimada ${_cicloStatsSalidaEstimada}`, () => `S. estimada ${_cicloStatsSalidaEstimada}`));
+    if (_cicloStatsSalidaBanco) fases.push(_faseHito('banco', () => `Salida ajustada ${_cicloStatsSalidaBanco}`, () => `S. ajustada ${_cicloStatsSalidaBanco}`));
     // El tiempo fuera va al final: no es un hito de la barra, y así no corta la secuencia de hitos
     if (_cicloStatsTiempoFuera) {
         fases.push({ tipo: 'tiempoFuera', texto: () => `Tiempo fuera ${_formatearMinutosCorto(TiempoUtils.horaAMinutos(_cicloStatsTiempoFuera))}` });

@@ -263,6 +263,9 @@ function crearLinea() {
     const balance = crearDato('Faltan', 'est-dato est-mosaico');
     const banco = crearDato('Banco de horas', 'est-dato est-mosaico');
     const fuera = crearDato('Tiempo fuera', 'est-dato est-mosaico');
+    // tercera línea del mosaico: si ese tiempo se descuenta o no del total (opción "No descontar tiempo fuera" de Ajustes)
+    const fueraDetalle = el('span', 'est-dato-detalle');
+    fuera.raiz.append(fueraDetalle);
     mosaicos.append(balance.raiz, banco.raiz, fuera.raiz);
     const nota = el('div', 'est-linea-nota');
     // cabecera (tiempo trabajado) y cuerpo (la línea): en una tarjeta ancha van lado a lado (ver la disposición en estilo-tarjeta.js);
@@ -298,7 +301,10 @@ function pintarLinea(r, d) {
         mostrar(r.banco.raiz, !!d.banco);
         if (d.banco) pintarDato(r.banco, 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
         mostrar(r.fuera.raiz, esRegistro && !!d.tiempoFuera);
-        if (esRegistro && d.tiempoFuera) pintarDato(r.fuera, d.tiempoFuera.corriendo ? 'Fuera (en curso)' : 'Tiempo fuera', d.tiempoFuera.texto);
+        if (esRegistro && d.tiempoFuera) {
+            pintarDato(r.fuera, d.tiempoFuera.corriendo ? 'Fuera (en curso)' : 'Tiempo fuera', d.tiempoFuera.texto);
+            fijar(r.fuera.raiz.querySelector('.est-dato-detalle'), d.tiempoFuera.descuenta ? 'Se descuenta' : 'No se descuenta');
+        }
         mostrar(r.mosaicos, !!(d.balance || d.banco || (esRegistro && d.tiempoFuera)));
         return;
     }

@@ -2284,6 +2284,12 @@
     background: color-mix(in srgb, var(--tono) 12%, transparent);
 }
 
+.est-dato-detalle {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    line-height: 1.2;
+}
+
 .est-mosaico .est-dato-valor {
     font-size: var(--text-sm);
     overflow: visible;   /* con tres mosaicos en un móvil angosto el valor tiene que entrar entero */

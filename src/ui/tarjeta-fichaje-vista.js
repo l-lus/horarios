@@ -411,7 +411,7 @@ function _resumenTiempoFuera(reg) {
     const registrado = reg && TiposRegistro.tieneTiempoFuera(reg) ? TiempoUtils.horaAMinutos(reg.tiempoFuera) : 0;
     const corriendo = TiempoFuera.corriendo();
     const minutos = registrado + (corriendo ? TiempoFuera.minutosActivos() : 0);
-    return minutos > 0 || corriendo ? { minutos, corriendo, texto: duracionCompacta(minutos) } : null;
+    return minutos > 0 || corriendo ? { minutos, corriendo, texto: duracionCompacta(minutos), descuenta: !EstadoApp.getIgnorarTiempoFuera() } : null;
 }
 
 /** Lo que falta (o sobra) del objetivo del día: etiqueta, texto y tono ('neutro', 'green', 'red' o 'gold'). null sin objetivo. */

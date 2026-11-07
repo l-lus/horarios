@@ -412,7 +412,8 @@ async function restaurarRespaldo(data, importados, modo, opciones = {}) {
 function importarDatos(file, modo = 'replace') {
     if (!file) { D._notify().mostrarToast('Seleccioná un archivo primero', 'error'); return; }
     if (file.size > S.SECURITY_LIMITS.MAX_JSON_SIZE) { D._notify().mostrarToast('Archivo muy grande', 'error'); return; }
-    if (!file.type || file.type !== 'application/json') { D._notify().mostrarToast('Solo se permiten archivos JSON', 'error'); return; }
+    // Algunos navegadores informan un tipo vacío o genérico para un .json: alcanza con la extensión (el contenido se valida igual después)
+    if (file.type !== 'application/json' && !/\.json$/i.test(file.name ?? '')) { D._notify().mostrarToast('Solo se permiten archivos JSON', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = async (e) => {

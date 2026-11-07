@@ -521,3 +521,99 @@ test('GestionDatos: deshacer y rehacer restauran los registros y recalculan sus 
     assert.deepEqual(toasts, ['Deshecho', 'Rehecho']);
     GestorHistorial.clear();
 });
+
+test('GestionDatos.cargarPerfilActivo: el perfil manda aunque la pila de deshacer haya quedado vieja', async (t) => {
+    const { GestionDatos } = await import('../src/services/gestion-datos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    const { GestorHistorial } = await import('../src/services/gestor-historial.js');
+    EstadoApp.configurarNotificaciones({ actualizarUI: () => { }, mostrarToast: () => { } });
+    GestorPerfiles.inicializar();
+    GestorHistorial.clear();
+    EstadoApp._setRegistros([]);
+    GestorHistorial.saveState(EstadoApp.registros(), 'inicio');
+    await EstadoApp.guardarYActualizar();
+
+    // La escritura de la pila (varios MB) falla por cuota; la del perfil (mucho más chica) entra
+    const setItemReal = localStorage.setItem;
+    localStorage.setItem = (k, v) => {
+        if (k.includes('history')) throw Object.assign(new Error('cuota'), { name: 'QuotaExceededError' });
+        setItemReal(k, v);
+    };
+    t.mock.method(console, 'error', () => { });
+    t.mock.method(console, 'warn', () => { });
+    try {
+        EstadoApp.registros().push(EstadoApp._construirRegistro('2026-10-20', '08:30', null));
+        GestorHistorial.saveState(EstadoApp.registros(), 'entrada');
+        assert.equal(await EstadoApp.guardarYActualizar(), true);
+    } finally {
+        localStorage.setItem = setItemReal;
+    }
+
+    try {
+        GestorPerfiles.inicializar();   // recarga de la app
+        GestionDatos.cargarPerfilActivo();
+        assert.equal(EstadoApp.registros().length, 1, 'el fichaje guardado en el perfil no se pierde');
+        assert.deepEqual(GestorHistorial.getCurrentState().map(r => r.fecha), ['2026-10-20'], 'la pila vuelve a coincidir con el perfil');
+
+        // Un cambio guardado sin pasar por la pila (ej. créditos recalculados desde Ajustes) tampoco se revierte
+        const reg = EstadoApp.registros()[0];
+        reg.salida = '12:00';
+        reg.credito = '03:30';
+        await EstadoApp.guardarYActualizar();
+        GestorPerfiles.inicializar();
+        GestionDatos.cargarPerfilActivo();
+        assert.equal(EstadoApp.registros()[0].credito, '03:30');
+    } finally {
+        GestorHistorial.clear();
+        EstadoApp._setRegistros([]);
+        await EstadoApp.guardarYActualizar();
+    }
+});
+
+test('GestionDatos.cargarPerfilActivo: con la pila al día se conserva lo que se puede deshacer', async () => {
+    const { GestionDatos } = await import('../src/services/gestion-datos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    const { GestorHistorial } = await import('../src/services/gestor-historial.js');
+    EstadoApp.configurarNotificaciones({ actualizarUI: () => { }, mostrarToast: () => { }, iniciarTimerAutoCierreBotones: () => { } });
+    GestorPerfiles.inicializar();
+    GestorHistorial.clear();
+    EstadoApp._setRegistros([]);
+    GestorHistorial.saveState(EstadoApp.registros(), 'inicio');
+    await EstadoApp.guardarYActualizar();
+    EstadoApp.registros().push(EstadoApp._construirRegistro('2026-10-20', '08:30', '15:30'));
+    GestorHistorial.saveState(EstadoApp.registros(), 'jornada');
+    await EstadoApp.guardarYActualizar();
+
+    try {
+        GestorPerfiles.inicializar();
+        GestionDatos.cargarPerfilActivo();
+        assert.equal(GestorHistorial.canUndo(), true);
+        GestionDatos.undoAction();
+        assert.equal(EstadoApp.registros().length, 0);
+    } finally {
+        GestorHistorial.clear();
+        EstadoApp._setRegistros([]);
+        await EstadoApp.guardarYActualizar();
+    }
+});
+
+test('ImportarExportar.importarDatos acepta un .json aunque el navegador no informe su tipo, y rechaza otros archivos', async () => {
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const toasts = [];
+    EstadoApp.configurarNotificaciones({ mostrarToast: (m) => toasts.push(m) });
+    const leidos = [];
+    globalThis.FileReader = class { readAsText(f) { leidos.push(f.name); } };
+    try {
+        ImportarExportar.importarDatos({ name: 'sin-tipo.json', type: '', size: 10 });
+        ImportarExportar.importarDatos({ name: 'android.JSON', type: 'application/octet-stream', size: 10 });
+        ImportarExportar.importarDatos({ name: 'respaldo', type: 'application/json', size: 10 });
+        ImportarExportar.importarDatos({ name: 'foto.png', type: 'image/png', size: 10 });
+        assert.deepEqual(leidos, ['sin-tipo.json', 'android.JSON', 'respaldo']);
+        assert.deepEqual(toasts, ['Solo se permiten archivos JSON']);
+    } finally {
+        delete globalThis.FileReader;
+    }
+});

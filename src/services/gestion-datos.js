@@ -54,10 +54,15 @@ function recalcularTotalesEnMemoria(recalcularCreditos = false) {
     });
 }
 
+/** Para comparar listas de registros sin depender del orden (hay un registro por fecha). */
+const _firmaRegistros = (lista) => JSON.stringify([...lista].sort((a, b) => a.fecha.localeCompare(b.fecha)));
+
 /**
  * Carga en EstadoApp el perfil activo (configuración y registros) y, si sigue vigente, la pila de deshacer.
  * Lo guardado se repara antes de usarlo (ver SeguridadYUtils.repararRegistrosGuardados): un perfil corrupto
  * o editado a mano no llega tal cual a los cálculos.
+ * Los registros siempre salen del perfil. La pila solo sirve para deshacer: si no coincide con el perfil (su última escritura
+ * falló por cuota, o se guardó un cambio que no pasa por ella) se descarta; restaurarla revertiría datos ya guardados.
  */
 function cargarPerfilActivo() {
     const perfil = GestorPerfiles.obtenerDatosPerfil() || {};
@@ -77,18 +82,16 @@ function cargarPerfilActivo() {
     EstadoApp._setRegistros(registros);
 
     const historialCargado = GestorHistorial.loadFromLocalStorage();
-    if (historialCargado) {
-        const estadoActual = GestorHistorial.getCurrentState();
-        if (Array.isArray(estadoActual)) {
-            EstadoApp._setRegistros(S.repararRegistrosGuardados(estadoActual));
-        } else {
-            console.warn('Historial corrupto, descartado. Usando registros del perfil.');
-            GestorHistorial.clear();
-        }
+    const estadoPila = historialCargado ? GestorHistorial.getCurrentState() : null;
+    const pilaVigente = Array.isArray(estadoPila)
+        && _firmaRegistros(S.repararRegistrosGuardados(estadoPila)) === _firmaRegistros(registros);
+    if (historialCargado && !pilaVigente) {
+        console.warn('La pila de deshacer no coincide con el perfil: se descarta.');
+        GestorHistorial.clear();
     }
     ordenarRegistros();
     recalcularTotalesEnMemoria();
-    if (!historialCargado) GestorHistorial.saveState(EstadoApp.registros());
+    if (!pilaVigente) GestorHistorial.saveState(EstadoApp.registros());
 
     const migrados = Compensatorios.migrarObjetivoHorasFaltante();
     if (migrados > 0) {

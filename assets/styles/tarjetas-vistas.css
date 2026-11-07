@@ -421,6 +421,19 @@
 .linea-tick.espejado { transform: scaleX(-1); }
 .linea-tick--buffer.espejado { transform: scale(-1, -1); }
 
+/* Móvil: la diagonal de la vista diaria es 4 px más corta (24 en vez de 28) y las etiquetas suben lo mismo, para que su centro siga donde termina la línea.
+   Solo cambia el alto: el svg se estira un poco en vertical, así que el ángulo queda cerca de 45° pero no exacto */
+@media (max-width: 767px) {
+    .progress-pista {
+        --centro-etiqueta: 21.5px;
+    }
+
+    #linea-tick-salida,
+    #linea-tick-buffer {
+        height: 24px;
+    }
+}
+
 .linea-tick--buffer.positivo { --tick-color: var(--c-green); }
 .linea-tick--buffer.negativo { --tick-color: var(--c-red); }
 

@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
-import { duracionCompacta, hitosOrdenados, posicionesLinea } from '../core/resumen-tarjeta.js';
+import { duracionCompacta, hitosOrdenados, horaCorta, posicionesLinea, resumenesDeMedida } from '../core/resumen-tarjeta.js';
 
 // ====================================================================
 // DISEÑOS PROPIOS DE LA TARJETA DE ESTADO (vista diaria): anillo, línea de tiempo, lista de filas y tipográfica
@@ -89,6 +89,43 @@ function pintarDato(d, etiqueta, valor, tono) {
     entonar(d.raiz, tono);
 }
 
+// ─── Días de la semana (compartido) ──────────────────────────────────────────────────────────────────────────────────────
+
+/** Qué se escribe de un día en la semana: sus horas, el emoji del día especial o su estado cuando no hay horas. @param {any} dia */
+function textoDia(dia) {
+    if (dia.totalMin > 0) return duracionCompacta(dia.totalMin);
+    if (dia.estado === 'especial') return `${dia.emoji} ${dia.etiqueta}`.trim();
+    return { 'sin-salida': 'sin salida', 'sin-registro': 'sin registro', futuro: 'pendiente' }[/** @type {string} */ (dia.estado)] ?? '—';
+}
+
+/** Fila de celdas chicas (sigla y horas de cada día): el pie del anillo en la semana. */
+function crearDias(max = 7) {
+    const raiz = el('div', 'est-dias');
+    const celdas = Array.from({ length: max }, () => {
+        const c = el('div', 'est-dia');
+        const sigla = el('span', 'est-dia-sigla');
+        const valor = el('span', 'est-dia-valor');
+        c.append(sigla, valor);
+        raiz.append(c);
+        return { raiz: c, sigla, valor };
+    });
+    return { raiz, celdas };
+}
+
+/** @param {ReturnType<typeof crearDias>} d @param {any[]} dias */
+function pintarDias(d, dias) {
+    d.celdas.forEach((c, i) => {
+        const dia = dias[i];
+        mostrar(c.raiz, !!dia);
+        if (!dia) return;
+        fijar(c.sigla, dia.sigla);
+        fijar(c.valor, dia.estado === 'especial' && dia.emoji ? dia.emoji : horaCorta(dia.totalMin));
+        c.raiz.dataset.color = dia.color ?? 'neutro';
+        c.raiz.dataset.estado = dia.estado;
+        c.raiz.classList.toggle('hoy', !!dia.hoy);
+    });
+}
+
 // ─── B · Anillo ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 function crearAnillo() {
     const raiz = el('div', 'est-anillo');
@@ -120,20 +157,22 @@ function crearAnillo() {
     const conBanco = crearDato('Con banco');
     const fuera = crearDato('Tiempo fuera');
     pie.append(entrada.raiz, salida.raiz, conBanco.raiz, fuera.raiz);
-    raiz.append(principal, pie);
-    return { raiz, aro, arco, valor, unidad, mensaje, sub, balance, banco, pie, entrada, salida, conBanco, fuera };
+    const dias = crearDias();
+    raiz.append(principal, pie, dias.raiz);
+    return { raiz, aro, arco, valor, unidad, mensaje, sub, balance, banco, pie, entrada, salida, conBanco, fuera, dias };
 }
 
 function pintarAnillo(r, d) {
     r.raiz.dataset.tipo = d.tipo;
-    const esRegistro = d.tipo === 'registro';
-    mostrar(r.pie, d.tipo !== 'especial');
-    mostrar(r.mensaje, !esRegistro);
-    mostrar(r.sub, !esRegistro && !!d.banco);
-    mostrar(r.balance.raiz, esRegistro && !!d.balance);
-    mostrar(r.banco.raiz, esRegistro && !!d.banco);
+    const conTotal = d.tipo === 'registro' || d.tipo === 'semana';
+    mostrar(r.pie, d.tipo === 'registro' || d.tipo === 'espera');
+    mostrar(r.dias.raiz, d.tipo === 'semana');
+    mostrar(r.mensaje, !conTotal);
+    mostrar(r.sub, !conTotal && (d.tipo === 'especial' || !!d.banco));
+    mostrar(r.balance.raiz, conTotal && !!d.balance);
+    mostrar(r.banco.raiz, conTotal && !!d.banco);
 
-    if (esRegistro) {
+    if (conTotal) {
         const { horas, minutos } = d.trabajado;
         fijar(r.valor, horas > 0 ? `${horas}:${_pad2(minutos)}` : String(minutos));
         fijar(r.unidad, horas > 0 ? 'horas' : 'min');
@@ -142,6 +181,7 @@ function pintarAnillo(r, d) {
         pintarAvance(r.arco, d.progreso);
         if (d.balance) pintarDato(r.balance, d.balance.etiqueta, d.balance.texto, d.balance.tono);
         if (d.banco) pintarDato(r.banco, 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
+        if (d.tipo === 'semana') { pintarDias(r.dias, d.dias); return; }
         pintarDato(r.entrada, 'Entrada', d.entrada);
         mostrar(r.salida.raiz, !!(d.salida || d.salidaEstimada));
         pintarDato(r.salida, 'Salida', d.salida || d.salidaEstimada);
@@ -170,14 +210,13 @@ function pintarAnillo(r, d) {
         pintarAvance(r.arco, 100);
         fijar(r.mensaje, d.etiqueta);
         fijar(r.sub, d.descripcion);
-        mostrar(r.sub, true);
         entonar(r.sub, 'neutro');
     }
 }
 
+// ─── C · Línea de tiempo vertical ─────────────────────────────────────────────────────────────────────────────────────────
 const ROTULOS_NODO = { entrada: 'Entrada', ahora: 'Ahora', salida: 'Salida', banco: 'Con banco' };
 
-// ─── C · Línea de tiempo vertical ─────────────────────────────────────────────────────────────────────────────────────────
 function crearLinea() {
     const raiz = el('div', 'est-linea');
     const cabecera = el('div', 'est-linea-cabecera');
@@ -201,36 +240,50 @@ function crearLinea() {
         hitos[tipo] = { raiz: li, etiqueta: e, hora };
     }
 
+    // la semana: un nodo por día
+    const nodosDias = el('ol', 'est-nodos');
+    const dias = Array.from({ length: 7 }, () => {
+        const li = el('li', 'est-nodo est-nodo--dia');
+        const e = el('span', 'est-nodo-etiqueta');
+        const hora = el('span', 'est-nodo-hora');
+        li.append(el('span', 'est-nodo-punto'), e, hora);
+        nodosDias.append(li);
+        return { raiz: li, etiqueta: e, hora };
+    });
+
     const mosaicos = el('div', 'est-mosaicos');
     const balance = crearDato('Faltan', 'est-dato est-mosaico');
     const banco = crearDato('Banco de horas', 'est-dato est-mosaico');
     const fuera = crearDato('Tiempo fuera', 'est-dato est-mosaico');
     mosaicos.append(balance.raiz, banco.raiz, fuera.raiz);
     const nota = el('div', 'est-linea-nota');
-    raiz.append(cabecera, nodos, mosaicos, nota);
-    return { raiz, etiqueta, duracion, titulo, emoji, texto, nodos, hitos, mosaicos, balance, banco, fuera, nota };
+    raiz.append(cabecera, nodos, nodosDias, mosaicos, nota);
+    return { raiz, etiqueta, duracion, titulo, emoji, texto, nodos, hitos, nodosDias, dias, mosaicos, balance, banco, fuera, nota };
 }
 
 function pintarLinea(r, d) {
     r.raiz.dataset.tipo = d.tipo;
     const esRegistro = d.tipo === 'registro';
-    mostrar(r.etiqueta, esRegistro);
-    mostrar(r.duracion.raiz, esRegistro);
-    mostrar(r.titulo, !esRegistro);
+    const conTotal = esRegistro || d.tipo === 'semana';
+    mostrar(r.etiqueta, conTotal);
+    mostrar(r.duracion.raiz, conTotal);
+    mostrar(r.titulo, !conTotal);
     mostrar(r.nota, d.tipo === 'especial');
+    mostrar(r.nodosDias, d.tipo === 'semana');
 
-    if (esRegistro) {
-        fijar(r.etiqueta, d.cerrado ? 'Trabajaste' : 'Llevás trabajado');
+    if (conTotal) {
+        if (esRegistro) fijar(r.etiqueta, d.cerrado ? 'Trabajaste' : 'Llevás trabajado');
+        else fijar(r.etiqueta, `${d.abierta ? 'Llevás en la semana' : 'Total de la semana'}${d.objetivoMin > 0 ? ` · objetivo ${duracionCompacta(d.objetivoMin)}` : ''}`);
         pintarDuracion(r.duracion, d.trabajado);
-        pintarNodos(r, d);
-        mostrar(r.nodos, true);
+        mostrar(r.nodos, esRegistro);
+        if (esRegistro) pintarNodos(r, d); else pintarNodosDias(r, d.dias);
         mostrar(r.balance.raiz, !!d.balance);
         if (d.balance) pintarDato(r.balance, d.balance.etiqueta, d.balance.texto, d.balance.tono);
         mostrar(r.banco.raiz, !!d.banco);
         if (d.banco) pintarDato(r.banco, 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
-        mostrar(r.fuera.raiz, !!d.tiempoFuera);
-        if (d.tiempoFuera) pintarDato(r.fuera, d.tiempoFuera.corriendo ? 'Fuera (en curso)' : 'Tiempo fuera', d.tiempoFuera.texto);
-        mostrar(r.mosaicos, !!(d.balance || d.banco || d.tiempoFuera));
+        mostrar(r.fuera.raiz, esRegistro && !!d.tiempoFuera);
+        if (esRegistro && d.tiempoFuera) pintarDato(r.fuera, d.tiempoFuera.corriendo ? 'Fuera (en curso)' : 'Tiempo fuera', d.tiempoFuera.texto);
+        mostrar(r.mosaicos, !!(d.balance || d.banco || (esRegistro && d.tiempoFuera)));
         return;
     }
 
@@ -281,6 +334,24 @@ function pintarNodos(r, d) {
     });
 }
 
+/** Un nodo por día de la semana: hoy en azul, los pasados con el color de su estado y los que faltan punteados. */
+function pintarNodosDias(r, dias) {
+    r.dias.forEach((n, i) => {
+        const dia = dias[i];
+        mostrar(n.raiz, !!dia);
+        if (!dia) return;
+        const futuro = dia.estado === 'futuro' && !dia.hoy;
+        n.raiz.classList.toggle('primero', i === 0);
+        n.raiz.classList.toggle('hoy', !!dia.hoy);
+        n.raiz.classList.toggle('pendiente', futuro);
+        n.raiz.classList.toggle('pasado', !futuro);
+        n.raiz.classList.toggle('lleno', dia.estado === 'cerrado' || dia.estado === 'especial');
+        n.raiz.dataset.color = dia.color ?? 'neutro';
+        fijar(n.etiqueta, dia.hoy ? 'Hoy' : dia.sigla);
+        fijar(n.hora, textoDia(dia));
+    });
+}
+
 /** Sin registro: entrada y salida quedan pendientes (nodos punteados). */
 function pintarNodosPendientes(r) {
     for (const h of Object.values(r.hitos)) mostrar(h.raiz, false);
@@ -312,23 +383,28 @@ function crearFilas() {
 
     /** @type {Record<string, ReturnType<typeof crearDato>>} */
     const filas = {};
-    for (const [id, rotulo] of [['entrada', 'Entrada'], ['salida', 'Salida estimada'], ['conBanco', 'Salida con banco'], ['fuera', 'Tiempo fuera'], ['balance', 'Faltan'], ['banco', 'Banco de horas'], ['estado', 'Estado'], ['nota', 'Nota']]) {
+    const nueva = (id, rotulo) => {
         const f = crearDato(rotulo, 'est-fila');
         f.etiqueta.className = 'est-fila-etiqueta';
         f.valor.className = 'est-fila-valor';
         raiz.append(f.raiz);
         filas[id] = f;
-    }
-    return { raiz, cabecera, etiqueta, emoji, texto, duracion, filas };
+        return f;
+    };
+    for (const [id, rotulo] of [['entrada', 'Entrada'], ['salida', 'Salida estimada'], ['conBanco', 'Salida con banco'], ['fuera', 'Tiempo fuera']]) nueva(id, rotulo);
+    const dias = Array.from({ length: 7 }, (_, i) => nueva(`dia${i}`, ''));
+    for (const [id, rotulo] of [['balance', 'Faltan'], ['banco', 'Banco de horas'], ['estado', 'Estado'], ['nota', 'Nota']]) nueva(id, rotulo);
+    return { raiz, cabecera, etiqueta, emoji, texto, duracion, filas, dias };
 }
 
 function pintarFilas(r, d) {
     r.raiz.dataset.tipo = d.tipo;
     const f = r.filas;
     for (const fila of Object.values(f)) mostrar(fila.raiz, false);
-    mostrar(r.duracion.raiz, d.tipo === 'registro');
-    mostrar(r.emoji, d.tipo !== 'registro');
-    mostrar(r.texto, d.tipo !== 'registro');
+    const conTotal = d.tipo === 'registro' || d.tipo === 'semana';
+    mostrar(r.duracion.raiz, conTotal);
+    mostrar(r.emoji, d.tipo === 'especial');
+    mostrar(r.texto, !conTotal);
     r.cabecera.dataset.color = d.tipo === 'especial' ? d.color : 'neutro';
     entonar(r.texto, d.tipo === 'espera' ? 'apagado' : 'neutro');
 
@@ -336,7 +412,6 @@ function pintarFilas(r, d) {
 
     if (d.tipo === 'registro') {
         fijar(r.etiqueta, d.cerrado ? 'Trabajaste' : 'Llevás trabajado');
-        mostrar(r.emoji, false);
         pintarDuracion(r.duracion, d.trabajado);
         fila('entrada', 'Entrada', d.entrada);
         if (d.cerrado) fila('salida', 'Salida', d.salida);
@@ -345,10 +420,19 @@ function pintarFilas(r, d) {
         if (d.tiempoFuera) fila('fuera', d.tiempoFuera.corriendo ? 'Tiempo fuera (en curso)' : 'Tiempo fuera', d.tiempoFuera.texto);
         if (d.balance) fila('balance', d.balance.etiqueta, d.balance.texto, d.balance.tono);
         if (d.banco) fila('banco', 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
+    } else if (d.tipo === 'semana') {
+        fijar(r.etiqueta, d.abierta ? 'Llevás en la semana' : 'Total de la semana');
+        pintarDuracion(r.duracion, d.trabajado);
+        d.dias.forEach((dia, i) => {
+            if (i >= r.dias.length) return;
+            fila(`dia${i}`, dia.hoy ? `${dia.sigla} (hoy)` : dia.sigla, textoDia(dia));
+            r.dias[i].valor.dataset.color = dia.color ?? 'neutro';
+            r.dias[i].etiqueta.classList.add('est-fila-etiqueta--dia');
+        });
+        if (d.balance) fila('balance', d.balance.etiqueta, d.balance.texto, d.balance.tono);
+        if (d.banco) fila('banco', 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
     } else if (d.tipo === 'espera') {
         fijar(r.etiqueta, 'Llevás trabajado');
-        fijar(r.emoji, '');
-        mostrar(r.emoji, false);
         fijar(r.texto, d.mensaje || '—');
         fila('entrada', 'Entrada', '--:--', 'apagado');
         fila('salida', 'Salida estimada', '--:--', 'apagado');
@@ -387,17 +471,59 @@ function crearTipografica() {
 
     const regla = el('div', 'est-regla-bloque');
     regla.append(fila, pie);
-    raiz.append(emoji, duracion.raiz, titulo, subtitulo, regla);
-    return { raiz, emoji, duracion, titulo, subtitulo, regla, linea, relleno, marca, izq, der, pieIzq, pieDer };
+
+    // la semana: un segmento por día (relleno según lo que cumplió) con su sigla abajo
+    const semana = el('div', 'est-regla-bloque');
+    const segmentos = el('div', 'est-segmentos');
+    const segs = Array.from({ length: 7 }, () => {
+        const seg = el('div', 'est-seg');
+        const barra = el('span', 'est-seg-barra');
+        const relleno = el('span', 'est-seg-relleno');
+        barra.append(relleno);
+        const sigla = el('span', 'est-seg-sigla');
+        seg.append(barra, sigla);
+        segmentos.append(seg);
+        return { raiz: seg, relleno, sigla };
+    });
+    const pieSemana = el('div', 'est-regla-pie');
+    const leyendaSemana = el('span', 'est-regla-leyenda');
+    pieSemana.append(leyendaSemana);
+    semana.append(segmentos, pieSemana);
+
+    raiz.append(emoji, duracion.raiz, titulo, subtitulo, regla, semana);
+    return { raiz, emoji, duracion, titulo, subtitulo, regla, linea, relleno, marca, izq, der, pieIzq, pieDer, semana, segs, leyendaSemana };
 }
 
 function pintarTipografica(r, d) {
     r.raiz.dataset.tipo = d.tipo;
-    const esRegistro = d.tipo === 'registro';
-    mostrar(r.emoji, !esRegistro);
-    mostrar(r.duracion.raiz, esRegistro);
-    mostrar(r.titulo, !esRegistro);
-    r.raiz.dataset.color = d.tipo === 'especial' ? d.color : (esRegistro ? d.color : 'neutro');
+    const conTotal = d.tipo === 'registro' || d.tipo === 'semana';
+    mostrar(r.emoji, !conTotal);
+    mostrar(r.duracion.raiz, conTotal);
+    mostrar(r.titulo, !conTotal);
+    mostrar(r.semana, d.tipo === 'semana');
+    r.raiz.dataset.color = d.tipo === 'especial' ? d.color : (conTotal ? d.color : 'neutro');
+
+    if (d.tipo === 'semana') {
+        pintarDuracion(r.duracion, d.trabajado);
+        const partes = [d.objetivoMin > 0 ? `de ${duracionCompacta(d.objetivoMin)}` : 'esta semana'];
+        if (d.balance) partes.push(d.balance.etiqueta === 'Objetivo' ? 'objetivo cumplido' : `${d.balance.etiqueta.toLowerCase()} ${d.balance.texto}`);
+        fijar(r.subtitulo, partes.join(' · '));
+        entonar(r.subtitulo, 'apagado');
+        mostrar(r.regla, false);
+        r.segs.forEach((seg, i) => {
+            const dia = d.dias[i];
+            mostrar(seg.raiz, !!dia);
+            if (!dia) return;
+            seg.raiz.dataset.color = dia.color ?? 'neutro';
+            seg.raiz.dataset.estado = dia.estado;
+            seg.raiz.classList.toggle('hoy', !!dia.hoy);
+            seg.relleno.style.setProperty('--avance', String(dia.fraccion));
+            fijar(seg.sigla, dia.sigla);
+        });
+        mostrar(r.leyendaSemana, !!d.banco);
+        if (d.banco) { fijar(r.leyendaSemana, fraseBanco(d.banco)); entonar(r.leyendaSemana, tonoBanco(d.banco)); }
+        return;
+    }
 
     if (d.tipo === 'registro') {
         pintarDuracion(r.duracion, d.trabajado);
@@ -422,6 +548,7 @@ function pintarTipografica(r, d) {
             if (pos.banco !== null) r.marca.style.setProperty('--banco', String(pos.banco));
             entonar(r.marca, tonoBanco(d.banco));
         }
+        mostrar(r.pieIzq, true);
         fijar(r.pieIzq, 'Entrada');
         const conBanco = d.salidaBanco && d.banco ? `Con banco ${d.salidaBanco} · ${d.banco.texto}` : (d.cerrado ? 'Salida' : 'Salida estimada');
         fijar(r.pieDer, conBanco);
@@ -464,12 +591,38 @@ const DISENOS = {
     tipografica: { crear: crearTipografica, pintar: pintarTipografica }
 };
 
-/** @type {{ id: string, refs: any } | null} */
+/** @type {{ id: string, nDias: number, refs: any } | null} */
 let _montado = null;
 
 /**
- * Dibuja el resumen del día con el diseño del estilo elegido. Al cambiar de estilo se reconstruye el DOM; si el estilo no es propio (o no hay
- * resumen) deja el contenedor vacío y devuelve false: la tarjeta usa entonces la barra de siempre.
+ * Arma el diseño dentro de #stats-estilo. Además de la capa visible agrega capas de medida: copias ocultas del mismo diseño dibujadas con el peor caso
+ * de cada estado (registro, sin registro, día especial y semana). Todas ocupan la misma celda de una cuadrícula, así la tarjeta mide siempre lo que el más
+ * alto de ellos y no cambia de tamaño al pasar del día a la semana ni entre estados.
+ */
+function _montar(host, id, nDias) {
+    const diseno = DISENOS[/** @type {keyof typeof DISENOS} */ (id)];
+    host.replaceChildren();
+    const capas = el('div', 'est-capas');
+    const visible = el('div', 'est-capa');
+    const refs = diseno.crear();
+    visible.append(refs.raiz);
+    capas.append(visible);
+    for (const medida of resumenesDeMedida(nDias)) {
+        const capa = el('div', 'est-capa est-capa--medida');
+        capa.setAttribute('aria-hidden', 'true');
+        capa.setAttribute('inert', '');
+        const r = diseno.crear();
+        diseno.pintar(r, medida);
+        capa.append(r.raiz);
+        capas.append(capa);
+    }
+    host.append(capas);
+    _montado = { id, nDias, refs };
+}
+
+/**
+ * Dibuja el resumen del día o de la semana con el diseño del estilo elegido. Al cambiar de estilo (o de cantidad de días de la semana) se reconstruye
+ * el DOM; si el estilo no es propio (o no hay resumen) deja el contenedor vacío y devuelve false: la tarjeta usa entonces la barra de siempre.
  * @param {any} resumen
  */
 function actualizar(resumen) {
@@ -481,13 +634,9 @@ function actualizar(resumen) {
         if (_montado) { host.replaceChildren(); _montado = null; }
         return false;
     }
-    if (!_montado || _montado.id !== id || !host.firstChild) {
-        host.replaceChildren();
-        const refs = diseno.crear();
-        host.append(refs.raiz);
-        _montado = { id, refs };
-    }
-    diseno.pintar(_montado.refs, resumen);
+    const nDias = resumen.nDias ?? 5;
+    if (!_montado || _montado.id !== id || _montado.nDias !== nDias || !host.firstChild) _montar(host, id, nDias);
+    diseno.pintar(_montado?.refs, resumen);
     return true;
 }
 

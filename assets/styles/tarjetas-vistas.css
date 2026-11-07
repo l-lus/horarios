@@ -2108,12 +2108,15 @@
 }
 
 .est-mosaico {
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-sm);
     border-radius: var(--radius-md);
     background: color-mix(in srgb, var(--tono) 12%, transparent);
 }
 
-.est-mosaico .est-dato-valor { font-size: var(--text-base); }
+.est-mosaico .est-dato-valor {
+    font-size: var(--text-sm);
+    overflow: visible;   /* con tres mosaicos en un móvil angosto el valor tiene que entrar entero */
+}
 
 .est-linea-nota {
     padding: var(--space-sm) var(--space-md);
@@ -2284,3 +2287,119 @@
 }
 
 .est-tipografica:not([data-tipo="registro"]) .est-regla-pie { justify-content: flex-start; }
+
+/* ── Alto reservado: capa visible + capas de medida ocultas en la misma celda, la cuadrícula toma el alto de la más alta ── */
+.est-capas {
+    display: grid;
+}
+
+.est-capa {
+    grid-area: 1 / 1;
+    min-width: 0;
+}
+
+.est-capa--medida {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* ── Semana ── */
+.est-dias {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-xs);
+}
+
+.est-dia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: var(--space-xs) 0;
+    border-radius: var(--radius-sm);
+    min-width: 0;
+}
+
+.est-dia.hoy {
+    background: color-mix(in srgb, var(--est-color) 16%, transparent);
+}
+
+.est-dia-sigla {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-transform: capitalize;
+}
+
+.est-dia.hoy .est-dia-sigla {
+    color: var(--text-main);
+    font-weight: var(--fw-semibold);
+}
+
+.est-dia-valor {
+    font-size: var(--text-sm);
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+    color: var(--est-color);
+    white-space: nowrap;
+}
+
+.est-dia[data-estado="futuro"] .est-dia-valor,
+.est-dia[data-estado="sin-registro"] .est-dia-valor { color: var(--text-muted); font-weight: var(--fw-normal); }
+
+/* Línea de tiempo: un nodo por día */
+.est-nodo--dia { --nodo: var(--est-color); }
+.est-nodo--dia .est-nodo-etiqueta { min-width: 2.4rem; text-transform: capitalize; }
+.est-nodo--dia.lleno .est-nodo-punto { background: var(--est-color); }
+.est-nodo--dia.hoy .est-nodo-punto { background: var(--bg-card); }
+.est-nodo--dia.hoy .est-nodo-etiqueta { color: var(--c-blue); font-weight: var(--fw-semibold); }
+.est-nodo--dia.pendiente { --nodo: var(--text-muted); }
+.est-nodo--dia .est-nodo-hora { color: var(--est-color); }
+.est-nodo--dia.pendiente .est-nodo-hora { color: var(--text-muted); font-weight: var(--fw-normal); }
+.est-nodo--dia[data-color="neutro"] .est-nodo-hora { color: var(--text-muted); font-weight: var(--fw-normal); }
+
+/* Lista de filas: el nombre del día */
+.est-fila-etiqueta--dia { text-transform: capitalize; }
+
+/* Tipográfica: un segmento por día, relleno según lo que cumplió */
+.est-segmentos {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-xs);
+}
+
+.est-seg {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-xs);
+}
+
+.est-seg-barra {
+    position: relative;
+    height: 5px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--text-muted) 25%, transparent);
+    overflow: hidden;
+}
+
+.est-seg-relleno {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: calc(var(--avance, 0) * 100%);
+    background: var(--est-color);
+    transition: width var(--dur-conteo) var(--ease-conteo), background-color var(--dur-anim) ease;
+}
+
+.est-seg-sigla {
+    font-size: var(--text-xs);
+    text-align: center;
+    color: var(--text-muted);
+    text-transform: capitalize;
+}
+
+.est-seg.hoy .est-seg-sigla {
+    color: var(--text-main);
+    font-weight: var(--fw-bold);
+}

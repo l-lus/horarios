@@ -969,7 +969,7 @@ test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (re
         ...base, regHoy: { fecha: hoy, entrada: 'VAC', salida: 'VAC' }, tiempoHoy: 0,
         tipoEspecialHoy: { emoji: '🏖️', label: 'Vacaciones', descripcion: 'Vacaciones', color: 'orange' }
     }).resumen;
-    assert.deepEqual(especial, { tipo: 'especial', emoji: '🏖️', etiqueta: 'Vacaciones', descripcion: '¡Vacaciones!', color: 'orange' });
+    assert.deepEqual(especial, { tipo: 'especial', emoji: '🏖️', etiqueta: 'Vacaciones', descripcion: '¡Vacaciones!', color: 'orange', nDias: 0 });
 
     const abierto = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: { fecha: hoy, entrada: '09:00', salida: '' }, tiempoHoy: 0.5 }).resumen;
     assert.equal(abierto.tipo, 'registro');
@@ -985,4 +985,48 @@ test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (re
     assert.equal(cerrado.salida, '17:00');
     assert.equal(cerrado.salidaEstimada, '');
     assert.deepEqual(cerrado.balance, { etiqueta: 'Objetivo', texto: 'Cumplido', tono: 'green' });
+});
+
+test('TarjetaFichajeVista: el resumen de la semana lista los días con su color y lo que falta, y todos los resúmenes traen la cantidad de días', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const { horaCorta, resumenesDeMedida } = await import('../src/core/resumen-tarjeta.js');
+    assert.equal(horaCorta(450), '7:30');
+    assert.equal(horaCorta(0), '—');
+
+    const dia = (fecha, estado, extra = {}) => ({ fecha, objetivo: 7, total: 0, activo: false, estado, ...extra });
+    const est = {
+        totalSemana: 10.5, totalSemanaProgreso: 10.5, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false,
+        hoy: '2026-10-28', bufferSemanal: -2, diasSemana: [
+            dia('2026-10-26', 'cerrado', { total: 7, cumplimiento: 'cumplido' }),
+            dia('2026-10-27', 'cerrado', { total: 3.5, cumplimiento: 'faltante' }),
+            dia('2026-10-28', 'especial', { objetivo: 0, especial: 'orange', emoji: '🏖️', etiqueta: 'Vacaciones' }),
+            dia('2026-10-29', 'futuro')
+        ]
+    };
+    const r = TarjetaFichajeVista.derivarVistaSemana(est).resumen;
+    assert.equal(r.tipo, 'semana');
+    assert.equal(r.nDias, 4);
+    assert.deepEqual(r.trabajado, { horas: 10, minutos: 30 });
+    assert.equal(r.objetivoMin, 2100);
+    assert.deepEqual(r.balance, { etiqueta: 'Faltan', texto: '24 h 30 min', tono: 'neutro' });
+    assert.equal(r.banco.texto, '−2 h');
+    assert.deepEqual(r.dias.map(d => [d.sigla, d.estado, d.color, d.totalMin, d.hoy]), [
+        ['lun', 'cerrado', 'green', 420, false],
+        ['mar', 'cerrado', 'red', 210, false],
+        ['mié', 'especial', 'orange', 0, true],
+        ['jue', 'futuro', null, 0, false]
+    ]);
+    assert.equal(r.dias[1].fraccion, 0.5);
+    assert.equal(r.dias[2].emoji, '🏖️');
+
+    // una semana sin días laborables se muestra como "sin registro" (emoji y mensaje)
+    const vacia = TarjetaFichajeVista.derivarVistaSemana({ ...est, todosEspeciales: true, diasSemana: [] }).resumen;
+    assert.equal(vacia.tipo, 'espera');
+    assert.equal(vacia.emoji, '🌞');
+
+    // los resúmenes de medida cubren todos los estados y la cantidad de días pedida
+    const medidas = resumenesDeMedida(6);
+    assert.deepEqual(medidas.map(m => m.tipo), ['registro', 'espera', 'especial', 'semana']);
+    assert.equal(medidas[3].dias.length, 6);
+    assert.ok(medidas.every(m => m.nDias === 6));
 });

@@ -56,3 +56,37 @@ export function posicionesLinea(linea) {
         banco: linea.hayBanda && linea.bufferRel !== null ? unitario(linea.bufferRel) : null
     };
 }
+
+/** Horas del día en formato corto para las celdas de la semana: "7:30"; sin tiempo, "—". @param {number} minutos */
+export function horaCorta(minutos) {
+    const { horas, minutos: m } = partesDuracion(minutos);
+    return horas === 0 && m === 0 ? '—' : `${horas}:${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * Resúmenes de ejemplo con TODOS los datos posibles (el peor caso de cada estado): los diseños los dibujan ocultos para que la tarjeta reserve el alto
+ * del más alto y no cambie de tamaño al pasar de la vista del día a la de la semana, ni entre registro, sin registro y día especial.
+ * @param {number} nDias días que muestra la semana
+ */
+export function resumenesDeMedida(nDias) {
+    const banco = { minutos: -15, positivo: false, texto: '−15 min' };
+    const balance = { etiqueta: 'Faltan', texto: '8 h 5 min', tono: 'neutro' };
+    const dias = Array.from({ length: Math.max(1, nDias) }, (_, i) => ({
+        fecha: '', sigla: 'lun', inicial: 'L', hoy: i === 0, estado: 'cerrado', color: 'green',
+        totalMin: 485, objetivoMin: 480, fraccion: 1, emoji: '🏖️', etiqueta: 'Vacaciones'
+    }));
+    return [
+        {
+            tipo: 'registro', cerrado: false, color: 'blue', progreso: 50, nDias, mensaje: '',
+            trabajadoMin: 485, trabajado: partesDuracion(485), entrada: '00:00', salida: '', salidaEstimada: '00:00', salidaBanco: '00:00',
+            linea: { cerrado: false, ahoraRel: 60, salidaRel: 480, bufferRel: 420, hayBanda: true },
+            balance, banco, tiempoFuera: { minutos: 5, corriendo: false, texto: '5 min' }
+        },
+        { tipo: 'espera', emoji: '🎒', mensaje: 'Esperando registro…', banco, nDias },
+        { tipo: 'especial', emoji: '🏖️', etiqueta: 'Vacaciones', descripcion: '¡Vacaciones!', color: 'orange', nDias },
+        {
+            tipo: 'semana', abierta: true, color: 'blue', mensaje: '', progreso: 50, nDias,
+            trabajadoMin: 2405, trabajado: partesDuracion(2405), objetivoMin: 2400, balance, banco, dias
+        }
+    ];
+}

@@ -20,6 +20,7 @@ import { _scrollHastaVisible, _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
 import { VistaPrevia } from './vista-previa.js';
+import { TarjetaEstilos } from './tarjeta-estilos.js';
 import { AyudaBuscador } from './ayuda-buscador.js';
 import { AvisoJornada } from '../services/aviso-jornada.js';
 import { DiasHabiles } from '../services/dias-habiles.js';
@@ -203,12 +204,12 @@ const _esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matc
 
 // Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
 function toggleDisposicionLinea() {
-    EstiloTarjeta.siguienteDisposicion();
+    TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteDisposicion());   // lo que se mueve en la tarjeta viaja a su lugar nuevo
     actualizarEstadoBotonHintIntegrado();
 }
 
 function toggleMosaicosLinea() {
-    EstiloTarjeta.siguienteMosaicos();
+    TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteMosaicos());
     actualizarEstadoBotonHintIntegrado();
 }
 

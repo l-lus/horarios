@@ -1998,27 +1998,25 @@
     gap: var(--space-sm);
 }
 
-/* Tarjeta ancha (PC): el aro ocupa la primera mitad y Faltan / Banco de horas empiezan justo en la mitad; el pie usa cuatro columnas iguales con el mismo espacio,
-   así la tercera ("Con banco") arranca en la misma vertical. Se mide el ancho de la tarjeta (#stats-estilo), no el de la ventana. */
-@container (min-width: 28rem) {
-    .est-anillo-principal {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: var(--space-sm);
-    }
-
-    .est-anillo-pie {
-        display: grid;
-        grid-auto-flow: row;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: var(--space-sm);
-    }
-
-    .est-pie-1 { grid-column: 1; }
-    .est-pie-2 { grid-column: 2; }
-    .est-pie-3 { grid-column: 3; }
-    .est-pie-4 { grid-column: 4; }
+/* El aro ocupa la primera mitad y Faltan / Banco de horas empiezan justo en la mitad (en el móvil y en la PC); el pie usa cuatro columnas iguales con el mismo espacio,
+   así la tercera ("Con banco") arranca en la misma vertical. */
+.est-anillo-principal {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-sm);
 }
+
+.est-anillo-pie {
+    display: grid;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-sm);
+}
+
+.est-pie-1 { grid-column: 1; }
+.est-pie-2 { grid-column: 2; }
+.est-pie-3 { grid-column: 3; }
+.est-pie-4 { grid-column: 4; }
 
 /* ── C · Línea de tiempo vertical ── */
 .est-linea,
@@ -2034,18 +2032,19 @@
 @container (min-width: 28rem) {
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea {
         display: grid;
-        /* dos mitades iguales con el mismo espacio entre ellas que los mosaicos de abajo: el tiempo y la línea quedan alineados con "Faltan" y "Banco de horas" */
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        /* el tiempo ocupa el 40 % y la línea el 60 %, los dos pegados arriba */
+        grid-template-columns: minmax(0, 4fr) minmax(0, 6fr);
         grid-template-areas: "cabecera linea" "pie pie";
-        align-items: center;
+        align-items: start;
         gap: var(--space-md) var(--space-sm);
     }
 
     html[data-disposicion-linea="derecha"] .est-linea {
+        grid-template-columns: minmax(0, 6fr) minmax(0, 4fr);
         grid-template-areas: "linea cabecera" "pie pie";
     }
 
-    /* el mismo margen interno que el texto de los mosaicos, para que el texto de arriba y el de abajo arranquen en la misma vertical */
+    /* el mismo margen interno que el texto de los mosaicos, para que el texto de arriba y el de abajo arranquen en la misma vertical del borde de la tarjeta */
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea:not(.sin-cuerpo) :is(.est-linea-cabecera, .est-linea-cuerpo) {
         padding-inline: var(--space-sm);
     }

@@ -93,8 +93,8 @@ function _refrescar(animar = true) {
     const visibles = filas.map(f => (f.def.visible ? f.def.visible() : true));
     const aplicar = () => {
         filas.forEach((f, i) => {
-            const texto = f.def.valor();
-            if (f.valor.textContent !== texto) f.valor.textContent = texto;
+            // el valor cambia con el mismo desplazamiento vertical que los valores de Ajustes (la primera vez, sin animar)
+            Animaciones._animarValor(f.valor, f.def.valor(), animar ? 1 : 0);
             if (f.envoltorio.classList.contains('expanded') !== visibles[i]) setColapsable(f.envoltorio, visibles[i], { animar });
         });
     };

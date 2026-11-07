@@ -1,4 +1,6 @@
 import { $ } from '../core/dom.js';
+import { uiAnimarReubicacion } from './arrastre.js';
+import { Animaciones } from './animaciones.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 import { duracionCompacta, hitosOrdenados, horaCorta, posicionesLinea, resumenesDeMedida } from '../core/resumen-tarjeta.js';
 
@@ -712,4 +714,15 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0 } = {}) {
     return true;
 }
 
-export const TarjetaEstilos = { actualizar };
+/**
+ * Aplica un cambio de disposición de la línea de tiempo (`cambiar`, que solo cambia un atributo de <html>) animando lo que se mueve: el tiempo trabajado, la línea,
+ * los mosaicos y la nota viajan desde su lugar anterior al nuevo (la misma técnica con que se mueven las tarjetas al reubicarlas) y la tarjeta acompaña el cambio de alto.
+ * @param {() => void} cambiar
+ */
+function reubicar(cambiar) {
+    const host = $('stats-estilo');
+    const obtener = () => host ? [.../** @type {NodeListOf<HTMLElement>} */ (host.querySelectorAll('.est-linea-cabecera, .est-linea-cuerpo, .est-mosaicos, .est-linea-nota'))] : [];
+    Animaciones._animarAlturaCambio($('stats-card'), () => uiAnimarReubicacion(obtener, (/** @type {HTMLElement} */ el) => el.className.split(' ')[0], cambiar));
+}
+
+export const TarjetaEstilos = { actualizar, reubicar };

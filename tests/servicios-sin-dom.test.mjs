@@ -673,3 +673,35 @@ test('EstadoApp.horasTranscurridas: lo corrido hasta ahora, sin la pausa en curs
     assert.equal(EstadoApp.horasTranscurridas({ entrada: '08:00' }, 30), 1.5);
     assert.equal(EstadoApp.horasTranscurridas({ entrada: '09:59' }, 30), 0);
 });
+
+test('EstadoApp._guardarConCicloSiHoy guarda el perfil antes de la animación de cambio de vista, y si no pudo guardar no cambia de vista', async () => {
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    GestorPerfiles.inicializar();
+    const llamadas = [];
+    let render = null;
+    EstadoApp.configurarNotificaciones({
+        forzarVista: (vista, fn) => { llamadas.push(`forzarVista:${vista}`); render = fn; },
+        prepararMostrarFaseAlRenderizar: (fase) => llamadas.push(`fase:${fase}`),
+        actualizarUI: () => llamadas.push('actualizarUI'),
+        mostrarToast: () => llamadas.push('toast'),
+    });
+    EstadoApp.setVistaActual('semana');
+    const guardados = [];
+    EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: () => { guardados.push(llamadas.length); return true; } });
+    try {
+        await EstadoApp._guardarConCicloSiHoy('id', true, 'entrada');
+        assert.deepEqual(guardados, [0], 'se guarda antes de empezar a cambiar de vista');
+        assert.deepEqual(llamadas, ['forzarVista:diaria']);
+        render();
+        assert.deepEqual(llamadas, ['forzarVista:diaria', 'fase:entrada', 'actualizarUI']);
+
+        llamadas.length = 0;
+        EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: () => false });
+        assert.equal(await EstadoApp._guardarConCicloSiHoy('id', true, 'entrada'), false);
+        assert.deepEqual(llamadas, ['toast'], 'sin guardar no hay cambio de vista ni render');
+    } finally {
+        EstadoApp.setVistaActual('diaria');
+        EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: GestorPerfiles.guardarDatosPerfilActual });
+    }
+});

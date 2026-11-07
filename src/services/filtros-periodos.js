@@ -2,7 +2,7 @@ import { TOAST_MS, MS_DIA } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
-import { GestorHistorial } from './gestor-historial.js';
+import { Cambios } from './cambios.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { EstadoApp } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
@@ -93,8 +93,7 @@ async function guardarEdicionGrupo({ tipo, desde, hasta }) {
     EstadoApp._setRegistros(filtrados);
     EstadoApp.ordenarRegistros();
     EstadoApp.sincronizarPushHoy();
-    GestorHistorial.saveState(EstadoApp.registros(), `editar grupo (${nuevosRegistros.length} día${TiempoUtils.pluralizar(nuevosRegistros.length)})`);
-    const saved = await EstadoApp.guardarYActualizar(nuevosRegistros.map(r => r.id));
+    const saved = await Cambios.confirmar(`editar grupo (${nuevosRegistros.length} día${TiempoUtils.pluralizar(nuevosRegistros.length)})`, { ids: nuevosRegistros.map(r => r.id) });
     if (saved) { notify.mostrarToast('Grupo actualizado', 'success'); notify.cerrarEdicionGrupo(); }
 }
 
@@ -109,8 +108,7 @@ async function eliminarGrupoActual() {
     const idsAEliminar = grupoEnEdicion.registros.map(r => r.id);
     EstadoApp._setRegistros(EstadoApp.registros().filter(r => !idsAEliminar.includes(r.id)));
     EstadoApp.sincronizarPushHoy();
-    GestorHistorial.saveState(EstadoApp.registros(), `eliminar grupo (${idsAEliminar.length} registro${TiempoUtils.pluralizar(idsAEliminar.length)})`);
-    const saved = await EstadoApp.guardarYActualizar();
+    const saved = await Cambios.confirmar(`eliminar grupo (${idsAEliminar.length} registro${TiempoUtils.pluralizar(idsAEliminar.length)})`);
     if (saved) { notify.mostrarToast('Grupo eliminado', 'success'); notify.cerrarEdicionGrupo(); }
 }
 
@@ -137,8 +135,7 @@ async function registrarDiaEspecial(fecha, tipo) {
 
     EstadoApp.ordenarRegistros();
     const esHoy = fecha === TiempoUtils.obtenerFechaHoy();
-    GestorHistorial.saveState(EstadoApp.registros(), `agregar ${tipoConfig.label} (${TiempoUtils.fechaCorta(fecha)})`);
-    const saved = await EstadoApp._guardarConCicloSiHoy(nuevo.id, esHoy);
+    const saved = await Cambios.confirmarEnTarjeta(`agregar ${tipoConfig.label} (${TiempoUtils.fechaCorta(fecha)})`, nuevo.id, esHoy);
     if (saved) {
         notify.avisarFichaje(`Registro agregado como ${tipoTexto}`, 'success');
     } else {
@@ -290,8 +287,7 @@ async function registrarVacacionesDirecto(desde, hasta, tipo) {
 
     EstadoApp.ordenarRegistros();
     const incluyeHoy = nuevosRegistros.includes(TiempoUtils.obtenerFechaHoy());
-    GestorHistorial.saveState(registros, `agregar ${tipoConfig.label} (${nuevosRegistros.length} día${TiempoUtils.pluralizar(nuevosRegistros.length)})`);
-    const saved = await EstadoApp._guardarConCicloSiHoy(idsNuevosParaAnimar, incluyeHoy);
+    const saved = await Cambios.confirmarEnTarjeta(`agregar ${tipoConfig.label} (${nuevosRegistros.length} día${TiempoUtils.pluralizar(nuevosRegistros.length)})`, idsNuevosParaAnimar, incluyeHoy);
     if (saved) {
         notify.avisarFichaje(nuevosRegistros.length === 1 ? '1 día registrado' : `${nuevosRegistros.length} días registrados`, 'success');
     } else {
@@ -319,8 +315,7 @@ async function borrarPeriodoDirecto(desde, hasta) {
 
     EstadoApp._setRegistros(registros.filter(r => !registrosAEliminar.includes(r)));
     EstadoApp.sincronizarPushHoy();
-    GestorHistorial.saveState(EstadoApp.registros(), `eliminar período (${registrosAEliminar.length} registro${TiempoUtils.pluralizar(registrosAEliminar.length)})`);
-    const saved = await EstadoApp.guardarYActualizar();
+    const saved = await Cambios.confirmar(`eliminar período (${registrosAEliminar.length} registro${TiempoUtils.pluralizar(registrosAEliminar.length)})`);
     if (saved) {
         notify.avisarFichaje(registrosAEliminar.length === 1 ? '1 registro eliminado' : `${registrosAEliminar.length} registros eliminados`, 'success');
     } else {

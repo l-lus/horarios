@@ -4,7 +4,7 @@ import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
 import { FiltrosYPeriodos } from './filtros-periodos.js';
-import { GestorHistorial } from './gestor-historial.js';
+import { Cambios } from './cambios.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { AvisoJornada } from './aviso-jornada.js';
 import { TiempoFuera } from './tiempo-fuera.js';
@@ -15,7 +15,7 @@ import { TiempoFuera } from './tiempo-fuera.js';
 // Abrir, guardar (con validaciones, salida temprana y referencia de compensatorio), eliminar y referencia automática.
 // Lee y escribe el formulario solo por el puerto notify.formularioEdicion (lo implementa ui/formularios.js).
 const {
-    ordenarRegistros, registroPorId, _fechaFuturaInvalida, calcularHoras, _aplicarCalculoHoras, guardarYActualizar
+    ordenarRegistros, registroPorId, _fechaFuturaInvalida, calcularHoras, _aplicarCalculoHoras
 } = EstadoApp;
 const {
     _esObjetivoValido, objetivoGuardado, calcularAsignacionesCompensatorio, _buscarAsignacionCompensatorio, objetivoEdicionEnVivo
@@ -39,9 +39,7 @@ async function eliminarRegistroActual() {
 
         EstadoApp._setRegistros(EstadoApp.registros().filter(r => r.id !== editandoId));
         AvisoJornada.sincronizarHoy();
-        GestorHistorial.saveState(EstadoApp.registros(), `eliminar registro${registroABorrar ? ` (${TiempoUtils.fechaCorta(registroABorrar.fecha)})` : ''}`);
-
-        const saved = await guardarYActualizar();
+        const saved = await Cambios.confirmar(`eliminar registro${registroABorrar ? ` (${TiempoUtils.fechaCorta(registroABorrar.fecha)})` : ''}`);
         notify.formularioEdicion.liberarEliminar(btnEliminar);
 
         if (saved) {
@@ -159,8 +157,7 @@ async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {
     }
     EstadoApp._setRegistros(EstadoApp.registros().filter(r => r.id !== editandoId));
     AvisoJornada.sincronizarHoy();
-    GestorHistorial.saveState(EstadoApp.registros(), `eliminar registro vacío${reg ? ` (${TiempoUtils.fechaCorta(reg.fecha)})` : ''}`);
-    const saved = await guardarYActualizar();
+    const saved = await Cambios.confirmar(`eliminar registro vacío${reg ? ` (${TiempoUtils.fechaCorta(reg.fecha)})` : ''}`);
     notify.restaurarBotonGuardarEdicion(btnGuardar);
     if (saved) { notify.mostrarToast('Registro eliminado (vacío)', 'info'); notify.cerrarEdicion(); }
 }
@@ -251,8 +248,7 @@ async function guardarEdicion() {
 
     const creditoFinal = _aplicarEdicion(r, nuevo, credito);
     ordenarRegistros();
-    GestorHistorial.saveState(EstadoApp.registros(), `editar registro (${TiempoUtils.fechaCorta(nuevo.fecha)})`);
-    const saved = await guardarYActualizar(r.id, true);
+    const saved = await Cambios.confirmar(`editar registro (${TiempoUtils.fechaCorta(nuevo.fecha)})`, { ids: r.id, animarCard: true });
     notify.restaurarBotonGuardarEdicion(btnGuardar);
     if (saved) {
         AvisoJornada.sincronizarHoy();

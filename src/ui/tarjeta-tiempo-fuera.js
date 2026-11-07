@@ -1,7 +1,7 @@
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { TiempoFuera } from '../services/tiempo-fuera.js';
-import { GestorHistorial } from '../services/gestor-historial.js';
+import { Cambios } from '../services/cambios.js';
 import { Animaciones } from './animaciones.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { EstadoApp } from '../services/estado-app.js';
@@ -138,8 +138,7 @@ async function _detenerTimerBreak(registroHoy) {
 
     const minutos = TiempoFuera.volcarEnRegistro(registroHoy);
     EstadoApp._aplicarCalculoHoras(registroHoy, registroHoy.entrada, registroHoy.salida, registroHoy.tiempoFuera);
-    GestorHistorial.saveState(EstadoApp.registros(), `tiempo fuera +${minutos}min (${TiempoUtils.fechaCorta(registroHoy.fecha)})`);
-    await EstadoApp.guardarYActualizar(registroHoy.id);
+    await Cambios.confirmar(`tiempo fuera +${minutos}min (${TiempoUtils.fechaCorta(registroHoy.fecha)})`, { ids: registroHoy.id });
     AvisoJornada.sincronizarHoy();
     const ignorarTF = EstadoApp.getIgnorarTiempoFuera();
     const diaTexto = registroHoy.fecha === TiempoUtils.obtenerFechaHoy() ? 'hoy' : 'ayer';

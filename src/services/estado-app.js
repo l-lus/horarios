@@ -232,35 +232,37 @@ function _construirRegistro(fecha, entrada, salida) {
     };
 }
 
-/** @param {any} [idNuevo] */
-async function guardarYActualizar(idNuevo = null, animarCard = false) {
-    let saveSuccessful = false;
+function _persistir() {
+    let guardado = false;
     try {
-        if (typeof _perfilHooks.guardarDatosPerfilActual === 'function') {
-            saveSuccessful = _perfilHooks.guardarDatosPerfilActual();
-        } else {
-            saveSuccessful = true;
-        }
+        guardado = typeof _perfilHooks.guardarDatosPerfilActual === 'function' ? _perfilHooks.guardarDatosPerfilActual() : true;
     } catch (e) {
         console.error('Error crítico al guardar:', e);
-        saveSuccessful = false;
     }
-    if (saveSuccessful) { notify.actualizarUI(idNuevo, false, animarCard); }
-    else { notify.mostrarToast('Error al guardar. Almacenamiento lleno o bloqueado.', 'error'); }
-    return saveSuccessful;
+    if (!guardado) notify.mostrarToast('Error al guardar. Almacenamiento lleno o bloqueado.', 'error');
+    return guardado;
 }
 
-/** @param {any} [fase] */
+/** @param {any} [idNuevo] */
+async function guardarYActualizar(idNuevo = null, animarCard = false) {
+    const guardado = _persistir();
+    if (guardado) notify.actualizarUI(idNuevo, false, animarCard);
+    return guardado;
+}
+
+/**
+ * Se guarda antes de tocar la vista: el cambio a la vista diaria se anima, y cerrar la app en ese momento no debe perder el dato.
+ * @param {any} [fase]
+ */
 async function _guardarConCicloSiHoy(idOrIds, esHoy, fase = null) {
-    const ejecutar = async () => {
+    if (!_persistir()) return false;
+    const refrescar = () => {
         if (esHoy && fase) notify.prepararMostrarFaseAlRenderizar(fase);
-        const ok = await guardarYActualizar(idOrIds);
-        if (!ok && esHoy && fase) notify.prepararMostrarFaseAlRenderizar(null);
-        return ok;
+        notify.actualizarUI(idOrIds);
     };
-    return esHoy && vistaActual === 'semana'
-        ? notify.forzarVista('diaria', ejecutar)
-        : ejecutar();
+    if (esHoy && vistaActual === 'semana') await notify.forzarVista('diaria', refrescar);
+    else refrescar();
+    return true;
 }
 
 export const EstadoApp = {

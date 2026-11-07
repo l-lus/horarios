@@ -3,7 +3,7 @@ import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EventosApp } from '../core/eventos.js';
-import { GestorHistorial } from './gestor-historial.js';
+import { Cambios } from './cambios.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp as D } from './estado-app.js';
@@ -435,8 +435,7 @@ async function _guardarRegistrosImportados(registros, mensajeExito, descripcion,
     D.ordenarRegistros();
     Compensatorios.migrarObjetivoHorasFaltante();
     D.sincronizarPushHoy();
-    GestorHistorial.saveState(D.registros(), descripcion);
-    if (!(await D.guardarYActualizar())) return false;
+    if (!(await Cambios.confirmar(descripcion))) return false;
     const notify = D._notify();
     notify.mostrarToast(mensajeExito, 'success');
     if (cerrarImportar) notify.cerrarImportar();

@@ -12,6 +12,7 @@ import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { AvisoJornada } from './aviso-jornada.js';
 import { TiempoFuera } from './tiempo-fuera.js';
+import { Cambios } from './cambios.js';
 
 // ====================================================================
 // DATA MANAGEMENT MODULE
@@ -20,7 +21,7 @@ const {
     ordenarRegistros, registroPorFecha, existeRegistroEnFecha,
     _hayEspacioParaRegistros, _fechaFuturaInvalida,
     _aplicarCalculoHoras, _recalcularHorasSiValido, _construirRegistro,
-    guardarYActualizar, _guardarConCicloSiHoy
+    guardarYActualizar
 } = EstadoApp;
 
 const { _esObjetivoValido, diasHabilesEnFecha, objetivoDeRegistro, _recalcularCreditoRegistro } = Compensatorios;
@@ -143,9 +144,8 @@ async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     _aplicarCalculoHoras(reg, reg.entrada, s, reg.tiempoFuera || null);
 
     const esHoy = reg.fecha === hoy;
-    GestorHistorial.saveState(EstadoApp.registros(), `salida ${s} (${TiempoUtils.fechaCorta(reg.fecha)})`);
     if (eraAyerAbierto) notify.retenerRegistroAyer(reg.id);
-    const saved = await _guardarConCicloSiHoy(reg.id, esHoy || eraAyerAbierto, 'salida');
+    const saved = await Cambios.confirmarEnTarjeta(`salida ${s} (${TiempoUtils.fechaCorta(reg.fecha)})`, reg.id, esHoy || eraAyerAbierto, 'salida');
     if (!saved) {
         if (eraAyerAbierto) notify.retenerRegistroAyer(null);
         notify.avisarFichaje(null, 'error', { btn });
@@ -175,8 +175,7 @@ async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
     ordenarRegistros();
     const esHoy = e && f === TiempoUtils.obtenerFechaHoy();
     const detalleAccion = e && s ? `entrada ${e} y salida ${s}` : e ? `entrada ${e}` : `salida ${s}`;
-    GestorHistorial.saveState(registros, `${detalleAccion} (${TiempoUtils.fechaCorta(f)})`);
-    const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
+    const saved = await Cambios.confirmarEnTarjeta(`${detalleAccion} (${TiempoUtils.fechaCorta(f)})`, nuevo.id, esHoy, 'entrada');
     if (!saved) {
         notify.avisarFichaje(null, 'error', { btn });
         return;
@@ -268,8 +267,7 @@ async function borrarTodoHistorial() {
     const perfil = GestorPerfiles.obtenerDatosPerfil();
     if (perfil) GestorPerfiles.CAMPOS_SYNC_GIST.forEach(k => delete perfil[k]);
 
-    GestorHistorial.saveState(registros, `restablecer perfil (${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)})`);
-    if (await guardarYActualizar()) Recarga.solicitar();
+    if (await Cambios.confirmar(`restablecer perfil (${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)})`)) Recarga.solicitar();
 }
 
 function _aplicarEstadoHistorial(resultado, mensaje) {

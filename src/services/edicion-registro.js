@@ -1,4 +1,4 @@
-import { MINUTOS_DIA, MARGEN_HORAS } from '../core/constantes.js';
+import { MINUTOS_DIA } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp } from './estado-app.js';
@@ -15,7 +15,7 @@ import { TiempoFuera } from './tiempo-fuera.js';
 // Abrir, guardar (con validaciones, salida temprana y referencia de compensatorio), eliminar y referencia automática.
 // Lee y escribe el formulario solo por el puerto notify.formularioEdicion (lo implementa ui/formularios.js).
 const {
-    ordenarRegistros, registroPorId, _fechaFuturaInvalida, calcularHoras, _aplicarCalculoHoras
+    ordenarRegistros, registroPorId, _fechaFuturaInvalida, _aplicarCalculoHoras
 } = EstadoApp;
 const {
     _esObjetivoValido, objetivoGuardado, calcularAsignacionesCompensatorio, _buscarAsignacionCompensatorio, objetivoEdicionEnVivo
@@ -139,12 +139,7 @@ function _validarCamposEdicion(f, e, s, tf) {
 
 function _calcularCredito(e, s, tf, objetivo = EstadoApp.horasDiarias()) {
     if (!EstadoApp._notify().formularioEdicion.leer().creditoActivo) return null;
-    const calc = calcularHoras(e, s, tf, null);
-    if (!calc) return null;
-    const diferencia = objetivo - calc.total;
-    if (diferencia <= MARGEN_HORAS) return null;
-    const { horas: h, minutos: m } = TiempoUtils.descomponerHorasDecimales(diferencia);
-    return TiempoUtils.minutosAHora(h * 60 + m);
+    return Compensatorios.creditoPara(e, s, tf, objetivo);
 }
 
 async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {

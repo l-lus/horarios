@@ -448,7 +448,7 @@ async function init() {
     actualizarBotonesHistorico();
 
     const hoy = TiempoUtils.obtenerFechaHoy();
-    const hoyEsLaborable = TiempoUtils.esFechaHabil(hoy, Compensatorios.diasHabilesEnFecha(hoy));
+    const hoyEsLaborable = Compensatorios.esDiaLaboral(hoy);
     if (EstadoApp.vistaActual() === 'semana' && hoyEsLaborable) {
         setTimerAutoVista(setTimeout(() => {
             setTimerAutoVista(null);

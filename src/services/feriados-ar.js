@@ -20,9 +20,7 @@ function _cargarProcesados() {
 function _marcarProcesado(fecha) {
     const set = _cargarProcesados();
     set.add(fecha);
-    const limite = new Date();
-    limite.setDate(limite.getDate() - 60);
-    const limiteStr = TiempoUtils.formatearFechaLocal(limite);
+    const limiteStr = TiempoUtils.sumarDias(TiempoUtils.obtenerFechaHoy(), -60);
     set.forEach(f => { if (f < limiteStr) set.delete(f); });
     Almacenamiento.setItem(SK_PROCESADOS, JSON.stringify([...set]), true);
 }

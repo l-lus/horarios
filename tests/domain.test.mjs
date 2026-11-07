@@ -791,3 +791,31 @@ test('TiempoUtils.msHastaProximoMinuto: lo que falta para el próximo cambio de 
     assert.equal(ms(59999), 1);
     assert.equal(ms(60000), 60000);
 });
+
+test('TiempoUtils.sumarDias: cruza meses y años, en ambos sentidos', () => {
+    const { sumarDias } = TiempoUtils;
+    assert.equal(sumarDias('2026-10-31', 1), '2026-11-01');
+    assert.equal(sumarDias('2026-01-01', -1), '2025-12-31');
+    assert.equal(sumarDias('2028-02-28', 1), '2028-02-29');
+    assert.equal(sumarDias('2026-10-26', 6), '2026-11-01');
+    assert.equal(sumarDias('2026-10-26', 0), '2026-10-26');
+});
+
+test('Compensatorios.esDiaLaboral: usa el tramo de días hábiles que rige en esa fecha', () => {
+    EstadoApp._setHistorialDiasHabilesRaw([{ desde: '0001-01-01', dias: [1, 2, 3, 4, 5] }, { desde: '2026-06-01', dias: [6] }]);
+    assert.equal(Compensatorios.esDiaLaboral('2026-05-25'), true, 'lunes en el primer tramo');
+    assert.equal(Compensatorios.esDiaLaboral('2026-05-30'), false, 'sábado en el primer tramo');
+    assert.equal(Compensatorios.esDiaLaboral('2026-06-01'), false, 'lunes en el segundo tramo');
+    assert.equal(Compensatorios.esDiaLaboral('2026-06-06'), true, 'sábado en el segundo tramo');
+    EstadoApp._setHistorialDiasHabilesRaw([]);
+});
+
+test('Compensatorios.creditoPara: lo que falta para el objetivo, sin perder minutos por redondeo', () => {
+    EstadoApp.setIgnorarTiempoFuera(false);
+    assert.equal(Compensatorios.creditoPara('08:00', '12:00', null, 7), '03:00');
+    assert.equal(Compensatorios.creditoPara('08:00', '12:00', '00:30', 7), '03:30');
+    assert.equal(Compensatorios.creditoPara('08:00', '15:00', null, 7), null, 'cumplió');
+    assert.equal(Compensatorios.creditoPara('08:00', '14:59', null, 7), '00:01', 'un minuto');
+    assert.equal(Compensatorios.creditoPara('08:00', '12:00', null, 7.125), '03:08', 'objetivo con decimales');
+    assert.equal(Compensatorios.creditoPara('08:00', null, null, 7), null, 'sin salida');
+});

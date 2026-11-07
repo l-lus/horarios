@@ -304,10 +304,7 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
         let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
         if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + Compensatorios.objetivoDeRegistro(r), 0);
 
-        const fechaLunes = TiempoUtils.parsearFechaLocal(lunesOriginal);
-        const fechaDomingo = new Date(fechaLunes);
-        fechaDomingo.setDate(fechaLunes.getDate() + 6);
-        const domingo = TiempoUtils.formatearFechaLocal(fechaDomingo);
+        const domingo = TiempoUtils.sumarDias(lunesOriginal, 6);
 
         let lunes = lunesOriginal, fechaFin = domingo, esIncompleta = false, continuaEn = '';
 

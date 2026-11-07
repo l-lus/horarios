@@ -212,10 +212,15 @@ function esFechaHabil(fecha, diasHabiles) {
     return diasHabiles.includes(parsearFechaLocal(fecha).getDay());
 }
 
-function esDiaAnterior(fecha, anterior) {
+/** Fecha ISO corrida `dias` días (negativo: hacia atrás). */
+function sumarDias(fecha, dias) {
     const d = parsearFechaLocal(fecha);
-    d.setDate(d.getDate() - 1);
-    return formatearFechaLocal(d) === anterior;
+    d.setDate(d.getDate() + dias);
+    return formatearFechaLocal(d);
+}
+
+function esDiaAnterior(fecha, anterior) {
+    return sumarDias(fecha, -1) === anterior;
 }
 
 function agruparMesesPorAnio(mesesOrdenados) {
@@ -237,7 +242,7 @@ function nombreMesCapitalizado(mesAnio) {
 function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 export const TiempoUtils = {
-    esFechaHabil, esDiaAnterior, agruparMesesPorAnio, nombreMesCapitalizado,
+    esFechaHabil, sumarDias, esDiaAnterior, agruparMesesPorAnio, nombreMesCapitalizado,
     validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
     obtenerFechaHoy, obtenerHoraActual, msHastaProximoMinuto, normalizarMinutosDia, minutosAHora, fechaLocalISOFull,
     horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,

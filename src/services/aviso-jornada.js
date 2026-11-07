@@ -12,7 +12,7 @@ import { TiposRegistro } from './tipos-registro.js';
 // fuera y el saldo semanal. RecordatorioPush habla con el Worker; este módulo decide cuándo y con qué datos.
 // filtros-periodos e importar-exportar no pueden importarlo (ciclo): lo llaman por EstadoApp.sincronizarPushHoy().
 const { existeRegistroEnFecha, registroPorFecha } = EstadoApp;
-const { diasHabilesEnFecha, objetivoDeRegistro, calcularAsignacionesCompensatorio } = Compensatorios;
+const { objetivoDeRegistro, calcularAsignacionesCompensatorio } = Compensatorios;
 const { detectarAyerAbierto, calcularBufferPeriodo } = FiltrosYPeriodos;
 
 /**
@@ -27,7 +27,7 @@ function _registroAbiertoParaPush(hoy) {
         if (ayerAbierto) candidato = regAyer;
     }
     if (!candidato) return null;
-    return TiempoUtils.esFechaHabil(candidato.fecha, diasHabilesEnFecha(candidato.fecha)) ? candidato : null;
+    return Compensatorios.esDiaLaboral(candidato.fecha) ? candidato : null;
 }
 
 function _sincronizarPushHoy() {
@@ -58,14 +58,12 @@ function _ultimoDiaHabilEfectivoSemana() {
     const { fin } = TiempoUtils.obtenerSemanaRangoActual();
     let fecha = fin;
     for (let i = 0; i < 7; i++) {
-        if (TiempoUtils.esFechaHabil(fecha, diasHabilesEnFecha(fecha))) {
+        if (Compensatorios.esDiaLaboral(fecha)) {
             const reg = registroPorFecha(fecha);
             const esEspecial = reg && TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida);
             if (!esEspecial) return fecha;
         }
-        const d = TiempoUtils.parsearFechaLocal(fecha);
-        d.setDate(d.getDate() - 1);
-        fecha = TiempoUtils.formatearFechaLocal(d);
+        fecha = TiempoUtils.sumarDias(fecha, -1);
     }
     return null;
 }

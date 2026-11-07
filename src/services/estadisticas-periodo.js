@@ -168,10 +168,7 @@ function calcularEstadisticasAnio(anio, registrosPeriodo = null) {
 
 function calcularEstadisticasSemana(lunesISO) {
     if (!lunesISO) return calcularEstadisticasRango([], { regularidadPorMes: false });
-    const lunes = new Date(lunesISO + 'T00:00:00');
-    const domingo = new Date(lunes);
-    domingo.setDate(lunes.getDate() + 6);
-    const hasta = TiempoUtils.formatearFechaLocal(domingo);
+    const hasta = TiempoUtils.sumarDias(lunesISO, 6);
     const registros = EstadoApp.registros().filter(r => r.fecha >= lunesISO && r.fecha <= hasta);
     return calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: lunesISO, hasta });
 }

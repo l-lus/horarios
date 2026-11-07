@@ -180,7 +180,7 @@ async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
         notify.avisarFichaje(null, 'error', { btn });
         return;
     }
-    if (esHoy && !s && TiempoUtils.esFechaHabil(f, diasHabilesEnFecha(f))) {
+    if (esHoy && !s && Compensatorios.esDiaLaboral(f)) {
         const bufferSemanal = AvisoJornada.bufferSemanalPara(f);
         RecordatorioPush.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
     }

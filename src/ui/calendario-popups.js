@@ -213,9 +213,7 @@ function _filaSemana(r, asignaciones) {
 }
 
 function _htmlPopupSemana(lunes) {
-    const d = TiempoUtils.parsearFechaLocal(lunes);
-    d.setDate(d.getDate() + 6);
-    const domingo = TiempoUtils.formatearFechaLocal(d);
+    const domingo = TiempoUtils.sumarDias(lunes, 6);
     const asignaciones = Compensatorios.calcularAsignacionesCompensatorio();
     const registros = EstadoApp.registros()
         .filter(r => r.fecha >= lunes && r.fecha <= domingo)

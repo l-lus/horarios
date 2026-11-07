@@ -25,7 +25,7 @@ function _estadoDiasHabiles(diasHabiles) {
 function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
     if (diasHabiles.length === 0 || horasDiarias <= 0) return false;
     const fechasLaborables = TiempoUtils.generarRangoFechas(ini, fn)
-        .filter(f => Compensatorios.diasHabilesEnFecha(f).includes(TiempoUtils.parsearFechaLocal(f).getDay()));
+        .filter(f => Compensatorios.esDiaLaboral(f));
     if (fechasLaborables.length === 0) return false;
     return fechasLaborables.every(fecha => {
         const r = registros.find(x => x.fecha === fecha);
@@ -54,7 +54,7 @@ function _totalesSemana(registrosSemana, regActivo, tiempoHoy, asignaciones) {
 function _objetivoSemana(ini, fn, porFecha, horasDiarias) {
     let objetivoSemana = 0;
     for (const isoDate of TiempoUtils.generarRangoFechas(ini, fn)) {
-        if (!Compensatorios.diasHabilesEnFecha(isoDate).includes(TiempoUtils.parsearFechaLocal(isoDate).getDay())) continue;
+        if (!Compensatorios.esDiaLaboral(isoDate)) continue;
         const rDia = porFecha.get(isoDate);
         if (!rDia) { objetivoSemana += horasDiarias; continue; }
         const tipoDia = TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida);
@@ -73,7 +73,7 @@ function _franjasSemana({ ini, fn, hoy, horasDiarias, porFecha, regActivo, tiemp
     const diasSemana = [];
     for (const isoDate of TiempoUtils.generarRangoFechas(ini, fn)) {
         const rDia = porFecha.get(isoDate) ?? null;
-        const esLaborable = Compensatorios.diasHabilesEnFecha(isoDate).includes(TiempoUtils.parsearFechaLocal(isoDate).getDay());
+        const esLaborable = Compensatorios.esDiaLaboral(isoDate);
         if (!esLaborable && !rDia) continue;
         const tipo = rDia ? TiposRegistro.obtenerTipoPorCodigo(rDia.entrada, rDia.salida) : null;
         const especial = tipo && tipo.id !== 'remoto' ? tipo.color : undefined;

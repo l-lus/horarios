@@ -184,9 +184,7 @@ function _borrarInfoActiva(perfilId) {
 function _infoVigente(info) {
     const hoy = TiempoUtils.obtenerFechaHoy();
     if (info.fechaISO === hoy) return true;
-    const ayer = TiempoUtils.parsearFechaLocal(hoy);
-    ayer.setDate(ayer.getDate() - 1);
-    return info.fechaISO === TiempoUtils.formatearFechaLocal(ayer) && Number(info.targetTimeMs) + MARGEN_CRON_MS >= Date.now();
+    return info.fechaISO === TiempoUtils.sumarDias(hoy, -1) && Number(info.targetTimeMs) + MARGEN_CRON_MS >= Date.now();
 }
 
 function obtenerInfoActiva(perfilId) {

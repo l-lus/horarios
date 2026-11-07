@@ -58,6 +58,11 @@ function diasHabilesEnFecha(iso) {
     return Array.isArray(vigente.dias) ? vigente.dias : D.diasHabiles();
 }
 
+/** ¿La fecha es laborable según el tramo de días hábiles que la rige? */
+function esDiaLaboral(fecha) {
+    return TiempoUtils.esFechaHabil(fecha, diasHabilesEnFecha(fecha));
+}
+
 function registrarCambioDiasHabiles(nuevosDias) {
     const hoy = TiempoUtils.obtenerFechaHoy();
     let hist = D.historialDiasHabiles();
@@ -87,7 +92,7 @@ function esTipoRemoto(registro) {
 
 function _excedenteDeRegistro(r) {
     if (!r || !r.entrada || !r.salida || TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return 0;
-    const objetivo = TiempoUtils.esFechaHabil(r.fecha, diasHabilesEnFecha(r.fecha)) ? objetivoDeRegistro(r) : 0;
+    const objetivo = esDiaLaboral(r.fecha) ? objetivoDeRegistro(r) : 0;
     const excedente = r.total - objetivo;
     return excedente > 0 ? excedente : 0;
 }
@@ -123,14 +128,9 @@ function calcularAsignacionesCompensatorio(listaRegistros = D.registros()) {
         if (valido) usados.add(r.referenciaCompensatorio);
     }
 
-    const fechaLimiteDesde = (fechaRef) => {
-        const d = TiempoUtils.parsearFechaLocal(fechaRef);
-        d.setDate(d.getDate() - LIMITE_DIAS_COMPENSATORIO);
-        return TiempoUtils.formatearFechaLocal(d);
-    };
     for (const r of compensatorios) {
         if (asignaciones.has(r.id)) continue;
-        const limite = fechaLimiteDesde(r.fecha);
+        const limite = TiempoUtils.sumarDias(r.fecha, -LIMITE_DIAS_COMPENSATORIO);
         let mejor = null;
         for (const [fecha, candidata] of excedentePorFecha) {
             if (usados.has(fecha) || fecha < limite || fecha > r.fecha) continue;
@@ -245,16 +245,21 @@ function migrarObjetivoHorasFaltante() {
     return migrados;
 }
 
+/** Salida temprana ("HH:MM") de una jornada: lo que le falta para llegar al objetivo, o null si no falta nada. */
+function _creditoDesdeTotal(total, objetivo) {
+    const diferencia = objetivo - total;
+    return diferencia > MARGEN_HORAS ? TiempoUtils.minutosAHora(TiempoUtils.horasAMinutosRedondeados(diferencia)) : null;
+}
+
+function creditoPara(entrada, salida, tiempoFuera, objetivo) {
+    const crudo = D.calcularHoras(entrada, salida, tiempoFuera || null, null);
+    return crudo ? _creditoDesdeTotal(crudo.total, objetivo) : null;
+}
+
 function _recalcularCreditoRegistro(r, nuevoObjetivo) {
     const crudo = D.calcularHoras(r.entrada, r.salida, r.tiempoFuera || null, null);
     if (!crudo) return false;
-    const diferencia = nuevoObjetivo - crudo.total;
-    let nuevoCredito = null;
-    if (diferencia > MARGEN_HORAS) {
-        const { horas: h, minutos: m } = TiempoUtils.descomponerHorasDecimales(diferencia);
-        nuevoCredito = TiempoUtils.minutosAHora(h * 60 + m);
-    }
-    r.credito = nuevoCredito;
+    r.credito = _creditoDesdeTotal(crudo.total, nuevoObjetivo);
     D._aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera, r.credito);
     return true;
 }
@@ -282,6 +287,7 @@ export const Compensatorios = {
     editarTramoDias,
     eliminarTramoDias,
     diasHabilesEnFecha,
+    esDiaLaboral,
     registrarCambioDiasHabiles,
     objetivoDeRegistro,
     objetivoGuardado,
@@ -294,6 +300,7 @@ export const Compensatorios = {
     horasEfectivasDeRegistro,
     objetivoEdicionEnVivo,
     migrarObjetivoHorasFaltante,
+    creditoPara,
     _recalcularCreditoRegistro,
     aplicarHorasATodosLosRegistros
 };

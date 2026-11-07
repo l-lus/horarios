@@ -135,7 +135,7 @@ function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario,
     const cell = document.createElement('div');
     let clases = `calendario-dia ${clase}`;
     if (esHoy) clases += ' hoy';
-    if (clase === 'dia-sin-registro' && !TiempoUtils.esFechaHabil(fecha, Compensatorios.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
+    if (clase === 'dia-sin-registro' && !Compensatorios.esDiaLaboral(fecha)) clases += ' no-laborable';
     if (esNuevo) {
         clases += ' nuevo-registro-animacion';
         cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
@@ -162,7 +162,7 @@ function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario,
 /** Bandas que marcan en el calendario los días laborables de la semana actual (una por fila de la grilla). */
 function _bandasSemanaActual(anio, mes, offsetInicio, diasDelMes) {
     const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
-    const esLaborable = (f) => TiempoUtils.esFechaHabil(f, Compensatorios.diasHabilesEnFecha(f));
+    const esLaborable = (f) => Compensatorios.esDiaLaboral(f);
     const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
     const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
     const segmentosSemana = [];

@@ -14,9 +14,7 @@ function logicaCubiertoActiva() {
 
 /** @param {any} [asignacionesPrecalculadas] */
 function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
-    const lunesDate = TiempoUtils.parsearFechaLocal(lunes);
-    lunesDate.setDate(lunesDate.getDate() + 6);
-    const domingo = TiempoUtils.formatearFechaLocal(lunesDate);
+    const domingo = TiempoUtils.sumarDias(lunes, 6);
     const limite = domingo < hasta ? domingo : hasta;
 
     const registrosSemana = EstadoApp.registros().filter(r => r.fecha >= lunes && r.fecha <= limite);
@@ -46,7 +44,7 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
         if (esRemoto) {
             deltaBruto = 0;
         } else if (r && !esEspecial && r.salida) {
-            const objetivo = TiempoUtils.esFechaHabil(isoDate, Compensatorios.diasHabilesEnFecha(isoDate)) ? Compensatorios.objetivoDeRegistro(r) : 0;
+            const objetivo = Compensatorios.esDiaLaboral(isoDate) ? Compensatorios.objetivoDeRegistro(r) : 0;
             deltaBruto = r.total - objetivo;
             if (deltaBruto > EPS) montoCompensado = Compensatorios.montoCompensadoDeReferencia(r, asignacionesPrecalculadas);
         }
@@ -103,9 +101,7 @@ function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null)
             generado += ex.generado;
             usado += ex.usado;
         }
-        const siguienteLunes = TiempoUtils.parsearFechaLocal(lunes);
-        siguienteLunes.setDate(siguienteLunes.getDate() + 7);
-        lunes = TiempoUtils.formatearFechaLocal(siguienteLunes);
+        lunes = TiempoUtils.sumarDias(lunes, 7);
     }
 
     if (generado <= EPS) return null;
@@ -130,7 +126,7 @@ function estadoDeRegistro(r, asignaciones = null) {
     if (!r.entrada) return { ...base, estado: 'sin-datos' };
     const objetivo = Compensatorios.objetivoDeRegistro(r);
     const total = r.total || 0;
-    if (!(objetivo > 0 && TiempoUtils.esFechaHabil(r.fecha, Compensatorios.diasHabilesEnFecha(r.fecha)))) {
+    if (!(objetivo > 0 && Compensatorios.esDiaLaboral(r.fecha))) {
         return { ...base, estado: 'neutro' };
     }
     const estado = horasGte(total, objetivo) ? 'cumplido' : (cubiertoPorSaldo(r.fecha, asignaciones) ? 'cubierto' : 'incompleto');

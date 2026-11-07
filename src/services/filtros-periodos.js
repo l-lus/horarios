@@ -144,9 +144,7 @@ async function registrarDiaEspecial(fecha, tipo) {
 }
 
 function detectarAyerAbierto(fechaHoy, regs) {
-    const ayerObj = TiempoUtils.parsearFechaLocal(fechaHoy);
-    ayerObj.setDate(ayerObj.getDate() - 1);
-    const ayerStr = TiempoUtils.formatearFechaLocal(ayerObj);
+    const ayerStr = TiempoUtils.sumarDias(fechaHoy, -1);
     const regAyer = regs instanceof Map ? (regs.get(ayerStr) ?? null) : (regs.find(r => r.fecha === ayerStr) ?? null);
 
     let ayerAbierto = false;
@@ -191,7 +189,7 @@ function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutos
     const horasDiarias = EstadoApp.horasDiarias();
     for (const iso of TiempoUtils.generarRangoFechas(desde, hasta)) {
         if (iso > hoy) continue;
-        const esDiaHabil = Compensatorios.diasHabilesEnFecha(iso).includes(TiempoUtils.parsearFechaLocal(iso).getDay());
+        const esDiaHabil = Compensatorios.esDiaLaboral(iso);
         const r = regsPorFecha.get(iso);
         const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
         const esRemoto = esEspecial && Compensatorios.esTipoRemoto(r);

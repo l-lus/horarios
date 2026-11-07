@@ -17,20 +17,6 @@ import { normalizarOrdenCards, columnasDesdeOrden, tamanosDeColumnas, esTamanosC
 // Qué tarjetas se ven: no es una clave de almacenamiento (se guarda una por tarjeta y por perfil), solo el nombre en el archivo
 const CLAVE_TARJETAS_VISIBLES = 'tarjetasVisibles';
 
-const KEYS_CONFIG_EXPORTABLE = [
-    STORAGE_KEYS.IGNORAR_TF,
-    STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
-    STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
-    STORAGE_KEYS.REDUCIR_ANIMACIONES,
-    STORAGE_KEYS.HINT_INTEGRADO,
-    STORAGE_KEYS.DESC_HITOS_NUMERO,
-    STORAGE_KEYS.CICLO_HINT_AUTO,
-    STORAGE_KEYS.ORDEN_CARDS,
-    STORAGE_KEYS.ORDEN_CARDS_MOVIL,
-    STORAGE_KEYS.COLUMNAS_CARDS,
-    CLAVE_TARJETAS_VISIBLES
-];
-
 // Diseño de la interfaz (orden y visibilidad de tarjetas). Un archivo de otra versión puede traer ids que esta no conoce:
 // se aceptan mientras sean textos cortos y pocos, y al aplicarlos se descartan los desconocidos (el orden vuelve a filtrar al leer).
 const MAX_ITEMS_LISTA_UI = 64;
@@ -45,53 +31,92 @@ const _ordenMovilActual = () => normalizarOrdenCards(Almacenamiento.getObject(ST
 const _columnasActuales = () => tamanosDeColumnas(columnasDesdeOrden(_ordenActual(), Almacenamiento.getObject(STORAGE_KEYS.COLUMNAS_CARDS, null, true)));
 const _visiblesActuales = () => Object.fromEntries(CARDS.map(c => [c, Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(c), true, true)]));
 
+const _avisarHint = () => EventosApp.emit('config:hint-integrado');
+
+/** @param {any} pref @param {string} etiqueta @param {any} [alAplicar] */
+const _opcion = (pref, etiqueta, alAplicar = null) => ({
+    clave: pref.clave,
+    etiqueta,
+    esValido: (v) => typeof v === 'boolean',
+    actual: pref.get,
+    aplicar: (v) => { pref.set(v); alAplicar?.(v); },
+});
+
+/** @param {string} clave @param {string} etiqueta @param {() => string[]} actual @param {any} [alAplicar] */
+const _ordenDeTarjetas = (clave, etiqueta, actual, alAplicar = null) => ({
+    clave,
+    etiqueta,
+    tarjetas: true,
+    esValido: _esListaDeIds,
+    actual,
+    distinto: (v) => normalizarOrdenCards(v).join() !== actual().join(),
+    aplicar: (v, data) => { Almacenamiento.setItem(clave, normalizarOrdenCards(v), true); alAplicar?.(data); },
+});
+
+/**
+ * Configuración que viaja en un respaldo. Cada campo sabe validarse, leerse, aplicarse y decir si cambió
+ * (`distinto`: por defecto, comparar con lo actual); `tarjetas` indica que al aplicarlo hay que redibujar las tarjetas.
+ * Lo que un archivo no trae (o trae inválido) no se toca: los respaldos viejos no incluyen todo.
+ * @type {any[]}
+ */
+const CONFIG_RESPALDO = [
+    { ..._opcion(Preferencias.IGNORAR_TF, 'tiempo fuera', (v) => D.setIgnorarTiempoFuera(v)), actual: () => D.getIgnorarTiempoFuera() },
+    _opcion(Preferencias.IGNORAR_LOGICA_CUBIERTO, 'banco de horas'),
+    _opcion(Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO, 'objetivo diario global'),
+    {
+        clave: STORAGE_KEYS.REDUCIR_ANIMACIONES,
+        etiqueta: 'animaciones',
+        esValido: (v) => ['auto', 'on', 'off'].includes(v),
+        actual: () => Movimiento.modo(),
+        aplicar: (v) => Movimiento.setModo(v),
+    },
+    _opcion(Preferencias.HINT_INTEGRADO, 'hint integrado', _avisarHint),
+    _opcion(Preferencias.DESC_HITOS_NUMERO, 'nombre del hito en el número', _avisarHint),
+    _opcion(Preferencias.CICLO_HINT_AUTO, 'ciclo automático del hint', _avisarHint),
+    // Un respaldo con orden pero sin columnas (versiones anteriores) usa el reparto por defecto: los tamaños viejos no corresponderían al orden nuevo
+    _ordenDeTarjetas(STORAGE_KEYS.ORDEN_CARDS, 'orden de tarjetas', _ordenActual, (data) => {
+        if (!Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS])) Almacenamiento.removeItem(STORAGE_KEYS.COLUMNAS_CARDS, true);
+    }),
+    _ordenDeTarjetas(STORAGE_KEYS.ORDEN_CARDS_MOVIL, 'orden de tarjetas (móvil)', _ordenMovilActual),
+    {
+        clave: STORAGE_KEYS.COLUMNAS_CARDS,
+        etiqueta: 'columnas de tarjetas',
+        tarjetas: true,
+        esValido: (v) => esTamanosColumnasValidos(v),
+        actual: _columnasActuales,
+        distinto: (v) => v.join() !== _columnasActuales().join(),
+        aplicar: (v) => Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS, v, true),
+    },
+    {
+        clave: CLAVE_TARJETAS_VISIBLES,
+        etiqueta: 'tarjetas visibles',
+        tarjetas: true,
+        esValido: _esMapaDeBooleanos,
+        actual: _visiblesActuales,
+        distinto: (v) => {
+            const actuales = _visiblesActuales();
+            return CARDS.some(c => typeof v[c] === 'boolean' && v[c] !== actuales[c]);
+        },
+        aplicar: (v) => CARDS.forEach(c => {
+            if (typeof v[c] === 'boolean') Almacenamiento.setItem(STORAGE_KEYS.CARD_VISIBLE(c), v[c], true);
+        }),
+    },
+];
+
 function obtenerConfigExportable() {
-    return {
-        [STORAGE_KEYS.IGNORAR_TF]: D.getIgnorarTiempoFuera(),
-        [STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]: Preferencias.IGNORAR_LOGICA_CUBIERTO.get(),
-        [STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]: Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get(),
-        [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Movimiento.modo(),
-        [STORAGE_KEYS.HINT_INTEGRADO]: Preferencias.HINT_INTEGRADO.get(),
-        [STORAGE_KEYS.DESC_HITOS_NUMERO]: Preferencias.DESC_HITOS_NUMERO.get(),
-        [STORAGE_KEYS.CICLO_HINT_AUTO]: Preferencias.CICLO_HINT_AUTO.get(),
-        [STORAGE_KEYS.ORDEN_CARDS]: _ordenActual(),
-        [STORAGE_KEYS.ORDEN_CARDS_MOVIL]: _ordenMovilActual(),
-        [STORAGE_KEYS.COLUMNAS_CARDS]: _columnasActuales(),
-        [CLAVE_TARJETAS_VISIBLES]: _visiblesActuales()
-    };
+    return Object.fromEntries(CONFIG_RESPALDO.map(c => [c.clave, c.actual()]));
 }
 
 function validarCamposConfigImport(data) {
     if (!data || typeof data !== 'object') return false;
-    const boolKeys = [
-        STORAGE_KEYS.IGNORAR_TF,
-        STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
-        STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
-        STORAGE_KEYS.HINT_INTEGRADO,
-        STORAGE_KEYS.DESC_HITOS_NUMERO,
-        STORAGE_KEYS.CICLO_HINT_AUTO
-    ];
-    for (const k of boolKeys) {
-        if (data[k] !== undefined && typeof data[k] !== 'boolean') return false;
-    }
-    if (data[STORAGE_KEYS.REDUCIR_ANIMACIONES] !== undefined &&
-        !['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES])) {
-        return false;
-    }
-    if (data[STORAGE_KEYS.ORDEN_CARDS] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ORDEN_CARDS])) return false;
-    if (data[STORAGE_KEYS.ORDEN_CARDS_MOVIL] !== undefined && !_esListaDeIds(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL])) return false;
-    if (data[STORAGE_KEYS.COLUMNAS_CARDS] !== undefined && !esTamanosColumnasValidos(data[STORAGE_KEYS.COLUMNAS_CARDS])) return false;
-    if (data[CLAVE_TARJETAS_VISIBLES] !== undefined && !_esMapaDeBooleanos(data[CLAVE_TARJETAS_VISIBLES])) return false;
-    return true;
+    return CONFIG_RESPALDO.every(c => data[c.clave] === undefined || c.esValido(data[c.clave]));
 }
 
 /** @param {any} [registrosParaRecalcular] */
 function aplicarConfigImportada(data, registrosParaRecalcular = null) {
     if (!data || typeof data !== 'object') return;
-    if (Array.isArray(data.diasHabiles)) {
-        const diasValidos = data.diasHabiles.filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
-        if (diasValidos.length > 0) D.setDiasHabiles(diasValidos);
-    }
+    const dias = S.sanitizarDiasHabiles(data.diasHabiles);
+    if (dias) D.setDiasHabiles(dias);
     if (data.horasDiarias !== undefined && data.horasDiarias !== null) {
         const h = typeof data.horasDiarias === 'string' ? parseFloat(data.horasDiarias) : data.horasDiarias;
         if (Number.isFinite(h) && h >= 0 && h <= 24) D.setHorasDiarias(h);
@@ -100,54 +125,9 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
     D._setHistorialDiasHabilesRaw(historialImportado || [{ desde: DESDE_SIEMPRE, dias: D.diasHabiles() }]);
     D.setDiasHabiles(Compensatorios.diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
 
-    if (typeof data[STORAGE_KEYS.IGNORAR_TF] === 'boolean') {
-        D.setIgnorarTiempoFuera(data[STORAGE_KEYS.IGNORAR_TF]);
-        Preferencias.IGNORAR_TF.set(data[STORAGE_KEYS.IGNORAR_TF]);
-    }
-    if (typeof data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] === 'boolean') {
-        Preferencias.IGNORAR_LOGICA_CUBIERTO.set(data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO]);
-    }
-    if (typeof data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] === 'boolean') {
-        Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.set(data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO]);
-    }
-    if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES])) {
-        Movimiento.setModo(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]);
-    }
-    if (typeof data[STORAGE_KEYS.HINT_INTEGRADO] === 'boolean') {
-        Preferencias.HINT_INTEGRADO.set(data[STORAGE_KEYS.HINT_INTEGRADO]);
-        EventosApp.emit('config:hint-integrado');
-    }
-    if (typeof data[STORAGE_KEYS.DESC_HITOS_NUMERO] === 'boolean') {
-        Preferencias.DESC_HITOS_NUMERO.set(data[STORAGE_KEYS.DESC_HITOS_NUMERO]);
-        EventosApp.emit('config:hint-integrado');
-    }
-    if (typeof data[STORAGE_KEYS.CICLO_HINT_AUTO] === 'boolean') {
-        Preferencias.CICLO_HINT_AUTO.set(data[STORAGE_KEYS.CICLO_HINT_AUTO]);
-        EventosApp.emit('config:hint-integrado');
-    }
-    // Diseño de la interfaz: lo que el archivo no trae no se toca (los respaldos viejos no lo incluyen). La UI se redibuja al recibir los eventos
-    let cambioTarjetas = false;
-    if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS])) {
-        Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS, normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS]), true);
-        // Un respaldo sin columnas (versiones anteriores) usa el reparto por defecto; si no, los tamaños viejos no corresponderían al orden nuevo
-        if (!Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS])) Almacenamiento.removeItem(STORAGE_KEYS.COLUMNAS_CARDS, true);
-        cambioTarjetas = true;
-    }
-    if (Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS])) {
-        Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS, data[STORAGE_KEYS.COLUMNAS_CARDS], true);
-        cambioTarjetas = true;
-    }
-    if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL])) {
-        Almacenamiento.setItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL]), true);
-        cambioTarjetas = true;
-    }
-    const visibles = data[CLAVE_TARJETAS_VISIBLES];
-    if (visibles && typeof visibles === 'object') {
-        CARDS.forEach(c => {
-            if (typeof visibles[c] === 'boolean') { Almacenamiento.setItem(STORAGE_KEYS.CARD_VISIBLE(c), visibles[c], true); cambioTarjetas = true; }
-        });
-    }
-    if (cambioTarjetas) EventosApp.emit('config:tarjetas');
+    const aplicados = CONFIG_RESPALDO.filter(c => c.esValido(data[c.clave]));
+    aplicados.forEach(c => c.aplicar(data[c.clave], data));
+    if (aplicados.some(c => c.tarjetas)) EventosApp.emit('config:tarjetas');
 
     if (Array.isArray(registrosParaRecalcular)) {
         registrosParaRecalcular.forEach(r => {
@@ -168,47 +148,10 @@ function calcularCambiosConfigImport(data) {
     if (data.horasDiarias != null && parseFloat(data.horasDiarias) !== D.horasDiarias()) {
         cambios.push(`horas diarias (${D.horasDiarias()}h → ${parseFloat(data.horasDiarias)}h)`);
     }
-    if (typeof data[STORAGE_KEYS.IGNORAR_TF] === 'boolean' && data[STORAGE_KEYS.IGNORAR_TF] !== D.getIgnorarTiempoFuera()) {
-        cambios.push('tiempo fuera');
-    }
-    if (typeof data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] === 'boolean' &&
-        data[STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO] !== Preferencias.IGNORAR_LOGICA_CUBIERTO.get()) {
-        cambios.push('banco de horas');
-    }
-    if (typeof data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] === 'boolean' &&
-        data[STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO] !== Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get()) {
-        cambios.push('objetivo diario global');
-    }
-    if (['auto', 'on', 'off'].includes(data[STORAGE_KEYS.REDUCIR_ANIMACIONES]) &&
-        data[STORAGE_KEYS.REDUCIR_ANIMACIONES] !== Movimiento.modo()) {
-        cambios.push('animaciones');
-    }
-    if (typeof data[STORAGE_KEYS.HINT_INTEGRADO] === 'boolean' &&
-        data[STORAGE_KEYS.HINT_INTEGRADO] !== Preferencias.HINT_INTEGRADO.get()) {
-        cambios.push('hint integrado');
-    }
-    if (typeof data[STORAGE_KEYS.DESC_HITOS_NUMERO] === 'boolean' &&
-        data[STORAGE_KEYS.DESC_HITOS_NUMERO] !== Preferencias.DESC_HITOS_NUMERO.get()) {
-        cambios.push('nombre del hito en el número');
-    }
-    if (typeof data[STORAGE_KEYS.CICLO_HINT_AUTO] === 'boolean' &&
-        data[STORAGE_KEYS.CICLO_HINT_AUTO] !== Preferencias.CICLO_HINT_AUTO.get()) {
-        cambios.push('ciclo automático del hint');
-    }
-    if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS]) && normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS]).join() !== _ordenActual().join()) {
-        cambios.push('orden de tarjetas');
-    }
-    if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL]) && normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS_MOVIL]).join() !== _ordenMovilActual().join()) {
-        cambios.push('orden de tarjetas (móvil)');
-    }
-    if (Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS]) && data[STORAGE_KEYS.COLUMNAS_CARDS].join() !== _columnasActuales().join()) {
-        cambios.push('columnas de tarjetas');
-    }
-    const visibles = data[CLAVE_TARJETAS_VISIBLES];
-    if (visibles && typeof visibles === 'object') {
-        const actuales = _visiblesActuales();
-        if (CARDS.some(c => typeof visibles[c] === 'boolean' && visibles[c] !== actuales[c])) cambios.push('tarjetas visibles');
-    }
+    CONFIG_RESPALDO.forEach(c => {
+        const v = data[c.clave];
+        if (c.esValido(v) && (c.distinto ? c.distinto(v) : v !== c.actual())) cambios.push(c.etiqueta);
+    });
     return cambios;
 }
 
@@ -295,7 +238,7 @@ async function exportarJSON() {
 }
 
 // Claves que puede traer un respaldo (archivo local o Gist): cualquier otra se considera sospechosa
-const CLAVES_RAIZ_RESPALDO = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...KEYS_CONFIG_EXPORTABLE, 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
+const CLAVES_RAIZ_RESPALDO = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...CONFIG_RESPALDO.map(c => c.clave), 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
 const _NOMBRE_ORIGEN = { archivo: 'archivo', gist: 'Gist' };
 
 /** Chequeo estructural de un respaldo ya parseado. Devuelve el mensaje de error o null si es válido. */

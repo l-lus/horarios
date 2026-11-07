@@ -357,7 +357,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
     if (Calendario.getVistaHistoricoCalendario()) {
         const selector = $('calendario-selector-meses');
         if (selector && selector.style.display !== 'none') {
-            // el reloj no cierra el selector: el usuario puede estar eligiendo un mes
+            // el reloj no cierra el selector: de eso se encarga su propio temporizador de inactividad (ver calendario.js)
             if (!soloReloj && !Calendario._selectorMesesProtegido()) Calendario._cerrarSelectorMeses(idNuevo);
         } else {
             Calendario._renderizarCalendario(idNuevo, asignacionesCompensatorio);

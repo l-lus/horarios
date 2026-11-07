@@ -31,8 +31,25 @@ function _selectorMesesProtegido() {
     return Date.now() - _selectorMesesAbiertoEn < GUARD_SELECTOR_MESES_MS;
 }
 
+// El selector vuelve solo a los días tras un rato sin tocarlo; cualquier interacción dentro de él reinicia la cuenta
+const CIERRE_SELECTOR_INACTIVO_MS = 15000;
+const EVENTOS_ACTIVIDAD_SELECTOR = ['pointerdown', 'pointermove', 'wheel', 'touchstart', 'scroll', 'keydown'];
+/** @type {ReturnType<typeof setTimeout> | null} */
+let _timerCierreSelector = null;
+
+function _cancelarCierreSelector() {
+    if (_timerCierreSelector !== null) clearTimeout(_timerCierreSelector);
+    _timerCierreSelector = null;
+}
+
+function _programarCierreSelector() {
+    _cancelarCierreSelector();
+    _timerCierreSelector = setTimeout(() => _cerrarSelectorMeses(), CIERRE_SELECTOR_INACTIVO_MS);
+}
+
 /** @param {any} [idResaltar] */
 function _cerrarSelectorMeses(idResaltar = null) {
+    _cancelarCierreSelector();
     const grid = $('calendario-grid');
     const selector = $('calendario-selector-meses');
     const navBotones = $('calendario-nav-botones');
@@ -95,6 +112,7 @@ function abrirSelectorMesesCalendario() {
         selector.style.display = 'grid';
     });
     _selectorMesesAbiertoEn = Date.now();
+    _programarCierreSelector();
 }
 
 function _activarVistaCalendarioHistorico() {
@@ -320,6 +338,7 @@ function toggleVistaHistorico() {
     const grid = $('calendario-grid');
     const navBotones = $('calendario-nav-botones');
     if (selector && !selector.classList.contains('hidden') && selector.style.display !== 'none') {
+        _cancelarCierreSelector();
         selector.style.display = 'none';
         if (grid) grid.style.display = 'grid';
         if (navBotones) navBotones.style.display = 'flex';
@@ -448,6 +467,10 @@ function bindEventos() {
         if (navBtns[1]) navBtns[1].addEventListener('click', () => navegarCalendario(1));
     }
     _registrarRuedaCalendario($('calendario-grid'));
+    const selector = $('calendario-selector-meses');
+    EVENTOS_ACTIVIDAD_SELECTOR.forEach(tipo => selector?.addEventListener(tipo, () => {
+        if (_timerCierreSelector !== null) _programarCierreSelector();
+    }, { passive: true }));
 
 }
 

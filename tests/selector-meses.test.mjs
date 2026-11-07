@@ -7,7 +7,9 @@ const fakeEl = () => ({
     style: { setProperty: noop, removeProperty: noop },
     dataset: {},
     classList: { add: noop, remove: noop, toggle: noop, contains: () => false },
-    addEventListener: noop,
+    oyentes: {},
+    addEventListener(tipo, fn) { (this.oyentes[tipo] ??= []).push(fn); },
+    disparar(tipo) { (this.oyentes[tipo] ?? []).forEach(fn => fn({})); },
     removeEventListener: noop,
     querySelector: () => fakeEl(),
     querySelectorAll: () => [],
@@ -89,4 +91,39 @@ test('El reloj de la tarjeta no cierra el selector de meses; un render normal s�
     TarjetaFichaje.actualizarUI();
     await new Promise(r => setTimeout(r, 20));
     assert.equal(selector.style.display, 'none', 'un render normal lo cierra');
+});
+
+test('El selector de meses se cierra solo tras 15 s sin tocarlo, y cada interacción reinicia la cuenta', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: new Date(2026, 9, 28, 10, 0) });
+    const { Calendario } = await import('../src/ui/calendario.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    GestorPerfiles.inicializar();
+    Calendario.bindEventos();
+    const selector = porId('calendario-selector-meses');
+    const titulo = porId('calendario-titulo-mes');
+
+    selector.style.display = 'none';
+    titulo.disparar('click');
+    assert.equal(selector.style.display, 'grid', 'se abre');
+
+    t.mock.timers.tick(14000);
+    assert.equal(selector.style.display, 'grid', 'antes de los 15 s sigue abierto');
+
+    selector.disparar('pointermove');
+    t.mock.timers.tick(14000);
+    assert.equal(selector.style.display, 'grid', 'la interacción reinició la cuenta');
+
+    t.mock.timers.tick(1000);
+    assert.equal(selector.style.display, 'none', 'pasados 15 s sin tocarlo se cierra');
+
+    // Cerrado a mano no queda una cuenta pendiente que después cierre un selector abierto de nuevo
+    titulo.disparar('click');
+    t.mock.timers.tick(5000);
+    titulo.disparar('click');
+    assert.equal(selector.style.display, 'none');
+    titulo.disparar('click');
+    t.mock.timers.tick(14000);
+    assert.equal(selector.style.display, 'grid', 'la cuenta empezó de nuevo al reabrir');
+    t.mock.timers.tick(1000);
+    assert.equal(selector.style.display, 'none');
 });

@@ -51,7 +51,7 @@ horarios/
 │   ├── html.test.mjs           # Escape automático de core/html.js
 │   ├── orden-cards.test.mjs    # Columnas libres de escritorio: reparto, mover, columna nueva y límites
 │   ├── edicion-registro.test.mjs # Edición de un registro (modal) sin DOM: guardar, validaciones, crédito, compensatorio, eliminar
-│   ├── selector-meses.test.mjs # El reloj de la tarjeta no cierra el selector de meses del calendario (DOM mínimo simulado)
+│   ├── selector-meses.test.mjs # Selector de meses: se cierra tras 15 s sin tocarlo y el reloj de la tarjeta no lo cierra (DOM mínimo simulado)
 │   └── servicios-sin-dom.test.mjs # Servicios ejecutados en Node sin `document`, con formularios simulados
 ├── docs/                       # Documentación técnica, seguridad y arquitectura
 └── horarios-push/              # Backend opcional (Cloudflare Worker para Web Push y métricas anónimas)

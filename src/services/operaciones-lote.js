@@ -17,7 +17,8 @@ function _rechazar(mensaje, tipo, opciones) {
     return { error: mensaje };
 }
 
-async function registrarDiaEspecial(fecha, tipo) {
+/** @param {string} fecha @param {string} tipo @param {string | null} [notas] descripción opcional del registro (p. ej. el nombre del feriado) */
+async function registrarDiaEspecial(fecha, tipo, notas = null) {
     const notify = EstadoApp._notify();
     if (!TiempoUtils.validarFecha(fecha)) return _rechazar('Fecha inválida');
     const registroExistente = EstadoApp.registroPorFecha(fecha);
@@ -37,6 +38,8 @@ async function registrarDiaEspecial(fecha, tipo) {
     if (!EstadoApp._hayEspacioParaRegistros(1)) return _rechazar('Límite de registros alcanzado');
 
     const nuevo = EstadoApp._construirRegistro(fecha, entrada, salida);
+    const notasLimpias = S.normalizarNotas(notas);
+    if (notasLimpias) nuevo.notas = notasLimpias;
     EstadoApp.registros().push(nuevo);
 
     EstadoApp.ordenarRegistros();

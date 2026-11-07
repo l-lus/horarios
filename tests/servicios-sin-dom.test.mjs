@@ -726,3 +726,27 @@ test('OperacionesLote: devuelve { ok: true } al registrar y { error } si no pudo
         EstadoApp._setRegistros([]);
     }
 });
+
+test('OperacionesLote.registrarDiaEspecial: la descripción opcional queda en las notas del registro (saneada y sin pasar el máximo)', async () => {
+    const { OperacionesLote: L } = await import('../src/services/operaciones-lote.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    const { SeguridadYUtils: S } = await import('../src/core/seguridad.js');
+    GestorPerfiles.inicializar();
+    EstadoApp.configurarNotificaciones({ avisarFichaje: () => { }, mostrarToast: () => { }, actualizarUI: () => { }, forzarVista: (_v, fn) => fn() });
+    EstadoApp._setRegistros([]);
+    try {
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-05', 'feriado', S.notasHastaPalabra('Paso a la Inmortalidad del Gral. Güemes')), { ok: true });
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-06', 'feriado', 'Día <b>Nac</b>'), { ok: true });
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-07', 'feriado'), { ok: true });
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-08', 'feriado', ''), { ok: true });
+        const porFecha = f => EstadoApp.registroPorFecha(f);
+        assert.equal(porFecha('2026-10-05').notas, 'Paso a la Inmortalidad del Gral');
+        assert.equal(porFecha('2026-10-06').notas, 'Día bNacb', 'la lista blanca de las notas también rige acá');
+        assert.equal('notas' in porFecha('2026-10-07'), false, 'sin descripción el registro queda como antes');
+        assert.equal('notas' in porFecha('2026-10-08'), false);
+        EstadoApp.registros().forEach(r => assert.equal(S.validarRegistroSeguro(r), true));
+    } finally {
+        EstadoApp._setRegistros([]);
+    }
+});

@@ -1132,3 +1132,29 @@ test('TarjetaFichajeVista: el resumen de la semana lista los días con su color 
     assert.equal(medidas[3].dias.length, 7);
 
 });
+
+test('SeguridadYUtils.notasHastaPalabra: respeta la lista blanca y el largo máximo cortando en la última palabra completa', async () => {
+    const { SeguridadYUtils: S } = await import('../src/core/seguridad.js');
+    const MAX = S.SECURITY_LIMITS.MAX_NOTAS_LENGTH;
+
+    assert.equal(S.notasHastaPalabra('Año Nuevo'), 'Año Nuevo');
+    assert.equal(S.notasHastaPalabra('Día Nac. de la Memoria'), 'Día Nac de la Memoria', 'los signos fuera de la lista blanca se quitan');
+    assert.equal(S.notasHastaPalabra('Paso a la Inmortalidad del Gral. Güemes'), 'Paso a la Inmortalidad del Gral', 'se corta antes de la palabra que no entra');
+    assert.equal(S.notasHastaPalabra('Visita de Su Santidad el Papa León XIV (CABA)'), 'Visita de Su Santidad el Papa León');
+
+    // una palabra que llega justo al máximo se conserva completa; si la siguiente ya no entra, se descarta entera
+    const justo = 'a'.repeat(MAX - 5) + ' bcde';
+    assert.equal(justo.length, MAX);
+    assert.equal(S.notasHastaPalabra(`${justo} fgh`), justo);
+    // una palabra que se pasa del máximo no queda partida
+    assert.equal(S.notasHastaPalabra('a'.repeat(MAX - 5) + ' bcdefg'), 'a'.repeat(MAX - 5));
+    // una sola palabra más larga que el máximo no tiene dónde cortarse: se recorta en el máximo
+    assert.equal(S.notasHastaPalabra('x'.repeat(MAX + 15)), 'x'.repeat(MAX));
+
+    assert.equal(S.notasHastaPalabra(''), null);
+    assert.equal(S.notasHastaPalabra('...'), null);
+    assert.equal(S.notasHastaPalabra(undefined), null);
+    for (const t of ['Feriado con un nombre bastante largo para el campo', 'Paso a la Inmortalidad del Gral. San Martín']) {
+        assert.ok((S.notasHastaPalabra(t) ?? '').length <= MAX);
+    }
+});

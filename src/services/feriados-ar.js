@@ -2,6 +2,7 @@ import { STORAGE_KEYS } from '../core/constantes.js';
 import { FERIADOS_AR } from '../data/feriados.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp } from './estado-app.js';
 import { OperacionesLote } from './operaciones-lote.js';
 
@@ -67,7 +68,8 @@ async function chequearYNotificar() {
 
     if (confirmo) {
         for (const feriado of pendientes) {
-            await OperacionesLote.registrarDiaEspecial(feriado.fecha, 'feriado');
+            // El nombre del feriado va como descripción del registro, hasta la última palabra que entre en el largo máximo de las notas
+            await OperacionesLote.registrarDiaEspecial(feriado.fecha, 'feriado', S.notasHastaPalabra(feriado.nombre));
         }
     }
 }

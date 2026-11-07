@@ -7,7 +7,7 @@ import { Preferencias } from './preferencias.js';
 // ====================================================================
 // Cómo se dibuja el registro del día en la tarjeta de arriba. La clásica (el predeterminado) y la barra con hitos (el antiguo "hint integrado") son la barra de
 // siempre; los demás son diseños propios que reemplazan el número, la barra y los textos, tanto en la vista diaria como en la semanal. Es una opción de la
-// instalación, no del perfil. Sin valor guardado se usa la clásica, salvo que el interruptor antiguo HINT_INTEGRADO estuviera activo (entonces, la barra con hitos).
+// instalación, no del perfil. Sin valor guardado se usa la barra con hitos, salvo que el interruptor antiguo HINT_INTEGRADO se hubiera apagado a propósito (entonces, la clásica).
 export const ESTILOS_TARJETA = Object.freeze([
     { id: 'clasica', label: 'Clásica' },
     { id: 'linea', label: 'Línea de tiempo' },
@@ -81,7 +81,9 @@ let _mosaicos = null;
 function actual() {
     if (_estilo === null) {
         const guardado = Almacenamiento.getItem(STORAGE_KEYS.ESTILO_TARJETA, null);
-        _estilo = _esValido(guardado) ? guardado : (Preferencias.HINT_INTEGRADO.get() ? 'hitos' : 'clasica');
+        // Sin estilo guardado: la barra con hitos, salvo que el interruptor antiguo se hubiera apagado a propósito (entonces, la clásica)
+        const hintGuardado = Almacenamiento.getItem(STORAGE_KEYS.HINT_INTEGRADO, null);
+        _estilo = _esValido(guardado) ? guardado : (hintGuardado !== null && !Preferencias.HINT_INTEGRADO.get() ? 'clasica' : 'hitos');
     }
     return _estilo;
 }

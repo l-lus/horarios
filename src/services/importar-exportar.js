@@ -23,6 +23,7 @@ const KEYS_CONFIG_EXPORTABLE = [
     STORAGE_KEYS.REDUCIR_ANIMACIONES,
     STORAGE_KEYS.HINT_INTEGRADO,
     STORAGE_KEYS.DESC_HITOS_NUMERO,
+    STORAGE_KEYS.CICLO_HINT_AUTO,
     STORAGE_KEYS.ORDEN_CARDS,
     STORAGE_KEYS.ORDEN_CARDS_MOVIL,
     STORAGE_KEYS.COLUMNAS_CARDS,
@@ -51,6 +52,7 @@ function obtenerConfigExportable() {
         [STORAGE_KEYS.REDUCIR_ANIMACIONES]: Movimiento.modo(),
         [STORAGE_KEYS.HINT_INTEGRADO]: Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO),
         [STORAGE_KEYS.DESC_HITOS_NUMERO]: Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO),
+        [STORAGE_KEYS.CICLO_HINT_AUTO]: Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO),
         [STORAGE_KEYS.ORDEN_CARDS]: _ordenActual(),
         [STORAGE_KEYS.ORDEN_CARDS_MOVIL]: _ordenMovilActual(),
         [STORAGE_KEYS.COLUMNAS_CARDS]: _columnasActuales(),
@@ -65,7 +67,8 @@ function validarCamposConfigImport(data) {
         STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO,
         STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO,
         STORAGE_KEYS.HINT_INTEGRADO,
-        STORAGE_KEYS.DESC_HITOS_NUMERO
+        STORAGE_KEYS.DESC_HITOS_NUMERO,
+        STORAGE_KEYS.CICLO_HINT_AUTO
     ];
     for (const k of boolKeys) {
         if (data[k] !== undefined && typeof data[k] !== 'boolean') return false;
@@ -115,6 +118,10 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
     }
     if (typeof data[STORAGE_KEYS.DESC_HITOS_NUMERO] === 'boolean') {
         Almacenamiento.setItem(STORAGE_KEYS.DESC_HITOS_NUMERO, data[STORAGE_KEYS.DESC_HITOS_NUMERO]);
+        EventosApp.emit('config:hint-integrado');
+    }
+    if (typeof data[STORAGE_KEYS.CICLO_HINT_AUTO] === 'boolean') {
+        Almacenamiento.setItem(STORAGE_KEYS.CICLO_HINT_AUTO, data[STORAGE_KEYS.CICLO_HINT_AUTO]);
         EventosApp.emit('config:hint-integrado');
     }
     // Diseño de la interfaz: lo que el archivo no trae no se toca (los respaldos viejos no lo incluyen). La UI se redibuja al recibir los eventos
@@ -182,6 +189,10 @@ function calcularCambiosConfigImport(data) {
     if (typeof data[STORAGE_KEYS.DESC_HITOS_NUMERO] === 'boolean' &&
         data[STORAGE_KEYS.DESC_HITOS_NUMERO] !== Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO)) {
         cambios.push('nombre del hito en el número');
+    }
+    if (typeof data[STORAGE_KEYS.CICLO_HINT_AUTO] === 'boolean' &&
+        data[STORAGE_KEYS.CICLO_HINT_AUTO] !== Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO)) {
+        cambios.push('ciclo automático del hint');
     }
     if (Array.isArray(data[STORAGE_KEYS.ORDEN_CARDS]) && normalizarOrdenCards(data[STORAGE_KEYS.ORDEN_CARDS]).join() !== _ordenActual().join()) {
         cambios.push('orden de tarjetas');

@@ -26,7 +26,7 @@ const {
     _renderConFirma, _conRendersSinAnimar, _rendersSinAnimarActivos, _animarFadeSwap,
     _animarMutacion, _animarConteo, _conteoEnCurso, _cancelarConteo, _durSiAnima
 } = Animaciones;
-const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo, _descHitosEnNumero } = TarjetaFichajeVista;
+const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo, _descHitosEnNumero, _cicloAutoActivo } = TarjetaFichajeVista;
 
 const { setProgressBarColor, toggleFondoCard, actualizarFondoCard } = TarjetaFondos;
 const {
@@ -161,7 +161,7 @@ function _renderStats(vista, est, conteo = null) {
     CicloStats.actualizarDatos({ valorHoras: vista.stats, entrada: entradaHoy, salida: salidaHoy, tiempoFuera: tiempoFueraHoy, salidaEstimada, salidaBanco, hitosEnBarra: !!linea, nombreEnNumero });
 
     const fase = CicloStats.tomarFasePendiente();
-    if (fase && CicloStats.iniciarEnFase(fase)) return;
+    if (fase && _cicloAutoActivo() && CicloStats.iniciarEnFase(fase)) return;
 
     if (!CicloStats.activo()) {
         if (conteo) {
@@ -449,7 +449,7 @@ function bindEventos() {
 
     $('stats-card')?.addEventListener('click', (e) => {
         const enStatsNumber = /** @type {HTMLElement} */ (e.target).closest('#stats-semana');
-        if (enStatsNumber && EstadoApp.vistaActual() !== 'semana' && !CicloStats.activo()) {
+        if (enStatsNumber && EstadoApp.vistaActual() !== 'semana' && !CicloStats.activo() && _cicloAutoActivo()) {
             const ciclado = CicloStats.iniciar(true);
             if (ciclado) {
                 e.stopPropagation();

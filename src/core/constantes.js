@@ -18,6 +18,7 @@ export const STORAGE_KEYS = Object.freeze({
     ESTILO_CALENDARIO: 'estiloCalendario',
     HINT_INTEGRADO: 'hintIntegrado',
     DESC_HITOS_NUMERO: 'descHitosNumero',   // con el hint integrado: el nombre del hito enfocado va en el número grande en vez de desplegarse en la barra
+    CICLO_HINT_AUTO: 'cicloHintAuto',       // con el hint integrado: el ciclo automático de fases del número grande (al tocarlo o al fichar)
     DIAS_HABILES: 'diasHabiles',
     HISTORIAL_DIAS_HABILES: 'historialDiasHabiles',
     HORAS_DIARIAS: 'horasDiarias',
@@ -68,6 +69,7 @@ export const CARDS_ORDEN = Object.freeze(['estado', ...CARDS]);
 export const DEFAULTS = Object.freeze({
     HINT_INTEGRADO: true,
     DESC_HITOS_NUMERO: true,
+    CICLO_HINT_AUTO: true,
     RUEDA_CALENDARIO: true,
 });
 

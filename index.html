@@ -832,7 +832,17 @@
                                         <span>Hint integrado en la barra</span>
                                         <span class="settings-list-desc">Muestra el registro del día sobre la barra</span>
                                     </span>
-                                    <span id="hint-integrado-label">B</span>
+                                    <span class="toggle-switch" aria-hidden="true"></span>
+                                </button>
+                                <button id="btn-toggle-hint-animacion">
+                                    <svg class="icon">
+                                        <use href="#icon-eye" />
+                                    </svg>
+                                    <span class="settings-list-text">
+                                        <span>Animación de los hitos</span>
+                                        <span class="settings-list-desc">Desactivado, sobre la barra o sobre el texto del número</span>
+                                    </span>
+                                    <span id="hint-animacion-label">Texto</span>
                                 </button>
                                 <button id="btn-toggle-animaciones">
                                     <svg class="icon">
@@ -1309,8 +1319,10 @@
                                 colapsadas las tarjetas entre sesiones), Formato de tiempo corto (5h 9m en vez de horas
                                 completas), Hint integrado en la barra (muestra la entrada, la salida estimada y la
                                 salida con banco de horas sobre la barra, o las siglas de cada día en la semana; con
-                                un toque cambia entre No, A —cada hito con su descripción en la barra— y B —el nombre
-                                del hito, como "Entrada 08:30", en el número grande—) y
+                                es un interruptor; con él activo aparece <em>Animación de los hitos</em>, que cambia
+                                entre Desactivado —sin ciclo automático al tocar el número—, Barra —cada hito con su
+                                descripción en la barra— y Texto —el nombre del hito, como "Entrada 08:30", en el
+                                número grande—) y
                                 Reducir animaciones (Auto sigue la configuración del dispositivo, o se fuerza activada o
                                 desactivada). Las opciones de PC se ocultan en dispositivos táctiles.</p>
                             <p><strong>Tarjetas y posición:</strong> mostrá u ocultá Fichar, Estadísticas y

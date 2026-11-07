@@ -25,7 +25,7 @@ import { AvisoJornada } from '../services/aviso-jornada.js';
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
 // ====================================================================
 const {
-    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnDisabled, _flashCampo
+    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnDisabled, _setBtnActivo, _flashCampo
 } = UIBase;
 const { _esperarAnim, _animarValor } = Animaciones;
 
@@ -92,28 +92,40 @@ const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRu
         onAfterToggle: () => { EventosApp.emit('config:rueda-calendario'); }
     });
 
-// "Hint integrado" tiene tres estados en un solo botón: No (la información va en el texto de abajo), A (hitos sobre la barra, con su descripción
-// desplegada) y B (hitos sobre la barra y el nombre de cada uno en el número grande, el predeterminado). Se guardan en dos opciones: HINT_INTEGRADO y DESC_HITOS_NUMERO.
-const _MODOS_HINT = ['no', 'barra', 'numero'];
-const _ETIQUETAS_HINT = { no: 'No', barra: 'A', numero: 'B' };
+// "Hint integrado" es un interruptor (HINT_INTEGRADO). Con él activo aparece la opción de animación de los hitos, con tres estados en un solo botón:
+// Desactivado (sin ciclo automático del número grande), Barra (cada hito con su descripción desplegada en la barra) y Texto (el nombre del hito en el número grande, el predeterminado).
+// Se guardan en CICLO_HINT_AUTO (false = desactivado) y DESC_HITOS_NUMERO (barra o texto).
+const _MODOS_ANIM_HINT = ['off', 'barra', 'texto'];
+const _ETIQUETAS_ANIM_HINT = { off: 'Desactivado', barra: 'Barra', texto: 'Texto' };
 
-function _modoHintIntegrado() {
-    if (!Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO)) return 'no';
-    return Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO) ? 'numero' : 'barra';
+function _modoAnimHint() {
+    if (!Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO)) return 'off';
+    return Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO) ? 'texto' : 'barra';
 }
 
 function actualizarEstadoBotonHintIntegrado() {
-    const lbl = $('hint-integrado-label');
-    if (lbl) lbl.textContent = _ETIQUETAS_HINT[_modoHintIntegrado()];
+    const activo = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
+    _setBtnActivo('btn-toggle-hint-integrado', activo);
+    // la animación solo tiene sentido con el hint integrado: sin él, la opción se oculta
+    $('btn-toggle-hint-animacion')?.classList.toggle('hidden', !activo);
+    const lbl = $('hint-animacion-label');
+    if (lbl) lbl.textContent = _ETIQUETAS_ANIM_HINT[_modoAnimHint()];
 }
 
 // Al restaurar un respaldo o bajar de Gist cambia la opción: se actualiza la etiqueta
 EventosApp.on('config:hint-integrado', () => actualizarEstadoBotonHintIntegrado());
 
 function toggleHintIntegrado() {
-    const siguiente = _MODOS_HINT[(_MODOS_HINT.indexOf(_modoHintIntegrado()) + 1) % _MODOS_HINT.length];
-    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, siguiente !== 'no');
-    Almacenamiento.setItem(STORAGE_KEYS.DESC_HITOS_NUMERO, siguiente === 'numero');
+    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, !Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO));
+    actualizarEstadoBotonHintIntegrado();
+    EventosApp.emit('config:hint-integrado');
+    actualizarUI();
+}
+
+function toggleAnimacionHint() {
+    const siguiente = _MODOS_ANIM_HINT[(_MODOS_ANIM_HINT.indexOf(_modoAnimHint()) + 1) % _MODOS_ANIM_HINT.length];
+    Almacenamiento.setItem(STORAGE_KEYS.CICLO_HINT_AUTO, siguiente !== 'off');
+    if (siguiente !== 'off') Almacenamiento.setItem(STORAGE_KEYS.DESC_HITOS_NUMERO, siguiente === 'texto');
     actualizarEstadoBotonHintIntegrado();
     EventosApp.emit('config:hint-integrado');
     actualizarUI();
@@ -355,6 +367,7 @@ function bindEventos() {
     $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
     $('btn-toggle-rueda-calendario')?.addEventListener('click', () => toggleRuedaCalendario());
     $('btn-toggle-hint-integrado')?.addEventListener('click', () => toggleHintIntegrado());
+    $('btn-toggle-hint-animacion')?.addEventListener('click', () => toggleAnimacionHint());
     $('btn-toggle-metrica-uso')?.addEventListener('click', () => toggleMetricaUso());
     $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
     $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());

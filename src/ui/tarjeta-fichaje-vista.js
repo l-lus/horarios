@@ -33,7 +33,10 @@ EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
 let _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
 // y su variante: el nombre del hito enfocado va en el número grande en vez de desplegarse en la barra
 let _descHitosNumero = Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO);
+// y si el ciclo automático de fases (al tocar el número o al fichar) sigue activo con el hint integrado
+let _cicloHintAuto = Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO);
 EventosApp.on('config:hint-integrado', () => {
+    _cicloHintAuto = Almacenamiento.getBoolean(STORAGE_KEYS.CICLO_HINT_AUTO, DEFAULTS.CICLO_HINT_AUTO);
     _hintIntegrado = Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO);
     _descHitosNumero = Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO);
 });
@@ -505,5 +508,6 @@ export const TarjetaFichajeVista = {
     _modoTextoStats,
     _hintIntegradoActivo: () => _hintIntegrado,
     _descHitosEnNumero: () => _hintIntegrado && _descHitosNumero,
+    _cicloAutoActivo: () => !_hintIntegrado || _cicloHintAuto,
     _refrescarFormatoCortoStatsCache
 };

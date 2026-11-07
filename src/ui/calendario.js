@@ -23,6 +23,14 @@ const {
     _aArray, _estaColapsado, _durSiAnima
 } = Animaciones;
 
+const GUARD_SELECTOR_MESES_MS = 4000;
+let _selectorMesesAbiertoEn = 0;
+
+/** True si el selector se abrió hace menos de 4 s (evita que un refresco de UI lo cierre justo después de abrirlo). */
+function _selectorMesesProtegido() {
+    return Date.now() - _selectorMesesAbiertoEn < GUARD_SELECTOR_MESES_MS;
+}
+
 /** @param {any} [idResaltar] */
 function _cerrarSelectorMeses(idResaltar = null) {
     const grid = $('calendario-grid');
@@ -86,6 +94,7 @@ function abrirSelectorMesesCalendario() {
         montar(titulo, html`${icono('#icon-back')} Volver`);
         selector.style.display = 'grid';
     });
+    _selectorMesesAbiertoEn = Date.now();
 }
 
 function _activarVistaCalendarioHistorico() {
@@ -445,6 +454,7 @@ function bindEventos() {
 export const Calendario = {
     bindEventos,
     _cerrarSelectorMeses,
+    _selectorMesesProtegido,
     _activarVistaCalendarioHistorico,
     _renderizarCalendario,
     animarEntradaInicial,

@@ -142,10 +142,9 @@ function _refrescar(animar = true) {
 /** Deja la tarjeta entera entre el encabezado y el panel: si ya se ve no se mueve; si es más alta que el espacio libre se alinea arriba. */
 function _llevarAVista() {
     if (!_activa) return;
-    const panel = $('vista-previa-panel');
     const encabezado = document.querySelector('.header');
     const libreSup = (encabezado ? encabezado.getBoundingClientRect().bottom : 0) + MARGEN_PX;
-    const libreInf = window.innerHeight - (panel ? panel.offsetHeight : 0) - MARGEN_PX;
+    const libreInf = window.innerHeight - _alturaReservada() - MARGEN_PX;
     const r = _activa.objetivo.getBoundingClientRect();
     let delta = 0;
     if (r.height > libreInf - libreSup || r.top < libreSup) delta = r.top - libreSup;
@@ -153,9 +152,26 @@ function _llevarAVista() {
     if (Math.abs(delta) > 1) window.scrollBy({ top: delta, behavior: Movimiento.scrollBehavior() });
 }
 
+/**
+ * Lo que ocupa el panel en su peor caso: la cabecera, la fila principal (la última) y la subopción más alta (a la vez solo se muestra una). Es lo que se reserva
+ * abajo de la página y lo que se descuenta al encuadrar la tarjeta: así, cuando una subopción aparece o desaparece y el panel crece o se achica, la página de
+ * atrás no se corre ni hay que volver a desplazarla (esa era una segunda animación encima de la del panel).
+ */
+function _alturaReservada() {
+    const panel = $('vista-previa-panel');
+    if (!panel) return 0;
+    const filas = _activa ? _activa.filas : [];
+    const alto = (/** @type {{ btn: HTMLElement }} */ f) => f.btn.offsetHeight;   // el alto natural del botón, aunque su colapsable esté plegado
+    // lo fijo del panel (cabecera y márgenes) = su alto actual menos el de todas las filas tal como se ven ahora (plegadas, a medias o desplegadas)
+    const base = panel.offsetHeight - filas.reduce((suma, f) => suma + f.envoltorio.offsetHeight, 0);
+    const principal = filas.length ? alto(filas[filas.length - 1]) : 0;
+    const subopciones = Math.max(0, ...filas.slice(0, -1).map(alto));
+    return Math.ceil(base + principal + subopciones);
+}
+
 function _medirPanel() {
     const panel = $('vista-previa-panel');
-    if (panel) document.body.style.setProperty('--vp-panel-h', `${panel.offsetHeight}px`);
+    if (panel) document.body.style.setProperty('--vp-panel-h', `${_alturaReservada()}px`);
 }
 
 function _mostrar() {
@@ -178,6 +194,7 @@ function _mostrar() {
 
     _medirPanel();
     // las filas que aparecen o desaparecen al cambiar de estilo cambian el alto del panel: el espacio de abajo y el encuadre lo siguen
+    // la reserva ya cubre el peor caso: solo se mide de nuevo si cambia la cantidad de líneas de un texto (por ejemplo al girar el celular)
     _activa.observer = new ResizeObserver(() => { _medirPanel(); });
     _activa.observer.observe(panel);
     _activa.timer = setTimeout(_llevarAVista, 60);

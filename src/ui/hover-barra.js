@@ -54,6 +54,7 @@ function conectarTextos(textos) {
 function _salirDeHito() {
     if (!_tipoDiario) return;
     _tipoDiario = '';
+    $('stats-card')?.classList.remove('hover-hito');
     CicloStats.soltarFase();
 }
 
@@ -72,7 +73,7 @@ function _sobreDiaria(e) {
     const clave = tipos.join();
     if (clave === _tipoDiario) return;
     _salirDeHito();
-    if (CicloStats.fijarFase(tipos)) _tipoDiario = clave;
+    if (CicloStats.fijarFase(tipos)) { _tipoDiario = clave; $('stats-card')?.classList.add('hover-hito'); }
 }
 
 // Vista semanal: el día de la marca bajo el cursor o, si no hay, el del tramo que corresponde a su posición sobre la pista

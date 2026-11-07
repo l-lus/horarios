@@ -221,9 +221,11 @@ function _renderBarra(vista, desdeCero = false) {
     }
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
-    // la clase que oculta la descripción en la barra (nombre en el número grande) tiene que estar bien antes de medir las descripciones; si no, al pasar de Texto a Barra se miden con ancho 0
-    pista?.closest('#stats-card')?.classList.toggle('desc-en-numero', conLinea && _descHitosEnNumero());
+    // La clase que oculta la descripción en la barra (Texto: el ciclo pone el nombre en el número grande) se quita para medir las descripciones
+    // (con display:none miden 0) porque al pasar el cursor por un hito siempre se despliegan en la barra, y se vuelve a poner al terminar.
+    card?.classList.remove('desc-en-numero');
     const colorTramo = BarraHitos.render({ vista, pista: /** @type {HTMLElement} */ (pista), fill: el, conLinea, conSemana });
+    card?.classList.toggle('desc-en-numero', conLinea && _descHitosEnNumero());
     if (colorTramo && punto && !vista.cerrado) punto.dataset.color = colorTramo(anchoBarra);
     el.classList.toggle('con-remate', !conLinea && !conSemana && vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
     HoverBarra.actualizarDatos(conSemana ? { hitos: vista.hitosSemana ?? [], fin: vista.anchoBarra / 100 } : null);

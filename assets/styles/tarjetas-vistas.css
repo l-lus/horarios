@@ -533,12 +533,13 @@
     transition: left var(--dur-slow), opacity var(--dur-fast) ease, filter var(--dur-anim) ease;
 }
 
-/* Variante B del hint integrado: el número grande lleva el nombre del hito enfocado y la barra solo resalta la hora, sin desplegar su descripción */
-.stats-card.desc-en-numero .linea-et-desc {
+/* Variante B del hint integrado: en el ciclo, el número grande lleva el nombre del hito enfocado y la barra solo resalta la hora, sin desplegar su descripción.
+   Al pasar el cursor por un hito (.hover-hito) siempre se despliega en la barra y el número queda con las horas */
+.stats-card.desc-en-numero:not(.hover-hito) .linea-et-desc {
     display: none;
 }
 
-.stats-card.desc-en-numero .linea-etiqueta {
+.stats-card.desc-en-numero:not(.hover-hito) .linea-etiqueta {
     --desc-ancho: 0px !important;
     --separacion-desc: 0px !important;
 }

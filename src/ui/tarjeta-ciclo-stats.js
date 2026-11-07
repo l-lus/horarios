@@ -154,8 +154,8 @@ function _iniciarCicloEnFase(tipo) {
 }
 
 /**
- * Muestra y mantiene la fase del primer tipo de `tipos` que exista (cursor sobre su hito): detiene el ciclo, escribe su texto en el número grande
- * (con la variante B) y resalta el hito en la barra. Devuelve true si había una fase para mostrar.
+ * Muestra y mantiene la fase del primer tipo de `tipos` que exista (cursor sobre su hito): detiene el ciclo, deja las horas en el número grande
+ * (la descripción se despliega en la barra, sea cual sea la animación elegida) y resalta el hito en la barra. Devuelve true si había una fase para mostrar.
  * @param {string[]} tipos
  */
 function _fijarFase(tipos) {
@@ -166,7 +166,8 @@ function _fijarFase(tipos) {
     _cicloStatsInterval = null;
     _faseFija = fase.tipo;
     const el = $('stats-semana');
-    if (el) Animaciones._animarTextoHover(el, () => _escribirTextoFase(el, fase));
+    // el cursor siempre despliega la descripción en la barra: el número grande queda con las horas aunque el ciclo use el nombre del hito
+    if (el) Animaciones._animarTextoHover(el, () => { el.textContent = _cicloStatsValorHoras; });
     _emitirFase(fase.tipo);
     return true;
 }

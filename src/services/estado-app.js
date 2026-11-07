@@ -204,6 +204,12 @@ function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
     return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
 }
 
+/** Horas de una jornada abierta hasta este momento, sin contar lo que lleva la pausa en curso. */
+function horasTranscurridas(reg, minutosFuera = 0) {
+    const t = calcularHoras(reg.entrada, TiempoUtils.obtenerHoraActual(), reg.tiempoFuera || null, null, true);
+    return Math.max(0, (t ? t.total : 0) - (minutosFuera / 60));
+}
+
 /** @param {any} [tf] @param {any} [cr] */
 function _aplicarCalculoHoras(r, e, s, tf = null, cr = null) {
     const t = calcularHoras(e, s, tf, cr);
@@ -295,6 +301,7 @@ export const EstadoApp = {
     _hayEspacioParaRegistros,
     _fechaFuturaInvalida,
     calcularHoras,
+    horasTranscurridas,
     _aplicarCalculoHoras,
     _recalcularHorasSiValido,
     _construirRegistro,

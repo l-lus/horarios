@@ -645,3 +645,31 @@ test('TiempoFuera: menos de 30 s no cuenta, lo demás se suma al registro y la o
     assert.equal(reg.tiempoFuera, '00:16');
     assert.equal(F.corriendo(), false);
 });
+
+test('FiltrosYPeriodos: jornada vigente y activa, con el cruce de medianoche', async () => {
+    const { FiltrosYPeriodos: F } = await import('../src/services/filtros-periodos.js');
+    const ayer = { entrada: '22:00', salida: null };
+    const abierta = { entrada: '08:00', salida: null };
+    const cerrada = { entrada: '08:00', salida: '15:00' };
+    const especial = { entrada: '12:12', salida: '12:12' };
+
+    assert.equal(F.jornadaVigente(null, ayer, true), ayer, 'ayer abierto y hoy sin registro');
+    assert.equal(F.jornadaVigente(abierta, ayer, true), abierta, 'hoy ya tiene entrada');
+    assert.equal(F.jornadaVigente(null, null, false), null);
+
+    assert.equal(F.jornadaActiva(null, ayer, true), ayer);
+    assert.equal(F.jornadaActiva(abierta, null, false), abierta);
+    assert.equal(F.jornadaActiva(cerrada, null, false), null, 'cerrada no corre');
+    assert.equal(F.jornadaActiva(especial, null, false), null, 'un día especial no corre');
+    assert.equal(F.jornadaActiva(null, null, false), null);
+});
+
+test('EstadoApp.horasTranscurridas: lo corrido hasta ahora, sin la pausa en curso y nunca negativo', async (t) => {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 28, 10, 0) });
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    EstadoApp.setIgnorarTiempoFuera(false);
+    assert.equal(EstadoApp.horasTranscurridas({ entrada: '08:00' }), 2);
+    assert.equal(EstadoApp.horasTranscurridas({ entrada: '08:00', tiempoFuera: '00:30' }), 1.5);
+    assert.equal(EstadoApp.horasTranscurridas({ entrada: '08:00' }, 30), 1.5);
+    assert.equal(EstadoApp.horasTranscurridas({ entrada: '09:59' }, 30), 0);
+});

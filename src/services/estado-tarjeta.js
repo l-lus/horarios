@@ -127,11 +127,9 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, resolverRetenido
     const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
 
     let tiempoHoy = 0;
-    const regActivo = (ayerAbierto && !regHoy?.entrada) ? regAyer
-        : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
+    const regActivo = FiltrosYPeriodos.jornadaActiva(regHoy, regAyer, ayerAbierto);
     if (regActivo) {
-        const t = EstadoApp.calcularHoras(regActivo.entrada, TiempoUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
-        tiempoHoy = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
+        tiempoHoy = EstadoApp.horasTranscurridas(regActivo, minutosBreakActivo);
     } else if (!tipoEspecialHoy && regHoy?.salida) {
         tiempoHoy = regHoy.total;
     }
@@ -159,7 +157,8 @@ function calcularEstadoCard({ asignacionesPrecalculadas = null, resolverRetenido
         diasSemana,
         tipoEspecialHoy, tiempoHoy,
         todosEspeciales,
-        ayerAbierto, ayerStr: ayer, regAyer
+        ayerAbierto, ayerStr: ayer, regAyer,
+        regVigente: FiltrosYPeriodos.jornadaVigente(regHoy, regAyer, ayerAbierto)
     };
 }
 

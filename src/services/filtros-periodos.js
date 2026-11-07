@@ -162,11 +162,21 @@ function detectarAyerAbierto(fechaHoy, regs) {
     return { ayerStr, regAyer, ayerAbierto };
 }
 
+/** Jornada de la que se habla "hoy": la de ayer si sigue abierta y hoy no tiene entrada (cruce de medianoche); si no, el registro de hoy. */
+function jornadaVigente(regHoy, regAyer, ayerAbierto) {
+    return ayerAbierto && !regHoy?.entrada ? regAyer : regHoy;
+}
+
+/** La jornada vigente, solo si todavía no cerró (la que corre ahora). */
+function jornadaActiva(regHoy, regAyer, ayerAbierto) {
+    const vigente = jornadaVigente(regHoy, regAyer, ayerAbierto);
+    return vigente?.entrada && !vigente.salida ? vigente : null;
+}
+
 function registroParaTiempoFuera(fechaHoy = TiempoUtils.obtenerFechaHoy()) {
     const regHoy = EstadoApp.registroPorFecha(fechaHoy) ?? null;
-    if (regHoy?.entrada) return regHoy;
     const { regAyer, ayerAbierto } = detectarAyerAbierto(fechaHoy, EstadoApp.registros());
-    return ayerAbierto ? regAyer : regHoy;
+    return jornadaVigente(regHoy, regAyer, ayerAbierto);
 }
 
 /** @param {any} [asignacionesPrecalculadas] */
@@ -175,13 +185,10 @@ function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutos
     const registros = EstadoApp.registros();
     const registrosRango = registros.filter(r => r.fecha >= desde && r.fecha <= hasta);
     const regsPorFecha = new Map(registrosRango.map(r => [r.fecha, r]));
-    const { ayerStr, ayerAbierto } = detectarAyerAbierto(hoy, regsPorFecha);
+    const { ayerStr, regAyer, ayerAbierto } = detectarAyerAbierto(hoy, regsPorFecha);
     const asignacionesCompensatorio = asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio();
 
-    const regHoy = regsPorFecha.get(hoy) ?? null;
-    const tipoEspecialHoy = TiposRegistro.obtenerTipoPorCodigo(regHoy?.entrada, regHoy?.salida);
-    const regActivo = (ayerAbierto && !regHoy?.entrada) ? (regsPorFecha.get(ayerStr) ?? null)
-        : (!tipoEspecialHoy && regHoy?.entrada && !regHoy.salida) ? regHoy : null;
+    const regActivo = jornadaActiva(regsPorFecha.get(hoy) ?? null, regAyer, ayerAbierto);
 
     let objetivo = 0, hechas = 0;
     const horasDiarias = EstadoApp.horasDiarias();
@@ -202,8 +209,7 @@ function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutos
         if (esRemoto && esDiaHabil && diaTerminado) hechas += objetivoDia;
 
         if (incluirActivoEnVivo && !diaTerminado && esDiaHabil && !esEspecial && r && r === regActivo) {
-            const t = EstadoApp.calcularHoras(regActivo.entrada, TiempoUtils.obtenerHoraActual(), regActivo.tiempoFuera || null, null, true);
-            const transcurrido = Math.max(0, (t ? t.total : 0) - (minutosBreakActivo / 60));
+            const transcurrido = EstadoApp.horasTranscurridas(regActivo, minutosBreakActivo);
             if (transcurrido > objetivoDia) {
                 objetivo += objetivoDia;
                 hechas += transcurrido;
@@ -328,6 +334,8 @@ export const FiltrosYPeriodos = {
     eliminarGrupoActual,
     registrarDiaEspecial,
     detectarAyerAbierto,
+    jornadaVigente,
+    jornadaActiva,
     registroParaTiempoFuera,
     calcularBufferPeriodo,
     limpiarFiltros,

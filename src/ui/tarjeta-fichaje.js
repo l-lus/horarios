@@ -88,7 +88,7 @@ function _renderTitulo(vista, sinAnimar = false, est = null) {
 function _actualizarTiempoFueraConsolidado(el, est) {
     if (!el) return;
 
-    const regHoy = (est?.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est?.regHoy;
+    const regHoy = est?.regVigente;
     const mostrar = !!regHoy && EstadoApp.vistaActual() !== 'semana'
         && !TiempoFuera.corriendo()
         && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
@@ -144,7 +144,7 @@ function _renderStats(vista, est, conteo = null) {
 
     const esDiaria = EstadoApp.vistaActual() !== 'semana';
     // En el cruce de medianoche (ayer sigue abierto y hoy aún no tiene entrada) la barra muestra los hitos de esa jornada, y el ciclo también
-    const regHoy = (est.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est.regHoy;
+    const regHoy = est.regVigente;
     const esEspecial = !!est.tipoEspecialHoy;
     const entradaHoy = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
     const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';

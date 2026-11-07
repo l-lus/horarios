@@ -287,7 +287,7 @@ function pintarLinea(r, d) {
 
     if (conTotal) {
         if (esRegistro) fijar(r.etiqueta, d.cerrado ? 'Trabajaste' : 'Llevás trabajado');
-        else fijar(r.etiqueta, `${d.abierta ? 'Llevás en la semana' : 'Total de la semana'}${d.objetivoMin > 0 ? ` · objetivo ${duracionCompacta(d.objetivoMin)}` : ''}`);
+        else fijar(r.etiqueta, d.abierta ? 'Llevás en la semana' : 'Total de la semana');
         pintarDuracion(r.duracion, d.trabajado);
         mostrar(r.nodos, esRegistro);
         if (esRegistro) pintarNodos(r, d); else pintarNodosDias(r, d.dias);

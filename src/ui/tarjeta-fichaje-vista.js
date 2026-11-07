@@ -74,7 +74,7 @@ function _conMensajeCorto(derivar) {
 // Con la jornada recién abierta el reloj marca 0 minutos: se muestra un texto en lugar del cero
 const _TEXTO_COMENZANDO = 'Comenzando...';
 const _TEXTO_SEMANA_SIN_HORAS = 'Sin horas todavía';
-const _sinMinutos = horasDecimales => Math.round(horasDecimales * 60) === 0;
+const _sinMinutos = horasDecimales => TiempoUtils.horasAMinutosRedondeados(horasDecimales) === 0;
 
 function _horasTextoStats(horasDecimales) {
     return TiempoUtils.horasATexto(horasDecimales, _modoTextoStats());
@@ -300,7 +300,7 @@ function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHab
     const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
 
     if (mostrarBuffer) {
-        const minutosConBuffer = minutosTotal - Math.round(bufferSemanal * 60);   // minutos enteros: el saldo guarda 6 decimales y 1 min (0.016667 h) daba 1.00002
+        const minutosConBuffer = minutosTotal - TiempoUtils.horasAMinutosRedondeados(bufferSemanal);
         const horaBuf = _minutosAHoraWrap(minutosConBuffer);
         const claseBuffer = bufferSemanal > 0 ? ' hint-buffer-color--green' : bufferSemanal < 0 ? ' hint-buffer-color--red' : '';
         return {
@@ -328,8 +328,7 @@ function _calcularLinea(reg, objetivoDiario, bufferSemanal, diasHabiles) {
     const ahoraRel = rel(TiempoUtils.horaAMinutos(cerrado ? reg.salida : TiempoUtils.obtenerHoraActual()));
     const hayBuffer = !cerrado && TiempoUtils.esFechaHabil(reg.fecha, diasHabiles) && Math.abs(bufferSemanal) > 0.01;
     // con un buffer mayor que la jornada la salida con buffer no puede quedar antes de la entrada
-    // el saldo semanal viene con 6 decimales (1 min = 0.016667 h = 1.00002 min): sin redondear, la hora se truncaba un minuto de más
-    const bufferRel = hayBuffer ? Math.max(0, salidaRel - Math.round(bufferSemanal * 60)) : null;
+    const bufferRel = hayBuffer ? Math.max(0, salidaRel - TiempoUtils.horasAMinutosRedondeados(bufferSemanal)) : null;
     const hayBanda = bufferRel !== null && Math.abs(bufferRel - salidaRel) >= 1;
 
     return {

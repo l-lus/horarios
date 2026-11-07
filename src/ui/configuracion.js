@@ -458,6 +458,7 @@ function bindEventos() {
         'btn-toggle-objetivo-registro': () => toggleObjetivoPorRegistro(),
         'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
         'btn-estilo-tarjeta': () => abrirVistaPreviaTarjeta(),
+        'btn-toggle-fondo': () => abrirVistaPreviaTarjeta(),   // el fondo también se prueba en vivo sobre la tarjeta
         'btn-linea-disposicion': () => toggleDisposicionLinea(),
         'btn-linea-mosaicos': () => toggleMosaicosLinea(),
         'btn-toggle-hint-animacion': () => toggleAnimacionHint(),

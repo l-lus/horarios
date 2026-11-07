@@ -32,7 +32,7 @@ const {
 } = Animaciones;
 const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo, _estiloPropioActivo, _descHitosEnNumero, _cicloAutoActivo } = TarjetaFichajeVista;
 
-const { setProgressBarColor, toggleFondoCard, actualizarFondoCard } = TarjetaFondos;
+const { setProgressBarColor, actualizarFondoCard } = TarjetaFondos;
 const {
     _formatearMinutosCorto,
     _obtenerOCrearLabelTF, _quitarLabelTF, actualizarEstadoBotonTimerMain, toggleTimerBreakMain
@@ -564,7 +564,6 @@ function bindEventos() {
     });
 
     alClic({
-        'btn-toggle-fondo': () => toggleFondoCard(),
         'btn-edit-entrada': () => pegarHoraActual('edit-entrada'),
         'btn-edit-salida': () => pegarHoraActual('edit-salida'),
         'btn-edit-tf': () => limpiarCampo('edit-tiempo-fuera'),

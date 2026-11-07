@@ -15,12 +15,14 @@ const MEDIO_ANCHO_MARCA = 3;
  * Posición de una etiqueta de ancho `w` colgada de una marca ubicada en `x` (px desde el borde izquierdo de la pista).
  * `left` es donde va la etiqueta; `desde`/`hasta` es el tramo horizontal que ocupa el conector con su etiqueta
  * (más `margen / 2` a cada lado de la etiqueta), para detectar choques con otras marcas del mismo lado.
+ * Con `forzarEspejado` la etiqueta va a la derecha aunque a la izquierda entre (cuando a su izquierda hay otra hora que no se puede mover).
  * @param {number} x
  * @param {number} w
  * @param {number} [margen]
+ * @param {boolean} [forzarEspejado]
  */
-export function geometriaConector(x, w, margen = 0) {
-    const espejado = x - ANCHO_CONECTOR - SEPARACION_ETIQUETA - w < 0;
+export function geometriaConector(x, w, margen = 0, forzarEspejado = false) {
+    const espejado = forzarEspejado || x - ANCHO_CONECTOR - SEPARACION_ETIQUETA - w < 0;
     const left = espejado ? x + ANCHO_CONECTOR + SEPARACION_ETIQUETA : x - ANCHO_CONECTOR - SEPARACION_ETIQUETA - w;
     return {
         espejado,
@@ -84,6 +86,17 @@ export function entradaDebeSubir({ ancho, entradaLeft, entradaAncho, salidaLeft,
     const salidaChoca = salidaLeft < finEntrada;
     const arribaOcupado = bufferLeft !== null && bufferLeft < finEntrada;
     return salidaChoca && !arribaOcupado;
+}
+
+/**
+ * La hora de salida pasa a la derecha de su conector cuando la pisa la de entrada y la entrada no puede subir porque arriba está la etiqueta del buffer en ese mismo
+ * tramo (es el caso de `entradaDebeSubir` que no tiene salida: sin esto las dos horas quedaban pegadas o encimadas, p. ej. con muchas horas corridas y tiempo extra).
+ * @param {{ ancho: number, entradaLeft: number, entradaAncho: number, salidaLeft: number, bufferLeft?: number | null }} p
+ */
+export function salidaDebeEspejarse({ ancho, entradaLeft, entradaAncho, salidaLeft, bufferLeft = null }) {
+    if (!(ancho > 0)) return false;
+    const finEntrada = entradaLeft + entradaAncho + MARGEN_HORAS;
+    return salidaLeft < finEntrada && bufferLeft !== null && bufferLeft < finEntrada;
 }
 
 // ====================================================================

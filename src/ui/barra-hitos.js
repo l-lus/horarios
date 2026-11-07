@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import {
-    geometriaConector, geometriaDiagonal, holguraHaciaDerecha, repartirLados, entradaDebeSubir,
+    geometriaConector, geometriaDiagonal, holguraHaciaDerecha, repartirLados, entradaDebeSubir, salidaDebeEspejarse,
     holguraDescripcion, nivelDescripcion, MARGEN_DESCRIPCION_DERECHA
 } from '../core/geometria-etiquetas.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
@@ -29,9 +29,9 @@ function _colocarEtiquetaLinea(el, pct, ancho) {
 }
 
 // Posiciona la etiqueta de una marca en "T" (ver core/geometria-etiquetas.js): a la izquierda del conector o, si no entra, espejada a la derecha.
-function _colocarEtiquetaConector(et, tick, pct, ancho) {
+function _colocarEtiquetaConector(et, tick, pct, ancho, forzarEspejado = false) {
     if (!et) return;
-    const { espejado, left } = geometriaConector((pct / 100) * ancho, et.offsetWidth);
+    const { espejado, left } = geometriaConector((pct / 100) * ancho, et.offsetWidth, 0, forzarEspejado);
     tick.classList.toggle('espejado', espejado);
     et.classList.toggle('linea-etiqueta--espejada', espejado);   // la descripción del foco se despliega hacia el lado contrario
     et.style.left = `${left}px`;
@@ -214,6 +214,17 @@ function _renderLinea(vista, pista, fill) {
         _colocarEtiquetaConector(etSalida, tickSalida, pMarca, ancho);
     }
     _colocarEtiquetaConector(etBuffer, tickBuffer, pBuffer ?? pSalida, ancho);
+    // si la entrada no puede subir (arriba está la etiqueta del buffer en ese tramo) y la salida la pisa, la salida pasa a la derecha de su conector
+    // (solo si ahí entra completa en la pista)
+    if (!L.cerrado && salidaDebeEspejarse({
+        ancho,
+        entradaLeft: parseFloat(etEntrada.style.left),
+        entradaAncho: etEntrada.offsetWidth,
+        salidaLeft: parseFloat(etSalida.style.left),
+        bufferLeft: L.hayBanda ? parseFloat(etBuffer.style.left) : null
+    }) && geometriaConector((pMarca / 100) * ancho, etSalida.offsetWidth, 0, true).left + etSalida.offsetWidth <= ancho) {
+        _colocarEtiquetaConector(etSalida, tickSalida, pMarca, ancho, true);
+    }
     // si la hora de salida (abierta o cerrada) pisa o queda pegada a la de entrada, esta pasa arriba de la barra,
     // salvo que arriba esté la etiqueta del buffer en ese mismo tramo (sin ancho medido no se decide nada)
     const entradaArriba = entradaDebeSubir({

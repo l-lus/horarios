@@ -704,6 +704,29 @@ test('GeometriaEtiquetas: conector, reparto de lados y cuándo la entrada pasa a
     assert.equal(entradaDebeSubir({ ...base, ancho: 0, salidaLeft: 0 }), false);
 });
 
+test('GeometriaEtiquetas: la salida pasa a la derecha cuando la entrada no puede subir (sin DOM)', async () => {
+    const { salidaDebeEspejarse, geometriaConector, entradaDebeSubir, ANCHO_CONECTOR, SEPARACION_ETIQUETA } = await import('../src/core/geometria-etiquetas.js');
+    // entrada de 0 a 39 px (fin + 12 = 51); la salida a la izquierda de su conector arranca en 41: se pisan
+    const base = { ancho: 300, entradaLeft: 0, entradaAncho: 39, salidaLeft: 41 };
+    // con la etiqueta del buffer arriba en ese tramo la entrada no puede subir: la salida se espeja
+    assert.equal(salidaDebeEspejarse({ ...base, bufferLeft: 12 }), true);
+    assert.equal(entradaDebeSubir({ ...base, bufferLeft: 12 }), false);
+    // sin buffer (o con el buffer lejos) la entrada sube y la salida se queda donde está
+    assert.equal(salidaDebeEspejarse({ ...base, bufferLeft: null }), false);
+    assert.equal(salidaDebeEspejarse({ ...base, bufferLeft: 120 }), false);
+    assert.equal(entradaDebeSubir({ ...base, bufferLeft: null }), true);
+    // sin choque no hace falta
+    assert.equal(salidaDebeEspejarse({ ...base, salidaLeft: 80, bufferLeft: 12 }), false);
+    // sin ancho medido no se decide nada
+    assert.equal(salidaDebeEspejarse({ ...base, ancho: 0, bufferLeft: 12 }), false);
+    // forzar el espejo deja la etiqueta a la derecha del conector aunque a la izquierda entre
+    const normal = geometriaConector(120, 39);
+    assert.equal(normal.espejado, false);
+    const forzada = geometriaConector(120, 39, 0, true);
+    assert.equal(forzada.espejado, true);
+    assert.equal(forzada.left, 120 + ANCHO_CONECTOR + SEPARACION_ETIQUETA);
+});
+
 test('GeometriaEtiquetas: lugar libre y versión de la descripción del hito enfocado (sin DOM)', async () => {
     const { holguraDescripcion, nivelDescripcion, holguraHaciaDerecha, MARGEN_DESCRIPCION_DERECHA, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
 

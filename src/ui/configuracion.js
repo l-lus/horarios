@@ -38,7 +38,7 @@ const _reprogramarPushDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 
 
 const verificarBloqueoCredito = (...args) => EstadoApp._notify().verificarBloqueoCredito(...args);
 const actualizarUI = (...args) => EstadoApp._notify().actualizarUI(...args);
-const { getFondoCard, _getLabelFondo } = TarjetaFondos;
+const { getFondoCard, _getLabelFondo, toggleFondoCard } = TarjetaFondos;
 const _refrescarFormatoCortoStatsCache = () => EventosApp.emit('config:formato-corto-stats');
 const { actualizarEstadoBotonPersistir } = OrdenTarjetas;
 const { actualizarEstadoBotonNotificaciones } = Notificaciones;
@@ -159,21 +159,23 @@ function abrirVistaPreviaTarjeta(desdeAjustes = true) {
         idObjetivo: 'stats-card',
         antes: desdeAjustes ? _cerrarAjustesParaVistaPrevia : undefined,
         alCerrar: desdeAjustes ? _volverAAjustes : undefined,
-        // las subopciones arriba y la fila del estilo al final: el panel crece hacia arriba y esa fila (la que se toca) no cambia de lugar (ver VistaPrevia.abrir)
+        // las subopciones arriba y las filas fijas (estilo y fondo) al final: el panel crece hacia arriba y esas filas no cambian de lugar (ver VistaPrevia.abrir)
         filas: [
             {
-                etiqueta: 'Disposición', descripcion: 'Solo en PC', valor: () => EstiloTarjeta.etiquetaDisposicion(),
+                etiqueta: 'Disposición', valor: () => EstiloTarjeta.etiquetaDisposicion(),
                 alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea' && _esPC()
             },
             {
-                etiqueta: 'Faltan y banco', descripcion: 'Solo en móvil', valor: () => EstiloTarjeta.etiquetaMosaicos(),
+                etiqueta: 'Disposición', valor: () => EstiloTarjeta.etiquetaMosaicos(),
                 alTocar: toggleMosaicosLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esPC()
             },
             {
                 etiqueta: 'Animación', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
                 alTocar: toggleAnimacionHint, visible: () => EstiloTarjeta.hintIntegrado()
             },
-            { etiqueta: 'Estilo', descripcion: 'Tocá la tarjeta: día o semana', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta }
+            { etiqueta: 'Estilo', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta },
+            // siempre visible (no es una subopción de un estilo): el fondo de la tarjeta, el mismo de Ajustes > Apariencia
+            { etiqueta: 'Fondo', icono: '#icon-landscape', valor: () => _getLabelFondo(getFondoCard()), alTocar: toggleFondoCard }
         ]
     });
 }

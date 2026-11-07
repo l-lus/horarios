@@ -153,7 +153,7 @@ function _llevarAVista() {
 }
 
 /**
- * Lo que ocupa el panel en su peor caso: la cabecera, la fila principal (la última) y la subopción más alta (a la vez solo se muestra una). Es lo que se reserva
+ * Lo que ocupa el panel en su peor caso: la cabecera, las filas fijas (la principal, la última, y las que no dependen de nada) y la subopción más alta (a la vez solo se muestra una). Es lo que se reserva
  * abajo de la página y lo que se descuenta al encuadrar la tarjeta: así, cuando una subopción aparece o desaparece y el panel crece o se achica, la página de
  * atrás no se corre ni hay que volver a desplazarla (esa era una segunda animación encima de la del panel).
  */
@@ -164,9 +164,10 @@ function _alturaReservada() {
     const alto = (/** @type {{ btn: HTMLElement }} */ f) => f.btn.offsetHeight;   // el alto natural del botón, aunque su colapsable esté plegado
     // lo fijo del panel (cabecera y márgenes) = su alto actual menos el de todas las filas tal como se ven ahora (plegadas, a medias o desplegadas)
     const base = panel.offsetHeight - filas.reduce((suma, f) => suma + f.envoltorio.offsetHeight, 0);
-    const principal = filas.length ? alto(filas[filas.length - 1]) : 0;
-    const subopciones = Math.max(0, ...filas.slice(0, -1).map(alto));
-    return Math.ceil(base + principal + subopciones);
+    // las filas sin `visible` están siempre (la principal y las fijas, como el fondo); las condicionales son subopciones y a la vez solo se muestra una
+    const fijas = filas.filter(f => !f.def.visible).reduce((suma, f) => suma + alto(f), 0);
+    const subopciones = Math.max(0, ...filas.filter(f => f.def.visible).map(alto));
+    return Math.ceil(base + fijas + subopciones);
 }
 
 function _medirPanel() {
@@ -198,8 +199,8 @@ function _mostrar() {
     _activa.observer = new ResizeObserver(() => { _medirPanel(); });
     _activa.observer.observe(panel);
     _activa.timer = setTimeout(_llevarAVista, 60);
-    // el foco va a la fila principal (la última): las subopciones, si las hay, quedan arriba
-    /** @type {HTMLElement | null} */ (panel.querySelector('.collapsible:last-child button'))?.focus({ preventScroll: true });
+    // el foco va a la primera fila fija (la principal): las subopciones, si las hay, quedan arriba
+    _activa.filas.find(f => !f.def.visible)?.btn.focus({ preventScroll: true });
 }
 
 /**

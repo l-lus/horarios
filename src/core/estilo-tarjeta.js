@@ -36,11 +36,14 @@ const _disposicionValida = id => DISPOSICIONES_LINEA.some(d => d.id === id);
 
 // Subvariante para la tarjeta angosta (móvil): los mosaicos "Faltan" y "Banco de horas" abajo (como siempre) o apilados a la derecha, al lado del tiempo y la línea.
 export const MOSAICOS_LINEA = Object.freeze([
-    { id: 'abajo', label: 'Abajo' },
-    { id: 'derecha', label: 'A la derecha' }
+    { id: 'abajo', label: 'Horizontal' },   // los mosaicos en fila, abajo
+    { id: 'derecha', label: 'Vertical' }     // los mosaicos apilados, a la derecha de la línea
 ]);
 
 const _mosaicosValido = id => MOSAICOS_LINEA.some(m => m.id === id);
+
+/** Sin elección guardada, en el móvil los mosaicos van apilados a la derecha de la línea ("Vertical"). */
+const MOSAICOS_PREDETERMINADO = 'derecha';
 
 /** Posición que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */
 export function siguienteMosaicos(id) {
@@ -49,7 +52,7 @@ export function siguienteMosaicos(id) {
 }
 
 export function etiquetaMosaicos(id) {
-    return (MOSAICOS_LINEA.find(m => m.id === id) ?? MOSAICOS_LINEA[0]).label;
+    return (MOSAICOS_LINEA.find(m => m.id === id) ?? MOSAICOS_LINEA.find(m => m.id === MOSAICOS_PREDETERMINADO)).label;
 }
 
 /** Disposición que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */
@@ -99,7 +102,7 @@ function disposicion() {
 function mosaicos() {
     if (_mosaicos === null) {
         const guardado = Almacenamiento.getItem(STORAGE_KEYS.LINEA_MOSAICOS, null);
-        _mosaicos = _mosaicosValido(guardado) ? guardado : MOSAICOS_LINEA[0].id;
+        _mosaicos = _mosaicosValido(guardado) ? guardado : MOSAICOS_PREDETERMINADO;
     }
     return _mosaicos;
 }

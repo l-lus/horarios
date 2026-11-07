@@ -1645,6 +1645,12 @@
     height: var(--icon-sm);
 }
 
+/* Los estilos con diseño propio (línea de tiempo, anillo y lista de filas) ya muestran el tiempo fuera en su propio dato:
+   el badge del título (el consolidado, no el de "Tiempo fuera" en curso, que va dentro de .tf-badge) sobra */
+:root:is([data-estilo-tarjeta="linea"], [data-estilo-tarjeta="anillo"], [data-estilo-tarjeta="filas"]) #stats-titulo > .break-counter-label {
+    display: none;
+}
+
 .tf-badge {
     display: inline-flex;
     align-items: center;

@@ -874,13 +874,13 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
     const { STORAGE_KEYS } = await import('../src/core/constantes.js');
 
     const ids = ESTILOS_TARJETA.map(e => e.id);
-    assert.deepEqual(ids, ['hitos', 'clasica', 'anillo', 'linea', 'filas', 'tipografica']);
-    let id = 'hitos';
+    assert.deepEqual(ids, ['clasica', 'linea', 'filas', 'anillo', 'hitos']);
+    let id = 'clasica';
     for (let i = 0; i < ids.length; i++) id = siguienteEstilo(id);
-    assert.equal(id, 'hitos', 'dando la vuelta completa se vuelve al punto de partida');
-    assert.equal(siguienteEstilo('desconocido'), 'hitos');
-    assert.equal(etiquetaEstilo('desconocido'), 'Barra con hitos');
-    assert.deepEqual(ids.filter(esEstiloPropio), ['anillo', 'linea', 'filas', 'tipografica']);
+    assert.equal(id, 'clasica', 'dando la vuelta completa se vuelve al punto de partida');
+    assert.equal(siguienteEstilo('desconocido'), 'clasica');
+    assert.equal(etiquetaEstilo('desconocido'), 'Clásica');
+    assert.deepEqual(ids.filter(esEstiloPropio), ['linea', 'filas', 'anillo']);
 
     // sin estilo guardado se deduce del hint integrado: quien ya usaba la app ve lo mismo que antes
     Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_TARJETA);
@@ -916,9 +916,9 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
 
     // disposición del tiempo trabajado en la línea de tiempo (subvariante para tarjetas anchas)
     const { DISPOSICIONES_LINEA, siguienteDisposicion, etiquetaDisposicion } = await import('../src/core/estilo-tarjeta.js');
-    assert.deepEqual(DISPOSICIONES_LINEA.map(d => d.id), ['arriba', 'izquierda', 'derecha']);
+    assert.deepEqual(DISPOSICIONES_LINEA.map(d => d.id), ['arriba', 'izquierda', 'derecha', 'mosaicos-izquierda', 'mosaicos-derecha']);
     assert.equal(siguienteDisposicion('arriba'), 'izquierda');
-    assert.equal(siguienteDisposicion('derecha'), 'arriba');
+    assert.equal(siguienteDisposicion('mosaicos-derecha'), 'arriba');
     assert.equal(siguienteDisposicion('x'), 'arriba');
     assert.equal(etiquetaDisposicion('x'), 'Arriba');
     Almacenamiento.removeItem(STORAGE_KEYS.LINEA_DISPOSICION);
@@ -931,6 +931,7 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
     ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, lineaDisposicion: 'derecha' });
     assert.equal(EstiloTarjeta.disposicion(), 'derecha');
     assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'derecha' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'mosaicos-izquierda' }), true);
     assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'abajo' }), false);
 
     // posición de los mosaicos de la línea de tiempo con la tarjeta angosta (móvil)
@@ -958,8 +959,8 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
     EstiloTarjeta.releer();
 });
 
-test('ResumenTarjeta: duraciones compactas, orden de los hitos y posiciones de la regla (sin DOM)', async () => {
-    const { partesDuracion, duracionCompacta, duracionConSigno, hitosOrdenados, posicionesLinea } = await import('../src/core/resumen-tarjeta.js');
+test('ResumenTarjeta: duraciones compactas y orden de los hitos (sin DOM)', async () => {
+    const { partesDuracion, duracionCompacta, duracionConSigno, hitosOrdenados } = await import('../src/core/resumen-tarjeta.js');
 
     assert.deepEqual(partesDuracion(398), { horas: 6, minutos: 38 });
     assert.deepEqual(partesDuracion(-5), { horas: 0, minutos: 0 });
@@ -979,16 +980,6 @@ test('ResumenTarjeta: duraciones compactas, orden de los hitos y posiciones de l
     // sin banda no hay hito de banco; cerrada solo quedan entrada y salida
     assert.deepEqual(hitosOrdenados({ ...abierta, hayBanda: false, bufferRel: null }).map(h => h.tipo), ['entrada', 'ahora', 'salida']);
     assert.deepEqual(hitosOrdenados({ ...abierta, cerrado: true }).map(h => h.tipo), ['entrada', 'salida']);
-
-    const pos = posicionesLinea(abierta);
-    assert.ok(Math.abs(pos.avance - 22 / 420) < 1e-9);
-    assert.equal(pos.salida, 1);
-    assert.ok(Math.abs(pos.banco - 401 / 420) < 1e-9);
-    // el banco en contra alarga la escala: la salida estimada queda antes del final
-    const enContra = posicionesLinea({ ...abierta, bufferRel: 455 });
-    assert.equal(enContra.banco, 1);
-    assert.ok(enContra.salida < 1);
-    assert.equal(posicionesLinea({ ahoraRel: 0, salidaRel: 0, bufferRel: null, hayBanda: false }).avance, 0);
 });
 
 test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (registro abierto y cerrado, sin registro y día especial)', async () => {
@@ -1064,7 +1055,7 @@ test('TarjetaFichajeVista: el resumen de la semana lista los días con su color 
     assert.equal(vacia.tipo, 'espera');
     assert.equal(vacia.emoji, '🌞');
 
-    // los resúmenes de medida (alto reservado de anillo y tipográfica) cubren todos los estados
+    // los resúmenes de medida (alto reservado del anillo) cubren todos los estados
     const medidas = resumenesDeMedida();
     assert.deepEqual(medidas.map(m => m.tipo), ['registro', 'espera', 'especial', 'semana']);
     assert.equal(medidas[3].dias.length, 7);

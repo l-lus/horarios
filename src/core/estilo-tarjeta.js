@@ -5,30 +5,31 @@ import { Preferencias } from './preferencias.js';
 // ====================================================================
 // ESTILO DE LA TARJETA DE ESTADO
 // ====================================================================
-// Cómo se dibuja el registro del día en la tarjeta de arriba. Los dos primeros son la barra de siempre (la clásica, con el texto de la salida estimada
-// debajo, y la barra con hitos, que es el antiguo "hint integrado"); los demás son diseños propios que reemplazan el número, la barra y los textos
-// en la vista diaria (la vista semanal sigue con la barra). Es una opción de la instalación, no del perfil.
-// Sin valor guardado se deduce de HINT_INTEGRADO, así quien ya usaba la app ve lo mismo que antes.
+// Cómo se dibuja el registro del día en la tarjeta de arriba. La clásica (el predeterminado) y la barra con hitos (el antiguo "hint integrado") son la barra de
+// siempre; los demás son diseños propios que reemplazan el número, la barra y los textos, tanto en la vista diaria como en la semanal. Es una opción de la
+// instalación, no del perfil. Sin valor guardado se usa la clásica, salvo que el interruptor antiguo HINT_INTEGRADO estuviera activo (entonces, la barra con hitos).
 export const ESTILOS_TARJETA = Object.freeze([
-    { id: 'hitos', label: 'Barra con hitos' },
     { id: 'clasica', label: 'Clásica' },
-    { id: 'anillo', label: 'Anillo' },
     { id: 'linea', label: 'Línea de tiempo' },
     { id: 'filas', label: 'Lista de filas' },
-    { id: 'tipografica', label: 'Tipográfica' }
+    { id: 'anillo', label: 'Anillo' },
+    { id: 'hitos', label: 'Barra con hitos' }
 ]);
 
-/** Estilos con diseño propio: dibujan la vista diaria en `#stats-estilo` en vez de la barra. */
-const ESTILOS_PROPIOS = Object.freeze(['anillo', 'linea', 'filas', 'tipografica']);
+/** Estilos con diseño propio: dibujan la tarjeta en `#stats-estilo` en vez de la barra. */
+const ESTILOS_PROPIOS = Object.freeze(['linea', 'filas', 'anillo']);
 
 const _esValido = id => ESTILOS_TARJETA.some(e => e.id === id);
 
-// Subvariante del estilo "Línea de tiempo": en una tarjeta ancha (PC) el tiempo trabajado puede ir arriba de la línea, como en el móvil, o a su izquierda o su derecha.
+// Subvariante del estilo "Línea de tiempo": en una tarjeta ancha (PC) elige cómo se reparte la tarjeta: el tiempo trabajado arriba de la línea (como en el móvil), el tiempo
+// a la izquierda o a la derecha de la línea, o los mosaicos "Faltan" y "Banco de horas" apilados a la izquierda o a la derecha.
 // El CSS solo mira <html data-disposicion-linea> (y el ancho de la tarjeta), así que cambiarla no redibuja nada.
 export const DISPOSICIONES_LINEA = Object.freeze([
     { id: 'arriba', label: 'Arriba' },
-    { id: 'izquierda', label: 'A la izquierda' },
-    { id: 'derecha', label: 'A la derecha' }
+    { id: 'izquierda', label: 'Tiempo a la izquierda' },
+    { id: 'derecha', label: 'Tiempo a la derecha' },
+    { id: 'mosaicos-izquierda', label: 'Mosaicos a la izquierda' },
+    { id: 'mosaicos-derecha', label: 'Mosaicos a la derecha' }
 ]);
 
 const _disposicionValida = id => DISPOSICIONES_LINEA.some(d => d.id === id);

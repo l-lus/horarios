@@ -1798,7 +1798,7 @@
     mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.3) var(--foco-desde), #000 var(--foco-desde) var(--foco-hasta), rgba(0, 0, 0, 0.3) var(--foco-hasta));
 }
 
-/* ─── ESTILOS DE LA TARJETA DE ESTADO (anillo, línea de tiempo, lista de filas, tipográfica) ─────────────────────
+/* ─── ESTILOS DE LA TARJETA DE ESTADO (anillo, línea de tiempo y lista de filas) ─────────────────────
    Los dibuja ui/tarjeta-estilos.js dentro de #stats-estilo (vista diaria). Con .estilo-propio el número, la barra y los textos de abajo se ocultan
    (siguen existiendo: el render los actualiza igual) y la tarjeta crece a su contenido en vez de tener el alto fijo de la barra.
    Dos atributos de datos mandan los colores: data-tono (neutro | apagado | green | red | gold) pinta textos y mosaicos, y data-color (el color del
@@ -2029,6 +2029,33 @@
 /* Tarjeta ancha (PC): según la disposición elegida (html[data-disposicion-linea]) el tiempo trabajado va a la izquierda o a la derecha de la línea
    en vez de arriba; los mosaicos (Faltan, Banco de horas...) y la nota quedan siempre abajo, a todo el ancho. Se mide el ancho de la tarjeta
    (contenedor #stats-estilo), no el de la ventana: en un móvil, o con la tarjeta angosta, todo queda en una columna. */
+/* Tarjeta ancha (PC) con los mosaicos a un costado: "Faltan" y "Banco de horas" (y "Tiempo fuera") quedan apilados en una columna a la izquierda o a la derecha, y el tiempo
+   trabajado y la línea ocupan el resto. Solo con registro o en la semana (sin registro los textos pendientes necesitan el ancho). */
+@container (min-width: 28rem) {
+    html:is([data-disposicion-linea="mosaicos-izquierda"], [data-disposicion-linea="mosaicos-derecha"]) .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem);
+        grid-template-areas: "cabecera pie" "linea pie";
+        align-items: start;
+        gap: var(--space-md) var(--space-sm);
+    }
+
+    html[data-disposicion-linea="mosaicos-izquierda"] .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) {
+        grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
+        grid-template-areas: "pie cabecera" "pie linea";
+    }
+
+    html:is([data-disposicion-linea="mosaicos-izquierda"], [data-disposicion-linea="mosaicos-derecha"]) .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) .est-linea-cabecera { grid-area: cabecera; }
+    html:is([data-disposicion-linea="mosaicos-izquierda"], [data-disposicion-linea="mosaicos-derecha"]) .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) .est-linea-cuerpo { grid-area: linea; }
+
+    html:is([data-disposicion-linea="mosaicos-izquierda"], [data-disposicion-linea="mosaicos-derecha"]) .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) .est-mosaicos {
+        grid-area: pie;
+        grid-auto-flow: row;
+        grid-auto-columns: auto;
+        align-self: start;
+    }
+}
+
 @container (min-width: 28rem) {
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea {
         display: grid;
@@ -2333,101 +2360,7 @@
     color: var(--text-muted);
 }
 
-/* ── F · Tipográfica minimal ── */
-.est-tipografica {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-xs);
-    text-align: center;
-}
-
-.est-tipografica-titulo {
-    font-size: 2.2rem;
-    font-weight: var(--fw-semibold);
-    line-height: var(--lh-tight);
-}
-
-.est-tipografica[data-tipo="espera"] .est-tipografica-titulo {
-    font-size: 1.6rem;
-    color: var(--text-muted);
-}
-
-.est-tipografica-subtitulo {
-    font-size: var(--text-sm);
-    color: var(--tono);
-}
-
-.est-regla-bloque {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-    width: 100%;
-    margin-top: var(--space-md);
-}
-
-.est-regla-fila {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-}
-
-.est-regla-hora {
-    font-weight: var(--fw-bold);
-    font-variant-numeric: tabular-nums;
-}
-
-.est-regla {
-    position: relative;
-    flex: 1;
-    height: 3px;
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--text-muted) 25%, transparent);
-}
-
-.est-regla-relleno {
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: calc(var(--avance, 0) * 100%);
-    border-radius: inherit;
-    background: var(--est-color);
-    transition: width var(--dur-conteo) var(--ease-conteo), background-color var(--dur-anim) ease;
-}
-
-.est-regla-marca {
-    position: absolute;
-    top: -3px;
-    left: calc(var(--banco, 0) * 100%);
-    width: 3px;
-    height: 9px;
-    border-radius: 2px;
-    background: var(--tono);
-    transform: translateX(-50%);
-}
-
-.est-regla.punteada {
-    background: linear-gradient(90deg, color-mix(in srgb, var(--text-muted) 55%, transparent) 50%, transparent 50%) 0 0 / 12px 100%;
-}
-
-.est-regla.llena { height: 4px; }
-
-.est-regla-pie {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-md);
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-}
-
-.est-regla-leyenda--der {
-    margin-left: auto;
-    color: var(--tono);
-    text-align: right;
-}
-
-.est-tipografica:not([data-tipo="registro"]) .est-regla-pie { justify-content: flex-start; }
-
-/* ── Alto reservado (anillo y tipográfica): capa visible + capas de medida ocultas en la misma celda, la cuadrícula toma el alto de la más alta ── */
+/* ── Alto reservado (anillo): capa visible + capas de medida ocultas en la misma celda, la cuadrícula toma el alto de la más alta ── */
 .est-capas {
     display: grid;
 }
@@ -2500,45 +2433,3 @@
 /* Lista de filas: el nombre del día */
 .est-fila-etiqueta--dia { text-transform: capitalize; }
 
-/* Tipográfica: un segmento por día, relleno según lo que cumplió */
-.est-segmentos {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
-    gap: var(--space-xs);
-}
-
-.est-seg {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-xs);
-}
-
-.est-seg-barra {
-    position: relative;
-    height: 5px;
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--text-muted) 25%, transparent);
-    overflow: hidden;
-}
-
-.est-seg-relleno {
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: calc(var(--avance, 0) * 100%);
-    background: var(--est-color);
-    transition: width var(--dur-conteo) var(--ease-conteo), background-color var(--dur-anim) ease;
-}
-
-.est-seg-sigla {
-    font-size: var(--text-xs);
-    text-align: center;
-    color: var(--text-muted);
-    text-transform: capitalize;
-}
-
-.est-seg.hoy .est-seg-sigla {
-    color: var(--text-main);
-    font-weight: var(--fw-bold);
-}

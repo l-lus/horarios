@@ -2,10 +2,10 @@ import { $ } from '../core/dom.js';
 import { uiAnimarReubicacion } from './arrastre.js';
 import { Animaciones } from './animaciones.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
-import { duracionCompacta, hitosOrdenados, horaCorta, posicionesLinea, resumenesDeMedida } from '../core/resumen-tarjeta.js';
+import { duracionCompacta, hitosOrdenados, horaCorta, resumenesDeMedida } from '../core/resumen-tarjeta.js';
 
 // ====================================================================
-// DISEÑOS PROPIOS DE LA TARJETA DE ESTADO (vista diaria): anillo, línea de tiempo, lista de filas y tipográfica
+// DISEÑOS PROPIOS DE LA TARJETA DE ESTADO (vista diaria): anillo, línea de tiempo y lista de filas
 // ====================================================================
 // Cada diseño arma su DOM una sola vez dentro de #stats-estilo y después solo actualiza textos y variables CSS con el `resumen` que deriva
 // tarjeta-fichaje-vista.js (tipo 'registro', 'espera' o 'especial'). El CSS (tarjetas-vistas.css, sección "ESTILOS DE LA TARJETA") hace el resto:
@@ -472,149 +472,13 @@ function pintarFilas(r, d) {
     }
 }
 
-// ─── F · Tipográfica minimal ──────────────────────────────────────────────────────────────────────────────────────────────
-function crearTipografica() {
-    const raiz = el('div', 'est-tipografica');
-    const emoji = el('div', 'est-emoji est-emoji--grande');
-    const duracion = crearDuracion('est-duracion--enorme');
-    const titulo = el('div', 'est-tipografica-titulo');
-    const subtitulo = el('div', 'est-tipografica-subtitulo');
-
-    const linea = el('div', 'est-regla');
-    const relleno = el('span', 'est-regla-relleno');
-    const marca = el('span', 'est-regla-marca');
-    linea.append(relleno, marca);
-    const izq = el('span', 'est-regla-hora');
-    const der = el('span', 'est-regla-hora');
-    const fila = el('div', 'est-regla-fila');
-    fila.append(izq, linea, der);
-    const pie = el('div', 'est-regla-pie');
-    const pieIzq = el('span', 'est-regla-leyenda');
-    const pieDer = el('span', 'est-regla-leyenda est-regla-leyenda--der');
-    pie.append(pieIzq, pieDer);
-
-    const regla = el('div', 'est-regla-bloque');
-    regla.append(fila, pie);
-
-    // la semana: un segmento por día (relleno según lo que cumplió) con su sigla abajo
-    const semana = el('div', 'est-regla-bloque');
-    const segmentos = el('div', 'est-segmentos');
-    const segs = Array.from({ length: 7 }, () => {
-        const seg = el('div', 'est-seg');
-        const barra = el('span', 'est-seg-barra');
-        const relleno = el('span', 'est-seg-relleno');
-        barra.append(relleno);
-        const sigla = el('span', 'est-seg-sigla');
-        seg.append(barra, sigla);
-        segmentos.append(seg);
-        return { raiz: seg, relleno, sigla };
-    });
-    const pieSemana = el('div', 'est-regla-pie');
-    const leyendaSemana = el('span', 'est-regla-leyenda');
-    pieSemana.append(leyendaSemana);
-    semana.append(segmentos, pieSemana);
-
-    raiz.append(emoji, duracion.raiz, titulo, subtitulo, regla, semana);
-    return { raiz, emoji, duracion, titulo, subtitulo, regla, linea, relleno, marca, izq, der, pieIzq, pieDer, semana, segs, leyendaSemana };
-}
-
-function pintarTipografica(r, d) {
-    r.raiz.dataset.tipo = d.tipo;
-    const conTotal = d.tipo === 'registro' || d.tipo === 'semana';
-    mostrar(r.emoji, !conTotal);
-    mostrar(r.duracion.raiz, conTotal);
-    mostrar(r.titulo, !conTotal);
-    mostrar(r.semana, d.tipo === 'semana');
-    r.raiz.dataset.color = d.tipo === 'especial' ? d.color : (conTotal ? d.color : 'neutro');
-
-    if (d.tipo === 'semana') {
-        pintarDuracion(r.duracion, d.trabajado);
-        const partes = [d.objetivoMin > 0 ? `de ${duracionCompacta(d.objetivoMin)}` : 'esta semana'];
-        if (d.balance) partes.push(d.balance.etiqueta === 'Objetivo' ? 'objetivo cumplido' : `${d.balance.etiqueta.toLowerCase()} ${d.balance.texto}`);
-        fijar(r.subtitulo, partes.join(' · '));
-        entonar(r.subtitulo, 'apagado');
-        mostrar(r.regla, false);
-        r.segs.forEach((seg, i) => {
-            const dia = d.dias[i];
-            mostrar(seg.raiz, !!dia);
-            if (!dia) return;
-            seg.raiz.dataset.color = dia.color ?? 'neutro';
-            seg.raiz.dataset.estado = dia.estado;
-            seg.raiz.classList.toggle('hoy', !!dia.hoy);
-            seg.relleno.style.setProperty('--avance', String(dia.fraccion));
-            fijar(seg.sigla, dia.sigla);
-        });
-        mostrar(r.leyendaSemana, !!d.banco);
-        if (d.banco) { fijar(r.leyendaSemana, fraseBanco(d.banco)); entonar(r.leyendaSemana, tonoBanco(d.banco)); }
-        return;
-    }
-
-    if (d.tipo === 'registro') {
-        pintarDuracion(r.duracion, d.trabajado);
-        const partes = ['trabajados hoy'];
-        if (d.balance) partes.push(d.balance.etiqueta === 'Objetivo' ? 'objetivo cumplido' : `${d.balance.etiqueta.toLowerCase()} ${d.balance.texto}`);
-        if (d.tiempoFuera) partes.push(`${d.tiempoFuera.corriendo ? 'fuera (en curso)' : 'fuera'} ${d.tiempoFuera.texto}`);
-        fijar(r.subtitulo, partes.join(' · '));
-        entonar(r.subtitulo, 'apagado');
-
-        const linea = d.linea;
-        mostrar(r.regla, true);
-        mostrar(r.linea, !!linea);
-        mostrar(r.izq, true);
-        mostrar(r.der, !!(d.salida || d.salidaEstimada));
-        fijar(r.izq, d.entrada);
-        fijar(r.der, d.salida || d.salidaEstimada);
-        r.linea.classList.remove('punteada', 'llena');
-        if (linea) {
-            const pos = posicionesLinea(linea);
-            r.relleno.style.setProperty('--avance', String(d.cerrado ? 1 : pos.avance));
-            mostrar(r.marca, pos.banco !== null);
-            if (pos.banco !== null) r.marca.style.setProperty('--banco', String(pos.banco));
-            entonar(r.marca, tonoBanco(d.banco));
-        }
-        mostrar(r.pieIzq, true);
-        fijar(r.pieIzq, 'Entrada');
-        const conBanco = d.salidaBanco && d.banco ? `Con banco ${d.salidaBanco} · ${d.banco.texto}` : (d.cerrado ? 'Salida' : 'Salida estimada');
-        fijar(r.pieDer, conBanco);
-        entonar(r.pieDer, d.salidaBanco ? tonoBanco(d.banco) : 'apagado');
-        return;
-    }
-
-    fijar(r.emoji, d.emoji);
-    r.linea.classList.toggle('punteada', d.tipo === 'espera');
-    r.linea.classList.toggle('llena', d.tipo === 'especial');
-    mostrar(r.linea, true);
-    mostrar(r.marca, false);
-    mostrar(r.izq, false);
-    mostrar(r.der, false);
-    mostrar(r.pieIzq, true);
-    r.relleno.style.setProperty('--avance', d.tipo === 'especial' ? '1' : '0');
-    entonar(r.pieDer, 'apagado');
-    fijar(r.pieDer, '');
-    if (d.tipo === 'espera') {
-        fijar(r.titulo, d.mensaje);
-        mostrar(r.titulo, !!d.mensaje);
-        fijar(r.subtitulo, '');
-        mostrar(r.regla, !!d.banco);
-        fijar(r.pieIzq, d.banco ? fraseBanco(d.banco) : '');
-        entonar(r.pieIzq, tonoBanco(d.banco));
-    } else {
-        fijar(r.titulo, d.etiqueta);
-        fijar(r.subtitulo, '');
-        mostrar(r.regla, true);
-        fijar(r.pieIzq, d.descripcion);
-        entonar(r.pieIzq, 'apagado');
-    }
-}
-
 // ─── Montaje ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// `fija`: el alto de la tarjeta no varía casi nada entre estados (anillo y tipográfica), así que se reserva el del más alto. En los demás (línea de tiempo y
+// `fija`: el alto de la tarjeta no varía casi nada entre estados (el anillo), así que se reserva el del más alto. En los demás (línea de tiempo y
 // lista de filas el día, la semana y cada estado miden muy distinto) el alto sigue al contenido y se anima (ver _animarAlturaCard en tarjeta-fichaje.js).
 const DISENOS = {
     anillo: { crear: crearAnillo, pintar: pintarAnillo, fija: true },
     linea: { crear: crearLinea, pintar: pintarLinea, fija: false },
-    filas: { crear: crearFilas, pintar: pintarFilas, fija: false },
-    tipografica: { crear: crearTipografica, pintar: pintarTipografica, fija: true }
+    filas: { crear: crearFilas, pintar: pintarFilas, fija: false }
 };
 
 /** @type {{ id: string, refs: any } | null} */
@@ -624,8 +488,7 @@ let _montado = null;
 const NUMEROS = {
     anillo: pintarNumeroAnillo,
     linea: (/** @type {any} */ r, /** @type {any} */ t) => pintarDuracion(r.duracion, t),
-    filas: (/** @type {any} */ r, /** @type {any} */ t) => pintarDuracion(r.duracion, t),
-    tipografica: (/** @type {any} */ r, /** @type {any} */ t) => pintarDuracion(r.duracion, t)
+    filas: (/** @type {any} */ r, /** @type {any} */ t) => pintarDuracion(r.duracion, t)
 };
 
 /** @type {{ cancelado: boolean } | null} */

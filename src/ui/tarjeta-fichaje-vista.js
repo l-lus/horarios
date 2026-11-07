@@ -35,7 +35,7 @@ EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
 // "Hint integrado" (estilo "Barra con hitos"): la salida estimada y la salida con buffer se dibujan sobre la barra en vez de en el texto inferior.
 // Los estilos con diseño propio (anillo, línea de tiempo...) reemplazan la barra tanto en la vista diaria como en la semanal.
 const _hintActivo = () => EstiloTarjeta.hintIntegrado();
-/** ¿La tarjeta usa el diseño propio de un estilo (anillo, línea de tiempo, filas o tipográfica) en vez de la barra? */
+/** ¿La tarjeta usa el diseño propio de un estilo (anillo, línea de tiempo o filas) en vez de la barra? */
 const _estiloPropioActivo = () => EstiloTarjeta.propio();
 // y su variante: el nombre del hito enfocado va en el número grande en vez de desplegarse en la barra
 let _descHitosNumero = Preferencias.DESC_HITOS_NUMERO.get();
@@ -397,7 +397,7 @@ function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, la
     return bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
 }
 
-// ─── Resumen del día para los diseños propios (anillo, línea de tiempo, filas, tipográfica) ─────────────────────────────────
+// ─── Resumen del día para los diseños propios (anillo, línea de tiempo y filas) ─────────────────────────────────
 /** Banco de horas de la semana (con signo) o null si no hay nada que mostrar; mismo criterio que el texto "extras esta semana". */
 function _resumenBanco(est) {
     const { bufferSemanal, horasDiarias, semanaAbierta } = est;

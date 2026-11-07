@@ -256,7 +256,7 @@ function _renderCard(vista) {
 }
 
 /**
- * Estilos con diseño propio (anillo, línea de tiempo, filas, tipográfica): en la vista diaria #stats-estilo reemplaza al número, la barra y los textos
+ * Estilos con diseño propio (anillo, línea de tiempo y filas): en la vista diaria #stats-estilo reemplaza al número, la barra y los textos
  * (el CSS los oculta con .estilo-propio; siguen actualizándose sin dibujar nada, así volver a otro estilo no tiene nada que reconstruir).
  * Sin resumen (p. ej. jornada de ayer ya retenida) se queda la barra de siempre.
  */

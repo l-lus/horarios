@@ -1,7 +1,7 @@
 // ====================================================================
 // RESUMEN DEL DÍA PARA LOS ESTILOS DE LA TARJETA DE ESTADO (funciones puras, sin DOM)
 // ====================================================================
-// Los diseños propios de la tarjeta (anillo, línea de tiempo, lista de filas, tipográfica) dibujan los mismos datos con distinta forma:
+// Los diseños propios de la tarjeta (anillo, línea de tiempo y lista de filas) dibujan los mismos datos con distinta forma:
 // acá se calculan una sola vez, en minutos y con textos compactos ("6 h 38 min").
 
 /** @param {number} minutos entero (se redondea; lo negativo cuenta como 0) */
@@ -42,21 +42,6 @@ export function hitosOrdenados(linea) {
     return hitos.sort((a, b) => a.rel - b.rel || prioridad[a.tipo] - prioridad[b.tipo]);
 }
 
-/**
- * Posiciones (0 a 1) del avance, la salida con banco y el final sobre una escala común, para la línea de la variante tipográfica.
- * La escala llega hasta el hito más lejano (si el banco obliga a quedarse más tiempo, la salida con banco es el final).
- * @param {{ ahoraRel: number, salidaRel: number, bufferRel: number | null, hayBanda: boolean }} linea
- */
-export function posicionesLinea(linea) {
-    const fin = Math.max(linea.salidaRel, linea.hayBanda && linea.bufferRel !== null ? linea.bufferRel : 0, 1);
-    const unitario = v => Math.min(1, Math.max(0, v / fin));
-    return {
-        avance: unitario(linea.ahoraRel),
-        salida: unitario(linea.salidaRel),
-        banco: linea.hayBanda && linea.bufferRel !== null ? unitario(linea.bufferRel) : null
-    };
-}
-
 /** Horas del día en formato corto para las celdas de la semana: "7:30"; sin tiempo, "—". @param {number} minutos */
 export function horaCorta(minutos) {
     const { horas, minutos: m } = partesDuracion(minutos);
@@ -64,7 +49,7 @@ export function horaCorta(minutos) {
 }
 
 /**
- * Resúmenes de ejemplo con TODOS los datos posibles (el peor caso de cada estado): los diseños de alto fijo (anillo y tipográfica) los dibujan ocultos
+ * Resúmenes de ejemplo con TODOS los datos posibles (el peor caso de cada estado): el diseño de alto fijo (el anillo) los dibujan ocultos
  * para que la tarjeta reserve el alto del más alto y no cambie de tamaño al pasar del día a la semana ni entre registro, sin registro y día especial.
  */
 export function resumenesDeMedida() {

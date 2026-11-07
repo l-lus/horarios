@@ -138,13 +138,6 @@
     margin: var(--space-lg) var(--margen-x) calc(var(--space-lg) + var(--ajuste-optico));
 }
 
-/* Móvil: barra de hitos un poco más corta (más aire a los lados; las etiquetas de los extremos quedaban casi pegadas al borde de la tarjeta) */
-@media (max-width: 767px) {
-    .progress-pista {
-        --margen-x: var(--space-xl);
-    }
-}
-
 .progress-punto {
     position: absolute;
     top: 50%;

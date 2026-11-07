@@ -319,6 +319,7 @@
 #modal-reporte-secciones .config-actions button>span:not(.toggle-switch),
 #modal-notificaciones .form-group button>span:not(.toggle-switch) {
     flex: 1;
+    min-width: 0;   /* permite que el texto se parta en vez de empujar al valor */
 }
 
 #hint-fondo-label,
@@ -328,13 +329,19 @@
 #hint-estilo-tarjeta-label,
 #linea-disposicion-label,
 #linea-mosaicos-label {
-    flex: none;
+    /* Proporción 75 / 25: el valor ocupa siempre el 25 % del ancho de la fila (igual en móvil y en PC)
+       y el texto descriptivo se queda con el resto. Si el valor no entra, se parte en líneas. */
+    flex: 0 0 25%;
+    min-width: 0;
+    max-width: 25%;
     margin-left: auto;
     color: var(--text-muted);
     font-size: var(--text-base);
     font-weight: var(--fw-normal);
     text-align: right;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
 }
 
 #modal-notificaciones .config-hint-text {

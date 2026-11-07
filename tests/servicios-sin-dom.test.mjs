@@ -616,3 +616,32 @@ test('ImportarExportar.importarDatos acepta un .json aunque el navegador no info
         delete globalThis.FileReader;
     }
 });
+
+test('TiempoFuera: menos de 30 s no cuenta, lo demás se suma al registro y la opción de ignorarlo no descuenta', async (t) => {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 28, 10, 0) });
+    const { TiempoFuera: F } = await import('../src/services/tiempo-fuera.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    EstadoApp.setIgnorarTiempoFuera(false);
+    const reg = { tiempoFuera: '00:10' };
+
+    assert.equal(F.corriendo(), false);
+    assert.equal(F.minutosActivos(), 0);
+    assert.equal(F.volcarEnRegistro(reg), 0, 'sin temporizador no hace nada');
+
+    F.iniciar();
+    t.mock.timers.tick(29_000);
+    assert.equal(F.alcanzaMinimo(), false);
+    assert.equal(F.volcarEnRegistro(reg), 0, 'muy corto: se descarta');
+    assert.equal(reg.tiempoFuera, '00:10');
+    assert.equal(F.corriendo(), false);
+
+    F.iniciar();
+    t.mock.timers.tick(5 * 60_000 + 40_000);
+    assert.equal(F.minutosActivos(), 5);
+    EstadoApp.setIgnorarTiempoFuera(true);
+    assert.equal(F.minutosActivos(), 0, 'con la opción activa no descuenta');
+    EstadoApp.setIgnorarTiempoFuera(false);
+    assert.equal(F.volcarEnRegistro(reg), 6, 'redondea a partir de los 30 s');
+    assert.equal(reg.tiempoFuera, '00:16');
+    assert.equal(F.corriendo(), false);
+});

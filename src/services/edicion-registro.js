@@ -1,6 +1,5 @@
-import { STORAGE_KEYS, MINUTOS_DIA, MARGEN_HORAS } from '../core/constantes.js';
+import { MINUTOS_DIA, MARGEN_HORAS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
@@ -8,6 +7,7 @@ import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { AvisoJornada } from './aviso-jornada.js';
+import { TiempoFuera } from './tiempo-fuera.js';
 
 // ====================================================================
 //              RECORD EDITING (modal "Editar" de un registro)
@@ -20,7 +20,7 @@ const {
 const {
     _esObjetivoValido, objetivoGuardado, calcularAsignacionesCompensatorio, _buscarAsignacionCompensatorio, objetivoEdicionEnVivo
 } = Compensatorios;
-const { detenerYRegistrarTimer, registroParaTiempoFuera } = FiltrosYPeriodos;
+const { registroParaTiempoFuera } = FiltrosYPeriodos;
 
 async function eliminarRegistroActual() {
     const editandoId = EstadoApp.editandoId();
@@ -31,10 +31,8 @@ async function eliminarRegistroActual() {
         const hoy = TiempoUtils.obtenerFechaHoy();
 
         if (registroABorrar && registroABorrar === registroParaTiempoFuera(hoy)) {
-            const perfilId = EstadoApp.obtenerPerfilIdActual();
-            const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
-            if (Almacenamiento.getItem(storageKey)) {
-                Almacenamiento.removeItem(storageKey);
+            if (TiempoFuera.corriendo()) {
+                TiempoFuera.descartar();
                 notify.mostrarToast('Timer detenido al borrar el registro', 'info');
             }
         }
@@ -156,8 +154,7 @@ async function _eliminarRegistroVacioDesdeEdicion(btnGuardar) {
     const notify = EstadoApp._notify();
     const reg = registroPorId(editandoId);
     if (reg?.fecha === TiempoUtils.obtenerFechaHoy()) {
-        const perfilId = EstadoApp.obtenerPerfilIdActual();
-        Almacenamiento.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
+        TiempoFuera.descartar();
         notify.actualizarEstadoBotonTimerMain();
     }
     EstadoApp._setRegistros(EstadoApp.registros().filter(r => r.id !== editandoId));
@@ -214,7 +211,7 @@ function _aplicarEdicion(r, nuevo, credito) {
     r.fecha = nuevo.fecha;
     r.entrada = nuevo.entrada || null;
     // Se cierra una jornada abierta: si había un timer de tiempo fuera corriendo, se detiene y se suma
-    if (nuevo.salida && !(r.salida || '') && detenerYRegistrarTimer(r)) {
+    if (nuevo.salida && !(r.salida || '') && TiempoFuera.volcarEnRegistro(r) > 0) {
         tiempoFuera = r.tiempoFuera;
         creditoFinal = _calcularCredito(nuevo.entrada, nuevo.salida, tiempoFuera, objetivoEdicionEnVivo());
     }

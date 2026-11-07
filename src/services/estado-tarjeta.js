@@ -5,6 +5,7 @@ import { Compensatorios } from './compensatorios.js';
 import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SaldoSemanal } from './saldo-semanal.js';
+import { TiempoFuera } from './tiempo-fuera.js';
 
 // ====================================================================
 // ESTADO DE LA TARJETA DE FICHAJE MODULE (cálculo del día y la semana, sin DOM)
@@ -101,10 +102,11 @@ function _franjasSemana({ ini, fn, hoy, horasDiarias, porFecha, regActivo, tiemp
 
 /**
  * Estado de la tarjeta de fichaje (día y semana actual). Lo que depende de la UI llega por parámetro:
- * los minutos del tiempo fuera en curso y el registro de ayer que la tarjeta retiene tras cerrarlo.
- * @param {{ asignacionesPrecalculadas?: any, minutosBreakActivo?: number, resolverRetenido?: (registros: any[], regHoy: any) => any }} [opciones]
+ * el registro de ayer que la tarjeta retiene tras cerrarlo.
+ * @param {{ asignacionesPrecalculadas?: any, resolverRetenido?: (registros: any[], regHoy: any) => any }} [opciones]
  */
-function calcularEstadoCard({ asignacionesPrecalculadas = null, minutosBreakActivo = 0, resolverRetenido = () => null } = {}) {
+function calcularEstadoCard({ asignacionesPrecalculadas = null, resolverRetenido = () => null } = {}) {
+    const minutosBreakActivo = TiempoFuera.minutosActivos();
     const hoy = TiempoUtils.obtenerFechaHoy();
     const { inicio: ini, fin: fn } = TiempoUtils.obtenerSemanaRangoActual();
     const registros = EstadoApp.registros();

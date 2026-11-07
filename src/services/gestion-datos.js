@@ -11,6 +11,7 @@ import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { AvisoJornada } from './aviso-jornada.js';
+import { TiempoFuera } from './tiempo-fuera.js';
 
 // ====================================================================
 // DATA MANAGEMENT MODULE
@@ -24,7 +25,7 @@ const {
 
 const { _esObjetivoValido, diasHabilesEnFecha, objetivoDeRegistro, _recalcularCreditoRegistro } = Compensatorios;
 
-const { detenerYRegistrarTimer, detectarAyerAbierto } = FiltrosYPeriodos;
+const { detectarAyerAbierto } = FiltrosYPeriodos;
 
 /** Preferencias de interfaz guardadas (los días y horas del perfil los carga cargarPerfilActivo). */
 function cargarConfiguracion() {
@@ -133,7 +134,7 @@ function _mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s) {
 
 async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     const notify = EstadoApp._notify();
-    const timerDetenido = detenerYRegistrarTimer(reg);
+    const timerDetenido = TiempoFuera.volcarEnRegistro(reg) > 0;
     const hoy = TiempoUtils.obtenerFechaHoy();
     // jornada de ayer que cruzó la medianoche: la tarjeta la sigue mostrando unos segundos antes de pasar a hoy
     const ayer = detectarAyerAbierto(hoy, EstadoApp.registros());
@@ -260,8 +261,7 @@ async function borrarTodoHistorial() {
     EstadoApp.setIgnorarTiempoFuera(false);
     RecordatorioPush.restablecer();
 
-    const perfilId = EstadoApp.obtenerPerfilIdActual();
-    Almacenamiento.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
+    TiempoFuera.descartar();
     const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, ...CARDS.map(STORAGE_KEYS.CARD_VISIBLE), STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.ORDEN_CARDS_MOVIL, STORAGE_KEYS.COLUMNAS_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
     keys.forEach(k => Almacenamiento.removeItem(k, true));
 

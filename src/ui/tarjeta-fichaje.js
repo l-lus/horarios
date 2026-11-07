@@ -9,6 +9,7 @@ import { BarraHitos } from './barra-hitos.js';
 import { Animaciones } from './animaciones.js';
 import { TarjetaFichajeVista } from './tarjeta-fichaje-vista.js';
 import { EstadoTarjeta } from '../services/estado-tarjeta.js';
+import { TiempoFuera } from '../services/tiempo-fuera.js';
 import { Calendario } from './calendario.js';
 import { Historico } from './historico.js';
 import { Estadisticas } from './estadisticas.js';
@@ -30,7 +31,7 @@ const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActi
 
 const { setProgressBarColor, toggleFondoCard, actualizarFondoCard } = TarjetaFondos;
 const {
-    _breakStorageKey, _minutosBreakActivo, _formatearMinutosCorto,
+    _formatearMinutosCorto,
     _obtenerOCrearLabelTF, _quitarLabelTF, actualizarEstadoBotonTimerMain, toggleTimerBreakMain
 } = TarjetaTiempoFuera;
 const {
@@ -71,7 +72,6 @@ function _registroRetenidoAyer(registros, regHoy) {
 function _calcularEstadoCard(asignacionesPrecalculadas = null) {
     return EstadoTarjeta.calcularEstadoCard({
         asignacionesPrecalculadas,
-        minutosBreakActivo: _minutosBreakActivo(),
         resolverRetenido: _registroRetenidoAyer
     });
 }
@@ -90,7 +90,7 @@ function _actualizarTiempoFueraConsolidado(el, est) {
 
     const regHoy = (est?.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est?.regHoy;
     const mostrar = !!regHoy && EstadoApp.vistaActual() !== 'semana'
-        && Almacenamiento.getItem(_breakStorageKey()) === null
+        && !TiempoFuera.corriendo()
         && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
 
     if (!mostrar) { _quitarLabelTF(el); return; }
@@ -344,8 +344,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
 
     const conteo = conteoInicial ? _planConteoInicial(vista, est) : null;
 
-    const timerFueraCorriendo = Almacenamiento.getItem(_breakStorageKey()) !== null;
-    if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo, est); }
+    if (!TiempoFuera.corriendo()) { _renderTitulo(vista, sinAnimarTitulo, est); }
     _renderCard(vista);
     _renderBarra(vista, !!conteo);
     Estadisticas._renderSelectorStats();

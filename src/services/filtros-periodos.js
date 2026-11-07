@@ -1,7 +1,6 @@
-import { STORAGE_KEYS, TOAST_MS, MS_DIA } from '../core/constantes.js';
+import { TOAST_MS, MS_DIA } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
@@ -145,23 +144,6 @@ async function registrarDiaEspecial(fecha, tipo) {
     } else {
         throw new Error('Error al guardar');
     }
-}
-
-function detenerYRegistrarTimer(registro) {
-    const perfilId = EstadoApp.obtenerPerfilIdActual();
-    const storageKey = STORAGE_KEYS.BREAK_TIME(perfilId);
-    const storedStart = Almacenamiento.getItem(storageKey);
-    if (!storedStart) return false;
-
-    const diffMs = Date.now() - parseInt(storedStart);
-    const segundosTranscurridos = Math.floor(diffMs / 1000);
-    if (segundosTranscurridos < 30) { Almacenamiento.removeItem(storageKey); return false; }
-
-    const minutosTranscurridos = TiempoUtils.segundosAMinutosRedondeado(segundosTranscurridos);
-    const tiempoActual = registro.tiempoFuera || '00:00';
-    registro.tiempoFuera = TiempoUtils.sumarMinutosAHora(tiempoActual, minutosTranscurridos);
-    Almacenamiento.removeItem(storageKey);
-    return true;
 }
 
 function detectarAyerAbierto(fechaHoy, regs) {
@@ -345,7 +327,6 @@ export const FiltrosYPeriodos = {
     guardarEdicionGrupo,
     eliminarGrupoActual,
     registrarDiaEspecial,
-    detenerYRegistrarTimer,
     detectarAyerAbierto,
     registroParaTiempoFuera,
     calcularBufferPeriodo,

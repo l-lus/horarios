@@ -5,6 +5,7 @@ import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
+import { TiempoFuera } from '../services/tiempo-fuera.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { html, icono } from '../core/html.js';
@@ -12,7 +13,7 @@ import { html, icono } from '../core/html.js';
 // ====================================================================
 //                     UI CLOCK-IN CARD VIEW MODEL (textos, hints y colores de la tarjeta)
 // ====================================================================
-const { _minutosBreakActivo, _minutosAHoraWrap } = TarjetaTiempoFuera;
+const { _minutosAHoraWrap } = TarjetaTiempoFuera;
 
 function _calcularProgreso(valor, objetivo) {
     return objetivo > 0 ? Math.min((valor / objetivo) * 100, 100) : 100;
@@ -292,7 +293,7 @@ function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHab
         minutosTotal += TiempoUtils.horaAMinutos(reg.tiempoFuera);
     }
 
-    minutosTotal += _minutosBreakActivo();
+    minutosTotal += TiempoFuera.minutosActivos();
 
     const horaSalida = _minutosAHoraWrap(minutosTotal);
 
@@ -323,7 +324,7 @@ function _calcularLinea(reg, objetivoDiario, bufferSemanal, diasHabiles) {
 
     let salidaRel = objetivoDiario * 60;
     if (reg.tiempoFuera && !EstadoApp.getIgnorarTiempoFuera()) salidaRel += TiempoUtils.horaAMinutos(reg.tiempoFuera);
-    salidaRel += _minutosBreakActivo();
+    salidaRel += TiempoFuera.minutosActivos();
 
     const ahoraRel = rel(TiempoUtils.horaAMinutos(cerrado ? reg.salida : TiempoUtils.obtenerHoraActual()));
     const hayBuffer = !cerrado && TiempoUtils.esFechaHabil(reg.fecha, diasHabiles) && Math.abs(bufferSemanal) > MARGEN_HORAS;

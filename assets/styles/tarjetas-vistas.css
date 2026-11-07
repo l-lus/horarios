@@ -2059,15 +2059,14 @@
 @container (min-width: 28rem) {
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea {
         display: grid;
-        /* el tiempo ocupa el 40 % y la línea el 60 %, los dos pegados arriba */
-        grid-template-columns: minmax(0, 4fr) minmax(0, 6fr);
+        /* dos mitades iguales (50/50), con el mismo espacio entre ellas que los mosaicos de abajo, los dos pegados arriba */
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         grid-template-areas: "cabecera linea" "pie pie";
         align-items: start;
         gap: var(--space-md) var(--space-sm);
     }
 
     html[data-disposicion-linea="derecha"] .est-linea {
-        grid-template-columns: minmax(0, 6fr) minmax(0, 4fr);
         grid-template-areas: "linea cabecera" "pie pie";
     }
 

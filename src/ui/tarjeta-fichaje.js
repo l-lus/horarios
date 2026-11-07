@@ -260,13 +260,24 @@ function _renderCard(vista) {
  * (el CSS los oculta con .estilo-propio; siguen actualizándose sin dibujar nada, así volver a otro estilo no tiene nada que reconstruir).
  * Sin resumen (p. ej. jornada de ayer ya retenida) se queda la barra de siempre.
  */
-/** @param {any} vista @param {any} [conteo] plan del conteo inicial (ver _planConteoInicial) */
-function _renderEstilo(vista, conteo = null) {
+
+/**
+ * Marca si la tarjeta usa un diseño propio (.estilo-propio oculta el número, la barra y los textos de siempre). Tiene que hacerse ANTES de dibujar la barra: si la
+ * barra sigue oculta (display: none) cuando se dibuja, mide ancho cero y sus marcas quedan apiladas (pasa al volver de un estilo propio a la barra con hitos).
+ * @param {any} vista
+ */
+function _marcarEstiloPropio(vista) {
     const propio = _estiloPropioActivo() && !!vista.resumen;
     $('stats-card')?.classList.toggle('estilo-propio', propio);
     // también el contenido: el fantasma de la animación (ver _fantasmaDe) cuelga del body y es una copia de #stats-card-content, sin el ancestro #stats-card;
     // sin la clase propia mostraría un instante la barra de siempre en vez del diseño
     $('stats-card-content')?.classList.toggle('estilo-propio', propio);
+    return propio;
+}
+
+/** @param {any} vista @param {any} [conteo] plan del conteo inicial (ver _planConteoInicial) */
+function _renderEstilo(vista, conteo = null) {
+    const propio = _marcarEstiloPropio(vista);
     // en la carga (conteo) el aro, la regla y el número crecen de cero, igual que el número y la barra de los estilos clásicos
     TarjetaEstilos.actualizar(propio ? vista.resumen : null, { conteoInicial: !!conteo, duracion: _durSiAnima('--dur-conteo') });
 }
@@ -404,6 +415,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
     if (!TiempoFuera.corriendo()) { _renderTitulo(vista, sinAnimarTitulo, est); }
     _renderCard(vista);
     _estiloDibujado = EstiloTarjeta.actual();
+    _marcarEstiloPropio(vista);
     _renderBarra(vista, !!conteo);
     Estadisticas._renderSelectorStats();
     actualizarEstadoBotonTimerMain(sinAnimarTitulo);

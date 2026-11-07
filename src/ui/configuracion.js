@@ -158,14 +158,14 @@ function abrirVistaPreviaTarjeta() {
         // las subopciones arriba y la fila del estilo al final: el panel crece hacia arriba y esa fila (la que se toca) no cambia de lugar (ver VistaPrevia.abrir)
         filas: [
             {
-                etiqueta: 'Tiempo trabajado en la línea', descripcion: 'Solo en una tarjeta ancha (PC)', valor: () => EstiloTarjeta.etiquetaDisposicion(),
+                etiqueta: 'Tiempo trabajado', descripcion: 'Solo en PC, con la tarjeta ancha', valor: () => EstiloTarjeta.etiquetaDisposicion(),
                 alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esTactil()
             },
             {
-                etiqueta: 'Animación de los hitos', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
+                etiqueta: 'Animación', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
                 alTocar: toggleAnimacionHint, visible: () => EstiloTarjeta.hintIntegrado()
             },
-            { etiqueta: 'Estilo de la tarjeta', descripcion: 'Tocá la tarjeta para ver el día y la semana', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta }
+            { etiqueta: 'Estilo', descripcion: 'Tocá la tarjeta: día o semana', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta }
         ]
     });
 }
@@ -178,7 +178,7 @@ function abrirVistaPreviaCalendario() {
         antes: _cerrarAjustesParaVistaPrevia,
         alCerrar: _volverAAjustes,
         filas: [
-            { etiqueta: 'Estilo del calendario', icono: '#icon-calendar-simple', valor: () => EstiloCalendario.etiqueta(), alTocar: toggleEstiloCalendario }
+            { etiqueta: 'Estilo', icono: '#icon-calendar-simple', valor: () => EstiloCalendario.etiqueta(), alTocar: toggleEstiloCalendario }
         ]
     });
 }

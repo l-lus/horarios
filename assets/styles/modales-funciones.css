@@ -879,6 +879,23 @@ body.tarjeta-arrastrando-activa * {
     font-weight: var(--fw-semibold);
 }
 
+/* Cada fila ocupa siempre el mismo alto: el nombre y la descripción en una línea (con puntos suspensivos si no entran) y el valor sin partirse. Con textos que se parten
+   en una o dos líneas según el largo del valor (por ejemplo "Contorno con brillo"), el panel cambiaba de tamaño cada vez que cambiaba el valor */
+.vista-previa-panel .settings-list-text {
+    min-width: 0;
+}
+
+.vista-previa-panel .settings-list-text>span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.vista-previa-panel .settings-list>.collapsible>.collapsible-inner>button>span:last-child {
+    flex: none;
+    white-space: nowrap;
+}
+
 /* Las filas son colapsables: la última (la principal) no lleva la raya de abajo */
 .vista-previa-panel .settings-list>.collapsible:last-child>.collapsible-inner>button {
     border-bottom: none;

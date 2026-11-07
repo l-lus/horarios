@@ -989,7 +989,7 @@ test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (re
 
 test('TarjetaFichajeVista: el resumen de la semana lista los días con su color y lo que falta', async () => {
     const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
-    const { horaCorta } = await import('../src/core/resumen-tarjeta.js');
+    const { horaCorta, resumenesDeMedida } = await import('../src/core/resumen-tarjeta.js');
     assert.equal(horaCorta(450), '7:30');
     assert.equal(horaCorta(0), '—');
 
@@ -1022,5 +1022,10 @@ test('TarjetaFichajeVista: el resumen de la semana lista los días con su color 
     const vacia = TarjetaFichajeVista.derivarVistaSemana({ ...est, todosEspeciales: true, diasSemana: [] }).resumen;
     assert.equal(vacia.tipo, 'espera');
     assert.equal(vacia.emoji, '🌞');
+
+    // los resúmenes de medida (alto reservado de anillo y tipográfica) cubren todos los estados
+    const medidas = resumenesDeMedida();
+    assert.deepEqual(medidas.map(m => m.tipo), ['registro', 'espera', 'especial', 'semana']);
+    assert.equal(medidas[3].dias.length, 7);
 
 });

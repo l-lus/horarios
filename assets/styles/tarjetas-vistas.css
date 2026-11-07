@@ -2292,6 +2292,21 @@
 
 .est-tipografica:not([data-tipo="registro"]) .est-regla-pie { justify-content: flex-start; }
 
+/* ── Alto reservado (anillo y tipográfica): capa visible + capas de medida ocultas en la misma celda, la cuadrícula toma el alto de la más alta ── */
+.est-capas {
+    display: grid;
+}
+
+.est-capa {
+    grid-area: 1 / 1;
+    min-width: 0;
+}
+
+.est-capa--medida {
+    visibility: hidden;
+    pointer-events: none;
+}
+
 /* ── Semana ── */
 .est-dias {
     display: grid;

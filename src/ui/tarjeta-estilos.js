@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
-import { duracionCompacta, hitosOrdenados, horaCorta, posicionesLinea } from '../core/resumen-tarjeta.js';
+import { duracionCompacta, hitosOrdenados, horaCorta, posicionesLinea, resumenesDeMedida } from '../core/resumen-tarjeta.js';
 
 // ====================================================================
 // DISEÑOS PROPIOS DE LA TARJETA DE ESTADO (vista diaria): anillo, línea de tiempo, lista de filas y tipográfica
@@ -584,20 +584,50 @@ function pintarTipografica(r, d) {
 }
 
 // ─── Montaje ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// `fija`: el alto de la tarjeta no varía casi nada entre estados (anillo y tipográfica), así que se reserva el del más alto. En los demás (línea de tiempo y
+// lista de filas el día, la semana y cada estado miden muy distinto) el alto sigue al contenido y se anima (ver _animarAlturaCard en tarjeta-fichaje.js).
 const DISENOS = {
-    anillo: { crear: crearAnillo, pintar: pintarAnillo },
-    linea: { crear: crearLinea, pintar: pintarLinea },
-    filas: { crear: crearFilas, pintar: pintarFilas },
-    tipografica: { crear: crearTipografica, pintar: pintarTipografica }
+    anillo: { crear: crearAnillo, pintar: pintarAnillo, fija: true },
+    linea: { crear: crearLinea, pintar: pintarLinea, fija: false },
+    filas: { crear: crearFilas, pintar: pintarFilas, fija: false },
+    tipografica: { crear: crearTipografica, pintar: pintarTipografica, fija: true }
 };
 
 /** @type {{ id: string, refs: any } | null} */
 let _montado = null;
 
 /**
+ * Arma el diseño dentro de #stats-estilo. Los de alto fijo suman capas de medida: copias ocultas del mismo diseño dibujadas con el peor caso de cada estado
+ * (registro, sin registro, día especial y semana). Todas ocupan la misma celda de una cuadrícula, así la tarjeta mide siempre lo que el más alto.
+ * @param {HTMLElement} host @param {string} id @param {{ crear: () => any, pintar: (r: any, d: any) => void, fija: boolean }} diseno
+ */
+function _montar(host, id, diseno) {
+    host.replaceChildren();
+    const refs = diseno.crear();
+    if (!diseno.fija) {
+        host.append(refs.raiz);
+    } else {
+        const capas = el('div', 'est-capas');
+        const visible = el('div', 'est-capa');
+        visible.append(refs.raiz);
+        capas.append(visible);
+        for (const medida of resumenesDeMedida()) {
+            const capa = el('div', 'est-capa est-capa--medida');
+            capa.setAttribute('aria-hidden', 'true');
+            capa.setAttribute('inert', '');
+            const r = diseno.crear();
+            diseno.pintar(r, medida);
+            capa.append(r.raiz);
+            capas.append(capa);
+        }
+        host.append(capas);
+    }
+    _montado = { id, refs };
+}
+
+/**
  * Dibuja el resumen del día o de la semana con el diseño del estilo elegido. Al cambiar de estilo se reconstruye el DOM; si el estilo no es propio
  * (o no hay resumen) deja el contenedor vacío y devuelve false: la tarjeta usa entonces la barra de siempre.
- * El alto de la tarjeta sigue al contenido; quien llama anima los cambios (ver _animarAlturaCard en tarjeta-fichaje.js).
  * @param {any} resumen
  */
 function actualizar(resumen) {
@@ -609,13 +639,8 @@ function actualizar(resumen) {
         if (_montado) { host.replaceChildren(); _montado = null; }
         return false;
     }
-    if (!_montado || _montado.id !== id || !host.firstChild) {
-        host.replaceChildren();
-        const refs = diseno.crear();
-        host.append(refs.raiz);
-        _montado = { id, refs };
-    }
-    diseno.pintar(_montado.refs, resumen);
+    if (!_montado || _montado.id !== id || !host.firstChild) _montar(host, id, diseno);
+    diseno.pintar(_montado?.refs, resumen);
     return true;
 }
 

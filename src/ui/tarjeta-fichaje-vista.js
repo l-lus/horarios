@@ -384,6 +384,20 @@ function _colorSiCerraraAhora(tiempoHoy, objetivo, bufferSemanal) {
     return SaldoSemanal.logicaCubiertoActiva() && horasGte(bufferSemanal, objetivo - tiempoHoy) ? 'gold' : 'red';
 }
 
+/**
+ * Lo que aclara de un día abierto el "pero ..." de `_mensajeProgreso`, sin el "pero" (para los mosaicos de la línea de tiempo):
+ * 'Te podés ir' (objetivo cumplido, o falta tiempo pero el saldo lo cubre), 'Debés tiempo' (objetivo cumplido, pero el saldo semanal sigue en deuda) o ''.
+ */
+function _aclaracionProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal) {
+    if (objetivoDiario === 0) return '';
+    if (cumplido) {
+        const extra = tiempoHoy - objetivoDiario;
+        // sin el "(+extra)" del mensaje: el mosaico "Extra" ya lo muestra
+        return bufferSemanal < 0 && Math.abs(bufferSemanal) > extra ? 'Debés tiempo' : 'Te podés ir';
+    }
+    return bufferSemanal >= objetivoDiario - tiempoHoy ? 'Te podés ir' : '';
+}
+
 function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, labelCero = '') {
     if (objetivoDiario === 0) return labelCero;
     if (cumplido) {
@@ -415,21 +429,23 @@ function _resumenTiempoFuera(reg) {
 }
 
 /** Lo que falta (o sobra) del objetivo del día: etiqueta, texto y tono ('neutro', 'green', 'red' o 'gold'). null sin objetivo. */
-function _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre) {
+function _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre, aclaracion = '') {
     if (!(objetivo > 0)) return null;
     const falta = TiempoUtils.horasAMinutosRedondeados(objetivo - tiempoHoy);
+    // en un día abierto, `aclaracion` es el "pero te podés ir" / "pero debés tiempo" del mensaje, como tercera línea
+    const detalle = !cerrado && aclaracion ? { detalle: aclaracion } : {};
     if (falta > 0) {
         return cerrado
             ? { etiqueta: 'Faltó', texto: duracionCompacta(falta), tono: colorCierre === 'gold' ? 'gold' : 'red', ...(colorCierre === 'gold' && { detalle: 'Cubierto' }) }
-            : { etiqueta: 'Faltan', texto: duracionCompacta(falta), tono: 'neutro' };
+            : { etiqueta: 'Faltan', texto: duracionCompacta(falta), tono: 'neutro', ...detalle };
     }
     return falta === 0
-        ? { etiqueta: 'Objetivo', texto: 'Cumplido', tono: 'green' }
-        : { etiqueta: 'Extra', texto: duracionConSigno(-falta), tono: 'green' };
+        ? { etiqueta: 'Objetivo', texto: 'Cumplido', tono: 'green', ...detalle }
+        : { etiqueta: 'Extra', texto: duracionConSigno(-falta), tono: 'green', ...detalle };
 }
 
 /** Resumen de un registro con entrada (abierto o cerrado). `linea` puede ser null (sin objetivo): entonces no hay salida estimada. */
-function _resumenRegistro({ reg, linea, tiempoHoy, objetivo, progreso, cerrado, color, colorCierre, mensaje, est }) {
+function _resumenRegistro({ reg, linea, tiempoHoy, objetivo, progreso, cerrado, color, colorCierre, mensaje, est, aclaracion = '' }) {
     const trabajadoMin = TiempoUtils.horasAMinutosRedondeados(tiempoHoy);
     return {
         tipo: 'registro', cerrado, color, mensaje, progreso,
@@ -439,7 +455,7 @@ function _resumenRegistro({ reg, linea, tiempoHoy, objetivo, progreso, cerrado, 
         salidaEstimada: !cerrado && linea ? linea.horaSalida : '',
         salidaBanco: !cerrado && linea?.hayBanda ? linea.horaBuffer : '',
         linea,
-        balance: _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre),
+        balance: _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre, aclaracion),
         banco: _resumenBanco(est),
         tiempoFuera: _resumenTiempoFuera(reg),
     };
@@ -473,7 +489,8 @@ function _vistaAyerAbierto(est) {
         linea,
         resumen: est.regAyer ? _resumenRegistro({
             reg: est.regAyer, linea, tiempoHoy, objetivo: objetivoDiarioAyerAplica, progreso: prog, cerrado: false,
-            color: colorBarra, colorCierre: colorBarra, mensaje, est
+            color: colorBarra, colorCierre: colorBarra, mensaje, est,
+            aclaracion: _aclaracionProgreso(cumplido, tiempoHoy, objetivoDiarioAyerAplica, bufferSemanalBase)
         }) : null,
     };
 }
@@ -596,7 +613,8 @@ function derivarVistaHoy(est) {
         linea,
         resumen: _resumenRegistro({
             reg: regHoy, linea, tiempoHoy, objetivo: objetivoDiarioAplica, progreso: prog, cerrado: dayClosed,
-            color: colorBarra, colorCierre: colorBarra, mensaje: mostrarMensaje ? mensaje : '', est
+            color: colorBarra, colorCierre: colorBarra, mensaje: mostrarMensaje ? mensaje : '', est,
+            aclaracion: dayClosed ? '' : _aclaracionProgreso(cumplido, tiempoHoy, objetivoDiarioAplica, bufferSemanalBase)
         }),
     }, avisoAyerHint);
 }

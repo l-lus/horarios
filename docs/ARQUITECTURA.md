@@ -51,6 +51,7 @@ horarios/
 │   ├── html.test.mjs           # Escape automático de core/html.js
 │   ├── orden-cards.test.mjs    # Columnas libres de escritorio: reparto, mover, columna nueva y límites
 │   ├── edicion-registro.test.mjs # Edición de un registro (modal) sin DOM: guardar, validaciones, crédito, compensatorio, eliminar
+│   ├── saldo.test.mjs          # Saldo de horas, días cubiertos y aprovechamiento, con resultados calculados a mano
 │   ├── calendario-y-lista.test.mjs # Con DOM mínimo simulado: selector de meses (cierre por inactividad), lista dibujada solo al mostrarla y calendario sin redibujar en cada minuto
 │   └── servicios-sin-dom.test.mjs # Servicios ejecutados en Node sin `document`, con formularios simulados
 ├── docs/                       # Documentación técnica, seguridad y arquitectura

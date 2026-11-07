@@ -162,6 +162,12 @@ function crearAnillo() {
     return { raiz, aro, arco, valor, unidad, mensaje, sub, balance, banco, pie, entrada, salida, conBanco, fuera, dias };
 }
 
+/** El número del centro del aro: "7:45 horas" o "22 min". @param {any} r @param {{ horas: number, minutos: number }} t */
+function pintarNumeroAnillo(r, { horas, minutos }) {
+    fijar(r.valor, horas > 0 ? `${horas}:${_pad2(minutos)}` : String(minutos));
+    fijar(r.unidad, horas > 0 ? 'horas' : 'min');
+}
+
 function pintarAnillo(r, d) {
     r.raiz.dataset.tipo = d.tipo;
     const conTotal = d.tipo === 'registro' || d.tipo === 'semana';
@@ -173,9 +179,7 @@ function pintarAnillo(r, d) {
     mostrar(r.banco.raiz, conTotal && !!d.banco);
 
     if (conTotal) {
-        const { horas, minutos } = d.trabajado;
-        fijar(r.valor, horas > 0 ? `${horas}:${_pad2(minutos)}` : String(minutos));
-        fijar(r.unidad, horas > 0 ? 'horas' : 'min');
+        pintarNumeroAnillo(r, d.trabajado);
         r.aro.dataset.color = d.color;
         r.aro.classList.remove('espera');
         pintarAvance(r.arco, d.progreso);
@@ -604,6 +608,51 @@ const DISENOS = {
 /** @type {{ id: string, refs: any } | null} */
 let _montado = null;
 
+// Número grande de cada diseño (lo que cuenta de 0 al valor en la primera carga, como el número de la barra en los estilos clásicos)
+const NUMEROS = {
+    anillo: pintarNumeroAnillo,
+    linea: (/** @type {any} */ r, /** @type {any} */ t) => pintarDuracion(r.duracion, t),
+    filas: (/** @type {any} */ r, /** @type {any} */ t) => pintarDuracion(r.duracion, t),
+    tipografica: (/** @type {any} */ r, /** @type {any} */ t) => pintarDuracion(r.duracion, t)
+};
+
+/** @type {{ cancelado: boolean } | null} */
+let _conteo = null;
+
+function _cancelarConteo() {
+    if (_conteo) _conteo.cancelado = true;
+    _conteo = null;
+}
+
+/**
+ * Cuenta el número de 0 al valor con la misma curva que el de las barras (ease-out cúbico, horas y minutos por separado). Cualquier otro dibujo lo corta.
+ * @param {string} id @param {any} refs @param {{ horas: number, minutos: number }} total @param {number} duracion
+ */
+function _contar(id, refs, total, duracion) {
+    const pintarNumero = NUMEROS[/** @type {keyof typeof NUMEROS} */ (id)];
+    const estado = { cancelado: false };
+    _conteo = estado;
+    const inicio = performance.now();
+    pintarNumero(refs, { horas: 0, minutos: 0 });
+    const paso = (/** @type {number} */ ahora) => {
+        if (estado.cancelado) return;
+        const t = Math.min(1, Math.max(0, (ahora - inicio) / duracion));
+        const e = t >= 1 ? 1 : 1 - Math.pow(1 - t, 3);
+        pintarNumero(refs, t >= 1 ? total : { horas: Math.round(total.horas * e), minutos: Math.round(total.minutos * e) });
+        if (t < 1) requestAnimationFrame(paso); else if (_conteo === estado) _conteo = null;
+    };
+    requestAnimationFrame(paso);
+}
+
+/** El mismo resumen sin avance (aro, regla y segmentos vacíos): de ahí parten las transiciones del primer dibujo. @param {any} d */
+function _sinAvance(d) {
+    return {
+        ...d, progreso: 0,
+        linea: d.linea ? { ...d.linea, ahoraRel: 0 } : d.linea,
+        dias: d.dias ? d.dias.map((/** @type {any} */ x) => ({ ...x, fraccion: 0 })) : d.dias
+    };
+}
+
 /**
  * Arma el diseño dentro de #stats-estilo. Los de alto fijo suman capas de medida: copias ocultas del mismo diseño dibujadas con el peor caso de cada estado
  * (registro, sin registro, día especial y semana). Todas ocupan la misma celda de una cuadrícula, así la tarjeta mide siempre lo que el más alto.
@@ -636,10 +685,12 @@ function _montar(host, id, diseno) {
 /**
  * Dibuja el resumen del día o de la semana con el diseño del estilo elegido. Al cambiar de estilo se reconstruye el DOM; si el estilo no es propio
  * (o no hay resumen) deja el contenedor vacío y devuelve false: la tarjeta usa entonces la barra de siempre.
- * @param {any} resumen
+ * Con `conteoInicial` (la carga de la página, igual que en los estilos clásicos) el aro, la regla y los segmentos crecen de cero y el número cuenta de 0 a su valor.
+ * @param {any} resumen @param {{ conteoInicial?: boolean, duracion?: number }} [opciones] duracion: la del conteo en ms
  */
-function actualizar(resumen) {
+function actualizar(resumen, { conteoInicial = false, duracion = 0 } = {}) {
     const host = $('stats-estilo');
+    _cancelarConteo();
     if (!host) return false;
     const id = EstiloTarjeta.actual();
     const diseno = DISENOS[/** @type {keyof typeof DISENOS} */ (id)];
@@ -648,7 +699,14 @@ function actualizar(resumen) {
         return false;
     }
     if (!_montado || _montado.id !== id || !host.firstChild) _montar(host, id, diseno);
-    diseno.pintar(_montado?.refs, resumen);
+    const refs = _montado?.refs;
+    const contar = conteoInicial && duracion > 1 && !!resumen.trabajado && resumen.trabajadoMin > 0;
+    if (contar) {
+        diseno.pintar(refs, _sinAvance(resumen));
+        void host.offsetWidth;   // el estado vacío tiene que estar aplicado para que el siguiente dibujo transicione hacia el real
+    }
+    diseno.pintar(refs, resumen);
+    if (contar) _contar(id, refs, resumen.trabajado, duracion);
     return true;
 }
 

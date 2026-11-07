@@ -184,6 +184,35 @@ function _crearFantasmaSiVisible(el) {
     return fantasma;
 }
 
+/**
+ * Aplica un cambio que modifica el alto de `el` (`mutarFn`) y lo anima, con el mismo ritmo que el colapsado de las otras tarjetas (--dur-collapse, ease-out).
+ * Se mide el alto antes y después, se fija el de partida en px sin transición y se pasa al de llegada; al terminar se devuelve el control al CSS.
+ * Mientras dura se recorta el contenido para que no se vea salirse de la tarjeta.
+ * @param {HTMLElement | null} el @param {() => void} mutarFn
+ */
+function _animarAlturaCambio(el, mutarFn) {
+    const dur = el ? _durSiAnima('--dur-collapse', el) : 0;
+    if (!el || !(dur > 1) || !el.getClientRects().length) { mutarFn(); return; }
+    const antes = el.offsetHeight;
+    el.style.height = '';
+    mutarFn();
+    const despues = el.offsetHeight;
+    if (Math.abs(despues - antes) < 2) return;
+    el.style.overflow = 'hidden';
+    el.style.transition = 'none';
+    el.style.height = `${antes}px`;
+    void el.offsetHeight;
+    el.style.transition = `height ${dur}ms ease-out`;
+    el.style.height = `${despues}px`;
+    const terminar = () => { el.style.height = ''; el.style.transition = ''; el.style.overflow = ''; };
+    el.addEventListener('transitionend', function alTerminar(e) {
+        if (e.target !== el || e.propertyName !== 'height') return;
+        el.removeEventListener('transitionend', alTerminar);
+        terminar();
+    });
+    setTimeout(terminar, dur + 100);   // red de seguridad (pestaña en segundo plano: no hay transitionend)
+}
+
 const _valorAnimEstado = new WeakMap();
 
 function _finalizarValorPendiente(el) {
@@ -414,6 +443,7 @@ export const Animaciones = {
     _flashElemento,
     _crearFantasmaSiVisible,
     _animarValor,
+    _animarAlturaCambio,
     _animarConteo,
     _conteoEnCurso,
     _cancelarConteo

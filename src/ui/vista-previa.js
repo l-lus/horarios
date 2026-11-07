@@ -1,5 +1,6 @@
 import { $, setColapsable } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
+import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 // VISTA PREVIA EN VIVO (ajustes de apariencia que se prueban sobre la propia tarjeta)
@@ -88,12 +89,21 @@ function _construirFilas(defs) {
 /** @param {boolean} [animar] con false (la primera vez) las filas quedan en su estado sin transición */
 function _refrescar(animar = true) {
     if (!_activa) return;
-    for (const f of _activa.filas) {
-        const texto = f.def.valor();
-        if (f.valor.textContent !== texto) f.valor.textContent = texto;
-        const visible = f.def.visible ? f.def.visible() : true;
-        if (f.envoltorio.classList.contains('expanded') !== visible) setColapsable(f.envoltorio, visible, { animar });
-    }
+    const filas = _activa.filas;
+    const visibles = filas.map(f => (f.def.visible ? f.def.visible() : true));
+    const aplicar = () => {
+        filas.forEach((f, i) => {
+            const texto = f.def.valor();
+            if (f.valor.textContent !== texto) f.valor.textContent = texto;
+            if (f.envoltorio.classList.contains('expanded') !== visibles[i]) setColapsable(f.envoltorio, visibles[i], { animar });
+        });
+    };
+    // Si no aparece ni desaparece ninguna fila (eso ya lo anima su colapsable), un valor más largo o corto puede partir el texto en otra cantidad de líneas
+    // y cambiar el alto del panel: ese cambio también se anima
+    const cambiaVisibilidad = filas.some((f, i) => f.envoltorio.classList.contains('expanded') !== visibles[i]);
+    const panel = $('vista-previa-panel');
+    if (animar && !cambiaVisibilidad && panel) Animaciones._animarAlturaCambio(panel, aplicar);
+    else aplicar();
 }
 
 /** Deja la tarjeta entera entre el encabezado y el panel: si ya se ve no se mueve; si es más alta que el espacio libre se alinea arriba. */

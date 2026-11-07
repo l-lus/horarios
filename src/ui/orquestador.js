@@ -81,7 +81,7 @@ const {
 const { cerrarModalReporteSecciones } = Reportes;
 
 const {
-    actualizarUI, alternarVista, _forzarVista, setTimerAutoVista, _retenerRegistroAyer
+    actualizarUI, alternarVista, _forzarVista, _cambiarConFundido, setTimerAutoVista, _retenerRegistroAyer
 } = TarjetaFichaje;
 const { iniciar: _iniciarCicloStatsSiempre, detener: _detenerCicloStats, prepararFase: _prepararMostrarFaseAlRenderizar } = CicloStats;
 
@@ -146,7 +146,7 @@ function _initGlobales() {
         formularioRegistro: Formularios.registro, formularioEdicion: Formularios.edicion,
         leerObjetivoEdicion: () => parseFloat($('edit-objetivo')?.dataset.valor ?? ''),
         hayUIBloqueante: () => !!document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding'),
-        forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, retenerRegistroAyer: _retenerRegistroAyer, refrescarConfigSiVisible
+        forzarVista: _forzarVista, cambiarConFundido: _cambiarConFundido, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, retenerRegistroAyer: _retenerRegistroAyer, refrescarConfigSiVisible
     });
     Almacenamiento.configurarNotificaciones({ mostrarToast });
     RecordatorioPush.configurarNotificaciones({ mostrarToast });

@@ -133,7 +133,8 @@ function toggleEstiloTarjeta() {
     EstiloTarjeta.siguiente();
     actualizarEstadoBotonHintIntegrado(true);
     EventosApp.emit('config:hint-integrado');
-    actualizarUI(null, false, true);   // animarCard: el contenido se funde del estilo anterior al nuevo (y el alto, ver _animarAlturaCard)
+    // todo el contenido de la tarjeta se funde del diseño anterior al nuevo, igual que al pasar de día a semana (y el alto se anima, ver _animarAlturaCard)
+    EstadoApp._notify().cambiarConFundido(() => actualizarUI());
 }
 
 /** Cierra Ajustes (sin volver al modal padre) para dejar la página libre durante la vista previa; al terminar se reabre. */
@@ -292,7 +293,8 @@ function actualizarHintEstiloCalendario() {
 
 // Cada toque pasa al estilo siguiente; el CSS reacciona solo al atributo de <html>, así que el calendario cambia al instante
 function toggleEstiloCalendario() {
-    EstiloCalendario.siguiente();
+    // los estilos miden distinto (el alto de las celdas cambia): la tarjeta de Registros acompaña el cambio con una transición de alto
+    Animaciones._animarAlturaCambio($('card-historico'), () => EstiloCalendario.siguiente());
     actualizarHintEstiloCalendario();
 }
 

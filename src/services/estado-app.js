@@ -40,6 +40,7 @@ import { TiposRegistro } from './tipos-registro.js';
  * @property {() => string} temaGuardado
  * @property {() => string} obtenerNombrePerfilSafe
  * @property {(vista: string, fn: () => any) => any} forzarVista
+ * @property {(fn: () => any) => any} cambiarConFundido redibuja la tarjeta de estado con el mismo fundido de todo su contenido que el cambio de día a semana
  * @property {(...args: any[]) => void} abrirModal
  * @property {(...args: any[]) => void} actualizarEstadoBotonTimerMain
  * @property {(...args: any[]) => void} actualizarHintGrupo
@@ -83,6 +84,7 @@ let notify = {
     confirmarModal: async () => false,
     descargarJSON: () => { },
     forzarVista: (vista, fn) => fn(),
+    cambiarConFundido: (fn) => fn(),
     formularioRegistro: {
         leer: () => ({ fecha: '', entrada: '', salida: '' }),
         escribir: () => { },

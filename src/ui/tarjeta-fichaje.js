@@ -260,13 +260,15 @@ function _renderCard(vista) {
  * (el CSS los oculta con .estilo-propio; siguen actualizándose sin dibujar nada, así volver a otro estilo no tiene nada que reconstruir).
  * Sin resumen (p. ej. jornada de ayer ya retenida) se queda la barra de siempre.
  */
-function _renderEstilo(vista) {
+/** @param {any} vista @param {any} [conteo] plan del conteo inicial (ver _planConteoInicial) */
+function _renderEstilo(vista, conteo = null) {
     const propio = _estiloPropioActivo() && !!vista.resumen;
     $('stats-card')?.classList.toggle('estilo-propio', propio);
     // también el contenido: el fantasma de la animación (ver _fantasmaDe) cuelga del body y es una copia de #stats-card-content, sin el ancestro #stats-card;
     // sin la clase propia mostraría un instante la barra de siempre en vez del diseño
     $('stats-card-content')?.classList.toggle('estilo-propio', propio);
-    TarjetaEstilos.actualizar(propio ? vista.resumen : null);
+    // en la carga (conteo) el aro, la regla y el número crecen de cero, igual que el número y la barra de los estilos clásicos
+    TarjetaEstilos.actualizar(propio ? vista.resumen : null, { conteoInicial: !!conteo, duracion: _durSiAnima('--dur-conteo') });
 }
 
 // Estilo con que se dibujó la tarjeta la última vez (null hasta el primer dibujo): sirve para animar el cambio de estilo y para no animar el primer dibujo
@@ -353,15 +355,14 @@ function _renderBuffer(est = _bufferActual) {
     if (el.scrollHeight > el.clientHeight + 1) _dibujarBuffer(est, true);
 }
 
-/** @param {() => void} renderFn @param {(Element | null)[]} [extra] elementos que solo se animan en este cambio (la barra, al cambiar de estilo) */
-function _animarCambioCard(renderFn, extra = []) {
+/** @param {() => void} renderFn */
+function _animarCambioCard(renderFn) {
     const els = [
         $('stats-semana'),
         $('stats-mensaje'),
         $('stats-buffer'),
         $('toggle-hint'),
         $('stats-estilo'),
-        ...extra,
     ];
 
     CicloStats.detener();
@@ -402,14 +403,8 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
 
     if (!TiempoFuera.corriendo()) { _renderTitulo(vista, sinAnimarTitulo, est); }
     _renderCard(vista);
-    // Al cambiar de estilo la barra también cambia (pierde o gana los hitos, o se oculta): se dibuja dentro de la mutación, después de sacar las copias de lo que se ve,
-    // y la animación la incluye; en cualquier otro caso se dibuja antes, como siempre
-    const estilo = EstiloTarjeta.actual();
-    const cambioEstilo = _estiloDibujado !== null && _estiloDibujado !== estilo;
-    _estiloDibujado = estilo;
-    const debeAnimar = !_rendersSinAnimarActivos() && (animarCard || (idNuevo !== null && !soloReloj));
-    const barraEnMutacion = cambioEstilo && debeAnimar;
-    if (!barraEnMutacion) _renderBarra(vista, !!conteo);
+    _estiloDibujado = EstiloTarjeta.actual();
+    _renderBarra(vista, !!conteo);
     Estadisticas._renderSelectorStats();
     actualizarEstadoBotonTimerMain(sinAnimarTitulo);
     if (TarjetaLote.getModoLoteActivo()) actualizarBotonLote();
@@ -424,35 +419,46 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
         }
     }
 
+    const debeAnimar = !_rendersSinAnimarActivos() && (animarCard || (idNuevo !== null && !soloReloj));
     const renderResto = () => {
-        if (barraEnMutacion) _renderBarra(vista, !!conteo);
         _renderStats(vista, est, conteo);
         _renderMensaje(vista);
         _renderHint(vista);
         _renderBuffer(est);
-        _renderEstilo(vista);
+        _renderEstilo(vista, conteo);
         _animarAlturaCard(alturaAntes);
     };
     if (debeAnimar) {
-        _animarCambioCard(renderResto, barraEnMutacion ? [document.querySelector('#stats-card .progress-pista')] : []);
+        _animarCambioCard(renderResto);
     } else {
         renderResto();
     }
 }
 
-function _forzarVista(nuevaVista, renderFn) {
-    if (EstadoApp.vistaActual() === nuevaVista) { return Promise.resolve(renderFn()); }
+/**
+ * Redibuja la tarjeta fundiendo todo su contenido (se saca una copia del actual que se desvanece mientras entra el nuevo): el mismo efecto del cambio de
+ * día a semana. Lo usa también el cambio de estilo de la tarjeta, para que se vea la salida del diseño anterior además de la entrada del nuevo.
+ * @param {() => any} renderFn @param {() => void} [antes] se ejecuta dentro del fundido, antes de redibujar
+ */
+function _cambiarConFundido(renderFn, antes = undefined) {
     if (_timerAutoVista) { clearTimeout(_timerAutoVista); _timerAutoVista = null; }
     const card = $('stats-card');
     const content = $('stats-card-content');
     if (card) card.classList.add('cambiando-vista');
     return _animarFadeSwap(content, async () => {
-        EstadoApp.setVistaActual(nuevaVista);
-        Almacenamiento.setItem(STORAGE_KEYS.VISTA_ACTUAL, nuevaVista);
+        antes?.();
         CicloStats.detener();
         const resultado = await _conRendersSinAnimar(renderFn);
         if (card) card.classList.remove('cambiando-vista');
         return resultado;
+    });
+}
+
+function _forzarVista(nuevaVista, renderFn) {
+    if (EstadoApp.vistaActual() === nuevaVista) { return Promise.resolve(renderFn()); }
+    return _cambiarConFundido(renderFn, () => {
+        EstadoApp.setVistaActual(nuevaVista);
+        Almacenamiento.setItem(STORAGE_KEYS.VISTA_ACTUAL, nuevaVista);
     });
 }
 
@@ -561,6 +567,7 @@ export const TarjetaFichaje = {
     actualizarUI,
     alternarVista,
     _forzarVista,
+    _cambiarConFundido,
     setTimerAutoVista: (v) => { _timerAutoVista = v; },
     _retenerRegistroAyer,
 };

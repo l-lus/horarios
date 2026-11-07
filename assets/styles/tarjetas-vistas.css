@@ -2082,7 +2082,7 @@
         grid-area: pie;
         grid-auto-flow: row;
         grid-auto-columns: auto;
-        align-self: center;
+        align-self: start;   /* arrancan a la altura de "Llevás trabajado", arriba de la columna */
     }
 }
 

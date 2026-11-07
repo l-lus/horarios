@@ -2065,6 +2065,28 @@
     }
 }
 
+/* Tarjeta angosta (móvil) con los mosaicos a la derecha: "Faltan" y "Banco de horas" (y "Tiempo fuera") quedan apilados en una columna al costado del tiempo y la línea,
+   que ocupan el resto del ancho. Solo con registro o en la semana (sin registro los textos pendientes necesitan el ancho). Con la tarjeta ancha manda la otra disposición (arriba). */
+@container (max-width: 27.99rem) {
+    html[data-mosaicos-linea="derecha"] .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(7rem, 8.5rem);
+        grid-template-areas: "cabecera pie" "linea pie";
+        align-items: start;
+        gap: var(--space-md) var(--space-sm);
+    }
+
+    html[data-mosaicos-linea="derecha"] .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) .est-linea-cabecera { grid-area: cabecera; }
+    html[data-mosaicos-linea="derecha"] .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) .est-linea-cuerpo { grid-area: linea; }
+
+    html[data-mosaicos-linea="derecha"] .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) .est-mosaicos {
+        grid-area: pie;
+        grid-auto-flow: row;
+        grid-auto-columns: auto;
+        align-self: center;
+    }
+}
+
 .est-linea-cabecera {
     display: flex;
     flex-direction: column;

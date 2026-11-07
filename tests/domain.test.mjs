@@ -285,6 +285,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         hintIntegrado: true,
         estiloTarjeta: 'hitos',
         lineaDisposicion: 'arriba',
+        lineaMosaicos: 'abajo',
         descHitosNumero: true,
         cicloHintAuto: true,
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
@@ -932,7 +933,26 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
     assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'derecha' }), true);
     assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'abajo' }), false);
 
+    // posición de los mosaicos de la línea de tiempo con la tarjeta angosta (móvil)
+    const { MOSAICOS_LINEA, siguienteMosaicos, etiquetaMosaicos } = await import('../src/core/estilo-tarjeta.js');
+    assert.deepEqual(MOSAICOS_LINEA.map(m => m.id), ['abajo', 'derecha']);
+    assert.equal(siguienteMosaicos('abajo'), 'derecha');
+    assert.equal(siguienteMosaicos('derecha'), 'abajo');
+    assert.equal(etiquetaMosaicos('x'), 'Abajo');
+    Almacenamiento.removeItem(STORAGE_KEYS.LINEA_MOSAICOS);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.mosaicos(), 'abajo', 'por defecto abajo, como siempre');
+    EstiloTarjeta.siguienteMosaicos();
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.LINEA_MOSAICOS), 'derecha');
+    EstiloTarjeta.setMosaicos('izquierda');
+    assert.equal(EstiloTarjeta.mosaicos(), 'derecha', 'un valor inválido no cambia nada');
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, lineaMosaicos: 'abajo' });
+    assert.equal(EstiloTarjeta.mosaicos(), 'abajo');
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaMosaicos: 'derecha' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaMosaicos: 'izquierda' }), false);
+
     // se deja como estaba para no alterar los demás tests
+    Almacenamiento.removeItem(STORAGE_KEYS.LINEA_MOSAICOS);
     Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_TARJETA);
     Almacenamiento.removeItem(STORAGE_KEYS.LINEA_DISPOSICION);
     EstiloTarjeta.releer();

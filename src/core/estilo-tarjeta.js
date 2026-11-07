@@ -33,6 +33,24 @@ export const DISPOSICIONES_LINEA = Object.freeze([
 
 const _disposicionValida = id => DISPOSICIONES_LINEA.some(d => d.id === id);
 
+// Subvariante para la tarjeta angosta (móvil): los mosaicos "Faltan" y "Banco de horas" abajo (como siempre) o apilados a la derecha, al lado del tiempo y la línea.
+export const MOSAICOS_LINEA = Object.freeze([
+    { id: 'abajo', label: 'Abajo' },
+    { id: 'derecha', label: 'A la derecha' }
+]);
+
+const _mosaicosValido = id => MOSAICOS_LINEA.some(m => m.id === id);
+
+/** Posición que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */
+export function siguienteMosaicos(id) {
+    const idx = MOSAICOS_LINEA.findIndex(m => m.id === id);
+    return MOSAICOS_LINEA[(idx + 1) % MOSAICOS_LINEA.length].id;
+}
+
+export function etiquetaMosaicos(id) {
+    return (MOSAICOS_LINEA.find(m => m.id === id) ?? MOSAICOS_LINEA[0]).label;
+}
+
 /** Disposición que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */
 export function siguienteDisposicion(id) {
     const idx = DISPOSICIONES_LINEA.findIndex(d => d.id === id);
@@ -57,6 +75,7 @@ export const esEstiloPropio = id => ESTILOS_PROPIOS.includes(id);
 
 let _estilo = null;
 let _disposicion = null;
+let _mosaicos = null;
 
 function actual() {
     if (_estilo === null) {
@@ -74,10 +93,26 @@ function disposicion() {
     return _disposicion;
 }
 
+function mosaicos() {
+    if (_mosaicos === null) {
+        const guardado = Almacenamiento.getItem(STORAGE_KEYS.LINEA_MOSAICOS, null);
+        _mosaicos = _mosaicosValido(guardado) ? guardado : MOSAICOS_LINEA[0].id;
+    }
+    return _mosaicos;
+}
+
+function setMosaicos(id) {
+    if (!_mosaicosValido(id)) return;
+    _mosaicos = id;
+    Almacenamiento.setItem(STORAGE_KEYS.LINEA_MOSAICOS, id);
+    _aplicar();
+}
+
 function _aplicar() {
     if (typeof document === 'undefined') return;
     document.documentElement.setAttribute('data-estilo-tarjeta', actual());
     document.documentElement.setAttribute('data-disposicion-linea', disposicion());
+    document.documentElement.setAttribute('data-mosaicos-linea', mosaicos());
 }
 
 function setDisposicion(id) {
@@ -106,6 +141,7 @@ function siguiente() {
 function releer() {
     _estilo = null;
     _disposicion = null;
+    _mosaicos = null;
     _aplicar();
 }
 
@@ -118,6 +154,9 @@ export const EstiloTarjeta = {
     init, actual, setEstilo, siguiente, releer, desdeHintIntegrado, disposicion, setDisposicion,
     siguienteDisposicion: () => setDisposicion(siguienteDisposicion(disposicion())),
     etiquetaDisposicion: () => etiquetaDisposicion(disposicion()),
+    mosaicos, setMosaicos,
+    siguienteMosaicos: () => setMosaicos(siguienteMosaicos(mosaicos())),
+    etiquetaMosaicos: () => etiquetaMosaicos(mosaicos()),
     etiqueta: () => etiquetaEstilo(actual()),
     /** ¿La barra lleva los hitos dibujados encima (el antiguo hint integrado)? */
     hintIntegrado: () => actual() === 'hitos',

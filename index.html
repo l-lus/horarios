@@ -870,15 +870,25 @@
                                 </div>
                                 <div class="collapsible" id="linea-disposicion-colapsable">
                                     <div class="collapsible-inner">
-                                        <button id="btn-linea-disposicion" class="config-solo-pc">
+                                        <button id="btn-linea-disposicion">
                                             <svg class="icon">
                                                 <use href="#icon-eye" />
                                             </svg>
                                             <span class="settings-list-text">
-                                                <span>Tiempo trabajado en la línea (PC)</span>
-                                                <span class="settings-list-desc">En una tarjeta ancha, arriba de la línea de tiempo o a su izquierda o derecha</span>
+                                                <span>Tiempo trabajado (tarjeta ancha)</span>
+                                                <span class="settings-list-desc">En PC, arriba de la línea de tiempo o a su izquierda o derecha</span>
                                             </span>
                                             <span id="linea-disposicion-label">Arriba</span>
+                                        </button>
+                                        <button id="btn-linea-mosaicos">
+                                            <svg class="icon">
+                                                <use href="#icon-eye" />
+                                            </svg>
+                                            <span class="settings-list-text">
+                                                <span>Faltan y banco (tarjeta angosta)</span>
+                                                <span class="settings-list-desc">En el móvil, abajo o a la derecha de la línea de tiempo</span>
+                                            </span>
+                                            <span id="linea-mosaicos-label">Abajo</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1367,7 +1377,7 @@
                                 (con la fila o el dato del tiempo fuera cuando lo hay) y también tienen su versión de la
                                 semana, con el total, lo que falta y el resultado de cada día; Anillo y Tipográfica mantienen siempre el mismo alto; Línea de
                                 tiempo y Lista de filas ajustan el alto al contenido con una transición suave. Con <em>Línea de tiempo</em> aparece, en PC, <em>Tiempo trabajado en la línea</em>: en una tarjeta ancha el tiempo
-                                puede ir arriba de la línea, a su izquierda o a su derecha (en el móvil siempre va arriba). Con <em>Barra con hitos</em> aparece <em>Animación de los hitos</em>,
+                                puede ir arriba de la línea, a su izquierda o a su derecha, y con la tarjeta angosta (móvil) <em>Faltan y banco</em> puede ir abajo o a la derecha de la línea. Con <em>Barra con hitos</em> aparece <em>Animación de los hitos</em>,
                                 que cambia entre Desactivado —sin ciclo automático al tocar el número—, Barra —cada
                                 hito con su descripción en la barra— y Texto —el nombre del hito, como "Entrada 08:30",
                                 en el número grande—.</p>

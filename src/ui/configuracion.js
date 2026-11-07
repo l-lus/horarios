@@ -123,6 +123,8 @@ function actualizarEstadoBotonHintIntegrado(animar = false) {
     if (colapsableLinea && colapsableLinea.classList.contains('expanded') !== lineaActiva) setColapsable(colapsableLinea, lineaActiva, { animar });
     const lblLinea = $('linea-disposicion-label');
     if (lblLinea) lblLinea.textContent = EstiloTarjeta.etiquetaDisposicion();
+    const lblMosaicos = $('linea-mosaicos-label');
+    if (lblMosaicos) lblMosaicos.textContent = EstiloTarjeta.etiquetaMosaicos();
 }
 
 // Al restaurar un respaldo o bajar de Gist cambia la opción: se actualiza la etiqueta
@@ -158,8 +160,12 @@ function abrirVistaPreviaTarjeta() {
         // las subopciones arriba y la fila del estilo al final: el panel crece hacia arriba y esa fila (la que se toca) no cambia de lugar (ver VistaPrevia.abrir)
         filas: [
             {
-                etiqueta: 'Tiempo trabajado', descripcion: 'Solo en PC, con la tarjeta ancha', valor: () => EstiloTarjeta.etiquetaDisposicion(),
-                alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esTactil()
+                etiqueta: 'Tiempo trabajado', descripcion: 'Con la tarjeta ancha (PC)', valor: () => EstiloTarjeta.etiquetaDisposicion(),
+                alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea'
+            },
+            {
+                etiqueta: 'Faltan y banco', descripcion: 'Con la tarjeta angosta (móvil)', valor: () => EstiloTarjeta.etiquetaMosaicos(),
+                alTocar: toggleMosaicosLinea, visible: () => EstiloTarjeta.actual() === 'linea'
             },
             {
                 etiqueta: 'Animación', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
@@ -183,12 +189,14 @@ function abrirVistaPreviaCalendario() {
     });
 }
 
-/** Dispositivo táctil: ahí las opciones solo de PC (config-solo-pc) no tienen sentido. */
-const _esTactil = () => !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-
 // Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
 function toggleDisposicionLinea() {
     EstiloTarjeta.siguienteDisposicion();
+    actualizarEstadoBotonHintIntegrado();
+}
+
+function toggleMosaicosLinea() {
+    EstiloTarjeta.siguienteMosaicos();
     actualizarEstadoBotonHintIntegrado();
 }
 
@@ -436,6 +444,7 @@ function bindEventos() {
         'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
         'btn-estilo-tarjeta': () => abrirVistaPreviaTarjeta(),
         'btn-linea-disposicion': () => toggleDisposicionLinea(),
+        'btn-linea-mosaicos': () => toggleMosaicosLinea(),
         'btn-toggle-hint-animacion': () => toggleAnimacionHint(),
         'btn-toggle-metrica-uso': () => toggleMetricaUso(),
         'btn-toggle-formato-corto-stats': () => toggleFormatoCortoStats(),

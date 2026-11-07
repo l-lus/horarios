@@ -1,5 +1,5 @@
 import { Preferencias } from '../core/preferencias.js';
-import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA } from '../core/estilo-tarjeta.js';
+import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA, MOSAICOS_LINEA } from '../core/estilo-tarjeta.js';
 import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE } from '../core/constantes.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -87,6 +87,13 @@ const CONFIG_RESPALDO = [
         esValido: (v) => DISPOSICIONES_LINEA.some(d => d.id === v),
         actual: EstiloTarjeta.disposicion,
         aplicar: (v) => { EstiloTarjeta.setDisposicion(v); _avisarHint(); },
+    },
+    {
+        clave: STORAGE_KEYS.LINEA_MOSAICOS,
+        etiqueta: 'posición de los mosaicos de la línea de tiempo',
+        esValido: (v) => MOSAICOS_LINEA.some(m => m.id === v),
+        actual: EstiloTarjeta.mosaicos,
+        aplicar: (v) => { EstiloTarjeta.setMosaicos(v); _avisarHint(); },
     },
     _opcion(Preferencias.DESC_HITOS_NUMERO, 'nombre del hito en el número', _avisarHint),
     _opcion(Preferencias.CICLO_HINT_AUTO, 'ciclo automático del hint', _avisarHint),

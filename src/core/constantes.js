@@ -16,6 +16,7 @@ export const STORAGE_KEYS = Object.freeze({
     REDUCIR_ANIMACIONES: 'reducirAnimaciones',
     FORMATO_CORTO_STATS: 'formatoCortoStats',
     ESTILO_CALENDARIO: 'estiloCalendario',
+    LINEA_MOSAICOS: 'lineaMosaicos',        // estilo línea de tiempo con la tarjeta angosta (móvil): los mosaicos Faltan y Banco de horas abajo o a la derecha
     LINEA_DISPOSICION: 'lineaDisposicion',  // estilo línea de tiempo en pantallas anchas: dónde va el tiempo trabajado (arriba, a la izquierda o a la derecha de la línea)
     ESTILO_TARJETA: 'estiloTarjeta',        // aspecto de la tarjeta de estado (ver core/estilo-tarjeta.js); sin valor se deduce de HINT_INTEGRADO
     HINT_INTEGRADO: 'hintIntegrado',

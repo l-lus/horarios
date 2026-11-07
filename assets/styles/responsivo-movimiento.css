@@ -590,6 +590,11 @@ button.campo-flash-color {
 }
 
 
+/* El brillo del tramo azul de la línea de tiempo: sin movimiento queda el azul liso */
+:root[data-motion="reduce"] .est-nodos.en-curso :is(.est-nodo.pasado, .est-nodo--ahora)::before {
+    animation: none;
+}
+
 /* El pulso del hito enfocado es un anillo en bucle corto: sin movimiento queda solo el resalte de la píldora */
 :root[data-motion="reduce"] .linea-tick.foco::after,
 :root[data-motion="reduce"] .progress-punto.foco::after {
@@ -598,6 +603,7 @@ button.campo-flash-color {
 }
 
 /* Con un modal abierto el brillo y el latido de la barra quedan detrás del overlay: se pausan para no mantener el pipeline de frames (ni el desenfoque del overlay) trabajando por algo que no se ve */
+body.modal-open .est-nodos.en-curso :is(.est-nodo.pasado, .est-nodo--ahora)::before,
 body.modal-open .progress-fill.shimmer::after,
 body.modal-open .progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado),
 body.modal-open .progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado)::after {

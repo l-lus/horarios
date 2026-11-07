@@ -292,7 +292,7 @@ function pintarLinea(r, d) {
         else fijar(r.etiqueta, d.abierta ? 'Llevás en la semana' : 'Total de la semana');
         pintarDuracion(r.duracion, d.trabajado);
         mostrar(r.nodos, esRegistro);
-        if (esRegistro) pintarNodos(r, d); else pintarNodosDias(r, d.dias);
+        if (esRegistro) pintarNodos(r, d); else pintarNodosDias(r, d.dias, d.abierta);
         mostrar(r.balance.raiz, !!d.balance);
         if (d.balance) pintarDato(r.balance, d.balance.etiqueta, d.balance.texto, d.balance.tono);
         mostrar(r.banco.raiz, !!d.banco);
@@ -325,6 +325,8 @@ function pintarLinea(r, d) {
 /** Nodos de la jornada con registro, en el orden en que ocurren (el "Ahora" queda entre los demás según la hora). */
 function pintarNodos(r, d) {
     const linea = d.linea;
+    // con la jornada abierta el tramo azul (de la entrada hasta ahora) lleva el brillo de la barra de progreso
+    r.nodos.classList.toggle('en-curso', !d.cerrado);
     for (const [tipo, h] of Object.entries(r.hitos)) {
         mostrar(h.raiz, false);
         h.raiz.classList.remove('pendiente');
@@ -351,7 +353,8 @@ function pintarNodos(r, d) {
 }
 
 /** Un nodo por día de la semana: hoy en azul, los pasados con el color de su estado y los que faltan punteados. */
-function pintarNodosDias(r, dias) {
+function pintarNodosDias(r, dias, enCurso) {
+    r.nodosDias.classList.toggle('en-curso', !!enCurso);   // con la semana abierta, el tramo hasta hoy brilla igual
     r.dias.forEach((n, i) => {
         const dia = dias[i];
         mostrar(n.raiz, !!dia);
@@ -370,6 +373,7 @@ function pintarNodosDias(r, dias) {
 
 /** Sin registro: entrada y salida quedan pendientes (nodos punteados). */
 function pintarNodosPendientes(r) {
+    r.nodos.classList.remove('en-curso');
     for (const h of Object.values(r.hitos)) mostrar(h.raiz, false);
     const pendientes = [['entrada', 'Entrada · pendiente'], ['salida', 'Salida estimada · se calcula al fichar']];
     pendientes.forEach(([tipo, texto], i) => {

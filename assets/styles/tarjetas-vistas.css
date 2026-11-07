@@ -2164,6 +2164,18 @@
 .est-nodo.pasado::before,
 .est-nodo--ahora::before { background: var(--c-blue); }
 
+/* Brillo del tramo azul (de la entrada hasta ahora), el mismo de la barra de progreso de "Barra con hitos": una franja de luz que lo recorre de arriba abajo
+   en el primer 20 % del ciclo (--dur-ambiente) y descansa el resto. Solo con la jornada (o la semana) abierta. */
+@keyframes brillo-linea {
+    0% { background-position: 0 -100%, 0 0; }
+    20%, 100% { background-position: 0 200%, 0 0; }
+}
+
+.est-nodos.en-curso :is(.est-nodo.pasado, .est-nodo--ahora)::before {
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.55), transparent) 0 -100% / 100% 50% no-repeat, var(--c-blue);
+    animation: brillo-linea var(--dur-ambiente) ease-in-out infinite;
+}
+
 .est-nodo-etiqueta { color: var(--text-muted); }
 
 .est-nodo-hora {

@@ -231,6 +231,16 @@ html.entrada-pagina .container {
         padding-inline: calc(30% + var(--space-sm));
     }
 
+    /* Solo la píldora recibe toques (el resto del ancho del header deja pasar los clics al contenido) */
+    .header.scrolled {
+        pointer-events: none;
+    }
+
+    .header.scrolled::before {
+        pointer-events: auto;
+        cursor: pointer;
+    }
+
     .header.scrolled h1 {
         margin-left: 50%;
         transform: translateX(-50%) scale(0.95);

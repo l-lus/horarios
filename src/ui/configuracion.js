@@ -154,16 +154,17 @@ function abrirVistaPreviaTarjeta() {
         idObjetivo: 'stats-card',
         antes: _cerrarAjustesParaVistaPrevia,
         alCerrar: _volverAAjustes,
+        // las subopciones arriba y la fila del estilo al final: el panel crece hacia arriba y esa fila (la que se toca) no cambia de lugar (ver VistaPrevia.abrir)
         filas: [
-            { etiqueta: 'Estilo de la tarjeta', descripcion: 'Tocá la tarjeta para ver el día y la semana', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta },
+            {
+                etiqueta: 'Tiempo trabajado en la línea', descripcion: 'Solo en una tarjeta ancha (PC)', valor: () => EstiloTarjeta.etiquetaDisposicion(),
+                alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esTactil()
+            },
             {
                 etiqueta: 'Animación de los hitos', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
                 alTocar: toggleAnimacionHint, visible: () => EstiloTarjeta.hintIntegrado()
             },
-            {
-                etiqueta: 'Tiempo trabajado en la línea', descripcion: 'Solo en una tarjeta ancha (PC)', valor: () => EstiloTarjeta.etiquetaDisposicion(),
-                alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esTactil()
-            }
+            { etiqueta: 'Estilo de la tarjeta', descripcion: 'Tocá la tarjeta para ver el día y la semana', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta }
         ]
     });
 }

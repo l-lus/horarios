@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, setColapsable } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 
 // ====================================================================
@@ -27,7 +27,7 @@ const MARGEN_PX = 12;
 /** @type {Record<string, () => (() => void) | void>} */
 const _preparadores = {};
 
-/** @type {{ cfg: ConfigVistaPrevia, objetivo: HTMLElement, restaurar: (() => void) | null, filas: { def: FilaVistaPrevia, btn: HTMLElement, valor: HTMLElement }[], observer: ResizeObserver | null, timer: any } | null} */
+/** @type {{ cfg: ConfigVistaPrevia, objetivo: HTMLElement, restaurar: (() => void) | null, filas: { def: FilaVistaPrevia, envoltorio: HTMLElement, btn: HTMLElement, valor: HTMLElement }[], observer: ResizeObserver | null, timer: any } | null} */
 let _activa = null;
 let _iniciada = false;
 let _cerrando = false;
@@ -66,6 +66,13 @@ function _construirFilas(defs) {
         }
         const valor = document.createElement('span');
         btn.append(_icono(def.icono ?? '#icon-eye'), texto, valor);
+        // cada fila va dentro de un colapsable: al aparecer o desaparecer una subopción se despliega o se pliega con la misma animación que en Ajustes
+        const envoltorio = document.createElement('div');
+        envoltorio.className = 'collapsible';
+        const interior = document.createElement('div');
+        interior.className = 'collapsible-inner';
+        interior.append(btn);
+        envoltorio.append(interior);
         btn.addEventListener('click', () => {
             def.alTocar();
             _refrescar();
@@ -73,17 +80,19 @@ function _construirFilas(defs) {
             clearTimeout(_activa?.timer);
             if (_activa) _activa.timer = setTimeout(_llevarAVista, 380);
         });
-        cont.append(btn);
-        return { def, btn, valor };
+        cont.append(envoltorio);
+        return { def, envoltorio, btn, valor };
     });
 }
 
-function _refrescar() {
+/** @param {boolean} [animar] con false (la primera vez) las filas quedan en su estado sin transición */
+function _refrescar(animar = true) {
     if (!_activa) return;
     for (const f of _activa.filas) {
         const texto = f.def.valor();
         if (f.valor.textContent !== texto) f.valor.textContent = texto;
-        f.btn.classList.toggle('hidden', f.def.visible ? !f.def.visible() : false);
+        const visible = f.def.visible ? f.def.visible() : true;
+        if (f.envoltorio.classList.contains('expanded') !== visible) setColapsable(f.envoltorio, visible, { animar });
     }
 }
 
@@ -115,7 +124,7 @@ function _mostrar() {
 
     $('vista-previa-titulo')?.replaceChildren(cfg.titulo);
     _activa.filas = _construirFilas(cfg.filas);
-    _refrescar();
+    _refrescar(false);
 
     objetivo.classList.add('vista-previa-objetivo');
     document.body.classList.add('vista-previa-activa');
@@ -129,11 +138,14 @@ function _mostrar() {
     _activa.observer = new ResizeObserver(() => { _medirPanel(); });
     _activa.observer.observe(panel);
     _activa.timer = setTimeout(_llevarAVista, 60);
-    /** @type {HTMLElement | null} */ (panel.querySelector('button:not(.hidden)'))?.focus({ preventScroll: true });
+    // el foco va a la fila principal (la última): las subopciones, si las hay, quedan arriba
+    /** @type {HTMLElement | null} */ (panel.querySelector('.collapsible:last-child button'))?.focus({ preventScroll: true });
 }
 
 /**
  * Abre la vista previa: cierra Ajustes (`antes`), lleva la tarjeta a la vista y muestra el panel con `filas`.
+ * Las filas se muestran en el orden dado y la ÚLTIMA es la principal: las subopciones van antes, porque el panel está anclado abajo y crece hacia arriba,
+ * así la fila que se toca para cambiar el estilo no se mueve cuando aparece o desaparece una subopción.
  * @param {ConfigVistaPrevia} cfg
  */
 function abrir(cfg) {

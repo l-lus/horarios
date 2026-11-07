@@ -879,6 +879,11 @@ body.tarjeta-arrastrando-activa * {
     font-weight: var(--fw-semibold);
 }
 
+/* Las filas son colapsables: la última (la principal) no lleva la raya de abajo */
+.vista-previa-panel .settings-list>.collapsible:last-child>.collapsible-inner>button {
+    border-bottom: none;
+}
+
 .vista-previa-cabecera .btn-edit {
     flex: none;
     width: auto;

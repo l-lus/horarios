@@ -46,7 +46,7 @@ horarios/
 │   ├── services/               # Estado de la aplicación, reglas de dominio y servicios externos
 │   └── ui/                     # Componentes visuales, renderizado DOM, eventos y modales
 ├── tests/                      # Tests automatizados nativos (`npm test` = `node --test tests/*.mjs`, sin dependencias)
-│   ├── architecture.test.mjs   # Capas, ciclos, extensiones .js, precache de sw.js, versión APP_VERSION/CACHE_NAME y services sin DOM
+│   ├── architecture.test.mjs   # Capas, ciclos, extensiones .js, ids e íconos existentes, precache de sw.js, versión APP_VERSION/CACHE_NAME y services sin DOM
 │   ├── domain.test.mjs         # Cálculos horarios, seguridad, compensatorios y arranque completo de la UI
 │   ├── html.test.mjs           # Escape automático de core/html.js
 │   ├── orden-cards.test.mjs    # Columnas libres de escritorio: reparto, mover, columna nueva y límites

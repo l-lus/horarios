@@ -299,3 +299,25 @@ test('Service Worker (sw.js): todo recurso local que pide la app (index.html, ur
     assert.deepEqual(faltan, [], 'Agregalos a urlsToCache en sw.js para que funcionen sin conexión');
     assert.ok(pedidos.size >= 10, 'el test encontró los recursos (si no, revisar las expresiones)');
 });
+
+test('Ids: todo id que el código busca existe en index.html o lo crea el propio código', () => {
+    const html = fs.readFileSync('index.html', 'utf8');
+    const fuentes = srcFiles.map(f => [f, fs.readFileSync(f, 'utf8')]);
+    const codigo = fuentes.map(([, t]) => t).join('\n');
+
+    const conocidos = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
+    // Los que crea el código: id="..." en plantillas html`...`, el.id = '...' y { id: '...' } en createElement
+    for (const m of codigo.matchAll(/\bid="([\w-]+)"|\.id\s*=\s*'([\w-]+)'|\bid:\s*'([\w-]+)'/g)) conocidos.add(m[1] ?? m[2] ?? m[3]);
+
+    const buscados = [];
+    for (const [archivo, texto] of fuentes) {
+        const anotar = (id) => buscados.push({ id, archivo });
+        for (const m of texto.matchAll(/(?:\$|getElementById)\('([\w-]+)'\)/g)) anotar(m[1]);
+        for (const m of texto.matchAll(/querySelector(?:All)?\('([^']+)'\)/g)) for (const s of m[1].matchAll(/#([a-zA-Z][\w-]*)/g)) anotar(s[1]);
+        for (const bloque of texto.matchAll(/alClic\(\{([\s\S]*?)\n\s*\}\);/g)) for (const k of bloque[1].matchAll(/^\s*'([\w-]+)':/gm)) anotar(k[1]);
+        for (const m of texto.matchAll(/(?<!classList\.\w+\()'(modal-[a-z][a-z-]*)'/g)) anotar(m[1]);   // 'modal-open' y similares son clases, no ids
+    }
+    assert.ok(buscados.length > 300, `Se detectaron pocos ids (${buscados.length}): ¿cambió la forma de buscarlos?`);
+    const faltantes = [...new Set(buscados.filter(b => !conocidos.has(b.id)).map(b => `${b.archivo}: ${b.id}`))];
+    assert.deepEqual(faltantes, [], `Ids que no existen:\n${faltantes.join('\n')}`);
+});

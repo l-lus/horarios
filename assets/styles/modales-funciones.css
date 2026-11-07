@@ -895,6 +895,19 @@ body.tarjeta-arrastrando-activa * {
 .vista-previa-panel .settings-list>.collapsible>.collapsible-inner>button>span:last-child {
     flex: none;
     white-space: nowrap;
+    /* El valor queda pegado al borde derecho: mientras su ancho cambia (ver _cambiarValor) el texto se recorta por la izquierda en lugar de salirse hacia la derecha */
+    display: flex;
+    justify-content: flex-end;
+    overflow: hidden;
+}
+
+.vista-previa-panel .valor-roll {
+    flex: none;   /* conserva el ancho de su texto (si se achicara con la caja, el texto se saldría hacia la derecha) */
+    justify-items: end;
+}
+
+.vista-previa-panel .valor-roll-item {
+    text-align: right;
 }
 
 /* Las filas son colapsables: la última (la principal) no lleva la raya de abajo */

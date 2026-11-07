@@ -134,6 +134,10 @@ html.entrada-pagina .container {
     align-items: center;
     border-bottom: 3px solid transparent;
     transition: padding-inline var(--transition-ui);
+    /* Al volver arriba, durante la transición el padding sigue siendo ancho y el contenido (título + acciones)
+       desborda a la derecha: eso agranda el documento y el navegador lo desplaza unos px de costado.
+       clip (a diferencia de hidden) no crea contenedor de scroll ni rompe el sticky */
+    overflow-x: clip;
 }
 
 .header::before {

@@ -337,6 +337,8 @@ function pintarNodos(r, d) {
     const orden = linea ? hitosOrdenados(linea) : [{ tipo: 'entrada', rel: 0 }, ...(d.salida ? [{ tipo: 'salida', rel: 1 }] : [])];
     const horas = { entrada: d.entrada, salida: d.salida || d.salidaEstimada, banco: d.salidaBanco, ahora: '' };
     const ahoraRel = linea ? linea.ahoraRel : Infinity;
+    // el brillo es uno solo y llega hasta "ahora": cuántos tramos de la línea (de nodo a nodo) hay hasta ese punto
+    r.nodos.style.setProperty('--segmentos', String(Math.max(0, orden.findIndex(h => h.tipo === 'ahora'))));
     let primero = true;
     orden.forEach((hito, i) => {
         const nodo = r.hitos[hito.tipo];
@@ -355,6 +357,8 @@ function pintarNodos(r, d) {
 /** Un nodo por día de la semana: hoy en azul, los pasados con el color de su estado y los que faltan punteados. */
 function pintarNodosDias(r, dias, enCurso) {
     r.nodosDias.classList.toggle('en-curso', !!enCurso);   // con la semana abierta, el tramo hasta hoy brilla igual
+    // un solo brillo que va desde el primer día hasta hoy: cuántos tramos hay hasta el nodo de hoy
+    r.nodosDias.style.setProperty('--segmentos', String(Math.max(0, dias.findIndex(dia => dia.hoy))));
     r.dias.forEach((n, i) => {
         const dia = dias[i];
         mostrar(n.raiz, !!dia);

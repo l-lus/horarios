@@ -2132,7 +2132,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    min-height: 30px;
+    min-height: var(--alto-nodo, 30px);   /* la capa del brillo mide los tramos con este alto: los textos de las listas en curso no se parten */
     font-size: var(--text-sm);
 }
 
@@ -2164,16 +2164,58 @@
 .est-nodo.pasado::before,
 .est-nodo--ahora::before { background: var(--c-blue); }
 
-/* Brillo del tramo azul (de la entrada hasta ahora), el mismo de la barra de progreso de "Barra con hitos": una franja de luz que lo recorre de arriba abajo
-   en el primer 20 % del ciclo (--dur-ambiente) y descansa el resto. Solo con la jornada (o la semana) abierta. */
+/* Brillo de la línea de progreso (de la entrada hasta ahora, o del primer día hasta hoy), el mismo de la barra de "Barra con hitos": una sola franja de luz que recorre de
+   arriba abajo TODO el tramo azul (no uno por cada tramo entre nodos) en el primer 20 % del ciclo (--dur-ambiente) y descansa el resto. Es una capa que cubre desde el
+   centro del primer nodo hasta el nodo de "ahora" (--segmentos tramos de --alto-nodo, que fija tarjeta-estilos.js). Solo con la jornada (o la semana) abierta. */
 @keyframes brillo-linea {
     0% { background-position: 0 -100%, 0 0; }
     20%, 100% { background-position: 0 200%, 0 0; }
 }
 
-.est-nodos.en-curso :is(.est-nodo.pasado, .est-nodo--ahora)::before {
-    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.55), transparent) 0 -100% / 100% 50% no-repeat, var(--c-blue);
+.est-nodos {
+    position: relative;
+    --alto-nodo: 30px;
+}
+
+.est-nodos.en-curso::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: calc(var(--alto-nodo) / 2);
+    width: 2px;
+    height: calc(var(--segmentos, 0) * var(--alto-nodo));
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.55), transparent) 0 -100% / 100% 50% no-repeat;
     animation: brillo-linea var(--dur-ambiente) ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* Latido y onda del punto de "ahora" (o de hoy en la semana) cuando el brillo lo alcanza, como el remate de la barra con hitos. El brillo recorre el tramo en el primer 20 %
+   del ciclo y su centro llega al punto a ~17 %: el latido sube con él y vuelve hasta ~25 %, y la onda sale un instante después. */
+@keyframes punto-linea-latido {
+    0%, 15% { scale: 1; }
+    17.5% { scale: 1.15; }
+    25%, 100% { scale: 1; }
+}
+
+@keyframes punto-linea-onda {
+    0%, 16% { scale: 1; opacity: 0; }
+    17% { scale: 1; opacity: 0.55; }
+    29%, 100% { scale: 2.2; opacity: 0; }
+}
+
+.est-nodos.en-curso :is(.est-nodo--ahora, .est-nodo--dia.hoy) .est-nodo-punto {
+    animation: punto-linea-latido var(--dur-ambiente) ease-in-out infinite;
+}
+
+.est-nodos.en-curso :is(.est-nodo--ahora, .est-nodo--dia.hoy) .est-nodo-punto::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    box-sizing: border-box;
+    border: 2px solid var(--c-blue);
+    border-radius: 50%;
+    opacity: 0;
+    animation: punto-linea-onda var(--dur-ambiente) ease-out infinite;
 }
 
 .est-nodo-etiqueta { color: var(--text-muted); }

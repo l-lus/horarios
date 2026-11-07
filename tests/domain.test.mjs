@@ -283,6 +283,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarObjetivoPorRegistro: true,
         reducirAnimaciones: 'on',
         hintIntegrado: true,
+        estiloTarjeta: 'hitos',
         descHitosNumero: true,
         cicloHintAuto: true,
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
@@ -862,4 +863,126 @@ test('Preferencias: leen y guardan con su valor por defecto, por perfil solo las
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true), true, 'se guarda por perfil');
     assert.equal(Almacenamiento.getItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO), null, 'no en la clave global');
     Almacenamiento.removeItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, true);
+});
+
+test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos y nuevos', async () => {
+    const { ESTILOS_TARJETA, siguienteEstilo, etiquetaEstilo, esEstiloPropio, EstiloTarjeta } = await import('../src/core/estilo-tarjeta.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+
+    const ids = ESTILOS_TARJETA.map(e => e.id);
+    assert.deepEqual(ids, ['hitos', 'clasica', 'anillo', 'linea', 'filas', 'tipografica']);
+    let id = 'hitos';
+    for (let i = 0; i < ids.length; i++) id = siguienteEstilo(id);
+    assert.equal(id, 'hitos', 'dando la vuelta completa se vuelve al punto de partida');
+    assert.equal(siguienteEstilo('desconocido'), 'hitos');
+    assert.equal(etiquetaEstilo('desconocido'), 'Barra con hitos');
+    assert.deepEqual(ids.filter(esEstiloPropio), ['anillo', 'linea', 'filas', 'tipografica']);
+
+    // sin estilo guardado se deduce del hint integrado: quien ya usaba la app ve lo mismo que antes
+    Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_TARJETA);
+    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, false);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.actual(), 'clasica');
+    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, true);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.actual(), 'hitos');
+
+    // un valor guardado inválido se ignora
+    Almacenamiento.setItem(STORAGE_KEYS.ESTILO_TARJETA, 'inexistente');
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.actual(), 'hitos');
+
+    EstiloTarjeta.setEstilo('anillo');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ESTILO_TARJETA), 'anillo');
+    assert.equal(EstiloTarjeta.propio(), true);
+    assert.equal(EstiloTarjeta.hintIntegrado(), false);
+    EstiloTarjeta.setEstilo('mal');
+    assert.equal(EstiloTarjeta.actual(), 'anillo', 'un estilo inválido no cambia nada');
+
+    // respaldo viejo: solo trae el interruptor del hint integrado
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, hintIntegrado: false });
+    assert.equal(EstiloTarjeta.actual(), 'clasica');
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, hintIntegrado: true });
+    assert.equal(EstiloTarjeta.actual(), 'hitos');
+    // respaldo nuevo: trae el estilo y manda sobre el interruptor
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, hintIntegrado: false, estiloTarjeta: 'filas' });
+    assert.equal(EstiloTarjeta.actual(), 'filas');
+    assert.equal(ImportarExportar.validarCamposConfigImport({ estiloTarjeta: 'filas' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ estiloTarjeta: 'otro' }), false);
+
+    // se deja como estaba para no alterar los demás tests
+    Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_TARJETA);
+    EstiloTarjeta.releer();
+});
+
+test('ResumenTarjeta: duraciones compactas, orden de los hitos y posiciones de la regla (sin DOM)', async () => {
+    const { partesDuracion, duracionCompacta, duracionConSigno, hitosOrdenados, posicionesLinea } = await import('../src/core/resumen-tarjeta.js');
+
+    assert.deepEqual(partesDuracion(398), { horas: 6, minutos: 38 });
+    assert.deepEqual(partesDuracion(-5), { horas: 0, minutos: 0 });
+    assert.equal(duracionCompacta(22), '22 min');
+    assert.equal(duracionCompacta(480), '8 h');
+    assert.equal(duracionCompacta(398), '6 h 38 min');
+    assert.equal(duracionConSigno(19), '+19 min');
+    assert.equal(duracionConSigno(-35), '−35 min');
+
+    // abierta con banco a favor: la salida con banco llega antes que la estimada
+    const abierta = { cerrado: false, ahoraRel: 22, salidaRel: 420, bufferRel: 401, hayBanda: true };
+    assert.deepEqual(hitosOrdenados(abierta).map(h => h.tipo), ['entrada', 'ahora', 'banco', 'salida']);
+    // banco en contra: llega después
+    assert.deepEqual(hitosOrdenados({ ...abierta, bufferRel: 455 }).map(h => h.tipo), ['entrada', 'ahora', 'salida', 'banco']);
+    // "ahora" se ordena entre los demás según la hora
+    assert.deepEqual(hitosOrdenados({ ...abierta, ahoraRel: 410 }).map(h => h.tipo), ['entrada', 'banco', 'ahora', 'salida']);
+    // sin banda no hay hito de banco; cerrada solo quedan entrada y salida
+    assert.deepEqual(hitosOrdenados({ ...abierta, hayBanda: false, bufferRel: null }).map(h => h.tipo), ['entrada', 'ahora', 'salida']);
+    assert.deepEqual(hitosOrdenados({ ...abierta, cerrado: true }).map(h => h.tipo), ['entrada', 'salida']);
+
+    const pos = posicionesLinea(abierta);
+    assert.ok(Math.abs(pos.avance - 22 / 420) < 1e-9);
+    assert.equal(pos.salida, 1);
+    assert.ok(Math.abs(pos.banco - 401 / 420) < 1e-9);
+    // el banco en contra alarga la escala: la salida estimada queda antes del final
+    const enContra = posicionesLinea({ ...abierta, bufferRel: 455 });
+    assert.equal(enContra.banco, 1);
+    assert.ok(enContra.salida < 1);
+    assert.equal(posicionesLinea({ ahoraRel: 0, salidaRel: 0, bufferRel: null, hayBanda: false }).avance, 0);
+});
+
+test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (registro abierto y cerrado, sin registro y día especial)', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const { TiempoUtils } = await import('../src/core/tiempo-utils.js');
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    const base = {
+        horasDiarias: 8, esDiaHabil: true, diasHabiles: [0, 1, 2, 3, 4, 5, 6], tipoEspecialHoy: null,
+        bufferSemanal: 0.5, bufferSemanalBase: 0.5, semanaAbierta: true, hoy, ayerAbierto: false, regAyer: null
+    };
+
+    const sin = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: null, tiempoHoy: 0 }).resumen;
+    assert.equal(sin.tipo, 'espera');
+    assert.equal(sin.mensaje, 'Esperando registro…');
+    assert.equal(sin.banco.texto, '+30 min');
+    assert.equal(sin.banco.positivo, true);
+
+    const especial = TarjetaFichajeVista.derivarVistaHoy({
+        ...base, regHoy: { fecha: hoy, entrada: 'VAC', salida: 'VAC' }, tiempoHoy: 0,
+        tipoEspecialHoy: { emoji: '🏖️', label: 'Vacaciones', descripcion: 'Vacaciones', color: 'orange' }
+    }).resumen;
+    assert.deepEqual(especial, { tipo: 'especial', emoji: '🏖️', etiqueta: 'Vacaciones', descripcion: '¡Vacaciones!', color: 'orange' });
+
+    const abierto = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: { fecha: hoy, entrada: '09:00', salida: '' }, tiempoHoy: 0.5 }).resumen;
+    assert.equal(abierto.tipo, 'registro');
+    assert.equal(abierto.cerrado, false);
+    assert.deepEqual(abierto.trabajado, { horas: 0, minutos: 30 });
+    assert.equal(abierto.entrada, '09:00');
+    assert.equal(abierto.salida, '');
+    assert.deepEqual(abierto.balance, { etiqueta: 'Faltan', texto: '7 h 30 min', tono: 'neutro' });
+    assert.equal(abierto.banco.texto, '+30 min');
+
+    const cerrado = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: { fecha: hoy, entrada: '09:00', salida: '17:00' }, tiempoHoy: 8 }).resumen;
+    assert.equal(cerrado.cerrado, true);
+    assert.equal(cerrado.salida, '17:00');
+    assert.equal(cerrado.salidaEstimada, '');
+    assert.deepEqual(cerrado.balance, { etiqueta: 'Objetivo', texto: 'Cumplido', tono: 'green' });
 });

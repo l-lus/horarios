@@ -9,6 +9,8 @@ import { TiempoFuera } from '../services/tiempo-fuera.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { html, icono } from '../core/html.js';
 import { Objetivos } from '../services/objetivos.js';
+import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
+import { partesDuracion, duracionCompacta, duracionConSigno } from '../core/resumen-tarjeta.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD VIEW MODEL (textos, hints y colores de la tarjeta)
@@ -30,15 +32,18 @@ function _refrescarFormatoCortoStatsCache() {
 }
 EventosApp.on('config:formato-corto-stats', _refrescarFormatoCortoStatsCache);
 
-// "Hint integrado": la salida estimada y la salida con buffer se dibujan sobre la barra en vez de en el texto inferior
-let _hintIntegrado = Preferencias.HINT_INTEGRADO.get();
+// "Hint integrado" (estilo "Barra con hitos"): la salida estimada y la salida con buffer se dibujan sobre la barra en vez de en el texto inferior.
+// Los estilos con diseño propio (anillo, línea de tiempo...) reemplazan la vista diaria; la semanal usa la barra con tramos igual que los hitos.
+const _esSemana = () => EstadoApp.vistaActual() === 'semana';
+const _hintActivo = () => EstiloTarjeta.hintIntegrado() || (EstiloTarjeta.propio() && _esSemana());
+/** ¿Se dibuja ahora el diseño propio de un estilo (vista diaria con anillo, línea de tiempo, filas o tipográfica)? */
+const _estiloPropioActivo = () => EstiloTarjeta.propio() && !_esSemana();
 // y su variante: el nombre del hito enfocado va en el número grande en vez de desplegarse en la barra
 let _descHitosNumero = Preferencias.DESC_HITOS_NUMERO.get();
 // y si el ciclo automático de fases (al tocar el número o al fichar) sigue activo con el hint integrado
 let _cicloHintAuto = Preferencias.CICLO_HINT_AUTO.get();
 EventosApp.on('config:hint-integrado', () => {
     _cicloHintAuto = Preferencias.CICLO_HINT_AUTO.get();
-    _hintIntegrado = Preferencias.HINT_INTEGRADO.get();
     _descHitosNumero = Preferencias.DESC_HITOS_NUMERO.get();
 });
 
@@ -267,7 +272,7 @@ function derivarVistaSemana(est) {
     }
 
     const cerrado = !semanaAbierta && !todosEspeciales && horasDiarias > 0;
-    const franjas = _hintIntegrado && horasDiarias > 0 && !todosEspeciales ? _franjasSemana(est.diasSemana, horasDiarias, objetivoSemana, hoy) : null;
+    const franjas = _hintActivo() && horasDiarias > 0 && !todosEspeciales ? _franjasSemana(est.diasSemana, horasDiarias, objetivoSemana, hoy) : null;
 
     return {
         titulo: html`${icono('#icon-calendar-simple')} Esta Semana`,
@@ -362,6 +367,54 @@ function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, la
     return bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
 }
 
+// ─── Resumen del día para los diseños propios (anillo, línea de tiempo, filas, tipográfica) ─────────────────────────────────
+/** Banco de horas de la semana (con signo) o null si no hay nada que mostrar; mismo criterio que el texto "extras esta semana". */
+function _resumenBanco(est) {
+    const { bufferSemanal, horasDiarias, semanaAbierta } = est;
+    if (!(horasDiarias > 0 && Math.abs(bufferSemanal) > MARGEN_HORAS && semanaAbierta)) return null;
+    const minutos = TiempoUtils.horasAMinutosRedondeados(bufferSemanal);
+    return { minutos, positivo: bufferSemanal > 0, texto: duracionConSigno(minutos) };
+}
+
+/** Tiempo fuera del registro (más el que corre ahora) o null si no hay. */
+function _resumenTiempoFuera(reg) {
+    const registrado = reg && TiposRegistro.tieneTiempoFuera(reg) ? TiempoUtils.horaAMinutos(reg.tiempoFuera) : 0;
+    const corriendo = TiempoFuera.corriendo();
+    const minutos = registrado + (corriendo ? TiempoFuera.minutosActivos() : 0);
+    return minutos > 0 || corriendo ? { minutos, corriendo, texto: duracionCompacta(minutos) } : null;
+}
+
+/** Lo que falta (o sobra) del objetivo del día: etiqueta, texto y tono ('neutro', 'green', 'red' o 'gold'). null sin objetivo. */
+function _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre) {
+    if (!(objetivo > 0)) return null;
+    const falta = TiempoUtils.horasAMinutosRedondeados(objetivo - tiempoHoy);
+    if (falta > 0) {
+        return cerrado
+            ? { etiqueta: 'Faltó', texto: duracionCompacta(falta), tono: colorCierre === 'gold' ? 'gold' : 'red' }
+            : { etiqueta: 'Faltan', texto: duracionCompacta(falta), tono: 'neutro' };
+    }
+    return falta === 0
+        ? { etiqueta: 'Objetivo', texto: 'Cumplido', tono: 'green' }
+        : { etiqueta: 'Extra', texto: duracionConSigno(-falta), tono: 'green' };
+}
+
+/** Resumen de un registro con entrada (abierto o cerrado). `linea` puede ser null (sin objetivo): entonces no hay salida estimada. */
+function _resumenRegistro({ reg, linea, tiempoHoy, objetivo, progreso, cerrado, color, colorCierre, mensaje, est }) {
+    const trabajadoMin = TiempoUtils.horasAMinutosRedondeados(tiempoHoy);
+    return {
+        tipo: 'registro', cerrado, color, mensaje, progreso,
+        trabajadoMin, trabajado: partesDuracion(trabajadoMin),
+        entrada: reg.entrada,
+        salida: cerrado ? reg.salida : '',
+        salidaEstimada: !cerrado && linea ? linea.horaSalida : '',
+        salidaBanco: !cerrado && linea?.hayBanda ? linea.horaBuffer : '',
+        linea,
+        balance: _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre),
+        banco: _resumenBanco(est),
+        tiempoFuera: _resumenTiempoFuera(reg),
+    };
+}
+
 /** Vista de hoy cuando todavía no hay entrada pero ayer quedó una jornada abierta que cruza la medianoche. */
 function _vistaAyerAbierto(est) {
     const { tiempoHoy, bufferSemanalBase, diasHabiles, horasDiarias, regHoy } = est;
@@ -388,6 +441,10 @@ function _vistaAyerAbierto(est) {
         cerrado: false,
         hint,
         linea,
+        resumen: est.regAyer ? _resumenRegistro({
+            reg: est.regAyer, linea, tiempoHoy, objetivo: objetivoDiarioAyerAplica, progreso: prog, cerrado: false,
+            color: colorBarra, colorCierre: colorBarra, mensaje, est
+        }) : null,
     };
 }
 
@@ -405,6 +462,11 @@ function _vistaSinRegistro(est) {
         colorBorde: 'transparent', estadoFondo: 'esperando',
         cerrado: false,
         hint: 'Tocá para ver la Semana',
+        resumen: {
+            tipo: 'espera', emoji: esDiaHabil ? '🎒' : '🌞',
+            mensaje: esDiaHabil ? (horasDiarias === 0 ? '' : 'Esperando registro…') : (horasDiarias === 0 ? '' : 'Día libre'),
+            banco: _resumenBanco(est),
+        },
     };
 }
 
@@ -420,6 +482,10 @@ function _vistaEspecial(tipoEspecialHoy) {
         estadoFondo: 'especial', estadoFondoColor: tipoEspecialHoy.color,
         cerrado: false,
         hint: 'Tocá para ver la Semana',
+        resumen: {
+            tipo: 'especial', emoji: tipoEspecialHoy.emoji, etiqueta: tipoEspecialHoy.label,
+            descripcion: `¡${tipoEspecialHoy.descripcion}!`, color: tipoEspecialHoy.color,
+        },
     };
 }
 
@@ -498,6 +564,10 @@ function derivarVistaHoy(est) {
         cerrado: dayClosed,
         hint,
         linea,
+        resumen: _resumenRegistro({
+            reg: regHoy, linea, tiempoHoy, objetivo: objetivoDiarioAplica, progreso: prog, cerrado: dayClosed,
+            color: colorBarra, colorCierre: colorBarra, mensaje: mostrarMensaje ? mensaje : '', est
+        }),
     }, avisoAyerHint);
 }
 
@@ -507,9 +577,11 @@ export const TarjetaFichajeVista = {
     _cantidadHoras,
     _cantidadHorasCorta,
     _modoTextoStats,
-    _hintIntegradoActivo: () => _hintIntegrado,
+    _hintIntegradoActivo: _hintActivo,
+    _estiloPropioActivo,
     // Desactivado (sin ciclo automático) se comporta como Barra al pasar el cursor: la descripción se despliega en la barra y el número queda con las horas
-    _descHitosEnNumero: () => _hintIntegrado && _cicloHintAuto && _descHitosNumero,
-    _cicloAutoActivo: () => !_hintIntegrado || _cicloHintAuto,
+    _descHitosEnNumero: () => EstiloTarjeta.hintIntegrado() && _cicloHintAuto && _descHitosNumero,
+    // los diseños propios no tienen fases que ciclar: todo el registro está a la vista
+    _cicloAutoActivo: () => !_estiloPropioActivo() && (!EstiloTarjeta.hintIntegrado() || _cicloHintAuto),
     _refrescarFormatoCortoStatsCache
 };

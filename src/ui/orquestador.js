@@ -5,6 +5,7 @@ import { Formularios } from './formularios.js';
 import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
+import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 import { InstaladorPWA } from './instalador-pwa.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
@@ -288,6 +289,7 @@ function _restaurarEstadoVisual(config) {
     GestorTemas.aplicarTema(config.tema);
     Movimiento.init();
     EstiloCalendario.init();
+    EstiloTarjeta.init();
 
     $('fecha').value = TiempoUtils.obtenerFechaHoy();
 

@@ -1,4 +1,5 @@
 import { Preferencias } from '../core/preferencias.js';
+import { EstiloTarjeta, ESTILOS_TARJETA } from '../core/estilo-tarjeta.js';
 import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE } from '../core/constantes.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -71,7 +72,15 @@ const CONFIG_RESPALDO = [
         actual: () => Movimiento.modo(),
         aplicar: (v) => Movimiento.setModo(v),
     },
-    _opcion(Preferencias.HINT_INTEGRADO, 'hint integrado', _avisarHint),
+    // Un respaldo viejo solo trae el interruptor del hint integrado (= barra con hitos o clásica); uno nuevo trae además el estilo, que se aplica después y manda
+    _opcion(Preferencias.HINT_INTEGRADO, 'hint integrado', (v) => { EstiloTarjeta.desdeHintIntegrado(v); _avisarHint(); }),
+    {
+        clave: STORAGE_KEYS.ESTILO_TARJETA,
+        etiqueta: 'estilo de la tarjeta de estado',
+        esValido: (v) => ESTILOS_TARJETA.some(e => e.id === v),
+        actual: EstiloTarjeta.actual,
+        aplicar: (v) => { EstiloTarjeta.setEstilo(v); _avisarHint(); },
+    },
     _opcion(Preferencias.DESC_HITOS_NUMERO, 'nombre del hito en el número', _avisarHint),
     _opcion(Preferencias.CICLO_HINT_AUTO, 'ciclo automático del hint', _avisarHint),
     // Un respaldo con orden pero sin columnas (versiones anteriores) usa el reparto por defecto: los tamaños viejos no corresponderían al orden nuevo

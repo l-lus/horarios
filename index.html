@@ -337,6 +337,7 @@
                 <div class="stats-card-bg" id="stats-card-bg" aria-hidden="true"></div>
                 <div class="stats-card-content" id="stats-card-content">
                     <h2 id="stats-titulo" class="card-anim">Hoy</h2>
+                    <div id="stats-estilo" class="stats-estilo card-anim"></div>
                     <div class="stats-number" id="stats-semana">
                         <div>Cargando...</div>
                     </div>
@@ -826,17 +827,17 @@
                             </div>
                         </div>
                         <div class="config-actions form-group config-onboarding-hide">
-                            <label>Barra del día</label>
+                            <label>Tarjeta de estado</label>
                             <div class="settings-list">
-                                <button id="btn-toggle-hint-integrado">
+                                <button id="btn-estilo-tarjeta">
                                     <svg class="icon">
                                         <use href="#icon-eye" />
                                     </svg>
                                     <span class="settings-list-text">
-                                        <span>Hint integrado en la barra</span>
-                                        <span class="settings-list-desc">Muestra el registro del día sobre la barra</span>
+                                        <span>Estilo de la tarjeta</span>
+                                        <span class="settings-list-desc">Cómo se muestra el registro del día</span>
                                     </span>
-                                    <span class="toggle-switch" aria-hidden="true"></span>
+                                    <span id="hint-estilo-tarjeta-label">Barra con hitos</span>
                                 </button>
                                 <div class="collapsible" id="hint-animacion-colapsable">
                                     <div class="collapsible-inner">
@@ -1174,13 +1175,13 @@
                             <p class="ayuda-color-fila"><span class="ayuda-color ayuda-color--vacio"
                                     aria-hidden="true"></span><span><strong>Sin color:</strong> en la vista semanal, un
                                     día sin registro, sin salida registrada o que todavía no llegó.</span></p>
-                            <p><strong>Barra del día:</strong> con <em>Hint integrado</em> activo (Ajustes →
-                                Barra del día), la barra lleva marcas con flecha y hora: la <strong>entrada</strong>, la
+                            <p><strong>Barra del día:</strong> con el estilo <em>Barra con hitos</em> (Ajustes →
+                                Tarjeta de estado), la barra lleva marcas con flecha y hora: la <strong>entrada</strong>, la
                                 <strong>salida estimada</strong> (cuando cumplís tu objetivo) y, si tenés horas extra o
                                 faltantes en la semana, la <strong>salida con banco de horas</strong>. La barra es azul
                                 hasta la primera salida, toma el color del banco entre ambas (verde o dorado si te
                                 sobran horas, rojo si te faltan) y pasa a verde al superar la última. Al cerrar el
-                                registro, la marca de salida pasa a la hora real. Si lo desactivás, esos datos se
+                                registro, la marca de salida pasa a la hora real. Con el estilo <em>Clásica</em>, esos datos se
                                 muestran como texto debajo de la barra. En PC, al pasar el cursor sobre una marca se
                                 muestra su texto, igual que en la animación de la tarjeta; en la vista semanal, al pasarlo
                                 por la franja de un día se ven su total, su entrada y su salida (en el celular no
@@ -1329,9 +1330,13 @@
                             <p><strong>Calendario:</strong> Estilo del calendario (cómo se dibujan los días con
                                 registro), Auto popup calendario (PC) y Rueda para cambiar de mes (PC). Las opciones de
                                 PC se ocultan en dispositivos táctiles.</p>
-                            <p><strong>Ajustes de la barra del día:</strong> Hint integrado en la barra es un interruptor: muestra
-                                la entrada, la salida estimada y la salida con banco de horas sobre la barra, o las
-                                siglas de cada día en la semana. Con él activo aparece <em>Animación de los hitos</em>,
+                            <p><strong>Estilo de la tarjeta de estado:</strong> cada toque pasa al estilo siguiente.
+                                <em>Barra con hitos</em> muestra la entrada, la salida estimada y la salida con banco de
+                                horas sobre la barra, o las siglas de cada día en la semana; <em>Clásica</em> es la barra
+                                con esos datos como texto debajo. <em>Anillo</em>, <em>Línea de tiempo</em>,
+                                <em>Lista de filas</em> y <em>Tipográfica</em> reemplazan la vista del día por otro diseño
+                                (con la fila o el dato del tiempo fuera cuando lo hay); la vista de la semana sigue con la
+                                barra de tramos. Con <em>Barra con hitos</em> aparece <em>Animación de los hitos</em>,
                                 que cambia entre Desactivado —sin ciclo automático al tocar el número—, Barra —cada
                                 hito con su descripción en la barra— y Texto —el nombre del hito, como "Entrada 08:30",
                                 en el número grande—.</p>
@@ -1368,7 +1373,7 @@
                             <p>El archivo incluye además tu configuración: horas diarias, días laborales e historial, y
                                 las
                                 opciones <em>No descontar tiempo fuera</em>, <em>No cubrir con banco de horas</em>,
-                                <em>Objetivo diario global</em>, <em>Reducir animaciones</em> y <em>Hint integrado</em>,
+                                <em>Objetivo diario global</em>, <em>Reducir animaciones</em> y el <em>estilo de la tarjeta de estado</em>,
                                 más el orden y la visibilidad de las tarjetas (estos se aplican al
                                 <strong>Reemplazar</strong>, no al Combinar).
                             </p>

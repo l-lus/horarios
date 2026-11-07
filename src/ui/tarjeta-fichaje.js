@@ -20,6 +20,7 @@ import { esHtmlSeguro, montar } from '../core/html.js';
 import { CicloStats } from './tarjeta-ciclo-stats.js';
 import { FocoHitos } from './foco-hitos.js';
 import { HoverBarra } from './hover-barra.js';
+import { TarjetaEstilos } from './tarjeta-estilos.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD MODULE
@@ -28,7 +29,7 @@ const {
     _renderConFirma, _conRendersSinAnimar, _rendersSinAnimarActivos, _animarFadeSwap,
     _animarMutacion, _animarConteo, _conteoEnCurso, _cancelarConteo, _durSiAnima
 } = Animaciones;
-const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo, _descHitosEnNumero, _cicloAutoActivo } = TarjetaFichajeVista;
+const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo, _estiloPropioActivo, _descHitosEnNumero, _cicloAutoActivo } = TarjetaFichajeVista;
 
 const { setProgressBarColor, toggleFondoCard, actualizarFondoCard } = TarjetaFondos;
 const {
@@ -253,6 +254,17 @@ function _renderCard(vista) {
     actualizarFondoCard(vista.estadoFondo, vista.estadoFondoColor ?? null);
 }
 
+/**
+ * Estilos con diseño propio (anillo, línea de tiempo, filas, tipográfica): en la vista diaria #stats-estilo reemplaza al número, la barra y los textos
+ * (el CSS los oculta con .estilo-propio; siguen actualizándose sin dibujar nada, así volver a otro estilo no tiene nada que reconstruir).
+ * Sin resumen (p. ej. jornada de ayer ya retenida) se queda la barra de siempre.
+ */
+function _renderEstilo(vista) {
+    const propio = _estiloPropioActivo() && !!vista.resumen;
+    $('stats-card')?.classList.toggle('estilo-propio', propio);
+    TarjetaEstilos.actualizar(propio ? vista.resumen : null);
+}
+
 function _renderHint(vista) {
     const el = $('toggle-hint');
     if (!el) return;
@@ -304,6 +316,7 @@ function _animarCambioCard(renderFn) {
         $('stats-mensaje'),
         $('stats-buffer'),
         $('toggle-hint'),
+        $('stats-estilo'),
     ];
 
     CicloStats.detener();
@@ -364,6 +377,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
         _renderMensaje(vista);
         _renderHint(vista);
         _renderBuffer(est);
+        _renderEstilo(vista);
     };
     if (debeAnimar) {
         _animarCambioCard(renderResto);

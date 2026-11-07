@@ -1796,3 +1796,491 @@
     -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.3) var(--foco-desde), #000 var(--foco-desde) var(--foco-hasta), rgba(0, 0, 0, 0.3) var(--foco-hasta));
     mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.3) var(--foco-desde), #000 var(--foco-desde) var(--foco-hasta), rgba(0, 0, 0, 0.3) var(--foco-hasta));
 }
+
+/* ─── ESTILOS DE LA TARJETA DE ESTADO (anillo, línea de tiempo, lista de filas, tipográfica) ─────────────────────
+   Los dibuja ui/tarjeta-estilos.js dentro de #stats-estilo (vista diaria). Con .estilo-propio el número, la barra y los textos de abajo se ocultan
+   (siguen existiendo: el render los actualiza igual) y la tarjeta crece a su contenido en vez de tener el alto fijo de la barra.
+   Dos atributos de datos mandan los colores: data-tono (neutro | apagado | green | red | gold) pinta textos y mosaicos, y data-color (el color del
+   estado: blue, green, red, gold, orange, purple) pinta el anillo, la regla y los avisos de los días especiales. */
+.stats-estilo {
+    display: none;
+    --tono: var(--text-main);
+    --est-color: var(--c-blue);
+}
+
+.stats-card.estilo-propio {
+    height: auto;
+}
+
+.stats-card.estilo-propio :is(#stats-semana, .progress-pista, #stats-mensaje, #stats-buffer, #toggle-hint) {
+    display: none !important;
+}
+
+.stats-card.estilo-propio .stats-estilo {
+    display: block;
+}
+
+.stats-estilo [data-tono="neutro"] { --tono: var(--text-main); }
+.stats-estilo [data-tono="apagado"] { --tono: var(--text-muted); }
+.stats-estilo [data-tono="green"] { --tono: var(--c-green); }
+.stats-estilo [data-tono="red"] { --tono: var(--c-red); }
+.stats-estilo [data-tono="gold"] { --tono: var(--c-gold); }
+
+.stats-estilo [data-color="blue"] { --est-color: var(--c-blue); }
+.stats-estilo [data-color="green"] { --est-color: var(--c-green); }
+.stats-estilo [data-color="red"] { --est-color: var(--c-red); }
+.stats-estilo [data-color="gold"] { --est-color: var(--c-gold); }
+.stats-estilo [data-color="orange"] { --est-color: var(--c-orange); }
+.stats-estilo [data-color="purple"] { --est-color: var(--c-purple); }
+.stats-estilo [data-color="neutro"] { --est-color: var(--text-muted); }
+
+/* Duración con la unidad chica: "7 h 45 min" */
+.est-duracion {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25em;
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--lh-tight);
+    color: var(--text-main);
+}
+
+.est-unidad {
+    font-size: var(--text-base);
+    font-weight: var(--fw-normal);
+    color: var(--text-muted);
+}
+
+.est-duracion--media .est-num { font-size: 2rem; }
+.est-duracion--grande .est-num { font-size: 2.6rem; }
+.est-duracion--enorme .est-num { font-size: 3.4rem; }
+.est-duracion--enorme .est-unidad { font-size: var(--text-lg); }
+
+.est-emoji {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.est-emoji--grande { font-size: 2.6rem; }
+
+.est-dato {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.est-dato-etiqueta {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.est-dato-valor {
+    font-size: var(--text-base);
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+    color: var(--tono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── B · Anillo ── */
+.est-anillo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.est-anillo-principal {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+}
+
+.est-anillo-aro {
+    position: relative;
+    flex: none;
+    width: 96px;
+    height: 96px;
+}
+
+.est-anillo-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.est-anillo-pista,
+.est-anillo-arco {
+    fill: none;
+    stroke-width: 9;
+}
+
+.est-anillo-pista {
+    stroke: color-mix(in srgb, var(--text-muted) 22%, transparent);
+    transition: stroke-dasharray var(--transition-ui);
+}
+
+/* Esperando registro: el aro es una corona de marcas en vez de un trazo continuo */
+.est-anillo-aro.espera .est-anillo-pista {
+    stroke-dasharray: 0.9 2.6;
+}
+
+.est-anillo-arco {
+    stroke: var(--est-color);
+    stroke-linecap: round;
+    stroke-dasharray: 100;
+    stroke-dashoffset: var(--ring-offset, 100);
+    transition: stroke-dashoffset var(--dur-conteo) var(--ease-conteo), stroke var(--dur-anim) ease, opacity var(--transition-ui);
+}
+
+.est-anillo-arco.vacio { opacity: 0; }
+
+.est-anillo-centro {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+}
+
+.est-anillo-valor {
+    font-size: var(--text-lg);
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+.est-anillo[data-tipo="espera"] .est-anillo-valor,
+.est-anillo[data-tipo="especial"] .est-anillo-valor {
+    font-size: 2.2rem;
+}
+
+.est-anillo-unidad {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+}
+
+.est-anillo-datos {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    flex: 1;
+    min-width: 0;
+}
+
+.est-anillo-mensaje {
+    font-size: var(--text-lg);
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-tight);
+}
+
+.est-anillo-sub {
+    font-size: var(--text-sm);
+    color: var(--tono);
+}
+
+.est-anillo[data-tipo="espera"] .est-anillo-mensaje { color: var(--text-muted); }
+
+.est-dato--vertical .est-dato-valor { font-size: var(--text-lg); }
+
+.est-anillo-pie {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-sm);
+}
+
+/* ── C · Línea de tiempo vertical ── */
+.est-linea {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.est-linea-cabecera {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.est-linea-etiqueta {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+
+.est-linea-titulo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    font-size: 2rem;
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-tight);
+}
+
+.est-linea[data-tipo="espera"] .est-linea-titulo {
+    font-size: 1.5rem;
+    color: var(--text-muted);
+}
+
+.est-linea[data-tipo="especial"] .est-linea-titulo .est-emoji {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--est-color) 22%, transparent);
+}
+
+.est-nodos {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+}
+
+.est-nodo {
+    --nodo: var(--text-muted);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: 30px;
+    font-size: var(--text-sm);
+}
+
+.est-nodo-punto {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    width: 12px;
+    height: 12px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 2px solid var(--nodo);
+    background: var(--bg-card);
+}
+
+/* El conector llega desde el nodo anterior: azul hasta donde ya se llegó, gris lo que falta */
+.est-nodo::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: -50%;
+    width: 2px;
+    height: 100%;
+    background: color-mix(in srgb, var(--text-muted) 35%, transparent);
+}
+
+.est-nodo.primero::before { display: none; }
+
+.est-nodo.pasado::before,
+.est-nodo--ahora::before { background: var(--c-blue); }
+
+.est-nodo-etiqueta { color: var(--text-muted); }
+
+.est-nodo-hora {
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-main);
+}
+
+.est-nodo--entrada { --nodo: var(--c-blue); }
+.est-nodo--entrada .est-nodo-punto { background: var(--c-blue); }
+
+.est-nodo--ahora { --nodo: var(--c-blue); }
+.est-nodo--ahora .est-nodo-etiqueta { color: var(--c-blue); font-weight: var(--fw-semibold); }
+
+.est-nodo--banco { --nodo: var(--tono); }
+.est-nodo--banco .est-nodo-punto { background: var(--tono); }
+.est-nodo--banco :is(.est-nodo-etiqueta, .est-nodo-hora) { color: var(--tono); }
+
+.est-nodo.pendiente .est-nodo-punto { border-style: dashed; background: transparent; }
+.est-nodo.pendiente .est-nodo-etiqueta { color: var(--text-muted); }
+
+.est-mosaicos {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-sm);
+}
+
+.est-mosaico {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--tono) 12%, transparent);
+}
+
+.est-mosaico .est-dato-valor { font-size: var(--text-base); }
+
+.est-linea-nota {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-weight: var(--fw-medium);
+    color: var(--est-color);
+    background: color-mix(in srgb, var(--est-color) 18%, transparent);
+}
+
+/* ── E · Lista de filas ── */
+.est-filas {
+    display: flex;
+    flex-direction: column;
+}
+
+.est-fila {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+}
+
+/* Raya entre filas visibles (las ocultas siguen en el DOM, por eso no sirve :first-child / :last-child) */
+.est-fila:not(.hidden) ~ .est-fila:not(.hidden) {
+    border-top: 1px solid var(--border);
+}
+
+.est-fila--cabecera {
+    align-items: center;
+    padding-top: 0;
+}
+
+.est-fila-etiqueta {
+    flex: none;
+    font-size: var(--text-base);
+    color: var(--text-main);
+}
+
+.est-fila-etiqueta--chica { font-size: var(--text-sm); }
+
+.est-fila-valor {
+    min-width: 0;
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+    color: var(--tono);
+    text-align: right;
+}
+
+.est-fila[data-tono="green"] .est-fila-etiqueta,
+.est-fila[data-tono="red"] .est-fila-etiqueta,
+.est-fila[data-tono="gold"] .est-fila-etiqueta { color: var(--tono); }
+
+.est-fila[data-tono="apagado"] .est-fila-etiqueta { color: var(--text-muted); }
+
+.est-fila-grande {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.est-fila-texto {
+    font-size: 2rem;
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-tight);
+    color: var(--tono);
+}
+
+.est-fila-valor[data-color] { color: var(--est-color); }
+
+.est-filas[data-tipo="espera"] .est-fila-texto {
+    font-size: 1.15rem;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+
+/* ── F · Tipográfica minimal ── */
+.est-tipografica {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    text-align: center;
+}
+
+.est-tipografica-titulo {
+    font-size: 2.2rem;
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-tight);
+}
+
+.est-tipografica[data-tipo="espera"] .est-tipografica-titulo {
+    font-size: 1.6rem;
+    color: var(--text-muted);
+}
+
+.est-tipografica-subtitulo {
+    font-size: var(--text-sm);
+    color: var(--tono);
+}
+
+.est-regla-bloque {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    width: 100%;
+    margin-top: var(--space-md);
+}
+
+.est-regla-fila {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.est-regla-hora {
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+.est-regla {
+    position: relative;
+    flex: 1;
+    height: 3px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--text-muted) 25%, transparent);
+}
+
+.est-regla-relleno {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: calc(var(--avance, 0) * 100%);
+    border-radius: inherit;
+    background: var(--est-color);
+    transition: width var(--dur-conteo) var(--ease-conteo), background-color var(--dur-anim) ease;
+}
+
+.est-regla-marca {
+    position: absolute;
+    top: -3px;
+    left: calc(var(--banco, 0) * 100%);
+    width: 3px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--tono);
+    transform: translateX(-50%);
+}
+
+.est-regla.punteada {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--text-muted) 55%, transparent) 50%, transparent 50%) 0 0 / 12px 100%;
+}
+
+.est-regla.llena { height: 4px; }
+
+.est-regla-pie {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+
+.est-regla-leyenda--der {
+    margin-left: auto;
+    color: var(--tono);
+    text-align: right;
+}
+
+.est-tipografica:not([data-tipo="registro"]) .est-regla-pie { justify-content: flex-start; }

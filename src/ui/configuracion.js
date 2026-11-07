@@ -3,6 +3,7 @@ import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable, alClic } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
+import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorTemas } from './gestor-temas.js';
@@ -27,7 +28,7 @@ import { Objetivos } from '../services/objetivos.js';
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
 // ====================================================================
 const {
-    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnDisabled, _setBtnActivo, _flashCampo
+    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnDisabled, _flashCampo
 } = UIBase;
 const { _esperarAnim, _animarValor } = Animaciones;
 
@@ -94,7 +95,7 @@ const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRu
         onAfterToggle: () => { EventosApp.emit('config:rueda-calendario'); }
     });
 
-// "Hint integrado" es un interruptor (HINT_INTEGRADO). Con él activo aparece la opción de animación de los hitos, con tres estados en un solo botón:
+// El estilo de la tarjeta de estado (EstiloTarjeta) rota con un solo botón. Con el estilo "Barra con hitos" (el antiguo hint integrado) aparece la opción de animación de los hitos, con tres estados en un solo botón:
 // Desactivado (sin ciclo automático del número grande), Barra (cada hito con su descripción desplegada en la barra) y Texto (el nombre del hito en el número grande, el predeterminado).
 // Se guardan en CICLO_HINT_AUTO (false = desactivado) y DESC_HITOS_NUMERO (barra o texto).
 const _MODOS_ANIM_HINT = ['off', 'barra', 'texto'];
@@ -106,9 +107,10 @@ function _modoAnimHint() {
 }
 
 function actualizarEstadoBotonHintIntegrado(animar = false) {
-    const activo = Preferencias.HINT_INTEGRADO.get();
-    _setBtnActivo('btn-toggle-hint-integrado', activo);
-    // la animación solo tiene sentido con el hint integrado: sin él, la opción se pliega (sin animar al cargar o al restaurar un respaldo)
+    const activo = EstiloTarjeta.hintIntegrado();
+    const lblEstilo = $('hint-estilo-tarjeta-label');
+    if (lblEstilo) lblEstilo.textContent = EstiloTarjeta.etiqueta();
+    // la animación solo tiene sentido con la barra con hitos: con otro estilo la opción se pliega (sin animar al cargar o al restaurar un respaldo)
     // si ya está en ese estado no se toca: el evento 'config:hint-integrado' que emite el toggle vuelve acá sin animar y cortaría la transición en curso
     const colapsable = $('hint-animacion-colapsable');
     if (colapsable && colapsable.classList.contains('expanded') !== activo) setColapsable(colapsable, activo, { animar });
@@ -119,8 +121,9 @@ function actualizarEstadoBotonHintIntegrado(animar = false) {
 // Al restaurar un respaldo o bajar de Gist cambia la opción: se actualiza la etiqueta
 EventosApp.on('config:hint-integrado', () => actualizarEstadoBotonHintIntegrado());
 
-function toggleHintIntegrado() {
-    Preferencias.HINT_INTEGRADO.set(!Preferencias.HINT_INTEGRADO.get());
+// Cada toque pasa al estilo siguiente y redibuja la tarjeta
+function toggleEstiloTarjeta() {
+    EstiloTarjeta.siguiente();
     actualizarEstadoBotonHintIntegrado(true);
     EventosApp.emit('config:hint-integrado');
     actualizarUI();
@@ -366,7 +369,7 @@ function bindEventos() {
         'btn-toggle-logica-cubierto': () => toggleLogicaCubierto(),
         'btn-toggle-objetivo-registro': () => toggleObjetivoPorRegistro(),
         'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
-        'btn-toggle-hint-integrado': () => toggleHintIntegrado(),
+        'btn-estilo-tarjeta': () => toggleEstiloTarjeta(),
         'btn-toggle-hint-animacion': () => toggleAnimacionHint(),
         'btn-toggle-metrica-uso': () => toggleMetricaUso(),
         'btn-toggle-formato-corto-stats': () => toggleFormatoCortoStats(),

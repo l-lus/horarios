@@ -81,9 +81,11 @@ const { cerrarModalReporteSecciones } = Reportes;
 const {
     actualizarUI, alternarVista, _forzarVista, setTimerAutoVista, _retenerRegistroAyer
 } = TarjetaFichaje;
-const { iniciar: _iniciarCicloStats, detener: _detenerCicloStats, prepararFase: _prepararMostrarFaseAlRenderizar } = CicloStats;
+const { iniciar: _iniciarCicloStatsSiempre, detener: _detenerCicloStats, prepararFase: _prepararMostrarFaseAlRenderizar } = CicloStats;
 
-const { _refrescarFormatoCortoStatsCache } = TarjetaFichajeVista;
+const { _refrescarFormatoCortoStatsCache, _cicloAutoActivo } = TarjetaFichajeVista;
+// con el hint integrado y la animación de los hitos en Desactivado no hay ciclo automático (ni al cargar ni al volver a la pestaña)
+const _iniciarCicloStats = (...args) => (_cicloAutoActivo() ? _iniciarCicloStatsSiempre(...args) : false);
 
 const { setFondoCard } = TarjetaFondos;
 const { actualizarEstadoBotonTimerMain } = TarjetaTiempoFuera;

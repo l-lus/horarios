@@ -2008,21 +2008,32 @@
 }
 
 /* Tarjeta ancha (PC): según la disposición elegida (html[data-disposicion-linea]) el tiempo trabajado va a la izquierda o a la derecha de la línea
-   en vez de arriba. Se mide el ancho de la tarjeta (contenedor #stats-estilo), no el de la ventana: en un móvil, o con la tarjeta angosta, queda arriba. */
+   en vez de arriba; los mosaicos (Faltan, Banco de horas...) y la nota quedan siempre abajo, a todo el ancho. Se mide el ancho de la tarjeta
+   (contenedor #stats-estilo), no el de la ventana: en un móvil, o con la tarjeta angosta, todo queda en una columna. */
 @container (min-width: 28rem) {
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea {
         display: grid;
         grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+        grid-template-areas: "cabecera linea" "pie pie";
         align-items: center;
-        column-gap: var(--space-xl);
+        gap: var(--space-md) var(--space-xl);
     }
 
     html[data-disposicion-linea="derecha"] .est-linea {
         grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
+        grid-template-areas: "linea cabecera" "pie pie";
     }
 
-    html[data-disposicion-linea="derecha"] .est-linea-cabecera {
-        order: 2;
+    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea.sin-cuerpo {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "cabecera" "pie";
+    }
+
+    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea-cabecera { grid-area: cabecera; }
+    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea-cuerpo { grid-area: linea; }
+    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) :is(.est-mosaicos, .est-linea-nota) { grid-area: pie; }
+
+    html[data-disposicion-linea="derecha"] .est-linea:not(.sin-cuerpo) .est-linea-cabecera {
         align-items: flex-end;
         text-align: right;
     }

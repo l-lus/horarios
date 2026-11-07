@@ -257,11 +257,12 @@ function crearLinea() {
     const fuera = crearDato('Tiempo fuera', 'est-dato est-mosaico');
     mosaicos.append(balance.raiz, banco.raiz, fuera.raiz);
     const nota = el('div', 'est-linea-nota');
-    // cabecera (tiempo trabajado) y cuerpo (línea, mosaicos y nota): en una tarjeta ancha pueden ir lado a lado (ver la disposición en estilo-tarjeta.js)
+    // cabecera (tiempo trabajado) y cuerpo (la línea): en una tarjeta ancha van lado a lado (ver la disposición en estilo-tarjeta.js);
+    // los mosaicos y la nota quedan siempre abajo, a todo el ancho
     const cuerpo = el('div', 'est-linea-cuerpo');
-    cuerpo.append(nodos, nodosDias, mosaicos, nota);
-    raiz.append(cabecera, cuerpo);
-    return { raiz, etiqueta, duracion, titulo, emoji, texto, nodos, hitos, nodosDias, dias, mosaicos, balance, banco, fuera, nota };
+    cuerpo.append(nodos, nodosDias);
+    raiz.append(cabecera, cuerpo, mosaicos, nota);
+    return { raiz, cuerpo, etiqueta, duracion, titulo, emoji, texto, nodos, hitos, nodosDias, dias, mosaicos, balance, banco, fuera, nota };
 }
 
 function pintarLinea(r, d) {
@@ -273,6 +274,10 @@ function pintarLinea(r, d) {
     mostrar(r.titulo, !conTotal);
     mostrar(r.nota, d.tipo === 'especial');
     mostrar(r.nodosDias, d.tipo === 'semana');
+    // sin línea que mostrar (día especial, o sin registro y sin mensaje) la cabecera ocupa todo el ancho
+    const sinLinea = d.tipo === 'especial' || (d.tipo === 'espera' && !d.mensaje);
+    mostrar(r.cuerpo, !sinLinea);
+    r.raiz.classList.toggle('sin-cuerpo', sinLinea);
 
     if (conTotal) {
         if (esRegistro) fijar(r.etiqueta, d.cerrado ? 'Trabajaste' : 'Llevás trabajado');

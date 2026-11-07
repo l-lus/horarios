@@ -2,8 +2,9 @@ import { TarjetaFondos } from './tarjeta-fondos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { STORAGE_KEYS, MARGEN_HORAS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
+import { $, superaUnaLinea } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
+import { TiposRegistro } from '../services/tipos-registro.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { BarraHitos } from './barra-hitos.js';
 import { Animaciones } from './animaciones.js';
@@ -91,7 +92,7 @@ function _actualizarTiempoFueraConsolidado(el, est) {
     const regHoy = est?.regVigente;
     const mostrar = !!regHoy && EstadoApp.vistaActual() !== 'semana'
         && !TiempoFuera.corriendo()
-        && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
+        && TiposRegistro.tieneTiempoFuera(regHoy);
 
     if (!mostrar) { _quitarLabelTF(el); return; }
 
@@ -125,9 +126,7 @@ function _ajustarStatsAlAncho(vista) {
     Object.assign(sonda.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none', width: `${ancho}px`, minHeight: '0' });
     sonda.textContent = vista.statsLargo;
     el.parentElement.appendChild(sonda);
-    const estilo = getComputedStyle(sonda);
-    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
-    const entra = sonda.getBoundingClientRect().height <= alto * 1.5;
+    const entra = !superaUnaLinea(sonda, sonda.getBoundingClientRect().height);
     sonda.remove();
     if (!entra) { vista.stats = vista.statsCorto; vista.statsAjustado = true; }
 }
@@ -148,7 +147,7 @@ function _renderStats(vista, est, conteo = null) {
     const esEspecial = !!est.tipoEspecialHoy;
     const entradaHoy = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
     const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';
-    const tiempoFueraHoy = (esDiaria && regHoy && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00' && !esEspecial) ? regHoy.tiempoFuera : '';
+    const tiempoFueraHoy = (esDiaria && regHoy && TiposRegistro.tieneTiempoFuera(regHoy) && !esEspecial) ? regHoy.tiempoFuera : '';
 
     // con el hint integrado la barra muestra los hitos: el ciclo los resalta en lugar de repetir su texto, y con la jornada abierta suma la salida estimada y, si hay banda, la salida con banco
     const linea = _hintIntegradoActivo() && esDiaria && !esEspecial ? vista.linea : null;
@@ -243,9 +242,7 @@ function _renderMensaje(vista = _mensajeActual) {
     el.classList.toggle('hidden', !vista.mostrarMensaje);
     el.textContent = vista.mensaje;
     if (!vista.mostrarMensaje || !vista.mensajeCorto || vista.mensajeCorto === vista.mensaje) return;
-    const estilo = getComputedStyle(el);
-    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
-    if (el.scrollHeight > alto * 1.5) el.textContent = vista.mensajeCorto;
+    if (superaUnaLinea(el, el.scrollHeight)) el.textContent = vista.mensajeCorto;
 }
 
 function _renderCard(vista) {

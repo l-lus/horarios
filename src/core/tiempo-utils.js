@@ -26,6 +26,16 @@ function pluralizar(n) {
     return n !== 1 ? 's' : '';
 }
 
+/** "3 registros", "1 día". */
+function contar(n, palabra) {
+    return `${n} ${palabra}${pluralizar(n)}`;
+}
+
+/** Mes de una fecha ISO: "2026-10-28" → "2026-10". */
+function claveMes(fecha) {
+    return fecha.substring(0, 7);
+}
+
 function nombreDiaPorIndice(indice) {
     return NOMBRES_DIAS[indice] || '';
 }
@@ -247,6 +257,6 @@ export const TiempoUtils = {
     obtenerFechaHoy, obtenerHoraActual, msHastaProximoMinuto, normalizarMinutosDia, minutosAHora, fechaLocalISOFull,
     horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
     obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
-    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, pluralizar,
+    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, claveMes, pluralizar, contar,
     generarRangoFechas, fechaCorta, segundosAMinutosRedondeado, horasAMinutosRedondeados, _pad2, esperar
 };

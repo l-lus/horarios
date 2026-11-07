@@ -275,7 +275,7 @@ function aplicarHorasATodosLosRegistros() {
             if (_recalcularCreditoRegistro(r, D.horasDiarias())) creditosRecalculados++;
         }
     });
-    if (aplicados > 0) GestorHistorial.saveState(D.registros(), `aplicar horas a todos (${aplicados} registro${TiempoUtils.pluralizar(aplicados)})`);
+    if (aplicados > 0) GestorHistorial.saveState(D.registros(), `aplicar horas a todos (${TiempoUtils.contar(aplicados, 'registro')})`);
     return { aplicados, creditosRecalculados };
 }
 

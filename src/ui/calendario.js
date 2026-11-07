@@ -69,7 +69,7 @@ function abrirSelectorMesesCalendario() {
 
     if (selector.style.display !== 'none') { _cerrarSelectorMeses(); return; }
 
-    const mesesOrdenados = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
+    const mesesOrdenados = [...new Set(EstadoApp.registros().map(r => TiempoUtils.claveMes(r.fecha)))].sort().reverse();
     selector.replaceChildren();
 
     if (mesesOrdenados.length === 0) {

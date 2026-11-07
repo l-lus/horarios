@@ -270,7 +270,7 @@ function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalc
     if (registrosAMostrar.length === 0) { _renderEmptyStateLista(lista); return; }
 
     const hoy = TiempoUtils.obtenerFechaHoy();
-    const mesHoy = hoy.substring(0, 7);
+    const mesHoy = TiempoUtils.claveMes(hoy);
     const anioHoy = hoy.substring(0, 4);
     const gruposPorMes = HistoricoItems.agruparRegistrosPorMes(registrosAMostrar);
     const fragmento = document.createDocumentFragment();

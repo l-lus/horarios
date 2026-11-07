@@ -157,7 +157,7 @@ async function aplicarHorasConfiguradasATodos() {
     }
 
     const confirmado = await GestorModales.confirmar(
-        `Se va a reemplazar el objetivo horario de ${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)} existente${TiempoUtils.pluralizar(totalRegistros)} por ${TiempoUtils.horasATexto(horas, 'short')}.`,
+        `Se va a reemplazar el objetivo horario de ${TiempoUtils.contar(totalRegistros, 'registro')} existente${TiempoUtils.pluralizar(totalRegistros)} por ${TiempoUtils.horasATexto(horas, 'short')}.`,
         'Aplicar',
         '#icon-aplicar-horas'
     );
@@ -169,7 +169,7 @@ async function aplicarHorasConfiguradasATodos() {
         actualizarUI();
         _reprogramarPushDebounced();
         let mensaje = aplicados > 0
-            ? `Objetivo actualizado en ${aplicados} registro${TiempoUtils.pluralizar(aplicados)}`
+            ? `Objetivo actualizado en ${TiempoUtils.contar(aplicados, 'registro')}`
             : 'Los registros ya tenían este objetivo';
         if (creditosRecalculados > 0) {
             mensaje += ` (${creditosRecalculados} con Salida Temprana recalculada)`;

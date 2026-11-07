@@ -250,7 +250,7 @@ async function agregarRegistro() {
 async function borrarTodoHistorial() {
     const registros = EstadoApp.registros();
     const totalRegistros = registros.length;
-    const confirmar = await EstadoApp._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
+    const confirmar = await EstadoApp._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${TiempoUtils.contar(totalRegistros, 'registro')} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
     if (!confirmar) return;
 
     EstadoApp.setDiasHabiles([...DIAS_HABILES_DEFAULT]);
@@ -267,7 +267,7 @@ async function borrarTodoHistorial() {
     const perfil = GestorPerfiles.obtenerDatosPerfil();
     if (perfil) GestorPerfiles.CAMPOS_SYNC_GIST.forEach(k => delete perfil[k]);
 
-    if (await Cambios.confirmar(`restablecer perfil (${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)})`)) Recarga.solicitar();
+    if (await Cambios.confirmar(`restablecer perfil (${TiempoUtils.contar(totalRegistros, 'registro')})`)) Recarga.solicitar();
 }
 
 function _aplicarEstadoHistorial(resultado, mensaje) {

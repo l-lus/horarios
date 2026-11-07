@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, superaUnaLinea } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Animaciones } from './animaciones.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
@@ -71,9 +71,7 @@ function _faseHito(tipo, texto, corto) {
 function _escribirTextoFase(el, fase) {
     el.textContent = fase.texto();
     if (!fase.corto) return;
-    const estilo = getComputedStyle(el);
-    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
-    if (Math.max(el.scrollHeight, el.getBoundingClientRect().height) > alto * 1.5) el.textContent = fase.corto();
+    if (superaUnaLinea(el, Math.max(el.scrollHeight, el.getBoundingClientRect().height))) el.textContent = fase.corto();
 }
 
 /** @returns {FaseCiclo[]} */

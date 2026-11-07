@@ -37,13 +37,13 @@ function _buildInfoHtmlRegistro(reg, asignaciones = null) {
             <div class="cal-popup-3l">Entrada: ${reg.entrada}</div>`;
     }
     let tfStr = '';
-    if (reg.tiempoFuera && reg.tiempoFuera !== '00:00') {
+    if (TiposRegistro.tieneTiempoFuera(reg)) {
         tfStr = `${TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(reg.tiempoFuera) / 60, 'short')} fuera`;
     }
     const diffClase = { cumplido: 'cal-popup-info--green', cubierto: 'cal-popup-info--gold', incompleto: 'cal-popup-info--red' }[est.estado] || '';
     const totalConDiff = TiempoUtils.horasATexto(reg.total || 0, 'short') + (est.diffText ? ` (${est.diffText})` : '');
     const cubiertoLineaHtml = est.estado === 'cubierto' ? html`<span class="cal-popup-badge cal-popup-badge--gold">Cubierto</span>` : '';
-    const salidaTempranaLineaHtml = reg.credito && reg.credito !== '00:00' ? html`<span class="cal-popup-badge cal-popup-badge--blue">Salida temprana</span>` : '';
+    const salidaTempranaLineaHtml = TiposRegistro.tieneCredito(reg) ? html`<span class="cal-popup-badge cal-popup-badge--blue">Salida temprana</span>` : '';
     const compensadoLineaHtml = est.fechaCompensado
         ? html`<span class="cal-popup-badge cal-popup-badge--purple">→ ${TiempoUtils.fechaCorta(est.fechaCompensado)}</span>`
         : '';
@@ -86,8 +86,8 @@ function _popupCalendario(event, registroId, asignaciones = null) {
     const reg = EstadoApp.registroPorId(registroId);
     if (!reg) return;
 
-    const claveMes = reg.fecha.substring(0, 7);
-    const registrosDelMes = EstadoApp.registros().filter(r => r.fecha.substring(0, 7) === claveMes);
+    const claveMes = TiempoUtils.claveMes(reg.fecha);
+    const registrosDelMes = EstadoApp.registros().filter(r => TiempoUtils.claveMes(r.fecha) === claveMes);
     const grupos = TiposRegistro.agruparConsecutivos(registrosDelMes);
     const grupoDelRegistro = grupos.find(g => g.tipo === 'grupo' && g.registros.some(r => r.id === registroId));
 

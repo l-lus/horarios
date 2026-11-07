@@ -136,7 +136,7 @@ function actualizarHintGrupo() {
     const fechaInicio = TiempoUtils.parsearFechaLocal(desde);
     const fechaFin = TiempoUtils.parsearFechaLocal(hasta);
     const diasTotales = Math.ceil(Math.abs(fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    hint.textContent = `${diasTotales} día${TiempoUtils.pluralizar(diasTotales)}`;
+    hint.textContent = `${TiempoUtils.contar(diasTotales, 'día')}`;
 }
 EventosApp.on('grupo:editar', ({ subtipo, desde, hasta }) => {
     $('edit-grupo-tipo').value = subtipo;

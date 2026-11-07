@@ -218,7 +218,7 @@ function normalizarRegistrosImportados(rawList) {
     const vigentes = validos.filter(r => r.fecha <= hoy || TiposRegistro.esRegistroEspecial(r.entrada, r.salida));
     const descartadosFuturos = validos.length - vigentes.length;
     if (descartadosFuturos > 0)
-        D._notify().mostrarToast(`${descartadosFuturos} registro${TiempoUtils.pluralizar(descartadosFuturos)} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${TiempoUtils.pluralizar(descartadosFuturos)}`, 'warning');
+        D._notify().mostrarToast(`${TiempoUtils.contar(descartadosFuturos, 'registro')} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${TiempoUtils.pluralizar(descartadosFuturos)}`, 'warning');
     // validarRegistroSeguro ya garantizó el id y los rangos de horas, minutos y total
     const normalizados = vigentes.map(r => ({
         id: r.id,
@@ -238,7 +238,7 @@ function normalizarRegistrosImportados(rawList) {
     const unicos = _sinDuplicados(normalizados);
     const descartadosDuplicados = normalizados.length - unicos.length;
     if (descartadosDuplicados > 0)
-        D._notify().mostrarToast(`${descartadosDuplicados} registro${TiempoUtils.pluralizar(descartadosDuplicados)} con fecha repetida omitido${TiempoUtils.pluralizar(descartadosDuplicados)}`, 'warning');
+        D._notify().mostrarToast(`${TiempoUtils.contar(descartadosDuplicados, 'registro')} con fecha repetida omitido${TiempoUtils.pluralizar(descartadosDuplicados)}`, 'warning');
 
     unicos.forEach(r => {
         if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return;

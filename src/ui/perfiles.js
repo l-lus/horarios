@@ -33,7 +33,7 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
             className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
         });
 
-        const countText = `${p.totalRegistros} registro${TiempoUtils.pluralizar(p.totalRegistros)}`;
+        const countText = `${TiempoUtils.contar(p.totalRegistros, 'registro')}`;
         const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
         const nombreEl = Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre' });
         nombreEl.appendChild(Object.assign(document.createElement('span'), {

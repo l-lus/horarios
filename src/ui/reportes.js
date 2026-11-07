@@ -52,7 +52,7 @@ function _resolverPeriodoDatos(esAnual) {
 }
 
 function _seccionDetalleAnual(registrosPeriodo) {
-    const mesesOrdenados = [...new Set(registrosPeriodo.map(r => r.fecha.substring(0, 7)))].sort();
+    const mesesOrdenados = [...new Set(registrosPeriodo.map(r => TiempoUtils.claveMes(r.fecha)))].sort();
     const filas = mesesOrdenados.map(claveMes => {
         const regsM = registrosPeriodo.filter(r => r.fecha.startsWith(claveMes));
 
@@ -113,10 +113,10 @@ function _seccionDetalleDiario(registrosPeriodo) {
         const entrada = r.entrada || '--:--';
         const salida = r.salida || '--:--';
         const total = r.salida ? TiempoUtils.horasATexto(r.total, 'short') : 'Incompleto';
-        const tiempoFuera = (r.tiempoFuera && r.tiempoFuera !== '00:00')
+        const tiempoFuera = (TiposRegistro.tieneTiempoFuera(r))
             ? `${TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(r.tiempoFuera) / 60, 'short')} fuera`
             : '';
-        const salidaTemprano = (r.credito && r.credito !== '00:00') ? html` <span class="tag tag-info">Salida temprana</span>` : '';
+        const salidaTemprano = (TiposRegistro.tieneCredito(r)) ? html` <span class="tag tag-info">Salida temprana</span>` : '';
         const cumplido = r.salida ? horasGte(r.total, Compensatorios.objetivoDeRegistro(r)) : null;
         const indicador = cumplido === null ? '' : (cumplido ? html`<span class="tag tag-ok">✓</span>` : html`<span class="tag tag-bad">✗</span>`);
 

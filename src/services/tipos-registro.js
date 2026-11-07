@@ -124,6 +124,10 @@ function obtenerCodigosPorTipo(id) {
     return tipo ? { entrada: tipo.codigo, salida: tipo.codigo } : null;
 }
 
+/** "00:00" es lo mismo que no tener tiempo fuera o salida temprana. */
+const tieneTiempoFuera = (r) => !!r.tiempoFuera && r.tiempoFuera !== '00:00';
+const tieneCredito = (r) => !!r.credito && r.credito !== '00:00';
+
 function agruparConsecutivos(registros) {
     if (!registros || registros.length === 0) return [];
     const idTipo = (r) => obtenerTipoPorCodigo(r.entrada, r.salida)?.id ?? null;
@@ -169,6 +173,8 @@ function mapaNotasPorRegistro(registros) {
 }
 
 export const TiposRegistro = {
+    tieneTiempoFuera,
+    tieneCredito,
     agruparConsecutivos,
     notaDeGrupo,
     mapaNotasPorRegistro,

@@ -67,7 +67,7 @@ function editarRegistro(id) {
         objetivo: objetivoActual,
         esCompensatorio: TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === 'compensatorio',
         referencia: r.referenciaCompensatorio || '',
-        creditoActivo: !!(r.credito && r.credito !== '00:00'),
+        creditoActivo: TiposRegistro.tieneCredito(r),
     });
 
     notify.setBloqueoEdicion(true);

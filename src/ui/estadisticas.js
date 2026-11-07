@@ -85,7 +85,7 @@ function actualizarEstadisticas(mesAnio = null) {
         const [año, mes] = mesAnio.split('-').map(Number);
         const tieneRegs = EstadoApp.registros().some(r => { const [a, m] = r.fecha.split('-').map(Number); return a === año && m === mes; });
         if (!tieneRegs) {
-            mesAnio = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
+            mesAnio = TiempoUtils.claveMes(TiempoUtils.obtenerFechaHoy());
             if (selectMes) selectMes.value = mesAnio;
         }
     }
@@ -204,8 +204,8 @@ function togglePeriodoStats(direccion = 1) {
 }
 
 function poblarSelectorMeses() {
-    const meses = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
-    const mesActual = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
+    const meses = [...new Set(EstadoApp.registros().map(r => TiempoUtils.claveMes(r.fecha)))].sort().reverse();
+    const mesActual = TiempoUtils.claveMes(TiempoUtils.obtenerFechaHoy());
     _poblarSelect('select-mes-stats', meses, TiempoUtils.nombreMesCapitalizado, mesActual, actualizarEstadisticas, TiempoUtils.agruparMesesPorAnio);
 }
 

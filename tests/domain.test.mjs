@@ -819,3 +819,12 @@ test('Compensatorios.creditoPara: lo que falta para el objetivo, sin perder minu
     assert.equal(Compensatorios.creditoPara('08:00', '12:00', null, 7.125), '03:08', 'objetivo con decimales');
     assert.equal(Compensatorios.creditoPara('08:00', null, null, 7), null, 'sin salida');
 });
+
+test('Helpers de presentación: contar, claveMes, tieneTiempoFuera y tieneCredito', () => {
+    assert.equal(TiempoUtils.contar(1, 'día'), '1 día');
+    assert.equal(TiempoUtils.contar(0, 'registro'), '0 registros');
+    assert.equal(TiempoUtils.contar(3, 'registro'), '3 registros');
+    assert.equal(TiempoUtils.claveMes('2026-10-28'), '2026-10');
+    assert.deepEqual(['00:30', '00:00', '', null, undefined].map(v => TiposRegistro.tieneTiempoFuera({ tiempoFuera: v })), [true, false, false, false, false]);
+    assert.deepEqual(['00:30', '00:00', '', null, undefined].map(v => TiposRegistro.tieneCredito({ credito: v })), [true, false, false, false, false]);
+});

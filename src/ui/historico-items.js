@@ -33,7 +33,7 @@ function agruparRegistrosPorMes(registros) {
             return;
         }
 
-        const claveMes = r.fecha.substring(0, 7);
+        const claveMes = TiempoUtils.claveMes(r.fecha);
         if (!grupos.has(claveMes)) {
             grupos.set(claveMes, []);
         }
@@ -127,11 +127,11 @@ function crearItemRegistroIndividual(r, idResaltar = null, hoy = TiempoUtils.obt
     const fechaText = `${TiempoUtils.obtenerNombreDia(r.fecha)} ${r.fecha.substring(8)}${etiqueta}`;
 
     const tfText = (() => {
-        if (!r.tiempoFuera || r.tiempoFuera === '' || r.tiempoFuera === '00:00') return '';
+        if (!TiposRegistro.tieneTiempoFuera(r)) return '';
         const tfStr = TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(r.tiempoFuera) / 60, 'short');
         return ` (${tfStr} Fuera)`;
     })();
-    const crText = r.credito && r.credito !== '00:00' ? ' (Salida Temprana)' : '';
+    const crText = TiposRegistro.tieneCredito(r) ? ' (Salida Temprana)' : '';
     const horasText = tipoEspecial
         ? tipoEspecial.descripcion
         : `${r.entrada || '-'} → ${r.salida || '-'}${tfText}${crText}`;

@@ -33,7 +33,7 @@ function _fechaDesdeEfectiva(registros, fechaDesdeDefault) {
 
 function _calcularRegularidadRango(registrosValidos, regularidadPorMes) {
     if (regularidadPorMes) {
-        const meses = [...new Set(registrosValidos.map(r => r.fecha.substring(0, 7)))];
+        const meses = [...new Set(registrosValidos.map(r => TiempoUtils.claveMes(r.fecha)))];
         const desE = [], desJ = [];
         meses.forEach(mes => {
             const regs = registrosValidos.filter(r => r.fecha.startsWith(mes));
@@ -69,11 +69,11 @@ function calcularEstadisticasRango(registrosRango, opciones = {}) {
         }
     });
 
-    const compensaciones = registrosRango.filter(r => r.credito && r.credito !== '00:00').length;
+    const compensaciones = registrosRango.filter(r => TiposRegistro.tieneCredito(r)).length;
 
     let tiempoFueraTotalMinutos = 0;
     registrosRango.forEach(r => {
-        if (r.tiempoFuera && r.tiempoFuera !== '00:00') {
+        if (TiposRegistro.tieneTiempoFuera(r)) {
             tiempoFueraTotalMinutos += TiempoUtils.horaAMinutos(r.tiempoFuera);
         }
     });

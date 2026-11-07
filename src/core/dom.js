@@ -23,3 +23,10 @@ export function setColapsable(el, abierto, { animar = true } = {}) {
     void el.offsetHeight;
     el.classList.remove('sin-transicion');
 }
+
+/** ¿Esa altura ocupa más de una línea de texto del elemento? (necesita el elemento en el documento) */
+export function superaUnaLinea(el, altura) {
+    const estilo = getComputedStyle(el);
+    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
+    return altura > alto * 1.5;
+}

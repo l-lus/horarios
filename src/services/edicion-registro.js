@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, MINUTOS_DIA, MARGEN_HORAS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
@@ -128,7 +128,7 @@ function _validarCamposEdicion(f, e, s, tf) {
             ? TiempoUtils.horaAMinutos(s)
             : TiempoUtils.horaAMinutos(TiempoUtils.obtenerHoraActual());
         let tiempoTranscurrido = minutosLimite - minutosEntrada;
-        if (tiempoTranscurrido < 0) tiempoTranscurrido += 24 * 60;
+        if (tiempoTranscurrido < 0) tiempoTranscurrido += MINUTOS_DIA;
         if (minutosFuera > tiempoTranscurrido)
             return {
                 msg: s
@@ -146,7 +146,7 @@ function _calcularCredito(e, s, tf, objetivo = EstadoApp.horasDiarias()) {
     const calc = calcularHoras(e, s, tf, null);
     if (!calc) return null;
     const diferencia = objetivo - calc.total;
-    if (diferencia <= 0.01) return null;
+    if (diferencia <= MARGEN_HORAS) return null;
     const { horas: h, minutos: m } = TiempoUtils.descomponerHorasDecimales(diferencia);
     return TiempoUtils.minutosAHora(h * 60 + m);
 }

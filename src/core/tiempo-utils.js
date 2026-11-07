@@ -1,3 +1,4 @@
+import { MINUTOS_DIA } from './constantes.js';
 // ====================================================================
 // TIME AND DATE UTILITIES MODULE (TiempoUtils)
 // ====================================================================
@@ -80,6 +81,11 @@ function obtenerFechaHoy() {
     return formatearFechaLocal(new Date());
 }
 
+/** Minutos llevados al rango de un día (cruce de medianoche, en ambos sentidos). */
+function normalizarMinutosDia(minutos) {
+    return ((minutos % MINUTOS_DIA) + MINUTOS_DIA) % MINUTOS_DIA;
+}
+
 function msHastaProximoMinuto(ahora = Date.now()) {
     return 60000 - (ahora % 60000);
 }
@@ -97,7 +103,7 @@ function horaAMinutos(h) {
 
 function sumarMinutosAHora(horaString, minutosASumar) {
     const totalMinutos = minutosASumar + horaAMinutos(horaString);
-    return totalMinutos >= 24 * 60 ? '23:59' : minutosAHora(totalMinutos);
+    return totalMinutos >= MINUTOS_DIA ? '23:59' : minutosAHora(totalMinutos);
 }
 
 function obtenerNombreDia(f) {
@@ -203,9 +209,7 @@ function formatearRangoSemana(lunesISO) {
 }
 
 function esFechaHabil(fecha, diasHabiles) {
-    const diaSemana = parsearFechaLocal(fecha).getDay();
-    if (Array.isArray(diasHabiles)) return diasHabiles.includes(diaSemana);
-    return diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
+    return diasHabiles.includes(parsearFechaLocal(fecha).getDay());
 }
 
 function esDiaAnterior(fecha, anterior) {
@@ -235,7 +239,7 @@ function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 export const TiempoUtils = {
     esFechaHabil, esDiaAnterior, agruparMesesPorAnio, nombreMesCapitalizado,
     validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
-    obtenerFechaHoy, obtenerHoraActual, msHastaProximoMinuto, minutosAHora, fechaLocalISOFull,
+    obtenerFechaHoy, obtenerHoraActual, msHastaProximoMinuto, normalizarMinutosDia, minutosAHora, fechaLocalISOFull,
     horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
     obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
     horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, pluralizar,

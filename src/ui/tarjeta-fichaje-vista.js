@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, DEFAULTS, ESTADO_DIA, CUMPLIMIENTO, horasGte, horasEq } from '../core/constantes.js';
+import { STORAGE_KEYS, DEFAULTS, ESTADO_DIA, CUMPLIMIENTO, horasGte, horasEq, MARGEN_HORAS } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -297,7 +297,7 @@ function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHab
     const horaSalida = _minutosAHoraWrap(minutosTotal);
 
     const esLaborable = TiempoUtils.esFechaHabil(reg.fecha, diasHabiles);
-    const mostrarBuffer = Math.abs(bufferSemanal) > 0.01 && esLaborable;
+    const mostrarBuffer = Math.abs(bufferSemanal) > MARGEN_HORAS && esLaborable;
 
     if (mostrarBuffer) {
         const minutosConBuffer = minutosTotal - TiempoUtils.horasAMinutosRedondeados(bufferSemanal);
@@ -318,7 +318,7 @@ function _calcularHintSalidaEstimada(reg, objetivoDiario, bufferSemanal, diasHab
 function _calcularLinea(reg, objetivoDiario, bufferSemanal, diasHabiles) {
     if (!reg || !reg.entrada || !(objetivoDiario > 0) || TiposRegistro.esRegistroEspecial(reg.entrada, reg.salida)) return null;
     const entrada = TiempoUtils.horaAMinutos(reg.entrada);
-    const rel = minutos => (((minutos - entrada) % 1440) + 1440) % 1440;
+    const rel = minutos => TiempoUtils.normalizarMinutosDia(minutos - entrada);
     const cerrado = !!reg.salida;
 
     let salidaRel = objetivoDiario * 60;
@@ -326,7 +326,7 @@ function _calcularLinea(reg, objetivoDiario, bufferSemanal, diasHabiles) {
     salidaRel += _minutosBreakActivo();
 
     const ahoraRel = rel(TiempoUtils.horaAMinutos(cerrado ? reg.salida : TiempoUtils.obtenerHoraActual()));
-    const hayBuffer = !cerrado && TiempoUtils.esFechaHabil(reg.fecha, diasHabiles) && Math.abs(bufferSemanal) > 0.01;
+    const hayBuffer = !cerrado && TiempoUtils.esFechaHabil(reg.fecha, diasHabiles) && Math.abs(bufferSemanal) > MARGEN_HORAS;
     // con un buffer mayor que la jornada la salida con buffer no puede quedar antes de la entrada
     const bufferRel = hayBuffer ? Math.max(0, salidaRel - TiempoUtils.horasAMinutosRedondeados(bufferSemanal)) : null;
     const hayBanda = bufferRel !== null && Math.abs(bufferRel - salidaRel) >= 1;

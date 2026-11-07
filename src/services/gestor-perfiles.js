@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, DIAS_HABILES_DEFAULT, HORAS_DIARIAS_DEFAULT } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
 import { Recarga } from '../core/recarga.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -22,7 +22,7 @@ function inicializar() {
 
 function cargarPerfiles() {
     const defaultPerfil = {
-        'default': { nombre: 'Principal', registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 }
+        'default': { nombre: 'Principal', registros: [], diasHabiles: [...DIAS_HABILES_DEFAULT], horasDiarias: HORAS_DIARIAS_DEFAULT }
     };
 
     perfiles = Almacenamiento.getObject(STORAGE_KEYS.PERFILES, defaultPerfil);
@@ -116,7 +116,7 @@ function crearPerfil(nombreCrudo) {
     const error = errorNombrePerfil(nombre);
     if (error) return { error };
     const id = 'perfil_' + S.generarIDSeguro();
-    perfiles[id] = { nombre, registros: [], diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 7 };
+    perfiles[id] = { nombre, registros: [], diasHabiles: [...DIAS_HABILES_DEFAULT], horasDiarias: HORAS_DIARIAS_DEFAULT };
     if (!_persistir()) { delete perfiles[id]; return { error: ERROR_GUARDAR }; }
     actualizarSelector();
     return { id, nombre };

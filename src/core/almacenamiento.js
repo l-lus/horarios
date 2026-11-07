@@ -202,7 +202,6 @@ function removeItem(key, useProfile = false) {
 }
 
 export const Almacenamiento = {
-    APP_STORAGE_PREFIX,
     setItem,
     getItem,
     getBoolean,

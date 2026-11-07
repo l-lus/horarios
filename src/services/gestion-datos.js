@@ -1,7 +1,7 @@
 import { Compensatorios } from './compensatorios.js';
 import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { EstadoApp } from './estado-app.js';
-import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
+import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, DIAS_HABILES_DEFAULT, HORAS_DIARIAS_DEFAULT } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from './recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -66,12 +66,12 @@ const _firmaRegistros = (lista) => JSON.stringify([...lista].sort((a, b) => a.fe
  */
 function cargarPerfilActivo() {
     const perfil = GestorPerfiles.obtenerDatosPerfil() || {};
-    EstadoApp.setDiasHabiles(S.sanitizarDiasHabiles(perfil.diasHabiles) ?? [1, 2, 3, 4, 5]);
+    EstadoApp.setDiasHabiles(S.sanitizarDiasHabiles(perfil.diasHabiles) ?? [...DIAS_HABILES_DEFAULT]);
     const horas = parseFloat(perfil.horasDiarias);
-    EstadoApp.setHorasDiarias(Number.isFinite(horas) && horas >= 0 && horas <= 24 ? horas : 7);
+    EstadoApp.setHorasDiarias(Number.isFinite(horas) && horas >= 0 && horas <= 24 ? horas : HORAS_DIARIAS_DEFAULT);
     const historialDias = Compensatorios.sanitizarHistorialDiasHabiles(perfil.historialDiasHabiles);
     _setHistorialDiasHabiles(
-        historialDias && historialDias.length > 0 ? historialDias : [{ desde: '0001-01-01', dias: EstadoApp.diasHabiles() }]
+        historialDias && historialDias.length > 0 ? historialDias : [{ desde: DESDE_SIEMPRE, dias: EstadoApp.diasHabiles() }]
     );
 
     const guardados = Array.isArray(perfil.registros) ? perfil.registros : [];
@@ -253,8 +253,8 @@ async function borrarTodoHistorial() {
     const confirmar = await EstadoApp._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
     if (!confirmar) return;
 
-    EstadoApp.setDiasHabiles([1, 2, 3, 4, 5]);
-    EstadoApp.setHorasDiarias(7);
+    EstadoApp.setDiasHabiles([...DIAS_HABILES_DEFAULT]);
+    EstadoApp.setHorasDiarias(HORAS_DIARIAS_DEFAULT);
     EstadoApp._setHistorialDiasHabilesRaw([]);
     registros.splice(0, registros.length);
     EstadoApp.setIgnorarTiempoFuera(false);

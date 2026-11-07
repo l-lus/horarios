@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, MS_DIA } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
@@ -326,7 +326,7 @@ function actualizarBotonLote() {
     if (!TiempoUtils.validarFecha(hasta)) return _setBtnError(btn, btnTexto, 'Fecha Final Inválida');
     if (desde > hasta) return _setBtnError(btn, btnTexto, 'Rango Inválido');
 
-    const diasTotales = Math.ceil(Math.abs(TiempoUtils.parsearFechaLocal(hasta).getTime() - TiempoUtils.parsearFechaLocal(desde).getTime()) / 864e5) + 1;
+    const diasTotales = Math.ceil(Math.abs(TiempoUtils.parsearFechaLocal(hasta).getTime() - TiempoUtils.parsearFechaLocal(desde).getTime()) / MS_DIA) + 1;
 
     return tipo === 'normal'
         ? _actualizarBtnNormal(btn, btnTexto, desde, hasta)

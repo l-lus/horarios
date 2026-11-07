@@ -11,8 +11,7 @@ const TIPOS = {
         label: 'Feriado',
         labelPlural: 'Feriados',
         descripcion: 'Día no laboral',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     AUSENCIA: {
         id: 'ausencia',
@@ -21,8 +20,7 @@ const TIPOS = {
         label: 'Licencia',
         labelPlural: 'Licencias',
         descripcion: 'Día libre',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     VACACIONES: {
         id: 'vacaciones',
@@ -31,8 +29,7 @@ const TIPOS = {
         label: 'Vacaciones',
         labelPlural: 'Vacaciones',
         descripcion: 'Vacaciones',
-        color: 'orange',
-        contabiliza: true
+        color: 'orange'
     },
     ASUETO: {
         id: 'asueto',
@@ -41,8 +38,7 @@ const TIPOS = {
         label: 'Asueto',
         labelPlural: 'Asuetos',
         descripcion: 'Día de asueto',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     ENFERMEDAD: {
         id: 'enfermedad',
@@ -51,8 +47,7 @@ const TIPOS = {
         label: 'Enfermedad',
         labelPlural: 'Enfermedades',
         descripcion: 'Enfermedad justificada',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     PARO: {
         id: 'paro',
@@ -61,8 +56,7 @@ const TIPOS = {
         label: 'Paro',
         labelPlural: 'Paros',
         descripcion: 'Fuerza mayor',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     REMOTO: {
         id: 'remoto',
@@ -71,8 +65,7 @@ const TIPOS = {
         label: 'Remoto',
         labelPlural: 'Remotos',
         descripcion: 'Trabajo desde casa',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     CAPACITACION: {
         id: 'capacitacion',
@@ -81,8 +74,7 @@ const TIPOS = {
         label: 'Capacitación',
         labelPlural: 'Capacitaciones',
         descripcion: 'Formación profesional',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     COMPENSATORIO: {
         id: 'compensatorio',
@@ -91,8 +83,7 @@ const TIPOS = {
         label: 'Compensatorio',
         labelPlural: 'Compensatorios',
         descripcion: 'Día compensatorio',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     }
 };
 

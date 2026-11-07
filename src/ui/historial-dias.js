@@ -1,3 +1,4 @@
+import { DESDE_SIEMPRE } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
@@ -17,7 +18,7 @@ const { _precargarCamposConfig } = Configuracion;
 let _tramoEnEdicionDesde = null;
 
 function _formatoFechaHistorial(iso) {
-    if (iso === '0001-01-01') return 'Desde siempre';
+    if (iso === DESDE_SIEMPRE) return 'Desde siempre';
     return `Desde ${TiempoUtils.fechaCorta(iso)}`;
 }
 
@@ -81,8 +82,8 @@ function abrirEditorTramoDias(desdeOriginal) {
 
     const inputDesde = $('editar-tramo-desde');
     if (inputDesde) {
-        inputDesde.value = desdeOriginal === '0001-01-01' ? '' : desdeOriginal;
-        inputDesde.disabled = (desdeOriginal === '0001-01-01');
+        inputDesde.value = desdeOriginal === DESDE_SIEMPRE ? '' : desdeOriginal;
+        inputDesde.disabled = (desdeOriginal === DESDE_SIEMPRE);
     }
 
     /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil-tramo"]')).forEach(cb => {

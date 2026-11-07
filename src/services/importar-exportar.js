@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, DEFAULTS, CARDS } from '../core/constantes.js';
+import { STORAGE_KEYS, DEFAULTS, CARDS, DESDE_SIEMPRE } from '../core/constantes.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -96,7 +96,7 @@ function aplicarConfigImportada(data, registrosParaRecalcular = null) {
         if (Number.isFinite(h) && h >= 0 && h <= 24) D.setHorasDiarias(h);
     }
     const historialImportado = Compensatorios.sanitizarHistorialDiasHabiles(data.historialDiasHabiles);
-    D._setHistorialDiasHabilesRaw(historialImportado || [{ desde: '0001-01-01', dias: D.diasHabiles() }]);
+    D._setHistorialDiasHabilesRaw(historialImportado || [{ desde: DESDE_SIEMPRE, dias: D.diasHabiles() }]);
     D.setDiasHabiles(Compensatorios.diasHabilesEnFecha(TiempoUtils.obtenerFechaHoy()));
 
     if (typeof data[STORAGE_KEYS.IGNORAR_TF] === 'boolean') {
@@ -211,34 +211,29 @@ function calcularCambiosConfigImport(data) {
     return cambios;
 }
 
-function normalizarRegistrosImportados(rawList, calcularHorasFn) {
+function normalizarRegistrosImportados(rawList) {
     const validarHora = (h) => (typeof h === 'string' && TiempoUtils.validarHora(h)) ? h : null;
     const hoy = TiempoUtils.obtenerFechaHoy();
-    const descartadosFuturos = rawList.filter(r =>
-        S.validarRegistroSeguro(r) && r.fecha > hoy && !TiposRegistro.esRegistroEspecial(r.entrada, r.salida)
-    ).length;
+    const validos = rawList.filter(r => S.validarRegistroSeguro(r));
+    const vigentes = validos.filter(r => r.fecha <= hoy || TiposRegistro.esRegistroEspecial(r.entrada, r.salida));
+    const descartadosFuturos = validos.length - vigentes.length;
     if (descartadosFuturos > 0)
         D._notify().mostrarToast(`${descartadosFuturos} registro${TiempoUtils.pluralizar(descartadosFuturos)} normal${descartadosFuturos > 1 ? 'es' : ''} con fecha futura omitido${TiempoUtils.pluralizar(descartadosFuturos)}`, 'warning');
-    const normalizados = rawList
-        .filter(r => S.validarRegistroSeguro(r))
-        .filter(r => {
-            if (r.fecha <= hoy) return true;
-            return TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-        })
-        .map(r => ({
-            id: (r.id && S.REGEX_PATTERNS.ID.test(r.id)) ? r.id : S.generarIDSeguro(),
-            fecha: r.fecha,
-            entrada: validarHora(r.entrada), salida: validarHora(r.salida), tiempoFuera: validarHora(r.tiempoFuera),
-            horas: Math.max(0, Math.min(24, parseFloat(r.horas) || 0)),
-            minutos: Math.max(0, Math.min(59, parseFloat(r.minutos) || 0)),
-            total: Math.max(0, Math.min(24, parseFloat(r.total) || 0)),
-            credito: validarHora(r.credito),
-            notas: S.normalizarNotas(r.notas),
-            objetivoHoras: S.esObjetivoHorasValido(r.objetivoHoras) ? r.objetivoHoras : undefined,
-            referenciaCompensatorio: (typeof r.referenciaCompensatorio === 'string' && TiempoUtils.validarFecha(r.referenciaCompensatorio))
-                ? r.referenciaCompensatorio
-                : undefined,
-        }));
+    // validarRegistroSeguro ya garantizó el id y los rangos de horas, minutos y total
+    const normalizados = vigentes.map(r => ({
+        id: r.id,
+        fecha: r.fecha,
+        entrada: validarHora(r.entrada), salida: validarHora(r.salida), tiempoFuera: validarHora(r.tiempoFuera),
+        horas: r.horas,
+        minutos: r.minutos,
+        total: r.total,
+        credito: validarHora(r.credito),
+        notas: S.normalizarNotas(r.notas),
+        objetivoHoras: S.esObjetivoHorasValido(r.objetivoHoras) ? r.objetivoHoras : undefined,
+        referenciaCompensatorio: (typeof r.referenciaCompensatorio === 'string' && TiempoUtils.validarFecha(r.referenciaCompensatorio))
+            ? r.referenciaCompensatorio
+            : undefined,
+    }));
 
     const unicos = _sinDuplicados(normalizados);
     const descartadosDuplicados = normalizados.length - unicos.length;
@@ -247,7 +242,7 @@ function normalizarRegistrosImportados(rawList, calcularHorasFn) {
 
     unicos.forEach(r => {
         if (TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) return;
-        D._aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera || null, r.credito || null, calcularHorasFn);
+        D._aplicarCalculoHoras(r, r.entrada, r.salida, r.tiempoFuera || null, r.credito || null);
     });
     return unicos;
 }
@@ -337,7 +332,7 @@ async function prepararRespaldo(data, origen = 'archivo') {
         notify.mostrarToast(`El ${nombre} es de una versión más nueva (v${data.version}). Algunos datos pueden no importarse correctamente.`, 'warning', 4000);
     }
     if (!(await _confirmarIntegridad(data, nombre))) return null;
-    const registros = normalizarRegistrosImportados(data.registros, D.calcularHoras);
+    const registros = normalizarRegistrosImportados(data.registros);
     if (registros.length === 0) { notify.mostrarToast('No se encontraron registros válidos', 'warning'); return null; }
     return registros;
 }

@@ -155,7 +155,7 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | Archivo | Export | Responsabilidad |
 |---|---|---|
 | [`src/core/tema-inicial.js`](../src/core/tema-inicial.js) | *(script clásico en `<head>`)* | Aplica el tema oscuro y modo de animaciones (`horarios_temaOscuro`, `horarios_reducirAnimaciones` con fallback legado) antes del primer pintado (anti-FOUC) y protege contra clickjacking. |
-| [`src/core/constantes.js`](../src/core/constantes.js) | `APP_NOMBRE`, `APP_VERSION`, `APP_STORAGE_PREFIX`, `STORAGE_KEYS`, `CARDS`, `CARDS_ORDEN`, `TOAST_MS`, `DEMORA_ARRANQUE_MS`, `horasGte`, `horasEq` | Prefijo de aplicación (`horarios_`), claves de `localStorage`, tarjetas (`CARDS` = ocultables, `CARDS_ORDEN` = ubicables, con la de estado), duraciones de toasts y demoras de arranque, comparadores de punto flotante con tolerancia y constantes globales. |
+| [`src/core/constantes.js`](../src/core/constantes.js) | `APP_NOMBRE`, `APP_VERSION`, `APP_STORAGE_PREFIX`, `STORAGE_KEYS`, `CARDS`, `CARDS_ORDEN`, `TOAST_MS`, `DEMORA_ARRANQUE_MS`, `DESDE_SIEMPRE`, `DIAS_HABILES_DEFAULT`, `HORAS_DIARIAS_DEFAULT`, `MARGEN_HORAS`, `MINUTOS_DIA`, `MS_DIA`, `horasGte`, `horasEq` | Prefijo de aplicación (`horarios_`), claves de `localStorage`, tarjetas (`CARDS` = ocultables, `CARDS_ORDEN` = ubicables, con la de estado), duraciones de toasts y demoras de arranque, comparadores de punto flotante con tolerancia y constantes globales. |
 | [`src/core/html.js`](../src/core/html.js) | ``html`...` ``, `crudo`, `montar`, `esHtmlSeguro`, `icono`, `aHtmlConfiable`, `urlScriptConfiable` | Plantillas HTML con escape automático de cada interpolación (ver 3.2) e `icono(href, clase)` para los íconos del sprite SVG (`'#icon-…'`). |
 | [`src/core/dom.js`](../src/core/dom.js) | `$`, `setColapsable` | `$` (`getElementById` tipado) y helper de contenedores colapsables. |
 | [`src/core/eventos.js`](../src/core/eventos.js) | `EventosApp` | Bus de eventos pub/sub (`on`, `off`, `emit`) (`on` devuelve la función para desuscribirse). |
@@ -272,8 +272,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 
 1. **Usar `import`/`export` con extensión `.js` explícita** (obligatorio en ES Modules nativos del navegador, ej. `import { TiempoUtils } from '../core/tiempo-utils.js';`).
 2. **Registrar el archivo en [`sw.js`](../sw.js):**
-   - Agregar la ruta en el array `urlsToCache`.
-   - La caché se invalida al publicar con `npm run release` (ver «Versionado y releases» más abajo), no a mano.
+   - `npm run release` regenera en `urlsToCache` la lista de módulos de `src/` y sube la versión de la caché (ver «Versionado y releases» más abajo). Los archivos de `assets/` se agregan a mano.
 3. **Correr la suite de validación arquitectónica y de dominio, y el chequeo de tipos:**
    ```bash
    npm test

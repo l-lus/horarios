@@ -1,7 +1,7 @@
 import { TarjetaFondos } from './tarjeta-fondos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, MARGEN_HORAS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -272,7 +272,7 @@ function _dibujarBuffer(est, corto) {
     if (!el) return;
     el.replaceChildren();
     const { bufferSemanal, horasDiarias, semanaAbierta } = est;
-    if (horasDiarias > 0 && Math.abs(bufferSemanal) > 0.01 && semanaAbierta) {
+    if (horasDiarias > 0 && Math.abs(bufferSemanal) > MARGEN_HORAS && semanaAbierta) {
         const esPositivo = bufferSemanal > 0;
         const claseColor = esPositivo ? 'positivo' : 'negativo';
         const punto = document.createElement('span');

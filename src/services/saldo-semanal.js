@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
+import { STORAGE_KEYS, horasGte, EPS_HORAS as EPS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from './tipos-registro.js';
@@ -22,7 +22,6 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
     const registrosSemana = EstadoApp.registros().filter(r => r.fecha >= lunes && r.fecha <= limite);
     const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
 
-    const EPS = 1e-6;
     const pendientes = [];
     const excedentes = [];
     let pool = 0, poolGenerado = 0, poolUsado = 0;
@@ -82,7 +81,6 @@ function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
     const lunes = TiempoUtils.obtenerLunesSemanaISO(fecha);
     const hoy = TiempoUtils.obtenerFechaHoy();
     const { pendientes } = calcularPoolSemana(lunes, hoy, asignacionesPrecalculadas);
-    const EPS = 1e-6;
     const deuda = pendientes.find(d => d.fecha === fecha);
     return deuda ? deuda.restante <= EPS : false;
 }
@@ -110,7 +108,7 @@ function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null)
         lunes = TiempoUtils.formatearFechaLocal(siguienteLunes);
     }
 
-    if (generado <= 1e-6) return null;
+    if (generado <= EPS) return null;
     return {
         porcentaje: Math.round((usado / generado) * 1000) / 10,
         horas: usado,

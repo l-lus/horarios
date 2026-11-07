@@ -239,7 +239,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
             minutos: 0,
             total: 8
         }
-    ], EstadoApp.calcularHoras);
+    ]);
     assert.equal(registros[0].total, 7.5);
 
     const backupData = {

@@ -1,3 +1,4 @@
+import { DIAS_HABILES_DEFAULT, HORAS_DIARIAS_DEFAULT, MINUTOS_DIA } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { TiposRegistro } from './tipos-registro.js';
@@ -121,8 +122,8 @@ function configurarNotificaciones(handlers) {
 }
 
 let registros = [];
-let diasHabiles = [1, 2, 3, 4, 5];
-let horasDiarias = 7;
+let diasHabiles = [...DIAS_HABILES_DEFAULT];
+let horasDiarias = HORAS_DIARIAS_DEFAULT;
 let editandoId = null;
 let vistaActual = 'diaria';
 let ignorarTiempoFuera = false;
@@ -196,7 +197,7 @@ function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
     const minutosEntrada = hE * 60 + mE;
     const minutosSalida = hS * 60 + mS;
     let minTotal = minutosSalida - minutosEntrada;
-    if (minTotal < 0) minTotal += 24 * 60;
+    if (minTotal < 0) minTotal += MINUTOS_DIA;
     let minNeto = (minTotal - tfMinutos) + crMinutos;
     if (minNeto < 0) minNeto = 0;
 
@@ -204,8 +205,8 @@ function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
 }
 
 /** @param {any} [tf] @param {any} [cr] */
-function _aplicarCalculoHoras(r, e, s, tf = null, cr = null, calcularFn = calcularHoras) {
-    const t = calcularFn(e, s, tf, cr);
+function _aplicarCalculoHoras(r, e, s, tf = null, cr = null) {
+    const t = calcularHoras(e, s, tf, cr);
     r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
     return t;
 }

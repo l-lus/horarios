@@ -414,12 +414,6 @@ h2.mutacion-saliente.no-margin,
     margin-bottom: var(--space-sm);
 }
 
-.form-group-border-top {
-    margin-top: var(--space-lg);
-    border-top: 1px solid var(--border);
-    padding-top: var(--space-lg);
-}
-
 label {
     display: block;
     font-size: var(--text-sm);

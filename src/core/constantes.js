@@ -65,6 +65,12 @@ export const CARDS = Object.freeze(['registrar', 'estadisticas', 'historico']);
 // Tarjetas que se pueden ubicar: las anteriores más la de estado ("Hoy", id `stats-card`), que se mueve pero no se oculta. Va primera por defecto.
 export const CARDS_ORDEN = Object.freeze(['estado', ...CARDS]);
 
+// Jornada de un perfil nuevo o restablecido
+export const DIAS_HABILES_DEFAULT = Object.freeze([1, 2, 3, 4, 5]);
+export const HORAS_DIARIAS_DEFAULT = 7;
+// Fecha del primer tramo del historial de días hábiles: rige "desde siempre"
+export const DESDE_SIEMPRE = '0001-01-01';
+
 // Valores por defecto de opciones booleanas que se leen desde varios módulos (un solo lugar para que no se desincronicen)
 export const DEFAULTS = Object.freeze({
     HINT_INTEGRADO: true,
@@ -110,5 +116,9 @@ export const CUMPLIMIENTO = Object.freeze({
 // NUMERIC PRECISION — shared helper
 // ====================================================================
 export const EPS_HORAS = 1e-6;
+// Diferencia de horas por debajo de la cual no se muestra saldo ni se calcula salida temprana
+export const MARGEN_HORAS = 0.01;
+export const MINUTOS_DIA = 24 * 60;
+export const MS_DIA = MINUTOS_DIA * 60 * 1000;
 export const horasGte = (valor, objetivo) => (valor - objetivo) > -EPS_HORAS;
 export const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;

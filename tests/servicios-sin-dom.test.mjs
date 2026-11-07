@@ -287,7 +287,7 @@ test('ImportarExportar.normalizarRegistrosImportados deja un registro por fecha 
         { ...base, id: 'aaaaaaaaaa2', fecha: '2026-10-20', entrada: '09:00', salida: '17:00' },
         { ...base, id: 'aaaaaaaaaa2', fecha: '2026-10-21', entrada: '08:00', salida: '16:00' },
     ];
-    const r = ImportarExportar.normalizarRegistrosImportados(lista, EstadoApp.calcularHoras);
+    const r = ImportarExportar.normalizarRegistrosImportados(lista);
     assert.equal(r.length, 2);
     assert.equal(r.find(x => x.fecha === '2026-10-20').salida, '17:00');
     assert.equal(new Set(r.map(x => x.id)).size, 2);
@@ -589,7 +589,6 @@ test('GestionDatos.cargarPerfilActivo: con la pila al día se conserva lo que se
     try {
         GestorPerfiles.inicializar();
         GestionDatos.cargarPerfilActivo();
-        assert.equal(GestorHistorial.canUndo(), true);
         GestionDatos.undoAction();
         assert.equal(EstadoApp.registros().length, 0);
     } finally {

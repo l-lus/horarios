@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, DESDE_SIEMPRE, MARGEN_HORAS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorHistorial } from './gestor-historial.js';
@@ -20,7 +20,7 @@ function objetivoGuardado(registro) {
 function sanitizarHistorialDiasHabiles(historial) {
     if (!Array.isArray(historial)) return null;
     const limpio = historial
-        .filter(t => t && typeof t.desde === 'string' && (t.desde === '0001-01-01' || TiempoUtils.validarFecha(t.desde)) && Array.isArray(t.dias))
+        .filter(t => t && typeof t.desde === 'string' && (t.desde === DESDE_SIEMPRE || TiempoUtils.validarFecha(t.desde)) && Array.isArray(t.dias))
         .map(t => ({ desde: t.desde, dias: t.dias.filter(d => Number.isInteger(d) && d >= 0 && d <= 6) }))
         .filter(t => t.dias.length > 0);
     limpio.sort((a, b) => a.desde.localeCompare(b.desde));
@@ -62,14 +62,14 @@ function registrarCambioDiasHabiles(nuevosDias) {
     const hoy = TiempoUtils.obtenerFechaHoy();
     let hist = D.historialDiasHabiles();
     const sinHistorial = !Array.isArray(hist) || hist.length === 0;
-    const soloTramoBase = !sinHistorial && hist.length === 1 && hist[0].desde === '0001-01-01';
+    const soloTramoBase = !sinHistorial && hist.length === 1 && hist[0].desde === DESDE_SIEMPRE;
     if (sinHistorial || (soloTramoBase && D.registros().length === 0)) {
-        hist = [{ desde: '0001-01-01', dias: nuevosDias }];
+        hist = [{ desde: DESDE_SIEMPRE, dias: nuevosDias }];
     } else {
         const idx = hist.findIndex(t => t.desde === hoy);
         if (idx >= 0) hist[idx] = { desde: hoy, dias: nuevosDias };
         else hist.push({ desde: hoy, dias: nuevosDias });
-        hist = sanitizarHistorialDiasHabiles(hist) || [{ desde: '0001-01-01', dias: nuevosDias }];
+        hist = sanitizarHistorialDiasHabiles(hist) || [{ desde: DESDE_SIEMPRE, dias: nuevosDias }];
     }
     D._setHistorialDiasHabilesRaw(hist);
     D.setDiasHabiles(nuevosDias);
@@ -183,7 +183,6 @@ function horasEfectivasDeRegistro(registro) {
 // --------------------------------------------------------------------
 // Edición de tramos del historial de días hábiles (modal "Historial de días hábiles")
 // --------------------------------------------------------------------
-const DESDE_SIEMPRE = '0001-01-01';
 
 /** Tramos ordenados por fecha; sin historial, uno solo "desde siempre" con los días vigentes. */
 function tramosDiasHabiles() {
@@ -251,7 +250,7 @@ function _recalcularCreditoRegistro(r, nuevoObjetivo) {
     if (!crudo) return false;
     const diferencia = nuevoObjetivo - crudo.total;
     let nuevoCredito = null;
-    if (diferencia > 0.01) {
+    if (diferencia > MARGEN_HORAS) {
         const { horas: h, minutos: m } = TiempoUtils.descomponerHorasDecimales(diferencia);
         nuevoCredito = TiempoUtils.minutosAHora(h * 60 + m);
     }

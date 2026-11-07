@@ -49,4 +49,4 @@ function siguienteTema(temaActual) {
     return TEMAS[(idx + 1) % TEMAS.length];
 }
 
-export const GestorTemas = { TEMAS, temaGuardado, aplicarTema, siguienteTema };
+export const GestorTemas = { temaGuardado, aplicarTema, siguienteTema };

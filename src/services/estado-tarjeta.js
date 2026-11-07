@@ -14,20 +14,15 @@ function _estadoDiasHabiles(diasHabiles) {
     const diaSemana = new Date().getDay();
     const hoyIndex = diaSemana === 0 ? 7 : diaSemana;
     const esDiaHabil = TiempoUtils.esFechaHabil(hoy, diasHabiles);
-    let quedanDiasFuturos;
-    if (Array.isArray(diasHabiles)) {
-        quedanDiasFuturos = false;
-        for (let d = hoyIndex + 1; d <= 7; d++) {
-            if (diasHabiles.includes(d === 7 ? 0 : d)) { quedanDiasFuturos = true; break; }
-        }
-    } else {
-        quedanDiasFuturos = hoyIndex < diasHabiles;
+    let quedanDiasFuturos = false;
+    for (let d = hoyIndex + 1; d <= 7; d++) {
+        if (diasHabiles.includes(d === 7 ? 0 : d)) { quedanDiasFuturos = true; break; }
     }
     return { esDiaHabil, quedanDiasFuturos };
 }
 
 function _todosEspeciales(registros, ini, fn, diasHabiles, horasDiarias) {
-    if (!Array.isArray(diasHabiles) || diasHabiles.length === 0 || horasDiarias <= 0) return false;
+    if (diasHabiles.length === 0 || horasDiarias <= 0) return false;
     const fechasLaborables = TiempoUtils.generarRangoFechas(ini, fn)
         .filter(f => Compensatorios.diasHabilesEnFecha(f).includes(TiempoUtils.parsearFechaLocal(f).getDay()));
     if (fechasLaborables.length === 0) return false;

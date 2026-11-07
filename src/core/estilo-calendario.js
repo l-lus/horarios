@@ -61,4 +61,4 @@ function siguiente() {
     setEstilo(siguienteEstilo(actual()));
 }
 
-export const EstiloCalendario = { init, actual, setEstilo, siguiente, etiqueta: () => etiquetaEstilo(actual()) };
+export const EstiloCalendario = { init, siguiente, etiqueta: () => etiquetaEstilo(actual()) };

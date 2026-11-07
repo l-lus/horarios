@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
+import { STORAGE_KEYS, TOAST_MS, MS_DIA } from '../core/constantes.js';
 import { EventosApp } from '../core/eventos.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -45,7 +45,7 @@ function _validarRangoGrupo(nuevoTipo, nuevaDesde, nuevaHasta) {
     const ini = TiempoUtils.parsearFechaLocal(nuevaDesde), fin = TiempoUtils.parsearFechaLocal(nuevaHasta);
     if (ini < dosPasado || fin > dosFuturo) return 'El rango debe estar entre 2 años atrás y 2 años adelante';
     if (!TiposRegistro.validarTipoPermitido(nuevoTipo)) return 'Tipo de registro inválido';
-    const dias = Math.ceil(Math.abs(fin.getTime() - ini.getTime()) / 864e5) + 1;
+    const dias = Math.ceil(Math.abs(fin.getTime() - ini.getTime()) / MS_DIA) + 1;
     if (dias > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) return `El rango contiene ${dias} días.\n Máximo: ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación.`;
     return null;
 }
@@ -175,7 +175,7 @@ function detectarAyerAbierto(fechaHoy, regs) {
         const [hE, mE] = regAyer.entrada.split(':').map(Number);
         const fechaEntrada = TiempoUtils.parsearFechaLocal(ayerStr);
         fechaEntrada.setHours(hE, mE, 0, 0);
-        ayerAbierto = (Date.now() - fechaEntrada.getTime()) <= 86400000;
+        ayerAbierto = (Date.now() - fechaEntrada.getTime()) <= MS_DIA;
     }
     return { ayerStr, regAyer, ayerAbierto };
 }

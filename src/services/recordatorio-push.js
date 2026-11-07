@@ -40,9 +40,7 @@ function _avisarFallo(accion, status) {
 }
 
 function _headersWorker() {
-    const headers = { 'Content-Type': 'application/json' };
-    if (APP_SECRET && !APP_SECRET.startsWith('PEGA_ACA')) headers['X-App-Secret'] = APP_SECRET;
-    return headers;
+    return { 'Content-Type': 'application/json', 'X-App-Secret': APP_SECRET };
 }
 
 function _postWorker(path, payload, keepalive = false) {
@@ -200,7 +198,6 @@ function obtenerInfoActiva(perfilId) {
 }
 async function _asegurarSuscripcion() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
-    if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith('PEGA_ACA')) return null;
 
     try {
         const permiso = await Notification.requestPermission();

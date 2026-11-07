@@ -32,8 +32,7 @@ function _minutosBreakActivo() {
 }
 
 function _minutosAHoraWrap(totalMinutos) {
-    const normalizado = ((totalMinutos % 1440) + 1440) % 1440;
-    return TiempoUtils.minutosAHora(normalizado);
+    return TiempoUtils.minutosAHora(TiempoUtils.normalizarMinutosDia(totalMinutos));
 }
 
 function _formatearMinutosCorto(totalMinutos) {

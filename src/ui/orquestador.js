@@ -428,8 +428,6 @@ function _initListenersOtros() {
 }
 
 async function init() {
-    Almacenamiento.migrarClavesLegadas();
-
     _initGlobales();
     _initListenersFormulario();
     _initListenersTeclado();

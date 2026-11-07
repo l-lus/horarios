@@ -292,7 +292,7 @@ function derivarVistaSemana(est) {
     const cerrado = !semanaAbierta && !todosEspeciales && horasDiarias > 0;
     const trabajadoMin = TiempoUtils.horasAMinutosRedondeados(tot);
     const resumen = todosEspeciales
-        ? { tipo: 'espera', emoji: '🌞', mensaje, banco: null, nDias: _nDiasSemana(est) }
+        ? { tipo: 'espera', emoji: '🌞', mensaje, banco: null }
         : {
             tipo: 'semana', abierta: semanaAbierta, color: colorBarra, mensaje: mostrarMensaje ? mensaje : '', progreso: progreso,
             trabajadoMin, trabajado: partesDuracion(trabajadoMin),
@@ -300,7 +300,6 @@ function derivarVistaSemana(est) {
             balance: _resumenBalance(prog, objetivoSemana, !semanaAbierta, colorBarra),
             banco: _resumenBanco(est),
             dias: (est.diasSemana ?? []).map(d => _resumenDiaSemana(d, hoy)),
-            nDias: _nDiasSemana(est),
         };
     const franjas = _hintActivo() && horasDiarias > 0 && !todosEspeciales ? _franjasSemana(est.diasSemana, horasDiarias, objetivoSemana, hoy) : null;
 
@@ -398,9 +397,6 @@ function _mensajeProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal, la
     return bufferSemanal >= faltante ? `${faltanteTexto}, pero te podés ir` : faltanteTexto;
 }
 
-/** Cuántos días muestra la semana (para que el diseño reserve su alto aunque hoy se vea la vista del día). */
-const _nDiasSemana = est => (est.diasSemana ?? []).length;
-
 // ─── Resumen del día para los diseños propios (anillo, línea de tiempo, filas, tipográfica) ─────────────────────────────────
 /** Banco de horas de la semana (con signo) o null si no hay nada que mostrar; mismo criterio que el texto "extras esta semana". */
 function _resumenBanco(est) {
@@ -436,7 +432,7 @@ function _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre) {
 function _resumenRegistro({ reg, linea, tiempoHoy, objetivo, progreso, cerrado, color, colorCierre, mensaje, est }) {
     const trabajadoMin = TiempoUtils.horasAMinutosRedondeados(tiempoHoy);
     return {
-        tipo: 'registro', cerrado, color, mensaje, progreso, nDias: _nDiasSemana(est),
+        tipo: 'registro', cerrado, color, mensaje, progreso,
         trabajadoMin, trabajado: partesDuracion(trabajadoMin),
         entrada: reg.entrada,
         salida: cerrado ? reg.salida : '',
@@ -500,13 +496,12 @@ function _vistaSinRegistro(est) {
             tipo: 'espera', emoji: esDiaHabil ? '🎒' : '🌞',
             mensaje: esDiaHabil ? (horasDiarias === 0 ? '' : 'Esperando registro…') : (horasDiarias === 0 ? '' : 'Día libre'),
             banco: _resumenBanco(est),
-            nDias: _nDiasSemana(est),
         },
     };
 }
 
 /** Vista de hoy cuando el registro es un día especial (licencia, feriado...). */
-function _vistaEspecial(tipoEspecialHoy, est) {
+function _vistaEspecial(tipoEspecialHoy) {
     return {
         titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
         stats: `${tipoEspecialHoy.emoji} ${tipoEspecialHoy.label}`,
@@ -519,7 +514,7 @@ function _vistaEspecial(tipoEspecialHoy, est) {
         hint: 'Tocá para ver la Semana',
         resumen: {
             tipo: 'especial', emoji: tipoEspecialHoy.emoji, etiqueta: tipoEspecialHoy.label,
-            descripcion: `¡${tipoEspecialHoy.descripcion}!`, color: tipoEspecialHoy.color, nDias: _nDiasSemana(est),
+            descripcion: `¡${tipoEspecialHoy.descripcion}!`, color: tipoEspecialHoy.color,
         },
     };
 }
@@ -539,7 +534,7 @@ function derivarVistaHoy(est) {
         ? { hint: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar`, aviso: `⚠️ Ayer (${TiempoUtils.obtenerNombreDia(est.ayerStr)}) quedó un fichaje sin cerrar` }
         : null;
 
-    if (tipoEspecialHoy) return _conAvisoAyer(_vistaEspecial(tipoEspecialHoy, est), avisoAyerHint);
+    if (tipoEspecialHoy) return _conAvisoAyer(_vistaEspecial(tipoEspecialHoy), avisoAyerHint);
 
     const dayClosed = !!regHoy.salida;
     const objetivoDiarioAplica = esDiaHabil ? objetivoDiario : 0;

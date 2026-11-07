@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
-import { duracionCompacta, hitosOrdenados, horaCorta, posicionesLinea, resumenesDeMedida } from '../core/resumen-tarjeta.js';
+import { duracionCompacta, hitosOrdenados, horaCorta, posicionesLinea } from '../core/resumen-tarjeta.js';
 
 // ====================================================================
 // DISEÑOS PROPIOS DE LA TARJETA DE ESTADO (vista diaria): anillo, línea de tiempo, lista de filas y tipográfica
@@ -591,38 +591,13 @@ const DISENOS = {
     tipografica: { crear: crearTipografica, pintar: pintarTipografica }
 };
 
-/** @type {{ id: string, nDias: number, refs: any } | null} */
+/** @type {{ id: string, refs: any } | null} */
 let _montado = null;
 
 /**
- * Arma el diseño dentro de #stats-estilo. Además de la capa visible agrega capas de medida: copias ocultas del mismo diseño dibujadas con el peor caso
- * de cada estado (registro, sin registro, día especial y semana). Todas ocupan la misma celda de una cuadrícula, así la tarjeta mide siempre lo que el más
- * alto de ellos y no cambia de tamaño al pasar del día a la semana ni entre estados.
- */
-function _montar(host, id, nDias) {
-    const diseno = DISENOS[/** @type {keyof typeof DISENOS} */ (id)];
-    host.replaceChildren();
-    const capas = el('div', 'est-capas');
-    const visible = el('div', 'est-capa');
-    const refs = diseno.crear();
-    visible.append(refs.raiz);
-    capas.append(visible);
-    for (const medida of resumenesDeMedida(nDias)) {
-        const capa = el('div', 'est-capa est-capa--medida');
-        capa.setAttribute('aria-hidden', 'true');
-        capa.setAttribute('inert', '');
-        const r = diseno.crear();
-        diseno.pintar(r, medida);
-        capa.append(r.raiz);
-        capas.append(capa);
-    }
-    host.append(capas);
-    _montado = { id, nDias, refs };
-}
-
-/**
- * Dibuja el resumen del día o de la semana con el diseño del estilo elegido. Al cambiar de estilo (o de cantidad de días de la semana) se reconstruye
- * el DOM; si el estilo no es propio (o no hay resumen) deja el contenedor vacío y devuelve false: la tarjeta usa entonces la barra de siempre.
+ * Dibuja el resumen del día o de la semana con el diseño del estilo elegido. Al cambiar de estilo se reconstruye el DOM; si el estilo no es propio
+ * (o no hay resumen) deja el contenedor vacío y devuelve false: la tarjeta usa entonces la barra de siempre.
+ * El alto de la tarjeta sigue al contenido; quien llama anima los cambios (ver _animarAlturaCard en tarjeta-fichaje.js).
  * @param {any} resumen
  */
 function actualizar(resumen) {
@@ -634,9 +609,13 @@ function actualizar(resumen) {
         if (_montado) { host.replaceChildren(); _montado = null; }
         return false;
     }
-    const nDias = resumen.nDias ?? 5;
-    if (!_montado || _montado.id !== id || _montado.nDias !== nDias || !host.firstChild) _montar(host, id, nDias);
-    diseno.pintar(_montado?.refs, resumen);
+    if (!_montado || _montado.id !== id || !host.firstChild) {
+        host.replaceChildren();
+        const refs = diseno.crear();
+        host.append(refs.raiz);
+        _montado = { id, refs };
+    }
+    diseno.pintar(_montado.refs, resumen);
     return true;
 }
 

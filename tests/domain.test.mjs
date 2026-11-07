@@ -969,7 +969,7 @@ test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (re
         ...base, regHoy: { fecha: hoy, entrada: 'VAC', salida: 'VAC' }, tiempoHoy: 0,
         tipoEspecialHoy: { emoji: '🏖️', label: 'Vacaciones', descripcion: 'Vacaciones', color: 'orange' }
     }).resumen;
-    assert.deepEqual(especial, { tipo: 'especial', emoji: '🏖️', etiqueta: 'Vacaciones', descripcion: '¡Vacaciones!', color: 'orange', nDias: 0 });
+    assert.deepEqual(especial, { tipo: 'especial', emoji: '🏖️', etiqueta: 'Vacaciones', descripcion: '¡Vacaciones!', color: 'orange' });
 
     const abierto = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: { fecha: hoy, entrada: '09:00', salida: '' }, tiempoHoy: 0.5 }).resumen;
     assert.equal(abierto.tipo, 'registro');
@@ -987,9 +987,9 @@ test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (re
     assert.deepEqual(cerrado.balance, { etiqueta: 'Objetivo', texto: 'Cumplido', tono: 'green' });
 });
 
-test('TarjetaFichajeVista: el resumen de la semana lista los días con su color y lo que falta, y todos los resúmenes traen la cantidad de días', async () => {
+test('TarjetaFichajeVista: el resumen de la semana lista los días con su color y lo que falta', async () => {
     const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
-    const { horaCorta, resumenesDeMedida } = await import('../src/core/resumen-tarjeta.js');
+    const { horaCorta } = await import('../src/core/resumen-tarjeta.js');
     assert.equal(horaCorta(450), '7:30');
     assert.equal(horaCorta(0), '—');
 
@@ -1005,7 +1005,6 @@ test('TarjetaFichajeVista: el resumen de la semana lista los días con su color 
     };
     const r = TarjetaFichajeVista.derivarVistaSemana(est).resumen;
     assert.equal(r.tipo, 'semana');
-    assert.equal(r.nDias, 4);
     assert.deepEqual(r.trabajado, { horas: 10, minutos: 30 });
     assert.equal(r.objetivoMin, 2100);
     assert.deepEqual(r.balance, { etiqueta: 'Faltan', texto: '24 h 30 min', tono: 'neutro' });
@@ -1024,9 +1023,4 @@ test('TarjetaFichajeVista: el resumen de la semana lista los días con su color 
     assert.equal(vacia.tipo, 'espera');
     assert.equal(vacia.emoji, '🌞');
 
-    // los resúmenes de medida cubren todos los estados y la cantidad de días pedida
-    const medidas = resumenesDeMedida(6);
-    assert.deepEqual(medidas.map(m => m.tipo), ['registro', 'espera', 'especial', 'semana']);
-    assert.equal(medidas[3].dias.length, 6);
-    assert.ok(medidas.every(m => m.nDias === 6));
 });

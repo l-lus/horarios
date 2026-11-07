@@ -262,7 +262,41 @@ function _renderCard(vista) {
 function _renderEstilo(vista) {
     const propio = _estiloPropioActivo() && !!vista.resumen;
     $('stats-card')?.classList.toggle('estilo-propio', propio);
+    // también el contenido: el fantasma de la animación (ver _fantasmaDe) cuelga del body y es una copia de #stats-card-content, sin el ancestro #stats-card;
+    // sin la clase propia mostraría un instante la barra de siempre en vez del diseño
+    $('stats-card-content')?.classList.toggle('estilo-propio', propio);
     TarjetaEstilos.actualizar(propio ? vista.resumen : null);
+}
+
+/** Alto actual de la tarjeta si ya usa un diseño propio (el que se anima al cambiar de contenido); 0 si no (primer dibujo o cambio de estilo: sin animación). */
+function _alturaCardPropia() {
+    const card = $('stats-card');
+    return card && card.classList.contains('estilo-propio') ? card.offsetHeight : 0;
+}
+
+/**
+ * Anima el alto de la tarjeta, de `antes` al que tiene ahora con el contenido nuevo ya dibujado, igual que el colapsado de las otras tarjetas
+ * (--dur-collapse, ease-out). Los diseños propios tienen alto según su contenido (el día, la semana y cada estado miden distinto), y `height: auto` no se anima:
+ * se fija el alto de partida en px, se fuerza el reflujo y se pasa al de llegada; al terminar vuelve a automático.
+ * @param {number} antes
+ */
+function _animarAlturaCard(antes) {
+    const card = $('stats-card');
+    if (!card || !(antes > 0) || !card.classList.contains('estilo-propio')) return;
+    const dur = _durSiAnima('--dur-collapse', card);
+    card.style.height = '';   // alto natural del contenido nuevo (también corta una animación anterior que siguiera en curso)
+    const despues = card.offsetHeight;
+    if (!(dur > 1) || Math.abs(despues - antes) < 2) return;
+    card.style.height = `${antes}px`;
+    void card.offsetHeight;
+    card.style.height = `${despues}px`;
+    const terminar = () => { card.style.height = ''; };
+    card.addEventListener('transitionend', function alTerminar(e) {
+        if (e.target !== card || e.propertyName !== 'height') return;
+        card.removeEventListener('transitionend', alTerminar);
+        terminar();
+    });
+    setTimeout(terminar, dur + 100);   // red de seguridad (pestaña en segundo plano: no hay transitionend)
 }
 
 function _renderHint(vista) {
@@ -340,6 +374,7 @@ function _planConteoInicial(vista, est) {
 
 /** @param {any} [idNuevo] */
 function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false, conteoInicial = false) {
+    const alturaAntes = _alturaCardPropia();   // antes de tocar nada: es de donde parte la animación del alto
     const asignacionesCompensatorio = Compensatorios.calcularAsignacionesCompensatorio();
 
     if (!soloReloj) Historico.actualizarListaRegistros(EstadoApp.registros(), idNuevo, asignacionesCompensatorio);
@@ -378,6 +413,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
         _renderHint(vista);
         _renderBuffer(est);
         _renderEstilo(vista);
+        _animarAlturaCard(alturaAntes);
     };
     if (debeAnimar) {
         _animarCambioCard(renderResto);

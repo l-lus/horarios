@@ -510,7 +510,7 @@ button.campo-flash-color {
 
     .registro-info {
         display: grid;
-        grid-template-columns: 1fr auto;
+        grid-template-columns: minmax(0, 1fr) auto;
         align-items: baseline;
         column-gap: 0.75rem;
     }

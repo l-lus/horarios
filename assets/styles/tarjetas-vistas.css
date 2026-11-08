@@ -740,6 +740,12 @@
     overflow: visible;
 }
 
+/* Con overflow visible el contenido ya no puede encogerse por debajo de su ancho natural: la columna del grid (auto) crecía hasta el texto más largo y las tarjetas
+   del mes expandido se salían de la lista (los meses cerrados no, porque su inner tiene overflow hidden). La columna se limita al ancho disponible. */
+.registro-mes-detalle {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 /* Días no laborables sin registro (según los días laborales vigentes en cada fecha) */
 .calendario-dia.dia-sin-registro.no-laborable {
     opacity: 0.5;
@@ -1468,6 +1474,12 @@
 .flex-1,
 .registro-info {
     flex: 1;
+}
+
+/* Sin esto el ancho mínimo de la info es el de su contenido (título + comentario completo, sin recortar): la tarjeta se ensancha y se sale de la lista.
+   Con 0 la info se ajusta al ancho de la tarjeta y el comentario se recorta con puntos suspensivos. */
+.registro-info {
+    min-width: 0;
 }
 
 

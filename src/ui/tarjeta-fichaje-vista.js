@@ -203,7 +203,7 @@ function _franjasSemana(todosLosDias, horasDiarias, objetivoSemana, hoy) {
             previo.hito.hover = { stats: null, mensaje: `${previo.hito.sigla}: ${_palabraEstadoDia(d)}` };
         } else {
             const hito = {
-                fecha: d.fecha, sigla: nombre(d), inicial: inicial(d), fraccion: fin, hoy: esHoy(d),
+                fecha: d.fecha, sigla: nombre(d), inicial: inicial(d), fraccion: fin, hoy: esHoy(d), futuro: !esHoy(d) && d.estado === ESTADO_DIA.FUTURO,   // futuro: su marca va hueca hasta que llegue el día
                 descripcion: `${nombre(d)}${esHoy(d) ? ' (hoy)' : ''} ${_palabraEstadoDia(d)}`,
                 hover: _textoHoverDia(d, esHoy(d), conRegistro(d)),
                 prioridad: esHoy(d) ? 3 : conRegistro(d) ? 2 : d.estado === ESTADO_DIA.ESPECIAL || d.estado === ESTADO_DIA.SIN_SALIDA ? 1 : 0   // si no entran todas las siglas se conservan primero hoy y los días con horas

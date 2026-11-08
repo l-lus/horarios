@@ -403,8 +403,17 @@
 
 /* Contorno del punto de anclaje (en el sprite no puede ir como atributo style: la CSP no permite estilos en línea) */
 #hito-ancla circle {
-    stroke: var(--bg-card);
-    stroke-width: 1.2;
+    fill: var(--ancla-relleno, currentColor);
+    stroke: var(--ancla-borde, var(--bg-card));
+    stroke-width: var(--ancla-grosor, 1.2);
+}
+
+/* Marca que el tiempo todavía no alcanzó (salida estimada o con buffer por delante de "ahora"; día futuro de la semana): punto hueco, solo el aro.
+   Se rellena cuando "ahora" llega a su posición. Las variables llegan al círculo del sprite porque se heredan a través del <use>. */
+.linea-tick.pendiente {
+    --ancla-relleno: var(--bg-card);
+    --ancla-borde: currentColor;
+    --ancla-grosor: 1.5;
 }
 
 /* Las marcas de la vista diaria tienen la diagonal 8 px más larga que las de la semanal (svg de 26 x 28 en vez de 26 x 20): así la hora queda más separada de la barra */
@@ -2188,6 +2197,7 @@
     border-radius: 50%;
     border: 2px solid var(--nodo);
     background: var(--bg-card);
+    transition: background var(--transition-ui);
 }
 
 /* El conector llega desde el nodo anterior: azul hasta donde ya se llegó, gris lo que falta */
@@ -2291,8 +2301,10 @@
     background: color-mix(in srgb, var(--est-color) 12%, transparent);
 }
 
+/* El punto se rellena cuando "ahora" llega a su hora (.pasado, que pone pintarNodos): hasta entonces queda hueco. La entrada siempre está pasada. */
 .est-nodo--banco { --nodo: var(--tono); }
-.est-nodo--banco .est-nodo-punto { background: var(--tono); }
+.est-nodo--banco.pasado .est-nodo-punto { background: var(--tono); }
+.est-nodo--salida.pasado .est-nodo-punto { background: var(--nodo); }
 .est-nodo--banco :is(.est-nodo-etiqueta, .est-nodo-hora) { color: var(--tono); }
 
 .est-nodo.pendiente .est-nodo-punto { border-style: dashed; background: transparent; }

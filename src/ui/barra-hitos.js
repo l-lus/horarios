@@ -195,6 +195,9 @@ function _renderLinea(vista, pista, fill) {
     tickBuffer.style.opacity = L.hayBanda ? '1' : '0';
     tickBuffer.classList.toggle('positivo', L.bufferPositivo);
     tickBuffer.classList.toggle('negativo', !L.bufferPositivo);
+    // hueco hasta que "ahora" llega a su posición (la entrada ya pasó siempre: su remate va relleno)
+    tickSalida.classList.toggle('pendiente', L.ahoraRel < L.salidaRel);
+    tickBuffer.classList.toggle('pendiente', L.bufferRel !== null && L.ahoraRel < L.bufferRel);
 
     const etEntrada = $('linea-et-entrada');
     const etSalida = $('linea-et-salida');
@@ -312,7 +315,7 @@ function _renderSemana(vista, pista) {
     items.forEach(it => {
         const lado = lados.get(it) ?? null;
         const arriba = (lado ?? it.preferido) === 'arriba';
-        it.tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}${it.espejado ? ' espejado' : ''}${lado ? '' : ' solo-punto'}`;
+        it.tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}${it.espejado ? ' espejado' : ''}${lado ? '' : ' solo-punto'}${it.h.futuro ? ' pendiente' : ''}`;
         it.et.className = `linea-etiqueta dia linea-etiqueta--${arriba ? 'arriba' : 'abajo'}${it.h.hoy ? ' linea-etiqueta--hoy' : ''}${it.espejado ? ' linea-etiqueta--espejada' : ''}${lado ? '' : ' linea-etiqueta--oculta'}`;
         it.tick.style.left = `${it.pct}%`;
         it.et.style.left = `${it.left}px`;

@@ -409,7 +409,7 @@ function pintarNodosDias(r, dias, enCurso) {
         n.raiz.classList.toggle('hoy', !!dia.hoy);
         n.raiz.classList.toggle('pendiente', pendiente);
         n.raiz.classList.toggle('pasado', !futuro);   // el conector azul llega hasta hoy, también con días especiales más adelante
-        n.raiz.classList.toggle('lleno', dia.estado === 'cerrado' || dia.estado === 'especial' || especialFuturo);
+        n.raiz.classList.toggle('lleno', !futuro);   // el punto se rellena cuando el día ya pasó (hoy lo resuelve el CSS); un día por adelantado queda hueco, aunque sea especial
         n.raiz.dataset.color = (especialFuturo ? dia.especial : dia.color) ?? 'neutro';
         fijar(n.etiqueta, dia.hoy ? 'Hoy' : dia.sigla);
         // los días que faltan llevan un "-" (el "pendiente" queda para hoy, que es el que espera su registro)

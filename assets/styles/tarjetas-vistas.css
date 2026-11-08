@@ -1991,7 +1991,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: conic-gradient(transparent 0deg, rgba(255, 255, 255, 0.45) 20deg, transparent 40deg, transparent 360deg);
+    background: conic-gradient(transparent 0deg, rgba(255, 255, 255, 0.35) 20deg, transparent 40deg, transparent 360deg);
     animation: brillo-anillo var(--dur-ambiente) ease-in-out infinite;
     will-change: transform;
 }

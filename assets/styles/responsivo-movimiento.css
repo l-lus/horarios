@@ -96,14 +96,22 @@
     }
 }
 
-/* El brillo del anillo: la franja (que ocupa 40°, con su centro a 20°) entra por el comienzo del arco, lo recorre hasta su final (el avance, en grados) y descansa; mismo ciclo y mismo 20 % que "shimmer" */
+/* El brillo del anillo: la franja (que ocupa 40°, con su centro a 20°) entra por el comienzo del arco, lo recorre hasta su final (el avance, en grados) y descansa; mismo ciclo y mismo 20 % que "shimmer".
+   Con el anillo casi o totalmente lleno la franja no puede pasar de los 320° (si no, su cola reaparecería por el comienzo del arco y quedaría fija ahí): llega al final del arco y se desvanece.
+   En reposo (20 % en adelante) no se ve en ningún caso. */
 @keyframes brillo-anillo {
     0% {
         transform: rotate(-40deg);
+        opacity: 1;
+    }
+
+    14% {
+        opacity: 1;
     }
 
     20%, 100% {
-        transform: rotate(calc((100 - var(--ring-offset, 100)) * 3.6deg));
+        transform: rotate(min(calc((100 - var(--ring-offset, 100)) * 3.6deg), 320deg));
+        opacity: 0;
     }
 }
 

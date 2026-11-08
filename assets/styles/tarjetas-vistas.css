@@ -2043,6 +2043,7 @@
         grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem);
         grid-template-areas: "cabecera pie" "linea pie";
         align-items: start;
+        align-content: start;   /* con el alto reservado de más, las filas no se estiran: la línea queda justo debajo de "Llevás trabajado" */
         gap: var(--space-md) var(--space-sm);
     }
 
@@ -2052,6 +2053,7 @@
         grid-template-columns: minmax(9rem, 12rem) minmax(var(--space-sm), 1fr) minmax(0, max-content) minmax(var(--space-sm), 1fr);
         grid-template-areas: "pie . cabecera ." "pie . linea .";
         column-gap: 0;
+        align-content: start;
     }
 
     html:is([data-disposicion-linea="mosaicos-izquierda"], [data-disposicion-linea="mosaicos-derecha"]) .est-linea:is([data-tipo="registro"], [data-tipo="semana"]) .est-linea-cabecera { grid-area: cabecera; }
@@ -2062,6 +2064,7 @@
         grid-auto-flow: row;
         grid-auto-columns: auto;
         align-self: start;
+        margin-top: 0;   /* arriba de su columna, no al pie */
     }
 }
 
@@ -2071,6 +2074,7 @@
         /* dos mitades iguales (50/50), con el mismo espacio entre ellas que los mosaicos de abajo, los dos pegados arriba */
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         grid-template-areas: "cabecera linea" "pie pie";
+        grid-template-rows: auto 1fr;   /* el alto sobrante es de la fila de los mosaicos, que quedan al pie de la tarjeta */
         align-items: start;
         gap: var(--space-md) var(--space-sm);
     }
@@ -2092,6 +2096,7 @@
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea-cabecera { grid-area: cabecera; }
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea-cuerpo { grid-area: linea; }
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) :is(.est-mosaicos, .est-linea-nota) { grid-area: pie; }
+    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-mosaicos { align-self: end; }
 
     html[data-disposicion-linea="derecha"] .est-linea:not(.sin-cuerpo) .est-linea-cabecera {
         align-items: flex-end;
@@ -2107,6 +2112,7 @@
         grid-template-columns: minmax(0, 1fr) minmax(7rem, 8.5rem);
         grid-template-areas: "cabecera pie" "linea pie";
         align-items: start;
+        align-content: start;   /* con el alto reservado de más, las filas no se estiran: la línea queda justo debajo de "Llevás trabajado" */
         gap: var(--space-md) var(--space-sm);
     }
 
@@ -2118,6 +2124,7 @@
         grid-auto-flow: row;
         grid-auto-columns: auto;
         align-self: start;   /* arrancan a la altura de "Llevás trabajado", arriba de la columna */
+        margin-top: 0;
     }
 }
 
@@ -2291,20 +2298,18 @@
     gap: var(--space-sm);
 }
 
-/* Esperando registro: el único mosaico (el banco de horas de la semana) también se ajusta a su texto y queda pegado al borde inferior de la tarjeta
-   (la línea ocupa todo el alto reservado, ver .est-capa > .est-linea; con la tarjeta ancha, en cuadrícula, el mismo efecto lo da align-self: end) */
+/* Los mosaicos quedan pegados al borde inferior de la tarjeta: la línea ocupa todo el alto reservado (ver .est-capa > .est-linea) y el sobrante queda
+   encima de ellos (margen automático en columna; en la cuadrícula de la tarjeta ancha, la fila 1fr y align-self: end) */
+.est-linea .est-mosaicos {
+    margin-top: auto;
+}
+
+/* Esperando registro: el único mosaico (el banco de horas de la semana) también se ajusta a su texto */
 .est-linea[data-tipo="espera"] .est-mosaicos {
     width: fit-content;
     max-width: 100%;
-    margin-top: auto;
     align-self: flex-start;
     justify-self: start;
-}
-
-@container (min-width: 28rem) {
-    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea[data-tipo="espera"] .est-mosaicos {
-        align-self: end;
-    }
 }
 
 .est-mosaico {

@@ -2096,7 +2096,7 @@
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea-cabecera { grid-area: cabecera; }
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea-cuerpo { grid-area: linea; }
     html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) :is(.est-mosaicos, .est-linea-nota) { grid-area: pie; }
-    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-mosaicos { align-self: end; }
+    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) :is(.est-mosaicos, .est-linea-nota) { align-self: end; }
 
     html[data-disposicion-linea="derecha"] .est-linea:not(.sin-cuerpo) .est-linea-cabecera {
         align-items: flex-end;
@@ -2338,6 +2338,7 @@
     max-width: 100%;
     align-self: flex-start;
     justify-self: start;
+    margin-top: auto;   /* pegada al borde inferior de la tarjeta, como los mosaicos (en la cuadrícula de la tarjeta ancha, align-self: end) */
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
     font-weight: var(--fw-medium);

@@ -242,6 +242,7 @@ function _resumenDiaSemana(d, hoy) {
         estado: d.estado, color, totalMin, objetivoMin,
         fraccion: objetivoMin > 0 ? Math.min(1, totalMin / objetivoMin) : (totalMin > 0 ? 1 : 0),
         emoji: d.emoji ?? '', etiqueta: d.etiqueta ?? '',
+        especial: d.especial ?? null,   // color del día especial; también lo traen los que se cargaron por adelantado (su estado sigue siendo "futuro")
     };
 }
 
@@ -292,7 +293,7 @@ function derivarVistaSemana(est) {
     const cerrado = !semanaAbierta && !todosEspeciales && horasDiarias > 0;
     const trabajadoMin = TiempoUtils.horasAMinutosRedondeados(tot);
     const resumen = todosEspeciales
-        ? { tipo: 'espera', emoji: '🌞', mensaje, banco: null }
+        ? { tipo: 'espera', emoji: '🌞', mensaje, banco: null, libre: true }
         : {
             tipo: 'semana', abierta: semanaAbierta, color: colorBarra, mensaje: mostrarMensaje ? mensaje : '', progreso: progreso,
             trabajadoMin, trabajado: partesDuracion(trabajadoMin),
@@ -515,6 +516,7 @@ function _vistaSinRegistro(est) {
         resumen: {
             tipo: 'espera', emoji: esDiaHabil ? '🎒' : '🌞',
             mensaje: esDiaHabil ? (horasDiarias === 0 ? '' : 'Esperando registro…') : (horasDiarias === 0 ? '' : 'Día libre'),
+            libre: !esDiaHabil,   // día no laborable: no hay entrada ni salida que esperar
             banco: _resumenBanco(est),
         },
     };

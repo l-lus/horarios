@@ -287,7 +287,17 @@ function crearLinea() {
     const cuerpo = el('div', 'est-linea-cuerpo');
     cuerpo.append(nodos, nodosDias);
     raiz.append(cabecera, cuerpo, mosaicos, nota);
-    return { raiz, cuerpo, etiqueta, duracion, titulo, emoji, texto, nodos, hitos, nodosDias, dias, mosaicos, balance, banco, fuera, nota };
+    return { raiz, cabecera, cuerpo, etiqueta, duracion, titulo, emoji, texto, nodos, hitos, nodosDias, dias, mosaicos, balance, banco, fuera, nota };
+}
+
+/**
+ * Esperando registro no tiene el número grande de arriba ("Llevás trabajado", "Total de la semana"): su cabecera es más baja y la línea de tiempo arrancaría más arriba que
+ * en la semana. Se le reserva el alto de la cabecera de la semana (la de la capa de medida) para que, al alternar de vista, el comienzo de la línea no cambie de lugar.
+ * @param {any} r @param {any} rSemana
+ */
+function alinearLinea(r, rSemana) {
+    const espera = r.raiz.dataset.tipo === 'espera' && !r.cuerpo.classList.contains('hidden');
+    r.cabecera.style.minHeight = espera ? `${rSemana.cabecera.offsetHeight}px` : '';
 }
 
 function pintarLinea(r, d) {
@@ -299,8 +309,8 @@ function pintarLinea(r, d) {
     mostrar(r.titulo, !conTotal);
     mostrar(r.nota, d.tipo === 'especial');
     mostrar(r.nodosDias, d.tipo === 'semana');
-    // sin línea que mostrar (día especial, o sin registro y sin mensaje) la cabecera ocupa todo el ancho
-    const sinLinea = d.tipo === 'especial' || (d.tipo === 'espera' && !d.mensaje);
+    // sin línea que mostrar (día especial, día libre, o sin registro y sin mensaje) la cabecera ocupa todo el ancho: no hay entrada ni salida que esperar
+    const sinLinea = d.tipo === 'especial' || (d.tipo === 'espera' && (!d.mensaje || !!d.libre));
     mostrar(r.cuerpo, !sinLinea);
     r.raiz.classList.toggle('sin-cuerpo', sinLinea);
 
@@ -334,7 +344,7 @@ function pintarLinea(r, d) {
     if (d.tipo === 'espera') {
         fijar(r.texto, d.mensaje);
         pintarNodosPendientes(r);
-        mostrar(r.nodos, !!d.mensaje);
+        mostrar(r.nodos, !!d.mensaje && !d.libre);
         mostrar(r.banco.raiz, !!d.banco);
         if (d.banco) pintarDato(r.banco, 'Banco de horas', `${d.banco.texto} esta semana`, tonoBanco(d.banco));
         mostrar(r.balance.raiz, false); mostrar(r.fuera.raiz, false);
@@ -390,14 +400,18 @@ function pintarNodosDias(r, dias, enCurso) {
         mostrar(n.raiz, !!dia);
         if (!dia) return;
         const futuro = dia.estado === 'futuro' && !dia.hoy;
+        // un feriado, asueto, vacaciones... cargado por adelantado se ve desde ya (con su color y su emoji), aunque el día todavía no haya llegado
+        const especialFuturo = futuro && !!dia.especial;
+        const pendiente = futuro && !especialFuturo;
         n.raiz.classList.toggle('primero', i === 0);
         n.raiz.classList.toggle('hoy', !!dia.hoy);
-        n.raiz.classList.toggle('pendiente', futuro);
-        n.raiz.classList.toggle('pasado', !futuro);
-        n.raiz.classList.toggle('lleno', dia.estado === 'cerrado' || dia.estado === 'especial');
-        n.raiz.dataset.color = dia.color ?? 'neutro';
+        n.raiz.classList.toggle('pendiente', pendiente);
+        n.raiz.classList.toggle('pasado', !futuro);   // el conector azul llega hasta hoy, también con días especiales más adelante
+        n.raiz.classList.toggle('lleno', dia.estado === 'cerrado' || dia.estado === 'especial' || especialFuturo);
+        n.raiz.dataset.color = (especialFuturo ? dia.especial : dia.color) ?? 'neutro';
         fijar(n.etiqueta, dia.hoy ? 'Hoy' : dia.sigla);
-        fijar(n.hora, textoDia(dia));
+        // los días que faltan llevan un "-" (el "pendiente" queda para hoy, que es el que espera su registro)
+        fijar(n.hora, especialFuturo ? `${dia.emoji} ${dia.etiqueta}`.trim() : pendiente ? '-' : textoDia(dia));
     });
 }
 
@@ -503,9 +517,9 @@ function pintarFilas(r, d) {
 // el alto de la vista semanal (con la semana real, no un peor caso) para que alternar entre el día y la semana no mueva lo de abajo; los estados del día más altos
 // que la semana (si los hay) siguen ampliando la tarjeta. En los demás (lista de filas) el alto sigue al contenido y se anima (ver _animarAlturaCard en tarjeta-fichaje.js).
 const DISENOS = {
-    anillo: { crear: crearAnillo, pintar: pintarAnillo, fija: true, reservaSemana: false },
-    linea: { crear: crearLinea, pintar: pintarLinea, fija: false, reservaSemana: true },
-    filas: { crear: crearFilas, pintar: pintarFilas, fija: false, reservaSemana: false }
+    anillo: { crear: crearAnillo, pintar: pintarAnillo, fija: true, reservaSemana: false, alinear: null },
+    linea: { crear: crearLinea, pintar: pintarLinea, fija: false, reservaSemana: true, alinear: alinearLinea },
+    filas: { crear: crearFilas, pintar: pintarFilas, fija: false, reservaSemana: false, alinear: null }
 };
 
 /** @type {{ id: string, refs: any, refsSemana: any } | null} */
@@ -626,7 +640,10 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
     // la capa que reserva el alto de la semana se dibuja con los datos reales de la semana (en la vista semanal son los mismos que los de la capa visible)
     const refsSemana = _montado?.refsSemana;
     const semana = refsSemana && resumenSemana ? resumenSemana() : null;
-    if (refsSemana && semana) diseno.pintar(refsSemana, semana);
+    if (refsSemana && semana) {
+        diseno.pintar(refsSemana, semana);
+        diseno.alinear?.(refs, refsSemana);
+    }
     if (contar) _contar(id, refs, resumen.trabajado, duracion);
     return true;
 }

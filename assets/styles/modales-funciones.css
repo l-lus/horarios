@@ -757,10 +757,6 @@ body.config-onboarding #theme-toggle-config {
     gap: var(--space-xsm);
 }
 
-.settings-list--tras-lista {
-    margin-top: var(--space-sm);
-}
-
 .orden-card-item.arrastrando {
     opacity: 0;
 }

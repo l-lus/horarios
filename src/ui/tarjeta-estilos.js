@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, superaUnaLinea } from '../core/dom.js';
 import { uiAnimarReubicacion } from './arrastre.js';
 import { Animaciones } from './animaciones.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
@@ -38,6 +38,18 @@ const fijar = (n, texto) => { if (n.textContent !== texto) n.textContent = texto
 const mostrar = (n, visible) => n.classList.toggle('hidden', !visible);
 /** @param {HTMLElement} n @param {string | undefined} tono 'neutro' | 'green' | 'red' | 'gold' */
 const entonar = (n, tono) => { n.dataset.tono = tono || 'neutro'; };
+
+/**
+ * Pone en `n` el primer texto de `textos` que entra en una línea: el completo y, solo si se parte en dos, la siguiente versión (más corta).
+ * Cada llamada parte del texto completo, así que vuelve solo cuando vuelve a entrar (ej. al girar el celular). Con un solo texto equivale a `fijar`.
+ * Necesita el elemento en el documento y visible para medir; sin eso (alto 0) queda el completo.
+ * @param {HTMLElement} n @param {string | string[] | undefined} textos
+ */
+function fijarQueEntre(n, textos) {
+    const versiones = [textos ?? ''].flat();
+    fijar(n, versiones[0]);
+    for (let i = 1; i < versiones.length && superaUnaLinea(n, n.scrollHeight); i++) fijar(n, versiones[i]);
+}
 const _pad2 = n => String(n).padStart(2, '0');
 
 /** Frase del banco de horas de la semana: "▲ 19 min extras esta semana". @param {{ minutos: number, positivo: boolean }} banco */
@@ -303,7 +315,6 @@ function pintarLinea(r, d) {
             // con el registro en curso y el objetivo del día cumplido, el extra es el de hoy (cerrado o en la semana queda "Extra")
             const etiquetaBalance = esRegistro && !d.cerrado && d.balance.etiqueta === 'Extra' ? 'Extra de hoy' : d.balance.etiqueta;
             pintarDato(r.balance, etiquetaBalance, d.balance.texto, d.balance.tono);
-            fijar(r.balance.raiz.querySelector('.est-dato-detalle'), d.balance.detalle ?? '');
         }
         mostrar(r.banco.raiz, !!d.banco);
         if (d.banco) pintarDato(r.banco, 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
@@ -313,6 +324,8 @@ function pintarLinea(r, d) {
             fijar(r.fuera.raiz.querySelector('.est-dato-detalle'), d.tiempoFuera.descuenta ? 'Se descuenta' : 'No se descuenta');
         }
         mostrar(r.mosaicos, !!(d.balance || d.banco || (esRegistro && d.tiempoFuera)));
+        // se mide con los mosaicos ya visibles y con su valor puesto: la tercera línea pasa a la versión corta solo si la completa se parte en dos
+        if (d.balance) fijarQueEntre(r.balance.raiz.querySelector('.est-dato-detalle'), d.balance.detalle);
         return;
     }
 

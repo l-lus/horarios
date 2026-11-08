@@ -150,7 +150,7 @@ function abrirVistaPreviaTarjeta(desdeAjustes = true) {
                 alTocar: toggleAnimacionHint, visible: () => EstiloTarjeta.hintIntegrado()
             },
             { etiqueta: 'Estilo', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta },
-            // siempre visible (no es una subopción de un estilo): el fondo de la tarjeta, el mismo de Ajustes > Apariencia
+            // siempre visible (no es una subopción de un estilo): el fondo de la tarjeta, el mismo de Ajustes > Comportamiento > Personalizar tarjeta de estado
             { etiqueta: 'Fondo', icono: '#icon-landscape', valor: () => _getLabelFondo(getFondoCard()), alTocar: toggleFondoCard }
         ]
     });

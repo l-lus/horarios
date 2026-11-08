@@ -106,7 +106,7 @@ const {
 const {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
     cerrarModalAyuda, refrescarConfigSiVisible, formatearInput
 } = Configuracion;
 
@@ -265,7 +265,6 @@ function _initDatosYConfig(config) {
     actualizarEstadoBotonLogicaCubierto();
     actualizarEstadoBotonObjetivoPorRegistro();
     actualizarEstadoBotonFormatoCortoStats();
-    actualizarEstadoBotonHintIntegrado();
     actualizarEstadoBotonMetricaUso();
     _refrescarFormatoCortoStatsCache();
     actualizarEstadoBotonAplicarHoras();

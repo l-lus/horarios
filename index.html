@@ -795,21 +795,35 @@
                                     </span>
                                     <span id="hint-animaciones-label">Auto</span>
                                 </button>
+                                <button id="btn-personalizar-tarjeta">
+                                    <svg class="icon">
+                                        <use href="#icon-eye" />
+                                    </svg>
+                                    <span class="settings-list-text">
+                                        <span>Personalizar tarjeta de estado</span>
+                                        <span class="settings-list-desc">Estilo, disposición y fondo. Se prueba en vivo sobre la tarjeta</span>
+                                    </span>
+                                    <svg class="icon icon-indicator">
+                                        <use href="#icon-chevron-right" />
+                                    </svg>
+                                </button>
+                                <button id="btn-personalizar-calendario">
+                                    <svg class="icon">
+                                        <use href="#icon-calendar-simple" />
+                                    </svg>
+                                    <span class="settings-list-text">
+                                        <span>Personalizar calendario</span>
+                                        <span class="settings-list-desc">Diseño de los días. Se prueba en vivo sobre el calendario</span>
+                                    </span>
+                                    <svg class="icon icon-indicator">
+                                        <use href="#icon-chevron-right" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                         <div class="config-actions form-group config-onboarding-hide">
                             <label>Calendario</label>
                             <div class="settings-list">
-                                <button id="btn-estilo-calendario">
-                                    <svg class="icon">
-                                        <use href="#icon-calendar-simple" />
-                                    </svg>
-                                    <span class="settings-list-text">
-                                        <span>Estilo del calendario</span>
-                                        <span class="settings-list-desc">Diseño de los días. Se prueba en vivo sobre el calendario</span>
-                                    </span>
-                                    <span id="hint-estilo-calendario-label">Legacy</span>
-                                </button>
                                 <button id="btn-toggle-hover-popup" class="config-solo-pc">
                                     <svg class="icon">
                                         <use href="#icon-calendar-simple" />
@@ -831,66 +845,6 @@
                                             cambia de mes.</span>
                                     </span>
                                     <span class="toggle-switch" aria-hidden="true"></span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="config-actions form-group config-onboarding-hide">
-                            <label>Tarjeta de estado</label>
-                            <div class="settings-list">
-                                <button id="btn-estilo-tarjeta">
-                                    <svg class="icon">
-                                        <use href="#icon-eye" />
-                                    </svg>
-                                    <span class="settings-list-text">
-                                        <span>Estilo de la tarjeta</span>
-                                        <span class="settings-list-desc">Cómo se muestra el registro del día. Se prueba en vivo sobre la tarjeta</span>
-                                    </span>
-                                    <span id="hint-estilo-tarjeta-label">Barra con hitos</span>
-                                </button>
-                                <div class="collapsible" id="hint-animacion-colapsable">
-                                    <div class="collapsible-inner">
-                                        <button id="btn-toggle-hint-animacion">
-                                        <svg class="icon">
-                                            <use href="#icon-eye" />
-                                        </svg>
-                                        <span class="settings-list-text">
-                                            <span>Animación de los hitos</span>
-                                            <span class="settings-list-desc">Desactivado, sobre la barra o sobre el texto del número</span>
-                                        </span>
-                                        <span id="hint-animacion-label">Texto</span>
-                                        </button>
-                                </div>
-                                </div>
-                                <div class="collapsible" id="linea-disposicion-colapsable">
-                                    <div class="collapsible-inner">
-                                        <button id="btn-linea-disposicion" class="config-solo-pc">
-                                            <svg class="icon">
-                                                <use href="#icon-eye" />
-                                            </svg>
-                                            <span class="settings-list-text">
-                                                <span>Disposición (PC)</span>
-                                                <span class="settings-list-desc">Dónde van el tiempo trabajado y los mosaicos Faltan y Banco de horas</span>
-                                            </span>
-                                            <span id="linea-disposicion-label">Arriba</span>
-                                        </button>
-                                        <button id="btn-linea-mosaicos" class="config-solo-movil">
-                                            <svg class="icon">
-                                                <use href="#icon-eye" />
-                                            </svg>
-                                            <span class="settings-list-text">
-                                                <span>Disposición (móvil)</span>
-                                                <span class="settings-list-desc">Faltan y Banco de horas en fila abajo (horizontal) o apilados a la derecha de la línea (vertical)</span>
-                                            </span>
-                                            <span id="linea-mosaicos-label">Vertical</span>
-                                        </button>
-                                    </div>
-                                </div>
-                                <button id="btn-toggle-fondo">
-                                    <svg class="icon">
-                                        <use href="#icon-landscape" />
-                                    </svg>
-                                    <span>Fondo</span>
-                                    <span id="hint-fondo-label">Golden Gate</span>
                                 </button>
                             </div>
                         </div>
@@ -1364,20 +1318,21 @@
                                 semanal. <em>Historial de días laborales</em> permite ver y editar los tramos, es decir,
                                 desde qué fecha rige cada combinación de días.</p>
                             <p><strong>Apariencia:</strong> Formato de tiempo corto (5h 9m en vez
-                                de horas completas) y Reducir animaciones (Auto sigue la configuración del
-                                dispositivo, o se fuerza activada o desactivada).</p>
-                            <p><strong>Calendario:</strong> Estilo del calendario (cómo se dibujan los días con
-                                registro), Auto popup calendario (PC) y Rueda para cambiar de mes (PC). Las opciones de
-                                PC se ocultan en dispositivos táctiles.</p>
-                            <p><strong>Estilo de la tarjeta de estado:</strong> al tocar la opción (o <em>Fondo</em>, el fondo de la tarjeta) se cierra Ajustes y la tarjeta queda a la vista (con scroll si hace falta) con un panel abajo para ir probando los estilos en vivo; <em>Listo</em>, tocar fuera de la tarjeta o el botón Atrás vuelven a Ajustes con el estilo elegido. Lo mismo ocurre con <em>Estilo del calendario</em>, sobre el calendario de Registros. En el panel, cada toque pasa a la opción siguiente.
+                                de horas completas), Reducir animaciones (Auto sigue la configuración del
+                                dispositivo, o se fuerza activada o desactivada), Personalizar tarjeta de estado y
+                                Personalizar calendario (ver más abajo).</p>
+                            <p><strong>Calendario:</strong> Auto popup calendario (PC) y Rueda para cambiar de mes (PC). Las opciones de
+                                PC se ocultan en dispositivos táctiles. El estilo de los días se elige en
+                                <em>Personalizar calendario</em>, en Apariencia.</p>
+                            <p><strong>Personalizar tarjeta de estado:</strong> al tocar la opción (en Apariencia) se cierra Ajustes y la tarjeta queda a la vista (con scroll si hace falta) con un panel abajo para ir probando en vivo su <em>Estilo</em> y su <em>Fondo</em> (y las subopciones de cada estilo); <em>Listo</em>, tocar fuera de la tarjeta o el botón Atrás vuelven a Ajustes con lo elegido. Lo mismo ocurre con <em>Personalizar calendario</em>, que prueba el estilo de los días sobre el calendario de Registros. En el panel, cada toque pasa a la opción siguiente.
                                 <em>Barra con hitos</em> muestra la entrada, la salida estimada y la salida con banco de
                                 horas sobre la barra, o las siglas de cada día en la semana; <em>Clásica</em> es la barra
                                 con esos datos como texto debajo. <em>Anillo</em>, <em>Línea de tiempo</em> y
                                 <em>Lista de filas</em> reemplazan la vista del día por otro diseño
                                 (con la fila o el dato del tiempo fuera cuando lo hay) y también tienen su versión de la
-                                semana, con el total, lo que falta y el resultado de cada día; el Anillo mantiene siempre el mismo alto; Línea de
-                                tiempo y Lista de filas ajustan el alto al contenido con una transición suave. Con <em>Línea de tiempo</em> aparece, en PC, <em>Disposición</em>: con la tarjeta ancha el tiempo
-                                trabajado puede ir arriba de la línea o a su izquierda o derecha, o los mosaicos <em>Faltan y Banco de horas</em> pueden ir apilados a la izquierda o a la derecha; y en el móvil <em>Disposición</em> deja <em>Faltan y Banco de horas</em> en fila abajo (<em>Horizontal</em>) o apilados a la derecha de la línea (<em>Vertical</em>, el predeterminado) (cada opción se muestra solo en el dispositivo que corresponde). Con <em>Barra con hitos</em> aparece <em>Animación de los hitos</em>,
+                                semana, con el total, lo que falta y el resultado de cada día; el Anillo mantiene siempre el mismo alto; la Línea de
+                                tiempo reserva el alto de la vista semanal, así la tarjeta no cambia de tamaño al alternar entre el día y la semana; y la Lista de filas ajusta el alto al contenido con una transición suave. Con <em>Línea de tiempo</em> aparece, en PC, <em>Disposición</em>: con la tarjeta ancha el tiempo
+                                trabajado puede ir arriba de la línea o a su izquierda o derecha, o los mosaicos <em>Faltan y Banco de horas</em> pueden ir apilados a la izquierda o a la derecha; y en el móvil <em>Disposición</em> deja <em>Faltan y Banco de horas</em> en fila abajo (<em>Horizontal</em>) o apilados a la derecha de la línea (<em>Vertical</em>, el predeterminado) (cada opción se muestra solo en el dispositivo que corresponde). Con <em>Barra con hitos</em> aparece <em>Animación</em>,
                                 que cambia entre Desactivado —sin ciclo automático al tocar el número—, Barra —cada
                                 hito con su descripción en la barra— y Texto —el nombre del hito, como "Entrada 08:30",
                                 en el número grande—.</p>

@@ -37,8 +37,6 @@ function setFondoCard(valor) {
 // Al restaurar un respaldo el fondo cambia desde el servicio: se relee del almacenamiento y se redibuja
 EventosApp.on('config:fondo-card', () => {
     _fondoCard = Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, FONDO_CARD_POR_DEFECTO, true);
-    const lbl = $('hint-fondo-label');
-    if (lbl) lbl.textContent = _getLabelFondo(_fondoCard);
     const bg = $('stats-card-bg');
     if (bg && bg.dataset.estado) actualizarFondoCard(bg.dataset.estado);
 });
@@ -48,8 +46,6 @@ function toggleFondoCard() {
     const idx = ids.indexOf(_fondoCard);
     _fondoCard = ids[(idx + 1) % ids.length];
     Almacenamiento.setItem(STORAGE_KEYS.FONDO_CARD, _fondoCard, true);
-    const btn = $('hint-fondo-label');
-    if (btn) btn.textContent = _getLabelFondo(_fondoCard);
     const bg = $('stats-card-bg');
     if (bg && bg.dataset.estado) actualizarFondoCard(bg.dataset.estado);
 }

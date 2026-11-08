@@ -1,6 +1,6 @@
 import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $, setColapsable, alClic } from '../core/dom.js';
+import { $, alClic } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
@@ -108,33 +108,9 @@ function _modoAnimHint() {
     return Preferencias.DESC_HITOS_NUMERO.get() ? 'texto' : 'barra';
 }
 
-function actualizarEstadoBotonHintIntegrado(animar = false) {
-    const activo = EstiloTarjeta.hintIntegrado();
-    const lblEstilo = $('hint-estilo-tarjeta-label');
-    if (lblEstilo) lblEstilo.textContent = EstiloTarjeta.etiqueta();
-    // la animación solo tiene sentido con la barra con hitos: con otro estilo la opción se pliega (sin animar al cargar o al restaurar un respaldo)
-    // si ya está en ese estado no se toca: el evento 'config:hint-integrado' que emite el toggle vuelve acá sin animar y cortaría la transición en curso
-    const colapsable = $('hint-animacion-colapsable');
-    if (colapsable && colapsable.classList.contains('expanded') !== activo) setColapsable(colapsable, activo, { animar });
-    const lbl = $('hint-animacion-label');
-    if (lbl) lbl.textContent = _ETIQUETAS_ANIM_HINT[_modoAnimHint()];
-    // la disposición del tiempo trabajado es una subopción del estilo "Línea de tiempo"
-    const lineaActiva = EstiloTarjeta.actual() === 'linea';
-    const colapsableLinea = $('linea-disposicion-colapsable');
-    if (colapsableLinea && colapsableLinea.classList.contains('expanded') !== lineaActiva) setColapsable(colapsableLinea, lineaActiva, { animar });
-    const lblLinea = $('linea-disposicion-label');
-    if (lblLinea) lblLinea.textContent = EstiloTarjeta.etiquetaDisposicion();
-    const lblMosaicos = $('linea-mosaicos-label');
-    if (lblMosaicos) lblMosaicos.textContent = EstiloTarjeta.etiquetaMosaicos();
-}
-
-// Al restaurar un respaldo o bajar de Gist cambia la opción: se actualiza la etiqueta
-EventosApp.on('config:hint-integrado', () => actualizarEstadoBotonHintIntegrado());
-
 // Cada toque pasa al estilo siguiente y redibuja la tarjeta
 function toggleEstiloTarjeta() {
     EstiloTarjeta.siguiente();
-    actualizarEstadoBotonHintIntegrado(true);
     EventosApp.emit('config:hint-integrado');
     // todo el contenido de la tarjeta se funde del diseño anterior al nuevo, igual que al pasar de día a semana (y el alto se anima, ver _animarAlturaCard)
     EstadoApp._notify().cambiarConFundido(() => actualizarUI());
@@ -207,19 +183,16 @@ const _esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matc
 // Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
 function toggleDisposicionLinea() {
     TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteDisposicion());   // lo que se mueve en la tarjeta viaja a su lugar nuevo
-    actualizarEstadoBotonHintIntegrado();
 }
 
 function toggleMosaicosLinea() {
     TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteMosaicos());
-    actualizarEstadoBotonHintIntegrado();
 }
 
 function toggleAnimacionHint() {
     const siguiente = _MODOS_ANIM_HINT[(_MODOS_ANIM_HINT.indexOf(_modoAnimHint()) + 1) % _MODOS_ANIM_HINT.length];
     Preferencias.CICLO_HINT_AUTO.set(siguiente !== 'off');
     if (siguiente !== 'off') Preferencias.DESC_HITOS_NUMERO.set(siguiente === 'texto');
-    actualizarEstadoBotonHintIntegrado();
     EventosApp.emit('config:hint-integrado');
     actualizarUI();
 }
@@ -309,16 +282,10 @@ function toggleReducirAnimaciones() {
     actualizarHintAnimaciones();
 }
 
-function actualizarHintEstiloCalendario() {
-    const lbl = $('hint-estilo-calendario-label');
-    if (lbl) lbl.textContent = EstiloCalendario.etiqueta();
-}
-
 // Cada toque pasa al estilo siguiente; el CSS reacciona solo al atributo de <html>, así que el calendario cambia al instante
 function toggleEstiloCalendario() {
     // los estilos miden distinto (el alto de las celdas cambia): la tarjeta de Registros acompaña el cambio con una transición de alto
     Animaciones._animarAlturaCambio($('card-historico'), () => EstiloCalendario.siguiente());
-    actualizarHintEstiloCalendario();
 }
 
 function _refrescarTogglesConfig() {
@@ -327,7 +294,6 @@ function _refrescarTogglesConfig() {
     actualizarEstadoBotonObjetivoPorRegistro();
     actualizarEstadoBotonAplicarHoras();
     actualizarHintAnimaciones();
-    actualizarHintEstiloCalendario();
     // Un respaldo restaurado puede cambiarlos sin recargar la app
     actualizarEstadoBotonFormatoCortoStats();
     actualizarEstadoBotonHoverPopup();
@@ -350,8 +316,6 @@ function _precargarCamposConfig() {
     actualizarFeedbackConfig();
     _refrescarTogglesConfig();
     actualizarEstadoBotonNotificaciones();
-    const lbl = $('hint-fondo-label');
-    if (lbl) lbl.textContent = _getLabelFondo(getFondoCard());
 }
 
 function mostrarconfig() {
@@ -458,15 +422,12 @@ function bindEventos() {
         'btn-toggle-ignorar-tf': () => toggleIgnorarTiempoFuera(),
         'btn-toggle-hover-popup': () => toggleHoverPopupCalendario(),
         'btn-toggle-animaciones': () => toggleReducirAnimaciones(),
-        'btn-estilo-calendario': () => abrirVistaPreviaCalendario(),
+        // las dos abren la vista previa en vivo: los estilos, subopciones y el fondo se eligen ahí
+        'btn-personalizar-tarjeta': () => abrirVistaPreviaTarjeta(),
+        'btn-personalizar-calendario': () => abrirVistaPreviaCalendario(),
         'btn-toggle-logica-cubierto': () => toggleLogicaCubierto(),
         'btn-toggle-objetivo-registro': () => toggleObjetivoPorRegistro(),
         'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
-        'btn-estilo-tarjeta': () => abrirVistaPreviaTarjeta(),
-        'btn-toggle-fondo': () => abrirVistaPreviaTarjeta(),   // el fondo también se prueba en vivo sobre la tarjeta
-        'btn-linea-disposicion': () => toggleDisposicionLinea(),
-        'btn-linea-mosaicos': () => toggleMosaicosLinea(),
-        'btn-toggle-hint-animacion': () => toggleAnimacionHint(),
         'btn-toggle-metrica-uso': () => toggleMetricaUso(),
         'btn-toggle-formato-corto-stats': () => toggleFormatoCortoStats(),
         'btn-aplicar-horas-todos': () => aplicarHorasConfiguradasATodos(),
@@ -501,7 +462,7 @@ function bindEventos() {
 export const Configuracion = {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
     cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
     pressHoldObjetivoEdicion, formatearInput, bindEventos
 };

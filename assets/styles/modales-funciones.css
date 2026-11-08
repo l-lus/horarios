@@ -314,7 +314,7 @@
     border-radius: var(--radius-md);
 }
 
-#modal-config .config-actions button>span:not(.toggle-switch, #hint-fondo-label, #hint-animaciones-label, #hint-estilo-calendario-label, #hint-animacion-label, #hint-estilo-tarjeta-label, #linea-disposicion-label, #linea-mosaicos-label),
+#modal-config .config-actions button>span:not(.toggle-switch, #hint-animaciones-label),
 .drag-handle>span:not(.toggle-switch),
 #modal-reporte-secciones .config-actions button>span:not(.toggle-switch),
 #modal-notificaciones .form-group button>span:not(.toggle-switch) {
@@ -322,13 +322,7 @@
     min-width: 0;   /* permite que el texto se parta en vez de empujar al valor */
 }
 
-#hint-fondo-label,
-#hint-animaciones-label,
-#hint-estilo-calendario-label,
-#hint-animacion-label,
-#hint-estilo-tarjeta-label,
-#linea-disposicion-label,
-#linea-mosaicos-label {
+#hint-animaciones-label {
     /* Proporción 75 / 25: el valor ocupa siempre el 25 % del ancho de la fila (igual en móvil y en PC)
        y el texto descriptivo se queda con el resto. Si el valor no entra, se parte en líneas. */
     flex: 0 0 25%;

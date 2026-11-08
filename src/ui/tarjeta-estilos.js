@@ -300,7 +300,9 @@ function pintarLinea(r, d) {
         if (esRegistro) pintarNodos(r, d); else pintarNodosDias(r, d.dias, d.abierta);
         mostrar(r.balance.raiz, !!d.balance);
         if (d.balance) {
-            pintarDato(r.balance, d.balance.etiqueta, d.balance.texto, d.balance.tono);
+            // con el registro en curso y el objetivo del día cumplido, el extra es el de hoy (cerrado o en la semana queda "Extra")
+            const etiquetaBalance = esRegistro && !d.cerrado && d.balance.etiqueta === 'Extra' ? 'Extra de hoy' : d.balance.etiqueta;
+            pintarDato(r.balance, etiquetaBalance, d.balance.texto, d.balance.tono);
             fijar(r.balance.raiz.querySelector('.est-dato-detalle'), d.balance.detalle ?? '');
         }
         mostrar(r.banco.raiz, !!d.banco);
@@ -484,15 +486,16 @@ function pintarFilas(r, d) {
 }
 
 // ─── Montaje ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// `fija`: el alto de la tarjeta no varía casi nada entre estados (el anillo), así que se reserva el del más alto. En los demás (línea de tiempo y
-// lista de filas el día, la semana y cada estado miden muy distinto) el alto sigue al contenido y se anima (ver _animarAlturaCard en tarjeta-fichaje.js).
+// `fija`: el alto de la tarjeta no varía casi nada entre estados (el anillo), así que se reserva el del más alto. `reservaSemana` (la línea de tiempo): se reserva
+// el alto de la vista semanal (con la semana real, no un peor caso) para que alternar entre el día y la semana no mueva lo de abajo; los estados del día más altos
+// que la semana (si los hay) siguen ampliando la tarjeta. En los demás (lista de filas) el alto sigue al contenido y se anima (ver _animarAlturaCard en tarjeta-fichaje.js).
 const DISENOS = {
-    anillo: { crear: crearAnillo, pintar: pintarAnillo, fija: true },
-    linea: { crear: crearLinea, pintar: pintarLinea, fija: false },
-    filas: { crear: crearFilas, pintar: pintarFilas, fija: false }
+    anillo: { crear: crearAnillo, pintar: pintarAnillo, fija: true, reservaSemana: false },
+    linea: { crear: crearLinea, pintar: pintarLinea, fija: false, reservaSemana: true },
+    filas: { crear: crearFilas, pintar: pintarFilas, fija: false, reservaSemana: false }
 };
 
-/** @type {{ id: string, refs: any } | null} */
+/** @type {{ id: string, refs: any, refsSemana: any } | null} */
 let _montado = null;
 
 // Número grande de cada diseño (lo que cuenta de 0 al valor en la primera carga, como el número de la barra en los estilos clásicos)
@@ -542,39 +545,54 @@ function _sinAvance(d) {
 /**
  * Arma el diseño dentro de #stats-estilo. Los de alto fijo suman capas de medida: copias ocultas del mismo diseño dibujadas con el peor caso de cada estado
  * (registro, sin registro, día especial y semana). Todas ocupan la misma celda de una cuadrícula, así la tarjeta mide siempre lo que el más alto.
- * @param {HTMLElement} host @param {string} id @param {{ crear: () => any, pintar: (r: any, d: any) => void, fija: boolean }} diseno
+ * Los de `reservaSemana` suman una sola capa de medida, con la semana real (la dibuja `actualizar`): la tarjeta nunca es más baja que la vista semanal.
+ * @param {HTMLElement} host @param {string} id @param {{ crear: () => any, pintar: (r: any, d: any) => void, fija: boolean, reservaSemana: boolean }} diseno
  */
 function _montar(host, id, diseno) {
     host.replaceChildren();
     const refs = diseno.crear();
-    if (!diseno.fija) {
+    let refsSemana = null;
+    if (!diseno.fija && !diseno.reservaSemana) {
         host.append(refs.raiz);
     } else {
         const capas = el('div', 'est-capas');
         const visible = el('div', 'est-capa');
         visible.append(refs.raiz);
         capas.append(visible);
-        for (const medida of resumenesDeMedida()) {
+        const capaMedida = () => {
             const capa = el('div', 'est-capa est-capa--medida');
             capa.setAttribute('aria-hidden', 'true');
             capa.setAttribute('inert', '');
-            const r = diseno.crear();
-            diseno.pintar(r, medida);
-            capa.append(r.raiz);
+            return capa;
+        };
+        if (diseno.fija) {
+            for (const medida of resumenesDeMedida()) {
+                const capa = capaMedida();
+                const r = diseno.crear();
+                diseno.pintar(r, medida);
+                capa.append(r.raiz);
+                capas.append(capa);
+            }
+        }
+        if (diseno.reservaSemana) {
+            const capa = capaMedida();
+            refsSemana = diseno.crear();
+            capa.append(refsSemana.raiz);
             capas.append(capa);
         }
         host.append(capas);
     }
-    _montado = { id, refs };
+    _montado = { id, refs, refsSemana };
 }
 
 /**
  * Dibuja el resumen del día o de la semana con el diseño del estilo elegido. Al cambiar de estilo se reconstruye el DOM; si el estilo no es propio
  * (o no hay resumen) deja el contenedor vacío y devuelve false: la tarjeta usa entonces la barra de siempre.
  * Con `conteoInicial` (la carga de la página, igual que en los estilos clásicos) el aro, la regla y los segmentos crecen de cero y el número cuenta de 0 a su valor.
- * @param {any} resumen @param {{ conteoInicial?: boolean, duracion?: number }} [opciones] duracion: la del conteo en ms
+ * `resumenSemana` (solo lo pide el diseño con `reservaSemana`): el resumen de la vista semanal, para que la capa de medida reserve su alto.
+ * @param {any} resumen @param {{ conteoInicial?: boolean, duracion?: number, resumenSemana?: () => any }} [opciones] duracion: la del conteo en ms
  */
-function actualizar(resumen, { conteoInicial = false, duracion = 0 } = {}) {
+function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSemana } = {}) {
     const host = $('stats-estilo');
     _cancelarConteo();
     if (!host) return false;
@@ -592,6 +610,10 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0 } = {}) {
         void host.offsetWidth;   // el estado vacío tiene que estar aplicado para que el siguiente dibujo transicione hacia el real
     }
     diseno.pintar(refs, resumen);
+    // la capa que reserva el alto de la semana se dibuja con los datos reales de la semana (en la vista semanal son los mismos que los de la capa visible)
+    const refsSemana = _montado?.refsSemana;
+    const semana = refsSemana && resumenSemana ? resumenSemana() : null;
+    if (refsSemana && semana) diseno.pintar(refsSemana, semana);
     if (contar) _contar(id, refs, resumen.trabajado, duracion);
     return true;
 }
@@ -603,7 +625,8 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0 } = {}) {
  */
 function reubicar(cambiar) {
     const host = $('stats-estilo');
-    const obtener = () => host ? [.../** @type {NodeListOf<HTMLElement>} */ (host.querySelectorAll('.est-linea-cabecera, .est-linea-cuerpo, .est-mosaicos, .est-linea-nota'))] : [];
+    // sin las copias de la capa de medida (ocultas): solo viaja lo que se ve
+    const obtener = () => host ? [.../** @type {NodeListOf<HTMLElement>} */ (host.querySelectorAll('.est-linea-cabecera, .est-linea-cuerpo, .est-mosaicos, .est-linea-nota'))].filter(n => !n.closest('.est-capa--medida')) : [];
     Animaciones._animarAlturaCambio($('stats-card'), () => uiAnimarReubicacion(obtener, (/** @type {HTMLElement} */ el) => el.className.split(' ')[0], cambiar));
 }
 

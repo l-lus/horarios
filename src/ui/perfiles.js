@@ -200,13 +200,6 @@ async function eliminarPerfilDesdeEditor() {
 function bindEventos() {
     document.querySelector('.header-profile-btn')?.addEventListener('click', () => abrirSelectorPerfiles());
 
-    // En móvil, con la píldora flotante el botón de perfil está oculto: tocar la píldora abre el selector
-    const movilCompacto = window.matchMedia('(max-width: 767px)');
-    document.querySelector('.header')?.addEventListener('click', (e) => {
-        const header = /** @type {HTMLElement} */ (e.currentTarget);
-        if (header.classList.contains('scrolled') && movilCompacto.matches) abrirSelectorPerfiles();
-    });
-
     document.querySelector('#modal-selector-perfiles .btn-cancel')?.addEventListener('click', () => cerrarSelectorPerfiles());
     $('btn-crear-perfil')?.addEventListener('click', () => crearPerfilDesdeSelector());
     $('btn-toggle-agregar-perfil')?.addEventListener('click', () => {

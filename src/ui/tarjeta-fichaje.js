@@ -507,13 +507,15 @@ function bindEventos() {
         if (!header || !statsCard) return;
 
         let observer = null;
+        // En móvil el header no se contrae al bajar: queda siempre como arriba del todo
+        const movil = window.matchMedia('(max-width: 767px)');
 
         const crearObserver = () => {
             if (observer) observer.disconnect();
             const headerH = header.offsetHeight;
             observer = new IntersectionObserver(
                 ([entry]) => {
-                    header.classList.toggle('scrolled', !entry.isIntersecting);
+                    header.classList.toggle('scrolled', !movil.matches && !entry.isIntersecting);
                 },
                 { rootMargin: `-${headerH}px 0px 0px 0px`, threshold: 0 }
             );
@@ -521,6 +523,7 @@ function bindEventos() {
         };
 
         crearObserver();
+        movil.addEventListener('change', crearObserver);   // al cruzar el corte (rotar, redimensionar) se reevalúa en el acto
         let resizeTimer = null;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);

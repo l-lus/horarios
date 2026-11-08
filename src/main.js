@@ -23,6 +23,9 @@ import { RecargaGesto } from './ui/recarga-gesto.js';
 InstaladorPWA.registrarServiceWorker();
 OrquestadorUI.init();
 
+// Sin zoom en móviles: el meta viewport lo bloquea en Android, pero iOS Safari ignora user-scalable=no y dispara gesturestart al pellizcar
+document.addEventListener('gesturestart', e => e.preventDefault());
+
 function _mostrarVersion() {
     const el = document.querySelector('.version-text');
     if (el) el.textContent = `${APP_NOMBRE}-${APP_VERSION}`;

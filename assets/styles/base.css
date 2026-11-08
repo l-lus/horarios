@@ -218,7 +218,7 @@ html.entrada-pagina .container {
     transform-origin: right center;
 }
 
-/* Pantallas anchas: la píldora ocupa el 30% centrado (con un mínimo de 340px para que entren el título y las acciones)
+/* La contracción solo existe en pantallas anchas (en móvil el header no cambia al hacer scroll). La píldora ocupa el 30% centrado (con un mínimo de 340px para que entren el título y las acciones)
    y el contenido se recoge hacia dentro. Solo cambia el padding horizontal: la altura del header no varía */
 @media (min-width: 768px) {
     .header {
@@ -227,45 +227,6 @@ html.entrada-pagina .container {
 
     .header.scrolled {
         padding-inline: calc(min(35%, calc(50% - 170px)) + var(--space-sm));
-    }
-}
-
-/* Móvil: la píldora ocupa el 40%, pero solo muestra el título centrado.
-   Las acciones (instalar y perfil) salen del flujo y se desvanecen en su sitio; el título se centra
-   con margin-left:50% + translateX(-50%), que sí se pueden animar (justify-content no) */
-@media (max-width: 767px) {
-    .header {
-        --header-inset-x: 30%;
-    }
-
-    .header.scrolled {
-        padding-inline: calc(30% + var(--space-sm));
-    }
-
-    /* Solo la píldora recibe toques (el resto del ancho del header deja pasar los clics al contenido) */
-    .header.scrolled {
-        pointer-events: none;
-    }
-
-    .header.scrolled::before {
-        pointer-events: auto;
-        cursor: pointer;
-    }
-
-    .header.scrolled h1 {
-        margin-left: 50%;
-        transform: translateX(-50%) scale(0.95);
-        transform-origin: center;
-    }
-
-    .header.scrolled .header-actions {
-        position: absolute;
-        right: var(--space-smd);
-        top: 50%;
-        transform: translateY(-50%) scale(0.95);
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
     }
 }
 

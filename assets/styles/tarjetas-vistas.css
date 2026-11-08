@@ -2254,7 +2254,7 @@
     position: absolute;
     inset: -3px;
     box-sizing: border-box;
-    border: 2px solid var(--c-blue);
+    border: 2px solid var(--est-color);
     border-radius: 50%;
     opacity: 0;
     animation: punto-linea-onda var(--dur-ambiente) ease-out infinite;
@@ -2271,17 +2271,24 @@
 .est-nodo--entrada { --nodo: var(--c-blue); }
 .est-nodo--entrada .est-nodo-punto { background: var(--c-blue); }
 
-.est-nodo--ahora { --nodo: var(--c-blue); }
-.est-nodo--ahora .est-nodo-etiqueta { color: var(--c-blue); font-weight: var(--fw-semibold); }
+.est-nodo--ahora { --nodo: var(--est-color); }
+.est-nodo--ahora .est-nodo-etiqueta { color: var(--est-color); font-weight: var(--fw-semibold); }
 
-/* El indicador de hoy ("Ahora" en la vista diaria, el día de hoy en la semana) es un poco más grande: el remate y el texto. El remate crece con márgenes negativos, así su
-   casilla sigue midiendo lo mismo y el conector, el alto de los nodos y la alineación del resto no se mueven. */
-.est-nodo:is(.est-nodo--ahora, .est-nodo--dia.hoy) { font-size: var(--text-base); }
+/* El indicador de hoy ("Ahora" en la vista diaria, el día de hoy en la semana) va en un badge con el color del estado, como los mosaicos: abarca el remate y el texto.
+   El fondo es un pseudo-elemento que sobresale a la izquierda, así el remate, el conector y la alineación del resto de los nodos no se mueven, y la casilla mide lo mismo. */
+.est-nodo:is(.est-nodo--ahora, .est-nodo--dia.hoy) {
+    align-self: flex-start;   /* el badge abarca solo su contenido, no toda la fila */
+    padding-right: var(--space-sm);
+    isolation: isolate;
+}
 
-.est-nodo:is(.est-nodo--ahora, .est-nodo--dia.hoy) .est-nodo-punto {
-    width: 18px;
-    height: 18px;
-    margin: -3px;
+.est-nodo:is(.est-nodo--ahora, .est-nodo--dia.hoy)::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 1px 0 1px calc(-1 * var(--space-sm));
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--est-color) 12%, transparent);
 }
 
 .est-nodo--banco { --nodo: var(--tono); }
@@ -2491,7 +2498,7 @@
 .est-nodo--dia .est-nodo-etiqueta { min-width: 2.4rem; text-transform: capitalize; }
 .est-nodo--dia.lleno .est-nodo-punto { background: var(--est-color); }
 .est-nodo--dia.hoy .est-nodo-punto { background: var(--bg-card); }
-.est-nodo--dia.hoy .est-nodo-etiqueta { color: var(--c-blue); font-weight: var(--fw-semibold); }
+.est-nodo--dia.hoy .est-nodo-etiqueta { color: var(--est-color); font-weight: var(--fw-semibold); }
 .est-nodo--dia.pendiente { --nodo: var(--text-muted); }
 .est-nodo--dia .est-nodo-hora { color: var(--est-color); }
 .est-nodo--dia.pendiente .est-nodo-hora { color: var(--text-muted); font-weight: var(--fw-normal); }

@@ -441,7 +441,8 @@ function _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre, aclaracion =
     if (falta > 0) {
         return cerrado
             ? { etiqueta: 'Faltó', texto: duracionCompacta(falta), tono: colorCierre === 'gold' ? 'gold' : 'red', ...(colorCierre === 'gold' && { detalle: 'Cubierto' }) }
-            : { etiqueta: 'Faltan', texto: duracionCompacta(falta), tono: 'neutro', ...detalle };
+            // con faltante en un día abierto la única aclaración posible es "pero te podés ir" (el saldo lo cubre): el mosaico lleva el color de "cubierto", como el de un día cerrado
+            : { etiqueta: 'Faltan', texto: duracionCompacta(falta), tono: detalle.detalle ? 'gold' : 'neutro', ...detalle };
     }
     return falta === 0
         ? { etiqueta: 'Objetivo', texto: 'Cumplido', tono: 'green', ...detalle }

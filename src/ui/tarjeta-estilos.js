@@ -387,6 +387,8 @@ function pintarNodos(r, d) {
         fijar(nodo.hora, horas[hito.tipo] ?? '');
         if (hito.tipo === 'salida') fijar(nodo.etiqueta, d.cerrado ? 'Salida' : 'Salida estimada');
         if (hito.tipo === 'banco') entonar(nodo.raiz, tonoBanco(d.banco));
+        // el badge de "Ahora" lleva el color del estado del día (el mismo del anillo y la nota)
+        if (hito.tipo === 'ahora') nodo.raiz.dataset.color = d.color ?? 'blue';
     });
 }
 

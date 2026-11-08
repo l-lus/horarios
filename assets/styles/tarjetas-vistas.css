@@ -1933,8 +1933,8 @@
 .est-anillo-aro {
     position: relative;
     flex: none;
-    width: 96px;
-    height: 96px;
+    width: 100%;   /* el aro ocupa todo el ancho de su columna; el margen mínimo lo da el radio del trazo dentro del viewBox */
+    aspect-ratio: 1;
 }
 
 .est-anillo-svg {
@@ -1980,18 +1980,18 @@
 }
 
 .est-anillo-valor {
-    font-size: var(--text-lg);
+    font-size: clamp(1.9rem, 12cqw, 3rem);   /* crece con la tarjeta (cqw: ancho de #stats-estilo) para acompañar al aro */
     font-weight: var(--fw-bold);
     font-variant-numeric: tabular-nums;
 }
 
 .est-anillo[data-tipo="espera"] .est-anillo-valor,
 .est-anillo[data-tipo="especial"] .est-anillo-valor {
-    font-size: 2.2rem;
+    font-size: clamp(3rem, 20cqw, 4.5rem);
 }
 
 .est-anillo-unidad {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     color: var(--text-muted);
 }
 
@@ -2016,8 +2016,6 @@
 
 .est-anillo[data-tipo="espera"] .est-anillo-mensaje { color: var(--text-muted); }
 
-.est-dato--vertical .est-dato-valor { font-size: var(--text-lg); }
-
 .est-anillo-pie {
     display: grid;
     grid-auto-flow: column;
@@ -2025,11 +2023,10 @@
     gap: var(--space-sm);
 }
 
-/* El aro ocupa la primera mitad y Faltan / Banco de horas empiezan justo en la mitad (en el móvil y en la PC); el pie usa cuatro columnas iguales con el mismo espacio,
-   así la tercera ("Con banco") arranca en la misma vertical. */
+/* El aro ocupa el 60 % y los mosaicos (Faltan / Banco de horas) el 40 % restante, en el móvil y en la PC; el pie usa cuatro columnas iguales. */
 .est-anillo-principal {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
     gap: var(--space-sm);
 }
 

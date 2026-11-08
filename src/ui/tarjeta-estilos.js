@@ -164,8 +164,8 @@ function crearAnillo() {
     const datos = el('div', 'est-anillo-datos');
     const mensaje = el('div', 'est-anillo-mensaje');
     const sub = el('div', 'est-anillo-sub');
-    const balance = crearDato('', 'est-dato est-dato--vertical');
-    const banco = crearDato('Banco de horas', 'est-dato est-dato--vertical');
+    const balance = crearDato('', 'est-dato est-mosaico');
+    const banco = crearDato('Banco de horas', 'est-dato est-mosaico');
     datos.append(mensaje, sub, balance.raiz, banco.raiz);
     principal.append(aro, datos);
 

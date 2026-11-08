@@ -24,6 +24,8 @@ const DEMORA_APERTURA_MS = 160;
 /** Demora entre el popstate de la vista previa y lo que sigue (reabrir Ajustes): el gestor de modales ignora los popstate durante unos ms. */
 const DEMORA_CIERRE_MS = 90;
 const MARGEN_PX = 12;
+/** Si la tarjeta es más alta que el espacio libre pero su borde superior ya se ve, alinearla arriba solo vale la pena si hay que mover más que esto. */
+const TOLERANCIA_ALINEAR_PX = 40;
 
 /** @type {Record<string, () => (() => void) | void>} */
 const _preparadores = {};
@@ -139,16 +141,23 @@ function _refrescar(animar = true) {
     else aplicar();
 }
 
-/** Deja la tarjeta entera entre el encabezado y el panel: si ya se ve no se mueve; si es más alta que el espacio libre se alinea arriba. */
+/**
+ * Deja la tarjeta entera entre el encabezado y el panel: si ya se ve no se mueve; si es más alta que el espacio libre se alinea arriba,
+ * salvo que su borde superior ya se vea y falten pocos píxeles (en una pantalla grande la página casi no se desplaza: el espacio que se reserva abajo para el
+ * panel la hacía "saltar" unos píxeles, y al cerrar volvía sola cuando desaparecía esa reserva).
+ */
 function _llevarAVista() {
     if (!_activa) return;
     const encabezado = document.querySelector('.header');
-    const libreSup = (encabezado ? encabezado.getBoundingClientRect().bottom : 0) + MARGEN_PX;
+    const bordeEncabezado = encabezado ? encabezado.getBoundingClientRect().bottom : 0;
+    const libreSup = bordeEncabezado + MARGEN_PX;
     const libreInf = window.innerHeight - _alturaReservada() - MARGEN_PX;
     const r = _activa.objetivo.getBoundingClientRect();
     let delta = 0;
-    if (r.height > libreInf - libreSup || r.top < libreSup) delta = r.top - libreSup;
-    else if (r.bottom > libreInf) delta = r.bottom - libreInf;
+    if (r.height > libreInf - libreSup || r.top < libreSup) {
+        delta = r.top - libreSup;
+        if (r.top >= bordeEncabezado && Math.abs(delta) <= TOLERANCIA_ALINEAR_PX) delta = 0;
+    } else if (r.bottom > libreInf) delta = r.bottom - libreInf;
     if (Math.abs(delta) > 1) window.scrollBy({ top: delta, behavior: Movimiento.scrollBehavior() });
 }
 

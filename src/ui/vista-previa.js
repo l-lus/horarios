@@ -142,7 +142,7 @@ function _refrescar(animar = true) {
 }
 
 /**
- * Deja la tarjeta entera entre el encabezado y el panel: si ya se ve no se mueve; si es más alta que el espacio libre se alinea arriba,
+ * Deja la tarjeta entera entre el encabezado y el panel: si ya se ve entera no se mueve (ni unos píxeles); si es más alta que el espacio libre se alinea arriba,
  * salvo que su borde superior ya se vea y falten pocos píxeles (en una pantalla grande la página casi no se desplaza: el espacio que se reserva abajo para el
  * panel la hacía "saltar" unos píxeles, y al cerrar volvía sola cuando desaparecía esa reserva).
  */
@@ -153,6 +153,11 @@ function _llevarAVista() {
     const libreSup = bordeEncabezado + MARGEN_PX;
     const libreInf = window.innerHeight - _alturaReservada() - MARGEN_PX;
     const r = _activa.objetivo.getBoundingClientRect();
+    // lo que se ve de verdad: entre el encabezado y el panel tal como está ahora (sin los márgenes ni la reserva del peor caso, que solo sirven para decidir cuánto
+    // desplazar cuando hace falta). Si la tarjeta ya cae entera ahí, no hay nada que acercar: la página se queda donde está
+    const panel = $('vista-previa-panel');
+    const finVisible = window.innerHeight - (panel ? panel.offsetHeight : 0);
+    if (r.top >= bordeEncabezado && r.bottom <= finVisible) return;
     let delta = 0;
     if (r.height > libreInf - libreSup || r.top < libreSup) {
         delta = r.top - libreSup;

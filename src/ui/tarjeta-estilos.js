@@ -45,8 +45,12 @@ const entonar = (n, tono) => { n.dataset.tono = tono || 'neutro'; };
  * Necesita el elemento en el documento y visible para medir; sin eso (alto 0) queda el completo.
  * @param {HTMLElement} n @param {string | string[] | undefined} textos
  */
+/** Versiones de cada texto "que entre" (de la más completa a la más corta): hace falta recordarlas para volver a elegir cuando cambia el ancho del lugar donde está. @type {WeakMap<HTMLElement, string[]>} */
+const _versionesQueEntre = new WeakMap();
+
 function fijarQueEntre(n, textos) {
     const versiones = [textos ?? ''].flat();
+    _versionesQueEntre.set(n, versiones);
     fijar(n, versiones[0]);
     for (let i = 1; i < versiones.length && superaUnaLinea(n, n.scrollHeight); i++) fijar(n, versiones[i]);
 }
@@ -331,11 +335,13 @@ function pintarLinea(r, d) {
         mostrar(r.fuera.raiz, esRegistro && !!d.tiempoFuera);
         if (esRegistro && d.tiempoFuera) {
             pintarDato(r.fuera, d.tiempoFuera.corriendo ? 'Fuera (en curso)' : 'Tiempo fuera', d.tiempoFuera.texto);
-            fijar(r.fuera.raiz.querySelector('.est-dato-detalle'), d.tiempoFuera.descuenta ? 'Se descuenta' : 'No se descuenta');
         }
         mostrar(r.mosaicos, !!(d.balance || d.banco || (esRegistro && d.tiempoFuera)));
         // se mide con los mosaicos ya visibles y con su valor puesto: la tercera línea pasa a la versión corta solo si la completa se parte en dos
         if (d.balance) fijarQueEntre(r.balance.raiz.querySelector('.est-dato-detalle'), d.balance.detalle);
+        if (esRegistro && d.tiempoFuera) {
+            fijarQueEntre(r.fuera.raiz.querySelector('.est-dato-detalle'), d.tiempoFuera.descuenta ? ['Se descuenta', 'Descuenta'] : ['No se descuenta', 'No descuenta']);
+        }
         return;
     }
 
@@ -612,6 +618,9 @@ function _montar(host, id, diseno) {
         host.append(capas);
     }
     _montado = { id, refs, refsSemana };
+    _anchoObservado = 0;
+    _observadorAncho?.disconnect();
+    _observadorAncho?.observe(host);
 }
 
 /**
@@ -651,6 +660,28 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
 }
 
 /**
+ * Vuelve a elegir qué versión de cada tercera línea ("Pero te podés ir" / "Te podés ir", "No se descuenta" / "No descuenta") entra en su mosaico.
+ * Se usa cuando cambia el ancho del lugar donde están sin que se redibuje la tarjeta: al cambiar la disposición o al rotar/redimensionar.
+ */
+function reajustarDetalles() {
+    const raiz = _montado?.id === 'linea' ? _montado.refs?.raiz : null;
+    if (!raiz) return;
+    raiz.querySelectorAll('.est-dato-detalle').forEach((/** @type {HTMLElement} */ n) => {
+        const versiones = _versionesQueEntre.get(n);
+        if (versiones && versiones.length > 1 && n.offsetParent !== null) fijarQueEntre(n, versiones);
+    });
+}
+
+// Girar el teléfono o redimensionar cambia el ancho de los mosaicos sin redibujar nada: se reeligen las versiones (solo si cambió el ancho; el texto solo cambia el alto)
+let _anchoObservado = 0;
+const _observadorAncho = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(entradas => {
+    const ancho = Math.round(entradas[entradas.length - 1].contentRect.width);
+    if (ancho === _anchoObservado) return;
+    _anchoObservado = ancho;
+    reajustarDetalles();
+});
+
+/**
  * Aplica un cambio de disposición de la línea de tiempo (`cambiar`, que solo cambia un atributo de <html>) animando lo que se mueve: el tiempo trabajado, la línea,
  * los mosaicos y la nota viajan desde su lugar anterior al nuevo (la misma técnica con que se mueven las tarjetas al reubicarlas) y la tarjeta acompaña el cambio de alto.
  * @param {() => void} cambiar
@@ -659,7 +690,7 @@ function reubicar(cambiar) {
     const host = $('stats-estilo');
     // sin las copias de la capa de medida (ocultas): solo viaja lo que se ve
     const obtener = () => host ? [.../** @type {NodeListOf<HTMLElement>} */ (host.querySelectorAll('.est-linea-cabecera, .est-linea-cuerpo, .est-mosaicos, .est-linea-nota'))].filter(n => !n.closest('.est-capa--medida')) : [];
-    Animaciones._animarAlturaCambio($('stats-card'), () => uiAnimarReubicacion(obtener, (/** @type {HTMLElement} */ el) => el.className.split(' ')[0], cambiar));
+    Animaciones._animarAlturaCambio($('stats-card'), () => uiAnimarReubicacion(obtener, (/** @type {HTMLElement} */ el) => el.className.split(' ')[0], () => { cambiar(); reajustarDetalles(); }));
 }
 
 export const TarjetaEstilos = { actualizar, reubicar };

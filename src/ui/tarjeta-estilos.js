@@ -166,20 +166,20 @@ function crearAnillo() {
     const sub = el('div', 'est-anillo-sub');
     const balance = crearDato('', 'est-dato est-mosaico');
     const banco = crearDato('Banco de horas', 'est-dato est-mosaico');
-    datos.append(mensaje, sub, balance.raiz, banco.raiz);
+    const fuera = crearDato('Tiempo fuera', 'est-dato est-mosaico');
+    datos.append(mensaje, sub, balance.raiz, banco.raiz, fuera.raiz);
     principal.append(aro, datos);
 
     const pie = el('div', 'est-anillo-pie');
     const entrada = crearDato('Entrada');
     const salida = crearDato('Salida');
     const conBanco = crearDato('Con banco');
-    const fuera = crearDato('Tiempo fuera');
-    // cada dato tiene su columna fija en una tarjeta ancha (ver el CSS): así "Con banco" arranca en la mitad, donde empiezan Faltan y Banco de horas
-    [entrada, salida, conBanco, fuera].forEach((d, i) => d.raiz.classList.add(`est-pie-${i + 1}`));
-    pie.append(entrada.raiz, salida.raiz, conBanco.raiz, fuera.raiz);
+    // cada dato tiene su columna fija (ver el CSS): así "Con banco" arranca donde empiezan los mosaicos de la derecha
+    [entrada, salida, conBanco].forEach((d, i) => d.raiz.classList.add(`est-pie-${i + 1}`));
+    pie.append(entrada.raiz, salida.raiz, conBanco.raiz);
     const dias = crearDias();
     raiz.append(principal, pie, dias.raiz);
-    return { raiz, aro, arco, valor, unidad, mensaje, sub, balance, banco, pie, entrada, salida, conBanco, fuera, dias };
+    return { raiz, aro, arco, valor, unidad, mensaje, sub, balance, banco, fuera, pie, entrada, salida, conBanco, dias };
 }
 
 /** El número del centro del aro: "7:45 horas" o "22 min". @param {any} r @param {{ horas: number, minutos: number }} t */
@@ -197,6 +197,7 @@ function pintarAnillo(r, d) {
     mostrar(r.sub, !conTotal && (d.tipo === 'especial' || !!d.banco));
     mostrar(r.balance.raiz, conTotal && !!d.balance);
     mostrar(r.banco.raiz, conTotal && !!d.banco);
+    mostrar(r.fuera.raiz, false);
 
     if (conTotal) {
         pintarNumeroAnillo(r, d.trabajado);
@@ -227,7 +228,7 @@ function pintarAnillo(r, d) {
         pintarDato(r.entrada, 'Entrada', '--:--');
         pintarDato(r.salida, 'Salida', '--:--');
         pintarDato(r.conBanco, 'Con banco', '--:--');
-        mostrar(r.salida.raiz, true); mostrar(r.conBanco.raiz, true); mostrar(r.fuera.raiz, false);
+        mostrar(r.salida.raiz, true); mostrar(r.conBanco.raiz, true);
     } else {
         r.aro.dataset.color = d.color;
         r.aro.classList.remove('espera');

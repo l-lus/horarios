@@ -2001,6 +2001,7 @@
     gap: var(--space-sm);
     flex: 1;
     min-width: 0;
+    align-self: start;   /* los mosaicos arrancan arriba, no centrados en el alto del aro */
 }
 
 .est-anillo-mensaje {
@@ -2023,7 +2024,7 @@
     gap: var(--space-sm);
 }
 
-/* El aro ocupa el 60 % y los mosaicos (Faltan / Banco de horas) el 40 % restante, en el móvil y en la PC; el pie usa cuatro columnas iguales. */
+/* El aro ocupa el 60 % y los mosaicos (Faltan / Banco de horas) el 40 % restante, en el móvil y en la PC; el pie reparte 30 / 30 / 40 para que "Con banco" arranque donde empiezan los mosaicos. */
 .est-anillo-principal {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -2033,14 +2034,13 @@
 .est-anillo-pie {
     display: grid;
     grid-auto-flow: row;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 3fr) minmax(0, 3fr) minmax(0, 4fr);
     gap: var(--space-sm);
 }
 
 .est-pie-1 { grid-column: 1; }
 .est-pie-2 { grid-column: 2; }
 .est-pie-3 { grid-column: 3; }
-.est-pie-4 { grid-column: 4; }
 
 /* ── C · Línea de tiempo vertical ── */
 .est-linea,

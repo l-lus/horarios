@@ -1944,7 +1944,8 @@
 }
 
 .est-anillo-pista,
-.est-anillo-arco {
+.est-anillo-arco,
+.est-anillo-tramo {
     fill: none;
     stroke-width: 9;
 }
@@ -1959,15 +1960,29 @@
     stroke-dasharray: 0.9 2.6;
 }
 
+/* El arco no se ve: es la máscara (blanca) que deja pasar los tramos de color hasta donde llega el avance. Su transición es la del conteo */
 .est-anillo-arco {
-    stroke: var(--est-color);
+    stroke: #fff;
     stroke-linecap: round;
     stroke-dasharray: 100;
     stroke-dashoffset: var(--ring-offset, 100);
-    transition: stroke-dashoffset var(--dur-conteo) var(--ease-conteo), stroke var(--dur-anim) ease, opacity var(--transition-ui);
+    transition: stroke-dashoffset var(--dur-conteo) var(--ease-conteo), opacity var(--transition-ui);
 }
 
 .est-anillo-arco.vacio { opacity: 0; }
+
+/* Cada tramo toma su color de data-color (--est-color); el punto del comienzo repite el del primer tramo para redondear el arranque del aro */
+.est-anillo-tramo {
+    stroke: var(--est-color);
+    transition: stroke var(--dur-anim) ease, stroke-dasharray var(--transition-ui), stroke-dashoffset var(--transition-ui);
+}
+
+.est-anillo-inicio {
+    fill: var(--est-color);
+    transition: fill var(--dur-anim) ease, opacity var(--transition-ui);
+}
+
+.est-anillo-inicio.vacio { opacity: 0; }
 
 /* Brillo del registro en curso (como el de la barra): una franja que recorre el arco lleno y descansa el resto del ciclo. El contenedor solo deja ver la corona del trazo
    dentro del sector ya recorrido (el avance sale de --ring-offset); el ::after gira por transform, sin repintar. */

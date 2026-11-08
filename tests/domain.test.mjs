@@ -1103,11 +1103,23 @@ test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (re
     assert.equal(abierto.salida, '');
     assert.deepEqual(abierto.balance, { etiqueta: 'Faltan', texto: '7 h 30 min', tono: 'neutro' });
     assert.equal(abierto.banco.texto, '+30 min');
+    // tramos del anillo (como la barra con hitos): azul hasta la salida con banco (7:30 de 8:00), el color del banco hasta la salida estimada
+    assert.equal(abierto.anillo.tramos.length, 2);
+    assert.deepEqual(abierto.anillo.tramos[0], { desde: 0, hasta: 93.75, color: 'blue' });
+    assert.equal(abierto.anillo.tramos[1].hasta, 100);
+    assert.equal(abierto.anillo.progreso, 6.25);
+
+    // con lo trabajado más allá de la última marca el aro se estira: azul hasta el objetivo y verde el resto
+    const extra = TarjetaFichajeVista.derivarVistaHoy({ ...base, bufferSemanal: 0, bufferSemanalBase: 0, regHoy: { fecha: hoy, entrada: '09:00', salida: '' }, tiempoHoy: 10 }).resumen;
+    assert.deepEqual(extra.anillo.tramos.map(t => t.color), ['blue', 'green']);
+    assert.equal(extra.anillo.progreso, 100);
+    assert.equal(extra.anillo.tramos[0].hasta, 80);
 
     const cerrado = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: { fecha: hoy, entrada: '09:00', salida: '17:00' }, tiempoHoy: 8 }).resumen;
     assert.equal(cerrado.cerrado, true);
     assert.equal(cerrado.salida, '17:00');
     assert.equal(cerrado.salidaEstimada, '');
+    assert.equal(cerrado.anillo, null, 'cerrado el aro va de un solo color');
     assert.deepEqual(cerrado.balance, { etiqueta: 'Objetivo', texto: 'Cumplido', tono: 'green' });
 });
 

@@ -66,6 +66,7 @@ function pintarAvance(aro, arco, p) {
     const v = Math.max(0, Math.min(100, p));
     aro.style.setProperty('--ring-offset', String(100 - v));
     arco.classList.toggle('vacio', v <= 0);
+    aro.querySelector('.est-anillo-inicio')?.classList.toggle('vacio', v <= 0);
 }
 
 // ─── Piezas comunes ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -145,6 +146,8 @@ function pintarDias(d, dias) {
 }
 
 // ─── B · Anillo ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+const MAX_TRAMOS_ANILLO = 3;   // azul, el color del banco y verde (ver `_anilloEnCurso`)
+let _anillosCreados = 0;       // cada aro tiene su propia máscara en el svg: el id no se puede repetir
 function crearAnillo() {
     const raiz = el('div', 'est-anillo');
     const principal = el('div', 'est-anillo-principal');
@@ -153,8 +156,29 @@ function crearAnillo() {
     svg.setAttribute('viewBox', '0 0 100 100');
     svg.setAttribute('class', 'est-anillo-svg');
     svg.setAttribute('aria-hidden', 'true');
+    // El arco (blanco) es la máscara de los tramos de color: el avance lo anima él y los tramos quedan fijos debajo, así los colores se descubren en orden como en la barra
     const arco = circulo('est-anillo-arco');
-    svg.append(circulo('est-anillo-pista'), arco);
+    const idMascara = `est-anillo-mascara-${++_anillosCreados}`;
+    const mascara = document.createElementNS(NS_SVG, 'mask');
+    mascara.setAttribute('id', idMascara);
+    mascara.setAttribute('maskUnits', 'userSpaceOnUse');
+    ['x', 'y'].forEach(a => mascara.setAttribute(a, '0'));
+    ['width', 'height'].forEach(a => mascara.setAttribute(a, '100'));
+    mascara.append(arco);
+    const tramos = document.createElementNS(NS_SVG, 'g');
+    tramos.setAttribute('mask', `url(#${idMascara})`);
+    const arcosTramo = Array.from({ length: MAX_TRAMOS_ANILLO }, () => {
+        const t = circulo('est-anillo-tramo');
+        tramos.append(t);
+        return t;
+    });
+    // el comienzo redondeado del arco cae antes de los tramos (fuera del trazo): lo dibuja este punto, en el color del primer tramo
+    const inicio = document.createElementNS(NS_SVG, 'circle');
+    inicio.setAttribute('class', 'est-anillo-inicio');
+    inicio.setAttribute('cx', '94');
+    inicio.setAttribute('cy', '50');
+    inicio.setAttribute('r', '4.5');
+    svg.append(circulo('est-anillo-pista'), mascara, tramos, inicio);
     const centro = el('div', 'est-anillo-centro');
     const valor = el('span', 'est-anillo-valor');
     const unidad = el('span', 'est-anillo-unidad');
@@ -181,7 +205,26 @@ function crearAnillo() {
     pie.append(entrada.raiz, salida.raiz, conBanco.raiz);
     const dias = crearDias();
     raiz.append(principal, pie, dias.raiz);
-    return { raiz, aro, arco, valor, unidad, mensaje, sub, balance, banco, fuera, pie, entrada, salida, conBanco, dias };
+    return { raiz, aro, arco, arcosTramo, inicio, valor, unidad, mensaje, sub, balance, banco, fuera, pie, entrada, salida, conBanco, dias };
+}
+
+/**
+ * Colorea el aro por tramos (% del aro, ver `_anilloEnCurso` en tarjeta-fichaje-vista.js); sin tramos, nada. Cada tramo es un arco de su largo que arranca en su comienzo
+ * y se mete un poco bajo el siguiente para que no quede una línea clara entre colores.
+ * @param {any} r @param {{ desde: number, hasta: number, color: string }[]} tramos
+ */
+function pintarTramos(r, tramos) {
+    r.arcosTramo.forEach((/** @type {SVGElement} */ arco, /** @type {number} */ i) => {
+        const t = tramos[i];
+        arco.style.display = t ? '' : 'none';
+        if (!t) return;
+        const largo = t.hasta - t.desde + (i < tramos.length - 1 ? 0.3 : 0);
+        arco.style.strokeDasharray = `${largo} 100`;
+        arco.style.strokeDashoffset = String(-t.desde);
+        arco.dataset.color = t.color;
+    });
+    r.inicio.style.display = tramos.length ? '' : 'none';
+    if (tramos.length) r.inicio.dataset.color = tramos[0].color;
 }
 
 /** El número del centro del aro: "7:45 horas" o "22 min". @param {any} r @param {{ horas: number, minutos: number }} t */
@@ -205,7 +248,10 @@ function pintarAnillo(r, d) {
         pintarNumeroAnillo(r, d.trabajado);
         r.aro.dataset.color = d.color;
         r.aro.classList.remove('espera');
-        pintarAvance(r.aro, r.arco, d.progreso);
+        // con la jornada abierta el aro lleva los tramos de la barra con hitos; cerrado, la semana y lo demás van de un solo color
+        const anillo = d.tipo === 'registro' && !d.cerrado ? d.anillo : null;
+        pintarTramos(r, anillo?.tramos ?? [{ desde: 0, hasta: 100, color: d.color }]);
+        pintarAvance(r.aro, r.arco, anillo?.progreso ?? d.progreso);
         // con el registro (o la semana) en curso, el brillo recorre el arco lleno, como el de la barra
         r.aro.classList.toggle('en-curso', d.tipo === 'registro' ? !d.cerrado : !!d.abierta);
         if (d.balance) pintarDato(r.balance, d.balance.etiqueta, d.balance.texto, d.balance.tono);
@@ -226,6 +272,7 @@ function pintarAnillo(r, d) {
     if (d.tipo === 'espera') {
         r.aro.dataset.color = 'blue';
         r.aro.classList.add('espera');
+        pintarTramos(r, []);
         pintarAvance(r.aro, r.arco, 0);
         r.aro.classList.remove('en-curso');
         fijar(r.mensaje, d.mensaje);
@@ -237,6 +284,7 @@ function pintarAnillo(r, d) {
     } else {
         r.aro.dataset.color = d.color;
         r.aro.classList.remove('espera');
+        pintarTramos(r, [{ desde: 0, hasta: 100, color: d.color }]);
         pintarAvance(r.aro, r.arco, 100);
         r.aro.classList.remove('en-curso');
         fijar(r.mensaje, d.etiqueta);

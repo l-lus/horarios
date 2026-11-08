@@ -449,11 +449,37 @@ function _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre, aclaracion =
         : { etiqueta: 'Extra', texto: duracionConSigno(-falta), tono: 'green', ...detalle };
 }
 
+/**
+ * Tramos de estado del anillo con la jornada abierta, con el mismo criterio que la barra con hitos: azul hasta la primera salida (con banco o estimada), el color del banco
+ * entre ambas (dorado si lo cubre el saldo, verde si no, rojo si se debe tiempo) y verde al superar la última. Se miden en tiempo trabajado (el tiempo fuera no cuenta, y
+ * por eso no mueve las marcas): el aro llega al 100 % en la última marca, o en lo trabajado si ya la superó (las marcas se corren como en la barra). Sin línea (sin objetivo) no hay tramos.
+ * Devuelve `{ progreso, tramos: [{ desde, hasta, color }] }` con todo en % del aro.
+ * @param {any} linea @param {number} tiempoHoy horas @param {number} objetivo horas
+ */
+function _anilloEnCurso(linea, tiempoHoy, objetivo) {
+    if (!linea || linea.cerrado || !(objetivo > 0)) return null;
+    const objetivoMin = objetivo * 60;
+    const trabajadoMin = Math.max(0, tiempoHoy * 60);
+    const distancia = linea.hayBanda ? Math.abs(linea.salidaRel - linea.bufferRel) : 0;
+    const lo = linea.hayBanda && linea.bufferPositivo ? Math.max(0, objetivoMin - distancia) : objetivoMin;
+    const hi = linea.hayBanda && !linea.bufferPositivo ? objetivoMin + distancia : objetivoMin;
+    const fin = Math.max(hi, trabajadoMin);
+    const pct = min => (min / fin) * 100;
+    const colorMedio = linea.bufferPositivo ? (SaldoSemanal.logicaCubiertoActiva() ? 'gold' : 'green') : 'red';
+    const tramos = [
+        { desde: 0, hasta: pct(lo), color: 'blue' },
+        { desde: pct(lo), hasta: pct(hi), color: colorMedio },
+        { desde: pct(hi), hasta: 100, color: 'green' }
+    ].filter(t => t.hasta - t.desde > 1e-6);
+    return { progreso: pct(trabajadoMin), tramos };
+}
+
 /** Resumen de un registro con entrada (abierto o cerrado). `linea` puede ser null (sin objetivo): entonces no hay salida estimada. */
 function _resumenRegistro({ reg, linea, tiempoHoy, objetivo, progreso, cerrado, color, colorCierre, mensaje, est, aclaracion = /** @type {string | string[]} */ ('') }) {
     const trabajadoMin = TiempoUtils.horasAMinutosRedondeados(tiempoHoy);
     return {
         tipo: 'registro', cerrado, color, mensaje, progreso,
+        anillo: _anilloEnCurso(linea, tiempoHoy, objetivo),
         trabajadoMin, trabajado: partesDuracion(trabajadoMin),
         entrada: reg.entrada,
         salida: cerrado ? reg.salida : '',

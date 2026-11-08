@@ -2291,12 +2291,20 @@
     gap: var(--space-sm);
 }
 
-/* Esperando registro: el único mosaico (el banco de horas de la semana) también se ajusta a su texto */
+/* Esperando registro: el único mosaico (el banco de horas de la semana) también se ajusta a su texto y queda pegado al borde inferior de la tarjeta
+   (la línea ocupa todo el alto reservado, ver .est-capa > .est-linea; con la tarjeta ancha, en cuadrícula, el mismo efecto lo da align-self: end) */
 .est-linea[data-tipo="espera"] .est-mosaicos {
     width: fit-content;
     max-width: 100%;
+    margin-top: auto;
     align-self: flex-start;
     justify-self: start;
+}
+
+@container (min-width: 28rem) {
+    html:is([data-disposicion-linea="izquierda"], [data-disposicion-linea="derecha"]) .est-linea[data-tipo="espera"] .est-mosaicos {
+        align-self: end;
+    }
 }
 
 .est-mosaico {
@@ -2408,6 +2416,11 @@
 .est-capa {
     grid-area: 1 / 1;
     min-width: 0;
+}
+
+/* la línea de tiempo llena el alto de la capa (el reservado por la más alta), así lo que va al final (el banco de horas esperando registro) llega al borde inferior */
+.est-capa > .est-linea {
+    height: 100%;
 }
 
 .est-capa--medida {

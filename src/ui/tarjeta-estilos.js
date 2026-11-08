@@ -61,10 +61,10 @@ const fraseBanco = banco => `${banco.positivo ? '▲' : '▼'} ${duracionCompact
 /** @param {{ positivo: boolean } | null} banco */
 const tonoBanco = banco => (banco ? (banco.positivo ? 'green' : 'red') : 'neutro');
 
-/** @param {any} p avance de 0 a 100 */
-function pintarAvance(arco, p) {
+/** El avance vive en el contenedor del aro (lo leen el arco y el brillo). @param {HTMLElement} aro @param {any} arco @param {any} p avance de 0 a 100 */
+function pintarAvance(aro, arco, p) {
     const v = Math.max(0, Math.min(100, p));
-    arco.style.setProperty('--ring-offset', String(100 - v));
+    aro.style.setProperty('--ring-offset', String(100 - v));
     arco.classList.toggle('vacio', v <= 0);
 }
 
@@ -159,7 +159,9 @@ function crearAnillo() {
     const valor = el('span', 'est-anillo-valor');
     const unidad = el('span', 'est-anillo-unidad');
     centro.append(valor, unidad);
-    aro.append(svg, centro);
+    const brillo = el('span', 'est-anillo-brillo');
+    brillo.setAttribute('aria-hidden', 'true');
+    aro.append(svg, brillo, centro);
 
     const datos = el('div', 'est-anillo-datos');
     const mensaje = el('div', 'est-anillo-mensaje');
@@ -203,7 +205,9 @@ function pintarAnillo(r, d) {
         pintarNumeroAnillo(r, d.trabajado);
         r.aro.dataset.color = d.color;
         r.aro.classList.remove('espera');
-        pintarAvance(r.arco, d.progreso);
+        pintarAvance(r.aro, r.arco, d.progreso);
+        // con el registro (o la semana) en curso, el brillo recorre el arco lleno, como el de la barra
+        r.aro.classList.toggle('en-curso', d.tipo === 'registro' ? !d.cerrado : !!d.abierta);
         if (d.balance) pintarDato(r.balance, d.balance.etiqueta, d.balance.texto, d.balance.tono);
         if (d.banco) pintarDato(r.banco, 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
         if (d.tipo === 'semana') { pintarDias(r.dias, d.dias); return; }
@@ -222,7 +226,8 @@ function pintarAnillo(r, d) {
     if (d.tipo === 'espera') {
         r.aro.dataset.color = 'blue';
         r.aro.classList.add('espera');
-        pintarAvance(r.arco, 0);
+        pintarAvance(r.aro, r.arco, 0);
+        r.aro.classList.remove('en-curso');
         fijar(r.mensaje, d.mensaje);
         if (d.banco) { fijar(r.sub, fraseBanco(d.banco)); entonar(r.sub, tonoBanco(d.banco)); }
         pintarDato(r.entrada, 'Entrada', '--:--');
@@ -232,7 +237,8 @@ function pintarAnillo(r, d) {
     } else {
         r.aro.dataset.color = d.color;
         r.aro.classList.remove('espera');
-        pintarAvance(r.arco, 100);
+        pintarAvance(r.aro, r.arco, 100);
+        r.aro.classList.remove('en-curso');
         fijar(r.mensaje, d.etiqueta);
         fijar(r.sub, d.descripcion);
         entonar(r.sub, 'neutro');

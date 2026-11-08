@@ -1969,6 +1969,33 @@
 
 .est-anillo-arco.vacio { opacity: 0; }
 
+/* Brillo del registro en curso (como el de la barra): una franja que recorre el arco lleno y descansa el resto del ciclo. El contenedor solo deja ver la corona del trazo
+   dentro del sector ya recorrido (el avance sale de --ring-offset); el ::after gira por transform, sin repintar. */
+.est-anillo-brillo {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    mask-image:
+        radial-gradient(closest-side, transparent 79%, #000 79.5%, #000 96.5%, transparent 97%),
+        conic-gradient(#000 calc((100 - var(--ring-offset, 100)) * 3.6deg), transparent 0);
+    mask-composite: intersect;
+    -webkit-mask-composite: source-in;
+}
+
+.est-anillo-aro:not(.en-curso) .est-anillo-brillo {
+    display: none;
+}
+
+.est-anillo-brillo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: conic-gradient(transparent 0deg, rgba(255, 255, 255, 0.45) 20deg, transparent 40deg, transparent 360deg);
+    animation: brillo-anillo var(--dur-ambiente) ease-in-out infinite;
+    will-change: transform;
+}
+
 .est-anillo-centro {
     position: absolute;
     inset: 0;

@@ -42,6 +42,27 @@ export const MOSAICOS_LINEA = Object.freeze([
 
 const _mosaicosValido = id => MOSAICOS_LINEA.some(m => m.id === id);
 
+// Variantes del estilo "Anillo": el aro a la izquierda (el predeterminado) o a la derecha, intercambiando las columnas, y la fila Entrada / Salida / Con banco
+// abajo (como siempre) o arriba de todo. Las cuatro combinaciones; el CSS solo mira <html data-disposicion-anillo>, así que cambiarla no redibuja nada.
+export const DISPOSICIONES_ANILLO = Object.freeze([
+    { id: 'izquierda', label: 'Anillo a la izquierda' },
+    { id: 'derecha', label: 'Anillo a la derecha' },
+    { id: 'arriba-izquierda', label: 'Fila arriba, anillo a la izquierda' },
+    { id: 'arriba-derecha', label: 'Fila arriba, anillo a la derecha' }
+]);
+
+const _anilloValido = id => DISPOSICIONES_ANILLO.some(d => d.id === id);
+
+/** Variante que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */
+export function siguienteAnillo(id) {
+    const idx = DISPOSICIONES_ANILLO.findIndex(d => d.id === id);
+    return DISPOSICIONES_ANILLO[(idx + 1) % DISPOSICIONES_ANILLO.length].id;
+}
+
+export function etiquetaAnillo(id) {
+    return (DISPOSICIONES_ANILLO.find(d => d.id === id) ?? DISPOSICIONES_ANILLO[0]).label;
+}
+
 /** Sin elección guardada, en el móvil los mosaicos van apilados a la derecha de la línea ("Vertical"). */
 const MOSAICOS_PREDETERMINADO = 'derecha';
 
@@ -81,6 +102,7 @@ export const esEstiloPropio = id => ESTILOS_PROPIOS.includes(id);
 let _estilo = null;
 let _disposicion = null;
 let _mosaicos = null;
+let _anillo = null;
 
 function actual() {
     if (_estilo === null) {
@@ -108,6 +130,21 @@ function mosaicos() {
     return _mosaicos;
 }
 
+function anillo() {
+    if (_anillo === null) {
+        const guardado = Almacenamiento.getItem(STORAGE_KEYS.ANILLO_DISPOSICION, null);
+        _anillo = _anilloValido(guardado) ? guardado : DISPOSICIONES_ANILLO[0].id;
+    }
+    return _anillo;
+}
+
+function setAnillo(id) {
+    if (!_anilloValido(id)) return;
+    _anillo = id;
+    Almacenamiento.setItem(STORAGE_KEYS.ANILLO_DISPOSICION, id);
+    _aplicar();
+}
+
 function setMosaicos(id) {
     if (!_mosaicosValido(id)) return;
     _mosaicos = id;
@@ -120,6 +157,7 @@ function _aplicar() {
     document.documentElement.setAttribute('data-estilo-tarjeta', actual());
     document.documentElement.setAttribute('data-disposicion-linea', disposicion());
     document.documentElement.setAttribute('data-mosaicos-linea', mosaicos());
+    document.documentElement.setAttribute('data-disposicion-anillo', anillo());
 }
 
 function setDisposicion(id) {
@@ -149,6 +187,7 @@ function releer() {
     _estilo = null;
     _disposicion = null;
     _mosaicos = null;
+    _anillo = null;
     _aplicar();
 }
 
@@ -164,6 +203,9 @@ export const EstiloTarjeta = {
     mosaicos, setMosaicos,
     siguienteMosaicos: () => setMosaicos(siguienteMosaicos(mosaicos())),
     etiquetaMosaicos: () => etiquetaMosaicos(mosaicos()),
+    anillo, setAnillo,
+    siguienteAnillo: () => setAnillo(siguienteAnillo(anillo())),
+    etiquetaAnillo: () => etiquetaAnillo(anillo()),
     etiqueta: () => etiquetaEstilo(actual()),
     /** ¿La barra lleva los hitos dibujados encima (el antiguo hint integrado)? */
     hintIntegrado: () => actual() === 'hitos',

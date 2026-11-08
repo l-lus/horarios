@@ -2038,6 +2038,25 @@
     gap: var(--space-sm);
 }
 
+/* Variantes del anillo (html[data-disposicion-anillo], ver core/estilo-tarjeta.js): "derecha" intercambia las columnas (los mosaicos al 40 % a la izquierda, el aro al 60 %
+   a la derecha) y "arriba-*" sube la fila de Entrada / Salida / Con banco (y la de los días en la semana) por encima de todo. */
+html:is([data-disposicion-anillo="derecha"], [data-disposicion-anillo="arriba-derecha"]) .est-anillo-principal {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+html:is([data-disposicion-anillo="derecha"], [data-disposicion-anillo="arriba-derecha"]) .est-anillo-aro {
+    order: 2;
+}
+
+/* el pie sigue el mismo reparto: la primera columna (la de los mosaicos) es la angosta */
+html:is([data-disposicion-anillo="derecha"], [data-disposicion-anillo="arriba-derecha"]) .est-anillo-pie {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 3fr) minmax(0, 3fr);
+}
+
+html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="arriba-derecha"]) :is(.est-anillo-pie, .est-dias) {
+    order: -1;
+}
+
 .est-pie-1 { grid-column: 1; }
 .est-pie-2 { grid-column: 2; }
 .est-pie-3 { grid-column: 3; }

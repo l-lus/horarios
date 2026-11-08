@@ -146,6 +146,10 @@ function abrirVistaPreviaTarjeta(desdeAjustes = true) {
                 alTocar: toggleMosaicosLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esPC()
             },
             {
+                etiqueta: 'Disposición', valor: () => EstiloTarjeta.etiquetaAnillo(),
+                alTocar: toggleDisposicionAnillo, visible: () => EstiloTarjeta.actual() === 'anillo'
+            },
+            {
                 etiqueta: 'Animación', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
                 alTocar: toggleAnimacionHint, visible: () => EstiloTarjeta.hintIntegrado()
             },
@@ -183,6 +187,10 @@ const _esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matc
 // Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
 function toggleDisposicionLinea() {
     TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteDisposicion());   // lo que se mueve en la tarjeta viaja a su lugar nuevo
+}
+
+function toggleDisposicionAnillo() {
+    TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteAnillo());
 }
 
 function toggleMosaicosLinea() {

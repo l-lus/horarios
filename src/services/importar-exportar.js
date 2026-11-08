@@ -1,5 +1,5 @@
 import { Preferencias } from '../core/preferencias.js';
-import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA, MOSAICOS_LINEA } from '../core/estilo-tarjeta.js';
+import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA, MOSAICOS_LINEA, DISPOSICIONES_ANILLO } from '../core/estilo-tarjeta.js';
 import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, FONDO_CARD_POR_DEFECTO } from '../core/constantes.js';
 import { EstiloCalendario, ESTILOS_CALENDARIO } from '../core/estilo-calendario.js';
 import { FONDOS_SVG } from '../data/fondos.js';
@@ -96,6 +96,13 @@ const CONFIG_RESPALDO = [
         esValido: (v) => MOSAICOS_LINEA.some(m => m.id === v),
         actual: EstiloTarjeta.mosaicos,
         aplicar: (v) => { EstiloTarjeta.setMosaicos(v); _avisarHint(); },
+    },
+    {
+        clave: STORAGE_KEYS.ANILLO_DISPOSICION,
+        etiqueta: 'disposición del anillo',
+        esValido: (v) => DISPOSICIONES_ANILLO.some(d => d.id === v),
+        actual: EstiloTarjeta.anillo,
+        aplicar: (v) => { EstiloTarjeta.setAnillo(v); _avisarHint(); },
     },
     _opcion(Preferencias.DESC_HITOS_NUMERO, 'nombre del hito en el número', _avisarHint),
     _opcion(Preferencias.CICLO_HINT_AUTO, 'ciclo automático del hint', _avisarHint),

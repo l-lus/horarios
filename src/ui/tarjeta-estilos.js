@@ -683,14 +683,14 @@ const _observadorAncho = typeof ResizeObserver === 'undefined' ? null : new Resi
 });
 
 /**
- * Aplica un cambio de disposición de la línea de tiempo (`cambiar`, que solo cambia un atributo de <html>) animando lo que se mueve: el tiempo trabajado, la línea,
- * los mosaicos y la nota viajan desde su lugar anterior al nuevo (la misma técnica con que se mueven las tarjetas al reubicarlas) y la tarjeta acompaña el cambio de alto.
+ * Aplica un cambio de disposición de la línea de tiempo o del anillo (`cambiar`, que solo cambia un atributo de <html>) animando lo que se mueve: el tiempo trabajado, la línea,
+ * los mosaicos y la nota (o el aro, sus datos y la fila de abajo) viajan desde su lugar anterior al nuevo (la misma técnica con que se mueven las tarjetas al reubicarlas) y la tarjeta acompaña el cambio de alto.
  * @param {() => void} cambiar
  */
 function reubicar(cambiar) {
     const host = $('stats-estilo');
     // sin las copias de la capa de medida (ocultas): solo viaja lo que se ve
-    const obtener = () => host ? [.../** @type {NodeListOf<HTMLElement>} */ (host.querySelectorAll('.est-linea-cabecera, .est-linea-cuerpo, .est-mosaicos, .est-linea-nota'))].filter(n => !n.closest('.est-capa--medida')) : [];
+    const obtener = () => host ? [.../** @type {NodeListOf<HTMLElement>} */ (host.querySelectorAll('.est-linea-cabecera, .est-linea-cuerpo, .est-mosaicos, .est-linea-nota, .est-anillo-aro, .est-anillo-datos, .est-anillo-pie, .est-dias'))].filter(n => !n.closest('.est-capa--medida')) : [];
     Animaciones._animarAlturaCambio($('stats-card'), () => uiAnimarReubicacion(obtener, (/** @type {HTMLElement} */ el) => el.className.split(' ')[0], () => { cambiar(); reajustarDetalles(); }));
 }
 

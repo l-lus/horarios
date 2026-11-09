@@ -2006,7 +2006,8 @@
 
 .est-anillo-inicio {
     fill: var(--est-color);
-    transition: fill var(--dur-anim) ease, opacity var(--transition-ui);
+    transform-origin: 50px 50px;
+    transition: fill var(--dur-anim) ease, opacity var(--transition-ui), transform var(--transition-ui);
 }
 
 .est-anillo-inicio.vacio { opacity: 0; }

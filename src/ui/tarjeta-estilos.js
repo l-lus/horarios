@@ -172,7 +172,7 @@ function crearAnillo() {
         tramos.append(t);
         return t;
     });
-    // el comienzo redondeado del arco cae antes de los tramos (fuera del trazo): lo dibuja este punto, en el color del primer tramo
+    // el comienzo redondeado del arco cae antes de los tramos (fuera del trazo): lo dibuja este punto, en el color y en el lugar del primer tramo
     const inicio = document.createElementNS(NS_SVG, 'circle');
     inicio.setAttribute('class', 'est-anillo-inicio');
     inicio.setAttribute('cx', '94');
@@ -227,7 +227,8 @@ function pintarTramos(r, tramos, progreso, conteoMs = 0) {
         const t = tramos[i];
         arco.style.display = t ? '' : 'none';
         if (!t) return;
-        const largo = t.hasta - t.desde + (i < tramos.length - 1 ? 0.3 : 0);
+        // el último sigue un poco más allá del avance: ahí se ve el extremo redondeado del arco (sin color debajo quedaría cortado en seco)
+        const largo = t.hasta - t.desde + (i < tramos.length - 1 ? 0.3 : 2);
         arco.style.strokeDasharray = `${largo} 100`;
         arco.style.strokeDashoffset = String(-t.desde);
         arco.dataset.color = t.color;
@@ -243,7 +244,11 @@ function pintarTramos(r, tramos, progreso, conteoMs = 0) {
         h.style.setProperty('--retraso-hito', `${Math.round(llegada * conteoMs)}ms`);
     });
     r.inicio.style.display = tramos.length ? '' : 'none';
-    if (tramos.length) r.inicio.dataset.color = tramos[0].color;
+    if (tramos.length) {
+        // el redondeo del comienzo va donde arranca el primer tramo (en la semana puede haber un hueco antes: un día sin horas)
+        r.inicio.dataset.color = tramos[0].color;
+        r.inicio.style.transform = `rotate(${(tramos[0].desde * 3.6).toFixed(2)}deg)`;
+    }
 }
 
 /** El número del centro del aro: "7:45 horas" o "22 min". @param {any} r @param {{ horas: number, minutos: number }} t */

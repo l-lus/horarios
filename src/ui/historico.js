@@ -70,19 +70,22 @@ function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asi
         chevron.classList.add('rotated');
     }
 
+    // cada semana es un contenedor (como los grupos de Ajustes) con sus días adentro
     let semanaAnterior = null;
+    /** @type {HTMLElement | null} */
+    let contenedorSemana = null;
     grupos.forEach(grupo => {
         const esGrupo = grupo.tipo === 'grupo';
         const r = esGrupo ? grupo.registros[grupo.registros.length - 1] : grupo.registros[0];
         const semanaActual = TiempoUtils.obtenerLunesSemanaISO(r.fecha);
 
-        if (semanaAnterior && semanaActual !== semanaAnterior) {
-            const sep = document.createElement('div');
-            sep.className = 'separador-semana';
-            innerMesActual.appendChild(sep);
+        if (!contenedorSemana || semanaActual !== semanaAnterior) {
+            contenedorSemana = document.createElement('div');
+            contenedorSemana.className = 'registro-semana';
+            innerMesActual.appendChild(contenedorSemana);
         }
 
-        innerMesActual.appendChild(
+        contenedorSemana.appendChild(
             esGrupo
                 ? HistoricoItems.crearGrupoExpandible(grupo, idNuevo, asignacionesCompensatorio)
                 : HistoricoItems.crearItemRegistroIndividual(r, idNuevo, hoy, asignacionesCompensatorio)

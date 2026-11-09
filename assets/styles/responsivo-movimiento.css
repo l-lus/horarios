@@ -382,6 +382,12 @@ button.campo-flash-color {
         filter: var(--hover);
     }
 
+    /* dentro del grupo de la semana el día se resalta como una fila de Ajustes (con fondo, no con brillo) */
+    .registro-semana .registro-item:hover {
+        filter: none;
+        background: var(--surface-row-hover);
+    }
+
     .day-checkbox:hover span {
         filter: var(--hover);
     }

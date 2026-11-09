@@ -625,6 +625,33 @@
     contain-intrinsic-size: 85px;
 }
 
+/* Cada semana del histórico es un grupo, como las listas de Ajustes (.settings-list): un contenedor redondeado con sus días adentro, sin tarjeta propia y separados por una línea */
+.registro-semana {
+    background: var(--input-bg);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: var(--space-sm);
+}
+
+.registro-semana:not(:last-child) {
+    margin-bottom: var(--space-xl);
+}
+
+.registro-semana .registro-item {
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0;
+    background: transparent;
+}
+
+.registro-semana>:not(:last-child) {
+    border-bottom: 1px solid var(--border);
+}
+
+.registro-semana .registro-item:active {
+    background: var(--surface-row-hover);
+}
+
 .registro-item.hoy::before {
     content: "HOY";
     position: absolute;

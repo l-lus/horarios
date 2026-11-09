@@ -529,14 +529,6 @@ select {
     transition: background var(--transition-ui), color var(--transition-ui), border-color var(--transition-ui);
 }
 
-.separador-semana {
-    height: 0;
-    background: transparent;
-    margin: var(--space-xl) auto;
-    border: none;
-    width: 100%;
-}
-
 input:disabled,
 select:disabled {
     background-color: var(--bg-card);

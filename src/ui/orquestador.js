@@ -5,6 +5,8 @@ import { Formularios } from './formularios.js';
 import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
+import { PosicionHeader } from '../core/posicion-header.js';
+import { HeaderPosicion } from './header-posicion.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 import { InstaladorPWA } from './instalador-pwa.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -276,6 +278,7 @@ function _initDatosYConfig(config) {
     aplicarOrdenCards(obtenerOrdenCards());
     iniciarDragOrdenCards();
     iniciarDragTarjetas();
+    HeaderPosicion.iniciar();
     setFondoCard(config.fondoCard || 'golden-gate');
     setModoEstadisticas(config.modoEstadisticas || 'mensual');
 
@@ -288,6 +291,7 @@ function _restaurarEstadoVisual(config) {
     GestorTemas.aplicarTema(config.tema);
     Movimiento.init();
     EstiloCalendario.init();
+    PosicionHeader.init();
     EstiloTarjeta.init();
 
     $('fecha').value = TiempoUtils.obtenerFechaHoy();

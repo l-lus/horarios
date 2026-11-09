@@ -291,6 +291,8 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         cicloHintAuto: true,
         formatoCortoStats: false,
         estiloCalendario: 'legacy',
+        posicionHeader: 'top',
+        posicionHeaderMovil: 'top',
         hoverPopupCalendario: false,
         ruedaCalendario: true,
         persistirTarjetas: true,
@@ -317,6 +319,10 @@ test('ImportarExportar: la apariencia (estilo del calendario, fondo, formato cor
     const cambios = { estiloCalendario: 'punto', fondoCard: 'ninguno', formatoCortoStats: true, hoverPopupCalendario: true, ruedaCalendario: false, persistirTarjetas: false };
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, ...cambios }), true);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, estiloCalendario: 'inexistente' }), false);
+    // la posición del encabezado: en PC valen los cuatro lados; en móvil solo arriba y abajo
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeader: 'left', posicionHeaderMovil: 'bottom' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeaderMovil: 'left' }), false);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeader: 'centro' }), false);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, fondoCard: 'inexistente' }), false);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, formatoCortoStats: 'si' }), false);
 
@@ -839,12 +845,29 @@ test('AvisoActualizacion: porcentajeValido acota y redondea el avance que inform
     assert.equal(porcentajeValido('abc'), null);
 });
 
+test('PosicionHeader: en PC valen las cuatro posiciones y en móvil solo arriba y abajo; lo inválido vuelve a arriba', async () => {
+    const { POSICIONES_HEADER, posicionesPermitidas, normalizarPosicion, etiquetaPosicion } = await import('../src/core/posicion-header.js');
+    assert.deepEqual(POSICIONES_HEADER.map(p => p.id), ['top', 'bottom', 'left', 'right']);
+    assert.deepEqual(posicionesPermitidas(true), ['top', 'bottom', 'left', 'right']);
+    assert.deepEqual(posicionesPermitidas(false), ['top', 'bottom']);
+
+    assert.equal(normalizarPosicion('left', true), 'left');
+    assert.equal(normalizarPosicion('bottom', false), 'bottom');
+    // un costado guardado no vale en móvil, ni un valor desconocido en ningún modo
+    assert.equal(normalizarPosicion('right', false), 'top');
+    assert.equal(normalizarPosicion('inventada', true), 'top');
+    assert.equal(normalizarPosicion(undefined, false), 'top');
+
+    assert.equal(etiquetaPosicion('bottom'), 'Abajo');
+    assert.equal(etiquetaPosicion('inventada'), 'Arriba');
+});
+
 test('EstiloCalendario: el ciclo recorre todos los estilos, vuelve al original y tolera ids desconocidos', async () => {
     const { ESTILOS_CALENDARIO, siguienteEstilo, etiquetaEstilo } = await import('../src/core/estilo-calendario.js');
     const ids = ESTILOS_CALENDARIO.map(e => e.id);
     assert.equal(ids[0], 'legacy', 'el estilo original es el primero y el valor por defecto');
     assert.equal(new Set(ids).size, ids.length, 'sin ids repetidos');
-    assert.deepEqual(ids, ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto']);
+    assert.deepEqual(ids, ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto']);
 
     // dando la vuelta completa se vuelve al punto de partida y se pasa por todos
     const visitados = [];

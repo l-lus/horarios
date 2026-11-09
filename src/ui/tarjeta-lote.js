@@ -1,5 +1,6 @@
 import { STORAGE_KEYS, MS_DIA } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
+import { PosicionHeader } from '../core/posicion-header.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
@@ -395,8 +396,7 @@ async function _irAFicharConFecha(fecha, esEspecial) {
 }
 
 function _scrollACardFichar(el) {
-    const headerEl = /** @type {HTMLElement} */ (document.querySelector('.header'));
-    const margen = (headerEl ? headerEl.offsetHeight : 0) + 8;
+    const margen = PosicionHeader.altoSuperior() + 8;
     return _scrollHastaVisible(el, { margenSuperior: margen });
 }
 

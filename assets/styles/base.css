@@ -125,13 +125,14 @@ html.entrada-pagina .container {
     margin-bottom: 2rem;
 }
 
-/* Cabecera: el layout (altura, sticky) no cambia nunca; al hacer scroll solo se anima la capa de
-   fondo (::before) hasta formar una píldora flotante. Cambiar márgenes/padding del header movería el
-   contenido y haría oscilar el IntersectionObserver que alterna .scrolled */
+/* Cabecera. Su posición la fija <html data-header-pos="top|bottom|left|right"> (core/posicion-header.js; en móvil solo arriba o abajo).
+   Arriba va pegada (sticky) y en flujo; abajo y a los costados va fija y la página le deja su lugar con un relleno en <html>, así que
+   el contenido nunca queda tapado. --header-alto lo mide ui/base.js */
+:root {
+    --header-lateral-w: 4rem;   /* ancho de la barra cuando va a un costado (PC) */
+}
+
 .header {
-    --header-inset-x: 12px;
-    --header-inset-y: 4px;
-    --header-borde: transparent;
     padding: var(--space-smd);
     position: sticky;
     top: 0;
@@ -140,11 +141,8 @@ html.entrada-pagina .container {
     justify-content: space-between;
     align-items: center;
     border-bottom: 3px solid transparent;
-    transition: padding-inline var(--transition-ui);
-    /* Al volver arriba, durante la transición el padding sigue siendo ancho y el contenido (título + acciones)
-       desborda a la derecha: eso agranda el documento y el navegador lo desplaza unos px de costado.
-       clip (a diferencia de hidden) no crea contenedor de scroll ni rompe el sticky */
-    overflow-x: clip;
+    /* Se mantiene presionada para reubicarla (ver ui/header-posicion.js); pan-y deja pasar el desplazamiento mientras tanto */
+    touch-action: pan-y;
 }
 
 .header::before {
@@ -154,89 +152,8 @@ html.entrada-pagina .container {
     z-index: -1;
     background: var(--bg-header);
     box-shadow: var(--shadow);
-    border: 1px solid transparent;
-    border-radius: 0;
     pointer-events: none;
-    transition:
-        inset var(--transition-ui),
-        border-radius var(--transition-ui),
-        border-color var(--transition-ui),
-        box-shadow var(--transition-ui),
-        background-color var(--transition-ui);
-}
-
-.header.scrolled::before {
-    inset: var(--header-inset-y) var(--header-inset-x);
-    border-radius: 999px;
-    border-color: var(--header-borde);
-    box-shadow: var(--shadow-header-flotante, 0 4px 16px rgba(0, 0, 0, 0.18));
-}
-
-.header.scrolled {
-    --header-borde: var(--border, rgba(128, 128, 128, 0.35));
-}
-
-.header.scrolled.progress-green {
-    --header-borde: var(--c-green);
-}
-
-.header.scrolled.progress-red {
-    --header-borde: var(--c-red);
-}
-
-.header.scrolled.progress-purple {
-    --header-borde: var(--c-purple);
-}
-
-.header.scrolled.progress-orange {
-    --header-borde: var(--c-orange);
-}
-
-.header.scrolled.progress-gold {
-    --header-borde: var(--c-gold);
-}
-
-.header.scrolled.progress-blue {
-    --header-borde: var(--c-blue);
-}
-
-.header h1 {
-    transition: transform var(--transition-ui), margin-left var(--transition-ui);
-}
-
-.header-actions {
-    transition: transform var(--transition-ui), opacity var(--transition-ui), visibility var(--transition-ui);
-}
-
-.header.scrolled h1 {
-    transform: scale(0.95);
-    transform-origin: left center;
-}
-
-.header.scrolled .header-actions {
-    transform: scale(0.95);
-    transform-origin: right center;
-}
-
-/* La contracción solo existe en pantallas anchas (en móvil el header no cambia al hacer scroll). La píldora ocupa el 30% centrado (con un mínimo de 340px para que entren el título y las acciones)
-   y el contenido se recoge hacia dentro. Solo cambia el padding horizontal: la altura del header no varía */
-@media (min-width: 768px) {
-    .header {
-        --header-inset-x: min(35%, calc(50% - 170px));
-    }
-
-    .header.scrolled {
-        padding-inline: calc(min(35%, calc(50% - 170px)) + var(--space-sm));
-    }
-}
-
-/* Desktop: la píldora desenfoca lo que pasa por debajo. En móviles se omite (coste de rendimiento) */
-@media (hover: hover) and (pointer: fine) {
-    .header.scrolled::before {
-        background: color-mix(in srgb, var(--bg-header) 78%, transparent);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
-    }
+    transition: background-color var(--transition-ui);
 }
 
 .header h1 {
@@ -248,6 +165,116 @@ html.entrada-pagina .container {
     flex-shrink: 0;
     margin-right: auto;
     margin-left: var(--space-lg);
+}
+
+/* Abajo: barra fija al pie. El relleno de <html> deja libre ese alto; la zona segura de los celulares con barra de gestos se suma al relleno de la barra */
+html[data-header-pos="bottom"] {
+    padding-bottom: var(--header-alto, 60px);
+}
+
+html[data-header-pos="bottom"] .header {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-bottom: 0;
+    border-top: 3px solid transparent;
+    padding-bottom: calc(var(--space-smd) + env(safe-area-inset-bottom, 0px));
+}
+
+html[data-header-pos="bottom"] .header::before {
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* A los costados (solo PC): el mismo encabezado girado, en una barra vertical fija. El texto va de costado con la parte de abajo de las letras hacia el
+   centro de la pantalla (a la izquierda se lee de abajo hacia arriba; a la derecha, de arriba hacia abajo); el título queda abajo y el perfil arriba.
+   Las letras las gira writing-mode; lo que no es texto (los íconos) se gira con `rotate`. Va en los hijos y no en la barra: la barra se desliza al
+   reubicarla con un transform (ui/arrastre.js) que pisaría el giro. */
+@media (min-width: 1024px) {
+    html[data-header-pos="left"] {
+        padding-left: var(--header-lateral-w);
+    }
+
+    html[data-header-pos="right"] {
+        padding-right: var(--header-lateral-w);
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        width: var(--header-lateral-w);
+        writing-mode: vertical-rl;
+        flex-direction: row-reverse;   /* el título (primero en el HTML) abajo y las acciones arriba */
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-lg);
+        padding: var(--space-lg) var(--space-sm);
+        border-bottom: 0;
+    }
+
+    html[data-header-pos="left"] .header {
+        left: 0;
+        right: auto;
+    }
+
+    html[data-header-pos="right"] .header {
+        left: auto;
+        right: 0;
+    }
+
+    html[data-header-pos="left"] .header::before {
+        border-right: 1px solid var(--border);
+    }
+
+    html[data-header-pos="right"] .header::before {
+        border-left: 1px solid var(--border);
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header h1 {
+        margin: 0;
+        justify-content: center;
+    }
+
+    /* Costado izquierdo: las letras (writing-mode) quedan con la parte de abajo hacia la izquierda; se giran 180° para que miren al centro */
+    html[data-header-pos="left"] .header :is(h1, .header-actions) {
+        rotate: 180deg;
+    }
+
+    /* Derecho: ya miran al centro, pero el orden de las acciones se invierte para que (como a la izquierda) el perfil quede arriba del botón de instalar */
+    html[data-header-pos="right"] .header-actions {
+        flex-direction: row-reverse;
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header .icon {
+        rotate: 90deg;
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header :is(.header-actions, button) {
+        writing-mode: vertical-rl;
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn {
+        max-width: none;
+        max-height: 12rem;
+        justify-content: center;
+        padding: var(--space-md) var(--space-xs);
+    }
+}
+
+/* Reubicando la cabecera (mantener presionada y arrastrar): queda atenuada mientras se desliza en vivo al borde más cercano, igual que una tarjeta */
+.header.reubicando {
+    opacity: 0.65;
+    user-select: none;
+    cursor: grabbing;
+}
+
+body.header-arrastrando-activa,
+body.header-arrastrando-activa * {
+    user-select: none !important;
+    cursor: grabbing !important;
 }
 
 /* ─── FLEX COMPARTIDO  ──────────────────────────────────────────────────── ──── */

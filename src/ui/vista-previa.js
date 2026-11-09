@@ -1,5 +1,6 @@
 import { $, setColapsable } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
+import { PosicionHeader } from '../core/posicion-header.js';
 import { Animaciones } from './animaciones.js';
 
 // ====================================================================
@@ -148,8 +149,8 @@ function _refrescar(animar = true) {
  */
 function _llevarAVista() {
     if (!_activa) return;
-    const encabezado = document.querySelector('.header');
-    const bordeEncabezado = encabezado ? encabezado.getBoundingClientRect().bottom : 0;
+    // el borde de arriba que deja libre el encabezado: solo cuenta si va arriba
+    const bordeEncabezado = PosicionHeader.altoSuperior();
     const libreSup = bordeEncabezado + MARGEN_PX;
     const libreInf = window.innerHeight - _alturaReservada() - MARGEN_PX;
     const r = _activa.objetivo.getBoundingClientRect();

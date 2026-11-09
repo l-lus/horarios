@@ -2,6 +2,7 @@ import { Preferencias } from '../core/preferencias.js';
 import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA, MOSAICOS_LINEA, DISPOSICIONES_ANILLO } from '../core/estilo-tarjeta.js';
 import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, FONDO_CARD_POR_DEFECTO } from '../core/constantes.js';
 import { EstiloCalendario, ESTILOS_CALENDARIO } from '../core/estilo-calendario.js';
+import { PosicionHeader, posicionesPermitidas } from '../core/posicion-header.js';
 import { FONDOS_SVG } from '../data/fondos.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -114,6 +115,20 @@ const CONFIG_RESPALDO = [
         esValido: (v) => ESTILOS_CALENDARIO.some(e => e.id === v),
         actual: EstiloCalendario.actual,
         aplicar: (v) => EstiloCalendario.setEstilo(v),
+    },
+    {
+        clave: STORAGE_KEYS.POSICION_HEADER,
+        etiqueta: 'posición del encabezado (PC)',
+        esValido: (v) => posicionesPermitidas(true).includes(v),
+        actual: () => PosicionHeader.guardada(true),
+        aplicar: (v) => PosicionHeader.fijar(true, v),
+    },
+    {
+        clave: STORAGE_KEYS.POSICION_HEADER_MOVIL,
+        etiqueta: 'posición del encabezado (móvil)',
+        esValido: (v) => posicionesPermitidas(false).includes(v),
+        actual: () => PosicionHeader.guardada(false),
+        aplicar: (v) => PosicionHeader.fijar(false, v),
     },
     _opcion(Preferencias.HOVER_POPUP, 'popup del calendario (PC)'),
     _opcion(Preferencias.RUEDA_CALENDARIO, 'rueda del calendario (PC)', () => EventosApp.emit('config:rueda-calendario')),

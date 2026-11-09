@@ -16,6 +16,8 @@ export const STORAGE_KEYS = Object.freeze({
     REDUCIR_ANIMACIONES: 'reducirAnimaciones',
     FORMATO_CORTO_STATS: 'formatoCortoStats',
     ESTILO_CALENDARIO: 'estiloCalendario',
+    POSICION_HEADER: 'posicionHeader',            // dónde va el encabezado en PC: arriba, abajo, izquierda o derecha (ver core/posicion-header.js)
+    POSICION_HEADER_MOVIL: 'posicionHeaderMovil', // ídem en móvil: solo arriba o abajo
     LINEA_MOSAICOS: 'lineaMosaicos',        // estilo línea de tiempo con la tarjeta angosta (móvil): los mosaicos Faltan y Banco de horas abajo o a la derecha
     ANILLO_DISPOSICION: 'anilloDisposicion', // estilo anillo: de qué lado va el aro y si la fila Entrada / Salida / Con banco va abajo o arriba
     LINEA_DISPOSICION: 'lineaDisposicion',  // estilo línea de tiempo en pantallas anchas: dónde va el tiempo trabajado (arriba, a la izquierda o a la derecha de la línea)
@@ -72,6 +74,8 @@ export const CLAVES_AJUSTES_INSTALACION = Object.freeze([
     STORAGE_KEYS.REDUCIR_ANIMACIONES,
     STORAGE_KEYS.FORMATO_CORTO_STATS,
     STORAGE_KEYS.ESTILO_CALENDARIO,
+    STORAGE_KEYS.POSICION_HEADER,
+    STORAGE_KEYS.POSICION_HEADER_MOVIL,
     STORAGE_KEYS.HOVER_POPUP,
     STORAGE_KEYS.RUEDA_CALENDARIO,
     STORAGE_KEYS.ESTILO_TARJETA,

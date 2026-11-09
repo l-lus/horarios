@@ -501,34 +501,13 @@ function bindEventos() {
     });
     HoverBarra.bindEventos();
 
+    // Al redimensionar se vuelve a ajustar lo que depende del ancho de la tarjeta de estado
     (function () {
-        const header = /** @type {HTMLElement} */ (document.querySelector('.header'));
-        const statsCard = $('stats-card');
-        if (!header || !statsCard) return;
-
-        let observer = null;
-        // En móvil el header no se contrae al bajar: queda siempre como arriba del todo
-        const movil = window.matchMedia('(max-width: 767px)');
-
-        const crearObserver = () => {
-            if (observer) observer.disconnect();
-            const headerH = header.offsetHeight;
-            observer = new IntersectionObserver(
-                ([entry]) => {
-                    header.classList.toggle('scrolled', !movil.matches && !entry.isIntersecting);
-                },
-                { rootMargin: `-${headerH}px 0px 0px 0px`, threshold: 0 }
-            );
-            observer.observe(statsCard);
-        };
-
-        crearObserver();
-        movil.addEventListener('change', crearObserver);   // al cruzar el corte (rotar, redimensionar) se reevalúa en el acto
+        if (!$('stats-card')) return;
         let resizeTimer = null;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
-                crearObserver();
                 BarraHitos.redibujar();
                 _renderMensaje();
                 _renderBuffer();

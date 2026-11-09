@@ -239,28 +239,59 @@ html[data-header-pos="bottom"] .header::before {
     }
 
     /* Costado izquierdo: las letras (writing-mode) quedan con la parte de abajo hacia la izquierda; se giran 180° para que miren al centro */
-    html[data-header-pos="left"] .header :is(h1, .header-actions) {
+    html[data-header-pos="left"] .header h1 {
         rotate: 180deg;
     }
 
-    /* Derecho: ya miran al centro, pero el orden de las acciones se invierte para que (como a la izquierda) el perfil quede arriba del botón de instalar */
-    html[data-header-pos="right"] .header-actions {
+    /* Acciones: el perfil arriba del botón de instalar (el primero del HTML va abajo) */
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-actions {
         flex-direction: row-reverse;
     }
 
-    html:is([data-header-pos="left"], [data-header-pos="right"]) .header .icon {
+    /* El ícono de instalar gira con el texto (a la izquierda al revés que a la derecha) */
+    html[data-header-pos="left"] #btn-install .icon {
+        rotate: -90deg;
+    }
+
+    html[data-header-pos="right"] #btn-install .icon {
         rotate: 90deg;
     }
 
-    html:is([data-header-pos="left"], [data-header-pos="right"]) .header :is(.header-actions, button) {
-        writing-mode: vertical-rl;
+    /* Perfil: solo el ícono. El nombre aparece en horizontal, como una píldora que sale hacia las tarjetas, al pasar el cursor o enfocar el botón */
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn {
+        position: relative;
+        writing-mode: horizontal-tb;
+        max-width: none;
+        padding: var(--space-sm);
+        gap: 0;
+        justify-content: center;
     }
 
-    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn {
-        max-width: none;
-        max-height: 12rem;
-        justify-content: center;
-        padding: var(--space-md) var(--space-xs);
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn span {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        max-width: 16rem;
+        padding: var(--space-xs) var(--space-md);
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-full);
+        box-shadow: var(--shadow);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--dur-fast);
+    }
+
+    html[data-header-pos="left"] .header-profile-btn span {
+        left: calc(100% + var(--space-sm));
+    }
+
+    html[data-header-pos="right"] .header-profile-btn span {
+        right: calc(100% + var(--space-sm));
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn:is(:hover, :focus-visible) span {
+        opacity: 1;
     }
 }
 

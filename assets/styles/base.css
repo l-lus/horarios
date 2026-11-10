@@ -26,7 +26,7 @@ body {
     background: var(--bg-body);
     color: var(--text-main);
     overflow-anchor: none;
-    transition: background var(--transition-ui), color var(--transition-ui);
+    transition: background var(--transition-ui), color var(--transition-ui), padding-bottom var(--dur-collapse) ease-out;   /* padding-bottom: el espacio de la vista previa se anima también al cerrarla (la clase vista-previa-activa ya no está) */
     overflow-y: auto;
 }
 

@@ -195,15 +195,15 @@ function _configCalendario(desdeAjustes = true) {
 }
 
 // El tema no tiene tarjeta ni filas: se ve toda la página y se elige con círculos de color. Se abre desde el encabezado (mantener y soltar, ver header-posicion.js),
-// desde el botón de tema del selector de perfiles (que se cierra mientras y se reabre al terminar) o pasando a él desde las otras vistas
+// desde el botón de tema del selector de perfiles (que se oculta mientras, conservando su entrada del historial, y se reabre al terminar) o pasando a él desde las otras vistas
 /** @param {boolean} [desdeSelector] con true (el botón del selector de perfiles) hay un modal que cerrar y al que volver */
 function _configTema(desdeSelector = false) {
     return {
         id: 'tema',
         titulo: 'Tema',
         sinVelo: true,
-        antes: desdeSelector ? () => GestorModales.cerrar('modal-selector-perfiles') : undefined,
-        alCerrar: desdeSelector ? () => GestorModales.abrir('modal-selector-perfiles') : undefined,
+        antes: desdeSelector ? () => GestorModales.cerrar('modal-selector-perfiles', null, { sinHistorial: true }) : undefined,
+        alCerrar: desdeSelector ? () => GestorModales.abrir('modal-selector-perfiles', null, { sinHistorial: true }) : undefined,
         filas: [],
         circulos: { opciones: GestorTemas.muestras(), actual: () => GestorTemas.temaGuardado(), alElegir: elegirTema }
     };

@@ -12,7 +12,7 @@ import { Cambios } from './cambios.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp as D } from './estado-app.js';
-import { normalizarOrdenCards, columnasDesdeOrden, tamanosDeColumnas, esTamanosColumnasValidos } from './orden-cards.js';
+import { normalizarOrdenCards, leerLayout, columnasDesdeOrden, tamanosDeColumnas, esTamanosColumnasValidos } from './orden-cards.js';
 import { DiasHabiles } from './dias-habiles.js';
 import { Objetivos } from './objetivos.js';
 
@@ -29,18 +29,15 @@ const MAX_LARGO_ID_UI = 40;
 const _esListaDeIds = (v) => Array.isArray(v) && v.length <= MAX_ITEMS_LISTA_UI && v.every(x => typeof x === 'string' && x.length > 0 && x.length <= MAX_LARGO_ID_UI);
 const _esMapaDeBooleanos = (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= MAX_ITEMS_LISTA_UI && Object.values(v).every(x => typeof x === 'boolean');
 
-const _ordenActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
-// Sin orden propio para móvil se usa el de escritorio (así era antes de separarlos)
-const _ordenMovilActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true) ?? Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
-// Sin orden propio para 3 columnas se usa el de 2 (y sus tamaños)
-const _orden3Actual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_3, null, true) ?? Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
+const _leer = (clave) => Almacenamiento.getObject(clave, null, true);
+const _ordenActual = () => leerLayout(2, _leer).orden;
+// Sin orden propio para móvil o para 3 columnas se usa el de 2 columnas (con sus tamaños): ver leerLayout
+const _ordenMovilActual = () => leerLayout(1, _leer).orden;
+const _orden3Actual = () => leerLayout(3, _leer).orden;
 // Tamaños de las columnas de escritorio (sin tamaños guardados, el reparto por defecto)
-const _columnasActuales = () => tamanosDeColumnas(columnasDesdeOrden(_ordenActual(), Almacenamiento.getObject(STORAGE_KEYS.COLUMNAS_CARDS, null, true)));
-const _columnas3Actuales = () => {
-    const propio = Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_3, null, true);
-    const tamanos = Almacenamiento.getObject(propio ? STORAGE_KEYS.COLUMNAS_CARDS_3 : STORAGE_KEYS.COLUMNAS_CARDS, null, true);
-    return tamanosDeColumnas(columnasDesdeOrden(_orden3Actual(), tamanos));
-};
+const _tamanosActuales = (modo) => { const { orden, tamanos } = leerLayout(modo, _leer); return tamanosDeColumnas(columnasDesdeOrden(orden, tamanos)); };
+const _columnasActuales = () => _tamanosActuales(2);
+const _columnas3Actuales = () => _tamanosActuales(3);
 const _visiblesActuales = () => Object.fromEntries(CARDS.map(c => [c, Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(c), true, true)]));
 
 const _avisarHint = () => EventosApp.emit('config:hint-integrado');

@@ -145,3 +145,6 @@ export const MINUTOS_DIA = 24 * 60;
 export const MS_DIA = MINUTOS_DIA * 60 * 1000;
 export const horasGte = (valor, objetivo) => (valor - objetivo) > -EPS_HORAS;
 export const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;
+
+/** Cortes de ancho que cambian el diseño (el CSS usa los mismos valores en sus @media): desde ESCRITORIO hay 2 columnas y desde ANCHO, 3. Mantenerlos juntos acá evita que el orden de tarjetas y la transición de layout discrepen. */
+export const CORTES_LAYOUT = Object.freeze({ ESCRITORIO: '(min-width: 1024px)', ANCHO: '(min-width: 1400px)' });

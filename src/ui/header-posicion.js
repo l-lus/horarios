@@ -1,3 +1,4 @@
+import { CORTES_LAYOUT } from '../core/constantes.js';
 import { PosicionHeader, posicionesPermitidas } from '../core/posicion-header.js';
 import { uiAnimarReubicacion, uiArrastreLargo } from './arrastre.js';
 import { elementosDelLayout, claveDelLayout } from './transicion-layout.js';
@@ -13,7 +14,7 @@ import { mostrarToast, _cerrarToastActual } from './toast.js';
 // se acomodan al lugar que deja. Al soltar queda ahí (Escape cancela y vuelve a donde estaba). El dibujo de cada posición es del CSS (<html data-header-pos>,
 // ver core/posicion-header.js).
 // Atajo para el tema (igual que el de las tarjetas, ver orden-tarjetas.js): mantener presionado y soltar sin mover dentro de VENTANA_PERSONALIZAR_MS abre la vista previa del tema.
-const _consultaEscritorio = window.matchMedia('(min-width: 1024px)');   // mismo corte que el CSS
+const _consultaEscritorio = window.matchMedia(CORTES_LAYOUT.ESCRITORIO);   // mismo corte que el CSS
 
 // Controles del encabezado que conservan su toque o clic normal: no inician el arrastre
 const _SELECTOR_CONTROLES = 'button, a, input, select, textarea';

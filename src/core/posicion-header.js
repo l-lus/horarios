@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from './constantes.js';
+import { STORAGE_KEYS, CORTES_LAYOUT } from './constantes.js';
 import { Almacenamiento } from './almacenamiento.js';
 import { EventosApp } from './eventos.js';
 
@@ -20,7 +20,7 @@ const ID_POR_DEFECTO = 'top';
 const _IDS_MOVIL = Object.freeze(['top', 'bottom']);
 
 /** Mismo corte que el CSS y que el orden de las tarjetas (@media min-width: 1024px). */
-const _consulta = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(min-width: 1024px)') : null;
+const _consulta = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(CORTES_LAYOUT.ESCRITORIO) : null;
 const _esEscritorio = () => !!_consulta && _consulta.matches;
 
 /** Ids de posición que valen en PC (todas) o en móvil (arriba y abajo). */

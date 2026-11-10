@@ -355,7 +355,9 @@ async function cambiar(delta) {
         activa.cfg = { ...nueva, antes: activa.cfg.antes, alCerrar: activa.cfg.alCerrar };
         activa.objetivo = objetivo;
         activa.restaurar = _preparadores[nueva.id]?.() ?? null;
-        Animaciones._animarAlturaCambio($('vista-previa-panel'), () => _poblar());
+        // la altura que se anima es la de la zona de opciones y no la del panel: el panel está anclado abajo y su cabecera (flechas y Listo) va después de las opciones,
+        // así que la cabecera queda quieta mientras las opciones crecen o se achican hacia arriba
+        Animaciones._animarAlturaCambio($('vista-previa-filas'), () => _poblar());
         objetivo?.classList.add('vista-previa-objetivo');
         _medirPanel();
         // el calendario o la tarjeta se anima al prepararse: se encuadra cuando termina

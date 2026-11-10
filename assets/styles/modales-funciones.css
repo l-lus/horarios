@@ -1008,6 +1008,7 @@ body.vista-previa-sin-velo .vista-previa-velo.show {
 /* Deja libre abajo lo que ocupa el panel para poder desplazar la página hasta ver la tarjeta entera */
 body.vista-previa-activa {
     padding-bottom: var(--vp-panel-h, 0px);
+    transition: padding-bottom var(--dur-collapse) ease-out;   /* al pasar de una vista a otra el panel cambia de alto: el espacio de abajo lo acompaña */
 }
 
 /* Las copias que se desvanecen en las animaciones de cambio (.mutacion-saliente, colgadas del body con z-index 80) quedaban por debajo del velo y de la tarjeta elevada:

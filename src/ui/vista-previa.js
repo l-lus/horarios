@@ -14,7 +14,7 @@ import { Animaciones } from './animaciones.js';
 // un preparador registrado con `registrarPreparador` que devuelve cómo dejar todo como estaba.
 //
 // Las vistas previas (tarjeta de estado, calendario y tema) están integradas: se registran con `registrarVista` y `definirOrden`, y desde el panel se pasa de una a otra
-// tocando el título (el ícono de al lado lo indica) o, en pantallas táctiles, deslizando el panel hacia los costados. El tema no tiene tarjeta ni velo (hay que ver los colores
+// tocando las flechas de los costados del título (la de la izquierda va a la anterior y la de la derecha a la siguiente) o, en pantallas táctiles, deslizando el panel hacia los costados. El tema no tiene tarjeta ni velo (hay que ver los colores
 // de toda la página) y en lugar de filas muestra círculos de color para elegir.
 //
 // La vista previa agrega una entrada al historial del navegador (como los modales): así el botón Atrás de un móvil la cierra en vez de salir de la app.
@@ -161,7 +161,7 @@ function _poblar() {
     const { cfg } = _activa;
     const titulo = $('vista-previa-titulo-texto');
     if (titulo) titulo.textContent = cfg.titulo;
-    // el ícono de al lado del título avisa que se puede pasar a otra vista; sin otra vista a dónde ir no se muestra
+    // las flechas de los costados del título solo se muestran si hay otra vista a dónde ir
     $('vista-previa-titulo')?.classList.toggle('con-otras', _orden.length > 1);
     document.body.classList.toggle('vista-previa-sin-velo', !!cfg.sinVelo);
     const cont = $('vista-previa-filas');
@@ -429,8 +429,9 @@ function bindEventos() {
     if (_iniciada) return;
     _iniciada = true;
     $('vista-previa-listo')?.addEventListener('click', () => cerrar());
-    // el título (con su ícono) pasa a la vista siguiente; el deslizamiento táctil, a la de al lado
-    $('vista-previa-titulo')?.addEventListener('click', () => cambiar(1));
+    // las flechas de los costados del título pasan a la vista anterior o a la siguiente; el deslizamiento táctil, a la de al lado
+    $('vista-previa-anterior')?.addEventListener('click', () => cambiar(-1));
+    $('vista-previa-siguiente')?.addEventListener('click', () => cambiar(1));
     _bindDeslizar();
     // tocar el velo (fuera de la tarjeta y del panel) cierra igual que Listo: el estilo elegido queda como está
     $('vista-previa-velo')?.addEventListener('click', () => cerrar());

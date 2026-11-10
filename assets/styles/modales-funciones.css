@@ -875,31 +875,39 @@ body.tarjeta-arrastrando-activa * {
     margin-bottom: var(--space-sm);
 }
 
-/* El título es un botón: pasa a la siguiente personalización (tarjeta de estado, calendario, tema). El ícono de al lado, que solo está si hay otra a dónde ir, lo avisa */
+/* El título va centrado entre dos flechas: la de la izquierda pasa a la personalización anterior (tarjeta de estado, calendario, tema) y la de la derecha, a la siguiente.
+   Sin otra a dónde ir, las flechas no se muestran */
 .vista-previa-titulo {
+    flex: 1;
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    justify-content: center;
+    gap: var(--space-xs);
     min-width: 0;
-    padding: var(--space-xs) var(--space-sm);
-    margin-left: calc(var(--space-sm) * -1);
+    font-weight: var(--fw-semibold);
+}
+
+.vista-previa-nav {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--control-sm);
+    height: var(--control-sm);
+    padding: 0;
     background: transparent;
     border: 0;
-    border-radius: var(--radius-md);
-    color: inherit;
-    font: inherit;
-    font-weight: var(--fw-semibold);
+    border-radius: var(--radius-full);
+    color: var(--text-muted);
     cursor: pointer;
 }
 
-.vista-previa-titulo .icon {
-    display: none;
-    flex: none;
-    color: var(--text-muted);
+.vista-previa-nav-anterior .icon {
+    transform: scaleX(-1);   /* la flecha de la izquierda es la de la derecha espejada */
 }
 
-.vista-previa-titulo.con-otras .icon {
-    display: block;
+.vista-previa-titulo:not(.con-otras) .vista-previa-nav {
+    display: none;
 }
 
 /* Deslizar el panel hacia los costados pasa a otra personalización: el navegador solo se ocupa del desplazamiento vertical */

@@ -207,7 +207,7 @@ function _configTema(_desdeAjustes = false) {
     };
 }
 
-// Las tres vistas previas están integradas: desde el panel se pasa de una a otra (tocando el título o deslizando en pantallas táctiles)
+// Las tres vistas previas están integradas: desde el panel se pasa de una a otra (tocando las flechas del título o deslizando en pantallas táctiles)
 VistaPrevia.registrarVista('tarjeta', () => _configTarjeta(false));
 VistaPrevia.registrarVista('calendario', () => _configCalendario(false));
 VistaPrevia.registrarVista('tema', () => _configTema());

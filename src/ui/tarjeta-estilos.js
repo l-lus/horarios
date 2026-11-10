@@ -472,17 +472,19 @@ function pintarNodos(r, d) {
         nodo.raiz.classList.toggle('primero', primero);
         nodo.raiz.classList.toggle('pasado', hito.tipo !== 'ahora' && hito.rel <= ahoraRel);
         primero = false;
-        if (d.cerrado) delete nodo.raiz.dataset.tramo; else nodo.raiz.dataset.tramo = tramoDe(hito.rel);
+        // cerrado no hay zonas: todo el tramo lleva el color del estado con que cerró
+        if (!d.cerrado) nodo.raiz.dataset.tramo = tramoDe(hito.rel);
+        else if (['green', 'gold', 'red'].includes(d.color)) nodo.raiz.dataset.tramo = d.color;
+        else delete nodo.raiz.dataset.tramo;
         fijar(nodo.hora, horas[hito.tipo] ?? '');
         if (hito.tipo === 'salida') fijar(nodo.etiqueta, d.cerrado ? 'Salida' : 'Salida estimada');
         if (hito.tipo === 'banco') entonar(nodo.raiz, tonoBanco(d.banco));
         // el badge de "Ahora" lleva el color del estado del día (el mismo del anillo y la nota)
         if (hito.tipo === 'ahora') nodo.raiz.dataset.color = d.color ?? 'blue';
-        // con el registro cerrado la salida es lo que pasó de verdad: el remate se rellena con el color del estado con que cerró (el mismo del badge "Finalizado")
-        const cierre = hito.tipo === 'salida' && !!d.cerrado;
-        nodo.raiz.classList.toggle('cerrado', cierre);
-        if (cierre) { nodo.raiz.classList.add('pasado'); nodo.raiz.dataset.color = d.color ?? 'neutro'; }
-        else if (hito.tipo === 'salida') delete nodo.raiz.dataset.color;
+        // con el registro cerrado los hitos (entrada y salida) y el conector toman el color del estado con que cerró (el mismo del badge "Finalizado")
+        nodo.raiz.classList.toggle('cerrado', !!d.cerrado);
+        if (d.cerrado) { nodo.raiz.classList.add('pasado'); nodo.raiz.dataset.color = d.color ?? 'neutro'; }
+        else if (hito.tipo !== 'ahora') delete nodo.raiz.dataset.color;
     });
 }
 

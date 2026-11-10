@@ -2387,7 +2387,7 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
 }
 
 .est-nodo--entrada { --nodo: var(--c-blue); }
-.est-nodo--entrada .est-nodo-punto { background: var(--c-blue); }
+.est-nodo--entrada .est-nodo-punto { background: var(--nodo); }
 
 .est-nodo--ahora { --nodo: var(--est-color); }
 .est-nodo--ahora .est-nodo-etiqueta { color: var(--est-color); font-weight: var(--fw-semibold); }
@@ -2413,7 +2413,7 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
 .est-nodo--banco { --nodo: var(--tono); }
 .est-nodo--banco.pasado .est-nodo-punto { background: var(--tono); }
 .est-nodo--salida.pasado .est-nodo-punto { background: var(--nodo); }
-.est-nodo--salida.cerrado { --nodo: var(--est-color); }
+.est-nodo.cerrado { --nodo: var(--est-color); }
 /* con el registro en curso la salida estimada ya alcanzada se rellena con el color del conector que llega a ella (data-tramo; todavía no es el cierre) */
 .est-nodo--salida.pasado:not(.cerrado)[data-tramo="blue"] { --nodo: var(--c-blue); }
 .est-nodo--salida.pasado:not(.cerrado)[data-tramo="green"] { --nodo: var(--c-green); }

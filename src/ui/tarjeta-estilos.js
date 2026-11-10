@@ -496,9 +496,10 @@ function pintarNodos(r, d) {
  * @param {any} r @param {HTMLElement[]} nodos los nodos visibles, en orden @param {number} [ms] 0 / undefined: sin animación @param {number} [base] espera antes de empezar
  */
 function animarEntradaLinea(r, nodos, ms = 0, base = 0) {
+    // un dibujo sin entrada (el reloj, un cambio de tamaño) no corta la que está en curso: la clase se quita sola al terminar
+    if (!(ms > 1)) return;
     clearTimeout(r.timerEntrada);
     r.raiz.classList.remove('entrando');
-    if (!(ms > 1)) return;
     const coloreado = (/** @type {HTMLElement} */ n) => n.classList.contains('pasado') || n.classList.contains('est-nodo--ahora');   // el conector que llega a él ya está coloreado
     const n = nodos.slice(1).filter(coloreado).length;   // tramos ya recorridos
     const t = (/** @type {number} */ p) => (p <= 0 ? 0 : 1 - Math.pow(1 - Math.min(1, p), 1 / 3));   // en qué fracción del tiempo la línea llega a la fracción p del recorrido

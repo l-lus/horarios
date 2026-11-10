@@ -201,6 +201,28 @@ button.campo-flash {
     animation: calendario-hoy-pulso var(--dur-pulso-hoy) ease-in-out 2;
 }
 
+/* Destello del mosaico de balance (Faltan cubierto / Extra / Objetivo cumplido) de la línea de tiempo en la carga: el mismo pulso del día de hoy del calendario con registro,
+   con el color del tono del mosaico */
+@keyframes mosaico-flash {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0 transparent) brightness(1);
+    }
+
+    50% {
+        transform: scale(1.08);
+        filter: drop-shadow(0 0 3px var(--tono)) drop-shadow(0 0 7px var(--tono)) brightness(1.3);
+    }
+}
+
+.est-mosaico.mosaico-flash {
+    position: relative;
+    z-index: 2;
+    animation: mosaico-flash var(--dur-pulso-hoy) ease-in-out 2;
+}
+
 /* Filas de ajustes: sin borde propio y dentro de un contenedor con overflow hidden,
    así que el resalte va como sombra interna */
 @keyframes calendarioEntradaDia {

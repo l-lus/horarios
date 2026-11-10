@@ -60,7 +60,7 @@ function _fantasmaDe(el) {
 }
 
 const _mutacionAnimEstado = new WeakMap();
-const _CLASES_FLASH = ['campo-flash', 'campo-flash-color'];
+const _CLASES_FLASH = ['campo-flash', 'campo-flash-color', 'mosaico-flash'];
 
 // ─── Destello (campo-flash / campo-flash-color) ─────────────────────────────
 // Ambas clases fijan `animation` con más especificidad que .mutacion-entrante, así que

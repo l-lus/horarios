@@ -736,7 +736,23 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
         diseno.alinear?.(refs, refsSemana);
     }
     if (contar) _contar(id, refs, resumen.trabajado, duracion);
+    if (conteoInicial && id === 'linea') destellarBalance(refs, resumen, contar ? duracion : 0);
     return true;
+}
+
+/**
+ * En la carga de la página, con el registro en curso, el mosaico de balance destella (como el día de hoy del calendario) si hay buenas noticias:
+ * el faltante lo cubre el saldo (dorado) o el objetivo ya está cumplido / hay extra (verde). Con el registro cerrado no tiene sentido.
+ * Espera a que termine el conteo para que no pase desapercibido.
+ * @param {any} refs @param {any} resumen @param {number} espera ms
+ */
+function destellarBalance(refs, resumen, espera) {
+    if (resumen.tipo !== 'registro' || resumen.cerrado || !resumen.balance) return;
+    if (resumen.balance.tono !== 'gold' && resumen.balance.tono !== 'green') return;
+    const nodo = refs.balance.raiz;
+    setTimeout(() => {
+        if (nodo.isConnected && _montado?.refs === refs) Animaciones._flashElemento(nodo, 'mosaico-flash');
+    }, espera + 20);
 }
 
 /**

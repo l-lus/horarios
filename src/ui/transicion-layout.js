@@ -50,6 +50,14 @@ function _programarFoto() {
     });
 }
 
+/** Para lo que cambia seguido (el reloj, el desplazamiento, el contenido): una foto como mucho cada tanto. Al redimensionar sí hace falta una por cuadro, porque el corte puede cruzarse en cualquier momento. */
+const ESPERA_FOTO_LENTA_MS = 250;
+let _timerFotoLenta = 0;
+function _programarFotoLenta() {
+    if (_timerFotoLenta) return;
+    _timerFotoLenta = window.setTimeout(() => { _timerFotoLenta = 0; _programarFoto(); }, ESPERA_FOTO_LENTA_MS);
+}
+
 function _alCruzarCorte() {
     if (_cruzando) return;   // dos cortes en el mismo cuadro (1024 y 1400 a la vez): una sola animación
     _cruzando = true;
@@ -73,10 +81,10 @@ function iniciar() {
     _iniciada = true;
     CORTES.forEach(q => window.matchMedia(q).addEventListener('change', _alCruzarCorte));
     window.addEventListener('resize', _programarFoto);
-    window.addEventListener('scroll', _programarFoto, { passive: true });
+    window.addEventListener('scroll', _programarFotoLenta, { passive: true });
     // el contenido cambia el alto de las tarjetas (se despliegan, llegan registros, corre el reloj) y con eso la posición de las de abajo
     const raiz = document.querySelector('.container');
-    if (raiz) new MutationObserver(_programarFoto).observe(raiz, { childList: true, subtree: true, attributes: true, characterData: true });
+    if (raiz) new MutationObserver(_programarFotoLenta).observe(raiz, { childList: true, subtree: true, attributes: true, characterData: true });
     _programarFoto();
 }
 

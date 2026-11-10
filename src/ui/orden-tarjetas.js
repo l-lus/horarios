@@ -125,9 +125,13 @@ function aplicarOrdenCards(orden, columnas = null) {
 
     const lista = $('lista-orden-cards');
     if (lista) {
+        // Solo se mueve lo que cambia de lugar: volver a insertar un ítem que ya está en su posición reinicia sus transiciones (el toggle saltaba sin animarse)
+        let i = 0;
         cols.flat().forEach(cual => {
             const item = $('orden-item-' + cual);
-            if (item) lista.appendChild(item);
+            if (!item) return;
+            if (lista.children[i] !== item) lista.insertBefore(item, lista.children[i] ?? null);
+            i++;
         });
     }
 }

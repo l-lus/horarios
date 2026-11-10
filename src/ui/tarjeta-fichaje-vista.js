@@ -390,7 +390,7 @@ function _colorSiCerraraAhora(tiempoHoy, objetivo, bufferSemanal) {
 /**
  * Lo que aclara de un día abierto el mensaje de `_mensajeProgreso` (para los mosaicos de la línea de tiempo), en una o dos versiones: el texto completo
  * y, si no entra en una línea, uno más corto (ver `fijarQueEntre` en tarjeta-estilos.js). Devuelve:
- * 'Pero te podés ir' (falta tiempo pero el saldo lo cubre; corta: 'Te podés ir'), 'Debés tiempo semanal' (objetivo cumplido, pero el saldo semanal
+ * 'Pero te podés ir' (falta tiempo pero el saldo lo cubre; corta: 'Te podés ir'), 'Te podés ir, pero debés tiempo' (objetivo cumplido, pero el saldo semanal
  * sigue en deuda; corta: 'Debés tiempo'), 'Te podés ir' (objetivo cumplido) o ''.
  * @returns {string | string[]}
  */
@@ -399,7 +399,7 @@ function _aclaracionProgreso(cumplido, tiempoHoy, objetivoDiario, bufferSemanal)
     if (cumplido) {
         const extra = tiempoHoy - objetivoDiario;
         // sin el "(+extra)" del mensaje: el mosaico "Extra" ya lo muestra
-        return bufferSemanal < 0 && Math.abs(bufferSemanal) > extra ? ['Debés tiempo semanal', 'Debés tiempo'] : 'Te podés ir';
+        return bufferSemanal < 0 && Math.abs(bufferSemanal) > extra ? ['Te podés ir, pero debés tiempo', 'Debés tiempo'] : 'Te podés ir';
     }
     return bufferSemanal >= objetivoDiario - tiempoHoy ? ['Pero te podés ir', 'Te podés ir'] : '';
 }
@@ -438,7 +438,7 @@ function _resumenTiempoFuera(reg) {
 function _resumenBalance(tiempoHoy, objetivo, cerrado, colorCierre, aclaracion = /** @type {string | string[]} */ ('')) {
     if (!(objetivo > 0)) return null;
     const falta = TiempoUtils.horasAMinutosRedondeados(objetivo - tiempoHoy);
-    // en un día abierto, `aclaracion` es el "pero te podés ir" / "debés tiempo semanal" del mensaje, como tercera línea (una o varias versiones, de la más completa a la más corta)
+    // en un día abierto, `aclaracion` es el "pero te podés ir" / "te podés ir, pero debés tiempo" del mensaje, como tercera línea (una o varias versiones, de la más completa a la más corta)
     const detalle = !cerrado && aclaracion ? { detalle: aclaracion } : {};
     if (falta > 0) {
         return cerrado

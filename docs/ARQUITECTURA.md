@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
-**Última actualización:** 2026-11-07  
-**Estado:** Arquitectura modularizada y saneada (84 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Última actualización:** 2026-11-10  
+**Estado:** Arquitectura modularizada y saneada (91 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -39,7 +39,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (84 módulos)
+├── src/                        # Código fuente en ES Modules (91 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
@@ -49,6 +49,7 @@ horarios/
 │   ├── architecture.test.mjs   # Capas, ciclos, extensiones .js, ids e íconos existentes, precache de sw.js, versión APP_VERSION/CACHE_NAME y services sin DOM
 │   ├── domain.test.mjs         # Cálculos horarios, seguridad, compensatorios y arranque completo de la UI
 │   ├── html.test.mjs           # Escape automático de core/html.js
+│   ├── service-worker.test.mjs # Service Worker: caché, actualización, fallback offline y notificaciones push
 │   ├── orden-cards.test.mjs    # Columnas libres de escritorio: reparto, mover, columna nueva y límites
 │   ├── edicion-registro.test.mjs # Edición de un registro (modal) sin DOM: guardar, validaciones, crédito, compensatorio, eliminar
 │   ├── servidor-dev.test.mjs   # El servidor de desarrollo entrega solo la app (ni .env, ni .git, ni datos) y rechaza DNS rebinding

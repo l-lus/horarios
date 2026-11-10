@@ -2136,6 +2136,25 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
     order: -1;
 }
 
+/* Día especial con la tarjeta angosta (móvil): el nombre del día ("Compensatorio", "Vacaciones"...) no entra en el 40 % que queda junto al aro y se corta, así que va debajo del aro,
+   centrado. Se mide el ancho de la tarjeta (contenedor #stats-estilo), como el resto de las disposiciones. Con "html" delante gana a las variantes "derecha" de más arriba. */
+@container (max-width: 27.99rem) {
+    html .est-anillo[data-tipo="especial"] .est-anillo-principal {
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+    }
+
+    html .est-anillo[data-tipo="especial"] .est-anillo-aro {
+        order: 0;
+        width: min(100%, 11rem);
+    }
+
+    html .est-anillo[data-tipo="especial"] .est-anillo-datos {
+        align-self: center;
+        text-align: center;
+    }
+}
+
 /* ── C · Línea de tiempo vertical ── */
 .est-linea,
 .est-linea-cuerpo {

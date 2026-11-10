@@ -5,7 +5,7 @@ import { CARDS_ORDEN } from '../core/constantes.js';
 // ====================================================================
 // El orden es una lista con todas las tarjetas, ocultas incluidas. En escritorio esa lista se corta en columnas según los tamaños guardados
 // (ej. [3, 1] = 3 tarjetas en la primera columna y 1 en la segunda); en móvil se muestra apilada. La tarjeta de estado ('estado') nunca se oculta.
-export const CARDS_EN_DERECHA = 1;   // reparto por defecto: solo la última (Registros) va a la segunda columna
+const CARDS_EN_DERECHA = 1;   // reparto por defecto: solo la última (Registros) va a la segunda columna
 export const MAX_COLUMNAS = 3;
 
 /**

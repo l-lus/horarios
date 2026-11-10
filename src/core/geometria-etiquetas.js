@@ -6,9 +6,8 @@
 export const ANCHO_CONECTOR = 27;        // de la marca al final de la línea diagonal (vista diaria; coincide con el path de las marcas de index.html)
 export const SEPARACION_ETIQUETA = 2;    // del final de la línea a la etiqueta
 export const MARGEN_HORAS = 12;          // separación mínima entre horas del mismo lado antes de reubicar la entrada
-export const MARGEN_SIGLAS = 8;          // separación mínima entre siglas del mismo lado en la vista semanal
-export const ANCHO_DIAGONAL = 16;        // de la marca al extremo de la sigla rotada (línea diagonal más separación)
-export const ANCHO_PASO_DIAGONAL = 24;   // ancho de pista que ocupa cada sigla en diagonal (paralelas entre sí)
+const ANCHO_DIAGONAL = 16;        // de la marca al extremo de la sigla rotada (línea diagonal más separación)
+const ANCHO_PASO_DIAGONAL = 24;   // ancho de pista que ocupa cada sigla en diagonal (paralelas entre sí)
 const MEDIO_ANCHO_MARCA = 3;
 
 /**

@@ -766,19 +766,20 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
     }
     if (!_montado || _montado.id !== id || !host.firstChild) _montar(host, id, diseno);
     const refs = _montado?.refs;
-    const contar = conteoInicial && duracion > 1 && !!resumen.trabajado && resumen.trabajadoMin > 0;
+    // la carga de la página y el paso automático de semana a día (aviso de pedirDestelloBalance) hacen la misma entrada: número que cuenta, línea que se llena, textos que suben y destello
+    const pendiente = id === 'linea' && resumen.tipo === 'registro' && _destelloPendiente > performance.now();
+    const carga = conteoInicial || pendiente;
+    const contar = carga && duracion > 1 && !!resumen.trabajado && resumen.trabajadoMin > 0;
     if (contar) {
         diseno.pintar(refs, _sinAvance(resumen));
         void host.offsetWidth;   // el estado vacío tiene que estar aplicado para que el siguiente dibujo transicione hacia el real
     }
-    // entrada de la línea de tiempo (la carga, o el cambio automático de semana a día): la línea se llena y los textos suben, como en la barra con hitos (también en la semana, solo en la carga)
-    const pendiente = _destelloPendiente > performance.now();
-    const entra = id === 'linea' && duracion > 1 && (resumen.tipo === 'semana' ? conteoInicial : resumen.tipo === 'registro' && (conteoInicial || pendiente));
-    const baseEntrada = entra && !conteoInicial ? ESPERA_DESTELLO_VISTA : 0;
+    // entrada de la línea de tiempo: la línea se llena y los textos suben, como en la barra con hitos (también en la semana, pero solo en la carga)
+    const entra = id === 'linea' && duracion > 1 && (resumen.tipo === 'semana' ? conteoInicial : resumen.tipo === 'registro' && carga);
     diseno.pintar(refs, {
         ...resumen,
         ...(contar && { conteoMs: duracion }),   // conteoMs: lo que dura el llenado, para que cada hito se marque cuando el aro llega a él
-        ...(entra && { entradaMs: duracion, entradaBase: baseEntrada })
+        ...(entra && { entradaMs: duracion })
     });
     // la capa que reserva el alto de la semana se dibuja con los datos reales de la semana (en la vista semanal son los mismos que los de la capa visible)
     const refsSemana = _montado?.refsSemana;
@@ -789,17 +790,16 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
     }
     if (contar) _contar(id, refs, resumen.trabajado, duracion);
     if (id === 'linea' && resumen.tipo === 'registro') {
-        if (conteoInicial || pendiente) destellarBalance(refs, resumen, baseEntrada + (entra ? duracion : 0));
+        if (carga) destellarBalance(refs, resumen, entra ? duracion : 0);
         _destelloPendiente = 0;
     }
     return true;
 }
 
-// La carga con la vista semanal pasa sola a la diaria: ese cambio también tiene que destellar (el aviso vence si la diaria no llega a dibujarse)
+// La carga con la vista semanal pasa sola a la diaria: esa vista tiene que entrar igual que en la carga directa (el aviso vence si la diaria no llega a dibujarse)
 let _destelloPendiente = 0;
-const ESPERA_DESTELLO_VISTA = 400;   // deja terminar el fundido del cambio de vista
 
-/** El próximo dibujo del registro del día (el cambio automático de semana a día en la carga) destella como lo hace la carga directa en la vista diaria. */
+/** El próximo dibujo del registro del día (el cambio automático de semana a día en la carga) hace la misma entrada que la carga directa en la vista diaria. */
 function pedirDestelloBalance() {
     _destelloPendiente = performance.now() + 5000;
 }

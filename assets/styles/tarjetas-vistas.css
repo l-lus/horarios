@@ -2324,6 +2324,39 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
 .est-nodo:is(.pasado, .est-nodo--ahora)[data-tramo="gold"]::before { background: var(--c-gold); }
 .est-nodo:is(.pasado, .est-nodo--ahora)[data-tramo="red"]::before { background: var(--c-red); }
 
+/* Entrada de la línea (la carga de la página o el paso automático de semana a día; la clase `entrando` la pone animarEntradaLinea): cada conector se llena de arriba abajo
+   en su turno, los textos de cada hito suben desde abajo cuando la línea llega a él y lo que todavía no se alcanzó aparece al final. Mismo gesto que la barra con hitos. */
+@keyframes linea-conector-llena {
+    from { scale: 1 0; }
+}
+
+.est-linea.entrando .est-nodo:is(.pasado, .est-nodo--ahora)::before {
+    transform-origin: 50% 0;
+    animation: linea-conector-llena var(--con-dur, 1ms) linear var(--con-ret, 0ms) backwards;
+}
+
+.est-linea.entrando .est-nodo:not(.pasado, .est-nodo--ahora)::before {
+    animation: linea-aparece var(--dur-slow) ease var(--con-ret, 0ms) backwards;
+}
+
+.est-linea.entrando .est-nodo :is(.est-nodo-etiqueta, .est-nodo-hora) {
+    animation: linea-etiqueta-aparece var(--dur-slow) var(--ease-conteo) var(--ret, 0ms) backwards;
+}
+
+.est-linea.entrando .est-nodo:not(.est-nodo--ahora) .est-nodo-punto,
+.est-linea.entrando .est-nodo:is(.est-nodo--ahora)::after {
+    animation: linea-aparece var(--dur-slow) ease var(--ret, 0ms) backwards;
+}
+
+/* el punto de "ahora" ya late (animación en bucle): se le suma la aparición */
+.est-linea.entrando .est-nodos.en-curso .est-nodo--ahora .est-nodo-punto {
+    animation: linea-aparece var(--dur-slow) ease var(--ret, 0ms) backwards, punto-linea-latido var(--dur-ambiente) ease-in-out infinite;
+}
+
+.est-linea.entrando .est-mosaico:not(.mosaico-flash) {
+    animation: linea-etiqueta-aparece var(--dur-slow) var(--ease-conteo) var(--ret-mosaicos, 0ms) backwards;
+}
+
 /* Brillo de la línea de progreso (de la entrada hasta ahora, o del primer día hasta hoy), el mismo de la barra de "Barra con hitos": una sola franja de luz que recorre de
    arriba abajo TODO el tramo azul (no uno por cada tramo entre nodos) en el primer 20 % del ciclo (--dur-ambiente) y descansa el resto. Es una capa que cubre desde el
    centro del primer nodo hasta el nodo de "ahora" (--segmentos tramos de --alto-nodo, que fija tarjeta-estilos.js). Solo con la jornada (o la semana) abierta. */

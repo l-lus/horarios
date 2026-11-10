@@ -486,6 +486,38 @@ function pintarNodos(r, d) {
         if (d.cerrado) { nodo.raiz.classList.add('pasado'); nodo.raiz.dataset.color = d.color ?? 'neutro'; }
         else if (hito.tipo !== 'ahora') delete nodo.raiz.dataset.color;
     });
+    animarEntradaLinea(r, orden, d.entradaMs, d.entradaBase);
+}
+
+/**
+ * Entrada de la línea del día, como la de la barra con hitos: el tramo ya recorrido se llena de arriba abajo en `ms` (con la misma curva del número, ease-out cúbico) y los textos de cada
+ * hito suben desde abajo cuando la línea llega a él; lo que todavía no se alcanzó y los mosaicos aparecen al final. Cada conector es un tramo (de nodo a nodo): su retardo y su duración
+ * salen de lo que le toca del recorrido total. La clase `entrando` (que activa las animaciones en CSS) se quita al terminar.
+ * @param {any} r @param {{ tipo: string, rel: number }[]} orden @param {number} [ms] 0 / undefined: sin animación @param {number} [base] espera antes de empezar
+ */
+function animarEntradaLinea(r, orden, ms = 0, base = 0) {
+    clearTimeout(r.timerEntrada);
+    r.raiz.classList.remove('entrando');
+    if (!(ms > 1)) return;
+    const coloreado = (/** @type {{ tipo: string }} */ h) => h.tipo === 'ahora' || r.hitos[h.tipo].raiz.classList.contains('pasado');
+    const n = orden.slice(1).filter(coloreado).length;   // tramos ya recorridos (los conectores coloreados)
+    const t = (/** @type {number} */ p) => (p <= 0 ? 0 : 1 - Math.pow(1 - Math.min(1, p), 1 / 3));   // en qué fracción del tiempo la línea llega a la fracción p del recorrido
+    orden.forEach((h, i) => {
+        const raiz = r.hitos[h.tipo].raiz;
+        const llega = i === 0 || n === 0 ? 0 : coloreado(h) ? t(i / n) * ms : ms;
+        raiz.style.setProperty('--ret', `${Math.round(base + llega)}ms`);
+        if (i > 0 && coloreado(h) && n > 0) {
+            const desde = t((i - 1) / n) * ms;
+            raiz.style.setProperty('--con-ret', `${Math.round(base + desde)}ms`);
+            raiz.style.setProperty('--con-dur', `${Math.max(1, Math.round(llega - desde))}ms`);
+        } else {
+            raiz.style.setProperty('--con-ret', `${Math.round(base + ms)}ms`);
+        }
+    });
+    r.raiz.style.setProperty('--ret-mosaicos', `${Math.round(base + ms * 0.5)}ms`);
+    void r.raiz.offsetWidth;
+    r.raiz.classList.add('entrando');
+    r.timerEntrada = setTimeout(() => r.raiz.classList.remove('entrando'), base + ms + 800);
 }
 
 /** Un nodo por día de la semana: hoy en azul, los pasados con el color de su estado y los que faltan punteados. */
@@ -739,7 +771,15 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
         diseno.pintar(refs, _sinAvance(resumen));
         void host.offsetWidth;   // el estado vacío tiene que estar aplicado para que el siguiente dibujo transicione hacia el real
     }
-    diseno.pintar(refs, contar ? { ...resumen, conteoMs: duracion } : resumen);   // conteoMs: lo que dura el llenado, para que cada hito se marque cuando el aro llega a él
+    // entrada de la línea de tiempo (la carga, o el cambio automático de semana a día): la línea se llena y los textos suben, como en la barra con hitos
+    const pendiente = _destelloPendiente > performance.now();
+    const entra = id === 'linea' && resumen.tipo === 'registro' && duracion > 1 && (conteoInicial || pendiente);
+    const baseEntrada = entra && !conteoInicial ? ESPERA_DESTELLO_VISTA : 0;
+    diseno.pintar(refs, {
+        ...resumen,
+        ...(contar && { conteoMs: duracion }),   // conteoMs: lo que dura el llenado, para que cada hito se marque cuando el aro llega a él
+        ...(entra && { entradaMs: duracion, entradaBase: baseEntrada })
+    });
     // la capa que reserva el alto de la semana se dibuja con los datos reales de la semana (en la vista semanal son los mismos que los de la capa visible)
     const refsSemana = _montado?.refsSemana;
     const semana = refsSemana && resumenSemana ? resumenSemana() : null;
@@ -749,8 +789,7 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
     }
     if (contar) _contar(id, refs, resumen.trabajado, duracion);
     if (id === 'linea' && resumen.tipo === 'registro') {
-        if (conteoInicial) destellarBalance(refs, resumen, contar ? duracion : 0);
-        else if (_destelloPendiente > performance.now()) destellarBalance(refs, resumen, ESPERA_DESTELLO_VISTA);
+        if (conteoInicial || pendiente) destellarBalance(refs, resumen, baseEntrada + (entra ? duracion : 0));
         _destelloPendiente = 0;
     }
     return true;

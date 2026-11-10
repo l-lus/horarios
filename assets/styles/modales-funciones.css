@@ -877,15 +877,23 @@ body.tarjeta-arrastrando-activa * {
 }
 
 /* El título va centrado entre dos flechas: la de la izquierda pasa a la personalización anterior (tarjeta de estado, calendario, tema) y la de la derecha, a la siguiente.
-   Sin otra a dónde ir, las flechas no se muestran */
+   Las flechas están en columnas fijas a los costados y solo el texto se centra entre ellas, así que no cambian de lugar según el largo del título.
+   Sin otra a dónde ir las flechas se ocultan (sin quitarlas del lugar) */
 .vista-previa-titulo {
     flex: 1;
-    display: flex;
+    display: grid;
+    grid-template-columns: var(--control-sm) minmax(0, 1fr) var(--control-sm);
     align-items: center;
-    justify-content: center;
-    gap: var(--space-xs);
-    min-width: 0;
+    max-width: 16rem;
+    margin-inline: auto;
+    text-align: center;
     font-weight: var(--fw-semibold);
+}
+
+.vista-previa-titulo>span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .vista-previa-nav {
@@ -908,7 +916,7 @@ body.tarjeta-arrastrando-activa * {
 }
 
 .vista-previa-titulo:not(.con-otras) .vista-previa-nav {
-    display: none;
+    visibility: hidden;
 }
 
 /* Deslizar el panel hacia los costados pasa a otra personalización: el navegador solo se ocupa del desplazamiento vertical */

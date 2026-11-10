@@ -458,6 +458,9 @@ function pintarNodos(r, d) {
     const orden = linea ? hitosOrdenados(linea) : [{ tipo: 'entrada', rel: 0 }, ...(d.salida ? [{ tipo: 'salida', rel: 1 }] : [])];
     const horas = { entrada: d.entrada, salida: d.salida || d.salidaEstimada, banco: d.salidaBanco, ahora: '' };
     const ahoraRel = linea ? linea.ahoraRel : Infinity;
+    // color de cada conector (el tramo que llega a ese nodo) según la zona donde termina, como el anillo: azul hasta la primera salida, el color del banco entre ambas y verde después
+    const zonas = linea && d.anillo && linea.hayBanda ? { lo: Math.min(linea.salidaRel, linea.bufferRel), hi: Math.max(linea.salidaRel, linea.bufferRel), medio: d.anillo.colorMedio } : null;
+    const tramoDe = (/** @type {number} */ rel) => !linea || !d.anillo ? 'blue' : !zonas ? (rel <= linea.salidaRel ? 'blue' : 'green') : rel <= zonas.lo ? 'blue' : rel <= zonas.hi ? zonas.medio : 'green';
     // el brillo es uno solo y llega hasta "ahora": cuántos tramos de la línea (de nodo a nodo) hay hasta ese punto
     r.nodos.style.setProperty('--segmentos', String(Math.max(0, orden.findIndex(h => h.tipo === 'ahora'))));
     let primero = true;
@@ -469,6 +472,7 @@ function pintarNodos(r, d) {
         nodo.raiz.classList.toggle('primero', primero);
         nodo.raiz.classList.toggle('pasado', hito.tipo !== 'ahora' && hito.rel <= ahoraRel);
         primero = false;
+        if (d.cerrado) delete nodo.raiz.dataset.tramo; else nodo.raiz.dataset.tramo = tramoDe(hito.rel);
         fijar(nodo.hora, horas[hito.tipo] ?? '');
         if (hito.tipo === 'salida') fijar(nodo.etiqueta, d.cerrado ? 'Salida' : 'Salida estimada');
         if (hito.tipo === 'banco') entonar(nodo.raiz, tonoBanco(d.banco));
@@ -513,6 +517,7 @@ function pintarNodosPendientes(r) {
         nodo.raiz.classList.add('pendiente');
         nodo.raiz.classList.toggle('primero', i === 0);
         nodo.raiz.classList.remove('pasado');
+        delete nodo.raiz.dataset.tramo;
         nodo.raiz.style.order = String(i);
         fijar(nodo.etiqueta, texto);
         fijar(nodo.hora, '');

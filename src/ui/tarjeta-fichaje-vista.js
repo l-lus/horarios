@@ -473,7 +473,7 @@ function _anilloEnCurso(linea, tiempoHoy, objetivo) {
         { desde: pct(lo), hasta: pct(hi), color: colorMedio },
         { desde: pct(hi), hasta: 100, color: 'green' }
     ].filter(t => t.hasta - t.desde > 1e-6);
-    return { progreso: pct(trabajadoMin), tramos };
+    return { progreso: pct(trabajadoMin), tramos, colorMedio };
 }
 
 /**

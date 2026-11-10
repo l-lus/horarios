@@ -2319,6 +2319,11 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
 .est-nodo.pasado::before,
 .est-nodo--ahora::before { background: var(--c-blue); }
 
+/* Con la jornada abierta cada conector lleva el color de la zona donde termina (data-tramo, ver pintarNodos): el mismo reparto del anillo y de la barra con hitos */
+.est-nodo:is(.pasado, .est-nodo--ahora)[data-tramo="green"]::before { background: var(--c-green); }
+.est-nodo:is(.pasado, .est-nodo--ahora)[data-tramo="gold"]::before { background: var(--c-gold); }
+.est-nodo:is(.pasado, .est-nodo--ahora)[data-tramo="red"]::before { background: var(--c-red); }
+
 /* Brillo de la línea de progreso (de la entrada hasta ahora, o del primer día hasta hoy), el mismo de la barra de "Barra con hitos": una sola franja de luz que recorre de
    arriba abajo TODO el tramo azul (no uno por cada tramo entre nodos) en el primer 20 % del ciclo (--dur-ambiente) y descansa el resto. Es una capa que cubre desde el
    centro del primer nodo hasta el nodo de "ahora" (--segmentos tramos de --alto-nodo, que fija tarjeta-estilos.js). Solo con la jornada (o la semana) abierta. */

@@ -497,8 +497,7 @@ const duracionLinea = duracion => Math.round(duracion * FACTOR_LINEA);
 
 /**
  * Entrada de la línea (del día o de la semana), como la de la barra con hitos: el tramo ya recorrido se llena de arriba abajo a ritmo parejo (un tramo detrás del otro) y los textos
- * de cada nodo suben desde abajo cuando la línea llega a él; lo que todavía no se alcanzó y los mosaicos aparecen al final. Cada conector es un tramo (de nodo a nodo): su retardo y su duración
- * salen de lo que le toca del recorrido total. La clase `entrando` (que activa las animaciones en CSS) se quita al terminar.
+ * de cada nodo suben desde abajo cuando la línea llega a él (los mosaicos, a mitad). Cada conector es un tramo (de nodo a nodo) y le toca la misma parte del recorrido total. La clase `entrando` (que activa las animaciones en CSS) se quita al terminar.
  * @param {any} r @param {HTMLElement[]} nodos los nodos visibles, en orden @param {number} [duracion] la del conteo en ms (ver `duracionLinea`); 0 / undefined: sin animación
  */
 function animarEntradaLinea(r, nodos, duracion = 0) {
@@ -508,18 +507,13 @@ function animarEntradaLinea(r, nodos, duracion = 0) {
     if (!(duracion > 1)) return;
     clearTimeout(r.timerEntrada);
     r.raiz.classList.remove('entrando');
-    const coloreado = (/** @type {HTMLElement} */ n) => n.classList.contains('pasado') || n.classList.contains('est-nodo--ahora');   // el conector que llega a él ya está coloreado
-    const n = nodos.slice(1).filter(coloreado).length;   // tramos ya recorridos
-    const t = (/** @type {number} */ p) => Math.max(0, Math.min(1, p));   // la línea avanza a ritmo parejo: cada tramo se ve llenarse y cada hito aparece uno después del otro
+    // todos los nodos van en fila, coloreados o no: la línea avanza a ritmo parejo, un tramo detrás del otro (los que todavía no se alcanzaron en la vida real también se dibujan, apagados)
+    const tramos = nodos.length - 1;
     nodos.forEach((raiz, i) => {
-        const llega = i === 0 || n === 0 ? 0 : coloreado(raiz) ? t(i / n) * ms : ms;
-        raiz.style.setProperty('--ret', `${Math.round(base + llega)}ms`);
-        if (i > 0 && coloreado(raiz) && n > 0) {
-            const desde = t((i - 1) / n) * ms;
-            raiz.style.setProperty('--con-ret', `${Math.round(base + desde)}ms`);
-            raiz.style.setProperty('--con-dur', `${Math.max(1, Math.round(llega - desde))}ms`);
-        } else {
-            raiz.style.setProperty('--con-ret', `${Math.round(base + ms)}ms`);
+        raiz.style.setProperty('--ret', `${Math.round(base + (tramos > 0 ? (i / tramos) * ms : 0))}ms`);
+        if (i > 0) {
+            raiz.style.setProperty('--con-ret', `${Math.round(base + ((i - 1) / tramos) * ms)}ms`);
+            raiz.style.setProperty('--con-dur', `${Math.max(1, Math.round(ms / tramos))}ms`);
         }
     });
     r.raiz.style.setProperty('--ret-mosaicos', `${Math.round(base + ms * 0.4)}ms`);

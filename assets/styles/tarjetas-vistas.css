@@ -2325,18 +2325,14 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
 .est-nodo:is(.pasado, .est-nodo--ahora)[data-tramo="red"]::before { background: var(--c-red); }
 
 /* Entrada de la línea (la carga de la página o el paso automático de semana a día; la clase `entrando` la pone animarEntradaLinea): cada conector se llena de arriba abajo
-   en su turno, los textos de cada hito suben desde abajo cuando la línea llega a él y lo que todavía no se alcanzó aparece al final. Mismo gesto que la barra con hitos. */
+   en su turno (también los apagados, los que todavía no se alcanzaron) y los textos de cada hito suben desde abajo cuando la línea llega a él. Mismo gesto que la barra con hitos. */
 @keyframes linea-conector-llena {
     from { scale: 1 0; }
 }
 
-.est-linea.entrando .est-nodo:is(.pasado, .est-nodo--ahora)::before {
+.est-linea.entrando .est-nodo::before {
     transform-origin: 50% 0;
     animation: linea-conector-llena var(--con-dur, 1ms) linear var(--con-ret, 0ms) backwards;
-}
-
-.est-linea.entrando .est-nodo:not(.pasado, .est-nodo--ahora)::before {
-    animation: linea-aparece var(--dur-slow) ease var(--con-ret, 0ms) backwards;
 }
 
 .est-linea.entrando .est-nodo :is(.est-nodo-etiqueta, .est-nodo-hora) {

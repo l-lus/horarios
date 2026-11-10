@@ -746,8 +746,21 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
         diseno.alinear?.(refs, refsSemana);
     }
     if (contar) _contar(id, refs, resumen.trabajado, duracion);
-    if (conteoInicial && id === 'linea') destellarBalance(refs, resumen, contar ? duracion : 0);
+    if (id === 'linea' && resumen.tipo === 'registro') {
+        if (conteoInicial) destellarBalance(refs, resumen, contar ? duracion : 0);
+        else if (_destelloPendiente > performance.now()) destellarBalance(refs, resumen, ESPERA_DESTELLO_VISTA);
+        _destelloPendiente = 0;
+    }
     return true;
+}
+
+// La carga con la vista semanal pasa sola a la diaria: ese cambio también tiene que destellar (el aviso vence si la diaria no llega a dibujarse)
+let _destelloPendiente = 0;
+const ESPERA_DESTELLO_VISTA = 400;   // deja terminar el fundido del cambio de vista
+
+/** El próximo dibujo del registro del día (el cambio automático de semana a día en la carga) destella como lo hace la carga directa en la vista diaria. */
+function pedirDestelloBalance() {
+    _destelloPendiente = performance.now() + 5000;
 }
 
 /**
@@ -799,4 +812,4 @@ function reubicar(cambiar) {
     Animaciones._animarAlturaCambio($('stats-card'), () => uiAnimarReubicacion(obtener, (/** @type {HTMLElement} */ el) => el.className.split(' ')[0], () => { cambiar(); reajustarDetalles(); }));
 }
 
-export const TarjetaEstilos = { actualizar, reubicar };
+export const TarjetaEstilos = { actualizar, reubicar, pedirDestelloBalance };

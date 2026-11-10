@@ -32,6 +32,7 @@ import { TarjetaFichaje } from './tarjeta-fichaje.js';
 import { TarjetaFichajeVista } from './tarjeta-fichaje-vista.js';
 import { CicloStats } from './tarjeta-ciclo-stats.js';
 import { TarjetaFondos } from './tarjeta-fondos.js';
+import { TarjetaEstilos } from './tarjeta-estilos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
@@ -460,6 +461,7 @@ async function init() {
     if (EstadoApp.vistaActual() === 'semana' && hoyEsLaborable) {
         setTimerAutoVista(setTimeout(() => {
             setTimerAutoVista(null);
+            TarjetaEstilos.pedirDestelloBalance();
             alternarVista();
             _esperarAnim().then(() => _iniciarCicloStats());
         }, 2500));

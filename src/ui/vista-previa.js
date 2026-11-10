@@ -14,7 +14,7 @@ import { Animaciones } from './animaciones.js';
 // un preparador registrado con `registrarPreparador` que devuelve cómo dejar todo como estaba.
 //
 // Las vistas previas (tarjeta de estado, calendario y tema) están integradas: se registran con `registrarVista` y `definirOrden`, y desde el panel se pasa de una a otra
-// tocando las flechas de los costados del título (la de la izquierda va a la anterior y la de la derecha a la siguiente) o, en pantallas táctiles, deslizando el panel hacia los costados. El tema no tiene tarjeta ni velo (hay que ver los colores
+// tocando las flechas de los costados del título (la de la izquierda va a la anterior y la de la derecha a la siguiente) o, en pantallas táctiles, deslizando el panel hacia los costados y, con mouse, girando la rueda sobre el panel. El tema no tiene tarjeta ni velo (hay que ver los colores
 // de toda la página) y en lugar de filas muestra círculos de color para elegir.
 //
 // La vista previa agrega una entrada al historial del navegador (como los modales): así el botón Atrás de un móvil la cierra en vez de salir de la app.
@@ -40,6 +40,10 @@ export const AVISO_PERSONALIZAR_MS = 800;
 const DESLIZ_MS = 130;
 const DESLIZ_PX = 36;
 const UMBRAL_DESLIZAR_PX = 50;
+/** Rueda del mouse sobre el panel: lo que hay que girar (suma de un mismo giro) para pasar de vista, y la pausa después de pasar (una vuelta rápida o la inercia del trackpad no saltan varias). */
+const UMBRAL_RUEDA = 40;
+const PAUSA_RUEDA_MS = 400;
+const REPOSO_RUEDA_MS = 150;
 /** Si la tarjeta es más alta que el espacio libre pero su borde superior ya se ve, alinearla arriba solo vale la pena si hay que mover más que esto. */
 const TOLERANCIA_ALINEAR_PX = 40;
 
@@ -398,6 +402,30 @@ function _bindDeslizar() {
     }, true);
 }
 
+/** La rueda del mouse (o el desplazamiento horizontal del trackpad) sobre el panel pasa de vista: hacia abajo la siguiente, hacia arriba la anterior. */
+function _bindRueda() {
+    const panel = $('vista-previa-panel');
+    if (!panel) return;
+    let acumulado = 0;
+    let hastaPausa = 0;
+    let timerReposo = null;
+    panel.addEventListener('wheel', (e) => {
+        if (!_activa || _cerrando) return;
+        // el panel está fijo sobre la página: sin esto la rueda desplazaría lo que hay detrás
+        e.preventDefault();
+        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        if (Math.abs(delta) < 4 || performance.now() < hastaPausa) return;
+        clearTimeout(timerReposo);
+        timerReposo = setTimeout(() => { acumulado = 0; }, REPOSO_RUEDA_MS);
+        acumulado += delta;
+        if (Math.abs(acumulado) < UMBRAL_RUEDA) return;
+        const direccion = acumulado > 0 ? 1 : -1;
+        acumulado = 0;
+        hastaPausa = performance.now() + PAUSA_RUEDA_MS;
+        cambiar(direccion);
+    }, { passive: false });
+}
+
 /** Pide cerrar: la vuelta atrás del historial dispara el popstate, que termina el cierre. */
 function cerrar() {
     if (!_activa || _cerrando) return;
@@ -435,6 +463,7 @@ function bindEventos() {
     $('vista-previa-anterior')?.addEventListener('click', () => cambiar(-1));
     $('vista-previa-siguiente')?.addEventListener('click', () => cambiar(1));
     _bindDeslizar();
+    _bindRueda();
     // tocar el velo (fuera de la tarjeta y del panel) cierra igual que Listo: el estilo elegido queda como está
     $('vista-previa-velo')?.addEventListener('click', () => cerrar());
     window.addEventListener('popstate', () => { if (_activa && document.body.classList.contains('vista-previa-activa')) _finalizar(); });

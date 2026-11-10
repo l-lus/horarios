@@ -402,7 +402,7 @@ function pintarLinea(r, d) {
         else fijar(r.etiqueta, d.abierta ? 'Llevás en la semana' : 'Total de la semana');
         pintarDuracion(r.duracion, d.trabajado);
         mostrar(r.nodos, esRegistro);
-        if (esRegistro) pintarNodos(r, d); else pintarNodosDias(r, d.dias, d.abierta);
+        if (esRegistro) pintarNodos(r, d); else pintarNodosDias(r, d.dias, d.abierta, d.entradaMs, d.entradaBase);
         mostrar(r.balance.raiz, !!d.balance);
         if (d.balance) {
             // con el registro en curso y el objetivo del día cumplido, el extra es el de hoy (cerrado o en la semana queda "Extra")
@@ -486,27 +486,26 @@ function pintarNodos(r, d) {
         if (d.cerrado) { nodo.raiz.classList.add('pasado'); nodo.raiz.dataset.color = d.color ?? 'neutro'; }
         else if (hito.tipo !== 'ahora') delete nodo.raiz.dataset.color;
     });
-    animarEntradaLinea(r, orden, d.entradaMs, d.entradaBase);
+    animarEntradaLinea(r, orden.map(h => r.hitos[h.tipo].raiz), d.entradaMs, d.entradaBase);
 }
 
 /**
- * Entrada de la línea del día, como la de la barra con hitos: el tramo ya recorrido se llena de arriba abajo en `ms` (con la misma curva del número, ease-out cúbico) y los textos de cada
- * hito suben desde abajo cuando la línea llega a él; lo que todavía no se alcanzó y los mosaicos aparecen al final. Cada conector es un tramo (de nodo a nodo): su retardo y su duración
+ * Entrada de la línea (del día o de la semana), como la de la barra con hitos: el tramo ya recorrido se llena de arriba abajo en `ms` (con la misma curva del número, ease-out cúbico) y los textos
+ * de cada nodo suben desde abajo cuando la línea llega a él; lo que todavía no se alcanzó y los mosaicos aparecen al final. Cada conector es un tramo (de nodo a nodo): su retardo y su duración
  * salen de lo que le toca del recorrido total. La clase `entrando` (que activa las animaciones en CSS) se quita al terminar.
- * @param {any} r @param {{ tipo: string, rel: number }[]} orden @param {number} [ms] 0 / undefined: sin animación @param {number} [base] espera antes de empezar
+ * @param {any} r @param {HTMLElement[]} nodos los nodos visibles, en orden @param {number} [ms] 0 / undefined: sin animación @param {number} [base] espera antes de empezar
  */
-function animarEntradaLinea(r, orden, ms = 0, base = 0) {
+function animarEntradaLinea(r, nodos, ms = 0, base = 0) {
     clearTimeout(r.timerEntrada);
     r.raiz.classList.remove('entrando');
     if (!(ms > 1)) return;
-    const coloreado = (/** @type {{ tipo: string }} */ h) => h.tipo === 'ahora' || r.hitos[h.tipo].raiz.classList.contains('pasado');
-    const n = orden.slice(1).filter(coloreado).length;   // tramos ya recorridos (los conectores coloreados)
+    const coloreado = (/** @type {HTMLElement} */ n) => n.classList.contains('pasado') || n.classList.contains('est-nodo--ahora');   // el conector que llega a él ya está coloreado
+    const n = nodos.slice(1).filter(coloreado).length;   // tramos ya recorridos
     const t = (/** @type {number} */ p) => (p <= 0 ? 0 : 1 - Math.pow(1 - Math.min(1, p), 1 / 3));   // en qué fracción del tiempo la línea llega a la fracción p del recorrido
-    orden.forEach((h, i) => {
-        const raiz = r.hitos[h.tipo].raiz;
-        const llega = i === 0 || n === 0 ? 0 : coloreado(h) ? t(i / n) * ms : ms;
+    nodos.forEach((raiz, i) => {
+        const llega = i === 0 || n === 0 ? 0 : coloreado(raiz) ? t(i / n) * ms : ms;
         raiz.style.setProperty('--ret', `${Math.round(base + llega)}ms`);
-        if (i > 0 && coloreado(h) && n > 0) {
+        if (i > 0 && coloreado(raiz) && n > 0) {
             const desde = t((i - 1) / n) * ms;
             raiz.style.setProperty('--con-ret', `${Math.round(base + desde)}ms`);
             raiz.style.setProperty('--con-dur', `${Math.max(1, Math.round(llega - desde))}ms`);
@@ -521,7 +520,7 @@ function animarEntradaLinea(r, orden, ms = 0, base = 0) {
 }
 
 /** Un nodo por día de la semana: hoy en azul, los pasados con el color de su estado y los que faltan punteados. */
-function pintarNodosDias(r, dias, enCurso) {
+function pintarNodosDias(r, dias, enCurso, entradaMs = 0, entradaBase = 0) {
     r.nodosDias.classList.toggle('en-curso', !!enCurso);   // con la semana abierta, el tramo hasta hoy brilla igual
     // un solo brillo que va desde el primer día hasta hoy: cuántos tramos hay hasta el nodo de hoy
     r.nodosDias.style.setProperty('--segmentos', String(Math.max(0, dias.findIndex(dia => dia.hoy))));
@@ -543,6 +542,7 @@ function pintarNodosDias(r, dias, enCurso) {
         // los días que faltan llevan un "-" (el "pendiente" queda para hoy, que es el que espera su registro)
         fijar(n.hora, especialFuturo ? `${dia.emoji} ${dia.etiqueta}`.trim() : pendiente ? '-' : textoDia(dia));
     });
+    animarEntradaLinea(r, r.dias.slice(0, dias.length).map(n => n.raiz), entradaMs, entradaBase);
 }
 
 /** Sin registro: entrada y salida quedan pendientes (nodos punteados). */
@@ -771,9 +771,9 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
         diseno.pintar(refs, _sinAvance(resumen));
         void host.offsetWidth;   // el estado vacío tiene que estar aplicado para que el siguiente dibujo transicione hacia el real
     }
-    // entrada de la línea de tiempo (la carga, o el cambio automático de semana a día): la línea se llena y los textos suben, como en la barra con hitos
+    // entrada de la línea de tiempo (la carga, o el cambio automático de semana a día): la línea se llena y los textos suben, como en la barra con hitos (también en la semana, solo en la carga)
     const pendiente = _destelloPendiente > performance.now();
-    const entra = id === 'linea' && resumen.tipo === 'registro' && duracion > 1 && (conteoInicial || pendiente);
+    const entra = id === 'linea' && duracion > 1 && (resumen.tipo === 'semana' ? conteoInicial : resumen.tipo === 'registro' && (conteoInicial || pendiente));
     const baseEntrada = entra && !conteoInicial ? ESPERA_DESTELLO_VISTA : 0;
     diseno.pintar(refs, {
         ...resumen,

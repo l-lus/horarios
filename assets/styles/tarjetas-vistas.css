@@ -2343,13 +2343,13 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
     animation: linea-etiqueta-aparece var(--dur-slow) var(--ease-conteo) var(--ret, 0ms) backwards;
 }
 
-.est-linea.entrando .est-nodo:not(.est-nodo--ahora) .est-nodo-punto,
-.est-linea.entrando .est-nodo:is(.est-nodo--ahora)::after {
+.est-linea.entrando .est-nodo .est-nodo-punto,
+.est-linea.entrando .est-nodo:is(.est-nodo--ahora, .est-nodo--dia.hoy)::after {
     animation: linea-aparece var(--dur-slow) ease var(--ret, 0ms) backwards;
 }
 
-/* el punto de "ahora" ya late (animación en bucle): se le suma la aparición */
-.est-linea.entrando .est-nodos.en-curso .est-nodo--ahora .est-nodo-punto {
+/* el punto de "ahora" (o de hoy en la semana) ya late (animación en bucle): se le suma la aparición */
+.est-linea.entrando .est-nodos.en-curso .est-nodo:is(.est-nodo--ahora, .est-nodo--dia.hoy) .est-nodo-punto {
     animation: linea-aparece var(--dur-slow) ease var(--ret, 0ms) backwards, punto-linea-latido var(--dur-ambiente) ease-in-out infinite;
 }
 

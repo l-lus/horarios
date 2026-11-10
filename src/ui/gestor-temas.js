@@ -41,7 +41,7 @@ function aplicarTema(tema) {
         document.documentElement.setAttribute('data-theme', tema);
     }
     const esClaro = tema === 'light';
-    ['theme-toggle', 'theme-toggle-modal', 'theme-toggle-config', 'btn-tema-selector'].forEach(id => {
+    ['theme-toggle', 'theme-toggle-config', 'btn-tema-selector'].forEach(id => {
         const icon = $(id)?.querySelector('use');
         if (icon) icon.setAttribute('href', esClaro ? '#icon-moon' : '#icon-sun');
     });

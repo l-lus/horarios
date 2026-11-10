@@ -3,7 +3,6 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
-import { setIconoBtn } from './boton-fichar.js';
 import { _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
 import { Recarga } from '../core/recarga.js';
@@ -98,12 +97,6 @@ function abrirSelectorPerfiles() {
         setAgregarPerfil(false, { animar: false });
 
         renderizarListaPerfiles();
-
-        const esClaro = !document.documentElement.classList.contains('dark-mode')
-            && !document.documentElement.getAttribute('data-theme');
-        const toggleBtnModal = $('theme-toggle-modal');
-
-        if (toggleBtnModal) setIconoBtn(toggleBtnModal, esClaro ? '#icon-moon' : '#icon-sun');
     });
 }
 

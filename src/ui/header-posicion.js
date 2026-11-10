@@ -1,5 +1,6 @@
 import { PosicionHeader, posicionesPermitidas } from '../core/posicion-header.js';
 import { uiAnimarReubicacion, uiArrastreLargo } from './arrastre.js';
+import { elementosDelLayout, claveDelLayout } from './transicion-layout.js';
 import { VistaPrevia, VENTANA_PERSONALIZAR_MS, AVISO_PERSONALIZAR_MS } from './vista-previa.js';
 import { EventosApp } from '../core/eventos.js';
 import { mostrarToast, _cerrarToastActual } from './toast.js';
@@ -20,13 +21,6 @@ const _SELECTOR_CONTROLES = 'button, a, input, select, textarea';
 /** Lo que más cerca del borde nuevo tiene que estar el puntero, respecto del actual, para que el encabezado cambie de lugar (evita saltos en las diagonales). */
 const HISTERESIS_PX = 24;
 
-/** El encabezado y las tarjetas visibles: lo que cambia de lugar cuando el encabezado se mueve. */
-const _elementosQueSeMueven = () => /** @type {HTMLElement[]} */ ([
-    document.querySelector('.header'),
-    ...document.querySelectorAll('.animated-card:not(.hidden)')
-].filter(Boolean));
-const _claveElemento = (el) => el.id || 'header';
-
 /** De los lugares permitidos, el del borde de la ventana más cercano al puntero; el actual solo se deja si otro gana por más que la histéresis. */
 function _posicionMasCercana(x, y, permitidas, actual) {
     const distancia = { top: y, bottom: window.innerHeight - y, left: x, right: window.innerWidth - x };
@@ -40,7 +34,7 @@ function iniciar() {
     let destino = null;
 
     // El encabezado se muestra en `id` en el acto (sin guardarlo), animando su deslizamiento y el de las tarjetas
-    const mostrarEn = (id, header) => uiAnimarReubicacion(_elementosQueSeMueven, _claveElemento, () => PosicionHeader.previsualizar(id), { encima: header });
+    const mostrarEn = (id, header) => uiAnimarReubicacion(elementosDelLayout, claveDelLayout, () => PosicionHeader.previsualizar(id), { encima: header });
 
     uiArrastreLargo(document, {
         elegir: (e) => {
@@ -73,7 +67,7 @@ function iniciar() {
             header.classList.remove('reubicando');
             document.body.classList.remove('header-arrastrando-activa');
             if (confirmar && destino) PosicionHeader.setPosicion(destino);   // ya se ve ahí: solo se guarda
-            else uiAnimarReubicacion(_elementosQueSeMueven, _claveElemento, () => PosicionHeader.restaurar(), { encima: header });
+            else uiAnimarReubicacion(elementosDelLayout, claveDelLayout, () => PosicionHeader.restaurar(), { encima: header });
             destino = null;
             // mantener y soltar sin mover (y dentro de la ventana) = personalizar el tema
             if (confirmar && !movido && duracion <= VENTANA_PERSONALIZAR_MS) {

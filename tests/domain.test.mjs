@@ -186,6 +186,7 @@ test('Integración: Arranque completo de OrquestadorUI.init() sin errores de eje
         removeItem: k => store.delete(k)
     };
     globalThis.requestAnimationFrame = () => 0;
+    globalThis.MutationObserver = class { observe() { } };
     globalThis.document = {
         readyState: 'complete',
         body: fakeEl(),

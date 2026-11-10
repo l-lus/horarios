@@ -7,6 +7,7 @@ import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { PosicionHeader } from '../core/posicion-header.js';
 import { HeaderPosicion } from './header-posicion.js';
+import { TransicionLayout } from './transicion-layout.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 import { InstaladorPWA } from './instalador-pwa.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -279,6 +280,7 @@ function _initDatosYConfig(config) {
     iniciarDragOrdenCards();
     iniciarDragTarjetas();
     HeaderPosicion.iniciar();
+    TransicionLayout.iniciar();
     setFondoCard(config.fondoCard || 'golden-gate');
     setModoEstadisticas(config.modoEstadisticas || 'mensual');
 

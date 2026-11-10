@@ -1,6 +1,8 @@
 import { PosicionHeader, posicionesPermitidas } from '../core/posicion-header.js';
 import { uiAnimarReubicacion, uiArrastreLargo } from './arrastre.js';
-import { VistaPrevia } from './vista-previa.js';
+import { VistaPrevia, VENTANA_PERSONALIZAR_MS, AVISO_PERSONALIZAR_MS } from './vista-previa.js';
+import { EventosApp } from '../core/eventos.js';
+import { mostrarToast, _cerrarToastActual } from './toast.js';
 
 // ====================================================================
 // UI REUBICAR EL ENCABEZADO (mantener presionado y arrastrar, como las tarjetas)
@@ -9,6 +11,7 @@ import { VistaPrevia } from './vista-previa.js';
 // cercano al puntero (arriba, abajo, a la izquierda o a la derecha; en móvil solo arriba y abajo), con el mismo deslizamiento que las tarjetas, y las tarjetas
 // se acomodan al lugar que deja. Al soltar queda ahí (Escape cancela y vuelve a donde estaba). El dibujo de cada posición es del CSS (<html data-header-pos>,
 // ver core/posicion-header.js).
+// Atajo para el tema (igual que el de las tarjetas, ver orden-tarjetas.js): mantener presionado y soltar sin mover dentro de VENTANA_PERSONALIZAR_MS abre la vista previa del tema.
 const _consultaEscritorio = window.matchMedia('(min-width: 1024px)');   // mismo corte que el CSS
 
 // Controles del encabezado que conservan su toque o clic normal: no inician el arrastre
@@ -54,21 +57,30 @@ function iniciar() {
             destino = PosicionHeader.actual();
             header.classList.add('reubicando');
             document.body.classList.add('header-arrastrando-activa');
+            mostrarToast('Soltá para personalizar', 'info', AVISO_PERSONALIZAR_MS);
             // igual que al arrastrar tarjetas: sin la animación de entrada, que pisaría el deslizamiento
             /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.animated-card')).forEach(c => c.style.animation = 'none');
         },
+        // en cuanto el dedo se mueve es una reubicación: el aviso de personalizar ya no corresponde
+        alPrimerMovimiento: () => _cerrarToastActual(),
         alMover: (e, header) => {
             const nueva = _posicionMasCercana(e.clientX, e.clientY, permitidas, destino);
             if (nueva === destino) return;
             destino = nueva;
             mostrarEn(destino, header);
         },
-        alTerminar: (header, confirmar) => {
+        alTerminar: (header, confirmar, { movido, duracion }) => {
             header.classList.remove('reubicando');
             document.body.classList.remove('header-arrastrando-activa');
             if (confirmar && destino) PosicionHeader.setPosicion(destino);   // ya se ve ahí: solo se guarda
             else uiAnimarReubicacion(_elementosQueSeMueven, _claveElemento, () => PosicionHeader.restaurar(), { encima: header });
             destino = null;
+            // mantener y soltar sin mover (y dentro de la ventana) = personalizar el tema
+            if (confirmar && !movido && duracion <= VENTANA_PERSONALIZAR_MS) {
+                _cerrarToastActual();
+                if (navigator.vibrate) { try { navigator.vibrate(20); } catch (_) { /* la vibración es opcional */ } }
+                EventosApp.emit('tarjeta:personalizar', { tarjeta: 'tema' });
+            }
         }
     });
 }

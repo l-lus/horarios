@@ -330,3 +330,29 @@ test('Errores: los servicios no lanzan por errores esperados, devuelven { error 
         .filter(a => /\bthrow\b/.test(fs.readFileSync(a, 'utf8')));
     assert.deepEqual(conThrow, []);
 });
+
+test('gestor-temas.js: las muestras de cada tema (fondo y acento) coinciden con los tokens de tokens.css', async () => {
+    const css = fs.readFileSync('assets/styles/tokens.css', 'utf8');
+    const bloque = (selector) => {
+        const i = css.indexOf(selector);
+        assert.notEqual(i, -1, `tokens.css: no está el bloque ${selector}`);
+        return css.slice(css.indexOf('{', i) + 1, css.indexOf('}', i));
+    };
+    const valor = (cuerpo, variable) => new RegExp(`${variable}:\\s*([^;]+);`).exec(cuerpo)?.[1].trim();
+    const raiz = bloque(':root {');
+    const bloques = {
+        light: raiz,
+        dark: bloque('html.dark-mode body,'),
+        ...Object.fromEntries(['medianoche', 'pink', 'green', 'blue', 'lilac', 'crema'].map(t => [t, bloque(`html[data-theme="${t}"] body,`)]))
+    };
+    const temasModulo = JSON.parse(/const TEMAS = (\[[^\]]*\]);/.exec(fs.readFileSync('src/ui/gestor-temas.js', 'utf8'))[1].replace(/'/g, '"'));
+    const { GestorTemas } = await import('../src/ui/gestor-temas.js');
+    assert.deepEqual(Object.keys(GestorTemas.MUESTRAS).sort(), [...temasModulo].sort());
+    for (const tema of temasModulo) {
+        const cuerpo = bloques[tema];
+        const activo = valor(cuerpo, '--c-active');
+        const acento = !activo || activo === 'var(--c-blue)' ? valor(raiz, '--c-blue') : activo;   // sin acento propio vale el azul de la raíz
+        assert.equal(GestorTemas.MUESTRAS[tema].fondo, valor(cuerpo, '--bg-body'), `fondo de ${tema}`);
+        assert.equal(GestorTemas.MUESTRAS[tema].acento, acento, `acento de ${tema}`);
+    }
+});

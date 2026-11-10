@@ -7,7 +7,7 @@ import { Almacenamiento } from '../core/almacenamiento.js';
 import { UIBase } from './base.js';
 import { uiAnimarReubicacion, uiArrastreLargo, REUBICACION_MS } from './arrastre.js';
 import { mostrarToast, _cerrarToastActual } from './toast.js';
-import { VistaPrevia } from './vista-previa.js';
+import { VistaPrevia, VENTANA_PERSONALIZAR_MS, AVISO_PERSONALIZAR_MS } from './vista-previa.js';
 
 // ====================================================================
 // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
@@ -225,11 +225,8 @@ function columnasTrasTecla(id, tecla) {
     return moverCard(columnas, id, destino, destino < columnas.length ? (enColumna(destino)[pos] ?? null) : null, opciones);
 }
 
-// Atajo para personalizar el estilo: con la tarjeta ya levantada (modo reubicar), soltar sin mover el dedo dentro de este tiempo abre la vista previa de su estilo.
-// Pasado el tiempo, soltar en el mismo lugar no hace nada (evita aperturas accidentales). El aviso dura menos que la ventana para no pisarse con el panel,
-// que aparece en el mismo lugar de la pantalla.
-const VENTANA_PERSONALIZAR_MS = 1000;
-const AVISO_PERSONALIZAR_MS = 800;
+// Atajo para personalizar el estilo: con la tarjeta ya levantada (modo reubicar), soltar sin mover el dedo dentro de VENTANA_PERSONALIZAR_MS abre la vista previa de su estilo.
+// Pasado el tiempo, soltar en el mismo lugar no hace nada (evita aperturas accidentales). Los tiempos son de vista-previa.js (el encabezado usa los mismos).
 /** Tarjetas con estilo propio: la de estado y Registros (su calendario). Valor: lo que se avisa en 'tarjeta:personalizar'. */
 const PERSONALIZABLES = { 'stats-card': 'estado', 'card-historico': 'calendario' };
 

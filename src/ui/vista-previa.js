@@ -13,11 +13,18 @@ import { Animaciones } from './animaciones.js';
 // Este módulo no conoce las opciones: quien lo llama pasa las filas del panel y, si la tarjeta necesita prepararse (p. ej. expandir el calendario del histórico),
 // un preparador registrado con `registrarPreparador` que devuelve cómo dejar todo como estaba.
 //
+// Las vistas previas (tarjeta de estado, calendario y tema) están integradas: se registran con `registrarVista` y `definirOrden`, y desde el panel se pasa de una a otra
+// tocando el título (el ícono de al lado lo indica) o, en pantallas táctiles, deslizando el panel hacia los costados. El tema no tiene tarjeta ni velo (hay que ver los colores
+// de toda la página) y en lugar de filas muestra círculos de color para elegir.
+//
 // La vista previa agrega una entrada al historial del navegador (como los modales): así el botón Atrás de un móvil la cierra en vez de salir de la app.
 // Todo cierre pasa por history.back() y se completa en el popstate, para no pisarse con el historial de los modales (ver gestor-modales.js).
 
 /** @typedef {{ etiqueta: string, descripcion?: string, icono?: string, valor: () => string, alTocar: () => void, visible?: () => boolean }} FilaVistaPrevia */
-/** @typedef {{ id: string, titulo: string, idObjetivo: string, filas: FilaVistaPrevia[], antes?: () => void, alCerrar?: () => void }} ConfigVistaPrevia */
+/** @typedef {{ id: string, etiqueta: string, fondo: string, acento: string }} OpcionCirculo */
+/** @typedef {{ opciones: OpcionCirculo[], actual: () => string, alElegir: (id: string) => void }} CirculosVistaPrevia */
+/** `idObjetivo` es la tarjeta que se lleva a la vista (sin él no hay tarjeta); `circulos` reemplaza a las filas; `sinVelo` deja la página sin atenuar. */
+/** @typedef {{ id: string, titulo: string, idObjetivo?: string, filas: FilaVistaPrevia[], circulos?: CirculosVistaPrevia, sinVelo?: boolean, antes?: () => void, alCerrar?: () => void }} ConfigVistaPrevia */
 
 const NS_SVG = 'http://www.w3.org/2000/svg';
 /** Demora entre cerrar Ajustes y mostrar la vista previa: deja pasar el popstate del modal para que los dos historiales no se pisen. */
@@ -25,20 +32,45 @@ const DEMORA_APERTURA_MS = 160;
 /** Demora entre el popstate de la vista previa y lo que sigue (reabrir Ajustes): el gestor de modales ignora los popstate durante unos ms. */
 const DEMORA_CIERRE_MS = 90;
 const MARGEN_PX = 12;
+/** Atajo desde las tarjetas y el encabezado (mantener y soltar sin mover, ver orden-tarjetas.js y header-posicion.js): soltar sin mover el dedo dentro de este tiempo abre la vista previa. */
+export const VENTANA_PERSONALIZAR_MS = 1000;
+/** El aviso dura menos que la ventana para no pisarse con el panel, que aparece en el mismo lugar de la pantalla. */
+export const AVISO_PERSONALIZAR_MS = 800;
+/** Deslizamiento del contenido del panel al pasar de una vista a otra, y lo que hay que arrastrar (px) en el panel para que cuente como deslizar. */
+const DESLIZ_MS = 130;
+const DESLIZ_PX = 36;
+const UMBRAL_DESLIZAR_PX = 50;
 /** Si la tarjeta es más alta que el espacio libre pero su borde superior ya se ve, alinearla arriba solo vale la pena si hay que mover más que esto. */
 const TOLERANCIA_ALINEAR_PX = 40;
 
 /** @type {Record<string, () => (() => void) | void>} */
 const _preparadores = {};
 
-/** @type {{ cfg: ConfigVistaPrevia, objetivo: HTMLElement, restaurar: (() => void) | null, filas: { def: FilaVistaPrevia, envoltorio: HTMLElement, btn: HTMLElement, valor: HTMLElement }[], observer: ResizeObserver | null, timer: any } | null} */
+/** Vistas registradas (id -> cómo armar su configuración) y el orden en que se pasa de una a otra. */
+/** @type {Record<string, () => ConfigVistaPrevia>} */
+const _vistas = {};
+/** @type {string[]} */
+let _orden = [];
+
+/** @type {{ cfg: ConfigVistaPrevia, objetivo: HTMLElement | null, restaurar: (() => void) | null, filas: { def: FilaVistaPrevia, envoltorio: HTMLElement, btn: HTMLElement, valor: HTMLElement }[], circulos: { def: CirculosVistaPrevia, btns: { id: string, btn: HTMLElement }[], nombre: HTMLElement } | null, observer: ResizeObserver | null, timer: any } | null} */
 let _activa = null;
+let _cambiando = false;
 let _iniciada = false;
 let _cerrando = false;
 
 /** Un preparador deja visible lo que se va a probar y devuelve cómo volver al estado anterior. @param {string} id @param {() => (() => void) | void} fn */
 function registrarPreparador(id, fn) {
     _preparadores[id] = fn;
+}
+
+/** Registra una vista previa: `fabrica` arma su configuración cada vez que se la muestra. @param {string} id @param {() => ConfigVistaPrevia} fabrica */
+function registrarVista(id, fabrica) {
+    _vistas[id] = fabrica;
+}
+
+/** Orden en que se pasa de una vista a otra desde el panel (la última vuelve a la primera). @param {string[]} ids */
+function definirOrden(ids) {
+    _orden = ids;
 }
 
 function _icono(href) {
@@ -89,6 +121,62 @@ function _construirFilas(defs) {
     });
 }
 
+/** En lugar de filas, círculos de color para elegir (el tema): cada uno muestra el fondo y el acento de su opción. @param {HTMLElement} cont @param {CirculosVistaPrevia} def */
+function _construirCirculos(cont, def) {
+    const grupo = document.createElement('div');
+    grupo.className = 'vista-previa-circulos';
+    grupo.setAttribute('role', 'group');
+    const btns = def.opciones.map(op => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'vista-previa-circulo';
+        btn.style.setProperty('--muestra-fondo', op.fondo);
+        btn.style.setProperty('--muestra-acento', op.acento);
+        btn.setAttribute('aria-label', op.etiqueta);
+        btn.title = op.etiqueta;
+        btn.addEventListener('click', () => { def.alElegir(op.id); _refrescar(); });
+        grupo.append(btn);
+        return { id: op.id, btn };
+    });
+    const nombre = document.createElement('span');
+    nombre.className = 'vista-previa-circulos-nombre';
+    cont.append(grupo, nombre);
+    if (_activa) _activa.circulos = { def, btns, nombre };
+}
+
+function _marcarCirculos() {
+    const c = _activa?.circulos;
+    if (!c) return;
+    const actual = c.def.actual();
+    c.btns.forEach(({ id, btn }) => {
+        btn.classList.toggle('activo', id === actual);
+        btn.setAttribute('aria-pressed', String(id === actual));
+    });
+    c.nombre.textContent = c.def.opciones.find(o => o.id === actual)?.etiqueta ?? '';
+}
+
+/** Arma el contenido del panel de la vista activa (título, filas o círculos), sin animar. */
+function _poblar() {
+    if (!_activa) return;
+    const { cfg } = _activa;
+    const titulo = $('vista-previa-titulo-texto');
+    if (titulo) titulo.textContent = cfg.titulo;
+    // el ícono de al lado del título avisa que se puede pasar a otra vista; sin otra vista a dónde ir no se muestra
+    $('vista-previa-titulo')?.classList.toggle('con-otras', _orden.length > 1);
+    document.body.classList.toggle('vista-previa-sin-velo', !!cfg.sinVelo);
+    const cont = $('vista-previa-filas');
+    _activa.circulos = null;
+    if (cont) cont.classList.toggle('settings-list', !cfg.circulos);
+    if (cfg.circulos && cont) {
+        cont.replaceChildren();
+        _activa.filas = [];
+        _construirCirculos(cont, cfg.circulos);
+    } else {
+        _activa.filas = _construirFilas(cfg.filas);
+    }
+    _refrescar(false);
+}
+
 /** Ancho que tendría el valor con `texto` (se mide con una copia oculta que hereda la misma tipografía). @param {HTMLElement} el @param {string} texto */
 function _anchoConTexto(el, texto) {
     const medidor = /** @type {HTMLElement} */ (el.cloneNode(false));
@@ -124,6 +212,7 @@ function _cambiarValor(el, texto) {
 /** @param {boolean} [animar] con false (la primera vez) las filas quedan en su estado sin transición */
 function _refrescar(animar = true) {
     if (!_activa) return;
+    _marcarCirculos();
     const filas = _activa.filas;
     const visibles = filas.map(f => (f.def.visible ? f.def.visible() : true));
     const aplicar = () => {
@@ -148,7 +237,7 @@ function _refrescar(animar = true) {
  * panel la hacía "saltar" unos píxeles, y al cerrar volvía sola cuando desaparecía esa reserva).
  */
 function _llevarAVista() {
-    if (!_activa) return;
+    if (!_activa?.objetivo) return;
     // el borde de arriba que deja libre el encabezado: solo cuenta si va arriba
     const bordeEncabezado = PosicionHeader.altoSuperior();
     const libreSup = bordeEncabezado + MARGEN_PX;
@@ -192,16 +281,14 @@ function _medirPanel() {
 
 function _mostrar() {
     if (!_activa) return;
-    const { cfg, objetivo } = _activa;
+    const { objetivo } = _activa;
     const panel = $('vista-previa-panel');
     const velo = $('vista-previa-velo');
     if (!panel || !velo) return;
 
-    $('vista-previa-titulo')?.replaceChildren(cfg.titulo);
-    _activa.filas = _construirFilas(cfg.filas);
-    _refrescar(false);
+    _poblar();
 
-    objetivo.classList.add('vista-previa-objetivo');
+    objetivo?.classList.add('vista-previa-objetivo');
     document.body.classList.add('vista-previa-activa');
     velo.classList.add('show');
     panel.classList.add('show');
@@ -226,13 +313,87 @@ function _mostrar() {
  */
 function abrir(cfg) {
     if (_activa) return;
-    const objetivo = $(cfg.idObjetivo);
-    if (!objetivo) return;
-    _activa = { cfg, objetivo, restaurar: null, filas: [], observer: null, timer: null };
+    const objetivo = cfg.idObjetivo ? $(cfg.idObjetivo) : null;
+    if (cfg.idObjetivo && !objetivo) return;
+    _activa = { cfg, objetivo, restaurar: null, filas: [], circulos: null, observer: null, timer: null };
     _cerrando = false;
     cfg.antes?.();
     _activa.restaurar = _preparadores[cfg.id]?.() ?? null;
     setTimeout(_mostrar, DEMORA_APERTURA_MS);
+}
+
+/** Desliza el contenido del panel (título y filas) hacia un costado (saliendo) o desde él (entrando). Devuelve las animaciones, para cancelarlas cuando ya no hacen falta. */
+async function _deslizar(dx, entrando) {
+    if (Movimiento.reducido()) return [];
+    const quieto = { transform: 'translateX(0)', opacity: 1 };
+    const lejos = { transform: `translateX(${dx}px)`, opacity: 0 };
+    const anims = [$('vista-previa-titulo-texto'), $('vista-previa-filas')]
+        .filter(el => el)
+        .map(el => /** @type {HTMLElement} */ (el).animate(entrando ? [lejos, quieto] : [quieto, lejos], { duration: DESLIZ_MS, easing: 'ease-out', fill: 'forwards' }));
+    await Promise.all(anims.map(a => a.finished.catch(() => {})));
+    return anims;
+}
+
+/** Pasa a la vista de al lado en el orden (`delta` 1 = la siguiente, -1 = la anterior). La vista previa sigue abierta: solo cambia lo que se prueba. @param {number} delta */
+async function cambiar(delta) {
+    if (!_activa || _cerrando || _cambiando || _orden.length < 2) return;
+    const i = _orden.indexOf(_activa.cfg.id);
+    if (i < 0) return;
+    const nueva = _vistas[_orden[(i + delta + _orden.length) % _orden.length]]?.();
+    if (!nueva) return;
+    const objetivo = nueva.idObjetivo ? $(nueva.idObjetivo) : null;
+    if (nueva.idObjetivo && !objetivo) return;
+    _cambiando = true;
+    try {
+        const salida = await _deslizar(-delta * DESLIZ_PX, false);
+        const activa = _activa;
+        if (!activa || _cerrando) return;
+        // sale lo anterior (lo que había preparado se deshace) y entra lo nuevo; Ajustes (alCerrar) sigue siendo a donde se vuelve al cerrar
+        clearTimeout(activa.timer);
+        activa.objetivo?.classList.remove('vista-previa-objetivo');
+        activa.restaurar?.();
+        activa.cfg = { ...nueva, antes: activa.cfg.antes, alCerrar: activa.cfg.alCerrar };
+        activa.objetivo = objetivo;
+        activa.restaurar = _preparadores[nueva.id]?.() ?? null;
+        Animaciones._animarAlturaCambio($('vista-previa-panel'), () => _poblar());
+        objetivo?.classList.add('vista-previa-objetivo');
+        _medirPanel();
+        // el calendario o la tarjeta se anima al prepararse: se encuadra cuando termina
+        activa.timer = setTimeout(_llevarAVista, 380);
+        salida.forEach(a => a.cancel());
+        const entrada = await _deslizar(delta * DESLIZ_PX, true);
+        entrada.forEach(a => a.cancel());
+    } finally {
+        _cambiando = false;
+    }
+}
+
+/** Deslizar el panel hacia los costados (pantallas táctiles) pasa a la vista de al lado: hacia la izquierda, la siguiente. */
+function _bindDeslizar() {
+    const panel = $('vista-previa-panel');
+    if (!panel) return;
+    let inicio = null;
+    let tragarClic = false;
+    panel.addEventListener('pointerdown', (e) => {
+        inicio = e.pointerType === 'touch' ? { x: e.clientX, y: e.clientY, id: e.pointerId } : null;
+    });
+    panel.addEventListener('pointerup', (e) => {
+        if (!inicio || e.pointerId !== inicio.id) return;
+        const dx = e.clientX - inicio.x;
+        const dy = e.clientY - inicio.y;
+        inicio = null;
+        if (Math.abs(dx) < UMBRAL_DESLIZAR_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        // el dedo que se levanta sobre un botón no debe contar además como toque
+        tragarClic = true;
+        setTimeout(() => { tragarClic = false; }, 120);
+        cambiar(dx < 0 ? 1 : -1);
+    });
+    panel.addEventListener('pointercancel', () => { inicio = null; });
+    panel.addEventListener('click', (e) => {
+        if (!tragarClic) return;
+        e.stopPropagation();
+        e.preventDefault();
+    }, true);
 }
 
 /** Pide cerrar: la vuelta atrás del historial dispara el popstate, que termina el cierre. */
@@ -251,8 +412,8 @@ function _finalizar() {
     _cerrando = false;
     clearTimeout(activa.timer);
     activa.observer?.disconnect();
-    activa.objetivo.classList.remove('vista-previa-objetivo');
-    document.body.classList.remove('vista-previa-activa');
+    activa.objetivo?.classList.remove('vista-previa-objetivo');
+    document.body.classList.remove('vista-previa-activa', 'vista-previa-sin-velo');
     document.body.style.removeProperty('--vp-panel-h');
     $('vista-previa-velo')?.classList.remove('show');
     const panel = $('vista-previa-panel');
@@ -268,6 +429,9 @@ function bindEventos() {
     if (_iniciada) return;
     _iniciada = true;
     $('vista-previa-listo')?.addEventListener('click', () => cerrar());
+    // el título (con su ícono) pasa a la vista siguiente; el deslizamiento táctil, a la de al lado
+    $('vista-previa-titulo')?.addEventListener('click', () => cambiar(1));
+    _bindDeslizar();
     // tocar el velo (fuera de la tarjeta y del panel) cierra igual que Listo: el estilo elegido queda como está
     $('vista-previa-velo')?.addEventListener('click', () => cerrar());
     window.addEventListener('popstate', () => { if (_activa && document.body.classList.contains('vista-previa-activa')) _finalizar(); });
@@ -277,4 +441,4 @@ function bindEventos() {
     window.addEventListener('resize', () => { _medirPanel(); });
 }
 
-export const VistaPrevia = { abrir, cerrar, bindEventos, registrarPreparador, activa: () => !!_activa };
+export const VistaPrevia = { abrir, cerrar, cambiar, bindEventos, registrarPreparador, registrarVista, definirOrden, activa: () => !!_activa };

@@ -43,11 +43,13 @@ const _refrescarFormatoCortoStatsCache = () => EventosApp.emit('config:formato-c
 const { actualizarEstadoBotonPersistir } = OrdenTarjetas;
 const { actualizarEstadoBotonNotificaciones } = Notificaciones;
 
+function elegirTema(tema) {
+    Almacenamiento.setItem(STORAGE_KEYS.TEMA_OSCURO, tema);
+    GestorTemas.aplicarTema(tema);
+}
+
 function alternarTema() {
-    const temaActual = GestorTemas.temaGuardado();
-    const temaSiguiente = GestorTemas.siguienteTema(temaActual);
-    Almacenamiento.setItem(STORAGE_KEYS.TEMA_OSCURO, temaSiguiente);
-    GestorTemas.aplicarTema(temaSiguiente);
+    elegirTema(GestorTemas.siguienteTema(GestorTemas.temaGuardado()));
 }
 
 const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
@@ -129,7 +131,12 @@ function _volverAAjustes() {
 // para probar los estilos en vivo (la tarjeta se puede tocar para ver el día y la semana)
 /** @param {boolean} [desdeAjustes] con false (el atajo de mantener la tarjeta) no hay Ajustes que cerrar ni al que volver */
 function abrirVistaPreviaTarjeta(desdeAjustes = true) {
-    VistaPrevia.abrir({
+    VistaPrevia.abrir(_configTarjeta(desdeAjustes));
+}
+
+/** @param {boolean} [desdeAjustes] */
+function _configTarjeta(desdeAjustes = true) {
+    return {
         id: 'tarjeta',
         titulo: 'Tarjeta de estado',
         idObjetivo: 'stats-card',
@@ -157,7 +164,7 @@ function abrirVistaPreviaTarjeta(desdeAjustes = true) {
             // siempre visible (no es una subopción de un estilo): el fondo de la tarjeta, el mismo de Ajustes > Apariencia
             { etiqueta: 'Fondo', icono: '#icon-landscape', valor: () => _getLabelFondo(getFondoCard()), alTocar: toggleFondoCard }
         ]
-    });
+    };
 }
 
 // Atajo desde las tarjetas (mantener y soltar sin mover, ver orden-tarjetas.js): abre la vista previa de su estilo, salvo que haya un modal u otra vista previa
@@ -165,11 +172,17 @@ EventosApp.on('tarjeta:personalizar', (datos) => {
     if (VistaPrevia.activa() || document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding')) return;
     if (datos?.tarjeta === 'estado') abrirVistaPreviaTarjeta(false);
     else if (datos?.tarjeta === 'calendario') abrirVistaPreviaCalendario(false);
+    else if (datos?.tarjeta === 'tema') VistaPrevia.abrir(_configTema(false));
 });
 
 /** @param {boolean} [desdeAjustes] */
 function abrirVistaPreviaCalendario(desdeAjustes = true) {
-    VistaPrevia.abrir({
+    VistaPrevia.abrir(_configCalendario(desdeAjustes));
+}
+
+/** @param {boolean} [desdeAjustes] */
+function _configCalendario(desdeAjustes = true) {
+    return {
         id: 'calendario',
         titulo: 'Calendario',
         idObjetivo: 'card-historico',
@@ -178,8 +191,27 @@ function abrirVistaPreviaCalendario(desdeAjustes = true) {
         filas: [
             { etiqueta: 'Estilo', icono: '#icon-calendar-simple', valor: () => EstiloCalendario.etiqueta(), alTocar: toggleEstiloCalendario }
         ]
-    });
+    };
 }
+
+// El tema no tiene tarjeta ni filas: se ve toda la página y se elige con círculos de color. Solo se abre desde el encabezado (mantener y soltar, ver header-posicion.js)
+// o pasando a él desde las otras vistas
+/** @param {boolean} [_desdeAjustes] */
+function _configTema(_desdeAjustes = false) {
+    return {
+        id: 'tema',
+        titulo: 'Tema',
+        sinVelo: true,
+        filas: [],
+        circulos: { opciones: GestorTemas.muestras(), actual: () => GestorTemas.temaGuardado(), alElegir: elegirTema }
+    };
+}
+
+// Las tres vistas previas están integradas: desde el panel se pasa de una a otra (tocando el título o deslizando en pantallas táctiles)
+VistaPrevia.registrarVista('tarjeta', () => _configTarjeta(false));
+VistaPrevia.registrarVista('calendario', () => _configCalendario(false));
+VistaPrevia.registrarVista('tema', () => _configTema());
+VistaPrevia.definirOrden(['tarjeta', 'calendario', 'tema']);
 
 /** PC (mouse): mismo criterio que .config-solo-pc / .config-solo-movil en responsivo-movimiento.css. Las subopciones de la línea de tiempo se muestran según el dispositivo. */
 const _esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;

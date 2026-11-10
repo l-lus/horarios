@@ -875,8 +875,83 @@ body.tarjeta-arrastrando-activa * {
     margin-bottom: var(--space-sm);
 }
 
+/* El título es un botón: pasa a la siguiente personalización (tarjeta de estado, calendario, tema). El ícono de al lado, que solo está si hay otra a dónde ir, lo avisa */
 .vista-previa-titulo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+    padding: var(--space-xs) var(--space-sm);
+    margin-left: calc(var(--space-sm) * -1);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-md);
+    color: inherit;
+    font: inherit;
     font-weight: var(--fw-semibold);
+    cursor: pointer;
+}
+
+.vista-previa-titulo .icon {
+    display: none;
+    flex: none;
+    color: var(--text-muted);
+}
+
+.vista-previa-titulo.con-otras .icon {
+    display: block;
+}
+
+/* Deslizar el panel hacia los costados pasa a otra personalización: el navegador solo se ocupa del desplazamiento vertical */
+.vista-previa-panel {
+    touch-action: pan-y;
+}
+
+/* Tema: círculos de color en lugar de filas. Cada uno muestra el fondo (mitad) y el acento (otra mitad) del tema */
+.vista-previa-circulos {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+}
+
+/* En pantallas angostas no entran los 8 en una fila: se reparten en dos filas parejas de 4 */
+@media (max-width: 519px) {
+    .vista-previa-circulos {
+        max-width: calc(4 * var(--touch-target) + 3 * var(--space-md));
+        margin-inline: auto;
+    }
+}
+
+.vista-previa-circulo {
+    flex: none;
+    width: var(--touch-target);
+    height: var(--touch-target);
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--muestra-fondo) 50%, var(--muestra-acento) 50%);
+    cursor: pointer;
+    transition: transform var(--dur-fast), box-shadow var(--dur-fast);
+}
+
+.vista-previa-circulo.activo {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--text-main);
+    transform: scale(1.06);
+}
+
+.vista-previa-circulos-nombre {
+    display: block;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    min-height: 1.2em;
+}
+
+/* Tema: se ven los colores de toda la página, sin atenuarla (el velo queda solo para atrapar el toque de afuera y cerrar) */
+body.vista-previa-sin-velo .vista-previa-velo.show {
+    background: transparent;
 }
 
 /* Cada fila ocupa siempre el mismo alto: el nombre y la descripción en una línea (con puntos suspensivos si no entran) y el valor sin partirse. Con textos que se parten

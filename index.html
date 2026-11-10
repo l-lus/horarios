@@ -334,7 +334,12 @@
     <div id="vista-previa-velo" class="vista-previa-velo" aria-hidden="true"></div>
     <section id="vista-previa-panel" class="vista-previa-panel" role="region" aria-label="Vista previa" inert>
         <div class="vista-previa-cabecera">
-            <span id="vista-previa-titulo" class="vista-previa-titulo"></span>
+            <button type="button" id="vista-previa-titulo" class="vista-previa-titulo" aria-label="Pasar a la siguiente personalización">
+                <span id="vista-previa-titulo-texto"></span>
+                <svg class="icon">
+                    <use href="#icon-replace-swap" />
+                </svg>
+            </button>
             <button type="button" id="vista-previa-listo" class="btn-edit">
                 <svg class="icon">
                     <use href="#icon-check" />

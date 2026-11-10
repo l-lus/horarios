@@ -478,6 +478,11 @@ function pintarNodos(r, d) {
         if (hito.tipo === 'banco') entonar(nodo.raiz, tonoBanco(d.banco));
         // el badge de "Ahora" lleva el color del estado del día (el mismo del anillo y la nota)
         if (hito.tipo === 'ahora') nodo.raiz.dataset.color = d.color ?? 'blue';
+        // con el registro cerrado la salida es lo que pasó de verdad: el remate se rellena con el color del estado con que cerró (el mismo del badge "Finalizado")
+        const cierre = hito.tipo === 'salida' && !!d.cerrado;
+        nodo.raiz.classList.toggle('cerrado', cierre);
+        if (cierre) { nodo.raiz.classList.add('pasado'); nodo.raiz.dataset.color = d.color ?? 'neutro'; }
+        else if (hito.tipo === 'salida') delete nodo.raiz.dataset.color;
     });
 }
 

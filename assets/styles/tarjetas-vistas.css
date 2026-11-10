@@ -2413,6 +2413,7 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
 .est-nodo--banco { --nodo: var(--tono); }
 .est-nodo--banco.pasado .est-nodo-punto { background: var(--tono); }
 .est-nodo--salida.pasado .est-nodo-punto { background: var(--nodo); }
+.est-nodo--salida.cerrado { --nodo: var(--est-color); }
 .est-nodo--banco :is(.est-nodo-etiqueta, .est-nodo-hora) { color: var(--tono); }
 
 .est-nodo.pendiente .est-nodo-punto { border-style: dashed; background: transparent; }

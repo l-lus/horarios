@@ -301,6 +301,8 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
         ordenCardsMovil: ['estado', 'registrar', 'estadisticas', 'historico'],
         columnasCards: [3, 1],
+        ordenCards3: ['estado', 'registrar', 'estadisticas', 'historico'],
+        columnasCards3: [3, 1],
         tarjetasVisibles: { registrar: true, estadisticas: true, historico: true }
     });
 });
@@ -404,6 +406,13 @@ test('ImportarExportar: el diseño de la interfaz (orden y tarjetas visibles) se
         assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true), ['estado', 'estadisticas', 'registrar', 'historico']);
         assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['estado', 'historico', 'estadisticas', 'registrar']);
         Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
+        // 3 columnas: sin orden propio usa el de 2; con uno propio, los de 1 y 2 columnas no cambian
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards3, ['estado', 'historico', 'estadisticas', 'registrar']);
+        ImportarExportar.aplicarConfigImportada({ ordenCards3: ['registrar', 'estado'] });
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_3, null, true), ['registrar', 'estado', 'estadisticas', 'historico']);
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['estado', 'historico', 'estadisticas', 'registrar']);
+        Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_3, true);
+        Almacenamiento.removeItem(STORAGE_KEYS.COLUMNAS_CARDS_3, true);
         assert.deepEqual(exportado.tarjetasVisibles, { registrar: true, estadisticas: false, historico: true });
 
         // Una clave que esta versión no conoce se rechaza como sospechosa

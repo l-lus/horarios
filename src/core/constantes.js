@@ -36,7 +36,9 @@ export const STORAGE_KEYS = Object.freeze({
     PERSISTIR_TARJETAS: 'persistirTarjetas',
     ORDEN_CARDS: 'ordenCards',
     ORDEN_CARDS_MOVIL: 'ordenCardsMovil',
-    COLUMNAS_CARDS: 'columnasCards',   // cuántas tarjetas hay en cada columna de escritorio (se corta el orden de ORDEN_CARDS)
+    COLUMNAS_CARDS: 'columnasCards',   // cuántas tarjetas hay en cada columna de escritorio de 2 columnas (se corta el orden de ORDEN_CARDS)
+    ORDEN_CARDS_3: 'ordenCards3',   // orden propio con 3 columnas (sin él se parte del de 2 columnas)
+    COLUMNAS_CARDS_3: 'columnasCards3',   // tamaños de las columnas con 3 columnas (se corta el orden de ORDEN_CARDS_3)
     FORMULARIO_EXPANDIDO: 'formularioExpandido',
     STATS_EXPANDIDO: 'statsExpandido',
     HISTORICO_EXPANDIDO: 'historicoExpandido',

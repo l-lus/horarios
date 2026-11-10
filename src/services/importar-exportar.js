@@ -32,8 +32,15 @@ const _esMapaDeBooleanos = (v) => !!v && typeof v === 'object' && !Array.isArray
 const _ordenActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
 // Sin orden propio para móvil se usa el de escritorio (así era antes de separarlos)
 const _ordenMovilActual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true) ?? Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
+// Sin orden propio para 3 columnas se usa el de 2 (y sus tamaños)
+const _orden3Actual = () => normalizarOrdenCards(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_3, null, true) ?? Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true));
 // Tamaños de las columnas de escritorio (sin tamaños guardados, el reparto por defecto)
 const _columnasActuales = () => tamanosDeColumnas(columnasDesdeOrden(_ordenActual(), Almacenamiento.getObject(STORAGE_KEYS.COLUMNAS_CARDS, null, true)));
+const _columnas3Actuales = () => {
+    const propio = Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_3, null, true);
+    const tamanos = Almacenamiento.getObject(propio ? STORAGE_KEYS.COLUMNAS_CARDS_3 : STORAGE_KEYS.COLUMNAS_CARDS, null, true);
+    return tamanosDeColumnas(columnasDesdeOrden(_orden3Actual(), tamanos));
+};
 const _visiblesActuales = () => Object.fromEntries(CARDS.map(c => [c, Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(c), true, true)]));
 
 const _avisarHint = () => EventosApp.emit('config:hint-integrado');
@@ -146,6 +153,9 @@ const CONFIG_RESPALDO = [
         if (!Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS])) Almacenamiento.removeItem(STORAGE_KEYS.COLUMNAS_CARDS, true);
     }),
     _ordenDeTarjetas(STORAGE_KEYS.ORDEN_CARDS_MOVIL, 'orden de tarjetas (móvil)', _ordenMovilActual),
+    _ordenDeTarjetas(STORAGE_KEYS.ORDEN_CARDS_3, 'orden de tarjetas (3 columnas)', _orden3Actual, (data) => {
+        if (!Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS_3])) Almacenamiento.removeItem(STORAGE_KEYS.COLUMNAS_CARDS_3, true);
+    }),
     {
         clave: STORAGE_KEYS.COLUMNAS_CARDS,
         etiqueta: 'columnas de tarjetas',
@@ -154,6 +164,15 @@ const CONFIG_RESPALDO = [
         actual: _columnasActuales,
         distinto: (v) => v.join() !== _columnasActuales().join(),
         aplicar: (v) => Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS, v, true),
+    },
+    {
+        clave: STORAGE_KEYS.COLUMNAS_CARDS_3,
+        etiqueta: 'columnas de tarjetas (3 columnas)',
+        tarjetas: true,
+        esValido: (v) => esTamanosColumnasValidos(v),
+        actual: _columnas3Actuales,
+        distinto: (v) => v.join() !== _columnas3Actuales().join(),
+        aplicar: (v) => Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS_3, v, true),
     },
     {
         clave: CLAVE_TARJETAS_VISIBLES,

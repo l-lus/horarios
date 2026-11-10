@@ -51,7 +51,12 @@ const _consultaEscritorio = window.matchMedia('(min-width: 1024px)');
 const _consultaAncha = window.matchMedia('(min-width: 1400px)');   // 3 columnas desde 1400px (2 columnas entre 1024 y 1399: un rango más amplio que el de 1200, donde 3 columnas quedaban muy justas)
 const _esEscritorio = () => _consultaEscritorio.matches;
 const _maxColumnas = () => (!_esEscritorio() ? 1 : _consultaAncha.matches ? MAX_COLUMNAS : 2);
-const _claveOrden = () => (_esEscritorio() ? STORAGE_KEYS.ORDEN_CARDS : STORAGE_KEYS.ORDEN_CARDS_MOVIL);
+// Cada cantidad de columnas (1 móvil, 2 y 3 en escritorio) tiene su propio orden; mientras no se haya ordenado con 3 columnas se parte del de 2
+const _con3Columnas = () => _esEscritorio() && _consultaAncha.matches;
+const _claveOrden = () => (!_esEscritorio() ? STORAGE_KEYS.ORDEN_CARDS_MOVIL : _con3Columnas() ? STORAGE_KEYS.ORDEN_CARDS_3 : STORAGE_KEYS.ORDEN_CARDS);
+/** Los tamaños de columna van con el orden: con 3 columnas y sin orden propio guardado se usan los de 2 columnas, que son los que le corresponden a ese orden. */
+const _claveColumnas = () => (_con3Columnas() && Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_3, null, true) ? STORAGE_KEYS.COLUMNAS_CARDS_3 : STORAGE_KEYS.COLUMNAS_CARDS);
+const _claveColumnasAlGuardar = () => (_con3Columnas() ? STORAGE_KEYS.COLUMNAS_CARDS_3 : STORAGE_KEYS.COLUMNAS_CARDS);
 
 function obtenerOrdenCards() {
     const guardado = Almacenamiento.getObject(_claveOrden(), null, true)
@@ -72,13 +77,13 @@ const _tarjetasVisibles = () => new Set(['estado', ...CARDS.filter(c => Almacena
 /** Columnas tal como se dibujan ahora: en móvil una sola; en escritorio el orden cortado según los tamaños guardados. */
 function _columnasActuales(orden = obtenerOrdenCards()) {
     if (!_esEscritorio()) return [orden];
-    const tamanos = Almacenamiento.getObject(STORAGE_KEYS.COLUMNAS_CARDS, null, true);
+    const tamanos = Almacenamiento.getObject(_claveColumnas(), null, true);
     return prepararColumnas(columnasDesdeOrden(orden, tamanos), _maxColumnas(), _tarjetasVisibles());
 }
 
 function _guardarColumnas(columnas) {
     guardarOrdenCards(columnas.flat());
-    if (_esEscritorio()) Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS, tamanosDeColumnas(columnas), true);
+    if (_esEscritorio()) Almacenamiento.setItem(_claveColumnasAlGuardar(), tamanosDeColumnas(columnas), true);
 }
 
 // Contenedores de escritorio (hasta 3 columnas); en móvil todo se apila en el primero, en el orden elegido
@@ -121,7 +126,7 @@ function aplicarOrdenCards(orden, columnas = null) {
     _actualizarColumnas();
 
     const etiqueta = $('label-orden-cards');
-    if (etiqueta) etiqueta.textContent = `Tarjetas y posición (${_esEscritorio() ? 'PC' : 'celular'})`;
+    if (etiqueta) etiqueta.textContent = `Tarjetas y posición (${!_esEscritorio() ? 'celular' : _con3Columnas() ? 'PC, 3 columnas' : 'PC, 2 columnas'})`;
 
     const lista = $('lista-orden-cards');
     if (lista) {

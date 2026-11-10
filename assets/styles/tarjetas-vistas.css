@@ -2414,8 +2414,11 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
 .est-nodo--banco.pasado .est-nodo-punto { background: var(--tono); }
 .est-nodo--salida.pasado .est-nodo-punto { background: var(--nodo); }
 .est-nodo--salida.cerrado { --nodo: var(--est-color); }
-/* con el registro en curso la salida estimada ya alcanzada se rellena de azul (todavía no es el cierre) */
-.est-nodo--salida.pasado:not(.cerrado) { --nodo: var(--c-blue); }
+/* con el registro en curso la salida estimada ya alcanzada se rellena con el color del conector que llega a ella (data-tramo; todavía no es el cierre) */
+.est-nodo--salida.pasado:not(.cerrado)[data-tramo="blue"] { --nodo: var(--c-blue); }
+.est-nodo--salida.pasado:not(.cerrado)[data-tramo="green"] { --nodo: var(--c-green); }
+.est-nodo--salida.pasado:not(.cerrado)[data-tramo="gold"] { --nodo: var(--c-gold); }
+.est-nodo--salida.pasado:not(.cerrado)[data-tramo="red"] { --nodo: var(--c-red); }
 .est-nodo--banco :is(.est-nodo-etiqueta, .est-nodo-hora) { color: var(--tono); }
 
 .est-nodo.pendiente .est-nodo-punto { border-style: dashed; background: transparent; }

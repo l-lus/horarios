@@ -133,6 +133,7 @@ html.entrada-pagina .container {
 }
 
 .header {
+    --header-borde: transparent;
     padding: var(--space-smd);
     position: sticky;
     top: 0;
@@ -140,7 +141,9 @@ html.entrada-pagina .container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 3px solid transparent;
+    /* El borde del lado que da al contenido muestra siempre el estado del registro (--header-borde, ver .progress-* más abajo); sin estado queda transparente */
+    border-bottom: 3px solid var(--header-borde);
+    transition: border-color var(--transition-ui);
     /* Se mantiene presionada para reubicarla (ver ui/header-posicion.js); pan-y deja pasar el desplazamiento mientras tanto */
     touch-action: pan-y;
 }
@@ -167,6 +170,14 @@ html.entrada-pagina .container {
     margin-left: var(--space-lg);
 }
 
+/* Color del borde según el estado del registro (la clase la pone ui/tarjeta-fondos.js junto con el color de la barra de progreso) */
+.header.progress-green { --header-borde: var(--c-green); }
+.header.progress-red { --header-borde: var(--c-red); }
+.header.progress-purple { --header-borde: var(--c-purple); }
+.header.progress-orange { --header-borde: var(--c-orange); }
+.header.progress-gold { --header-borde: var(--c-gold); }
+.header.progress-blue { --header-borde: var(--c-blue); }
+
 /* Abajo: barra fija al pie. El relleno de <html> deja libre ese alto; la zona segura de los celulares con barra de gestos se suma al relleno de la barra */
 html[data-header-pos="bottom"] {
     padding-bottom: var(--header-alto, 60px);
@@ -179,7 +190,7 @@ html[data-header-pos="bottom"] .header {
     left: 0;
     right: 0;
     border-bottom: 0;
-    border-top: 3px solid transparent;
+    border-top: 3px solid var(--header-borde);
     padding-bottom: calc(var(--space-smd) + env(safe-area-inset-bottom, 0px));
 }
 
@@ -218,11 +229,13 @@ html[data-header-pos="bottom"] .header::before {
     html[data-header-pos="left"] .header {
         left: 0;
         right: auto;
+        border-right: 3px solid var(--header-borde);
     }
 
     html[data-header-pos="right"] .header {
         left: auto;
         right: 0;
+        border-left: 3px solid var(--header-borde);
     }
 
     html[data-header-pos="left"] .header::before {

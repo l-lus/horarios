@@ -75,7 +75,7 @@ function _pintarProgreso() {
     const texto = toast.querySelector('.toast-texto');
     const barra = /** @type {HTMLProgressElement | null} */ (/** @type {unknown} */ (toast.querySelector('.toast-progreso')));
     const { mensaje, porcentaje } = _progreso;
-    if (texto) texto.textContent = porcentaje === null ? mensaje : `${mensaje} ${porcentaje} %`;
+    if (texto) texto.textContent = porcentaje === null ? mensaje : `${mensaje} ${porcentaje}\u00A0%`;
     if (barra) { if (porcentaje === null) barra.removeAttribute('value'); else barra.value = porcentaje; }
 }
 

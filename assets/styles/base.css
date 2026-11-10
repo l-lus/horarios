@@ -1153,8 +1153,15 @@ mark.ayuda-resaltado--activa {
     gap: var(--space-sm);
 }
 
+.toast.toast-con-progreso {
+    width: calc(100% - 2rem);
+    padding-inline: var(--space-lg);
+}
+
 .toast-con-progreso .toast-texto {
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;   /* el porcentaje no baja a una segunda línea: el texto se achica antes (ver font-size) */
+    font-size: min(1em, 4.4vw);
 }
 
 .toast-progreso {

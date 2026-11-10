@@ -487,8 +487,8 @@ function pintarNodos(r, d) {
         fijar(nodo.hora, horas[hito.tipo] ?? '');
         if (hito.tipo === 'salida') fijar(nodo.etiqueta, d.cerrado ? 'Salida' : 'Salida estimada');
         if (hito.tipo === 'banco') entonar(nodo.raiz, tonoBanco(d.banco));
-        // el badge de "Ahora" lleva el color del estado del día (el mismo del anillo y la nota)
-        if (hito.tipo === 'ahora') nodo.raiz.dataset.color = d.color ?? 'blue';
+        // el badge de "Ahora" lleva el color de la zona donde está, como el remate de la barra con hitos (azul antes de la primera salida, el color del banco entre ambas, verde después)
+        if (hito.tipo === 'ahora') nodo.raiz.dataset.color = linea && d.anillo ? tramoDe(hito.rel) : (d.color ?? 'blue');
         // con el registro cerrado los hitos (entrada y salida) y el conector toman el color del estado con que cerró (el mismo del badge "Finalizado")
         nodo.raiz.classList.toggle('cerrado', !!d.cerrado);
         if (d.cerrado) { nodo.raiz.classList.add('pasado'); nodo.raiz.dataset.color = d.color ?? 'neutro'; }

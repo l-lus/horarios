@@ -1141,6 +1141,7 @@
                             <p>- Personalizar la interfaz con temas, fondos y el orden de las tarjetas.</p>
                             <p>- Crear backups locales o sincronizar con token de GitHub Gist.</p>
                             <p>- Instalarla como app en tu dispositivo.</p>
+                            <p>- Actualizarse sola: al detectar una versión nueva muestra el avance de la descarga y, al terminar, te avisa para recargar (en el celular también podés tirar de la página hacia abajo para recargar).</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-fichar">
@@ -1158,7 +1159,8 @@
                         <section class="ayuda-seccion" id="ayuda-sec-colores">
                             <h4>Colores y barra de progreso</h4>
                             <p>Los colores indican cómo viene cada jornada. Se usan en la insignia y el borde de la
-                                tarjeta principal, en la barra de progreso, en la lista de registros y en el
+                                tarjeta principal, en el borde del encabezado (siempre visible, del lado que da a las
+                                tarjetas), en la barra de progreso, en la lista de registros y en el
                                 calendario:</p>
                             <p class="ayuda-color-fila"><span class="ayuda-color ayuda-color--blue"
                                     aria-hidden="true"></span><span><strong>Azul:</strong> jornada en curso, todavía sin
@@ -1311,14 +1313,14 @@
                             <h4>Perfiles</h4>
                             <p>Podés tener hasta 9 perfiles (por ejemplo, distintos trabajos), cada uno con sus propios
                                 registros, objetivos, notificaciones, opciones de estadísticas, fondo y orden de
-                                tarjetas. Se cambia de perfil desde el botón situado en el borde superior derecho de la
-                                app: tocá el que quieras usar y queda marcado como <strong>Activo</strong>.</p>
+                                tarjetas. Se cambia de perfil desde el botón del encabezado (arriba a la derecha, o donde lo hayas
+                                puesto, ver <em>Encabezado</em> en Ajustes): tocá el que quieras usar y queda marcado como <strong>Activo</strong>.</p>
                             <p>Para crear uno nuevo, tocá el botón del maletín con "+" que está sobre la línea de abajo para
                                 mostrar "Agregar perfil", escribí el nombre y tocá el botón de al lado.
                                 Con el lápiz de cada perfil podés renombrarlo o eliminarlo.</p>
                             <p>El tema, el formato de tiempo corto, el popup y la rueda del calendario, el hint
                                 integrado,
-                                reducir animaciones, recordar el estado de las tarjetas y el token de GitHub son comunes
+                                reducir animaciones, recordar el estado de las tarjetas, la posición del encabezado y el token de GitHub son comunes
                                 a todos los perfiles.</p>
                         </section>
 
@@ -1339,7 +1341,7 @@
                                 tarjetas (mantiene expandidas o colapsadas las tarjetas entre sesiones). Las opciones de
                                 PC se ocultan en dispositivos táctiles. El estilo de los días se elige en
                                 <em>Personalizar calendario</em>, en Apariencia.</p>
-                            <p><strong>Personalizar tarjeta de estado:</strong> al tocar la opción (en Apariencia) se cierra Ajustes y la tarjeta queda a la vista (con scroll si hace falta) con un panel abajo para ir probando en vivo su <em>Estilo</em> y su <em>Fondo</em> (y las subopciones de cada estilo); <em>Listo</em>, tocar fuera de la tarjeta o el botón Atrás vuelven a Ajustes con lo elegido. Lo mismo ocurre con <em>Personalizar calendario</em>, que prueba el estilo de los días sobre el calendario de Registros. En el panel, cada toque pasa a la opción siguiente.
+                            <p><strong>Personalizar tarjeta de estado:</strong> al tocar la opción (en Apariencia) se cierra Ajustes y la tarjeta queda a la vista (con scroll si hace falta) con un panel abajo para ir probando en vivo su <em>Estilo</em> y su <em>Fondo</em> (y las subopciones de cada estilo); <em>Listo</em>, tocar fuera de la tarjeta o el botón Atrás vuelven a Ajustes con lo elegido. Lo mismo ocurre con <em>Personalizar calendario</em>, que prueba el estilo de los días sobre el calendario de Registros. En el panel, cada toque pasa a la opción siguiente. Con las flechas a los costados del título (o deslizando el panel en pantallas táctiles, o con la rueda del mouse sobre él) pasás entre las vistas <em>Tarjeta de estado</em>, <em>Calendario</em> y <em>Tema</em> sin volver a Ajustes.
                                 <em>Barra con hitos</em> muestra la entrada, la salida estimada y la salida con banco de
                                 horas sobre la barra, o las siglas de cada día en la semana; <em>Clásica</em> es la barra
                                 con esos datos como texto debajo. <em>Anillo</em>, <em>Línea de tiempo</em> y
@@ -1356,7 +1358,7 @@
                                 Para reubicarlas, mantené presionado el encabezado de la tarjeta (en la de estado,
                                 la tarjeta entera) y arrastrala. En PC la ubicás donde sueltes: en cualquier columna
                                 y entre las tarjetas que ya hay. Si la llevás hasta el borde derecho se abre una
-                                columna nueva (hasta 3, en pantallas anchas, y la página se ensancha); la columna que
+                                columna nueva (hasta 2 columnas entre 1024 y 1399 px de ancho y hasta 3 desde 1400 px, donde la página se ensancha); la columna que
                                 se queda sin tarjetas desaparece, y un movimiento nunca deja todo en una sola
                                 columna. En la tarjeta de estado y en el encabezado de Registros, mantener y soltar sin mover (hasta 1 segundo
                                 después de que la tarjeta se levanta) abre la vista previa de su estilo. Con teclado, Alt + flechas sobre la tarjeta. El orden del celular (1 columna), el de PC con 2 columnas y el de PC con 3 columnas
@@ -1365,8 +1367,14 @@
                                 total), "No cubrir con banco de horas" (el banco no compensa automáticamente lo que
                                 falta para el objetivo) y "Objetivo diario global" (aplica el mismo objetivo a todos los
                                 registros en vez de definirlo por día).</p>
-                            <p><strong>Tema:</strong> el botón de tema (en Perfiles y en Ajustes) recorre claro, oscuro,
-                                medianoche, rosa, verde, azul, lila y crema.</p>
+                            <p><strong>Encabezado:</strong> mantené presionado el encabezado (en un lugar que no sea un botón) y
+                                arrastralo: se pone en el borde más cercano (arriba, abajo, a la izquierda o a la derecha en PC; arriba
+                                o abajo en el celular) y las tarjetas se acomodan. Escape cancela. La posición de PC y la del celular
+                                se guardan por separado. Su borde toma el color del estado del registro (el mismo de la barra de progreso).</p>
+                            <p><strong>Tema:</strong> en Ajustes, el botón de tema recorre claro, oscuro,
+                                medianoche, rosa, verde, azul, lila y crema. En Perfiles, el botón con la varita abre
+                                <em>Personalizar tema</em>: una vista previa en vivo donde se elige el color con círculos (Atrás
+                                vuelve a Perfiles). También se abre manteniendo presionado el encabezado y soltando sin mover.</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-datos">
@@ -1387,8 +1395,8 @@
                                 opciones <em>No descontar tiempo fuera</em>, <em>No cubrir con banco de horas</em>,
                                 <em>Objetivo diario global</em>, <em>Reducir animaciones</em>, el <em>estilo de la tarjeta de estado</em> y su
                                 fondo, el <em>estilo del calendario</em>, el formato de tiempo corto y las demás opciones de
-                                apariencia, más el orden y la visibilidad de las tarjetas (estos se aplican al
-                                <strong>Reemplazar</strong>, no al Combinar).
+                                apariencia, más la posición del encabezado (PC y celular) y el orden y la visibilidad de las tarjetas (el del celular, el de PC con 2 columnas y el de PC con 3 por separado; estos se aplican al
+                                <strong>Reemplazar</strong>, no al Combinar). El color del <em>tema</em> no se incluye: es de cada dispositivo.
                             </p>
                             <p>Con <strong>Restaurar</strong> importás un backup en este u otro dispositivo: elegís el
                                 archivo y decidís si querés <strong>Combinar</strong> (une el archivo con tus datos

@@ -48,7 +48,7 @@ function aplicarVisibilidadCards() {
 // Escritorio (hasta 3 columnas) y móvil (1 columna apilada) tienen cada uno su orden. Mismo corte que el CSS (@media min-width: 1024px).
 // Mientras no se haya ordenado en móvil, se parte del orden de escritorio.
 const _consultaEscritorio = window.matchMedia('(min-width: 1024px)');
-const _consultaAncha = window.matchMedia('(min-width: 1200px)');   // con menos ancho no entran 3 columnas de 350px
+const _consultaAncha = window.matchMedia('(min-width: 1400px)');   // 3 columnas desde 1400px (2 columnas entre 1024 y 1399: un rango más amplio que el de 1200, donde 3 columnas quedaban muy justas)
 const _esEscritorio = () => _consultaEscritorio.matches;
 const _maxColumnas = () => (!_esEscritorio() ? 1 : _consultaAncha.matches ? MAX_COLUMNAS : 2);
 const _claveOrden = () => (_esEscritorio() ? STORAGE_KEYS.ORDEN_CARDS : STORAGE_KEYS.ORDEN_CARDS_MOVIL);

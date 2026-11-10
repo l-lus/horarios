@@ -11,7 +11,7 @@ import { uiAnimarDesdePosiciones, REUBICACION_MS } from './arrastre.js';
 // cada elemento (en cada cuadro de un redimensionado, al desplazar y cuando cambia el contenido) y, al cruzar, se compara con esa foto.
 
 /** Los cortes de ancho que cambian el diseño (los mismos que el CSS y orden-tarjetas.js). */
-const CORTES = ['(min-width: 1024px)', '(min-width: 1200px)', '(max-width: 767px)', '(max-width: 600px)'];
+const CORTES = ['(min-width: 1024px)', '(min-width: 1400px)', '(max-width: 767px)', '(max-width: 600px)'];
 /** Mientras se desliza no se guardan fotos: los elementos están a medio camino. */
 const DURACION_MS = REUBICACION_MS + 100;
 const REINTENTO_FOTO_MS = 250;
@@ -50,7 +50,7 @@ function _programarFoto() {
 }
 
 function _alCruzarCorte() {
-    if (_cruzando) return;   // dos cortes en el mismo cuadro (1024 y 1200 a la vez): una sola animación
+    if (_cruzando) return;   // dos cortes en el mismo cuadro (1024 y 1400 a la vez): una sola animación
     _cruzando = true;
     const antes = _foto;   // la foto del último cuadro con el diseño anterior: todavía no la pisó nadie
     // el diseño nuevo ya está puesto, pero todavía no se pintó: en el próximo cuadro (después de que los demás oyentes del cambio, como el reparto en columnas, terminen)

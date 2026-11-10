@@ -54,7 +54,7 @@ export function horaCorta(minutos) {
  */
 export function resumenesDeMedida() {
     const banco = { minutos: -15, positivo: false, texto: '−15 min' };
-    const balance = { etiqueta: 'Faltan', texto: '8 h 5 min', tono: 'neutro' };
+    const balance = { etiqueta: 'Faltan', texto: '8 h 5 min', tono: 'neutro', detalle: 'Te podés ir' };   // con la tercera línea (la del peor caso)
     const dias = Array.from({ length: 7 }, (_, i) => ({
         fecha: '', sigla: 'lun', inicial: 'L', hoy: i === 0, estado: 'cerrado', color: 'green',
         totalMin: 485, objetivoMin: 480, fraccion: 1, emoji: '🏖️', etiqueta: 'Vacaciones'

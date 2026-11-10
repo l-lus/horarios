@@ -58,6 +58,11 @@ const _pad2 = n => String(n).padStart(2, '0');
 
 /** Frase del banco de horas de la semana: "▲ 19 min extras esta semana". @param {{ minutos: number, positivo: boolean }} banco */
 const fraseBanco = banco => `${banco.positivo ? '▲' : '▼'} ${duracionCompacta(Math.abs(banco.minutos))} ${banco.positivo ? 'extras' : 'faltantes'} esta semana`;
+/**
+ * Etiqueta del mosaico de balance (la comparten la línea de tiempo y el anillo): con el registro en curso y el objetivo del día cumplido, el extra es el de hoy
+ * (cerrado o en la semana queda "Extra"). @param {any} d resumen
+ */
+const etiquetaBalance = d => (d.tipo === 'registro' && !d.cerrado && d.balance.etiqueta === 'Extra' ? 'Extra de hoy' : d.balance.etiqueta);
 /** @param {{ positivo: boolean } | null} banco */
 const tonoBanco = banco => (banco ? (banco.positivo ? 'green' : 'red') : 'neutro');
 
@@ -201,6 +206,8 @@ function crearAnillo() {
     const mensaje = el('div', 'est-anillo-mensaje');
     const sub = el('div', 'est-anillo-sub');
     const balance = crearDato('', 'est-dato est-mosaico');
+    // tercera línea del mosaico (la misma de la línea de tiempo): "Cubierto", "Te podés ir", "Te podés ir, pero debés tiempo"...
+    balance.raiz.append(el('span', 'est-dato-detalle'));
     const banco = crearDato('Banco de horas', 'est-dato est-mosaico');
     const fuera = crearDato('Tiempo fuera', 'est-dato est-mosaico');
     datos.append(mensaje, sub, balance.raiz, banco.raiz, fuera.raiz);
@@ -278,7 +285,10 @@ function pintarAnillo(r, d) {
         pintarAvance(r.aro, r.arco, anillo?.progreso ?? d.progreso);
         // con el registro (o la semana) en curso, el brillo recorre el arco lleno, como el de la barra
         r.aro.classList.toggle('en-curso', d.tipo === 'registro' ? !d.cerrado : !!d.abierta);
-        if (d.balance) pintarDato(r.balance, d.balance.etiqueta, d.balance.texto, d.balance.tono);
+        if (d.balance) {
+            pintarDato(r.balance, etiquetaBalance(d), d.balance.texto, d.balance.tono);
+            fijarQueEntre(r.balance.raiz.querySelector('.est-dato-detalle'), d.balance.detalle);
+        }
         if (d.banco) pintarDato(r.banco, 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
         if (d.tipo === 'semana') { pintarDias(r.dias, d.dias); return; }
         pintarDato(r.entrada, 'Entrada', d.entrada);
@@ -405,9 +415,7 @@ function pintarLinea(r, d) {
         if (esRegistro) pintarNodos(r, d); else pintarNodosDias(r, d.dias, d.abierta, d.entradaMs);
         mostrar(r.balance.raiz, !!d.balance);
         if (d.balance) {
-            // con el registro en curso y el objetivo del día cumplido, el extra es el de hoy (cerrado o en la semana queda "Extra")
-            const etiquetaBalance = esRegistro && !d.cerrado && d.balance.etiqueta === 'Extra' ? 'Extra de hoy' : d.balance.etiqueta;
-            pintarDato(r.balance, etiquetaBalance, d.balance.texto, d.balance.tono);
+            pintarDato(r.balance, etiquetaBalance(d), d.balance.texto, d.balance.tono);
         }
         mostrar(r.banco.raiz, !!d.banco);
         if (d.banco) pintarDato(r.banco, 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
@@ -827,7 +835,7 @@ function destellarBalance(refs, resumen, espera) {
  * Se usa cuando cambia el ancho del lugar donde están sin que se redibuje la tarjeta: al cambiar la disposición o al rotar/redimensionar.
  */
 function reajustarDetalles() {
-    const raiz = _montado?.id === 'linea' ? _montado.refs?.raiz : null;
+    const raiz = _montado?.id === 'linea' || _montado?.id === 'anillo' ? _montado.refs?.raiz : null;
     if (!raiz) return;
     raiz.querySelectorAll('.est-dato-detalle').forEach((/** @type {HTMLElement} */ n) => {
         const versiones = _versionesQueEntre.get(n);

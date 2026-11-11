@@ -89,7 +89,9 @@
     --dur-giro: 900ms;      /* vuelta completa de un spinner */
     --dur-barra-indeterminada: 1.2s;   /* barrido de la barra de progreso sin porcentaje */
     --dur-pulso: 1.1s;      /* anillo que pulsa en el hito enfocado */
-    --dur-pulso-hoy: 1000ms; /* pulso del día de hoy en el calendario y del mosaico de balance (2 iteraciones, con subida escalonada) */
+    --dur-barrido: 450ms;   /* barrido de luz del destello de hoy (calendario) y del mosaico de balance */
+    --dur-onda: 850ms;      /* aro que sale y se desvanece en ese mismo destello (empieza tras --demora-onda) */
+    --demora-onda: 250ms;
     --dur-parpadeo: 3s;     /* parpadeo del badge de estado */
     --dur-parpadeo-rapido: 1.2s;   /* ídem cuando ya se cumplió el objetivo con la jornada abierta */
     --delay-linea: 0.3s;    /* escalonado de entrada de la línea del día */

@@ -77,9 +77,12 @@ function _aplicarFlash(el, clase, colorVar = null) {
     void el.offsetWidth;
     el.classList.add(clase);
 
+    // puede haber varias animaciones a la vez (barrido y onda): se espera a la que termina última (duración + demora, por sus iteraciones)
     const cs = getComputedStyle(el);
-    const duracionMs = (parseFloat(cs.animationDuration) || 0.5) * 1000;
-    const iteraciones = parseFloat(cs.animationIterationCount) || 1;
+    const lista = valor => valor.split(',').map(v => parseFloat(v) || 0);
+    const duraciones = lista(cs.animationDuration), demoras = lista(cs.animationDelay), vueltas = lista(cs.animationIterationCount);
+    const duracionMs = Math.max(0.5, ...duraciones.map((d, i) => (demoras[i % demoras.length] + d * (vueltas[i % vueltas.length] || 1)))) * 1000;
+    const iteraciones = 1;
     el._flashTimeout = setTimeout(() => el.classList.remove(clase), duracionMs * iteraciones);
 }
 

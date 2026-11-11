@@ -2011,6 +2011,17 @@
 
 .est-anillo-inicio.vacio { opacity: 0; }
 
+/* Hitos: marcas en los cortes entre tramos. El giro parte del centro del aro (el origen es en unidades del viewBox) y se anima como el resto */
+.est-anillo-hito {
+    stroke: var(--text-main);
+    stroke-width: 1.6;
+    opacity: 0.9;
+    transform-origin: 50px 50px;
+    transition: transform var(--transition-ui), opacity var(--transition-ui);
+}
+
+.est-anillo-hito.pendiente { opacity: 0.35; }
+
 /* Brillo del registro en curso (como el de la barra): una franja que recorre el arco lleno y descansa el resto del ciclo. El contenedor solo deja ver la corona del trazo
    dentro del sector ya recorrido (el avance sale de --ring-offset); el ::after gira por transform, sin repintar. */
 .est-anillo-brillo {

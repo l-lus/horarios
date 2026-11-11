@@ -178,7 +178,17 @@ function crearAnillo() {
     inicio.setAttribute('cx', '94');
     inicio.setAttribute('cy', '50');
     inicio.setAttribute('r', '4.5');
-    svg.append(circulo('est-anillo-pista'), mascara, tramos, inicio);
+    // hitos: una marca radial en cada corte entre tramos (a lo ancho del trazo), que gira hasta su posición (ver pintarTramos)
+    const hitos = Array.from({ length: MAX_TRAMOS_ANILLO - 1 }, () => {
+        const h = document.createElementNS(NS_SVG, 'line');
+        h.setAttribute('class', 'est-anillo-hito');
+        h.setAttribute('x1', '88.5');
+        h.setAttribute('x2', '99.5');
+        h.setAttribute('y1', '50');
+        h.setAttribute('y2', '50');
+        return h;
+    });
+    svg.append(circulo('est-anillo-pista'), mascara, tramos, inicio, ...hitos);
     const centro = el('div', 'est-anillo-centro');
     const valor = el('span', 'est-anillo-valor');
     const unidad = el('span', 'est-anillo-unidad');
@@ -205,15 +215,16 @@ function crearAnillo() {
     pie.append(entrada.raiz, salida.raiz, conBanco.raiz);
     const dias = crearDias();
     raiz.append(principal, pie, dias.raiz);
-    return { raiz, aro, arco, arcosTramo, inicio, valor, unidad, mensaje, sub, balance, banco, fuera, pie, entrada, salida, conBanco, dias };
+    return { raiz, aro, arco, arcosTramo, inicio, hitos, valor, unidad, mensaje, sub, balance, banco, fuera, pie, entrada, salida, conBanco, dias };
 }
 
 /**
  * Colorea el aro por tramos (% del aro, ver `_anilloEnCurso` en tarjeta-fichaje-vista.js); sin tramos, nada. Cada tramo es un arco de su largo que arranca en su comienzo
- * y se mete un poco bajo el siguiente para que no quede una línea clara entre colores.
- * @param {any} r @param {{ desde: number, hasta: number, color: string }[]} tramos
+ * y se mete un poco bajo el siguiente para que no quede una línea clara entre colores. En cada corte entre tramos va un hito (una marca a lo ancho del trazo),
+ * hueco (más tenue) hasta que el avance lo alcanza.
+ * @param {any} r @param {{ desde: number, hasta: number, color: string }[]} tramos @param {number} progreso avance del aro, en %
  */
-function pintarTramos(r, tramos) {
+function pintarTramos(r, tramos, progreso) {
     r.arcosTramo.forEach((/** @type {SVGElement} */ arco, /** @type {number} */ i) => {
         const t = tramos[i];
         arco.style.display = t ? '' : 'none';
@@ -222,6 +233,14 @@ function pintarTramos(r, tramos) {
         arco.style.strokeDasharray = `${largo} 100`;
         arco.style.strokeDashoffset = String(-t.desde);
         arco.dataset.color = t.color;
+    });
+    const cortes = tramos.slice(0, -1).map(t => t.hasta);
+    r.hitos.forEach((/** @type {SVGElement} */ h, /** @type {number} */ i) => {
+        const corte = cortes[i];
+        h.style.display = corte === undefined ? 'none' : '';
+        if (corte === undefined) return;
+        h.style.transform = `rotate(${(corte * 3.6).toFixed(2)}deg)`;
+        h.classList.toggle('pendiente', progreso < corte);
     });
     r.inicio.style.display = tramos.length ? '' : 'none';
     if (tramos.length) r.inicio.dataset.color = tramos[0].color;
@@ -250,7 +269,7 @@ function pintarAnillo(r, d) {
         r.aro.classList.remove('espera');
         // con la jornada abierta el aro lleva los tramos de la barra con hitos; cerrado, la semana y lo demás van de un solo color
         const anillo = d.tipo === 'registro' && !d.cerrado ? d.anillo : null;
-        pintarTramos(r, anillo?.tramos ?? [{ desde: 0, hasta: 100, color: d.color }]);
+        pintarTramos(r, anillo?.tramos ?? [{ desde: 0, hasta: 100, color: d.color }], anillo?.progreso ?? d.progreso);
         pintarAvance(r.aro, r.arco, anillo?.progreso ?? d.progreso);
         // con el registro (o la semana) en curso, el brillo recorre el arco lleno, como el de la barra
         r.aro.classList.toggle('en-curso', d.tipo === 'registro' ? !d.cerrado : !!d.abierta);
@@ -272,7 +291,7 @@ function pintarAnillo(r, d) {
     if (d.tipo === 'espera') {
         r.aro.dataset.color = 'blue';
         r.aro.classList.add('espera');
-        pintarTramos(r, []);
+        pintarTramos(r, [], 0);
         pintarAvance(r.aro, r.arco, 0);
         r.aro.classList.remove('en-curso');
         fijar(r.mensaje, d.mensaje);
@@ -284,7 +303,7 @@ function pintarAnillo(r, d) {
     } else {
         r.aro.dataset.color = d.color;
         r.aro.classList.remove('espera');
-        pintarTramos(r, [{ desde: 0, hasta: 100, color: d.color }]);
+        pintarTramos(r, [{ desde: 0, hasta: 100, color: d.color }], 100);
         pintarAvance(r.aro, r.arco, 100);
         r.aro.classList.remove('en-curso');
         fijar(r.mensaje, d.etiqueta);

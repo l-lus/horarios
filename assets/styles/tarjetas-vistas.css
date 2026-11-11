@@ -2017,7 +2017,7 @@
     stroke-width: 1.6;
     opacity: 0.9;
     transform-origin: 50px 50px;
-    transition: transform var(--transition-ui), opacity var(--transition-ui);
+    transition: transform var(--transition-ui), opacity var(--transition-ui) var(--retraso-hito, 0ms);
 }
 
 .est-anillo-hito.pendiente { opacity: 0.35; }

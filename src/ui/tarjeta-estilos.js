@@ -219,10 +219,10 @@ function crearAnillo() {
 /**
  * Colorea el aro por tramos (% del aro, ver `_anilloEnCurso` en tarjeta-fichaje-vista.js); sin tramos, nada. Cada tramo es un arco de su largo que arranca en su comienzo
  * y se mete un poco bajo el siguiente para que no quede una línea clara entre colores. En cada corte entre tramos va un hito (una marca a lo ancho del trazo),
- * hueco (más tenue) hasta que el avance lo alcanza.
- * @param {any} r @param {{ desde: number, hasta: number, color: string }[]} tramos @param {number} progreso avance del aro, en %
+ * hueco (más tenue) hasta que el avance lo alcanza; en el llenado inicial (`conteoMs`, lo que dura) se marca recién cuando el aro llega a él (el aro avanza con ease-out cúbico).
+ * @param {any} r @param {{ desde: number, hasta: number, color: string }[]} tramos @param {number} progreso avance del aro, en % @param {number} [conteoMs]
  */
-function pintarTramos(r, tramos, progreso) {
+function pintarTramos(r, tramos, progreso, conteoMs = 0) {
     r.arcosTramo.forEach((/** @type {SVGElement} */ arco, /** @type {number} */ i) => {
         const t = tramos[i];
         arco.style.display = t ? '' : 'none';
@@ -239,6 +239,8 @@ function pintarTramos(r, tramos, progreso) {
         if (corte === undefined) return;
         h.style.transform = `rotate(${(corte * 3.6).toFixed(2)}deg)`;
         h.classList.toggle('pendiente', progreso < corte);
+        const llegada = conteoMs > 0 && progreso >= corte ? 1 - Math.pow(1 - corte / progreso, 1 / 3) : 0;
+        h.style.setProperty('--retraso-hito', `${Math.round(llegada * conteoMs)}ms`);
     });
     r.inicio.style.display = tramos.length ? '' : 'none';
     if (tramos.length) r.inicio.dataset.color = tramos[0].color;
@@ -267,7 +269,7 @@ function pintarAnillo(r, d) {
         r.aro.classList.remove('espera');
         // con la jornada abierta el aro lleva los tramos de la barra con hitos y la semana uno por día; cerrado y lo demás van de un solo color
         const anillo = d.anillo ?? null;
-        pintarTramos(r, anillo?.tramos ?? [{ desde: 0, hasta: 100, color: d.color }], anillo?.progreso ?? d.progreso);
+        pintarTramos(r, anillo?.tramos ?? [{ desde: 0, hasta: 100, color: d.color }], anillo?.progreso ?? d.progreso, d.conteoMs);
         pintarAvance(r.aro, r.arco, anillo?.progreso ?? d.progreso);
         // con el registro (o la semana) en curso, el brillo recorre el arco lleno, como el de la barra
         r.aro.classList.toggle('en-curso', d.tipo === 'registro' ? !d.cerrado : !!d.abierta);
@@ -644,6 +646,7 @@ function _contar(id, refs, total, duracion) {
 function _sinAvance(d) {
     return {
         ...d, progreso: 0,
+        anillo: d.anillo ? { ...d.anillo, progreso: 0 } : d.anillo,   // el aro toma su avance de aquí cuando hay tramos: sin esto aparecería lleno de entrada
         linea: d.linea ? { ...d.linea, ahoraRel: 0 } : d.linea,
         dias: d.dias ? d.dias.map((/** @type {any} */ x) => ({ ...x, fraccion: 0 })) : d.dias
     };
@@ -719,7 +722,7 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
         diseno.pintar(refs, _sinAvance(resumen));
         void host.offsetWidth;   // el estado vacío tiene que estar aplicado para que el siguiente dibujo transicione hacia el real
     }
-    diseno.pintar(refs, resumen);
+    diseno.pintar(refs, contar ? { ...resumen, conteoMs: duracion } : resumen);   // conteoMs: lo que dura el llenado, para que cada hito se marque cuando el aro llega a él
     // la capa que reserva el alto de la semana se dibuja con los datos reales de la semana (en la vista semanal son los mismos que los de la capa visible)
     const refsSemana = _montado?.refsSemana;
     const semana = refsSemana && resumenSemana ? resumenSemana() : null;

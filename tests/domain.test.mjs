@@ -1152,6 +1152,11 @@ test('TarjetaFichajeVista: el resumen de la semana lista los días con su color 
         ['jue', 'futuro', null, 0, false]
     ]);
     assert.equal(r.dias[1].fraccion, 0.5);
+    // el aro lleva los tramos de la barra semanal: un tramo por día (el especial, de 1 h, con su color; el futuro no entra) sobre el objetivo de 35 h más esa hora fija
+    assert.deepEqual(r.anillo.tramos.map(t => [t.color, Math.round(t.desde * 100) / 100, Math.round(t.hasta * 100) / 100]), [
+        ['green', 0, 19.44], ['red', 19.44, 29.17], ['orange', 29.17, 31.94]
+    ]);
+    assert.equal(Math.round(r.anillo.progreso * 100) / 100, 31.94);
     assert.equal(r.dias[2].emoji, '🏖️');
 
     // una semana sin días laborables se muestra como "sin registro" (emoji y mensaje)

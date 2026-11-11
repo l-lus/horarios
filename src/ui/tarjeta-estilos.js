@@ -146,7 +146,7 @@ function pintarDias(d, dias) {
 }
 
 // ─── B · Anillo ───────────────────────────────────────────────────────────────────────────────────────────────────────────
-const MAX_TRAMOS_ANILLO = 3;   // azul, el color del banco y verde (ver `_anilloEnCurso`)
+const MAX_TRAMOS_ANILLO = 7;   // el día: azul, el color del banco y verde (`_anilloEnCurso`); la semana: un tramo por día (`_anilloSemana`)
 let _anillosCreados = 0;       // cada aro tiene su propia máscara en el svg: el id no se puede repetir
 function crearAnillo() {
     const raiz = el('div', 'est-anillo');
@@ -267,8 +267,8 @@ function pintarAnillo(r, d) {
         pintarNumeroAnillo(r, d.trabajado);
         r.aro.dataset.color = d.color;
         r.aro.classList.remove('espera');
-        // con la jornada abierta el aro lleva los tramos de la barra con hitos; cerrado, la semana y lo demás van de un solo color
-        const anillo = d.tipo === 'registro' && !d.cerrado ? d.anillo : null;
+        // con la jornada abierta el aro lleva los tramos de la barra con hitos y la semana uno por día; cerrado y lo demás van de un solo color
+        const anillo = d.anillo ?? null;
         pintarTramos(r, anillo?.tramos ?? [{ desde: 0, hasta: 100, color: d.color }], anillo?.progreso ?? d.progreso);
         pintarAvance(r.aro, r.arco, anillo?.progreso ?? d.progreso);
         // con el registro (o la semana) en curso, el brillo recorre el arco lleno, como el de la barra

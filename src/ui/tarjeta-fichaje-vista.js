@@ -291,6 +291,7 @@ function derivarVistaSemana(est) {
     }
 
     const cerrado = !semanaAbierta && !todosEspeciales && horasDiarias > 0;
+    const franjasSemana = horasDiarias > 0 && !todosEspeciales ? _franjasSemana(est.diasSemana, horasDiarias, objetivoSemana, hoy) : null;
     const trabajadoMin = TiempoUtils.horasAMinutosRedondeados(tot);
     const resumen = todosEspeciales
         ? { tipo: 'espera', emoji: '🌞', mensaje, banco: null, libre: true }
@@ -300,9 +301,10 @@ function derivarVistaSemana(est) {
             objetivoMin: TiempoUtils.horasAMinutosRedondeados(objetivoSemana),
             balance: _resumenBalance(prog, objetivoSemana, !semanaAbierta, colorBarra),
             banco: _resumenBanco(est),
+            anillo: _anilloSemana(franjasSemana),
             dias: (est.diasSemana ?? []).map(d => _resumenDiaSemana(d, hoy)),
         };
-    const franjas = _hintActivo() && horasDiarias > 0 && !todosEspeciales ? _franjasSemana(est.diasSemana, horasDiarias, objetivoSemana, hoy) : null;
+    const franjas = _hintActivo() ? franjasSemana : null;
 
     return {
         titulo: html`${icono('#icon-calendar-simple')} Esta Semana`,
@@ -472,6 +474,20 @@ function _anilloEnCurso(linea, tiempoHoy, objetivo) {
         { desde: pct(hi), hasta: 100, color: 'green' }
     ].filter(t => t.hasta - t.desde > 1e-6);
     return { progreso: pct(trabajadoMin), tramos };
+}
+
+/**
+ * Tramos del anillo en la vista semanal: los mismos de la barra semanal (`_franjasSemana`), un tramo por día con el color de su estado, uno tras otro y proporcionales a lo trabajado.
+ * El aro completo es el objetivo semanal (se estira si se trabajó más) y los días sin horas ocupan un tramo fijo y chico: los especiales (feriado, licencia...) con su color
+ * y los demás como hueco. El aro se llena hasta el final del último tramo, como la barra. Devuelve `{ progreso, tramos }` en % del aro, o null sin franjas.
+ * @param {any} franjas
+ */
+function _anilloSemana(franjas) {
+    if (!franjas) return null;
+    return {
+        progreso: franjas.fin * 100,
+        tramos: franjas.tramos.map((/** @type {any} */ t) => ({ desde: t.desde * 100, hasta: t.hasta * 100, color: t.color }))
+    };
 }
 
 /** Resumen de un registro con entrada (abierto o cerrado). `linea` puede ser null (sin objetivo): entonces no hay salida estimada. */

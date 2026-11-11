@@ -35,6 +35,7 @@ function _fantasmaDe(el) {
     clon.classList.add('mutacion-saliente');
     // El destello de un botón recién fichado no se copia al fantasma: duplicaba el borde/halo
     clon.classList.remove(..._CLASES_FLASH);
+    _quitarCapaDestello(clon);
 
     Object.assign(clon.style, {
         position: 'fixed',
@@ -60,7 +61,40 @@ function _fantasmaDe(el) {
 }
 
 const _mutacionAnimEstado = new WeakMap();
-const _CLASES_FLASH = ['campo-flash', 'campo-flash-color', 'mosaico-flash'];
+const _CLASES_FLASH = ['campo-flash', 'campo-flash-color', 'mosaico-flash', 'destello-hoy'];
+/** Destellos que no animan el elemento sino una capa temporal propia (barrido + onda, solo transform/opacity); ver .destello-capa en responsivo-movimiento.css */
+const _CLASES_CAPA = ['mosaico-flash', 'destello-hoy'];
+
+function _quitarCapaDestello(el) {
+    el.querySelectorAll(':scope > .destello-capa').forEach(c => c.remove());
+}
+
+/**
+ * Capa con el barrido de luz (si el día/mosaico tiene relleno) y el aro de la onda. Si el relleno se recorta al contenido (estilos del calendario con hueco)
+ * la capa se achica al mismo tamaño, para que el barrido y el aro salgan del disco y no de la celda.
+ * @param {HTMLElement} el @param {boolean} conBarrido
+ */
+function _crearCapaDestello(el, conBarrido) {
+    _quitarCapaDestello(el);
+    const capa = document.createElement('span');
+    capa.className = 'destello-capa';
+    capa.setAttribute('aria-hidden', 'true');
+    const cs = getComputedStyle(el);
+    if (cs.backgroundClip === 'content-box') capa.style.inset = cs.paddingTop;
+    if (conBarrido) {
+        const recorte = document.createElement('span');
+        recorte.className = 'destello-recorte';
+        const franja = document.createElement('span');
+        franja.className = 'destello-franja';
+        recorte.appendChild(franja);
+        capa.appendChild(recorte);
+    }
+    const onda = document.createElement('span');
+    onda.className = 'destello-onda';
+    capa.appendChild(onda);
+    el.appendChild(capa);
+    return capa;
+}
 
 // ─── Destello (campo-flash / campo-flash-color) ─────────────────────────────
 // Ambas clases fijan `animation` con más especificidad que .mutacion-entrante, así que
@@ -76,6 +110,13 @@ function _aplicarFlash(el, clase, colorVar = null) {
     if (colorVar) el.style.setProperty('--flash-color', colorVar);
     void el.offsetWidth;
     el.classList.add(clase);
+
+    if (_CLASES_CAPA.includes(clase)) {
+        const capa = _crearCapaDestello(el, !el.matches('.dia-sin-registro, .dia-filtrado'));
+        const totalMs = _getCSSdur('--demora-onda') + _getCSSdur('--dur-onda') + 50;
+        el._flashTimeout = setTimeout(() => { el.classList.remove(clase); capa.remove(); }, totalMs);
+        return;
+    }
 
     // puede haber varias animaciones a la vez (barrido y onda): se espera a la que termina última (duración + demora, por sus iteraciones)
     const cs = getComputedStyle(el);
@@ -96,6 +137,7 @@ function _flashElemento(el, clase, colorVar = null) {
 function _diferirFlash(el, clase, colorVar) {
     clearTimeout(el._flashTimeout);
     el.classList.remove(clase);
+    _quitarCapaDestello(el);
     const pendiente = _flashDiferido.get(el) ?? new Map();
     pendiente.set(clase, colorVar);
     _flashDiferido.set(el, pendiente);

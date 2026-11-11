@@ -369,7 +369,7 @@ function navegarCalendario(delta) {
 
 function _flashDiaHoyCalendario() {
     const el = document.querySelector('#calendario-grid .calendario-dia.hoy');
-    _flashElemento(el, 'campo-flash');
+    _flashElemento(el, 'destello-hoy');
 }
 
 function irHoyCalendario() {

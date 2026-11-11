@@ -158,55 +158,84 @@ button.campo-flash {
     animation: campo-flash var(--dur-flash) ease-in-out 2;
 }
 
-/* Destello de "hoy" en el calendario (botón Hoy) y del mosaico de balance de la línea de tiempo en la carga: una sola pasada de ~1 s.
-   Con registro: un barrido de luz cruza el relleno de izquierda a derecha (--dur-barrido) y, a mitad de camino, sale un aro del color del día que se agranda
-   y se desvanece (onda). El barrido es un degradado en background-image desplazado con background-position (no pisa el color de fondo de ningún estilo
-   y respeta background-clip) y la onda es un outline que se aleja (sigue el border-radius); así sirve para todos los estilos del calendario y para el mosaico.
-   Sin registro no hay relleno que recorrer: solo la onda, con el color del texto. */
-@keyframes destello-barrido {
-    from {
-        background-position: 100% 0;
-    }
-
-    to {
-        background-position: 0 0;
-    }
-}
-
-@keyframes destello-onda {
-    from {
-        outline: 2px solid var(--onda-color);
-        outline-offset: 0;
-    }
-
-    to {
-        outline: 2px solid transparent;
-        outline-offset: 10px;
-    }
-}
-
-.calendario-dia.hoy.campo-flash {
-    --onda-color: var(--text-main);
-    z-index: 2;
-    animation: destello-onda var(--dur-onda) ease-out;
-}
-
-.calendario-dia.hoy.campo-flash:not(.dia-sin-registro, .dia-filtrado) {
+/* Destello de "hoy" en el calendario (botón Hoy) y del mosaico de balance de la línea de tiempo en la carga: una sola pasada de ~1 s, solo transform/opacity.
+   Lo arma Animaciones._aplicarFlash: agrega al elemento una capa temporal (.destello-capa) con un barrido de luz que cruza el relleno de izquierda a derecha
+   (--dur-barrido) y, a mitad de camino, un aro del color del día (--onda-color) que se agranda y se desvanece (onda). Sin registro no hay relleno que recorrer:
+   solo la onda, con el color del texto. Con "reducir animaciones" no hay barrido y el aro solo se desvanece. */
+.calendario-dia.destello-hoy {
     --onda-color: var(--cal-color);
-    background-image: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.8) 50%, transparent 70%);
-    background-size: 300% 100%;
-    background-repeat: no-repeat;
-    animation: destello-barrido var(--dur-barrido) ease-in-out, destello-onda var(--dur-onda) ease-out var(--demora-onda) backwards;
+    --onda-escala: 1.5;
+    z-index: 2;
+}
+
+.calendario-dia.destello-hoy:is(.dia-sin-registro, .dia-filtrado) {
+    --onda-color: var(--text-main);
 }
 
 .est-mosaico.mosaico-flash {
     --onda-color: var(--tono);
+    --onda-escala: 1.12;
     position: relative;
     z-index: 2;
-    background-image: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
-    background-size: 300% 100%;
-    background-repeat: no-repeat;
-    animation: destello-barrido var(--dur-barrido) ease-in-out, destello-onda var(--dur-onda) ease-out var(--demora-onda) backwards;
+}
+
+.destello-capa,
+.destello-recorte,
+.destello-onda {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.destello-recorte {
+    overflow: hidden;
+}
+
+.destello-franja {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 60%;
+    background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.75) 50%, transparent);
+    transform: translateX(-100%);
+    will-change: transform;
+    animation: destello-barrido var(--dur-barrido) ease-in-out forwards;
+}
+
+@keyframes destello-barrido {
+    to {
+        transform: translateX(170%);
+    }
+}
+
+.destello-onda {
+    box-sizing: border-box;
+    border: 2px solid var(--onda-color);
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: destello-onda var(--dur-onda) ease-out var(--demora-onda) forwards;
+}
+
+@keyframes destello-onda {
+    from {
+        transform: scale(1);
+        opacity: 0.9;
+    }
+
+    to {
+        transform: scale(var(--onda-escala, 1.4));
+        opacity: 0;
+    }
+}
+
+:root[data-motion="reduce"] .destello-recorte {
+    display: none;
+}
+
+:root[data-motion="reduce"] :is(.calendario-dia.destello-hoy, .est-mosaico.mosaico-flash) {
+    --onda-escala: 1;
 }
 
 /* Filas de ajustes: sin borde propio y dentro de un contenedor con overflow hidden,

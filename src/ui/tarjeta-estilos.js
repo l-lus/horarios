@@ -763,9 +763,9 @@ function _montar(host, id, diseno) {
  * (o no hay resumen) deja el contenedor vacío y devuelve false: la tarjeta usa entonces la barra de siempre.
  * Con `conteoInicial` (la carga de la página, igual que en los estilos clásicos) el aro, la regla y los segmentos crecen de cero y el número cuenta de 0 a su valor.
  * `resumenSemana` (solo lo pide el diseño con `reservaSemana`): el resumen de la vista semanal, para que la capa de medida reserve su alto.
- * @param {any} resumen @param {{ conteoInicial?: boolean, duracion?: number, resumenSemana?: () => any }} [opciones] duracion: la del conteo en ms
+ * @param {any} resumen @param {{ conteoInicial?: boolean, cargaInicial?: boolean, duracion?: number, resumenSemana?: () => any }} [opciones] duracion: la del conteo en ms
  */
-function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSemana } = {}) {
+function actualizar(resumen, { conteoInicial = false, cargaInicial = false, duracion = 0, resumenSemana } = {}) {
     const host = $('stats-estilo');
     _cancelarConteo();
     if (!host) return false;
@@ -779,14 +779,14 @@ function actualizar(resumen, { conteoInicial = false, duracion = 0, resumenSeman
     const refs = _montado?.refs;
     // la carga de la página y el paso automático de semana a día (aviso de pedirDestelloBalance) hacen la misma entrada: número que cuenta, línea que se llena, textos que suben y destello
     const pendiente = id === 'linea' && resumen.tipo === 'registro' && _destelloPendiente > performance.now();
-    const carga = conteoInicial || pendiente;
+    const carga = conteoInicial || pendiente;   // `cargaInicial`: la carga de la página aunque el número no cuente (sin horas, día especial...): la línea entra igual
     const contar = carga && duracion > 1 && !!resumen.trabajado && resumen.trabajadoMin > 0;
     if (contar) {
         diseno.pintar(refs, _sinAvance(resumen));
         void host.offsetWidth;   // el estado vacío tiene que estar aplicado para que el siguiente dibujo transicione hacia el real
     }
     // entrada de la línea de tiempo: la línea se llena y los textos suben, como en la barra con hitos (también en la semana, pero solo en la carga)
-    const entra = id === 'linea' && duracion > 1 && (resumen.tipo === 'semana' ? conteoInicial : resumen.tipo === 'registro' && carga);
+    const entra = id === 'linea' && duracion > 1 && (resumen.tipo === 'semana' ? conteoInicial || cargaInicial : resumen.tipo === 'registro' && carga);
     diseno.pintar(refs, {
         ...resumen,
         ...(contar && { conteoMs: duracion }),   // conteoMs: lo que dura el llenado, para que cada hito se marque cuando el aro llega a él

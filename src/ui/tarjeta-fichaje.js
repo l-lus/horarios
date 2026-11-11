@@ -275,13 +275,13 @@ function _marcarEstiloPropio(vista) {
     return propio;
 }
 
-/** @param {any} vista @param {any} est @param {any} [conteo] plan del conteo inicial (ver _planConteoInicial) */
-function _renderEstilo(vista, est, conteo = null) {
+/** @param {any} vista @param {any} est @param {any} [conteo] plan del conteo inicial (ver _planConteoInicial) @param {boolean} [cargaInicial] es la carga de la página (la línea entra aunque el número no cuente) */
+function _renderEstilo(vista, est, conteo = null, cargaInicial = false) {
     const propio = _marcarEstiloPropio(vista);
     // en la vista semanal la vista dibujada ya es la semana; en la diaria se deriva la semana solo si el diseño reserva su alto (ver TarjetaEstilos)
     const resumenSemana = () => (EstadoApp.vistaActual() === 'semana' ? vista : TarjetaFichajeVista.derivarVistaSemana(est)).resumen;
     // en la carga (conteo) el aro, la regla y el número crecen de cero, igual que el número y la barra de los estilos clásicos
-    TarjetaEstilos.actualizar(propio ? vista.resumen : null, { conteoInicial: !!conteo, duracion: _durSiAnima('--dur-conteo'), resumenSemana });
+    TarjetaEstilos.actualizar(propio ? vista.resumen : null, { conteoInicial: !!conteo, cargaInicial, duracion: _durSiAnima('--dur-conteo'), resumenSemana });
 }
 
 // Estilo con que se dibujó la tarjeta la última vez (null hasta el primer dibujo): sirve para animar el cambio de estilo y para no animar el primer dibujo
@@ -439,7 +439,7 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
         _renderMensaje(vista);
         _renderHint(vista);
         _renderBuffer(est);
-        _renderEstilo(vista, est, conteo);
+        _renderEstilo(vista, est, conteo, conteoInicial);
         _animarAlturaCard(alturaAntes);
     };
     if (debeAnimar) {

@@ -267,13 +267,15 @@ test('CSP: index.html exige Trusted Types con la única política de core/html.j
     assert.match(fs.readFileSync('src/core/html.js', 'utf8'), /createPolicy\?\.\('horarios'/);
 });
 
-test('tema-inicial.js: sus listas de temas y estilos de calendario coinciden con las de los módulos', async () => {
+test('tema-inicial.js: sus listas de temas, estilos de calendario y posiciones del encabezado coinciden con las de los módulos', async () => {
     const codigo = fs.readFileSync('src/core/tema-inicial.js', 'utf8');
     const lista = (nombre) => JSON.parse(new RegExp(`var ${nombre} = (\\[[^\\]]*\\]);`).exec(codigo)[1].replace(/'/g, '"'));
     const temasModulo = JSON.parse(/const TEMAS = (\[[^\]]*\]);/.exec(fs.readFileSync('src/ui/gestor-temas.js', 'utf8'))[1].replace(/'/g, '"'));
     const { ESTILOS_CALENDARIO } = await import('../src/core/estilo-calendario.js');
+    const { POSICIONES_HEADER } = await import('../src/core/posicion-header.js');
     assert.deepEqual(lista('TEMAS_VALIDOS'), temasModulo);
     assert.deepEqual(lista('ESTILOS_CALENDARIO_VALIDOS'), ESTILOS_CALENDARIO.map(e => e.id));
+    assert.deepEqual(lista('POSICIONES_HEADER_VALIDAS'), POSICIONES_HEADER.map(p => p.id));
 });
 
 test('Service Worker (sw.js): todo recurso local que pide la app (index.html, url() de los CSS, íconos y fuentes) está precacheado', () => {
@@ -298,4 +300,59 @@ test('Service Worker (sw.js): todo recurso local que pide la app (index.html, ur
     const faltan = [...pedidos].filter(([ruta]) => !precache.has(ruta)).map(([ruta, origen]) => `${ruta} (lo pide ${origen})`);
     assert.deepEqual(faltan, [], 'Agregalos a urlsToCache en sw.js para que funcionen sin conexión');
     assert.ok(pedidos.size >= 10, 'el test encontró los recursos (si no, revisar las expresiones)');
+});
+
+test('Ids: todo id que el código busca existe en index.html o lo crea el propio código', () => {
+    const html = fs.readFileSync('index.html', 'utf8');
+    const fuentes = srcFiles.map(f => [f, fs.readFileSync(f, 'utf8')]);
+    const codigo = fuentes.map(([, t]) => t).join('\n');
+
+    const conocidos = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
+    // Los que crea el código: id="..." en plantillas html`...`, el.id = '...' y { id: '...' } en createElement
+    for (const m of codigo.matchAll(/\bid="([\w-]+)"|\.id\s*=\s*'([\w-]+)'|\bid:\s*'([\w-]+)'/g)) conocidos.add(m[1] ?? m[2] ?? m[3]);
+
+    const buscados = [];
+    for (const [archivo, texto] of fuentes) {
+        const anotar = (id) => buscados.push({ id, archivo });
+        for (const m of texto.matchAll(/(?:\$|getElementById)\('([\w-]+)'\)/g)) anotar(m[1]);
+        for (const m of texto.matchAll(/querySelector(?:All)?\('([^']+)'\)/g)) for (const s of m[1].matchAll(/#([a-zA-Z][\w-]*)/g)) anotar(s[1]);
+        for (const bloque of texto.matchAll(/alClic\(\{([\s\S]*?)\n\s*\}\);/g)) for (const k of bloque[1].matchAll(/^\s*'([\w-]+)':/gm)) anotar(k[1]);
+        for (const m of texto.matchAll(/(?<!classList\.\w+\()'(modal-[a-z][a-z-]*)'/g)) anotar(m[1]);   // 'modal-open' y similares son clases, no ids
+    }
+    assert.ok(buscados.length > 300, `Se detectaron pocos ids (${buscados.length}): ¿cambió la forma de buscarlos?`);
+    const faltantes = [...new Set(buscados.filter(b => !conocidos.has(b.id)).map(b => `${b.archivo}: ${b.id}`))];
+    assert.deepEqual(faltantes, [], `Ids que no existen:\n${faltantes.join('\n')}`);
+});
+
+test('Errores: los servicios no lanzan por errores esperados, devuelven { error } (solo el cliente de red lanza)', () => {
+    const conThrow = srcFiles
+        .filter(a => a.startsWith('src/services/') && a !== 'src/services/sincronizacion-gist.js')
+        .filter(a => /\bthrow\b/.test(fs.readFileSync(a, 'utf8')));
+    assert.deepEqual(conThrow, []);
+});
+
+test('gestor-temas.js: las muestras de cada tema (fondo y acento) coinciden con los tokens de tokens.css', async () => {
+    const css = fs.readFileSync('assets/styles/tokens.css', 'utf8');
+    const bloque = (selector) => {
+        const i = css.indexOf(selector);
+        assert.notEqual(i, -1, `tokens.css: no está el bloque ${selector}`);
+        return css.slice(css.indexOf('{', i) + 1, css.indexOf('}', i));
+    };
+    const valor = (cuerpo, variable) => new RegExp(`${variable}:\\s*([^;]+);`).exec(cuerpo)?.[1].trim();
+    const raiz = bloque(':root {');
+    const bloques = {
+        light: raiz,
+        dark: bloque('html.dark-mode body,'),
+        ...Object.fromEntries(['medianoche', 'pink', 'green', 'blue', 'lilac', 'crema'].map(t => [t, bloque(`html[data-theme="${t}"] body,`)]))
+    };
+    const temasModulo = JSON.parse(/const TEMAS = (\[[^\]]*\]);/.exec(fs.readFileSync('src/ui/gestor-temas.js', 'utf8'))[1].replace(/'/g, '"'));
+    const { GestorTemas } = await import('../src/ui/gestor-temas.js');
+    assert.deepEqual(Object.keys(GestorTemas.MUESTRAS).sort(), [...temasModulo].sort());
+    for (const tema of temasModulo) {
+        const cuerpo = bloques[tema];
+        const activo = valor(cuerpo, '--c-active');
+        const acento = !activo || activo === 'var(--c-blue)' ? valor(raiz, '--c-blue') : activo;   // sin acento propio vale el azul de la raíz
+        assert.equal(GestorTemas.MUESTRAS[tema].fondo, valor(cuerpo, '--bg-body'), `fondo de ${tema}`);
+        assert.equal(GestorTemas.MUESTRAS[tema].acento, acento, `acento de ${tema}`);
+    }
 });

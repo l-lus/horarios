@@ -1,6 +1,7 @@
 import { HistoricoEdicion } from './historico-edicion.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
+import { $, alClic } from '../core/dom.js';
+import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -11,13 +12,14 @@ import { Calendario } from './calendario.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { _scrollA } from './scroll.js';
 import { Animaciones } from './animaciones.js';
 import { icono, html, montar } from '../core/html.js';
 import { HistoricoItems } from './historico-items.js';
 import { IconosAnimados } from './iconos-animados.js';
 import { EdicionRegistro } from '../services/edicion-registro.js';
+import { EdicionGrupo } from '../services/edicion-grupo.js';
+import { Filtros } from '../services/filtros.js';
 
 // ====================================================================
 //                     UI HISTORY MODULE
@@ -68,19 +70,22 @@ function crearContenedorMes(claveMes, registrosDelMes, idNuevo, mesHoy, hoy, asi
         chevron.classList.add('rotated');
     }
 
+    // cada semana es un contenedor (como los grupos de Ajustes) con sus días adentro
     let semanaAnterior = null;
+    /** @type {HTMLElement | null} */
+    let contenedorSemana = null;
     grupos.forEach(grupo => {
         const esGrupo = grupo.tipo === 'grupo';
         const r = esGrupo ? grupo.registros[grupo.registros.length - 1] : grupo.registros[0];
         const semanaActual = TiempoUtils.obtenerLunesSemanaISO(r.fecha);
 
-        if (semanaAnterior && semanaActual !== semanaAnterior) {
-            const sep = document.createElement('div');
-            sep.className = 'separador-semana';
-            innerMesActual.appendChild(sep);
+        if (!contenedorSemana || semanaActual !== semanaAnterior) {
+            contenedorSemana = document.createElement('div');
+            contenedorSemana.className = 'registro-semana';
+            innerMesActual.appendChild(contenedorSemana);
         }
 
-        innerMesActual.appendChild(
+        contenedorSemana.appendChild(
             esGrupo
                 ? HistoricoItems.crearGrupoExpandible(grupo, idNuevo, asignacionesCompensatorio)
                 : HistoricoItems.crearItemRegistroIndividual(r, idNuevo, hoy, asignacionesCompensatorio)
@@ -251,17 +256,25 @@ function _prepararAnimacionLista(lista, idNuevo) {
     };
 }
 
+// Con el calendario a la vista la lista está oculta: no se dibuja hasta que se muestre
+let _listaPendiente = false;
+EventosApp.on('historico:vista', () => {
+    if (_listaPendiente && !Calendario.getVistaHistoricoCalendario()) actualizarListaRegistros(EstadoApp.registros());
+});
+
 /** @param {any} [idNuevo] @param {any} [asignacionesPrecalculadas] */
 function actualizarListaRegistros(registros, idNuevo = null, asignacionesPrecalculadas = null) {
+    if (Calendario.getVistaHistoricoCalendario()) { _listaPendiente = true; return; }
+    _listaPendiente = false;
     const lista = $('lista-registros');
     const animacionLista = _prepararAnimacionLista(lista, idNuevo);
     lista.replaceChildren();
 
-    const registrosAMostrar = FiltrosYPeriodos.obtenerRegistrosFiltrados();
+    const registrosAMostrar = Filtros.obtenerRegistrosFiltrados();
     if (registrosAMostrar.length === 0) { _renderEmptyStateLista(lista); return; }
 
     const hoy = TiempoUtils.obtenerFechaHoy();
-    const mesHoy = hoy.substring(0, 7);
+    const mesHoy = TiempoUtils.claveMes(hoy);
     const anioHoy = hoy.substring(0, 4);
     const gruposPorMes = HistoricoItems.agruparRegistrosPorMes(registrosAMostrar);
     const fragmento = document.createDocumentFragment();
@@ -303,7 +316,7 @@ function _initListenerAccionesLista(lista) {
             const grupoData = HistoricoItems.grupoDeCabecera(target);
             if (!grupoData) return;
             const registrosCompletos = EstadoApp.registros().filter(r => grupoData.registros.includes(r.id));
-            FiltrosYPeriodos.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
+            EdicionGrupo.editarGrupo({ registros: registrosCompletos, subtipo: grupoData.subtipo });
         }
     });
 }
@@ -401,20 +414,24 @@ function bindEventos() {
         iniciarTimerAutoCierreBotones();
         Calendario.toggleVistaHistorico();
     });
-    $('btn-filtro')?.addEventListener('click', (e) => mostrarFiltros(e));
-    $('btn-undo')?.addEventListener('click', () => { IconosAnimados.girarIcono($('btn-undo'), -1); GestionDatos.undoAction(); });
-    $('btn-redo')?.addEventListener('click', () => { IconosAnimados.girarIcono($('btn-redo'), 1); GestionDatos.redoAction(); });
+    alClic({
+        'btn-filtro': (e) => mostrarFiltros(e),
+        'btn-undo': () => { IconosAnimados.girarIcono($('btn-undo'), -1); GestionDatos.undoAction(); },
+        'btn-redo': () => { IconosAnimados.girarIcono($('btn-redo'), 1); GestionDatos.redoAction(); },
+    });
 
-    $('btn-toggle-credito')?.addEventListener('click', () => toggleCredito());
-    $('btn-lock-toggle')?.addEventListener('click', () => toggleBloqueoEdicion());
-    $('btn-edit-referencia-compensatorio')?.addEventListener('click', () => EdicionRegistro.pegarReferencia());
+    alClic({
+        'btn-toggle-credito': () => toggleCredito(),
+        'btn-lock-toggle': () => toggleBloqueoEdicion(),
+        'btn-edit-referencia-compensatorio': () => EdicionRegistro.pegarReferencia(),
+    });
     document.querySelector('#modal-editar .btn-edit')?.addEventListener('click', () => EdicionRegistro.guardar());
     document.querySelector('#modal-editar .btn-delete')?.addEventListener('click', () => EdicionRegistro.eliminar());
     document.querySelector('#modal-editar .btn-cancel')?.addEventListener('click', () => cerrarEdicion());
 
     $('btn-lock-grupo-toggle')?.addEventListener('click', () => toggleBloqueoEdicionGrupo());
     document.querySelector('#modal-editar-grupo .btn-edit')?.addEventListener('click', () => guardarEdicionGrupoDesdeFormulario());
-    document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => FiltrosYPeriodos.eliminarGrupoActual());
+    document.querySelector('#modal-editar-grupo .btn-delete')?.addEventListener('click', () => EdicionGrupo.eliminarGrupoActual());
     document.querySelector('#modal-editar-grupo .btn-cancel')?.addEventListener('click', () => cerrarEdicionGrupo());
 
 }

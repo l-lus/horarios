@@ -1,5 +1,6 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, FONDO_CARD_POR_DEFECTO } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
+import { EventosApp } from '../core/eventos.js';
 import { FONDOS_SVG } from '../data/fondos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EstadoApp } from '../services/estado-app.js';
@@ -33,13 +34,18 @@ function setFondoCard(valor) {
     _fondoCard = valor;
 }
 
+// Al restaurar un respaldo el fondo cambia desde el servicio: se relee del almacenamiento y se redibuja
+EventosApp.on('config:fondo-card', () => {
+    _fondoCard = Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, FONDO_CARD_POR_DEFECTO, true);
+    const bg = $('stats-card-bg');
+    if (bg && bg.dataset.estado) actualizarFondoCard(bg.dataset.estado);
+});
+
 function toggleFondoCard() {
     const ids = [...FONDOS_SVG.map(f => f.id), 'ninguno'];
     const idx = ids.indexOf(_fondoCard);
     _fondoCard = ids[(idx + 1) % ids.length];
     Almacenamiento.setItem(STORAGE_KEYS.FONDO_CARD, _fondoCard, true);
-    const btn = $('hint-fondo-label');
-    if (btn) btn.textContent = _getLabelFondo(_fondoCard);
     const bg = $('stats-card-bg');
     if (bg && bg.dataset.estado) actualizarFondoCard(bg.dataset.estado);
 }
@@ -79,10 +85,8 @@ function _sanitizarSVG(svgStr) {
         });
     });
 
-    doc.querySelectorAll('[style]').forEach(el => {
-        const safe = (el.getAttribute('style') || '').replace(/@import|url\s*\(/gi, '');
-        el.setAttribute('style', safe);
-    });
+    // los estilos en línea los bloquea la CSP (style-src 'self'): se quitan en vez de limpiarlos
+    doc.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
 
     const svgEl = doc.querySelector('svg');
     return svgEl ? svgEl.outerHTML : '';

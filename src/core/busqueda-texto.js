@@ -8,7 +8,7 @@
  * @param {string} texto
  * @returns {{ normal: string, indices: number[] }}
  */
-export function normalizarConMapa(texto) {
+function normalizarConMapa(texto) {
     let normal = '';
     /** @type {number[]} */
     const indices = [];

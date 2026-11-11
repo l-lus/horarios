@@ -1,14 +1,16 @@
 import { TarjetaFondos } from './tarjeta-fondos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
+import { STORAGE_KEYS, MARGEN_HORAS } from '../core/constantes.js';
+import { $, superaUnaLinea, alClic } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
+import { TiposRegistro } from '../services/tipos-registro.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { BarraHitos } from './barra-hitos.js';
 import { Animaciones } from './animaciones.js';
 import { TarjetaFichajeVista } from './tarjeta-fichaje-vista.js';
 import { EstadoTarjeta } from '../services/estado-tarjeta.js';
+import { TiempoFuera } from '../services/tiempo-fuera.js';
 import { Calendario } from './calendario.js';
 import { Historico } from './historico.js';
 import { Estadisticas } from './estadisticas.js';
@@ -18,6 +20,8 @@ import { esHtmlSeguro, montar } from '../core/html.js';
 import { CicloStats } from './tarjeta-ciclo-stats.js';
 import { FocoHitos } from './foco-hitos.js';
 import { HoverBarra } from './hover-barra.js';
+import { TarjetaEstilos } from './tarjeta-estilos.js';
+import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 
 // ====================================================================
 //                     UI CLOCK-IN CARD MODULE
@@ -26,11 +30,11 @@ const {
     _renderConFirma, _conRendersSinAnimar, _rendersSinAnimarActivos, _animarFadeSwap,
     _animarMutacion, _animarConteo, _conteoEnCurso, _cancelarConteo, _durSiAnima
 } = Animaciones;
-const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo, _descHitosEnNumero } = TarjetaFichajeVista;
+const { _cantidadHoras, _cantidadHorasCorta, _modoTextoStats, _hintIntegradoActivo, _estiloPropioActivo, _descHitosEnNumero, _cicloAutoActivo } = TarjetaFichajeVista;
 
-const { setProgressBarColor, toggleFondoCard, actualizarFondoCard } = TarjetaFondos;
+const { setProgressBarColor, actualizarFondoCard } = TarjetaFondos;
 const {
-    _breakStorageKey, _minutosBreakActivo, _formatearMinutosCorto,
+    _formatearMinutosCorto,
     _obtenerOCrearLabelTF, _quitarLabelTF, actualizarEstadoBotonTimerMain, toggleTimerBreakMain
 } = TarjetaTiempoFuera;
 const {
@@ -71,7 +75,6 @@ function _registroRetenidoAyer(registros, regHoy) {
 function _calcularEstadoCard(asignacionesPrecalculadas = null) {
     return EstadoTarjeta.calcularEstadoCard({
         asignacionesPrecalculadas,
-        minutosBreakActivo: _minutosBreakActivo(),
         resolverRetenido: _registroRetenidoAyer
     });
 }
@@ -88,10 +91,10 @@ function _renderTitulo(vista, sinAnimar = false, est = null) {
 function _actualizarTiempoFueraConsolidado(el, est) {
     if (!el) return;
 
-    const regHoy = (est?.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est?.regHoy;
+    const regHoy = est?.regVigente;
     const mostrar = !!regHoy && EstadoApp.vistaActual() !== 'semana'
-        && Almacenamiento.getItem(_breakStorageKey()) === null
-        && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00';
+        && !TiempoFuera.corriendo()
+        && TiposRegistro.tieneTiempoFuera(regHoy);
 
     if (!mostrar) { _quitarLabelTF(el); return; }
 
@@ -125,9 +128,7 @@ function _ajustarStatsAlAncho(vista) {
     Object.assign(sonda.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none', width: `${ancho}px`, minHeight: '0' });
     sonda.textContent = vista.statsLargo;
     el.parentElement.appendChild(sonda);
-    const estilo = getComputedStyle(sonda);
-    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
-    const entra = sonda.getBoundingClientRect().height <= alto * 1.5;
+    const entra = !superaUnaLinea(sonda, sonda.getBoundingClientRect().height);
     sonda.remove();
     if (!entra) { vista.stats = vista.statsCorto; vista.statsAjustado = true; }
 }
@@ -144,11 +145,11 @@ function _renderStats(vista, est, conteo = null) {
 
     const esDiaria = EstadoApp.vistaActual() !== 'semana';
     // En el cruce de medianoche (ayer sigue abierto y hoy aún no tiene entrada) la barra muestra los hitos de esa jornada, y el ciclo también
-    const regHoy = (est.ayerAbierto && !est.regHoy?.entrada) ? est.regAyer : est.regHoy;
+    const regHoy = est.regVigente;
     const esEspecial = !!est.tipoEspecialHoy;
     const entradaHoy = (esDiaria && regHoy && regHoy.entrada && !esEspecial) ? regHoy.entrada : '';
     const salidaHoy = (esDiaria && regHoy && regHoy.salida && !esEspecial) ? regHoy.salida : '';
-    const tiempoFueraHoy = (esDiaria && regHoy && regHoy.tiempoFuera && regHoy.tiempoFuera !== '00:00' && !esEspecial) ? regHoy.tiempoFuera : '';
+    const tiempoFueraHoy = (esDiaria && regHoy && TiposRegistro.tieneTiempoFuera(regHoy) && !esEspecial) ? regHoy.tiempoFuera : '';
 
     // con el hint integrado la barra muestra los hitos: el ciclo los resalta en lugar de repetir su texto, y con la jornada abierta suma la salida estimada y, si hay banda, la salida con banco
     const linea = _hintIntegradoActivo() && esDiaria && !esEspecial ? vista.linea : null;
@@ -161,7 +162,7 @@ function _renderStats(vista, est, conteo = null) {
     CicloStats.actualizarDatos({ valorHoras: vista.stats, entrada: entradaHoy, salida: salidaHoy, tiempoFuera: tiempoFueraHoy, salidaEstimada, salidaBanco, hitosEnBarra: !!linea, nombreEnNumero });
 
     const fase = CicloStats.tomarFasePendiente();
-    if (fase && CicloStats.iniciarEnFase(fase)) return;
+    if (fase && _cicloAutoActivo() && CicloStats.iniciarEnFase(fase)) return;
 
     if (!CicloStats.activo()) {
         if (conteo) {
@@ -221,7 +222,11 @@ function _renderBarra(vista, desdeCero = false) {
     }
     const enProgreso = esDiaria && vista.colorBarra === 'green' && vista.estadoFondo === 'en_curso';
     setProgressBarColor(el, vista.colorBarra, vista.colorBorde, enProgreso);
+    // La clase que oculta la descripción en la barra (Texto: el ciclo pone el nombre en el número grande) se quita para medir las descripciones
+    // (con display:none miden 0) porque al pasar el cursor por un hito siempre se despliegan en la barra, y se vuelve a poner al terminar.
+    card?.classList.remove('desc-en-numero');
     const colorTramo = BarraHitos.render({ vista, pista: /** @type {HTMLElement} */ (pista), fill: el, conLinea, conSemana });
+    card?.classList.toggle('desc-en-numero', conLinea && _descHitosEnNumero());
     if (colorTramo && punto && !vista.cerrado) punto.dataset.color = colorTramo(anchoBarra);
     el.classList.toggle('con-remate', !conLinea && !conSemana && vista.estadoFondo === 'en_curso' && !!punto && punto.classList.contains('visible'));
     HoverBarra.actualizarDatos(conSemana ? { hitos: vista.hitosSemana ?? [], fin: vista.anchoBarra / 100 } : null);
@@ -239,9 +244,7 @@ function _renderMensaje(vista = _mensajeActual) {
     el.classList.toggle('hidden', !vista.mostrarMensaje);
     el.textContent = vista.mensaje;
     if (!vista.mostrarMensaje || !vista.mensajeCorto || vista.mensajeCorto === vista.mensaje) return;
-    const estilo = getComputedStyle(el);
-    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
-    if (el.scrollHeight > alto * 1.5) el.textContent = vista.mensajeCorto;
+    if (superaUnaLinea(el, el.scrollHeight)) el.textContent = vista.mensajeCorto;
 }
 
 function _renderCard(vista) {
@@ -250,6 +253,74 @@ function _renderCard(vista) {
     card.classList.remove(..._COLORES_BORDE.map(c => `border-${c}`));
     card.classList.add(`border-${vista.colorBorde}`);
     actualizarFondoCard(vista.estadoFondo, vista.estadoFondoColor ?? null);
+}
+
+/**
+ * Estilos con diseño propio (anillo, línea de tiempo y filas): en la vista diaria #stats-estilo reemplaza al número, la barra y los textos
+ * (el CSS los oculta con .estilo-propio; siguen actualizándose sin dibujar nada, así volver a otro estilo no tiene nada que reconstruir).
+ * Sin resumen (p. ej. jornada de ayer ya retenida) se queda la barra de siempre.
+ */
+
+/**
+ * Marca si la tarjeta usa un diseño propio (.estilo-propio oculta el número, la barra y los textos de siempre). Tiene que hacerse ANTES de dibujar la barra: si la
+ * barra sigue oculta (display: none) cuando se dibuja, mide ancho cero y sus marcas quedan apiladas (pasa al volver de un estilo propio a la barra con hitos).
+ * @param {any} vista
+ */
+function _marcarEstiloPropio(vista) {
+    const propio = _estiloPropioActivo() && !!vista.resumen;
+    $('stats-card')?.classList.toggle('estilo-propio', propio);
+    // también el contenido: el fantasma de la animación (ver _fantasmaDe) cuelga del body y es una copia de #stats-card-content, sin el ancestro #stats-card;
+    // sin la clase propia mostraría un instante la barra de siempre en vez del diseño
+    $('stats-card-content')?.classList.toggle('estilo-propio', propio);
+    return propio;
+}
+
+/** @param {any} vista @param {any} est @param {any} [conteo] plan del conteo inicial (ver _planConteoInicial) @param {boolean} [cargaInicial] es la carga de la página (la línea entra aunque el número no cuente) */
+function _renderEstilo(vista, est, conteo = null, cargaInicial = false) {
+    const propio = _marcarEstiloPropio(vista);
+    // en la vista semanal la vista dibujada ya es la semana; en la diaria se deriva la semana solo si el diseño reserva su alto (ver TarjetaEstilos)
+    const resumenSemana = () => (EstadoApp.vistaActual() === 'semana' ? vista : TarjetaFichajeVista.derivarVistaSemana(est)).resumen;
+    // en la carga (conteo) el aro, la regla y el número crecen de cero, igual que el número y la barra de los estilos clásicos
+    TarjetaEstilos.actualizar(propio ? vista.resumen : null, { conteoInicial: !!conteo, cargaInicial, duracion: _durSiAnima('--dur-conteo'), resumenSemana });
+}
+
+// Estilo con que se dibujó la tarjeta la última vez (null hasta el primer dibujo): sirve para animar el cambio de estilo y para no animar el primer dibujo
+/** @type {string | null} */
+let _estiloDibujado = null;
+
+/** Alto actual de la tarjeta (de donde parte la animación del alto); 0 antes del primer dibujo, para que al cargar no se anime. */
+function _alturaCard() {
+    const card = $('stats-card');
+    return card && _estiloDibujado !== null ? card.offsetHeight : 0;
+}
+
+/**
+ * Anima el alto de la tarjeta, de `antes` al que tiene ahora con el contenido nuevo ya dibujado, igual que el colapsado de las otras tarjetas
+ * (--dur-collapse, ease-out). Los diseños propios tienen alto según su contenido (el día, la semana y cada estado miden distinto) y los estilos clásicos
+ * tienen el alto fijo de la barra: al pasar de uno a otro también cambia. `height: auto` no se anima: se fija el alto de partida en px, se fuerza el reflujo
+ * y se pasa al de llegada; al terminar vuelve al que mande el CSS.
+ * @param {number} antes
+ */
+function _animarAlturaCard(antes) {
+    const card = $('stats-card');
+    if (!card || !(antes > 0)) return;
+    const dur = _durSiAnima('--dur-collapse', card);
+    card.style.height = '';   // alto natural del contenido nuevo (también corta una animación anterior que siguiera en curso)
+    const despues = card.offsetHeight;
+    if (!(dur > 1) || Math.abs(despues - antes) < 2) return;
+    // el alto de partida se fija sin transición (si no, con un alto fijo de por medio, como el de la barra, la transición arrancaría desde el alto nuevo hacia el viejo)
+    card.style.transition = 'none';
+    card.style.height = `${antes}px`;
+    void card.offsetHeight;
+    card.style.transition = '';
+    card.style.height = `${despues}px`;
+    const terminar = () => { card.style.height = ''; };
+    card.addEventListener('transitionend', function alTerminar(e) {
+        if (e.target !== card || e.propertyName !== 'height') return;
+        card.removeEventListener('transitionend', alTerminar);
+        terminar();
+    });
+    setTimeout(terminar, dur + 100);   // red de seguridad (pestaña en segundo plano: no hay transitionend)
 }
 
 function _renderHint(vista) {
@@ -268,7 +339,7 @@ function _dibujarBuffer(est, corto) {
     if (!el) return;
     el.replaceChildren();
     const { bufferSemanal, horasDiarias, semanaAbierta } = est;
-    if (horasDiarias > 0 && Math.abs(bufferSemanal) > 0.01 && semanaAbierta) {
+    if (horasDiarias > 0 && Math.abs(bufferSemanal) > MARGEN_HORAS && semanaAbierta) {
         const esPositivo = bufferSemanal > 0;
         const claseColor = esPositivo ? 'positivo' : 'negativo';
         const punto = document.createElement('span');
@@ -297,12 +368,14 @@ function _renderBuffer(est = _bufferActual) {
     if (el.scrollHeight > el.clientHeight + 1) _dibujarBuffer(est, true);
 }
 
+/** @param {() => void} renderFn */
 function _animarCambioCard(renderFn) {
     const els = [
         $('stats-semana'),
         $('stats-mensaje'),
         $('stats-buffer'),
         $('toggle-hint'),
+        $('stats-estilo'),
     ];
 
     CicloStats.detener();
@@ -326,12 +399,10 @@ function _planConteoInicial(vista, est) {
 
 /** @param {any} [idNuevo] */
 function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sinAnimarTitulo = false, conteoInicial = false) {
+    const alturaAntes = _alturaCard();   // antes de tocar nada: es de donde parte la animación del alto
     const asignacionesCompensatorio = Compensatorios.calcularAsignacionesCompensatorio();
 
-    if (!soloReloj) {
-        const idNuevoLista = Calendario.getVistaHistoricoCalendario() ? null : idNuevo;
-        Historico.actualizarListaRegistros(EstadoApp.registros(), idNuevoLista, asignacionesCompensatorio);
-    }
+    if (!soloReloj) Historico.actualizarListaRegistros(EstadoApp.registros(), idNuevo, asignacionesCompensatorio);
 
     const est = _calcularEstadoCard(asignacionesCompensatorio);
     const vista = EstadoApp.vistaActual() === 'semana'
@@ -343,9 +414,10 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
 
     const conteo = conteoInicial ? _planConteoInicial(vista, est) : null;
 
-    const timerFueraCorriendo = Almacenamiento.getItem(_breakStorageKey()) !== null;
-    if (!timerFueraCorriendo) { _renderTitulo(vista, sinAnimarTitulo, est); }
+    if (!TiempoFuera.corriendo()) { _renderTitulo(vista, sinAnimarTitulo, est); }
     _renderCard(vista);
+    _estiloDibujado = EstiloTarjeta.actual();
+    _marcarEstiloPropio(vista);
     _renderBarra(vista, !!conteo);
     Estadisticas._renderSelectorStats();
     actualizarEstadoBotonTimerMain(sinAnimarTitulo);
@@ -353,8 +425,10 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
     if (Calendario.getVistaHistoricoCalendario()) {
         const selector = $('calendario-selector-meses');
         if (selector && selector.style.display !== 'none') {
-            Calendario._cerrarSelectorMeses(idNuevo);
-        } else {
+            // el reloj no cierra el selector: de eso se encarga su propio temporizador de inactividad (ver calendario.js)
+            if (!soloReloj && !Calendario._selectorMesesProtegido()) Calendario._cerrarSelectorMeses(idNuevo);
+        } else if (!soloReloj || Calendario._dibujadoOtroDia()) {
+            // lo que muestra el calendario no depende de la hora: al reloj solo le importa el cambio de día
             Calendario._renderizarCalendario(idNuevo, asignacionesCompensatorio);
         }
     }
@@ -365,6 +439,8 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
         _renderMensaje(vista);
         _renderHint(vista);
         _renderBuffer(est);
+        _renderEstilo(vista, est, conteo, conteoInicial);
+        _animarAlturaCard(alturaAntes);
     };
     if (debeAnimar) {
         _animarCambioCard(renderResto);
@@ -373,19 +449,30 @@ function actualizarUI(idNuevo = null, soloReloj = false, animarCard = false, sin
     }
 }
 
-function _forzarVista(nuevaVista, renderFn) {
-    if (EstadoApp.vistaActual() === nuevaVista) { return Promise.resolve(renderFn()); }
+/**
+ * Redibuja la tarjeta fundiendo todo su contenido (se saca una copia del actual que se desvanece mientras entra el nuevo): el mismo efecto del cambio de
+ * día a semana. Lo usa también el cambio de estilo de la tarjeta, para que se vea la salida del diseño anterior además de la entrada del nuevo.
+ * @param {() => any} renderFn @param {() => void} [antes] se ejecuta dentro del fundido, antes de redibujar
+ */
+function _cambiarConFundido(renderFn, antes = undefined) {
     if (_timerAutoVista) { clearTimeout(_timerAutoVista); _timerAutoVista = null; }
     const card = $('stats-card');
     const content = $('stats-card-content');
     if (card) card.classList.add('cambiando-vista');
     return _animarFadeSwap(content, async () => {
-        EstadoApp.setVistaActual(nuevaVista);
-        Almacenamiento.setItem(STORAGE_KEYS.VISTA_ACTUAL, nuevaVista);
+        antes?.();
         CicloStats.detener();
         const resultado = await _conRendersSinAnimar(renderFn);
         if (card) card.classList.remove('cambiando-vista');
         return resultado;
+    });
+}
+
+function _forzarVista(nuevaVista, renderFn) {
+    if (EstadoApp.vistaActual() === nuevaVista) { return Promise.resolve(renderFn()); }
+    return _cambiarConFundido(renderFn, () => {
+        EstadoApp.setVistaActual(nuevaVista);
+        Almacenamiento.setItem(STORAGE_KEYS.VISTA_ACTUAL, nuevaVista);
     });
 }
 
@@ -402,43 +489,25 @@ function bindEventos() {
     HoverBarra.conectarTextos({
         mostrar: (stats, mensaje) => {
             const num = $('stats-semana');
-            if (num && stats !== null) num.textContent = stats;
+            if (num && stats !== null) Animaciones._animarTextoHover(num, () => { num.textContent = stats; });
             const msg = $('stats-mensaje');
-            if (msg && mensaje !== null) { msg.classList.remove('hidden'); msg.textContent = mensaje; }
+            if (msg && mensaje !== null) Animaciones._animarTextoHover(msg, () => { msg.classList.remove('hidden'); msg.textContent = mensaje; });
         },
         restaurar: () => {
             const num = $('stats-semana');
-            if (num && !CicloStats.activo()) num.textContent = _statsActual;
-            _renderMensaje();
+            if (num && !CicloStats.activo()) Animaciones._animarTextoHover(num, () => { num.textContent = _statsActual; });
+            Animaciones._animarTextoHover($('stats-mensaje'), () => _renderMensaje());
         }
     });
     HoverBarra.bindEventos();
 
+    // Al redimensionar se vuelve a ajustar lo que depende del ancho de la tarjeta de estado
     (function () {
-        const header = /** @type {HTMLElement} */ (document.querySelector('.header'));
-        const statsCard = $('stats-card');
-        if (!header || !statsCard) return;
-
-        let observer = null;
-
-        const crearObserver = () => {
-            if (observer) observer.disconnect();
-            const headerH = header.offsetHeight;
-            observer = new IntersectionObserver(
-                ([entry]) => {
-                    header.classList.toggle('scrolled', !entry.isIntersecting);
-                },
-                { rootMargin: `-${headerH}px 0px 0px 0px`, threshold: 0 }
-            );
-            observer.observe(statsCard);
-        };
-
-        crearObserver();
+        if (!$('stats-card')) return;
         let resizeTimer = null;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
-                crearObserver();
                 BarraHitos.redibujar();
                 _renderMensaje();
                 _renderBuffer();
@@ -449,7 +518,7 @@ function bindEventos() {
 
     $('stats-card')?.addEventListener('click', (e) => {
         const enStatsNumber = /** @type {HTMLElement} */ (e.target).closest('#stats-semana');
-        if (enStatsNumber && EstadoApp.vistaActual() !== 'semana' && !CicloStats.activo()) {
+        if (enStatsNumber && EstadoApp.vistaActual() !== 'semana' && !CicloStats.activo() && _cicloAutoActivo()) {
             const ciclado = CicloStats.iniciar(true);
             if (ciclado) {
                 e.stopPropagation();
@@ -459,26 +528,33 @@ function bindEventos() {
         alternarVista();
     });
 
-    $('btn-timer-main')?.addEventListener('click', () => toggleTimerBreakMain());
-    $('btn-agregar')?.addEventListener('click', () => ejecutarAccionRegistro());
-    $('icon-indicator-form')?.addEventListener('click', () => toggleFormulario());
+    alClic({
+        'btn-timer-main': () => toggleTimerBreakMain(),
+        'btn-agregar': () => ejecutarAccionRegistro(),
+        'icon-indicator-form': () => toggleFormulario(),
+    });
 
-    $('btn-ir-modo-lote')?.addEventListener('click', () => toggleModoLote());
-    $('btn-pegar-entrada')?.addEventListener('click', () => pegarHoraActual('entrada'));
-    $('btn-pegar-salida')?.addEventListener('click', () => pegarHoraActual('salida'));
+    alClic({
+        'btn-ir-modo-lote': () => toggleModoLote(),
+        'btn-pegar-entrada': () => pegarHoraActual('entrada'),
+        'btn-pegar-salida': () => pegarHoraActual('salida'),
+    });
 
     $('lote-tipo')?.addEventListener('change', () => actualizarBotonLote());
-    $('btn-ir-modo-normal')?.addEventListener('click', () => toggleModoLote());
-    $('btn-lote-desde')?.addEventListener('click', () => alternarFechaActual('lote-fecha-desde'));
-    $('btn-lote-hasta')?.addEventListener('click', () => alternarFechaActual('lote-fecha-hasta'));
+    alClic({
+        'btn-ir-modo-normal': () => toggleModoLote(),
+        'btn-lote-desde': () => alternarFechaActual('lote-fecha-desde'),
+        'btn-lote-hasta': () => alternarFechaActual('lote-fecha-hasta'),
+    });
 
-    $('btn-toggle-fondo')?.addEventListener('click', () => toggleFondoCard());
-    $('btn-edit-entrada')?.addEventListener('click', () => pegarHoraActual('edit-entrada'));
-    $('btn-edit-salida')?.addEventListener('click', () => pegarHoraActual('edit-salida'));
-    $('btn-edit-tf')?.addEventListener('click', () => limpiarCampo('edit-tiempo-fuera'));
-    $('btn-edit-notas')?.addEventListener('click', () => limpiarCampo('edit-notas'));
-    $('btn-grupo-desde')?.addEventListener('click', () => alternarFechaActual('edit-grupo-desde'));
-    $('btn-grupo-hasta')?.addEventListener('click', () => alternarFechaActual('edit-grupo-hasta'));
+    alClic({
+        'btn-edit-entrada': () => pegarHoraActual('edit-entrada'),
+        'btn-edit-salida': () => pegarHoraActual('edit-salida'),
+        'btn-edit-tf': () => limpiarCampo('edit-tiempo-fuera'),
+        'btn-edit-notas': () => limpiarCampo('edit-notas'),
+        'btn-grupo-desde': () => alternarFechaActual('edit-grupo-desde'),
+        'btn-grupo-hasta': () => alternarFechaActual('edit-grupo-hasta'),
+    });
 }
 
 export const TarjetaFichaje = {
@@ -486,6 +562,7 @@ export const TarjetaFichaje = {
     actualizarUI,
     alternarVista,
     _forzarVista,
+    _cambiarConFundido,
     setTimerAutoVista: (v) => { _timerAutoVista = v; },
     _retenerRegistroAyer,
 };

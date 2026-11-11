@@ -65,6 +65,11 @@
     }
 }
 
+/* Cambios de texto al pasar el cursor por los hitos: más cortos que la mutación normal */
+.mutacion-entrante.mutacion-rapida {
+    animation-duration: var(--dur-valor);
+}
+
 @keyframes mutacionEntrada {
     from {
         opacity: 0;
@@ -88,6 +93,25 @@
 
     100% {
         transform: translateX(260%);
+    }
+}
+
+/* El brillo del anillo: la franja (que ocupa 40°, con su centro a 20°) entra por el comienzo del arco, lo recorre hasta su final (el avance, en grados) y descansa; mismo ciclo y mismo 20 % que "shimmer".
+   Con el anillo casi o totalmente lleno la franja no puede pasar de los 320° (si no, su cola reaparecería por el comienzo del arco y quedaría fija ahí): llega al final del arco y se desvanece.
+   En reposo (20 % en adelante) no se ve en ningún caso. */
+@keyframes brillo-anillo {
+    0% {
+        transform: rotate(-40deg);
+        opacity: 1;
+    }
+
+    14% {
+        opacity: 1;
+    }
+
+    20%, 100% {
+        transform: rotate(min(calc((100 - var(--ring-offset, 100)) * 3.6deg), 320deg));
+        opacity: 0;
     }
 }
 
@@ -156,18 +180,16 @@ button.campo-flash {
     animation: calendario-hoy-flash var(--dur-flash) ease-in-out 2;
 }
 
-/* Con registro el destello es un pulso de la parte de color de cada estilo (el relleno, el aro, la barra o el punto): crece un poco y brilla con el color
-   del día. El resplandor (drop-shadow) sigue lo que cada estilo dibuja, así que no hace falta una versión por estilo; solo transform y filter */
+/* Con registro el destello es un pulso de la parte de color de cada estilo (el relleno, el aro, la barra o el punto): brilla con el color
+   del día (sin crecer). El resplandor (drop-shadow) sigue lo que cada estilo dibuja, así que no hace falta una versión por estilo; solo filter */
 @keyframes calendario-hoy-pulso {
 
     0%,
     100% {
-        transform: scale(1);
         filter: drop-shadow(0 0 0 transparent) brightness(1);
     }
 
     50% {
-        transform: scale(1.16);
         filter: drop-shadow(0 0 3px var(--cal-color)) drop-shadow(0 0 7px var(--cal-color)) brightness(1.3);
     }
 }
@@ -175,6 +197,26 @@ button.campo-flash {
 .calendario-dia.hoy.campo-flash:not(.dia-sin-registro, .dia-filtrado) {
     z-index: 2;
     animation: calendario-hoy-pulso var(--dur-pulso-hoy) ease-in-out 2;
+}
+
+/* Destello del mosaico de balance (Faltan cubierto / Extra / Objetivo cumplido) de la línea de tiempo en la carga: el mismo pulso del día de hoy del calendario con registro,
+   con el color del tono del mosaico */
+@keyframes mosaico-flash {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 0 transparent) brightness(1);
+    }
+
+    50% {
+        filter: drop-shadow(0 0 3px var(--tono)) drop-shadow(0 0 7px var(--tono)) brightness(1.3);
+    }
+}
+
+.est-mosaico.mosaico-flash {
+    position: relative;
+    z-index: 2;
+    animation: mosaico-flash var(--dur-pulso-hoy) ease-in-out 2;
 }
 
 /* Filas de ajustes: sin borde propio y dentro de un contenedor con overflow hidden,
@@ -325,6 +367,13 @@ button.campo-flash-color {
     animation: icono-spin var(--dur-giro) linear infinite;
 }
 
+/* Lo contrario: opciones que solo tienen sentido en un dispositivo táctil (móvil) se ocultan cuando hay mouse */
+@media (hover: hover) and (pointer: fine) {
+    .config-solo-movil {
+        display: none !important;
+    }
+}
+
 /* Opciones que solo tienen sentido con mouse: se ocultan en dispositivos táctiles (mismo criterio que usa calendario.js) */
 @media not all and (hover: hover) and (pointer: fine) {
     .config-solo-pc {
@@ -351,6 +400,12 @@ button.campo-flash-color {
         filter: var(--hover);
     }
 
+    /* dentro del grupo de la semana el día se resalta como una fila de Ajustes (con fondo, no con brillo) */
+    .registro-semana .registro-item:hover {
+        filter: none;
+        background: var(--surface-row-hover);
+    }
+
     .day-checkbox:hover span {
         filter: var(--hover);
     }
@@ -367,6 +422,7 @@ button.campo-flash-color {
     }
 
     .settings-list>button:hover:not(:disabled),
+    .settings-list>.collapsible>.collapsible-inner>button:hover:not(:disabled),
     .btn-perfil-select:hover {
         background: var(--surface-row-hover);
     }
@@ -497,7 +553,7 @@ button.campo-flash-color {
 
     .registro-info {
         display: grid;
-        grid-template-columns: 1fr auto;
+        grid-template-columns: minmax(0, 1fr) auto;
         align-items: baseline;
         column-gap: 0.75rem;
     }
@@ -566,7 +622,8 @@ button.campo-flash-color {
 }
 
 /* El brillo es un ::after visible de por sí: sin animación quedaría fijo */
-:root[data-motion="reduce"] .progress-fill.shimmer::after {
+:root[data-motion="reduce"] .progress-fill.shimmer::after,
+:root[data-motion="reduce"] .est-anillo-brillo {
     display: none;
 }
 
@@ -577,6 +634,13 @@ button.campo-flash-color {
 }
 
 
+/* El brillo del tramo azul de la línea de tiempo: sin movimiento queda el azul liso */
+:root[data-motion="reduce"] .est-nodos.en-curso::after,
+:root[data-motion="reduce"] .est-nodos.en-curso :is(.est-nodo--ahora, .est-nodo--dia.hoy) .est-nodo-punto,
+:root[data-motion="reduce"] .est-nodos.en-curso :is(.est-nodo--ahora, .est-nodo--dia.hoy) .est-nodo-punto::after {
+    animation: none;
+}
+
 /* El pulso del hito enfocado es un anillo en bucle corto: sin movimiento queda solo el resalte de la píldora */
 :root[data-motion="reduce"] .linea-tick.foco::after,
 :root[data-motion="reduce"] .progress-punto.foco::after {
@@ -585,7 +649,11 @@ button.campo-flash-color {
 }
 
 /* Con un modal abierto el brillo y el latido de la barra quedan detrás del overlay: se pausan para no mantener el pipeline de frames (ni el desenfoque del overlay) trabajando por algo que no se ve */
+body.modal-open .est-nodos.en-curso::after,
+body.modal-open .est-nodos.en-curso :is(.est-nodo--ahora, .est-nodo--dia.hoy) .est-nodo-punto,
+body.modal-open .est-nodos.en-curso :is(.est-nodo--ahora, .est-nodo--dia.hoy) .est-nodo-punto::after,
 body.modal-open .progress-fill.shimmer::after,
+body.modal-open .est-anillo-brillo::after,
 body.modal-open .progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado),
 body.modal-open .progress-pista:has(.progress-fill.shimmer) .progress-punto:not(.progress-punto--inicio, .cerrado)::after {
     animation-play-state: paused;

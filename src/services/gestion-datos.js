@@ -1,7 +1,6 @@
-import { Compensatorios } from './compensatorios.js';
-import { FiltrosYPeriodos } from './filtros-periodos.js';
+import { Preferencias } from '../core/preferencias.js';
 import { EstadoApp } from './estado-app.js';
-import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
+import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, DIAS_HABILES_DEFAULT, HORAS_DIARIAS_DEFAULT, CLAVES_AJUSTES_INSTALACION } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from './recordatorio-push.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -11,6 +10,11 @@ import { GestorHistorial } from './gestor-historial.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { AvisoJornada } from './aviso-jornada.js';
+import { TiempoFuera } from './tiempo-fuera.js';
+import { Cambios } from './cambios.js';
+import { DiasHabiles } from './dias-habiles.js';
+import { Objetivos } from './objetivos.js';
+import { Jornada } from './jornada.js';
 
 // ====================================================================
 // DATA MANAGEMENT MODULE
@@ -19,19 +23,20 @@ const {
     ordenarRegistros, registroPorFecha, existeRegistroEnFecha,
     _hayEspacioParaRegistros, _fechaFuturaInvalida,
     _aplicarCalculoHoras, _recalcularHorasSiValido, _construirRegistro,
-    guardarYActualizar, _guardarConCicloSiHoy
+    guardarYActualizar
 } = EstadoApp;
 
-const { _esObjetivoValido, diasHabilesEnFecha, objetivoDeRegistro, _recalcularCreditoRegistro } = Compensatorios;
+const { _esObjetivoValido, objetivoDeRegistro, _recalcularCreditoRegistro } = Objetivos;
+const { diasHabilesEnFecha } = DiasHabiles;
 
-const { detenerYRegistrarTimer, detectarAyerAbierto } = FiltrosYPeriodos;
+const { detectarAyerAbierto } = Jornada;
 
 /** Preferencias de interfaz guardadas (los días y horas del perfil los carga cargarPerfilActivo). */
 function cargarConfiguracion() {
     return {
         tema: EstadoApp._notify().temaGuardado(),
         vistaActual: Almacenamiento.getItem(STORAGE_KEYS.VISTA_ACTUAL, 'diaria'),
-        ignorarTiempoFuera: Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true),
+        ignorarTiempoFuera: Preferencias.IGNORAR_TF.get(),
         modoEstadisticas: Almacenamiento.getItem(STORAGE_KEYS.MODO_ESTADISTICAS, 'mensual'),
         fondoCard: Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, 'golden-gate', true)
     };
@@ -54,19 +59,24 @@ function recalcularTotalesEnMemoria(recalcularCreditos = false) {
     });
 }
 
+/** Para comparar listas de registros sin depender del orden (hay un registro por fecha). */
+const _firmaRegistros = (lista) => JSON.stringify([...lista].sort((a, b) => a.fecha.localeCompare(b.fecha)));
+
 /**
  * Carga en EstadoApp el perfil activo (configuración y registros) y, si sigue vigente, la pila de deshacer.
  * Lo guardado se repara antes de usarlo (ver SeguridadYUtils.repararRegistrosGuardados): un perfil corrupto
  * o editado a mano no llega tal cual a los cálculos.
+ * Los registros siempre salen del perfil. La pila solo sirve para deshacer: si no coincide con el perfil (su última escritura
+ * falló por cuota, o se guardó un cambio que no pasa por ella) se descarta; restaurarla revertiría datos ya guardados.
  */
 function cargarPerfilActivo() {
     const perfil = GestorPerfiles.obtenerDatosPerfil() || {};
-    EstadoApp.setDiasHabiles(S.sanitizarDiasHabiles(perfil.diasHabiles) ?? [1, 2, 3, 4, 5]);
+    EstadoApp.setDiasHabiles(S.sanitizarDiasHabiles(perfil.diasHabiles) ?? [...DIAS_HABILES_DEFAULT]);
     const horas = parseFloat(perfil.horasDiarias);
-    EstadoApp.setHorasDiarias(Number.isFinite(horas) && horas >= 0 && horas <= 24 ? horas : 7);
-    const historialDias = Compensatorios.sanitizarHistorialDiasHabiles(perfil.historialDiasHabiles);
+    EstadoApp.setHorasDiarias(Number.isFinite(horas) && horas >= 0 && horas <= 24 ? horas : HORAS_DIARIAS_DEFAULT);
+    const historialDias = DiasHabiles.sanitizarHistorialDiasHabiles(perfil.historialDiasHabiles);
     _setHistorialDiasHabiles(
-        historialDias && historialDias.length > 0 ? historialDias : [{ desde: '0001-01-01', dias: EstadoApp.diasHabiles() }]
+        historialDias && historialDias.length > 0 ? historialDias : [{ desde: DESDE_SIEMPRE, dias: EstadoApp.diasHabiles() }]
     );
 
     const guardados = Array.isArray(perfil.registros) ? perfil.registros : [];
@@ -77,20 +87,18 @@ function cargarPerfilActivo() {
     EstadoApp._setRegistros(registros);
 
     const historialCargado = GestorHistorial.loadFromLocalStorage();
-    if (historialCargado) {
-        const estadoActual = GestorHistorial.getCurrentState();
-        if (Array.isArray(estadoActual)) {
-            EstadoApp._setRegistros(S.repararRegistrosGuardados(estadoActual));
-        } else {
-            console.warn('Historial corrupto, descartado. Usando registros del perfil.');
-            GestorHistorial.clear();
-        }
+    const estadoPila = historialCargado ? GestorHistorial.getCurrentState() : null;
+    const pilaVigente = Array.isArray(estadoPila)
+        && _firmaRegistros(S.repararRegistrosGuardados(estadoPila)) === _firmaRegistros(registros);
+    if (historialCargado && !pilaVigente) {
+        console.warn('La pila de deshacer no coincide con el perfil: se descarta.');
+        GestorHistorial.clear();
     }
     ordenarRegistros();
     recalcularTotalesEnMemoria();
-    if (!historialCargado) GestorHistorial.saveState(EstadoApp.registros());
+    if (!pilaVigente) GestorHistorial.saveState(EstadoApp.registros());
 
-    const migrados = Compensatorios.migrarObjetivoHorasFaltante();
+    const migrados = Objetivos.migrarObjetivoHorasFaltante();
     if (migrados > 0) {
         console.info(`Migración: ${migrados} registro(s) sin objetivo estampado, asignado el valor global vigente (${EstadoApp.horasDiarias()}h).`);
         GestorHistorial.parchearRegistrosEnHistorial(r => {
@@ -130,7 +138,7 @@ function _mensajeExitoSalida(reg, usaHoraActual, timerDetenido, s) {
 
 async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     const notify = EstadoApp._notify();
-    const timerDetenido = detenerYRegistrarTimer(reg);
+    const timerDetenido = TiempoFuera.volcarEnRegistro(reg) > 0;
     const hoy = TiempoUtils.obtenerFechaHoy();
     // jornada de ayer que cruzó la medianoche: la tarjeta la sigue mostrando unos segundos antes de pasar a hoy
     const ayer = detectarAyerAbierto(hoy, EstadoApp.registros());
@@ -139,9 +147,8 @@ async function _completarSalidaRegistro(reg, s, usaHoraActual, btn) {
     _aplicarCalculoHoras(reg, reg.entrada, s, reg.tiempoFuera || null);
 
     const esHoy = reg.fecha === hoy;
-    GestorHistorial.saveState(EstadoApp.registros(), `salida ${s} (${TiempoUtils.fechaCorta(reg.fecha)})`);
     if (eraAyerAbierto) notify.retenerRegistroAyer(reg.id);
-    const saved = await _guardarConCicloSiHoy(reg.id, esHoy || eraAyerAbierto, 'salida');
+    const saved = await Cambios.confirmarEnTarjeta(`salida ${s} (${TiempoUtils.fechaCorta(reg.fecha)})`, reg.id, esHoy || eraAyerAbierto, 'salida');
     if (!saved) {
         if (eraAyerAbierto) notify.retenerRegistroAyer(null);
         notify.avisarFichaje(null, 'error', { btn });
@@ -171,13 +178,12 @@ async function _crearNuevoRegistro(f, e, s, usaHoraActual, btn) {
     ordenarRegistros();
     const esHoy = e && f === TiempoUtils.obtenerFechaHoy();
     const detalleAccion = e && s ? `entrada ${e} y salida ${s}` : e ? `entrada ${e}` : `salida ${s}`;
-    GestorHistorial.saveState(registros, `${detalleAccion} (${TiempoUtils.fechaCorta(f)})`);
-    const saved = await _guardarConCicloSiHoy(nuevo.id, esHoy, 'entrada');
+    const saved = await Cambios.confirmarEnTarjeta(`${detalleAccion} (${TiempoUtils.fechaCorta(f)})`, nuevo.id, esHoy, 'entrada');
     if (!saved) {
         notify.avisarFichaje(null, 'error', { btn });
         return;
     }
-    if (esHoy && !s && TiempoUtils.esFechaHabil(f, diasHabilesEnFecha(f))) {
+    if (esHoy && !s && DiasHabiles.esDiaLaboral(f)) {
         const bufferSemanal = AvisoJornada.bufferSemanalPara(f);
         RecordatorioPush.programarFinDeJornada(nuevo.fecha, nuevo.entrada, nuevo.objetivoHoras, bufferSemanal);
     }
@@ -247,26 +253,25 @@ async function agregarRegistro() {
 async function borrarTodoHistorial() {
     const registros = EstadoApp.registros();
     const totalRegistros = registros.length;
-    const confirmar = await EstadoApp._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)} y la configuración volverá a los valores por defecto. No afecta otros perfiles.`, 'Restablecer');
+    const confirmar = await EstadoApp._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${TiempoUtils.contar(totalRegistros, 'registro')} y la configuración, incluida la apariencia de la app, volverá a los valores por defecto. Los demás perfiles conservan sus registros.`, 'Restablecer');
     if (!confirmar) return;
 
-    EstadoApp.setDiasHabiles([1, 2, 3, 4, 5]);
-    EstadoApp.setHorasDiarias(7);
+    EstadoApp.setDiasHabiles([...DIAS_HABILES_DEFAULT]);
+    EstadoApp.setHorasDiarias(HORAS_DIARIAS_DEFAULT);
     EstadoApp._setHistorialDiasHabilesRaw([]);
     registros.splice(0, registros.length);
     EstadoApp.setIgnorarTiempoFuera(false);
     RecordatorioPush.restablecer();
 
-    const perfilId = EstadoApp.obtenerPerfilIdActual();
-    Almacenamiento.removeItem(STORAGE_KEYS.BREAK_TIME(perfilId));
-    const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, ...CARDS.map(STORAGE_KEYS.CARD_VISIBLE), STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.ORDEN_CARDS_MOVIL, STORAGE_KEYS.COLUMNAS_CARDS, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
+    TiempoFuera.descartar();
+    const keys = [STORAGE_KEYS.FONDO_CARD, STORAGE_KEYS.IGNORAR_TF, STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, ...CARDS.map(STORAGE_KEYS.CARD_VISIBLE), STORAGE_KEYS.ORDEN_CARDS, STORAGE_KEYS.ORDEN_CARDS_MOVIL, STORAGE_KEYS.COLUMNAS_CARDS, STORAGE_KEYS.ORDEN_CARDS_3, STORAGE_KEYS.COLUMNAS_CARDS_3, STORAGE_KEYS.BIENVENIDA_VISTA, STORAGE_KEYS.FERIADOS_PROCESADOS];
     keys.forEach(k => Almacenamiento.removeItem(k, true));
+    CLAVES_AJUSTES_INSTALACION.forEach(k => Almacenamiento.removeItem(k));   // la apariencia no es de un perfil: vuelve a la de fábrica
 
     const perfil = GestorPerfiles.obtenerDatosPerfil();
     if (perfil) GestorPerfiles.CAMPOS_SYNC_GIST.forEach(k => delete perfil[k]);
 
-    GestorHistorial.saveState(registros, `restablecer perfil (${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)})`);
-    if (await guardarYActualizar()) Recarga.solicitar();
+    if (await Cambios.confirmar(`restablecer perfil (${TiempoUtils.contar(totalRegistros, 'registro')})`)) Recarga.solicitar();
 }
 
 function _aplicarEstadoHistorial(resultado, mensaje) {

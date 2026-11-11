@@ -31,6 +31,5 @@ function emit(event, payload) {
 
 export const EventosApp = {
     on,
-    off,
     emit
 };

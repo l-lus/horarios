@@ -136,4 +136,4 @@ function bindEventos() {
     });
 }
 
-export const AyudaBuscador = { bindEventos, buscar, limpiar, siguiente: () => _recorrer(1), anterior: () => _recorrer(-1) };
+export const AyudaBuscador = { bindEventos, limpiar };

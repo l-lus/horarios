@@ -1,7 +1,9 @@
-import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
+import { Preferencias } from '../core/preferencias.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
+import { $, alClic } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
+import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorTemas } from './gestor-temas.js';
@@ -12,14 +14,17 @@ import { TarjetaFondos } from './tarjeta-fondos.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
 import { Notificaciones } from './notificaciones.js';
 import { EventosApp } from '../core/eventos.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { _crearPressHold, debounce } from './gestos.js';
 import { _scrollHastaVisible, _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
+import { VistaPrevia } from './vista-previa.js';
+import { TarjetaEstilos } from './tarjeta-estilos.js';
 import { AyudaBuscador } from './ayuda-buscador.js';
 import { AvisoJornada } from '../services/aviso-jornada.js';
+import { DiasHabiles } from '../services/dias-habiles.js';
+import { Objetivos } from '../services/objetivos.js';
 
 // ====================================================================
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
@@ -33,101 +38,216 @@ const _reprogramarPushDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 
 
 const verificarBloqueoCredito = (...args) => EstadoApp._notify().verificarBloqueoCredito(...args);
 const actualizarUI = (...args) => EstadoApp._notify().actualizarUI(...args);
-const { getFondoCard, _getLabelFondo } = TarjetaFondos;
+const { getFondoCard, _getLabelFondo, toggleFondoCard } = TarjetaFondos;
 const _refrescarFormatoCortoStatsCache = () => EventosApp.emit('config:formato-corto-stats');
 const { actualizarEstadoBotonPersistir } = OrdenTarjetas;
 const { actualizarEstadoBotonNotificaciones } = Notificaciones;
 
+function elegirTema(tema) {
+    Almacenamiento.setItem(STORAGE_KEYS.TEMA_OSCURO, tema);
+    GestorTemas.aplicarTema(tema);
+}
+
 function alternarTema() {
-    const temaActual = GestorTemas.temaGuardado();
-    const temaSiguiente = GestorTemas.siguienteTema(temaActual);
-    Almacenamiento.setItem(STORAGE_KEYS.TEMA_OSCURO, temaSiguiente);
-    GestorTemas.aplicarTema(temaSiguiente);
+    elegirTema(GestorTemas.siguienteTema(GestorTemas.temaGuardado()));
 }
 
 const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
     _crearToggleConfig({
         getVal: () => EstadoApp.getIgnorarTiempoFuera(),
-        setVal: (v) => { EstadoApp.setIgnorarTiempoFuera(v); Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_TF, v, true); },
+        setVal: (v) => { EstadoApp.setIgnorarTiempoFuera(v); Preferencias.IGNORAR_TF.set(v); },
         btnId: 'btn-toggle-ignorar-tf',
         onAfterToggle: () => { GestionDatos.recalcularTotalesEnMemoria(true); EstadoApp.guardarYActualizar(); AvisoJornada.sincronizarHoy(); },
     });
 
 const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.HOVER_POPUP, false),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.HOVER_POPUP, v),
+        getVal: () => Preferencias.HOVER_POPUP.get(),
+        setVal: (v) => Preferencias.HOVER_POPUP.set(v),
         btnId: 'btn-toggle-hover-popup',
     });
 
 const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLogicaCubierto } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, v, true),
+        getVal: () => Preferencias.IGNORAR_LOGICA_CUBIERTO.get(),
+        setVal: (v) => Preferencias.IGNORAR_LOGICA_CUBIERTO.set(v),
         btnId: 'btn-toggle-logica-cubierto',
         onAfterToggle: () => { actualizarUI(); }
     });
 
 const { toggle: toggleObjetivoPorRegistro, actualizarEstado: actualizarEstadoBotonObjetivoPorRegistro } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, v, true),
+        getVal: () => Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get(),
+        setVal: (v) => Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.set(v),
         btnId: 'btn-toggle-objetivo-registro',
         onAfterToggle: () => { actualizarUI(); actualizarEstadoBotonAplicarHoras(); _reprogramarPushDebounced(); }
     });
 
 const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBotonFormatoCortoStats } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.FORMATO_CORTO_STATS, v),
+        getVal: () => Preferencias.FORMATO_CORTO_STATS.get(),
+        setVal: (v) => Preferencias.FORMATO_CORTO_STATS.set(v),
         btnId: 'btn-toggle-formato-corto-stats',
         onAfterToggle: () => { _refrescarFormatoCortoStatsCache(); actualizarUI(); }
     });
 
 const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRuedaCalendario } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.RUEDA_CALENDARIO, v),
+        getVal: () => Preferencias.RUEDA_CALENDARIO.get(),
+        setVal: (v) => Preferencias.RUEDA_CALENDARIO.set(v),
         btnId: 'btn-toggle-rueda-calendario',
         onAfterToggle: () => { EventosApp.emit('config:rueda-calendario'); }
     });
 
-// "Hint integrado" tiene tres estados en un solo botón: No (la información va en el texto de abajo), A (hitos sobre la barra, con su descripción
-// desplegada) y B (hitos sobre la barra y el nombre de cada uno en el número grande, el predeterminado). Se guardan en dos opciones: HINT_INTEGRADO y DESC_HITOS_NUMERO.
-const _MODOS_HINT = ['no', 'barra', 'numero'];
-const _ETIQUETAS_HINT = { no: 'No', barra: 'A', numero: 'B' };
+// El estilo de la tarjeta de estado (EstiloTarjeta) rota con un solo botón. Con el estilo "Barra con hitos" (el antiguo hint integrado) aparece la opción de animación de los hitos, con tres estados en un solo botón:
+// Desactivado (sin ciclo automático del número grande), Barra (cada hito con su descripción desplegada en la barra) y Texto (el nombre del hito en el número grande, el predeterminado).
+// Se guardan en CICLO_HINT_AUTO (false = desactivado) y DESC_HITOS_NUMERO (barra o texto).
+const _MODOS_ANIM_HINT = ['off', 'barra', 'texto'];
+const _ETIQUETAS_ANIM_HINT = { off: 'Desactivado', barra: 'Barra', texto: 'Texto' };
 
-function _modoHintIntegrado() {
-    if (!Almacenamiento.getBoolean(STORAGE_KEYS.HINT_INTEGRADO, DEFAULTS.HINT_INTEGRADO)) return 'no';
-    return Almacenamiento.getBoolean(STORAGE_KEYS.DESC_HITOS_NUMERO, DEFAULTS.DESC_HITOS_NUMERO) ? 'numero' : 'barra';
+function _modoAnimHint() {
+    if (!Preferencias.CICLO_HINT_AUTO.get()) return 'off';
+    return Preferencias.DESC_HITOS_NUMERO.get() ? 'texto' : 'barra';
 }
 
-function actualizarEstadoBotonHintIntegrado() {
-    const lbl = $('hint-integrado-label');
-    if (lbl) lbl.textContent = _ETIQUETAS_HINT[_modoHintIntegrado()];
+// Cada toque pasa al estilo siguiente y redibuja la tarjeta
+function toggleEstiloTarjeta() {
+    EstiloTarjeta.siguiente();
+    EventosApp.emit('config:hint-integrado');
+    // todo el contenido de la tarjeta se funde del diseño anterior al nuevo, igual que al pasar de día a semana (y el alto se anima, ver _animarAlturaCard)
+    EstadoApp._notify().cambiarConFundido(() => actualizarUI());
 }
 
-// Al restaurar un respaldo o bajar de Gist cambia la opción: se actualiza la etiqueta
-EventosApp.on('config:hint-integrado', () => actualizarEstadoBotonHintIntegrado());
+/** Cierra Ajustes (sin volver al modal padre) para dejar la página libre durante la vista previa; al terminar se reabre. */
+function _cerrarAjustesParaVistaPrevia() {
+    GestorModales.cerrar('modal-config');
+}
 
-function toggleHintIntegrado() {
-    const siguiente = _MODOS_HINT[(_MODOS_HINT.indexOf(_modoHintIntegrado()) + 1) % _MODOS_HINT.length];
-    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, siguiente !== 'no');
-    Almacenamiento.setItem(STORAGE_KEYS.DESC_HITOS_NUMERO, siguiente === 'numero');
-    actualizarEstadoBotonHintIntegrado();
+function _volverAAjustes() {
+    GestorModales.abrir('modal-config', _precargarCamposConfig);
+}
+
+// Tocar la opción del estilo de la tarjeta no lo cambia a ciegas: cierra Ajustes, lleva la tarjeta de estado a la vista y deja abajo los controles
+// para probar los estilos en vivo (la tarjeta se puede tocar para ver el día y la semana)
+/** @param {boolean} [desdeAjustes] con false (el atajo de mantener la tarjeta) no hay Ajustes que cerrar ni al que volver */
+function abrirVistaPreviaTarjeta(desdeAjustes = true) {
+    VistaPrevia.abrir(_configTarjeta(desdeAjustes));
+}
+
+/** @param {boolean} [desdeAjustes] */
+function _configTarjeta(desdeAjustes = true) {
+    return {
+        id: 'tarjeta',
+        titulo: 'Tarjeta de estado',
+        idObjetivo: 'stats-card',
+        antes: desdeAjustes ? _cerrarAjustesParaVistaPrevia : undefined,
+        alCerrar: desdeAjustes ? _volverAAjustes : undefined,
+        // las subopciones arriba y las filas fijas (estilo y fondo) al final: el panel crece hacia arriba y esas filas no cambian de lugar (ver VistaPrevia.abrir)
+        filas: [
+            {
+                etiqueta: 'Disposición', valor: () => EstiloTarjeta.etiquetaDisposicion(),
+                alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea' && _esPC()
+            },
+            {
+                etiqueta: 'Disposición', valor: () => EstiloTarjeta.etiquetaMosaicos(),
+                alTocar: toggleMosaicosLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esPC()
+            },
+            {
+                etiqueta: 'Disposición', valor: () => EstiloTarjeta.etiquetaAnillo(),
+                alTocar: toggleDisposicionAnillo, visible: () => EstiloTarjeta.actual() === 'anillo'
+            },
+            {
+                etiqueta: 'Animación', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
+                alTocar: toggleAnimacionHint, visible: () => EstiloTarjeta.hintIntegrado()
+            },
+            { etiqueta: 'Estilo', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta },
+            // siempre visible (no es una subopción de un estilo): el fondo de la tarjeta, el mismo de Ajustes > Apariencia
+            { etiqueta: 'Fondo', icono: '#icon-landscape', valor: () => _getLabelFondo(getFondoCard()), alTocar: toggleFondoCard }
+        ]
+    };
+}
+
+// Atajo desde las tarjetas (mantener y soltar sin mover, ver orden-tarjetas.js): abre la vista previa de su estilo, salvo que haya un modal u otra vista previa
+EventosApp.on('tarjeta:personalizar', (datos) => {
+    if (VistaPrevia.activa() || document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding')) return;
+    if (datos?.tarjeta === 'estado') abrirVistaPreviaTarjeta(false);
+    else if (datos?.tarjeta === 'calendario') abrirVistaPreviaCalendario(false);
+    else if (datos?.tarjeta === 'tema') VistaPrevia.abrir(_configTema(false));
+});
+
+/** @param {boolean} [desdeAjustes] */
+function abrirVistaPreviaCalendario(desdeAjustes = true) {
+    VistaPrevia.abrir(_configCalendario(desdeAjustes));
+}
+
+/** @param {boolean} [desdeAjustes] */
+function _configCalendario(desdeAjustes = true) {
+    return {
+        id: 'calendario',
+        titulo: 'Calendario',
+        idObjetivo: 'card-historico',
+        antes: desdeAjustes ? _cerrarAjustesParaVistaPrevia : undefined,
+        alCerrar: desdeAjustes ? _volverAAjustes : undefined,
+        filas: [
+            { etiqueta: 'Estilo', icono: '#icon-calendar-simple', valor: () => EstiloCalendario.etiqueta(), alTocar: toggleEstiloCalendario }
+        ]
+    };
+}
+
+// El tema no tiene tarjeta ni filas: se ve toda la página y se elige con círculos de color. Se abre desde el encabezado (mantener y soltar, ver header-posicion.js),
+// desde el botón de tema del selector de perfiles (que se oculta mientras, conservando su entrada del historial, y se reabre al terminar) o pasando a él desde las otras vistas
+/** @param {boolean} [desdeSelector] con true (el botón del selector de perfiles) hay un modal que cerrar y al que volver */
+function _configTema(desdeSelector = false) {
+    return {
+        id: 'tema',
+        titulo: 'Tema',
+        sinVelo: true,
+        antes: desdeSelector ? () => GestorModales.cerrar('modal-selector-perfiles', null, { sinHistorial: true }) : undefined,
+        alCerrar: desdeSelector ? () => GestorModales.abrir('modal-selector-perfiles', null, { sinHistorial: true }) : undefined,
+        filas: [],
+        circulos: { opciones: GestorTemas.muestras(), actual: () => GestorTemas.temaGuardado(), alElegir: elegirTema }
+    };
+}
+
+// Las tres vistas previas están integradas: desde el panel se pasa de una a otra (tocando las flechas del título o deslizando en pantallas táctiles)
+VistaPrevia.registrarVista('tarjeta', () => _configTarjeta(false));
+VistaPrevia.registrarVista('calendario', () => _configCalendario(false));
+VistaPrevia.registrarVista('tema', () => _configTema());
+VistaPrevia.definirOrden(['tarjeta', 'calendario', 'tema']);
+
+/** PC (mouse): mismo criterio que .config-solo-pc / .config-solo-movil en responsivo-movimiento.css. Las subopciones de la línea de tiempo se muestran según el dispositivo. */
+const _esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+// Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
+function toggleDisposicionLinea() {
+    TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteDisposicion());   // lo que se mueve en la tarjeta viaja a su lugar nuevo
+}
+
+function toggleDisposicionAnillo() {
+    TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteAnillo());
+}
+
+function toggleMosaicosLinea() {
+    TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteMosaicos());
+}
+
+function toggleAnimacionHint() {
+    const siguiente = _MODOS_ANIM_HINT[(_MODOS_ANIM_HINT.indexOf(_modoAnimHint()) + 1) % _MODOS_ANIM_HINT.length];
+    Preferencias.CICLO_HINT_AUTO.set(siguiente !== 'off');
+    if (siguiente !== 'off') Preferencias.DESC_HITOS_NUMERO.set(siguiente === 'texto');
     EventosApp.emit('config:hint-integrado');
     actualizarUI();
 }
 
 const { toggle: toggleMetricaUso, actualizarEstado: actualizarEstadoBotonMetricaUso } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.STATS_HABILITADO, v),
+        getVal: () => Preferencias.STATS_HABILITADO.get(),
+        setVal: (v) => Preferencias.STATS_HABILITADO.set(v),
         btnId: 'btn-toggle-metrica-uso',
     });
 
 function actualizarEstadoBotonAplicarHoras() {
-    const modoGlobal = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+    const modoGlobal = Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get();
     _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
 }
 
@@ -143,19 +263,19 @@ async function aplicarHorasConfiguradasATodos() {
     }
 
     const confirmado = await GestorModales.confirmar(
-        `Se va a reemplazar el objetivo horario de ${totalRegistros} registro${TiempoUtils.pluralizar(totalRegistros)} existente${TiempoUtils.pluralizar(totalRegistros)} por ${TiempoUtils.horasATexto(horas, 'short')}.`,
+        `Se va a reemplazar el objetivo horario de ${TiempoUtils.contar(totalRegistros, 'registro')} existente${TiempoUtils.pluralizar(totalRegistros)} por ${TiempoUtils.horasATexto(horas, 'short')}.`,
         'Aplicar',
         '#icon-aplicar-horas'
     );
     if (!confirmado) return;
 
-    const { aplicados, creditosRecalculados } = Compensatorios.aplicarHorasATodosLosRegistros();
+    const { aplicados, creditosRecalculados } = Objetivos.aplicarHorasATodosLosRegistros();
     const guardado = await EstadoApp.guardarYActualizar();
     if (guardado) {
         actualizarUI();
         _reprogramarPushDebounced();
         let mensaje = aplicados > 0
-            ? `Objetivo actualizado en ${aplicados} registro${TiempoUtils.pluralizar(aplicados)}`
+            ? `Objetivo actualizado en ${TiempoUtils.contar(aplicados, 'registro')}`
             : 'Los registros ya tenían este objetivo';
         if (creditosRecalculados > 0) {
             mensaje += ` (${creditosRecalculados} con Salida Temprana recalculada)`;
@@ -204,15 +324,10 @@ function toggleReducirAnimaciones() {
     actualizarHintAnimaciones();
 }
 
-function actualizarHintEstiloCalendario() {
-    const lbl = $('hint-estilo-calendario-label');
-    if (lbl) lbl.textContent = EstiloCalendario.etiqueta();
-}
-
 // Cada toque pasa al estilo siguiente; el CSS reacciona solo al atributo de <html>, así que el calendario cambia al instante
 function toggleEstiloCalendario() {
-    EstiloCalendario.siguiente();
-    actualizarHintEstiloCalendario();
+    // los estilos miden distinto (el alto de las celdas cambia): la tarjeta de Registros acompaña el cambio con una transición de alto
+    Animaciones._animarAlturaCambio($('card-historico'), () => EstiloCalendario.siguiente());
 }
 
 function _refrescarTogglesConfig() {
@@ -221,7 +336,11 @@ function _refrescarTogglesConfig() {
     actualizarEstadoBotonObjetivoPorRegistro();
     actualizarEstadoBotonAplicarHoras();
     actualizarHintAnimaciones();
-    actualizarHintEstiloCalendario();
+    // Un respaldo restaurado puede cambiarlos sin recargar la app
+    actualizarEstadoBotonFormatoCortoStats();
+    actualizarEstadoBotonHoverPopup();
+    actualizarEstadoBotonRuedaCalendario();
+    actualizarEstadoBotonPersistir();
 }
 
 function _precargarCamposConfig() {
@@ -239,13 +358,6 @@ function _precargarCamposConfig() {
     actualizarFeedbackConfig();
     _refrescarTogglesConfig();
     actualizarEstadoBotonNotificaciones();
-    const lbl = $('hint-fondo-label');
-    if (lbl) lbl.textContent = _getLabelFondo(getFondoCard());
-}
-
-// Abre los ajustes directamente (sin pasar por el selector de perfiles)
-function abrirConfig() {
-    GestorModales.abrir('modal-config', _precargarCamposConfig);
 }
 
 function mostrarconfig() {
@@ -299,7 +411,7 @@ function actualizarFeedbackConfig() {
         const diasVigentes = [...EstadoApp.diasHabiles()].sort((a, b) => a - b);
         const huboCambio = nuevosDias.length !== diasVigentes.length
             || nuevosDias.some((d, i) => d !== diasVigentes[i]);
-        if (huboCambio) Compensatorios.registrarCambioDiasHabiles(nuevosDias);
+        if (huboCambio) DiasHabiles.registrarCambioDiasHabiles(nuevosDias);
         EstadoApp.guardarYActualizar();
         if (huboCambio) _reprogramarPushDebounced();
     }
@@ -347,19 +459,23 @@ function formatearInput(e) {
 }
 
 function bindEventos() {
-    $('btn-toggle-ignorar-tf')?.addEventListener('click', () => toggleIgnorarTiempoFuera());
-    $('btn-toggle-hover-popup')?.addEventListener('click', () => toggleHoverPopupCalendario());
-    $('btn-toggle-animaciones')?.addEventListener('click', () => toggleReducirAnimaciones());
-    $('btn-estilo-calendario')?.addEventListener('click', () => toggleEstiloCalendario());
-    $('btn-toggle-logica-cubierto')?.addEventListener('click', () => toggleLogicaCubierto());
-    $('btn-toggle-objetivo-registro')?.addEventListener('click', () => toggleObjetivoPorRegistro());
-    $('btn-toggle-rueda-calendario')?.addEventListener('click', () => toggleRuedaCalendario());
-    $('btn-toggle-hint-integrado')?.addEventListener('click', () => toggleHintIntegrado());
-    $('btn-toggle-metrica-uso')?.addEventListener('click', () => toggleMetricaUso());
-    $('btn-toggle-formato-corto-stats')?.addEventListener('click', () => toggleFormatoCortoStats());
-    $('btn-aplicar-horas-todos')?.addEventListener('click', () => aplicarHorasConfiguradasATodos());
-    $('btn-ayuda-perfiles')?.addEventListener('click', () => abrirModalAyuda());
-    $('btn-ayuda-config')?.addEventListener('click', () => abrirModalAyuda());
+    VistaPrevia.bindEventos();
+    alClic({
+        'btn-toggle-ignorar-tf': () => toggleIgnorarTiempoFuera(),
+        'btn-toggle-hover-popup': () => toggleHoverPopupCalendario(),
+        'btn-toggle-animaciones': () => toggleReducirAnimaciones(),
+        // las dos abren la vista previa en vivo: los estilos, subopciones y el fondo se eligen ahí
+        'btn-personalizar-tarjeta': () => abrirVistaPreviaTarjeta(),
+        'btn-personalizar-calendario': () => abrirVistaPreviaCalendario(),
+        'btn-toggle-logica-cubierto': () => toggleLogicaCubierto(),
+        'btn-toggle-objetivo-registro': () => toggleObjetivoPorRegistro(),
+        'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
+        'btn-toggle-metrica-uso': () => toggleMetricaUso(),
+        'btn-toggle-formato-corto-stats': () => toggleFormatoCortoStats(),
+        'btn-aplicar-horas-todos': () => aplicarHorasConfiguradasATodos(),
+        'btn-ayuda-perfiles': () => abrirModalAyuda(),
+        'btn-ayuda-config': () => abrirModalAyuda(),
+    });
     document.querySelector('#modal-ayuda .btn-cancel')?.addEventListener('click', () => cerrarModalAyuda());
     AyudaBuscador.bindEventos();
     $('ayuda-indice')?.addEventListener('click', (e) => {
@@ -381,14 +497,15 @@ function bindEventos() {
     if (btnObjetivoInc) pressHoldObjetivoEdicion.vincular(btnObjetivoInc, 0.5);
     if (btnObjetivoDec) pressHoldObjetivoEdicion.vincular(btnObjetivoDec, -0.5);
     document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => mostrarconfig());
-    $('theme-toggle-modal')?.addEventListener('click', () => alternarTema());
+    // en el selector de perfiles el botón de tema abre la personalización del tema; el de Ajustes (que solo se ve en el onboarding) sigue cambiando el tema directo
+    $('theme-toggle-modal')?.addEventListener('click', () => { if (!VistaPrevia.activa()) VistaPrevia.abrir(_configTema(true)); });
     $('theme-toggle-config')?.addEventListener('click', () => alternarTema());
 }
 
 export const Configuracion = {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
-    abrirModalAyuda, abrirConfig, alternarTema, cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
+    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+    cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
     pressHoldObjetivoEdicion, formatearInput, bindEventos
 };

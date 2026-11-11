@@ -1,4 +1,4 @@
-// Sube la versión de la app: APP_VERSION (src/core/constantes.js) y CACHE_NAME (sw.js).
+// Sube la versión de la app: APP_VERSION (src/core/constantes.js) y CACHE_NAME (sw.js), y actualiza la lista de módulos de sw.js.
 // Formato: vAAMMDD (versión visible) y vAAMMDD.HHMM (caché del Service Worker).
 // Uso: npm run release   (después: npm test, que valida que ambas coincidan y que sw.js liste todos los módulos)
 import fs from 'node:fs';
@@ -17,6 +17,14 @@ function reemplazar(archivo, regex, nuevo) {
 }
 
 reemplazar('src/core/constantes.js', /(APP_VERSION\s*=\s*')[^']+(')/, `$1${version}$2`);
+// Lista de módulos de sw.js: todo lo que hay en src/ (el resto de la lista, estilos e íconos, se mantiene a mano)
+function modulosDe(dir) {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e =>
+        e.isDirectory() ? modulosDe(`${dir}/${e.name}`) : e.name.endsWith('.js') ? [`${dir}/${e.name}`] : []);
+}
+const lineasModulos = modulosDe('src').sort().map(ruta => `  './${ruta}',`).join('\n');
+reemplazar('sw.js', /(?:  '\.\/src\/[^\n]*\n)+/, () => `${lineasModulos}\n`);
+
 reemplazar('sw.js', /(CACHE_NAME\s*=\s*`\$\{CACHE_PREFIX\})[^`]+(-cache`)/, `$1${cache}$2`);
 
 console.log(`APP_VERSION = ${version}\nCACHE_NAME  = horarios-${cache}-cache`);

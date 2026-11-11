@@ -1,3 +1,4 @@
+import { DIAS_HABILES_DEFAULT, HORAS_DIARIAS_DEFAULT, MINUTOS_DIA } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { TiposRegistro } from './tipos-registro.js';
@@ -39,6 +40,7 @@ import { TiposRegistro } from './tipos-registro.js';
  * @property {() => string} temaGuardado
  * @property {() => string} obtenerNombrePerfilSafe
  * @property {(vista: string, fn: () => any) => any} forzarVista
+ * @property {(fn: () => any) => any} cambiarConFundido redibuja la tarjeta de estado con el mismo fundido de todo su contenido que el cambio de día a semana
  * @property {(...args: any[]) => void} abrirModal
  * @property {(...args: any[]) => void} actualizarEstadoBotonTimerMain
  * @property {(...args: any[]) => void} actualizarHintGrupo
@@ -82,6 +84,7 @@ let notify = {
     confirmarModal: async () => false,
     descargarJSON: () => { },
     forzarVista: (vista, fn) => fn(),
+    cambiarConFundido: (fn) => fn(),
     formularioRegistro: {
         leer: () => ({ fecha: '', entrada: '', salida: '' }),
         escribir: () => { },
@@ -121,8 +124,8 @@ function configurarNotificaciones(handlers) {
 }
 
 let registros = [];
-let diasHabiles = [1, 2, 3, 4, 5];
-let horasDiarias = 7;
+let diasHabiles = [...DIAS_HABILES_DEFAULT];
+let horasDiarias = HORAS_DIARIAS_DEFAULT;
 let editandoId = null;
 let vistaActual = 'diaria';
 let ignorarTiempoFuera = false;
@@ -196,16 +199,22 @@ function calcularHoras(e, s, tf = null, cr = null, esCalculoTemporal = false) {
     const minutosEntrada = hE * 60 + mE;
     const minutosSalida = hS * 60 + mS;
     let minTotal = minutosSalida - minutosEntrada;
-    if (minTotal < 0) minTotal += 24 * 60;
+    if (minTotal < 0) minTotal += MINUTOS_DIA;
     let minNeto = (minTotal - tfMinutos) + crMinutos;
     if (minNeto < 0) minNeto = 0;
 
     return { horas: Math.floor(minNeto / 60), minutos: minNeto % 60, total: minNeto / 60 };
 }
 
+/** Horas de una jornada abierta hasta este momento, sin contar lo que lleva la pausa en curso. */
+function horasTranscurridas(reg, minutosFuera = 0) {
+    const t = calcularHoras(reg.entrada, TiempoUtils.obtenerHoraActual(), reg.tiempoFuera || null, null, true);
+    return Math.max(0, (t ? t.total : 0) - (minutosFuera / 60));
+}
+
 /** @param {any} [tf] @param {any} [cr] */
-function _aplicarCalculoHoras(r, e, s, tf = null, cr = null, calcularFn = calcularHoras) {
-    const t = calcularFn(e, s, tf, cr);
+function _aplicarCalculoHoras(r, e, s, tf = null, cr = null) {
+    const t = calcularHoras(e, s, tf, cr);
     r.horas = t?.horas || 0; r.minutos = t?.minutos || 0; r.total = t?.total || 0;
     return t;
 }
@@ -225,35 +234,37 @@ function _construirRegistro(fecha, entrada, salida) {
     };
 }
 
-/** @param {any} [idNuevo] */
-async function guardarYActualizar(idNuevo = null, animarCard = false) {
-    let saveSuccessful = false;
+function _persistir() {
+    let guardado = false;
     try {
-        if (typeof _perfilHooks.guardarDatosPerfilActual === 'function') {
-            saveSuccessful = _perfilHooks.guardarDatosPerfilActual();
-        } else {
-            saveSuccessful = true;
-        }
+        guardado = typeof _perfilHooks.guardarDatosPerfilActual === 'function' ? _perfilHooks.guardarDatosPerfilActual() : true;
     } catch (e) {
         console.error('Error crítico al guardar:', e);
-        saveSuccessful = false;
     }
-    if (saveSuccessful) { notify.actualizarUI(idNuevo, false, animarCard); }
-    else { notify.mostrarToast('Error al guardar. Almacenamiento lleno o bloqueado.', 'error'); }
-    return saveSuccessful;
+    if (!guardado) notify.mostrarToast('Error al guardar. Almacenamiento lleno o bloqueado.', 'error');
+    return guardado;
 }
 
-/** @param {any} [fase] */
+/** @param {any} [idNuevo] */
+async function guardarYActualizar(idNuevo = null, animarCard = false) {
+    const guardado = _persistir();
+    if (guardado) notify.actualizarUI(idNuevo, false, animarCard);
+    return guardado;
+}
+
+/**
+ * Se guarda antes de tocar la vista: el cambio a la vista diaria se anima, y cerrar la app en ese momento no debe perder el dato.
+ * @param {any} [fase]
+ */
 async function _guardarConCicloSiHoy(idOrIds, esHoy, fase = null) {
-    const ejecutar = async () => {
+    if (!_persistir()) return false;
+    const refrescar = () => {
         if (esHoy && fase) notify.prepararMostrarFaseAlRenderizar(fase);
-        const ok = await guardarYActualizar(idOrIds);
-        if (!ok && esHoy && fase) notify.prepararMostrarFaseAlRenderizar(null);
-        return ok;
+        notify.actualizarUI(idOrIds);
     };
-    return esHoy && vistaActual === 'semana'
-        ? notify.forzarVista('diaria', ejecutar)
-        : ejecutar();
+    if (esHoy && vistaActual === 'semana') await notify.forzarVista('diaria', refrescar);
+    else refrescar();
+    return true;
 }
 
 export const EstadoApp = {
@@ -294,6 +305,7 @@ export const EstadoApp = {
     _hayEspacioParaRegistros,
     _fechaFuturaInvalida,
     calcularHoras,
+    horasTranscurridas,
     _aplicarCalculoHoras,
     _recalcularHorasSiValido,
     _construirRegistro,

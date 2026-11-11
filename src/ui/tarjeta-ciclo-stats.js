@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, superaUnaLinea } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Animaciones } from './animaciones.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
@@ -9,7 +9,7 @@ import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 // Ciclo de textos del número grande de la tarjeta en la vista diaria: horas → "Entrada 08:30" → "Salida 17:00" (registro cerrado)
 // → (con el registro abierto: salida estimada → salida con banco) → "Tiempo fuera 25m" → horas. Con el hint integrado (`hitosEnBarra`) la barra ya muestra la entrada, la salida y, con el registro abierto,
 // la salida estimada y la salida con banco, cada una con su descripción: esas fases no cambian el texto (queda el de las horas) y solo resaltan su hito.
-// Con la variante B del hint integrado (Ajustes) cada hito escribe su nombre y su hora en el número grande ("Entrada 08:30", "Salida estimada 17:00" —"Salida est." si no entra en una línea—, "Con banco 16:52") en lugar de desplegarlos en la barra. El tiempo fuera no tiene hito en la barra, siempre se muestra como texto y cierra el ciclo. Sin el hint integrado, entrada y salida se muestran como texto.
+// Con la variante B del hint integrado (Ajustes) cada hito escribe su nombre y su hora en el número grande ("Entrada 08:30", "Salida estimada 17:00" —"S. estimada" si no entra en una línea—, "Con banco 16:52") en lugar de desplegarlos en la barra. El tiempo fuera no tiene hito en la barra, siempre se muestra como texto y cierra el ciclo. Sin el hint integrado, entrada y salida se muestran como texto.
 // Cada 2 s. tarjeta-fichaje.js le pasa los datos en cada render y lo inicia/detiene.
 // Cada vez que cambia la fase avisa su tipo (o null al terminar) a quien se registre con `alCambiarFase`: así la barra resalta el hito correspondiente
 // sin que este módulo conozca el DOM de la barra.
@@ -34,7 +34,7 @@ let _cicloStatsFaseAlRenderizar = null;
 let _alCambiarFase = null;
 
 // Todas las fases duran lo mismo (el resalte de un hito tarda ~0,5 s en desplegarse y sobra para leerlo)
-const _CICLO_DURACION_MS = 2000;
+const _CICLO_DURACION_MS = 1500;
 
 function _emitirFase(tipo) {
     if (_alCambiarFase) _alCambiarFase(tipo);
@@ -71,9 +71,7 @@ function _faseHito(tipo, texto, corto) {
 function _escribirTextoFase(el, fase) {
     el.textContent = fase.texto();
     if (!fase.corto) return;
-    const estilo = getComputedStyle(el);
-    const alto = parseFloat(estilo.lineHeight) || parseFloat(estilo.fontSize) * 1.2;
-    if (Math.max(el.scrollHeight, el.getBoundingClientRect().height) > alto * 1.5) el.textContent = fase.corto();
+    if (superaUnaLinea(el, Math.max(el.scrollHeight, el.getBoundingClientRect().height))) el.textContent = fase.corto();
 }
 
 /** @returns {FaseCiclo[]} */
@@ -86,8 +84,8 @@ function _fasesCiclo() {
     if (_cicloStatsSalida) {
         fases.push(_faseHito('salida', () => `Salida ${_cicloStatsSalida}`));
     }
-    if (_cicloStatsSalidaEstimada) fases.push(_faseHito('salidaEstimada', () => `Salida estimada ${_cicloStatsSalidaEstimada}`, () => `Salida est. ${_cicloStatsSalidaEstimada}`));
-    if (_cicloStatsSalidaBanco) fases.push(_faseHito('banco', () => `Con banco ${_cicloStatsSalidaBanco}`));
+    if (_cicloStatsSalidaEstimada) fases.push(_faseHito('salidaEstimada', () => `Salida estimada ${_cicloStatsSalidaEstimada}`, () => `S. estimada ${_cicloStatsSalidaEstimada}`));
+    if (_cicloStatsSalidaBanco) fases.push(_faseHito('banco', () => `Con banco ${_cicloStatsSalidaBanco}`, () => `Con banco ${_cicloStatsSalidaBanco}`));
     // El tiempo fuera va al final: no es un hito de la barra, y así no corta la secuencia de hitos
     if (_cicloStatsTiempoFuera) {
         fases.push({ tipo: 'tiempoFuera', texto: () => `Tiempo fuera ${_formatearMinutosCorto(TiempoUtils.horaAMinutos(_cicloStatsTiempoFuera))}` });
@@ -154,8 +152,8 @@ function _iniciarCicloEnFase(tipo) {
 }
 
 /**
- * Muestra y mantiene la fase del primer tipo de `tipos` que exista (cursor sobre su hito): detiene el ciclo, escribe su texto en el número grande
- * (con la variante B) y resalta el hito en la barra. Devuelve true si había una fase para mostrar.
+ * Muestra y mantiene la fase del primer tipo de `tipos` que exista (cursor sobre su hito): detiene el ciclo, deja las horas en el número grande
+ * (la descripción se despliega en la barra, sea cual sea la animación elegida) y resalta el hito en la barra. Devuelve true si había una fase para mostrar.
  * @param {string[]} tipos
  */
 function _fijarFase(tipos) {
@@ -166,7 +164,8 @@ function _fijarFase(tipos) {
     _cicloStatsInterval = null;
     _faseFija = fase.tipo;
     const el = $('stats-semana');
-    if (el) _escribirTextoFase(el, fase);
+    // el cursor siempre despliega la descripción en la barra: el número grande queda con las horas aunque el ciclo use el nombre del hito
+    if (el) Animaciones._animarTextoHover(el, () => { el.textContent = _cicloStatsValorHoras; });
     _emitirFase(fase.tipo);
     return true;
 }
@@ -176,7 +175,7 @@ function _soltarFase() {
     if (_faseFija === null) return;
     _faseFija = null;
     const el = $('stats-semana');
-    if (el) el.textContent = _cicloStatsValorHoras;
+    if (el) Animaciones._animarTextoHover(el, () => { el.textContent = _cicloStatsValorHoras; });
     _emitirFase(null);
 }
 

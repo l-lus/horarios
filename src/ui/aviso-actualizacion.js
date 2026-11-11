@@ -22,7 +22,7 @@ export function porcentajeValido(valor) {
 function iniciar() {
     if (_descargando) return;
     _descargando = true;
-    iniciarToastProgreso('Descargando actualización…');
+    iniciarToastProgreso('Descargando actualización');
 }
 
 /** @param {any} porcentaje avance de la descarga, de 0 a 100 */

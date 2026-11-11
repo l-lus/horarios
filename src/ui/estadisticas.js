@@ -1,3 +1,4 @@
+import { Preferencias } from '../core/preferencias.js';
 import { Reportes } from './reportes.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
@@ -85,7 +86,7 @@ function actualizarEstadisticas(mesAnio = null) {
         const [año, mes] = mesAnio.split('-').map(Number);
         const tieneRegs = EstadoApp.registros().some(r => { const [a, m] = r.fecha.split('-').map(Number); return a === año && m === mes; });
         if (!tieneRegs) {
-            mesAnio = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
+            mesAnio = TiempoUtils.claveMes(TiempoUtils.obtenerFechaHoy());
             if (selectMes) selectMes.value = mesAnio;
         }
     }
@@ -204,8 +205,8 @@ function togglePeriodoStats(direccion = 1) {
 }
 
 function poblarSelectorMeses() {
-    const meses = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
-    const mesActual = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
+    const meses = [...new Set(EstadoApp.registros().map(r => TiempoUtils.claveMes(r.fecha)))].sort().reverse();
+    const mesActual = TiempoUtils.claveMes(TiempoUtils.obtenerFechaHoy());
     _poblarSelect('select-mes-stats', meses, TiempoUtils.nombreMesCapitalizado, mesActual, actualizarEstadisticas, TiempoUtils.agruparMesesPorAnio);
 }
 
@@ -266,7 +267,7 @@ function _infoPopupStat(statId) {
         info = conExtra(nota(`Días hábiles: ${diasTexto}.`));
     }
     if (statId === 'stat-tiempo-fuera-total' && info) {
-        const ignorarTF = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+        const ignorarTF = Preferencias.IGNORAR_TF.get();
         info = conExtra(nota(ignorarTF
             ? 'Actualmente NO SE RESTA el tiempo fuera del tiempo total.'
             : 'Actualmente SE RESTA el tiempo fuera del tiempo total.'));

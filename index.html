@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#131314">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self';
          script-src 'self'; 
@@ -51,6 +51,10 @@
         <symbol id="icon-sun" viewBox="0 0 16 16">
             <path
                 d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708" />
+        </symbol>
+        <symbol id="icon-magic" viewBox="0 0 16 16">
+            <path
+                d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2A.5.5 0 0 0 6 2.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10A.5.5 0 1 0 14 9.293L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L8.646 5.94a.5.5 0 0 0 0 .707l.708.708a.5.5 0 0 0 .707 0l1.293-1.293Zm-3 3a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.646 13.94a.5.5 0 0 0 0 .707l.708.708a.5.5 0 0 0 .707 0z" />
         </symbol>
         <symbol id="icon-combine" viewBox="0 0 16 16">
             <path
@@ -241,12 +245,6 @@
             <path
                 d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
         </symbol>
-        <symbol id="icon-cloud-upload" viewBox="0 0 16 16">
-            <path fill-rule="evenodd"
-                d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
-            <path
-                d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
-        </symbol>
         <symbol id="icon-cloud-download" viewBox="0 0 16 16">
             <path fill-rule="evenodd"
                 d="M7.646 10.854a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L8.5 9.293V5.5a.5.5 0 0 0-1 0v3.793L6.354 8.146a.5.5 0 1 0-.708.708z" />
@@ -336,6 +334,33 @@
 
     <div id="toast" class="toast"></div>
 
+    <!-- Vista previa en vivo de las opciones de apariencia (ver ui/vista-previa.js): velo que atenúa la página y panel con los controles -->
+    <div id="vista-previa-velo" class="vista-previa-velo" aria-hidden="true"></div>
+    <section id="vista-previa-panel" class="vista-previa-panel" role="region" aria-label="Vista previa" inert>
+        <div id="vista-previa-filas" class="settings-list"></div>
+        <div class="vista-previa-cabecera">
+            <div id="vista-previa-titulo" class="vista-previa-titulo">
+                <button type="button" id="vista-previa-anterior" class="vista-previa-nav vista-previa-nav-anterior" aria-label="Personalización anterior">
+                    <svg class="icon">
+                        <use href="#icon-chevron-right" />
+                    </svg>
+                </button>
+                <span id="vista-previa-titulo-texto"></span>
+                <button type="button" id="vista-previa-siguiente" class="vista-previa-nav" aria-label="Personalización siguiente">
+                    <svg class="icon">
+                        <use href="#icon-chevron-right" />
+                    </svg>
+                </button>
+            </div>
+            <button type="button" id="vista-previa-listo" class="btn-edit">
+                <svg class="icon">
+                    <use href="#icon-check" />
+                </svg>
+                Listo
+            </button>
+        </div>
+    </section>
+
     <div class="container">
 
         <div class="left-column" id="columna-1">
@@ -343,6 +368,7 @@
                 <div class="stats-card-bg" id="stats-card-bg" aria-hidden="true"></div>
                 <div class="stats-card-content" id="stats-card-content">
                     <h2 id="stats-titulo" class="card-anim">Hoy</h2>
+                    <div id="stats-estilo" class="stats-estilo card-anim"></div>
                     <div class="stats-number" id="stats-semana">
                         <div>Cargando...</div>
                     </div>
@@ -761,25 +787,59 @@
                             </div>
                         </div>
                         <div class="config-actions form-group config-onboarding-hide">
-                            <label>Interfaz</label>
+                            <label>Apariencia</label>
                             <div class="settings-list">
-                                <button id="btn-toggle-fondo">
+                                <button id="btn-personalizar-tarjeta">
                                     <svg class="icon">
-                                        <use href="#icon-landscape" />
+                                        <use href="#icon-eye" />
                                     </svg>
-                                    <span>Fondo</span>
-                                    <span id="hint-fondo-label">Golden Gate</span>
+                                    <span class="settings-list-text">
+                                        <span>Personalizar tarjeta de estado</span>
+                                        <span class="settings-list-desc">Estilo, disposición y fondo. Se prueba en vivo sobre la tarjeta</span>
+                                    </span>
+                                    <svg class="icon icon-indicator">
+                                        <use href="#icon-chevron-right" />
+                                    </svg>
                                 </button>
-                                <button id="btn-estilo-calendario">
+                                <button id="btn-personalizar-calendario">
                                     <svg class="icon">
                                         <use href="#icon-calendar-simple" />
                                     </svg>
                                     <span class="settings-list-text">
-                                        <span>Calendario</span>
-                                        <span class="settings-list-desc">Diseño de los dias</span>
+                                        <span>Personalizar calendario</span>
+                                        <span class="settings-list-desc">Diseño de los días. Se prueba en vivo sobre el calendario</span>
                                     </span>
-                                    <span id="hint-estilo-calendario-label">Legacy</span>
+                                    <svg class="icon icon-indicator">
+                                        <use href="#icon-chevron-right" />
+                                    </svg>
                                 </button>
+                                <button id="btn-toggle-formato-corto-stats">
+                                    <svg class="icon">
+                                        <use href="#icon-replace-swap" />
+                                    </svg>
+                                    <span class="settings-list-text">
+                                        <span>Formato corto</span>
+                                        <span class="settings-list-desc">Muestra las horas y dias abreviados (5h 9m),
+                                            (L, M, X)</span>
+                                    </span>
+                                    <span class="toggle-switch" aria-hidden="true"></span>
+                                </button>
+                                <button id="btn-toggle-animaciones">
+                                    <svg class="icon">
+                                        <use href="#icon-eye" />
+                                    </svg>
+                                    <span class="settings-list-text">
+                                        <span>Reducir animaciones</span>
+                                        <span class="settings-list-desc">Se desactivan la mayoría de las animaciones y
+                                            transiciones suaves</span>
+                                    </span>
+                                    <span id="hint-animaciones-label">Auto</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="config-actions form-group config-onboarding-hide">
+                            <label>Comportamiento</label>
+                            <div class="settings-list">
                                 <button id="btn-toggle-hover-popup" class="config-solo-pc">
                                     <svg class="icon">
                                         <use href="#icon-calendar-simple" />
@@ -812,38 +872,6 @@
                                             tarjetas entre sesiones</span>
                                     </span>
                                     <span class="toggle-switch" aria-hidden="true"></span>
-                                </button>
-                                <button id="btn-toggle-formato-corto-stats">
-                                    <svg class="icon">
-                                        <use href="#icon-replace-swap" />
-                                    </svg>
-                                    <span class="settings-list-text">
-                                        <span>Formato corto</span>
-                                        <span class="settings-list-desc">Muestra las horas y dias abreviados (5h 9m),
-                                            (L, M, X)</span>
-                                    </span>
-                                    <span class="toggle-switch" aria-hidden="true"></span>
-                                </button>
-                                <button id="btn-toggle-hint-integrado">
-                                    <svg class="icon">
-                                        <use href="#icon-eye" />
-                                    </svg>
-                                    <span class="settings-list-text">
-                                        <span>Hint integrado en la barra</span>
-                                        <span class="settings-list-desc">Muestra el registro del día sobre la barra</span>
-                                    </span>
-                                    <span id="hint-integrado-label">B</span>
-                                </button>
-                                <button id="btn-toggle-animaciones">
-                                    <svg class="icon">
-                                        <use href="#icon-eye" />
-                                    </svg>
-                                    <span class="settings-list-text">
-                                        <span>Reducir animaciones</span>
-                                        <span class="settings-list-desc">Se desactivan la mayoría de las animaciones y
-                                            transiciones suaves</span>
-                                    </span>
-                                    <span id="hint-animaciones-label">Auto</span>
                                 </button>
                             </div>
                         </div>
@@ -1113,6 +1141,7 @@
                             <p>- Personalizar la interfaz con temas, fondos y el orden de las tarjetas.</p>
                             <p>- Crear backups locales o sincronizar con token de GitHub Gist.</p>
                             <p>- Instalarla como app en tu dispositivo.</p>
+                            <p>- Actualizarse sola: al detectar una versión nueva muestra el avance de la descarga y, al terminar, te avisa para recargar (en el celular también podés tirar de la página hacia abajo para recargar).</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-fichar">
@@ -1130,7 +1159,8 @@
                         <section class="ayuda-seccion" id="ayuda-sec-colores">
                             <h4>Colores y barra de progreso</h4>
                             <p>Los colores indican cómo viene cada jornada. Se usan en la insignia y el borde de la
-                                tarjeta principal, en la barra de progreso, en la lista de registros y en el
+                                tarjeta principal, en el borde del encabezado (siempre visible, del lado que da a las
+                                tarjetas), en la barra de progreso, en la lista de registros y en el
                                 calendario:</p>
                             <p class="ayuda-color-fila"><span class="ayuda-color ayuda-color--blue"
                                     aria-hidden="true"></span><span><strong>Azul:</strong> jornada en curso, todavía sin
@@ -1154,13 +1184,13 @@
                             <p class="ayuda-color-fila"><span class="ayuda-color ayuda-color--vacio"
                                     aria-hidden="true"></span><span><strong>Sin color:</strong> en la vista semanal, un
                                     día sin registro, sin salida registrada o que todavía no llegó.</span></p>
-                            <p><strong>Barra del día:</strong> con <em>Hint integrado</em> activo (Ajustes →
-                                Interfaz), la barra lleva marcas con flecha y hora: la <strong>entrada</strong>, la
+                            <p><strong>Barra del día:</strong> con el estilo <em>Barra con hitos</em> (Ajustes →
+                                Tarjeta de estado), la barra lleva marcas con flecha y hora: la <strong>entrada</strong>, la
                                 <strong>salida estimada</strong> (cuando cumplís tu objetivo) y, si tenés horas extra o
                                 faltantes en la semana, la <strong>salida con banco de horas</strong>. La barra es azul
                                 hasta la primera salida, toma el color del banco entre ambas (verde o dorado si te
                                 sobran horas, rojo si te faltan) y pasa a verde al superar la última. Al cerrar el
-                                registro, la marca de salida pasa a la hora real. Si lo desactivás, esos datos se
+                                registro, la marca de salida pasa a la hora real. Con el estilo <em>Clásica</em>, esos datos se
                                 muestran como texto debajo de la barra. En PC, al pasar el cursor sobre una marca se
                                 muestra su texto, igual que en la animación de la tarjeta; en la vista semanal, al pasarlo
                                 por la franja de un día se ven su total, su entrada y su salida (en el celular no
@@ -1204,10 +1234,10 @@
                                 filtrarlos por fecha o tipo, deshacer y rehacer cambios (también con Ctrl+Z / Ctrl+Y) y
                                 tocar cualquiera para editarlo o borrarlo.</p>
                             <p>En el calendario podés deslizar para cambiar de mes. En PC también podés usar la rueda
-                                del mouse sobre los días (se puede desactivar en Ajustes → Interfaz → <strong>Rueda para
+                                del mouse sobre los días (se puede desactivar en Ajustes → Calendario → <strong>Rueda para
                                     cambiar de mes</strong>) o <strong>Alt + rueda</strong> sobre cualquier parte del
                                 calendario, que funciona aunque esa opción esté desactivada. También podés activar
-                                <strong>Auto popup calendario</strong> (Ajustes → Interfaz) para ver el resumen de un
+                                <strong>Auto popup calendario</strong> (Ajustes → Calendario) para ver el resumen de un
                                 día
                                 con solo pasar el mouse por encima.
                             </p>
@@ -1283,14 +1313,14 @@
                             <h4>Perfiles</h4>
                             <p>Podés tener hasta 9 perfiles (por ejemplo, distintos trabajos), cada uno con sus propios
                                 registros, objetivos, notificaciones, opciones de estadísticas, fondo y orden de
-                                tarjetas. Se cambia de perfil desde el botón situado en el borde superior derecho de la
-                                app: tocá el que quieras usar y queda marcado como <strong>Activo</strong>.</p>
+                                tarjetas. Se cambia de perfil desde el botón del encabezado (arriba a la derecha, o donde lo hayas
+                                puesto, ver <em>Encabezado</em> en Ajustes): tocá el que quieras usar y queda marcado como <strong>Activo</strong>.</p>
                             <p>Para crear uno nuevo, tocá el botón del maletín con "+" que está sobre la línea de abajo para
                                 mostrar "Agregar perfil", escribí el nombre y tocá el botón de al lado.
                                 Con el lápiz de cada perfil podés renombrarlo o eliminarlo.</p>
                             <p>El tema, el formato de tiempo corto, el popup y la rueda del calendario, el hint
                                 integrado,
-                                reducir animaciones, recordar el estado de las tarjetas y el token de GitHub son comunes
+                                reducir animaciones, recordar el estado de las tarjetas, la posición del encabezado y el token de GitHub son comunes
                                 a todos los perfiles.</p>
                         </section>
 
@@ -1303,31 +1333,48 @@
                             <p><strong>Días laborales:</strong> los días de la semana que trabajás, con el total
                                 semanal. <em>Historial de días laborales</em> permite ver y editar los tramos, es decir,
                                 desde qué fecha rige cada combinación de días.</p>
-                            <p><strong>Interfaz:</strong> fondo de la tarjeta principal, Auto popup calendario (PC),
-                                Rueda para cambiar de mes (PC), Estilo de los días (cómo se dibujan en el calendario los
-                                días con registro), Recordar estado de tarjetas (mantiene expandidas o
-                                colapsadas las tarjetas entre sesiones), Formato de tiempo corto (5h 9m en vez de horas
-                                completas), Hint integrado en la barra (muestra la entrada, la salida estimada y la
-                                salida con banco de horas sobre la barra, o las siglas de cada día en la semana; con
-                                un toque cambia entre No, A —cada hito con su descripción en la barra— y B —el nombre
-                                del hito, como "Entrada 08:30", en el número grande—) y
-                                Reducir animaciones (Auto sigue la configuración del dispositivo, o se fuerza activada o
-                                desactivada). Las opciones de PC se ocultan en dispositivos táctiles.</p>
+                            <p><strong>Apariencia:</strong> Formato de tiempo corto (5h 9m en vez
+                                de horas completas), Reducir animaciones (Auto sigue la configuración del
+                                dispositivo, o se fuerza activada o desactivada), Personalizar tarjeta de estado y
+                                Personalizar calendario (ver más abajo).</p>
+                            <p><strong>Comportamiento:</strong> Auto popup calendario (PC), Rueda para cambiar de mes (PC) y Recordar estado de
+                                tarjetas (mantiene expandidas o colapsadas las tarjetas entre sesiones). Las opciones de
+                                PC se ocultan en dispositivos táctiles. El estilo de los días se elige en
+                                <em>Personalizar calendario</em>, en Apariencia.</p>
+                            <p><strong>Personalizar tarjeta de estado:</strong> al tocar la opción (en Apariencia) se cierra Ajustes y la tarjeta queda a la vista (con scroll si hace falta) con un panel abajo para ir probando en vivo su <em>Estilo</em> y su <em>Fondo</em> (y las subopciones de cada estilo); <em>Listo</em>, tocar fuera de la tarjeta o el botón Atrás vuelven a Ajustes con lo elegido. Lo mismo ocurre con <em>Personalizar calendario</em>, que prueba el estilo de los días sobre el calendario de Registros. En el panel, cada toque pasa a la opción siguiente. Con las flechas a los costados del título (o deslizando el panel en pantallas táctiles, o con la rueda del mouse sobre él) pasás entre las vistas <em>Tarjeta de estado</em>, <em>Calendario</em> y <em>Tema</em> sin volver a Ajustes.
+                                <em>Barra con hitos</em> muestra la entrada, la salida estimada y la salida con banco de
+                                horas sobre la barra, o las siglas de cada día en la semana; <em>Clásica</em> es la barra
+                                con esos datos como texto debajo. <em>Anillo</em>, <em>Línea de tiempo</em> y
+                                <em>Lista de filas</em> reemplazan la vista del día por otro diseño
+                                (con la fila o el dato del tiempo fuera cuando lo hay) y también tienen su versión de la
+                                semana, con el total, lo que falta y el resultado de cada día; el Anillo mantiene siempre el mismo alto; la Línea de
+                                tiempo reserva el alto de la vista semanal, así la tarjeta no cambia de tamaño al alternar entre el día y la semana; y la Lista de filas ajusta el alto al contenido con una transición suave. Con <em>Línea de tiempo</em> aparece, en PC, <em>Disposición</em>: con la tarjeta ancha el tiempo
+                                trabajado puede ir arriba de la línea o a su izquierda o derecha, o los mosaicos <em>Faltan y Banco de horas</em> pueden ir apilados a la izquierda o a la derecha; y en el móvil <em>Disposición</em> deja <em>Faltan y Banco de horas</em> en fila abajo (<em>Horizontal</em>) o apilados a la derecha de la línea (<em>Vertical</em>, el predeterminado) (cada opción se muestra solo en el dispositivo que corresponde). Con <em>Barra con hitos</em> aparece <em>Animación</em>,
+                                que cambia entre Desactivado —sin ciclo automático al tocar el número—, Barra —cada
+                                hito con su descripción en la barra— y Texto —el nombre del hito, como "Entrada 08:30",
+                                en el número grande—.</p>
                             <p><strong>Tarjetas y posición:</strong> mostrá u ocultá Fichar, Estadísticas y
-                                Registros (la tarjeta de estado, la de "Hoy", no se puede ocultar pero sí mover).
+                                Registros, y elegí si se recuerda su estado entre sesiones (la tarjeta de estado, la de "Hoy", no se puede ocultar pero sí mover).
                                 Para reubicarlas, mantené presionado el encabezado de la tarjeta (en la de estado,
                                 la tarjeta entera) y arrastrala. En PC la ubicás donde sueltes: en cualquier columna
                                 y entre las tarjetas que ya hay. Si la llevás hasta el borde derecho se abre una
-                                columna nueva (hasta 3, en pantallas anchas, y la página se ensancha); la columna que
+                                columna nueva (hasta 2 columnas entre 1024 y 1399 px de ancho y hasta 3 desde 1400 px, donde la página se ensancha); la columna que
                                 se queda sin tarjetas desaparece, y un movimiento nunca deja todo en una sola
-                                columna. Con teclado, Alt + flechas sobre la tarjeta. El orden de PC y el del celular
+                                columna. En la tarjeta de estado y en el encabezado de Registros, mantener y soltar sin mover (hasta 1 segundo
+                                después de que la tarjeta se levanta) abre la vista previa de su estilo. Con teclado, Alt + flechas sobre la tarjeta. El orden del celular (1 columna), el de PC con 2 columnas y el de PC con 3 columnas
                                 son independientes: el que ves acá es el del modo en el que estás ahora.</p>
                             <p><strong>Estadísticas:</strong> "No descontar tiempo fuera" (las salidas no restan del
                                 total), "No cubrir con banco de horas" (el banco no compensa automáticamente lo que
                                 falta para el objetivo) y "Objetivo diario global" (aplica el mismo objetivo a todos los
                                 registros en vez de definirlo por día).</p>
-                            <p><strong>Tema:</strong> el botón de tema (en Perfiles y en Ajustes) recorre claro, oscuro,
-                                medianoche, rosa, verde, azul, lila y crema.</p>
+                            <p><strong>Encabezado:</strong> mantené presionado el encabezado (en un lugar que no sea un botón) y
+                                arrastralo: se pone en el borde más cercano (arriba, abajo, a la izquierda o a la derecha en PC; arriba
+                                o abajo en el celular) y las tarjetas se acomodan. Escape cancela. La posición de PC y la del celular
+                                se guardan por separado. Su borde toma el color del estado del registro (el mismo de la barra de progreso).</p>
+                            <p><strong>Tema:</strong> en Ajustes, el botón de tema recorre claro, oscuro,
+                                medianoche, rosa, verde, azul, lila y crema. En Perfiles, el botón con la varita abre
+                                <em>Personalizar tema</em>: una vista previa en vivo donde se elige el color con círculos (Atrás
+                                vuelve a Perfiles). También se abre manteniendo presionado el encabezado y soltando sin mover.</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-datos">
@@ -1346,15 +1393,17 @@
                             <p>El archivo incluye además tu configuración: horas diarias, días laborales e historial, y
                                 las
                                 opciones <em>No descontar tiempo fuera</em>, <em>No cubrir con banco de horas</em>,
-                                <em>Objetivo diario global</em>, <em>Reducir animaciones</em> y <em>Hint integrado</em>,
-                                más el orden y la visibilidad de las tarjetas (estos se aplican al
-                                <strong>Reemplazar</strong>, no al Combinar).
+                                <em>Objetivo diario global</em>, <em>Reducir animaciones</em>, el <em>estilo de la tarjeta de estado</em> y su
+                                fondo, el <em>estilo del calendario</em>, el formato de tiempo corto y las demás opciones de
+                                apariencia, más la posición del encabezado (PC y celular) y el orden y la visibilidad de las tarjetas (el del celular, el de PC con 2 columnas y el de PC con 3 por separado; estos se aplican al
+                                <strong>Reemplazar</strong>, no al Combinar). El color del <em>tema</em> no se incluye: es de cada dispositivo.
                             </p>
                             <p>Con <strong>Restaurar</strong> importás un backup en este u otro dispositivo: elegís el
                                 archivo y decidís si querés <strong>Combinar</strong> (une el archivo con tus datos
                                 locales) o <strong>Reemplazar</strong> (sustituye tus datos locales).</p>
                             <p><strong>Restablecer</strong> elimina los registros del perfil activo y devuelve su
-                                configuración a los valores por defecto, sin afectar a los demás perfiles. Antes te pide
+                                configuración, incluida la apariencia de la app, a los valores por defecto. Los demás
+                                perfiles conservan sus registros. Antes te pide
                                 confirmación.</p>
                         </section>
 
@@ -1957,9 +2006,9 @@
                         </svg>
                         Ajustes
                     </button>
-                    <button class="time-btn" id="theme-toggle-modal" title="Cambiar tema">
+                    <button class="time-btn" id="theme-toggle-modal" title="Personalizar">
                         <svg class="icon">
-                            <use href="#icon-moon" />
+                            <use href="#icon-magic" />
                         </svg>
                     </button>
                 </div>

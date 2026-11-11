@@ -145,8 +145,8 @@ function handleOutsideClick(event) {
     }
 }
 
-/** @param {any} [callback] */
-function abrir(modalId, callback = null) {
+/** @param {any} [callback] @param {{ sinHistorial?: boolean }} [opciones] con sinHistorial no agrega entrada al historial (se reutiliza la que dejó `cerrar` con sinHistorial) */
+function abrir(modalId, callback = null, opciones = {}) {
     const modal = $(modalId);
     if (!modal) return;
 
@@ -156,7 +156,7 @@ function abrir(modalId, callback = null) {
     modal.classList.add('show');
     document.body.classList.add('modal-open');
 
-    if (!_navegandoHaciaAtras && !_enAlternanciaHaciaAtras) {
+    if (!_navegandoHaciaAtras && !_enAlternanciaHaciaAtras && !opciones.sinHistorial) {
         history.pushState({ modalId: modalId }, "");
     }
 
@@ -166,8 +166,8 @@ function abrir(modalId, callback = null) {
     }, 100);
 }
 
-/** @param {any} [callback] */
-function cerrar(modalId, callback = null) {
+/** @param {any} [callback] @param {{ sinHistorial?: boolean }} [opciones] con sinHistorial el modal se oculta pero su entrada del historial queda (para reabrirlo enseguida sin empujar otra: Chrome salta las entradas agregadas sin gesto del usuario) */
+function cerrar(modalId, callback = null, opciones = {}) {
     const modal = $(modalId);
     if (!modal) return;
 
@@ -186,7 +186,7 @@ function cerrar(modalId, callback = null) {
     modal.removeEventListener('mousedown', _handleOverlayMousedown);
     modal.removeEventListener('click', handleOutsideClick);
 
-    if (estabaAbierto && !_navegandoHaciaAtras && !_enAlternanciaHaciaAdelante) {
+    if (estabaAbierto && !_navegandoHaciaAtras && !_enAlternanciaHaciaAdelante && !opciones.sinHistorial) {
         _ignorarProximoPopstate();
         history.back();
     }

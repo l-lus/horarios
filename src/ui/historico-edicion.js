@@ -1,3 +1,4 @@
+import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $, setColapsable } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
@@ -9,12 +10,14 @@ import { UIBase } from './base.js';
 import { Calendario } from './calendario.js';
 import { Configuracion } from './configuracion.js';
 import { html, icono } from '../core/html.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { _crearPopupFlotante } from './popups.js';
 import { mostrarToast } from './toast.js';
+import { Objetivos } from '../services/objetivos.js';
+import { EdicionGrupo } from '../services/edicion-grupo.js';
+import { Filtros } from '../services/filtros.js';
+import { VistaPrevia } from './vista-previa.js';
 
 // ====================================================================
 //           UI HISTORY EDIT, FILTERS & HEADER ACTIONS MODULE
@@ -68,7 +71,7 @@ function setBloqueoEdicion(bloqueado) {
         excluirBotones: 'button:not(#btn-lock-toggle):not(.btn-cancel):not(#btn-toggle-credito)'
     });
 
-    const enModoGlobal = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true);
+    const enModoGlobal = Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get();
     const elObjetivo = $('edit-objetivo');
     const objetivoDeshabilitado = bloqueado || enModoGlobal;
     [$('btn-edit-objetivo-inc'), $('btn-edit-objetivo-dec')].forEach(btn => {
@@ -136,7 +139,7 @@ function actualizarHintGrupo() {
     const fechaInicio = TiempoUtils.parsearFechaLocal(desde);
     const fechaFin = TiempoUtils.parsearFechaLocal(hasta);
     const diasTotales = Math.ceil(Math.abs(fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    hint.textContent = `${diasTotales} día${TiempoUtils.pluralizar(diasTotales)}`;
+    hint.textContent = `${TiempoUtils.contar(diasTotales, 'día')}`;
 }
 EventosApp.on('grupo:editar', ({ subtipo, desde, hasta }) => {
     $('edit-grupo-tipo').value = subtipo;
@@ -148,7 +151,7 @@ async function guardarEdicionGrupoDesdeFormulario() {
     const btnGuardar = /** @type {HTMLButtonElement} */ ($('modal-editar-grupo').querySelector('.btn-edit'));
     btnGuardar.disabled = true;
     try {
-        await FiltrosYPeriodos.guardarEdicionGrupo({
+        await EdicionGrupo.guardarEdicionGrupo({
             tipo: $('edit-grupo-tipo').value,
             desde: $('edit-grupo-desde').value,
             hasta: $('edit-grupo-hasta').value,
@@ -166,9 +169,9 @@ async function guardarEdicionGrupoDesdeFormulario() {
 let _popupFiltrosEl = null;
 
 function mostrarFiltros(event) {
-    if (FiltrosYPeriodos.obtenerRegistrosFiltrados().length !== EstadoApp.registros().length) {
+    if (Filtros.obtenerRegistrosFiltrados().length !== EstadoApp.registros().length) {
         ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => { if ($(id)) $(id).value = ''; });
-        FiltrosYPeriodos.limpiarFiltros();
+        Filtros.limpiarFiltros();
         return;
     }
 
@@ -221,7 +224,7 @@ function mostrarFiltros(event) {
         const desde = $('filtro-fecha-desde').value;
         const hasta = $('filtro-fecha-hasta').value;
         const tipo = $('filtro-tipo').value;
-        FiltrosYPeriodos.aplicarFiltrosInmediato(desde, hasta, tipo);
+        Filtros.aplicarFiltrosInmediato(desde, hasta, tipo);
     };
 
     ['filtro-fecha-desde', 'filtro-fecha-hasta', 'filtro-tipo'].forEach(id => {
@@ -286,6 +289,31 @@ function toggleHistorico() {
     }
 }
 
+/**
+ * Para la vista previa del estilo del calendario (ver vista-previa.js): deja a la vista el calendario del histórico (expande la tarjeta si estaba cerrada y pasa
+ * de la lista al calendario) y devuelve cómo dejarlo como estaba.
+ */
+function _mostrarCalendarioTemporal() {
+    const contenido = $('contenido-historico');
+    const botones = $('botones-historico');
+    const icon = $('icon-indicator-historico');
+    if (!contenido) return undefined;
+    const estabaExpandido = contenido.classList.contains('expanded');
+    const eraCalendario = Calendario.getVistaHistoricoCalendario();
+    if (!estabaExpandido) toggleHistorico();   // al expandir activa solo el calendario si esa era la vista guardada
+    if (!Calendario.getVistaHistoricoCalendario()) Calendario.toggleVistaHistorico();
+    return () => {
+        if (Calendario.getVistaHistoricoCalendario() !== eraCalendario) Calendario.toggleVistaHistorico();
+        if (!estabaExpandido) {
+            contenido.classList.remove('expanded');
+            botones?.classList.remove('expanded');
+            _setIconHistorico(icon, 'cerrado');
+            Almacenamiento.setItem(STORAGE_KEYS.HISTORICO_EXPANDIDO, 'cerrado');
+        }
+    };
+}
+VistaPrevia.registrarPreparador('calendario', _mostrarCalendarioTemporal);
+
 function iniciarTimerAutoCierreBotones() {
     if (timerAutoCierreBotones) {
         clearTimeout(timerAutoCierreBotones);
@@ -347,7 +375,7 @@ function verificarBloqueoCredito() {
     if (TiposRegistro.esRegistroEspecial(e, s)) return _bloquear();
 
     const calcTemp = EstadoApp.calcularHoras(e, s, tf, null);
-    const objetivoEdicion = Compensatorios.objetivoEdicionEnVivo();
+    const objetivoEdicion = Objetivos.objetivoEdicionEnVivo();
     if (!calcTemp || calcTemp.total >= objetivoEdicion) return _bloquear();
 
     _habilitar();

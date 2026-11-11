@@ -91,3 +91,27 @@ test('Columnas: tamaños guardados antes de que la tarjeta de estado fuera movib
     assert.deepEqual(columnasDesdeOrden(orden, [0, 3]), [['estado'], ['registrar', 'estadisticas', 'historico']]);
     assert.deepEqual(columnasDesdeOrden(orden), [['estado', 'registrar', 'estadisticas'], ['historico']]);
 });
+
+test('leerLayout: cada modo usa su orden; sin orden propio, móvil y 3 columnas parten del de 2 (con sus tamaños)', async () => {
+    const { leerLayout, clavesDeLayout } = await import('../src/services/orden-cards.js');
+    const guardado = {};
+    const leer = (clave) => guardado[clave] ?? null;
+    const k2 = clavesDeLayout(2), k3 = clavesDeLayout(3), k1 = clavesDeLayout(1);
+    assert.equal(k1.columnas, null);
+    assert.notEqual(k2.orden, k3.orden);
+
+    guardado[k2.orden] = ['registrar', 'estado'];
+    guardado[k2.columnas] = [2, 2];
+    assert.deepEqual(leerLayout(2, leer).orden.slice(0, 2), ['registrar', 'estado']);
+    assert.deepEqual(leerLayout(1, leer).orden.slice(0, 2), ['registrar', 'estado']);
+    assert.deepEqual(leerLayout(3, leer).orden.slice(0, 2), ['registrar', 'estado']);
+    assert.deepEqual(leerLayout(3, leer).tamanos, [2, 2]);
+
+    // con orden propio de 3 columnas, el de 2 no cambia y los tamaños de 2 ya no corresponden
+    guardado[k3.orden] = ['estado', 'registrar'];
+    guardado[k3.columnas] = [1, 1, 2];
+    assert.deepEqual(leerLayout(3, leer).orden.slice(0, 2), ['estado', 'registrar']);
+    assert.deepEqual(leerLayout(3, leer).tamanos, [1, 1, 2]);
+    assert.deepEqual(leerLayout(2, leer).orden.slice(0, 2), ['registrar', 'estado']);
+    assert.deepEqual(leerLayout(2, leer).tamanos, [2, 2]);
+});

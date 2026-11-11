@@ -1,3 +1,4 @@
+import { MINUTOS_DIA } from './constantes.js';
 // ====================================================================
 // TIME AND DATE UTILITIES MODULE (TiempoUtils)
 // ====================================================================
@@ -23,6 +24,16 @@ function _hhmm(h, m) {
 
 function pluralizar(n) {
     return n !== 1 ? 's' : '';
+}
+
+/** "3 registros", "1 día". */
+function contar(n, palabra) {
+    return `${n} ${palabra}${pluralizar(n)}`;
+}
+
+/** Mes de una fecha ISO: "2026-10-28" → "2026-10". */
+function claveMes(fecha) {
+    return fecha.substring(0, 7);
 }
 
 function nombreDiaPorIndice(indice) {
@@ -80,6 +91,15 @@ function obtenerFechaHoy() {
     return formatearFechaLocal(new Date());
 }
 
+/** Minutos llevados al rango de un día (cruce de medianoche, en ambos sentidos). */
+function normalizarMinutosDia(minutos) {
+    return ((minutos % MINUTOS_DIA) + MINUTOS_DIA) % MINUTOS_DIA;
+}
+
+function msHastaProximoMinuto(ahora = Date.now()) {
+    return 60000 - (ahora % 60000);
+}
+
 function fechaLocalISOFull() {
     const d = new Date();
     return `${formatearFechaLocal(d)} ${_pad2(d.getHours())}:${_pad2(d.getMinutes())}:${_pad2(d.getSeconds())}`;
@@ -93,7 +113,7 @@ function horaAMinutos(h) {
 
 function sumarMinutosAHora(horaString, minutosASumar) {
     const totalMinutos = minutosASumar + horaAMinutos(horaString);
-    return totalMinutos >= 24 * 60 ? '23:59' : minutosAHora(totalMinutos);
+    return totalMinutos >= MINUTOS_DIA ? '23:59' : minutosAHora(totalMinutos);
 }
 
 function obtenerNombreDia(f) {
@@ -146,7 +166,7 @@ function horasATexto(totalHoras, modo = 'long') {
 }
 
 function formatoDiferencia(totalHoras, horasDiariasObjetivo) {
-    const diffMinutos = Math.round(totalHoras * 60) - (horasDiariasObjetivo * 60);
+    const diffMinutos = horasAMinutosRedondeados(totalHoras) - (horasDiariasObjetivo * 60);
     if (diffMinutos === 0) return '';
     const abs = Math.abs(diffMinutos);
     const h = Math.floor(abs / 60);
@@ -169,6 +189,11 @@ function generarRangoFechas(desde, hasta) {
         cur.setDate(cur.getDate() + 1);
     }
     return resultado;
+}
+
+/** Horas decimales -> minutos enteros. Los saldos guardan 6 decimales (1 min = 0.016667 h = 1.00002 min): sin redondear, al truncar una hora se pierde un minuto. */
+function horasAMinutosRedondeados(horas) {
+    return Math.round(horas * 60);
 }
 
 function segundosAMinutosRedondeado(segundos) {
@@ -194,15 +219,18 @@ function formatearRangoSemana(lunesISO) {
 }
 
 function esFechaHabil(fecha, diasHabiles) {
-    const diaSemana = parsearFechaLocal(fecha).getDay();
-    if (Array.isArray(diasHabiles)) return diasHabiles.includes(diaSemana);
-    return diaSemana === 0 ? (diasHabiles === 7) : (diaSemana <= diasHabiles);
+    return diasHabiles.includes(parsearFechaLocal(fecha).getDay());
+}
+
+/** Fecha ISO corrida `dias` días (negativo: hacia atrás). */
+function sumarDias(fecha, dias) {
+    const d = parsearFechaLocal(fecha);
+    d.setDate(d.getDate() + dias);
+    return formatearFechaLocal(d);
 }
 
 function esDiaAnterior(fecha, anterior) {
-    const d = parsearFechaLocal(fecha);
-    d.setDate(d.getDate() - 1);
-    return formatearFechaLocal(d) === anterior;
+    return sumarDias(fecha, -1) === anterior;
 }
 
 function agruparMesesPorAnio(mesesOrdenados) {
@@ -221,14 +249,23 @@ function nombreMesCapitalizado(mesAnio) {
     return nombre.charAt(0).toUpperCase() + nombre.slice(1);
 }
 
+/** Error de un rango de fechas (formato y orden) o null. */
+function errorRangoFechas(desde, hasta) {
+    if (!desde || !hasta) return 'Verificá ambas fechas';
+    if (!TiempoUtils.validarFecha(desde)) return 'Fecha "Desde" inválida';
+    if (!TiempoUtils.validarFecha(hasta)) return 'Fecha "Hasta" inválida';
+    if (desde > hasta) return 'La fecha inicial debe ser inferior a la final';
+    return null;
+}
+
 function esperar(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 export const TiempoUtils = {
-    esFechaHabil, esDiaAnterior, agruparMesesPorAnio, nombreMesCapitalizado,
+    esFechaHabil, sumarDias, esDiaAnterior, agruparMesesPorAnio, nombreMesCapitalizado,
     validarFecha, validarHora, normalizarMinutosSueltos, parsearFechaLocal, formatearFechaLocal,
-    obtenerFechaHoy, obtenerHoraActual, minutosAHora, fechaLocalISOFull,
+    obtenerFechaHoy, obtenerHoraActual, msHastaProximoMinuto, normalizarMinutosDia, minutosAHora, fechaLocalISOFull,
     horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
     obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
-    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, pluralizar,
-    generarRangoFechas, fechaCorta, segundosAMinutosRedondeado, _pad2, esperar
+    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, claveMes, pluralizar, contar,
+    generarRangoFechas, errorRangoFechas, fechaCorta, segundosAMinutosRedondeado, horasAMinutosRedondeados, _pad2, esperar
 };

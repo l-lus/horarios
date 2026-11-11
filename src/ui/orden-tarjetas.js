@@ -1,10 +1,13 @@
-import { STORAGE_KEYS, CARDS } from '../core/constantes.js';
-import { normalizarOrdenCards, columnasDesdeOrden, prepararColumnas, moverCard, tamanosDeColumnas, MAX_COLUMNAS } from '../services/orden-cards.js';
-import { $ } from '../core/dom.js';
+import { Preferencias } from '../core/preferencias.js';
+import { STORAGE_KEYS, CARDS, CORTES_LAYOUT } from '../core/constantes.js';
+import { clavesDeLayout, leerLayout, columnasDesdeOrden, prepararColumnas, moverCard, tamanosDeColumnas } from '../services/orden-cards.js';
+import { $, alClic } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { UIBase } from './base.js';
 import { uiAnimarReubicacion, uiArrastreLargo, REUBICACION_MS } from './arrastre.js';
+import { mostrarToast, _cerrarToastActual } from './toast.js';
+import { VistaPrevia, VENTANA_PERSONALIZAR_MS, AVISO_PERSONALIZAR_MS } from './vista-previa.js';
 
 // ====================================================================
 // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
@@ -13,8 +16,8 @@ const { _crearToggleConfig, _setBtnActivo } = UIBase;
 
 const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
     _crearToggleConfig({
-        getVal: () => Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true),
-        setVal: (v) => Almacenamiento.setItem(STORAGE_KEYS.PERSISTIR_TARJETAS, v),
+        getVal: () => Preferencias.PERSISTIR_TARJETAS.get(),
+        setVal: (v) => Preferencias.PERSISTIR_TARJETAS.set(v),
         btnId: 'btn-toggle-persistir-tarjetas',
     });
 
@@ -44,20 +47,20 @@ function aplicarVisibilidadCards() {
 
 // Escritorio (hasta 3 columnas) y móvil (1 columna apilada) tienen cada uno su orden. Mismo corte que el CSS (@media min-width: 1024px).
 // Mientras no se haya ordenado en móvil, se parte del orden de escritorio.
-const _consultaEscritorio = window.matchMedia('(min-width: 1024px)');
-const _consultaAncha = window.matchMedia('(min-width: 1200px)');   // con menos ancho no entran 3 columnas de 350px
+const _consultaEscritorio = window.matchMedia(CORTES_LAYOUT.ESCRITORIO);
+const _consultaAncha = window.matchMedia(CORTES_LAYOUT.ANCHO);   // 3 columnas desde 1400px (2 columnas entre 1024 y 1399: un rango más amplio que el de 1200, donde 3 columnas quedaban muy justas)
 const _esEscritorio = () => _consultaEscritorio.matches;
-const _maxColumnas = () => (!_esEscritorio() ? 1 : _consultaAncha.matches ? MAX_COLUMNAS : 2);
-const _claveOrden = () => (_esEscritorio() ? STORAGE_KEYS.ORDEN_CARDS : STORAGE_KEYS.ORDEN_CARDS_MOVIL);
+// Cada cantidad de columnas (1 móvil, 2 y 3 en escritorio) tiene su propio orden y tamaños (ver clavesDeLayout / leerLayout en services/orden-cards.js)
+const _modo = () => (!_esEscritorio() ? 1 : _consultaAncha.matches ? 3 : 2);
+const _maxColumnas = () => _modo();
+const _leerLayout = () => leerLayout(_modo(), (clave) => Almacenamiento.getObject(clave, null, true));
 
 function obtenerOrdenCards() {
-    const guardado = Almacenamiento.getObject(_claveOrden(), null, true)
-        ?? Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS, null, true);
-    return normalizarOrdenCards(guardado);
+    return _leerLayout().orden;
 }
 
 function guardarOrdenCards(orden) {
-    Almacenamiento.setItem(_claveOrden(), orden, true);
+    Almacenamiento.setItem(clavesDeLayout(_modo()).orden, orden, true);
 }
 
 // La tarjeta de estado ('estado', id `stats-card`) se ubica como las demás pero no se puede ocultar
@@ -69,13 +72,13 @@ const _tarjetasVisibles = () => new Set(['estado', ...CARDS.filter(c => Almacena
 /** Columnas tal como se dibujan ahora: en móvil una sola; en escritorio el orden cortado según los tamaños guardados. */
 function _columnasActuales(orden = obtenerOrdenCards()) {
     if (!_esEscritorio()) return [orden];
-    const tamanos = Almacenamiento.getObject(STORAGE_KEYS.COLUMNAS_CARDS, null, true);
-    return prepararColumnas(columnasDesdeOrden(orden, tamanos), _maxColumnas(), _tarjetasVisibles());
+    return prepararColumnas(columnasDesdeOrden(orden, _leerLayout().tamanos), _maxColumnas(), _tarjetasVisibles());
 }
 
 function _guardarColumnas(columnas) {
     guardarOrdenCards(columnas.flat());
-    if (_esEscritorio()) Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS, tamanosDeColumnas(columnas), true);
+    const claveTamanos = clavesDeLayout(_modo()).columnas;
+    if (claveTamanos) Almacenamiento.setItem(claveTamanos, tamanosDeColumnas(columnas), true);
 }
 
 // Contenedores de escritorio (hasta 3 columnas); en móvil todo se apila en el primero, en el orden elegido
@@ -118,13 +121,17 @@ function aplicarOrdenCards(orden, columnas = null) {
     _actualizarColumnas();
 
     const etiqueta = $('label-orden-cards');
-    if (etiqueta) etiqueta.textContent = `Tarjetas y posición (${_esEscritorio() ? 'PC' : 'celular'})`;
+    if (etiqueta) etiqueta.textContent = `Tarjetas y posición (${!_esEscritorio() ? 'celular' : _modo() === 3 ? 'PC, 3 columnas' : 'PC, 2 columnas'})`;
 
     const lista = $('lista-orden-cards');
     if (lista) {
+        // Solo se mueve lo que cambia de lugar: volver a insertar un ítem que ya está en su posición reinicia sus transiciones (el toggle saltaba sin animarse)
+        let i = 0;
         cols.flat().forEach(cual => {
             const item = $('orden-item-' + cual);
-            if (item) lista.appendChild(item);
+            if (!item) return;
+            if (lista.children[i] !== item) lista.insertBefore(item, lista.children[i] ?? null);
+            i++;
         });
     }
 }
@@ -222,6 +229,11 @@ function columnasTrasTecla(id, tecla) {
     return moverCard(columnas, id, destino, destino < columnas.length ? (enColumna(destino)[pos] ?? null) : null, opciones);
 }
 
+// Atajo para personalizar el estilo: con la tarjeta ya levantada (modo reubicar), soltar sin mover el dedo dentro de VENTANA_PERSONALIZAR_MS abre la vista previa de su estilo.
+// Pasado el tiempo, soltar en el mismo lugar no hace nada (evita aperturas accidentales). Los tiempos son de vista-previa.js (el encabezado usa los mismos).
+/** Tarjetas con estilo propio: la de estado y Registros (su calendario). Valor: lo que se avisa en 'tarjeta:personalizar'. */
+const PERSONALIZABLES = { 'stats-card': 'estado', 'card-historico': 'calendario' };
+
 function iniciarDragTarjetas() {
     let columnasInicial = null;
     let columnasEnCurso = null;
@@ -243,6 +255,8 @@ function iniciarDragTarjetas() {
             const el = e.target instanceof Element ? e.target : null;
             if (!el) return null;
             if (el.closest('#btn-timer-main')) return null;
+            // con la vista previa de estilo abierta no se puede reubicar: son modos excluyentes
+            if (VistaPrevia.activa()) return null;
 
             const header = el.closest(_SELECTOR_ENCABEZADOS);
             if (!header) return null;
@@ -255,8 +269,11 @@ function iniciarDragTarjetas() {
             columnasEnCurso = columnasInicial;
             card.classList.add('reordenando');
             document.body.classList.add('tarjeta-arrastrando-activa');
+            if (card.id in PERSONALIZABLES) mostrarToast('Soltá para personalizar', 'info', AVISO_PERSONALIZAR_MS);
             /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.animated-card')).forEach(c => c.style.animation = 'none');
         },
+        // en cuanto el dedo se mueve es una reubicación: el aviso de personalizar ya no corresponde
+        alPrimerMovimiento: () => _cerrarToastActual(),
         alMover: (e, card) => {
             if (performance.now() < deslizandoHasta || !columnasEnCurso) return;
             const nuevas = evaluarNuevasColumnas(card, columnasEnCurso, e.clientX, e.clientY);
@@ -266,7 +283,7 @@ function iniciarDragTarjetas() {
                 deslizandoHasta = performance.now() + REUBICACION_MS;
             }
         },
-        alTerminar: (card, confirmar) => {
+        alTerminar: (card, confirmar, { movido, duracion }) => {
             card.classList.remove('reordenando');
             document.body.classList.remove('tarjeta-arrastrando-activa');
             const destino = confirmar ? columnasEnCurso : columnasInicial;
@@ -283,6 +300,12 @@ function iniciarDragTarjetas() {
             }
             columnasInicial = null;
             columnasEnCurso = null;
+            // mantener y soltar sin mover (y dentro de la ventana) = personalizar el estilo de la tarjeta
+            if (confirmar && !movido && duracion <= VENTANA_PERSONALIZAR_MS && card.id in PERSONALIZABLES) {
+                _cerrarToastActual();
+                if (navigator.vibrate) { try { navigator.vibrate(20); } catch (_) { /* la vibración es opcional */ } }
+                EventosApp.emit('tarjeta:personalizar', { tarjeta: PERSONALIZABLES[/** @type {keyof typeof PERSONALIZABLES} */ (card.id)] });
+            }
         }
     });
 
@@ -291,6 +314,7 @@ function iniciarDragTarjetas() {
     headers.forEach(header => {
         header.addEventListener('keydown', (e) => {
             if (!e.altKey || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+            if (VistaPrevia.activa()) return;   // idem: sin reubicar con teclado durante la vista previa
             const card = header.closest(_SELECTOR_CARDS);
             if (!card) return;
 
@@ -407,10 +431,12 @@ function iniciarDragOrdenCards() {
 }
 
 function bindEventos() {
-    $('btn-toggle-persistir-tarjetas')?.addEventListener('click', () => togglePersistirTarjetas());
-    $('btn-toggle-card-registrar')?.addEventListener('click', () => toggleVisibilidadCard('registrar'));
-    $('btn-toggle-card-estadisticas')?.addEventListener('click', () => toggleVisibilidadCard('estadisticas'));
-    $('btn-toggle-card-historico')?.addEventListener('click', () => toggleVisibilidadCard('historico'));
+    alClic({
+        'btn-toggle-persistir-tarjetas': () => togglePersistirTarjetas(),
+        'btn-toggle-card-registrar': () => toggleVisibilidadCard('registrar'),
+        'btn-toggle-card-estadisticas': () => toggleVisibilidadCard('estadisticas'),
+        'btn-toggle-card-historico': () => toggleVisibilidadCard('historico'),
+    });
 }
 
 export const OrdenTarjetas = {

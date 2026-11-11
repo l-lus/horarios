@@ -12,6 +12,7 @@ export const ESTILOS_CALENDARIO = Object.freeze([
     { id: 'legacy', label: 'Legacy' },
     { id: 'relleno-aro', label: 'Relleno con aro' },
     { id: 'cuadrado-aro', label: 'Cuadrado con aro' },
+    { id: 'aro-tinte', label: 'Aro con tinte' },
     { id: 'aro-grueso', label: 'Aro grueso' },
     { id: 'contorno-brillo', label: 'Contorno con brillo' },
     { id: 'subrayado', label: 'Subrayado' },
@@ -61,4 +62,4 @@ function siguiente() {
     setEstilo(siguienteEstilo(actual()));
 }
 
-export const EstiloCalendario = { init, actual, setEstilo, siguiente, etiqueta: () => etiquetaEstilo(actual()) };
+export const EstiloCalendario = { init, siguiente, actual, setEstilo, etiqueta: () => etiquetaEstilo(actual()) };

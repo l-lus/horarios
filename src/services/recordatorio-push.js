@@ -1,3 +1,4 @@
+import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -40,9 +41,7 @@ function _avisarFallo(accion, status) {
 }
 
 function _headersWorker() {
-    const headers = { 'Content-Type': 'application/json' };
-    if (APP_SECRET && !APP_SECRET.startsWith('PEGA_ACA')) headers['X-App-Secret'] = APP_SECRET;
-    return headers;
+    return { 'Content-Type': 'application/json', 'X-App-Secret': APP_SECRET };
 }
 
 function _postWorker(path, payload, keepalive = false) {
@@ -186,9 +185,7 @@ function _borrarInfoActiva(perfilId) {
 function _infoVigente(info) {
     const hoy = TiempoUtils.obtenerFechaHoy();
     if (info.fechaISO === hoy) return true;
-    const ayer = TiempoUtils.parsearFechaLocal(hoy);
-    ayer.setDate(ayer.getDate() - 1);
-    return info.fechaISO === TiempoUtils.formatearFechaLocal(ayer) && Number(info.targetTimeMs) + MARGEN_CRON_MS >= Date.now();
+    return info.fechaISO === TiempoUtils.sumarDias(hoy, -1) && Number(info.targetTimeMs) + MARGEN_CRON_MS >= Date.now();
 }
 
 function obtenerInfoActiva(perfilId) {
@@ -200,7 +197,6 @@ function obtenerInfoActiva(perfilId) {
 }
 async function _asegurarSuscripcion() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
-    if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith('PEGA_ACA')) return null;
 
     try {
         const permiso = await Notification.requestPermission();
@@ -408,7 +404,7 @@ async function enviarNotificacionPrueba(demoraMs = 10000) {
 
 async function registrarUso() {
     if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
-    if (!Almacenamiento.getBoolean(STORAGE_KEYS.STATS_HABILITADO, true)) return;
+    if (!Preferencias.STATS_HABILITADO.get()) return;
     const KEY = STORAGE_KEYS.STATS_ULTIMO_PING;
     const ahora = Date.now();
     if (ahora - Number(Almacenamiento.getItem(KEY, 0)) < USO_INTERVALO_MS) return;

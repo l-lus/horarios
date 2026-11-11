@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, MS_DIA } from '../core/constantes.js';
 import { SeguridadYUtils } from '../core/seguridad.js';
 import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
@@ -71,9 +71,8 @@ function loadFromLocalStorage() {
     if (historyData) {
         const ahora = Date.now();
         const tiempoTranscurrido = ahora - (historyData.timestamp || 0);
-        const limiteEnMs = 24 * 60 * 60 * 1000;
 
-        if (tiempoTranscurrido < limiteEnMs) {
+        if (tiempoTranscurrido < MS_DIA) {
             const historyRaw = historyData.history || [];
             _stack = historyRaw.map(entry => Array.isArray(entry) ? { estado: entry, descripcion: null } : entry);
             currentIndex = historyData.currentIndex !== undefined ? historyData.currentIndex : -1;
@@ -120,8 +119,6 @@ export const GestorHistorial = {
     saveState,
     undo,
     redo,
-    canUndo,
-    canRedo,
     updateButtons,
     clear,
     loadFromLocalStorage,

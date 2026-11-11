@@ -1,9 +1,14 @@
+import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { Formularios } from './formularios.js';
 import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
+import { PosicionHeader } from '../core/posicion-header.js';
+import { HeaderPosicion } from './header-posicion.js';
+import { TransicionLayout } from './transicion-layout.js';
+import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 import { InstaladorPWA } from './instalador-pwa.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
@@ -27,6 +32,7 @@ import { TarjetaFichaje } from './tarjeta-fichaje.js';
 import { TarjetaFichajeVista } from './tarjeta-fichaje-vista.js';
 import { CicloStats } from './tarjeta-ciclo-stats.js';
 import { TarjetaFondos } from './tarjeta-fondos.js';
+import { TarjetaEstilos } from './tarjeta-estilos.js';
 import { TarjetaTiempoFuera } from './tarjeta-tiempo-fuera.js';
 import { TarjetaLote } from './tarjeta-lote.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
@@ -35,12 +41,12 @@ import { Configuracion } from './configuracion.js';
 import { HistorialDias } from './historial-dias.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { resetearBoton, restaurarBotonGuardarEdicion, animarExitoFichaje } from './boton-fichar.js';
 import { registrarSwipe, debounce } from './gestos.js';
 import { mostrarToast, _habilitarCierreToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
+import { DiasHabiles } from '../services/dias-habiles.js';
 
 const {
     _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced, mostrarError, limpiarError,
@@ -79,11 +85,13 @@ const {
 const { cerrarModalReporteSecciones } = Reportes;
 
 const {
-    actualizarUI, alternarVista, _forzarVista, setTimerAutoVista, _retenerRegistroAyer
+    actualizarUI, alternarVista, _forzarVista, _cambiarConFundido, setTimerAutoVista, _retenerRegistroAyer
 } = TarjetaFichaje;
-const { iniciar: _iniciarCicloStats, detener: _detenerCicloStats, prepararFase: _prepararMostrarFaseAlRenderizar } = CicloStats;
+const { iniciar: _iniciarCicloStatsSiempre, detener: _detenerCicloStats, prepararFase: _prepararMostrarFaseAlRenderizar } = CicloStats;
 
-const { _refrescarFormatoCortoStatsCache } = TarjetaFichajeVista;
+const { _refrescarFormatoCortoStatsCache, _cicloAutoActivo } = TarjetaFichajeVista;
+// con el hint integrado y la animación de los hitos en Desactivado no hay ciclo automático (ni al cargar ni al volver a la pestaña)
+const _iniciarCicloStats = (...args) => (_cicloAutoActivo() ? _iniciarCicloStatsSiempre(...args) : false);
 
 const { setFondoCard } = TarjetaFondos;
 const { actualizarEstadoBotonTimerMain } = TarjetaTiempoFuera;
@@ -102,7 +110,7 @@ const {
 const {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
-    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonHintIntegrado, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
+    actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
     cerrarModalAyuda, refrescarConfigSiVisible, formatearInput
 } = Configuracion;
 
@@ -142,7 +150,7 @@ function _initGlobales() {
         formularioRegistro: Formularios.registro, formularioEdicion: Formularios.edicion,
         leerObjetivoEdicion: () => parseFloat($('edit-objetivo')?.dataset.valor ?? ''),
         hayUIBloqueante: () => !!document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding'),
-        forzarVista: _forzarVista, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, retenerRegistroAyer: _retenerRegistroAyer, refrescarConfigSiVisible
+        forzarVista: _forzarVista, cambiarConFundido: _cambiarConFundido, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, retenerRegistroAyer: _retenerRegistroAyer, refrescarConfigSiVisible
     });
     Almacenamiento.configurarNotificaciones({ mostrarToast });
     RecordatorioPush.configurarNotificaciones({ mostrarToast });
@@ -261,7 +269,6 @@ function _initDatosYConfig(config) {
     actualizarEstadoBotonLogicaCubierto();
     actualizarEstadoBotonObjetivoPorRegistro();
     actualizarEstadoBotonFormatoCortoStats();
-    actualizarEstadoBotonHintIntegrado();
     actualizarEstadoBotonMetricaUso();
     _refrescarFormatoCortoStatsCache();
     actualizarEstadoBotonAplicarHoras();
@@ -273,6 +280,8 @@ function _initDatosYConfig(config) {
     aplicarOrdenCards(obtenerOrdenCards());
     iniciarDragOrdenCards();
     iniciarDragTarjetas();
+    HeaderPosicion.iniciar();
+    TransicionLayout.iniciar();
     setFondoCard(config.fondoCard || 'golden-gate');
     setModoEstadisticas(config.modoEstadisticas || 'mensual');
 
@@ -285,11 +294,13 @@ function _restaurarEstadoVisual(config) {
     GestorTemas.aplicarTema(config.tema);
     Movimiento.init();
     EstiloCalendario.init();
+    PosicionHeader.init();
+    EstiloTarjeta.init();
 
     $('fecha').value = TiempoUtils.obtenerFechaHoy();
 
     try {
-        const persistir = Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true);
+        const persistir = Preferencias.PERSISTIR_TARJETAS.get();
         if (persistir && Almacenamiento.getBoolean(STORAGE_KEYS.FORMULARIO_EXPANDIDO)) toggleFormulario();
         if (persistir && Almacenamiento.getBoolean(STORAGE_KEYS.STATS_EXPANDIDO)) toggleStats();
 
@@ -332,16 +343,25 @@ function _initAutoSync() {
     }
 }
 
-let _relojUIInterval = null;
+// Lo que muestra la tarjeta cambia de minuto en minuto: el reloj actualiza justo después de cada cambio de minuto
+const RELOJ_MARGEN_MS = 50;
+let _relojUITimer = null;
+
+function _programarTickReloj() {
+    _relojUITimer = setTimeout(() => {
+        _programarTickReloj();
+        actualizarUI(null, true);
+    }, TiempoUtils.msHastaProximoMinuto() + RELOJ_MARGEN_MS);
+}
 
 function _iniciarRelojUI() {
-    if (_relojUIInterval) return;
-    _relojUIInterval = setInterval(() => actualizarUI(null, true), 20000);
+    if (_relojUITimer) return;
+    _programarTickReloj();
 }
 
 function _detenerRelojUI() {
-    clearInterval(_relojUIInterval);
-    _relojUIInterval = null;
+    clearTimeout(_relojUITimer);
+    _relojUITimer = null;
 }
 
 function _initListenerVisibility() {
@@ -417,8 +437,6 @@ function _initListenersOtros() {
 }
 
 async function init() {
-    Almacenamiento.migrarClavesLegadas();
-
     _initGlobales();
     _initListenersFormulario();
     _initListenersTeclado();
@@ -439,10 +457,11 @@ async function init() {
     actualizarBotonesHistorico();
 
     const hoy = TiempoUtils.obtenerFechaHoy();
-    const hoyEsLaborable = TiempoUtils.esFechaHabil(hoy, Compensatorios.diasHabilesEnFecha(hoy));
+    const hoyEsLaborable = DiasHabiles.esDiaLaboral(hoy);
     if (EstadoApp.vistaActual() === 'semana' && hoyEsLaborable) {
         setTimerAutoVista(setTimeout(() => {
             setTimerAutoVista(null);
+            TarjetaEstilos.pedirDestelloBalance();
             alternarVista();
             _esperarAnim().then(() => _iniciarCicloStats());
         }, 2500));

@@ -1,6 +1,8 @@
+import { Preferencias } from '../core/preferencias.js';
 import { Animaciones } from './animaciones.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
+import { PosicionHeader } from '../core/posicion-header.js';
+import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
@@ -26,7 +28,7 @@ function toggleSeccionGen(elementId, iconId, storageKey, callback = null) {
         else icon.classList.remove('rotated');
     }
 
-    if (Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true)) {
+    if (Preferencias.PERSISTIR_TARJETAS.get()) {
         Almacenamiento.setItem(storageKey, isExpanded);
     }
     if (isExpanded && callback) callback();
@@ -37,10 +39,20 @@ function _actualizarOffsetsStickyMes() {
     const header = document.querySelector('.header');
     const mesHeader = document.querySelector('.registro-mes-header');
     const root = document.documentElement.style;
-    if (header) root.setProperty('--app-header-h', header.getBoundingClientRect().height + 'px');
-    if (mesHeader) root.setProperty('--mes-header-h', mesHeader.getBoundingClientRect().height + 'px');
+    // --app-header-h es lo que el encabezado le saca a la parte de arriba (los meses del histórico se pegan debajo): 0 si va abajo o a un costado.
+    // --header-alto es su altura sea cual sea la posición (el margen que se le deja abajo cuando va abajo)
+    if (header) {
+        const alto = header.getBoundingClientRect().height;
+        root.setProperty('--app-header-h', (PosicionHeader.actual() === 'top' ? alto : 0) + 'px');
+        root.setProperty('--header-alto', alto + 'px');
+    }
+    // con la lista oculta mide 0: se conserva el valor anterior
+    const altoMes = mesHeader?.getBoundingClientRect().height;
+    if (altoMes) root.setProperty('--mes-header-h', altoMes + 'px');
 }
 const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
+// Al mover el encabezado de lugar cambia lo que ocupa arriba: se vuelve a medir
+EventosApp.on('header:posicion', _actualizarOffsetsStickyMes);
 
 function mostrarError(inputId, errorId) {
     const input = $(inputId);

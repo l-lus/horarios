@@ -1,14 +1,15 @@
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, MS_DIA } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
+import { PosicionHeader } from '../core/posicion-header.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { UIBase } from './base.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { resetearBoton, setIconoBtn, cancelarExitoFichaje, animarExitoFichaje, obtenerIconoBtn } from './boton-fichar.js';
 import { _scrollHastaVisible } from './scroll.js';
 import { Animaciones } from './animaciones.js';
+import { OperacionesLote } from '../services/operaciones-lote.js';
 
 // ====================================================================
 //           UI CARD BATCH / FORM & INPUT HELPERS MODULE
@@ -104,13 +105,12 @@ async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
     if (EstadoApp.existeRegistroEnFecha(fecha)) {
         _avisarFichaje(mensajeDuplicado, 'warning'); return;
     }
-    try {
-        await FiltrosYPeriodos.registrarDiaEspecial(fecha, tipo);
-        alExito?.();
-        _limpiarCamposLote();
-        actualizarBotonLote();
-        animarExitoFichaje($('btn-agregar'));
-    } catch (e) { console.error('Error al registrar:', e); }
+    const res = await OperacionesLote.registrarDiaEspecial(fecha, tipo);
+    if ('error' in res) return;
+    alExito?.();
+    _limpiarCamposLote();
+    actualizarBotonLote();
+    animarExitoFichaje($('btn-agregar'));
 }
 
 async function registrarLoteDesdeCard() {
@@ -149,21 +149,21 @@ async function registrarLoteDesdeCard() {
         _avisarFichaje('Tipo de registro inválido'); return;
     }
 
-    try {
-        if (tipo === 'normal') await FiltrosYPeriodos.borrarPeriodoDirecto(desde, hasta);
-        else await FiltrosYPeriodos.registrarVacacionesDirecto(desde, hasta, tipo);
-        aplicarFeedbackCampos(
-            [
-                { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
-                { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
-            ],
-            tipo === 'normal' ? '✓ Borrado' : '✓ Agregado',
-            tipo === 'normal' ? 'label-feedback--red' : 'label-feedback--green'
-        );
-        _limpiarCamposLote();
-        actualizarBotonLote();
-        animarExitoFichaje($('btn-agregar'));
-    } catch (e) { console.error('Error en operación de lote:', e); }
+    const res = tipo === 'normal'
+        ? await OperacionesLote.borrarPeriodoDirecto(desde, hasta)
+        : await OperacionesLote.registrarVacacionesDirecto(desde, hasta, tipo);
+    if ('error' in res) return;
+    aplicarFeedbackCampos(
+        [
+            { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
+            { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: true }
+        ],
+        tipo === 'normal' ? '✓ Borrado' : '✓ Agregado',
+        tipo === 'normal' ? 'label-feedback--red' : 'label-feedback--green'
+    );
+    _limpiarCamposLote();
+    actualizarBotonLote();
+    animarExitoFichaje($('btn-agregar'));
 }
 
 
@@ -326,7 +326,7 @@ function actualizarBotonLote() {
     if (!TiempoUtils.validarFecha(hasta)) return _setBtnError(btn, btnTexto, 'Fecha Final Inválida');
     if (desde > hasta) return _setBtnError(btn, btnTexto, 'Rango Inválido');
 
-    const diasTotales = Math.ceil(Math.abs(TiempoUtils.parsearFechaLocal(hasta).getTime() - TiempoUtils.parsearFechaLocal(desde).getTime()) / 864e5) + 1;
+    const diasTotales = Math.ceil(Math.abs(TiempoUtils.parsearFechaLocal(hasta).getTime() - TiempoUtils.parsearFechaLocal(desde).getTime()) / MS_DIA) + 1;
 
     return tipo === 'normal'
         ? _actualizarBtnNormal(btn, btnTexto, desde, hasta)
@@ -396,8 +396,7 @@ async function _irAFicharConFecha(fecha, esEspecial) {
 }
 
 function _scrollACardFichar(el) {
-    const headerEl = /** @type {HTMLElement} */ (document.querySelector('.header'));
-    const margen = (headerEl ? headerEl.offsetHeight : 0) + 8;
+    const margen = PosicionHeader.altoSuperior() + 8;
     return _scrollHastaVisible(el, { margenSuperior: margen });
 }
 

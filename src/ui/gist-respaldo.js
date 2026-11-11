@@ -1,6 +1,6 @@
 import { RespaldoLocal } from './respaldo-local.js';
 import { IconosAnimados } from './iconos-animados.js';
-import { $, setColapsable } from '../core/dom.js';
+import { $, setColapsable, alClic } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { EventosApp } from '../core/eventos.js';
 import { GestorModales } from './gestor-modales.js';
@@ -396,8 +396,9 @@ async function gistBajar(modoAutomatico = false) {
     _gistMergeDesdeModal = $('modal-gist')?.classList.contains('show') ?? false;
     await _gistConSpinner('btn-gist-bajar', 'Error al bajar', async () => {
         const data = await SincronizacionGist.bajar();
-        const registrosNormalizados = await ImportarExportar.prepararRespaldo(data, 'gist');
-        if (!registrosNormalizados) return;
+        const preparado = await ImportarExportar.prepararRespaldo(data, 'gist');
+        if ('error' in preparado) return;
+        const registrosNormalizados = preparado.registros;
         _gistMergeData = { registrosNormalizados, data };
 
         if (modoAutomatico) {
@@ -419,13 +420,15 @@ function bindEventos() {
     document.querySelector('.config-actions .btn-export')?.addEventListener('click', () => mostrarExportar());
     $('gist-token')?.addEventListener('input', () => actualizarEstadoBotonesGist());
     $('gist-id')?.addEventListener('input', () => actualizarEstadoBotonesGist());
-    $('btn-toggle-token')?.addEventListener('click', () => toggleVerToken());
-    $('btn-crear-token')?.addEventListener('click', () => window.open('https://github.com/settings/tokens/new?description=Horarios+sync&scopes=gist', '_blank', 'noopener,noreferrer'));
-    $('btn-gist-abrir')?.addEventListener('click', () => abrirGistEnBrowser());
-    $('btn-gist-subir')?.addEventListener('click', () => { IconosAnimados.animarFlecha($('btn-gist-subir'), 'subir'); gistSubir(); });
-    $('btn-gist-bajar')?.addEventListener('click', () => { IconosAnimados.animarFlecha($('btn-gist-bajar'), 'bajar'); gistBajar(); });
-    $('btn-toggle-gist-backup')?.addEventListener('click', () => toggleGistBackup());
-    $('btn-toggle-gist-merge')?.addEventListener('click', () => toggleGistMerge());
+    alClic({
+        'btn-toggle-token': () => toggleVerToken(),
+        'btn-crear-token': () => window.open('https://github.com/settings/tokens/new?description=Horarios+sync&scopes=gist', '_blank', 'noopener,noreferrer'),
+        'btn-gist-abrir': () => abrirGistEnBrowser(),
+        'btn-gist-subir': () => { IconosAnimados.animarFlecha($('btn-gist-subir'), 'subir'); gistSubir(); },
+        'btn-gist-bajar': () => { IconosAnimados.animarFlecha($('btn-gist-bajar'), 'bajar'); gistBajar(); },
+        'btn-toggle-gist-backup': () => toggleGistBackup(),
+        'btn-toggle-gist-merge': () => toggleGistMerge(),
+    });
     document.querySelectorAll('.gist-panel-toggle').forEach(b => b.addEventListener('click', () => toggleGistPanel(b.id)));
     const inputLimite = $('gist-limite-valor');
     if (inputLimite) {
@@ -441,10 +444,12 @@ function bindEventos() {
     $('btn-gist-merge-aplicar')?.addEventListener('click', () => gistMergeAplicar($('gist-merge-resumen')?.dataset.modo === 'replace' ? 'replace' : 'merge'));
     $('btn-gist-merge-cancelar')?.addEventListener('click', () => gistMergeCancelar());
 
-    $('btn-seleccionar-archivo')?.addEventListener('click', () => $('file-import').click());
-    $('btn-combinar')?.addEventListener('click', () => ImportarExportar.importarDatos($('file-import').files?.[0], 'merge'));
-    $('btn-reemplazar')?.addEventListener('click', () => ImportarExportar.importarDatos($('file-import').files?.[0], 'replace'));
-    $('btn-volver-importar')?.addEventListener('click', () => cerrarImportar());
+    alClic({
+        'btn-seleccionar-archivo': () => $('file-import').click(),
+        'btn-combinar': () => ImportarExportar.importarDatos($('file-import').files?.[0], 'merge'),
+        'btn-reemplazar': () => ImportarExportar.importarDatos($('file-import').files?.[0], 'replace'),
+        'btn-volver-importar': () => cerrarImportar(),
+    });
 
     document.querySelector('#modal-exportar .btn-export')?.addEventListener('click', () => ejecutarExportacion());
     $('btn-volver-exportar')?.addEventListener('click', () => cerrarExportar());

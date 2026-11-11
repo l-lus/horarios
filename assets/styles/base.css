@@ -26,7 +26,7 @@ body {
     background: var(--bg-body);
     color: var(--text-main);
     overflow-anchor: none;
-    transition: background var(--transition-ui), color var(--transition-ui);
+    transition: background var(--transition-ui), color var(--transition-ui), padding-bottom var(--dur-collapse) ease-out;   /* padding-bottom: el espacio de la vista previa se anima también al cerrarla (la clase vista-previa-activa ya no está) */
     overflow-y: auto;
 }
 
@@ -35,6 +35,13 @@ body {
    Así no se ven las tarjetas "muertas" (HTML estático) mientras el módulo todavía no corrió. */
 html.cargando body>* {
     visibility: hidden;
+}
+
+/* Los modales no se dibujan durante la carga: con display:none no hay estilo previo del que partir, así que al quitar .cargando
+   no puede dispararse la transición de opacity/visibility de .modal (se vería un confirm o un editor un instante en Firefox móvil) */
+html.cargando .modal {
+    display: none;
+    transition: none;
 }
 
 html.cargando body::after {
@@ -118,42 +125,38 @@ html.entrada-pagina .container {
     margin-bottom: 2rem;
 }
 
+/* Cabecera. Su posición la fija <html data-header-pos="top|bottom|left|right"> (core/posicion-header.js; en móvil solo arriba o abajo).
+   Arriba va pegada (sticky) y en flujo; abajo y a los costados va fija y la página le deja su lugar con un relleno en <html>, así que
+   el contenido nunca queda tapado. --header-alto lo mide ui/base.js */
+:root {
+    --header-lateral-w: 4rem;   /* ancho de la barra cuando va a un costado (PC) */
+}
+
 .header {
-    background: var(--bg-header);
+    --header-borde: transparent;
     padding: var(--space-smd);
-    box-shadow: var(--shadow);
     position: sticky;
     top: 0;
     z-index: var(--z-header);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 3px solid transparent;
-    transition: border-bottom-color var(--transition-ui);
+    /* El borde del lado que da al contenido muestra siempre el estado del registro (--header-borde, ver .progress-* más abajo); sin estado queda transparente */
+    border-bottom: 3px solid var(--header-borde);
+    transition: border-color var(--transition-ui);
+    /* Se mantiene presionada para reubicarla (ver ui/header-posicion.js); pan-y deja pasar el desplazamiento mientras tanto */
+    touch-action: pan-y;
 }
 
-.header.scrolled.progress-green {
-    border-bottom-color: var(--c-green);
-}
-
-.header.scrolled.progress-red {
-    border-bottom-color: var(--c-red);
-}
-
-.header.scrolled.progress-purple {
-    border-bottom-color: var(--c-purple);
-}
-
-.header.scrolled.progress-orange {
-    border-bottom-color: var(--c-orange);
-}
-
-.header.scrolled.progress-gold {
-    border-bottom-color: var(--c-gold);
-}
-
-.header.scrolled.progress-blue {
-    border-bottom-color: var(--c-blue);
+.header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--bg-header);
+    box-shadow: var(--shadow);
+    pointer-events: none;
+    transition: background-color var(--transition-ui);
 }
 
 .header h1 {
@@ -165,6 +168,157 @@ html.entrada-pagina .container {
     flex-shrink: 0;
     margin-right: auto;
     margin-left: var(--space-lg);
+}
+
+/* Color del borde según el estado del registro (la clase la pone ui/tarjeta-fondos.js junto con el color de la barra de progreso) */
+.header.progress-green { --header-borde: var(--c-green); }
+.header.progress-red { --header-borde: var(--c-red); }
+.header.progress-purple { --header-borde: var(--c-purple); }
+.header.progress-orange { --header-borde: var(--c-orange); }
+.header.progress-gold { --header-borde: var(--c-gold); }
+.header.progress-blue { --header-borde: var(--c-blue); }
+
+/* Abajo: barra fija al pie. El relleno de <html> deja libre ese alto; la zona segura de los celulares con barra de gestos se suma al relleno de la barra */
+html[data-header-pos="bottom"] {
+    padding-bottom: var(--header-alto, 60px);
+}
+
+html[data-header-pos="bottom"] .header {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-bottom: 0;
+    border-top: 3px solid var(--header-borde);
+    padding-bottom: calc(var(--space-smd) + env(safe-area-inset-bottom, 0px));
+}
+
+html[data-header-pos="bottom"] .header::before {
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* A los costados (solo PC): el mismo encabezado girado, en una barra vertical fija. El texto va de costado con la parte de abajo de las letras hacia el
+   centro de la pantalla (a la izquierda se lee de abajo hacia arriba; a la derecha, de arriba hacia abajo); el título queda abajo y el perfil arriba.
+   Las letras las gira writing-mode; lo que no es texto (los íconos) se gira con `rotate`. Va en los hijos y no en la barra: la barra se desliza al
+   reubicarla con un transform (ui/arrastre.js) que pisaría el giro. */
+@media (min-width: 1024px) {
+    html[data-header-pos="left"] {
+        padding-left: var(--header-lateral-w);
+    }
+
+    html[data-header-pos="right"] {
+        padding-right: var(--header-lateral-w);
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        width: var(--header-lateral-w);
+        writing-mode: vertical-rl;
+        flex-direction: row-reverse;   /* el título (primero en el HTML) abajo y las acciones arriba */
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-lg);
+        padding: var(--space-lg) var(--space-sm);
+        border-bottom: 0;
+    }
+
+    html[data-header-pos="left"] .header {
+        left: 0;
+        right: auto;
+        border-right: 3px solid var(--header-borde);
+    }
+
+    html[data-header-pos="right"] .header {
+        left: auto;
+        right: 0;
+        border-left: 3px solid var(--header-borde);
+    }
+
+    html[data-header-pos="left"] .header::before {
+        border-right: 1px solid var(--border);
+    }
+
+    html[data-header-pos="right"] .header::before {
+        border-left: 1px solid var(--border);
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header h1 {
+        margin: 0;
+        justify-content: center;
+    }
+
+    /* Costado izquierdo: las letras (writing-mode) quedan con la parte de abajo hacia la izquierda; se giran 180° para que miren al centro */
+    html[data-header-pos="left"] .header h1 {
+        rotate: 180deg;
+    }
+
+    /* Acciones: el perfil arriba del botón de instalar (el primero del HTML va abajo) */
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-actions {
+        flex-direction: row-reverse;
+    }
+
+    /* El ícono de instalar gira con el texto (a la izquierda al revés que a la derecha) */
+    html[data-header-pos="left"] #btn-install .icon {
+        rotate: -90deg;
+    }
+
+    html[data-header-pos="right"] #btn-install .icon {
+        rotate: 90deg;
+    }
+
+    /* Perfil: solo el ícono. El nombre aparece en horizontal, como una píldora que sale hacia las tarjetas, al pasar el cursor o enfocar el botón */
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn {
+        position: relative;
+        writing-mode: horizontal-tb;
+        max-width: none;
+        padding: var(--space-sm);
+        gap: 0;
+        justify-content: center;
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn span {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        max-width: 16rem;
+        padding: var(--space-xs) var(--space-md);
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-full);
+        box-shadow: var(--shadow);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--dur-fast);
+    }
+
+    html[data-header-pos="left"] .header-profile-btn span {
+        left: calc(100% + var(--space-sm));
+    }
+
+    html[data-header-pos="right"] .header-profile-btn span {
+        right: calc(100% + var(--space-sm));
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn:is(:hover, :focus-visible) span {
+        opacity: 1;
+    }
+}
+
+/* Reubicando la cabecera (mantener presionada y arrastrar): queda atenuada mientras se desliza en vivo al borde más cercano, igual que una tarjeta */
+.header.reubicando {
+    opacity: 0.65;
+    user-select: none;
+    cursor: grabbing;
+}
+
+body.header-arrastrando-activa,
+body.header-arrastrando-activa * {
+    user-select: none !important;
+    cursor: grabbing !important;
 }
 
 /* ─── FLEX COMPARTIDO  ──────────────────────────────────────────────────── ──── */
@@ -414,12 +568,6 @@ h2.mutacion-saliente.no-margin,
     margin-bottom: var(--space-sm);
 }
 
-.form-group-border-top {
-    margin-top: var(--space-lg);
-    border-top: 1px solid var(--border);
-    padding-top: var(--space-lg);
-}
-
 label {
     display: block;
     font-size: var(--text-sm);
@@ -450,14 +598,6 @@ select {
     color: var(--text-main);
     height: var(--input-height);
     transition: background var(--transition-ui), color var(--transition-ui), border-color var(--transition-ui);
-}
-
-.separador-semana {
-    height: 0;
-    background: transparent;
-    margin: var(--space-xl) auto;
-    border: none;
-    width: 100%;
 }
 
 input:disabled,
@@ -1013,8 +1153,15 @@ mark.ayuda-resaltado--activa {
     gap: var(--space-sm);
 }
 
+.toast.toast-con-progreso {
+    width: calc(100% - 2rem);
+    padding-inline: var(--space-lg);
+}
+
 .toast-con-progreso .toast-texto {
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;   /* el porcentaje no baja a una segunda línea: el texto se achica antes (ver font-size) */
+    font-size: min(1em, 4.4vw);
 }
 
 .toast-progreso {

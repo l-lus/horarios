@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import {
-    geometriaConector, geometriaDiagonal, holguraHaciaDerecha, repartirLados, entradaDebeSubir,
+    geometriaConector, geometriaDiagonal, holguraHaciaDerecha, repartirLados, entradaDebeSubir, salidaDebeEspejarse,
     holguraDescripcion, nivelDescripcion, MARGEN_DESCRIPCION_DERECHA
 } from '../core/geometria-etiquetas.js';
 import { SaldoSemanal } from '../services/saldo-semanal.js';
@@ -29,9 +29,9 @@ function _colocarEtiquetaLinea(el, pct, ancho) {
 }
 
 // Posiciona la etiqueta de una marca en "T" (ver core/geometria-etiquetas.js): a la izquierda del conector o, si no entra, espejada a la derecha.
-function _colocarEtiquetaConector(et, tick, pct, ancho) {
+function _colocarEtiquetaConector(et, tick, pct, ancho, forzarEspejado = false) {
     if (!et) return;
-    const { espejado, left } = geometriaConector((pct / 100) * ancho, et.offsetWidth);
+    const { espejado, left } = geometriaConector((pct / 100) * ancho, et.offsetWidth, 0, forzarEspejado);
     tick.classList.toggle('espejado', espejado);
     et.classList.toggle('linea-etiqueta--espejada', espejado);   // la descripción del foco se despliega hacia el lado contrario
     et.style.left = `${left}px`;
@@ -127,13 +127,13 @@ function _ajustarDescripciones(L, ancho, { etEntrada, etSalida, etBuffer, tickSa
         : holguraDescripcion('izquierda', izq(et), limiteIzquierdo);
     const espejadaSalida = !L.cerrado && tickSalida.classList.contains('espejado');
     /** @type {[string, string]} */
-    const textosSalida = L.cerrado ? ['Salida', 'Salida'] : ['Salida estimada', 'Estim.'];
+    const textosSalida = L.cerrado ? ['Salida', 'Salida'] : ['Salida estimada', 'S. estimada'];
     const descSalida = _elegirDescripcion(etSalida, textosSalida, hacia(etSalida, espejadaSalida, 0));
     _aplicarDescripcion(etSalida, descSalida);
     _prepararDespliegueDerecha(etSalida, textosSalida, holguraHaciaDerecha(izq(etSalida), etSalida.offsetWidth, ancho), descSalida);
     if (L.hayBanda) {
         /** @type {[string, string]} */
-        const textosBuffer = ['Con banco de horas', 'Con banco'];
+        const textosBuffer = ['Con banco', 'Con banco'];
         const descBuffer = _elegirDescripcion(etBuffer, textosBuffer, hacia(etBuffer, tickBuffer.classList.contains('espejado'), 0));
         _aplicarDescripcion(etBuffer, descBuffer);
         _prepararDespliegueDerecha(etBuffer, textosBuffer, holguraHaciaDerecha(izq(etBuffer), etBuffer.offsetWidth, ancho), descBuffer);
@@ -195,6 +195,9 @@ function _renderLinea(vista, pista, fill) {
     tickBuffer.style.opacity = L.hayBanda ? '1' : '0';
     tickBuffer.classList.toggle('positivo', L.bufferPositivo);
     tickBuffer.classList.toggle('negativo', !L.bufferPositivo);
+    // hueco hasta que "ahora" llega a su posición (la entrada ya pasó siempre: su remate va relleno)
+    tickSalida.classList.toggle('pendiente', L.ahoraRel < L.salidaRel);
+    tickBuffer.classList.toggle('pendiente', L.bufferRel !== null && L.ahoraRel < L.bufferRel);
 
     const etEntrada = $('linea-et-entrada');
     const etSalida = $('linea-et-salida');
@@ -214,6 +217,17 @@ function _renderLinea(vista, pista, fill) {
         _colocarEtiquetaConector(etSalida, tickSalida, pMarca, ancho);
     }
     _colocarEtiquetaConector(etBuffer, tickBuffer, pBuffer ?? pSalida, ancho);
+    // si la entrada no puede subir (arriba está la etiqueta del buffer en ese tramo) y la salida la pisa, la salida pasa a la derecha de su conector
+    // (solo si ahí entra completa en la pista)
+    if (!L.cerrado && salidaDebeEspejarse({
+        ancho,
+        entradaLeft: parseFloat(etEntrada.style.left),
+        entradaAncho: etEntrada.offsetWidth,
+        salidaLeft: parseFloat(etSalida.style.left),
+        bufferLeft: L.hayBanda ? parseFloat(etBuffer.style.left) : null
+    }) && geometriaConector((pMarca / 100) * ancho, etSalida.offsetWidth, 0, true).left + etSalida.offsetWidth <= ancho) {
+        _colocarEtiquetaConector(etSalida, tickSalida, pMarca, ancho, true);
+    }
     // si la hora de salida (abierta o cerrada) pisa o queda pegada a la de entrada, esta pasa arriba de la barra,
     // salvo que arriba esté la etiqueta del buffer en ese mismo tramo (sin ancho medido no se decide nada)
     const entradaArriba = entradaDebeSubir({
@@ -301,7 +315,7 @@ function _renderSemana(vista, pista) {
     items.forEach(it => {
         const lado = lados.get(it) ?? null;
         const arriba = (lado ?? it.preferido) === 'arriba';
-        it.tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}${it.espejado ? ' espejado' : ''}${lado ? '' : ' solo-punto'}`;
+        it.tick.className = `linea-tick dia${arriba ? ' linea-tick--buffer' : ''}${it.espejado ? ' espejado' : ''}${lado ? '' : ' solo-punto'}${it.h.futuro ? ' pendiente' : ''}`;
         it.et.className = `linea-etiqueta dia linea-etiqueta--${arriba ? 'arriba' : 'abajo'}${it.h.hoy ? ' linea-etiqueta--hoy' : ''}${it.espejado ? ' linea-etiqueta--espejada' : ''}${lado ? '' : ' linea-etiqueta--oculta'}`;
         it.tick.style.left = `${it.pct}%`;
         it.et.style.left = `${it.left}px`;

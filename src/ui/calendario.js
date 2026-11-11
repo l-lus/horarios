@@ -1,4 +1,5 @@
-import { STORAGE_KEYS, DEFAULTS } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -9,11 +10,12 @@ import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { html, icono, montar } from '../core/html.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { FiltrosYPeriodos } from '../services/filtros-periodos.js';
 import { registrarSwipe } from './gestos.js';
 import { _crearPopupFlotante } from './popups.js';
 import { Animaciones } from './animaciones.js';
 import { CalendarioPopups } from './calendario-popups.js';
+import { DiasHabiles } from '../services/dias-habiles.js';
+import { Filtros } from '../services/filtros.js';
 
 // ====================================================================
 //                     UI CALENDAR MODULE
@@ -23,8 +25,33 @@ const {
     _aArray, _estaColapsado, _durSiAnima
 } = Animaciones;
 
+const GUARD_SELECTOR_MESES_MS = 4000;
+let _selectorMesesAbiertoEn = 0;
+
+/** True si el selector se abrió hace menos de 4 s (evita que un refresco de UI lo cierre justo después de abrirlo). */
+function _selectorMesesProtegido() {
+    return Date.now() - _selectorMesesAbiertoEn < GUARD_SELECTOR_MESES_MS;
+}
+
+// El selector vuelve solo a los días tras un rato sin tocarlo; cualquier interacción dentro de él reinicia la cuenta
+const CIERRE_SELECTOR_INACTIVO_MS = 15000;
+const EVENTOS_ACTIVIDAD_SELECTOR = ['pointerdown', 'pointermove', 'wheel', 'touchstart', 'scroll', 'keydown'];
+/** @type {ReturnType<typeof setTimeout> | null} */
+let _timerCierreSelector = null;
+
+function _cancelarCierreSelector() {
+    if (_timerCierreSelector !== null) clearTimeout(_timerCierreSelector);
+    _timerCierreSelector = null;
+}
+
+function _programarCierreSelector() {
+    _cancelarCierreSelector();
+    _timerCierreSelector = setTimeout(() => _cerrarSelectorMeses(), CIERRE_SELECTOR_INACTIVO_MS);
+}
+
 /** @param {any} [idResaltar] */
 function _cerrarSelectorMeses(idResaltar = null) {
+    _cancelarCierreSelector();
     const grid = $('calendario-grid');
     const selector = $('calendario-selector-meses');
     const navBotones = $('calendario-nav-botones');
@@ -44,7 +71,7 @@ function abrirSelectorMesesCalendario() {
 
     if (selector.style.display !== 'none') { _cerrarSelectorMeses(); return; }
 
-    const mesesOrdenados = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 7)))].sort().reverse();
+    const mesesOrdenados = [...new Set(EstadoApp.registros().map(r => TiempoUtils.claveMes(r.fecha)))].sort().reverse();
     selector.replaceChildren();
 
     if (mesesOrdenados.length === 0) {
@@ -86,6 +113,8 @@ function abrirSelectorMesesCalendario() {
         montar(titulo, html`${icono('#icon-back')} Volver`);
         selector.style.display = 'grid';
     });
+    _selectorMesesAbiertoEn = Date.now();
+    _programarCierreSelector();
 }
 
 function _activarVistaCalendarioHistorico() {
@@ -100,13 +129,15 @@ function _activarVistaCalendarioHistorico() {
 }
 
 let _calendarioMes = null;
+/** @type {string | null} día en que se dibujó por última vez: al cambiar el día hay que redibujar (marca de hoy, semana actual) */
+let _fechaDibujado = null;
 
 /** Celda de un día del calendario: su clase de estado, resaltado de "hoy" o "nuevo" y los eventos de click/hover si tiene registro. */
 function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario, asignaciones }) {
     const cell = document.createElement('div');
     let clases = `calendario-dia ${clase}`;
     if (esHoy) clases += ' hoy';
-    if (clase === 'dia-sin-registro' && !TiempoUtils.esFechaHabil(fecha, Compensatorios.diasHabilesEnFecha(fecha))) clases += ' no-laborable';
+    if (clase === 'dia-sin-registro' && !DiasHabiles.esDiaLaboral(fecha)) clases += ' no-laborable';
     if (esNuevo) {
         clases += ' nuevo-registro-animacion';
         cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
@@ -133,7 +164,7 @@ function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario,
 /** Bandas que marcan en el calendario los días laborables de la semana actual (una por fila de la grilla). */
 function _bandasSemanaActual(anio, mes, offsetInicio, diasDelMes) {
     const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
-    const esLaborable = (f) => TiempoUtils.esFechaHabil(f, Compensatorios.diasHabilesEnFecha(f));
+    const esLaborable = (f) => DiasHabiles.esDiaLaboral(f);
     const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
     const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
     const segmentosSemana = [];
@@ -175,12 +206,13 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     }
     CalendarioPopups.registrarLongPressSemana(grid);
 
+    _fechaDibujado = TiempoUtils.obtenerFechaHoy();
     const hoy = new Date();
     const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
     const mes = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
     if (titulo) titulo.textContent = `${TiempoUtils.nombreMesPorIndice(mes)} ${anio}`;
     const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
-    const registrosFiltrados = FiltrosYPeriodos.obtenerRegistrosFiltrados();
+    const registrosFiltrados = Filtros.obtenerRegistrosFiltrados();
     const todosLosRegistros = EstadoApp.registros();
     const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
     const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
@@ -311,6 +343,7 @@ function toggleVistaHistorico() {
     const grid = $('calendario-grid');
     const navBotones = $('calendario-nav-botones');
     if (selector && !selector.classList.contains('hidden') && selector.style.display !== 'none') {
+        _cancelarCierreSelector();
         selector.style.display = 'none';
         if (grid) grid.style.display = 'grid';
         if (navBotones) navBotones.style.display = 'flex';
@@ -364,7 +397,7 @@ const RUEDA_LINEA_PX = 33;           // equivalencia de deltaMode "línea" en px
 let _ruedaHabilitada = null;
 EventosApp.on('config:rueda-calendario', () => { _ruedaHabilitada = null; });
 function _ruedaActiva() {
-    _ruedaHabilitada ??= Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, DEFAULTS.RUEDA_CALENDARIO);
+    _ruedaHabilitada ??= Preferencias.RUEDA_CALENDARIO.get();
     return _ruedaHabilitada;
 }
 
@@ -439,14 +472,20 @@ function bindEventos() {
         if (navBtns[1]) navBtns[1].addEventListener('click', () => navegarCalendario(1));
     }
     _registrarRuedaCalendario($('calendario-grid'));
+    const selector = $('calendario-selector-meses');
+    EVENTOS_ACTIVIDAD_SELECTOR.forEach(tipo => selector?.addEventListener(tipo, () => {
+        if (_timerCierreSelector !== null) _programarCierreSelector();
+    }, { passive: true }));
 
 }
 
 export const Calendario = {
     bindEventos,
     _cerrarSelectorMeses,
+    _selectorMesesProtegido,
     _activarVistaCalendarioHistorico,
     _renderizarCalendario,
+    _dibujadoOtroDia: () => _fechaDibujado !== TiempoUtils.obtenerFechaHoy(),
     animarEntradaInicial,
     toggleVistaHistorico,
     getVistaHistoricoCalendario: () => _vistaHistoricoCalendario,

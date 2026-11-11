@@ -60,7 +60,7 @@ function _fantasmaDe(el) {
 }
 
 const _mutacionAnimEstado = new WeakMap();
-const _CLASES_FLASH = ['campo-flash', 'campo-flash-color'];
+const _CLASES_FLASH = ['campo-flash', 'campo-flash-color', 'mosaico-flash'];
 
 // ─── Destello (campo-flash / campo-flash-color) ─────────────────────────────
 // Ambas clases fijan `animation` con más especificidad que .mutacion-entrante, así que
@@ -182,6 +182,35 @@ function _crearFantasmaSiVisible(el) {
     fantasma.addEventListener('animationend', limpiar, { once: true });
     _esperarAnim(150).then(limpiar);
     return fantasma;
+}
+
+/**
+ * Aplica un cambio que modifica el alto de `el` (`mutarFn`) y lo anima, con el mismo ritmo que el colapsado de las otras tarjetas (--dur-collapse, ease-out).
+ * Se mide el alto antes y después, se fija el de partida en px sin transición y se pasa al de llegada; al terminar se devuelve el control al CSS.
+ * Mientras dura se recorta el contenido para que no se vea salirse de la tarjeta.
+ * @param {HTMLElement | null} el @param {() => void} mutarFn
+ */
+function _animarAlturaCambio(el, mutarFn) {
+    const dur = el ? _durSiAnima('--dur-collapse', el) : 0;
+    if (!el || !(dur > 1) || !el.getClientRects().length) { mutarFn(); return; }
+    const antes = el.offsetHeight;
+    el.style.height = '';
+    mutarFn();
+    const despues = el.offsetHeight;
+    if (Math.abs(despues - antes) < 2) return;
+    el.style.overflow = 'hidden';
+    el.style.transition = 'none';
+    el.style.height = `${antes}px`;
+    void el.offsetHeight;
+    el.style.transition = `height ${dur}ms ease-out`;
+    el.style.height = `${despues}px`;
+    const terminar = () => { el.style.height = ''; el.style.transition = ''; el.style.overflow = ''; };
+    el.addEventListener('transitionend', function alTerminar(e) {
+        if (e.target !== el || e.propertyName !== 'height') return;
+        el.removeEventListener('transitionend', alTerminar);
+        terminar();
+    });
+    setTimeout(terminar, dur + 100);   // red de seguridad (pestaña en segundo plano: no hay transitionend)
 }
 
 const _valorAnimEstado = new WeakMap();
@@ -375,7 +404,27 @@ function _renderConFirma(el, contenido, alAplicar = null, { forzar = false } = {
     _animarMutacion(el, aplicar);
 }
 
+/**
+ * Cambio de texto de hover (hitos de la tarjeta de estado): como _animarMutacion pero rápido (--dur-valor) y sin animar si el texto no cambia.
+ * `fn` escribe el texto; `el` es el elemento cuyo contenido cambia.
+ * @param {HTMLElement | null} el @param {() => void} fn
+ */
+function _animarTextoHover(el, fn) {
+    if (!el) { fn(); return; }
+    const antes = el.textContent;
+    // se prueba primero sin animar: si el texto no cambia (p. ej. los hitos en la barra dejan el número de horas) no hay nada que animar y la mutación parpadearía
+    fn();
+    if (el.textContent === antes) return;
+    el.textContent = antes;
+    const dur = _getCSSdur('--dur-valor');
+    el.classList.add('mutacion-rapida');
+    const p = _animarMutacion(el, fn, dur);
+    setTimeout(() => el.classList.remove('mutacion-rapida'), dur + 30);
+    return p;
+}
+
 export const Animaciones = {
+    _animarTextoHover,
     _durSiAnima,
     DUR_ANIM,
     DUR_CALENDARIO,
@@ -394,6 +443,7 @@ export const Animaciones = {
     _flashElemento,
     _crearFantasmaSiVisible,
     _animarValor,
+    _animarAlturaCambio,
     _animarConteo,
     _conteoEnCurso,
     _cancelarConteo

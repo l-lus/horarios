@@ -3,7 +3,6 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
-import { setIconoBtn } from './boton-fichar.js';
 import { _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
 import { Recarga } from '../core/recarga.js';
@@ -33,7 +32,7 @@ function renderizarListaPerfiles(animarCrecimiento = false) {
             className: `btn-perfil-select ${p.esActual ? 'activo' : ''}`
         });
 
-        const countText = `${p.totalRegistros} registro${TiempoUtils.pluralizar(p.totalRegistros)}`;
+        const countText = `${TiempoUtils.contar(p.totalRegistros, 'registro')}`;
         const infoSection = Object.assign(document.createElement('div'), { className: 'btn-perfil-info' });
         const nombreEl = Object.assign(document.createElement('div'), { className: 'btn-perfil-nombre' });
         nombreEl.appendChild(Object.assign(document.createElement('span'), {
@@ -98,12 +97,6 @@ function abrirSelectorPerfiles() {
         setAgregarPerfil(false, { animar: false });
 
         renderizarListaPerfiles();
-
-        const esClaro = !document.documentElement.classList.contains('dark-mode')
-            && !document.documentElement.getAttribute('data-theme');
-        const toggleBtnModal = $('theme-toggle-modal');
-
-        if (toggleBtnModal) setIconoBtn(toggleBtnModal, esClaro ? '#icon-moon' : '#icon-sun');
     });
 }
 

@@ -1,11 +1,12 @@
+import { DESDE_SIEMPRE } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
 import { UIBase } from './base.js';
 import { Configuracion } from './configuracion.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { mostrarToast } from './toast.js';
 import { icono, montar } from '../core/html.js';
+import { DiasHabiles } from '../services/dias-habiles.js';
 
 // ====================================================================
 // UI WORKDAY HISTORY MODULE (historial de días hábiles y horas)
@@ -17,11 +18,11 @@ const { _precargarCamposConfig } = Configuracion;
 let _tramoEnEdicionDesde = null;
 
 function _formatoFechaHistorial(iso) {
-    if (iso === '0001-01-01') return 'Desde siempre';
+    if (iso === DESDE_SIEMPRE) return 'Desde siempre';
     return `Desde ${TiempoUtils.fechaCorta(iso)}`;
 }
 
-const _obtenerTramosOrdenados = () => Compensatorios.tramosDiasHabiles();
+const _obtenerTramosOrdenados = () => DiasHabiles.tramosDiasHabiles();
 
 function _renderizarListaHistorialDias() {
     const lista = $('lista-historial-dias');
@@ -81,8 +82,8 @@ function abrirEditorTramoDias(desdeOriginal) {
 
     const inputDesde = $('editar-tramo-desde');
     if (inputDesde) {
-        inputDesde.value = desdeOriginal === '0001-01-01' ? '' : desdeOriginal;
-        inputDesde.disabled = (desdeOriginal === '0001-01-01');
+        inputDesde.value = desdeOriginal === DESDE_SIEMPRE ? '' : desdeOriginal;
+        inputDesde.disabled = (desdeOriginal === DESDE_SIEMPRE);
     }
 
     /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil-tramo"]')).forEach(cb => {
@@ -105,7 +106,7 @@ async function guardarEdicionTramoDias() {
 
     const checkboxes = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('input[name="dia-habil-tramo"]:checked'));
     const nuevosDias = Array.from(checkboxes).map(cb => parseInt(cb.value));
-    const res = await Compensatorios.editarTramoDias(_tramoEnEdicionDesde, $('editar-tramo-desde')?.value, nuevosDias);
+    const res = await DiasHabiles.editarTramoDias(_tramoEnEdicionDesde, $('editar-tramo-desde')?.value, nuevosDias);
     if ('error' in res) { mostrarToast(res.error, 'error'); return; }
     if (!res.ok) return;
 
@@ -119,7 +120,7 @@ async function eliminarTramoDias() {
     if (tramos.length <= 1 || tramos[0].desde === _tramoEnEdicionDesde) return;   // el botón ya está deshabilitado
     if (!await GestorModales.confirmar('¿Eliminar este tramo del historial? Los registros afectados pasarán a regirse por el tramo anterior.', 'Eliminar')) return;
 
-    const res = await Compensatorios.eliminarTramoDias(_tramoEnEdicionDesde);
+    const res = await DiasHabiles.eliminarTramoDias(_tramoEnEdicionDesde);
     if ('error' in res) { mostrarToast(res.error, 'error'); return; }
     if (!res.ok) return;
 

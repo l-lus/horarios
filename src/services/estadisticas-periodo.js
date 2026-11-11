@@ -1,9 +1,10 @@
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { EstadoApp } from './estado-app.js';
 import { Compensatorios } from './compensatorios.js';
-import { FiltrosYPeriodos } from './filtros-periodos.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SaldoSemanal } from './saldo-semanal.js';
+import { TiempoFuera } from './tiempo-fuera.js';
+import { Objetivos } from './objetivos.js';
 
 // ====================================================================
 // ESTADÍSTICAS POR PERÍODO MODULE (semana, mes y año, sin DOM)
@@ -22,7 +23,7 @@ function desviacionEstandar(valores) {
 }
 
 function sumarHorasEfectivas(regs) {
-    return regs.reduce((sum, r) => sum + Compensatorios.horasEfectivasDeRegistro(r), 0);
+    return regs.reduce((sum, r) => sum + Objetivos.horasEfectivasDeRegistro(r), 0);
 }
 
 function _fechaDesdeEfectiva(registros, fechaDesdeDefault) {
@@ -33,13 +34,13 @@ function _fechaDesdeEfectiva(registros, fechaDesdeDefault) {
 
 function _calcularRegularidadRango(registrosValidos, regularidadPorMes) {
     if (regularidadPorMes) {
-        const meses = [...new Set(registrosValidos.map(r => r.fecha.substring(0, 7)))];
+        const meses = [...new Set(registrosValidos.map(r => TiempoUtils.claveMes(r.fecha)))];
         const desE = [], desJ = [];
         meses.forEach(mes => {
             const regs = registrosValidos.filter(r => r.fecha.startsWith(mes));
             if (regs.length < 2) return;
             const dE = desviacionEstandar(regs.map(r => TiempoUtils.horaAMinutos(r.entrada)));
-            const dJ = desviacionEstandar(regs.map(r => Math.round(r.total * 60)));
+            const dJ = desviacionEstandar(regs.map(r => TiempoUtils.horasAMinutosRedondeados(r.total)));
             if (dE !== null) desE.push(dE);
             if (dJ !== null) desJ.push(dJ);
         });
@@ -51,7 +52,7 @@ function _calcularRegularidadRango(registrosValidos, regularidadPorMes) {
     }
     return {
         regEntrada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => TiempoUtils.horaAMinutos(r.entrada)))),
-        regJornada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => Math.round(r.total * 60))))
+        regJornada: calcularRegularidad(desviacionEstandar(registrosValidos.map(r => TiempoUtils.horasAMinutosRedondeados(r.total))))
     };
 }
 
@@ -69,11 +70,11 @@ function calcularEstadisticasRango(registrosRango, opciones = {}) {
         }
     });
 
-    const compensaciones = registrosRango.filter(r => r.credito && r.credito !== '00:00').length;
+    const compensaciones = registrosRango.filter(r => TiposRegistro.tieneCredito(r)).length;
 
     let tiempoFueraTotalMinutos = 0;
     registrosRango.forEach(r => {
-        if (r.tiempoFuera && r.tiempoFuera !== '00:00') {
+        if (TiposRegistro.tieneTiempoFuera(r)) {
             tiempoFueraTotalMinutos += TiempoUtils.horaAMinutos(r.tiempoFuera);
         }
     });
@@ -95,7 +96,7 @@ function calcularEstadisticasRango(registrosRango, opciones = {}) {
     const hayPeriodo = horasDiariasObj > 0 && opciones.desde && opciones.hasta;
     const asignacionesCompensatorio = hayPeriodo ? Compensatorios.calcularAsignacionesCompensatorio() : null;
     const bufferPeriodo = hayPeriodo
-        ? FiltrosYPeriodos.calcularBufferPeriodo(opciones.desde, opciones.hasta, true, 0, asignacionesCompensatorio)
+        ? SaldoSemanal.calcularBufferPeriodo(opciones.desde, opciones.hasta, true, TiempoFuera.minutosActivos(), asignacionesCompensatorio)
         : null;
     const aprovechamientoSaldo = hayPeriodo
         ? SaldoSemanal.calcularAprovechamiento(opciones.desde, opciones.hasta, asignacionesCompensatorio)
@@ -168,10 +169,7 @@ function calcularEstadisticasAnio(anio, registrosPeriodo = null) {
 
 function calcularEstadisticasSemana(lunesISO) {
     if (!lunesISO) return calcularEstadisticasRango([], { regularidadPorMes: false });
-    const lunes = new Date(lunesISO + 'T00:00:00');
-    const domingo = new Date(lunes);
-    domingo.setDate(lunes.getDate() + 6);
-    const hasta = TiempoUtils.formatearFechaLocal(domingo);
+    const hasta = TiempoUtils.sumarDias(lunesISO, 6);
     const registros = EstadoApp.registros().filter(r => r.fecha >= lunesISO && r.fecha <= hasta);
     return calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: lunesISO, hasta });
 }

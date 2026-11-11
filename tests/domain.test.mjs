@@ -6,6 +6,8 @@ import { EventosApp } from '../src/core/eventos.js';
 import { TiposRegistro } from '../src/services/tipos-registro.js';
 import { EstadoApp } from '../src/services/estado-app.js';
 import { Compensatorios } from '../src/services/compensatorios.js';
+import { DiasHabiles } from '../src/services/dias-habiles.js';
+import { Objetivos } from '../src/services/objetivos.js';
 
 test('TiempoUtils: conversión HH:MM <-> minutos y cruces de medianoche', () => {
     assert.equal(TiempoUtils.horaAMinutos('08:30'), 510);
@@ -184,6 +186,7 @@ test('Integración: Arranque completo de OrquestadorUI.init() sin errores de eje
         removeItem: k => store.delete(k)
     };
     globalThis.requestAnimationFrame = () => 0;
+    globalThis.MutationObserver = class { observe() { } };
     globalThis.document = {
         readyState: 'complete',
         body: fakeEl(),
@@ -239,7 +242,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
             minutos: 0,
             total: 8
         }
-    ], EstadoApp.calcularHoras);
+    ]);
     assert.equal(registros[0].total, 7.5);
 
     const backupData = {
@@ -281,12 +284,73 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ignorarObjetivoPorRegistro: true,
         reducirAnimaciones: 'on',
         hintIntegrado: true,
+        estiloTarjeta: 'hitos',
+        lineaDisposicion: 'arriba',
+        lineaMosaicos: 'derecha',
+        anilloDisposicion: 'izquierda',
         descHitosNumero: true,
+        cicloHintAuto: true,
+        formatoCortoStats: false,
+        estiloCalendario: 'legacy',
+        posicionHeader: 'top',
+        posicionHeaderMovil: 'top',
+        hoverPopupCalendario: false,
+        ruedaCalendario: true,
+        persistirTarjetas: true,
+        fondoCard: 'golden-gate',
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
         ordenCardsMovil: ['estado', 'registrar', 'estadisticas', 'historico'],
         columnasCards: [3, 1],
+        ordenCards3: ['estado', 'registrar', 'estadisticas', 'historico'],
+        columnasCards3: [3, 1],
         tarjetasVisibles: { registrar: true, estadisticas: true, historico: true }
     });
+});
+
+test('ImportarExportar: la apariencia (estilo del calendario, fondo, formato corto...) viaja en el respaldo y se restaura; Restablecer cubre los mismos ajustes', async () => {
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { EstiloCalendario } = await import('../src/core/estilo-calendario.js');
+    const { STORAGE_KEYS, CLAVES_AJUSTES_INSTALACION } = await import('../src/core/constantes.js');
+
+    // Todo ajuste de la instalación que "Restablecer" borra tiene que viajar también en el respaldo (y al revés: si se agrega uno a la lista, no se olvida ninguno de los dos lados)
+    const exportado = ImportarExportar.obtenerConfigExportable();
+    CLAVES_AJUSTES_INSTALACION.forEach(k => assert.ok(k in exportado, `${k} falta en el respaldo`));
+    assert.ok(STORAGE_KEYS.FONDO_CARD in exportado, 'el fondo de la tarjeta falta en el respaldo');
+
+    const base = { diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8 };
+    const cambios = { estiloCalendario: 'punto', fondoCard: 'ninguno', formatoCortoStats: true, hoverPopupCalendario: true, ruedaCalendario: false, persistirTarjetas: false };
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, ...cambios }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, estiloCalendario: 'inexistente' }), false);
+    // la posición del encabezado: en PC valen los cuatro lados; en móvil solo arriba y abajo
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeader: 'left', posicionHeaderMovil: 'bottom' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeaderMovil: 'left' }), false);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeader: 'centro' }), false);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, fondoCard: 'inexistente' }), false);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, formatoCortoStats: 'si' }), false);
+
+    const etiquetas = ImportarExportar.calcularCambiosConfigImport({ ...base, ...cambios });
+    ['estilo del calendario', 'fondo de la tarjeta de estado', 'formato de tiempo corto', 'popup del calendario (PC)', 'rueda del calendario (PC)', 'recordar estado de tarjetas']
+        .forEach(e => assert.ok(etiquetas.includes(e), `no se informa el cambio de ${e}`));
+
+    ImportarExportar.aplicarConfigImportada({ ...base, ...cambios });
+    assert.equal(EstiloCalendario.actual(), 'punto');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ESTILO_CALENDARIO, null), 'punto');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, null, true), 'ninguno');
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false), true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.HOVER_POPUP, false), true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, true), false);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.PERSISTIR_TARJETAS, true), false);
+
+    // un respaldo sin esos campos (versiones anteriores) no los toca
+    ImportarExportar.aplicarConfigImportada({ ...base });
+    assert.equal(EstiloCalendario.actual(), 'punto');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, null, true), 'ninguno');
+
+    // se deja como estaba para no alterar los demás tests
+    ImportarExportar.aplicarConfigImportada({ ...base, estiloCalendario: 'legacy', fondoCard: 'golden-gate', formatoCortoStats: false, hoverPopupCalendario: false, ruedaCalendario: true, persistirTarjetas: true });
+    CLAVES_AJUSTES_INSTALACION.forEach(k => Almacenamiento.removeItem(k));
+    Almacenamiento.removeItem(STORAGE_KEYS.FONDO_CARD, true);
 });
 
 test('ImportarExportar: el diseño de la interfaz (orden y tarjetas visibles) se exporta, valida, compara y restaura', async () => {
@@ -342,6 +406,13 @@ test('ImportarExportar: el diseño de la interfaz (orden y tarjetas visibles) se
         assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_MOVIL, null, true), ['estado', 'estadisticas', 'registrar', 'historico']);
         assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['estado', 'historico', 'estadisticas', 'registrar']);
         Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_MOVIL, true);
+        // 3 columnas: sin orden propio usa el de 2; con uno propio, los de 1 y 2 columnas no cambian
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards3, ['estado', 'historico', 'estadisticas', 'registrar']);
+        ImportarExportar.aplicarConfigImportada({ ordenCards3: ['registrar', 'estado'] });
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ORDEN_CARDS_3, null, true), ['registrar', 'estado', 'estadisticas', 'historico']);
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().ordenCards, ['estado', 'historico', 'estadisticas', 'registrar']);
+        Almacenamiento.removeItem(STORAGE_KEYS.ORDEN_CARDS_3, true);
+        Almacenamiento.removeItem(STORAGE_KEYS.COLUMNAS_CARDS_3, true);
         assert.deepEqual(exportado.tarjetasVisibles, { registrar: true, estadisticas: false, historico: true });
 
         // Una clave que esta versión no conoce se rechaza como sospechosa
@@ -613,6 +684,18 @@ test('TarjetaFichajeVista: la línea del día abierta ubica la salida estimada y
     assert.ok(cerrada.salidaRel > cerrada.marcaSalidaRel, 'la escala de la barra sigue basada en la salida estimada');
 });
 
+test('TarjetaFichajeVista: un saldo semanal de 1 minuto adelanta la salida ajustada exactamente 1 minuto', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const est = {
+        regHoy: { fecha: '2026-11-04', entrada: '00:28', salida: null, total: 0, objetivoHoras: 7 },
+        tiempoHoy: 0.02, horasDiarias: 7, esDiaHabil: true, tipoEspecialHoy: null,
+        bufferSemanalBase: 0.016667, diasHabiles: [1, 2, 3, 4, 5], esRetenido: false
+    };
+    const linea = TarjetaFichajeVista.derivarVistaHoy(est).linea;
+    assert.equal(linea.horaSalida, '07:28');
+    assert.equal(linea.horaBuffer, '07:27');
+});
+
 test('TarjetaFichajeVista: con 0 minutos se muestra "Comenzando" o "Sin horas todavía" en lugar del cero', async () => {
     const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
     const estDia = (salida, tiempoHoy) => ({
@@ -686,6 +769,29 @@ test('GeometriaEtiquetas: conector, reparto de lados y cuándo la entrada pasa a
     assert.equal(entradaDebeSubir({ ...base, ancho: 0, salidaLeft: 0 }), false);
 });
 
+test('GeometriaEtiquetas: la salida pasa a la derecha cuando la entrada no puede subir (sin DOM)', async () => {
+    const { salidaDebeEspejarse, geometriaConector, entradaDebeSubir, ANCHO_CONECTOR, SEPARACION_ETIQUETA } = await import('../src/core/geometria-etiquetas.js');
+    // entrada de 0 a 39 px (fin + 12 = 51); la salida a la izquierda de su conector arranca en 41: se pisan
+    const base = { ancho: 300, entradaLeft: 0, entradaAncho: 39, salidaLeft: 41 };
+    // con la etiqueta del buffer arriba en ese tramo la entrada no puede subir: la salida se espeja
+    assert.equal(salidaDebeEspejarse({ ...base, bufferLeft: 12 }), true);
+    assert.equal(entradaDebeSubir({ ...base, bufferLeft: 12 }), false);
+    // sin buffer (o con el buffer lejos) la entrada sube y la salida se queda donde está
+    assert.equal(salidaDebeEspejarse({ ...base, bufferLeft: null }), false);
+    assert.equal(salidaDebeEspejarse({ ...base, bufferLeft: 120 }), false);
+    assert.equal(entradaDebeSubir({ ...base, bufferLeft: null }), true);
+    // sin choque no hace falta
+    assert.equal(salidaDebeEspejarse({ ...base, salidaLeft: 80, bufferLeft: 12 }), false);
+    // sin ancho medido no se decide nada
+    assert.equal(salidaDebeEspejarse({ ...base, ancho: 0, bufferLeft: 12 }), false);
+    // forzar el espejo deja la etiqueta a la derecha del conector aunque a la izquierda entre
+    const normal = geometriaConector(120, 39);
+    assert.equal(normal.espejado, false);
+    const forzada = geometriaConector(120, 39, 0, true);
+    assert.equal(forzada.espejado, true);
+    assert.equal(forzada.left, 120 + ANCHO_CONECTOR + SEPARACION_ETIQUETA);
+});
+
 test('GeometriaEtiquetas: lugar libre y versión de la descripción del hito enfocado (sin DOM)', async () => {
     const { holguraDescripcion, nivelDescripcion, holguraHaciaDerecha, MARGEN_DESCRIPCION_DERECHA, SEPARACION_DESCRIPCION } = await import('../src/core/geometria-etiquetas.js');
 
@@ -749,12 +855,29 @@ test('AvisoActualizacion: porcentajeValido acota y redondea el avance que inform
     assert.equal(porcentajeValido('abc'), null);
 });
 
+test('PosicionHeader: en PC valen las cuatro posiciones y en móvil solo arriba y abajo; lo inválido vuelve a arriba', async () => {
+    const { POSICIONES_HEADER, posicionesPermitidas, normalizarPosicion, etiquetaPosicion } = await import('../src/core/posicion-header.js');
+    assert.deepEqual(POSICIONES_HEADER.map(p => p.id), ['top', 'bottom', 'left', 'right']);
+    assert.deepEqual(posicionesPermitidas(true), ['top', 'bottom', 'left', 'right']);
+    assert.deepEqual(posicionesPermitidas(false), ['top', 'bottom']);
+
+    assert.equal(normalizarPosicion('left', true), 'left');
+    assert.equal(normalizarPosicion('bottom', false), 'bottom');
+    // un costado guardado no vale en móvil, ni un valor desconocido en ningún modo
+    assert.equal(normalizarPosicion('right', false), 'top');
+    assert.equal(normalizarPosicion('inventada', true), 'top');
+    assert.equal(normalizarPosicion(undefined, false), 'top');
+
+    assert.equal(etiquetaPosicion('bottom'), 'Abajo');
+    assert.equal(etiquetaPosicion('inventada'), 'Arriba');
+});
+
 test('EstiloCalendario: el ciclo recorre todos los estilos, vuelve al original y tolera ids desconocidos', async () => {
     const { ESTILOS_CALENDARIO, siguienteEstilo, etiquetaEstilo } = await import('../src/core/estilo-calendario.js');
     const ids = ESTILOS_CALENDARIO.map(e => e.id);
     assert.equal(ids[0], 'legacy', 'el estilo original es el primero y el valor por defecto');
     assert.equal(new Set(ids).size, ids.length, 'sin ids repetidos');
-    assert.deepEqual(ids, ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto']);
+    assert.deepEqual(ids, ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto']);
 
     // dando la vuelta completa se vuelve al punto de partida y se pasa por todos
     const visitados = [];
@@ -769,4 +892,340 @@ test('EstiloCalendario: el ciclo recorre todos los estilos, vuelve al original y
     // el estilo que se quitó ('solo-contorno') guardado por una versión anterior vuelve al original
     assert.equal(etiquetaEstilo('solo-contorno'), 'Legacy');
     assert.equal(etiquetaEstilo('aro-grueso'), 'Aro grueso');
+});
+
+test('TiempoUtils.msHastaProximoMinuto: lo que falta para el próximo cambio de minuto', () => {
+    const { msHastaProximoMinuto: ms } = TiempoUtils;
+    assert.equal(ms(0), 60000);
+    assert.equal(ms(1000), 59000);
+    assert.equal(ms(59999), 1);
+    assert.equal(ms(60000), 60000);
+});
+
+test('TiempoUtils.sumarDias: cruza meses y años, en ambos sentidos', () => {
+    const { sumarDias } = TiempoUtils;
+    assert.equal(sumarDias('2026-10-31', 1), '2026-11-01');
+    assert.equal(sumarDias('2026-01-01', -1), '2025-12-31');
+    assert.equal(sumarDias('2028-02-28', 1), '2028-02-29');
+    assert.equal(sumarDias('2026-10-26', 6), '2026-11-01');
+    assert.equal(sumarDias('2026-10-26', 0), '2026-10-26');
+});
+
+test('DiasHabiles.esDiaLaboral: usa el tramo de días hábiles que rige en esa fecha', () => {
+    EstadoApp._setHistorialDiasHabilesRaw([{ desde: '0001-01-01', dias: [1, 2, 3, 4, 5] }, { desde: '2026-06-01', dias: [6] }]);
+    assert.equal(DiasHabiles.esDiaLaboral('2026-05-25'), true, 'lunes en el primer tramo');
+    assert.equal(DiasHabiles.esDiaLaboral('2026-05-30'), false, 'sábado en el primer tramo');
+    assert.equal(DiasHabiles.esDiaLaboral('2026-06-01'), false, 'lunes en el segundo tramo');
+    assert.equal(DiasHabiles.esDiaLaboral('2026-06-06'), true, 'sábado en el segundo tramo');
+    EstadoApp._setHistorialDiasHabilesRaw([]);
+});
+
+test('Objetivos.creditoPara: lo que falta para el objetivo, sin perder minutos por redondeo', () => {
+    EstadoApp.setIgnorarTiempoFuera(false);
+    assert.equal(Objetivos.creditoPara('08:00', '12:00', null, 7), '03:00');
+    assert.equal(Objetivos.creditoPara('08:00', '12:00', '00:30', 7), '03:30');
+    assert.equal(Objetivos.creditoPara('08:00', '15:00', null, 7), null, 'cumplió');
+    assert.equal(Objetivos.creditoPara('08:00', '14:59', null, 7), '00:01', 'un minuto');
+    assert.equal(Objetivos.creditoPara('08:00', '12:00', null, 7.125), '03:08', 'objetivo con decimales');
+    assert.equal(Objetivos.creditoPara('08:00', null, null, 7), null, 'sin salida');
+});
+
+test('Helpers de presentación: contar, claveMes, tieneTiempoFuera y tieneCredito', () => {
+    assert.equal(TiempoUtils.contar(1, 'día'), '1 día');
+    assert.equal(TiempoUtils.contar(0, 'registro'), '0 registros');
+    assert.equal(TiempoUtils.contar(3, 'registro'), '3 registros');
+    assert.equal(TiempoUtils.claveMes('2026-10-28'), '2026-10');
+    assert.deepEqual(['00:30', '00:00', '', null, undefined].map(v => TiposRegistro.tieneTiempoFuera({ tiempoFuera: v })), [true, false, false, false, false]);
+    assert.deepEqual(['00:30', '00:00', '', null, undefined].map(v => TiposRegistro.tieneCredito({ credito: v })), [true, false, false, false, false]);
+});
+
+test('alClic: enlaza cada id a su manejador e ignora los que no existen', async () => {
+    const { alClic } = await import('../src/core/dom.js');
+    const docOriginal = globalThis.document;
+    const oyentes = {};
+    globalThis.document = { getElementById: id => (id === 'no-existe' ? null : { addEventListener: (tipo, fn) => { oyentes[`${id}:${tipo}`] = fn; } }) };
+    try {
+        const a = () => { }, b = () => { };
+        alClic({ 'btn-a': a, 'btn-b': b, 'no-existe': () => { } });
+        assert.deepEqual(oyentes, { 'btn-a:click': a, 'btn-b:click': b });
+    } finally {
+        globalThis.document = docOriginal;
+    }
+});
+
+test('Preferencias: leen y guardan con su valor por defecto, por perfil solo las que corresponde', async () => {
+    const { Preferencias: P } = await import('../src/core/preferencias.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+    Almacenamiento.removeItem(STORAGE_KEYS.HOVER_POPUP);
+    Almacenamiento.removeItem(STORAGE_KEYS.PERSISTIR_TARJETAS);
+    assert.equal(P.HOVER_POPUP.get(), false);
+    assert.equal(P.PERSISTIR_TARJETAS.get(), true);
+    P.HOVER_POPUP.set(true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.HOVER_POPUP), true);
+    Almacenamiento.removeItem(STORAGE_KEYS.HOVER_POPUP);
+
+    Almacenamiento.removeItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, true);
+    P.IGNORAR_LOGICA_CUBIERTO.set(true);
+    assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true), true, 'se guarda por perfil');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO), null, 'no en la clave global');
+    Almacenamiento.removeItem(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, true);
+});
+
+test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos y nuevos', async () => {
+    const { ESTILOS_TARJETA, siguienteEstilo, etiquetaEstilo, esEstiloPropio, EstiloTarjeta } = await import('../src/core/estilo-tarjeta.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+
+    const ids = ESTILOS_TARJETA.map(e => e.id);
+    assert.deepEqual(ids, ['clasica', 'linea', 'filas', 'anillo', 'hitos']);
+    let id = 'clasica';
+    for (let i = 0; i < ids.length; i++) id = siguienteEstilo(id);
+    assert.equal(id, 'clasica', 'dando la vuelta completa se vuelve al punto de partida');
+    assert.equal(siguienteEstilo('desconocido'), 'clasica');
+    assert.equal(etiquetaEstilo('desconocido'), 'Clásica');
+    assert.deepEqual(ids.filter(esEstiloPropio), ['linea', 'filas', 'anillo']);
+
+    // sin estilo guardado se deduce del hint integrado: quien ya usaba la app ve lo mismo que antes
+    Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_TARJETA);
+    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, false);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.actual(), 'clasica');
+    Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, true);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.actual(), 'hitos');
+
+    // un valor guardado inválido se ignora
+    Almacenamiento.setItem(STORAGE_KEYS.ESTILO_TARJETA, 'inexistente');
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.actual(), 'hitos');
+
+    EstiloTarjeta.setEstilo('anillo');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ESTILO_TARJETA), 'anillo');
+    assert.equal(EstiloTarjeta.propio(), true);
+    assert.equal(EstiloTarjeta.hintIntegrado(), false);
+    EstiloTarjeta.setEstilo('mal');
+    assert.equal(EstiloTarjeta.actual(), 'anillo', 'un estilo inválido no cambia nada');
+
+    // respaldo viejo: solo trae el interruptor del hint integrado
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, hintIntegrado: false });
+    assert.equal(EstiloTarjeta.actual(), 'clasica');
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, hintIntegrado: true });
+    assert.equal(EstiloTarjeta.actual(), 'hitos');
+    // respaldo nuevo: trae el estilo y manda sobre el interruptor
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, hintIntegrado: false, estiloTarjeta: 'filas' });
+    assert.equal(EstiloTarjeta.actual(), 'filas');
+    assert.equal(ImportarExportar.validarCamposConfigImport({ estiloTarjeta: 'filas' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ estiloTarjeta: 'otro' }), false);
+
+    // disposición del tiempo trabajado en la línea de tiempo (subvariante para tarjetas anchas)
+    const { DISPOSICIONES_LINEA, siguienteDisposicion, etiquetaDisposicion } = await import('../src/core/estilo-tarjeta.js');
+    assert.deepEqual(DISPOSICIONES_LINEA.map(d => d.id), ['arriba', 'izquierda', 'derecha', 'mosaicos-izquierda', 'mosaicos-derecha']);
+    assert.equal(siguienteDisposicion('arriba'), 'izquierda');
+    assert.equal(siguienteDisposicion('mosaicos-derecha'), 'arriba');
+    assert.equal(siguienteDisposicion('x'), 'arriba');
+    assert.equal(etiquetaDisposicion('x'), 'Arriba');
+    Almacenamiento.removeItem(STORAGE_KEYS.LINEA_DISPOSICION);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.disposicion(), 'arriba', 'por defecto el tiempo va arriba, como en el móvil');
+    EstiloTarjeta.siguienteDisposicion();
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.LINEA_DISPOSICION), 'izquierda');
+    EstiloTarjeta.setDisposicion('inválida');
+    assert.equal(EstiloTarjeta.disposicion(), 'izquierda');
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, lineaDisposicion: 'derecha' });
+    assert.equal(EstiloTarjeta.disposicion(), 'derecha');
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'derecha' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'mosaicos-izquierda' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaDisposicion: 'abajo' }), false);
+
+    // posición de los mosaicos de la línea de tiempo con la tarjeta angosta (móvil)
+    const { MOSAICOS_LINEA, siguienteMosaicos, etiquetaMosaicos } = await import('../src/core/estilo-tarjeta.js');
+    assert.deepEqual(MOSAICOS_LINEA.map(m => m.id), ['abajo', 'derecha']);
+    assert.equal(siguienteMosaicos('abajo'), 'derecha');
+    assert.equal(siguienteMosaicos('derecha'), 'abajo');
+    assert.equal(etiquetaMosaicos('x'), 'Vertical', 'un id desconocido cuenta como la posición por defecto');
+    Almacenamiento.removeItem(STORAGE_KEYS.LINEA_MOSAICOS);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.mosaicos(), 'derecha', 'por defecto vertical (apilados a la derecha de la línea)');
+    EstiloTarjeta.siguienteMosaicos();
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.LINEA_MOSAICOS), 'abajo');
+    EstiloTarjeta.setMosaicos('izquierda');
+    assert.equal(EstiloTarjeta.mosaicos(), 'abajo', 'un valor inválido no cambia nada');
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, lineaMosaicos: 'derecha' });
+    assert.equal(EstiloTarjeta.mosaicos(), 'derecha');
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaMosaicos: 'derecha' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ lineaMosaicos: 'izquierda' }), false);
+
+    // variantes del estilo anillo: aro a la izquierda o a la derecha, fila de abajo o arriba
+    const { DISPOSICIONES_ANILLO, siguienteAnillo, etiquetaAnillo } = await import('../src/core/estilo-tarjeta.js');
+    assert.deepEqual(DISPOSICIONES_ANILLO.map(d => d.id), ['izquierda', 'derecha', 'arriba-izquierda', 'arriba-derecha']);
+    assert.equal(siguienteAnillo('izquierda'), 'derecha');
+    assert.equal(siguienteAnillo('arriba-derecha'), 'izquierda');
+    assert.equal(siguienteAnillo('x'), 'izquierda');
+    assert.equal(etiquetaAnillo('x'), 'Anillo a la izquierda');
+    Almacenamiento.removeItem(STORAGE_KEYS.ANILLO_DISPOSICION);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.anillo(), 'izquierda', 'por defecto el aro a la izquierda y la fila abajo');
+    EstiloTarjeta.siguienteAnillo();
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ANILLO_DISPOSICION), 'derecha');
+    EstiloTarjeta.setAnillo('abajo');
+    assert.equal(EstiloTarjeta.anillo(), 'derecha', 'un valor inválido no cambia nada');
+    ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, anilloDisposicion: 'arriba-izquierda' });
+    assert.equal(EstiloTarjeta.anillo(), 'arriba-izquierda');
+    assert.equal(ImportarExportar.validarCamposConfigImport({ anilloDisposicion: 'arriba-derecha' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ anilloDisposicion: 'abajo' }), false);
+
+    // se deja como estaba para no alterar los demás tests
+    Almacenamiento.removeItem(STORAGE_KEYS.ANILLO_DISPOSICION);
+    Almacenamiento.removeItem(STORAGE_KEYS.LINEA_MOSAICOS);
+    Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_TARJETA);
+    Almacenamiento.removeItem(STORAGE_KEYS.LINEA_DISPOSICION);
+    EstiloTarjeta.releer();
+});
+
+test('ResumenTarjeta: duraciones compactas y orden de los hitos (sin DOM)', async () => {
+    const { partesDuracion, duracionCompacta, duracionConSigno, hitosOrdenados } = await import('../src/core/resumen-tarjeta.js');
+
+    assert.deepEqual(partesDuracion(398), { horas: 6, minutos: 38 });
+    assert.deepEqual(partesDuracion(-5), { horas: 0, minutos: 0 });
+    assert.equal(duracionCompacta(22), '22 min');
+    assert.equal(duracionCompacta(480), '8 h');
+    assert.equal(duracionCompacta(398), '6 h 38 min');
+    assert.equal(duracionConSigno(19), '+19 min');
+    assert.equal(duracionConSigno(-35), '−35 min');
+
+    // abierta con banco a favor: la salida con banco llega antes que la estimada
+    const abierta = { cerrado: false, ahoraRel: 22, salidaRel: 420, bufferRel: 401, hayBanda: true };
+    assert.deepEqual(hitosOrdenados(abierta).map(h => h.tipo), ['entrada', 'ahora', 'banco', 'salida']);
+    // banco en contra: llega después
+    assert.deepEqual(hitosOrdenados({ ...abierta, bufferRel: 455 }).map(h => h.tipo), ['entrada', 'ahora', 'salida', 'banco']);
+    // "ahora" se ordena entre los demás según la hora
+    assert.deepEqual(hitosOrdenados({ ...abierta, ahoraRel: 410 }).map(h => h.tipo), ['entrada', 'banco', 'ahora', 'salida']);
+    // sin banda no hay hito de banco; cerrada solo quedan entrada y salida
+    assert.deepEqual(hitosOrdenados({ ...abierta, hayBanda: false, bufferRel: null }).map(h => h.tipo), ['entrada', 'ahora', 'salida']);
+    assert.deepEqual(hitosOrdenados({ ...abierta, cerrado: true }).map(h => h.tipo), ['entrada', 'salida']);
+});
+
+test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (registro abierto y cerrado, sin registro y día especial)', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const { TiempoUtils } = await import('../src/core/tiempo-utils.js');
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    const base = {
+        horasDiarias: 8, esDiaHabil: true, diasHabiles: [0, 1, 2, 3, 4, 5, 6], tipoEspecialHoy: null,
+        bufferSemanal: 0.5, bufferSemanalBase: 0.5, semanaAbierta: true, hoy, ayerAbierto: false, regAyer: null
+    };
+
+    const sin = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: null, tiempoHoy: 0 }).resumen;
+    assert.equal(sin.tipo, 'espera');
+    assert.equal(sin.mensaje, 'Esperando registro…');
+    assert.equal(sin.banco.texto, '+30 min');
+    assert.equal(sin.banco.positivo, true);
+
+    const especial = TarjetaFichajeVista.derivarVistaHoy({
+        ...base, regHoy: { fecha: hoy, entrada: 'VAC', salida: 'VAC' }, tiempoHoy: 0,
+        tipoEspecialHoy: { emoji: '🏖️', label: 'Vacaciones', descripcion: 'Vacaciones', color: 'orange' }
+    }).resumen;
+    assert.deepEqual(especial, { tipo: 'especial', emoji: '🏖️', etiqueta: 'Vacaciones', descripcion: '¡Vacaciones!', color: 'orange' });
+
+    const abierto = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: { fecha: hoy, entrada: '09:00', salida: '' }, tiempoHoy: 0.5 }).resumen;
+    assert.equal(abierto.tipo, 'registro');
+    assert.equal(abierto.cerrado, false);
+    assert.deepEqual(abierto.trabajado, { horas: 0, minutos: 30 });
+    assert.equal(abierto.entrada, '09:00');
+    assert.equal(abierto.salida, '');
+    assert.deepEqual(abierto.balance, { etiqueta: 'Faltan', texto: '7 h 30 min', tono: 'neutro' });
+    assert.equal(abierto.banco.texto, '+30 min');
+    // tramos del anillo (como la barra con hitos): azul hasta la salida con banco (7:30 de 8:00), el color del banco hasta la salida estimada
+    assert.equal(abierto.anillo.tramos.length, 2);
+    assert.deepEqual(abierto.anillo.tramos[0], { desde: 0, hasta: 93.75, color: 'blue' });
+    assert.equal(abierto.anillo.tramos[1].hasta, 100);
+    assert.equal(abierto.anillo.progreso, 6.25);
+
+    // con lo trabajado más allá de la última marca el aro se estira: azul hasta el objetivo y verde el resto
+    const extra = TarjetaFichajeVista.derivarVistaHoy({ ...base, bufferSemanal: 0, bufferSemanalBase: 0, regHoy: { fecha: hoy, entrada: '09:00', salida: '' }, tiempoHoy: 10 }).resumen;
+    assert.deepEqual(extra.anillo.tramos.map(t => t.color), ['blue', 'green']);
+    assert.equal(extra.anillo.progreso, 100);
+    assert.equal(extra.anillo.tramos[0].hasta, 80);
+
+    const cerrado = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: { fecha: hoy, entrada: '09:00', salida: '17:00' }, tiempoHoy: 8 }).resumen;
+    assert.equal(cerrado.cerrado, true);
+    assert.equal(cerrado.salida, '17:00');
+    assert.equal(cerrado.salidaEstimada, '');
+    assert.equal(cerrado.anillo, null, 'cerrado el aro va de un solo color');
+    assert.deepEqual(cerrado.balance, { etiqueta: 'Objetivo', texto: 'Cumplido', tono: 'green' });
+});
+
+test('TarjetaFichajeVista: el resumen de la semana lista los días con su color y lo que falta', async () => {
+    const { TarjetaFichajeVista } = await import('../src/ui/tarjeta-fichaje-vista.js');
+    const { horaCorta, resumenesDeMedida } = await import('../src/core/resumen-tarjeta.js');
+    assert.equal(horaCorta(450), '7:30');
+    assert.equal(horaCorta(0), '—');
+
+    const dia = (fecha, estado, extra = {}) => ({ fecha, objetivo: 7, total: 0, activo: false, estado, ...extra });
+    const est = {
+        totalSemana: 10.5, totalSemanaProgreso: 10.5, objetivoSemana: 35, semanaAbierta: true, horasDiarias: 7, todosEspeciales: false,
+        hoy: '2026-10-28', bufferSemanal: -2, diasSemana: [
+            dia('2026-10-26', 'cerrado', { total: 7, cumplimiento: 'cumplido' }),
+            dia('2026-10-27', 'cerrado', { total: 3.5, cumplimiento: 'faltante' }),
+            dia('2026-10-28', 'especial', { objetivo: 0, especial: 'orange', emoji: '🏖️', etiqueta: 'Vacaciones' }),
+            dia('2026-10-29', 'futuro')
+        ]
+    };
+    const r = TarjetaFichajeVista.derivarVistaSemana(est).resumen;
+    assert.equal(r.tipo, 'semana');
+    assert.deepEqual(r.trabajado, { horas: 10, minutos: 30 });
+    assert.equal(r.objetivoMin, 2100);
+    assert.deepEqual(r.balance, { etiqueta: 'Faltan', texto: '24 h 30 min', tono: 'neutro' });
+    assert.equal(r.banco.texto, '−2 h');
+    assert.deepEqual(r.dias.map(d => [d.sigla, d.estado, d.color, d.totalMin, d.hoy]), [
+        ['lun', 'cerrado', 'green', 420, false],
+        ['mar', 'cerrado', 'red', 210, false],
+        ['mié', 'especial', 'orange', 0, true],
+        ['jue', 'futuro', null, 0, false]
+    ]);
+    assert.equal(r.dias[1].fraccion, 0.5);
+    // el aro lleva los tramos de la barra semanal: un tramo por día (el especial, de 1 h, con su color; el futuro no entra) sobre el objetivo de 35 h más esa hora fija
+    assert.deepEqual(r.anillo.tramos.map(t => [t.color, Math.round(t.desde * 100) / 100, Math.round(t.hasta * 100) / 100]), [
+        ['green', 0, 19.44], ['red', 19.44, 29.17], ['orange', 29.17, 31.94]
+    ]);
+    assert.equal(Math.round(r.anillo.progreso * 100) / 100, 31.94);
+    assert.equal(r.dias[2].emoji, '🏖️');
+
+    // una semana sin días laborables se muestra como "sin registro" (emoji y mensaje)
+    const vacia = TarjetaFichajeVista.derivarVistaSemana({ ...est, todosEspeciales: true, diasSemana: [] }).resumen;
+    assert.equal(vacia.tipo, 'espera');
+    assert.equal(vacia.emoji, '🌞');
+
+    // los resúmenes de medida (alto reservado del anillo) cubren todos los estados
+    const medidas = resumenesDeMedida();
+    assert.deepEqual(medidas.map(m => m.tipo), ['registro', 'espera', 'especial', 'semana']);
+    assert.equal(medidas[3].dias.length, 7);
+
+});
+
+test('SeguridadYUtils.notasHastaPalabra: respeta la lista blanca y el largo máximo cortando en la última palabra completa', async () => {
+    const { SeguridadYUtils: S } = await import('../src/core/seguridad.js');
+    const MAX = S.SECURITY_LIMITS.MAX_NOTAS_LENGTH;
+
+    assert.equal(S.notasHastaPalabra('Año Nuevo'), 'Año Nuevo');
+    assert.equal(S.notasHastaPalabra('Día Nac. de la Memoria'), 'Día Nac de la Memoria', 'los signos fuera de la lista blanca se quitan');
+    assert.equal(S.notasHastaPalabra('Paso a la Inmortalidad del Gral. Güemes'), 'Paso a la Inmortalidad del Gral', 'se corta antes de la palabra que no entra');
+    assert.equal(S.notasHastaPalabra('Visita de Su Santidad el Papa León XIV (CABA)'), 'Visita de Su Santidad el Papa León');
+
+    // una palabra que llega justo al máximo se conserva completa; si la siguiente ya no entra, se descarta entera
+    const justo = 'a'.repeat(MAX - 5) + ' bcde';
+    assert.equal(justo.length, MAX);
+    assert.equal(S.notasHastaPalabra(`${justo} fgh`), justo);
+    // una palabra que se pasa del máximo no queda partida
+    assert.equal(S.notasHastaPalabra('a'.repeat(MAX - 5) + ' bcdefg'), 'a'.repeat(MAX - 5));
+    // una sola palabra más larga que el máximo no tiene dónde cortarse: se recorta en el máximo
+    assert.equal(S.notasHastaPalabra('x'.repeat(MAX + 15)), 'x'.repeat(MAX));
+
+    assert.equal(S.notasHastaPalabra(''), null);
+    assert.equal(S.notasHastaPalabra('...'), null);
+    assert.equal(S.notasHastaPalabra(undefined), null);
+    for (const t of ['Feriado con un nombre bastante largo para el campo', 'Paso a la Inmortalidad del Gral. San Martín']) {
+        assert.ok((S.notasHastaPalabra(t) ?? '').length <= MAX);
+    }
 });

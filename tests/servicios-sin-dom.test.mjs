@@ -287,7 +287,7 @@ test('ImportarExportar.normalizarRegistrosImportados deja un registro por fecha 
         { ...base, id: 'aaaaaaaaaa2', fecha: '2026-10-20', entrada: '09:00', salida: '17:00' },
         { ...base, id: 'aaaaaaaaaa2', fecha: '2026-10-21', entrada: '08:00', salida: '16:00' },
     ];
-    const r = ImportarExportar.normalizarRegistrosImportados(lista, EstadoApp.calcularHoras);
+    const r = ImportarExportar.normalizarRegistrosImportados(lista);
     assert.equal(r.length, 2);
     assert.equal(r.find(x => x.fecha === '2026-10-20').salida, '17:00');
     assert.equal(new Set(r.map(x => x.id)).size, 2);
@@ -309,7 +309,7 @@ test('ImportarExportar: archivo y Gist comparten validación (prepararRespaldo) 
     assert.equal(IE.errorEstructuraRespaldo([], 'Gist'), 'Estructura del Gist inválida');
     assert.equal(IE.errorEstructuraRespaldo({ registros: [], extra: 1 }, 'Gist'), 'Gist con estructura sospechosa');
     assert.match(IE.errorEstructuraRespaldo({ registros: new Array(S.SECURITY_LIMITS.MAX_REGISTROS + 1) }), /Máximo/);
-    assert.equal(await IE.prepararRespaldo({ registros: [], _hashNoCoincide: true }, 'gist'), null);
+    assert.ok('error' in await IE.prepararRespaldo({ registros: [], _hashNoCoincide: true }, 'gist'));
 
     const base = { tiempoFuera: null, horas: 0, minutos: 0, total: 0 };
     const registros = [
@@ -317,7 +317,7 @@ test('ImportarExportar: archivo y Gist comparten validación (prepararRespaldo) 
         { ...base, id: 'bbbbbbbbbb2', fecha: '2026-10-21', entrada: '09:00', salida: '16:00' },
     ];
     const data = { registros, hash: await S.calcularHashSHA256(registros) };
-    const importados = await IE.prepararRespaldo(data, 'gist');
+    const { registros: importados } = await IE.prepararRespaldo(data, 'gist');
     assert.equal(importados.length, 2);
     assert.equal(confirmaciones, 0);   // hash correcto: no pide confirmación
 
@@ -431,27 +431,27 @@ test('SincronizacionGist: el token se valida con lista blanca y uno inválido no
     assert.equal(G.getToken(), '');
 });
 
-test('FiltrosYPeriodos: día especial y operaciones por lote rechazan fechas inválidas sin tocar los registros', async () => {
-    const { FiltrosYPeriodos: F } = await import('../src/services/filtros-periodos.js');
+test('OperacionesLote: día especial y operaciones por lote rechazan fechas inválidas sin tocar los registros', async () => {
+    const { OperacionesLote: F } = await import('../src/services/operaciones-lote.js');
     const { EstadoApp } = await import('../src/services/estado-app.js');
     const avisos = [];
     EstadoApp.configurarNotificaciones({ avisarFichaje: m => avisos.push(m), mostrarToast: m => avisos.push(m) });
     EstadoApp._setRegistros([]);
 
-    await assert.rejects(F.registrarDiaEspecial('2026-13-01', 'feriado'));
-    await assert.rejects(F.registrarVacacionesDirecto('no-fecha', '2026-10-20', 'vacaciones'));
-    await assert.rejects(F.registrarVacacionesDirecto('2026-10-20', '2026-10-10', 'vacaciones'));
-    await assert.rejects(F.borrarPeriodoDirecto('2026-10-01', ''));
+    assert.deepEqual(await F.registrarDiaEspecial('2026-13-01', 'feriado'), { error: 'Fecha inválida' });
+    assert.deepEqual(await F.registrarVacacionesDirecto('no-fecha', '2026-10-20', 'vacaciones'), { error: 'Fecha "Desde" inválida' });
+    assert.ok('error' in await F.registrarVacacionesDirecto('2026-10-20', '2026-10-10', 'vacaciones'));
+    assert.ok('error' in await F.borrarPeriodoDirecto('2026-10-01', ''));
     assert.equal(EstadoApp.registros().length, 0);
     assert.deepEqual(avisos, ['Fecha inválida', 'Fecha "Desde" inválida', 'La fecha inicial debe ser inferior a la final', 'Verificá ambas fechas']);
 
     EstadoApp._setRegistros([{ id: 'eeeeeeeeee1', fecha: '2026-10-05', entrada: '09:00', salida: '17:00', tiempoFuera: null, horas: 8, minutos: 0, total: 8 }]);
-    await assert.rejects(F.registrarDiaEspecial('2026-10-05', 'feriado'));
+    assert.deepEqual(await F.registrarDiaEspecial('2026-10-05', 'feriado'), { error: 'Ya existe un registro para esa fecha' });
     assert.equal(avisos.at(-1), 'Ya existe un registro para esa fecha');
 });
 
-test('FiltrosYPeriodos.aplicarFiltrosInmediato ignora fechas y tipos inválidos', async () => {
-    const { FiltrosYPeriodos: F } = await import('../src/services/filtros-periodos.js');
+test('Filtros.aplicarFiltrosInmediato ignora fechas y tipos inválidos', async () => {
+    const { Filtros: F } = await import('../src/services/filtros.js');
     const { EstadoApp } = await import('../src/services/estado-app.js');
     EstadoApp.configurarNotificaciones({ actualizarUI: () => { } });
     F.aplicarFiltrosInmediato('2026-10-01', 'x', '<b>');
@@ -472,13 +472,13 @@ test('ImportarExportar.armarRespaldo produce lo que prepararRespaldo acepta (ida
     for (const extra of [undefined, { rangoExportado: '2026-10-01 a 2026-10-31' }]) {
         const data = await IE.armarRespaldo(registros, extra);
         assert.equal(IE.errorEstructuraRespaldo(data), null);
-        assert.equal((await IE.prepararRespaldo(JSON.parse(JSON.stringify(data)))).length, 1);
+        assert.equal((await IE.prepararRespaldo(JSON.parse(JSON.stringify(data)))).registros.length, 1);
     }
     assert.equal(confirmaciones, 0);   // el hash coincide: no pide confirmación
 });
 
-test('Compensatorios: editar y eliminar tramos de días hábiles validan y no permiten borrar el primero', async () => {
-    const { Compensatorios: C } = await import('../src/services/compensatorios.js');
+test('DiasHabiles: editar y eliminar tramos de días hábiles validan y no permiten borrar el primero', async () => {
+    const { DiasHabiles: C } = await import('../src/services/dias-habiles.js');
     const { EstadoApp } = await import('../src/services/estado-app.js');
     let sincronizaciones = 0;
     EstadoApp.configurarNotificaciones({ actualizarUI: () => { } });
@@ -520,4 +520,233 @@ test('GestionDatos: deshacer y rehacer restauran los registros y recalculan sus 
     assert.equal(EstadoApp.registros()[0].total, 8);   // se recalculó al restaurar
     assert.deepEqual(toasts, ['Deshecho', 'Rehecho']);
     GestorHistorial.clear();
+});
+
+test('GestionDatos.cargarPerfilActivo: el perfil manda aunque la pila de deshacer haya quedado vieja', async (t) => {
+    const { GestionDatos } = await import('../src/services/gestion-datos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    const { GestorHistorial } = await import('../src/services/gestor-historial.js');
+    EstadoApp.configurarNotificaciones({ actualizarUI: () => { }, mostrarToast: () => { } });
+    GestorPerfiles.inicializar();
+    GestorHistorial.clear();
+    EstadoApp._setRegistros([]);
+    GestorHistorial.saveState(EstadoApp.registros(), 'inicio');
+    await EstadoApp.guardarYActualizar();
+
+    // La escritura de la pila (varios MB) falla por cuota; la del perfil (mucho más chica) entra
+    const setItemReal = localStorage.setItem;
+    localStorage.setItem = (k, v) => {
+        if (k.includes('history')) throw Object.assign(new Error('cuota'), { name: 'QuotaExceededError' });
+        setItemReal(k, v);
+    };
+    t.mock.method(console, 'error', () => { });
+    t.mock.method(console, 'warn', () => { });
+    try {
+        EstadoApp.registros().push(EstadoApp._construirRegistro('2026-10-20', '08:30', null));
+        GestorHistorial.saveState(EstadoApp.registros(), 'entrada');
+        assert.equal(await EstadoApp.guardarYActualizar(), true);
+    } finally {
+        localStorage.setItem = setItemReal;
+    }
+
+    try {
+        GestorPerfiles.inicializar();   // recarga de la app
+        GestionDatos.cargarPerfilActivo();
+        assert.equal(EstadoApp.registros().length, 1, 'el fichaje guardado en el perfil no se pierde');
+        assert.deepEqual(GestorHistorial.getCurrentState().map(r => r.fecha), ['2026-10-20'], 'la pila vuelve a coincidir con el perfil');
+
+        // Un cambio guardado sin pasar por la pila (ej. créditos recalculados desde Ajustes) tampoco se revierte
+        const reg = EstadoApp.registros()[0];
+        reg.salida = '12:00';
+        reg.credito = '03:30';
+        await EstadoApp.guardarYActualizar();
+        GestorPerfiles.inicializar();
+        GestionDatos.cargarPerfilActivo();
+        assert.equal(EstadoApp.registros()[0].credito, '03:30');
+    } finally {
+        GestorHistorial.clear();
+        EstadoApp._setRegistros([]);
+        await EstadoApp.guardarYActualizar();
+    }
+});
+
+test('GestionDatos.cargarPerfilActivo: con la pila al día se conserva lo que se puede deshacer', async () => {
+    const { GestionDatos } = await import('../src/services/gestion-datos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    const { GestorHistorial } = await import('../src/services/gestor-historial.js');
+    EstadoApp.configurarNotificaciones({ actualizarUI: () => { }, mostrarToast: () => { }, iniciarTimerAutoCierreBotones: () => { } });
+    GestorPerfiles.inicializar();
+    GestorHistorial.clear();
+    EstadoApp._setRegistros([]);
+    GestorHistorial.saveState(EstadoApp.registros(), 'inicio');
+    await EstadoApp.guardarYActualizar();
+    EstadoApp.registros().push(EstadoApp._construirRegistro('2026-10-20', '08:30', '15:30'));
+    GestorHistorial.saveState(EstadoApp.registros(), 'jornada');
+    await EstadoApp.guardarYActualizar();
+
+    try {
+        GestorPerfiles.inicializar();
+        GestionDatos.cargarPerfilActivo();
+        GestionDatos.undoAction();
+        assert.equal(EstadoApp.registros().length, 0);
+    } finally {
+        GestorHistorial.clear();
+        EstadoApp._setRegistros([]);
+        await EstadoApp.guardarYActualizar();
+    }
+});
+
+test('ImportarExportar.importarDatos acepta un .json aunque el navegador no informe su tipo, y rechaza otros archivos', async () => {
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const toasts = [];
+    EstadoApp.configurarNotificaciones({ mostrarToast: (m) => toasts.push(m) });
+    const leidos = [];
+    globalThis.FileReader = class { readAsText(f) { leidos.push(f.name); } };
+    try {
+        ImportarExportar.importarDatos({ name: 'sin-tipo.json', type: '', size: 10 });
+        ImportarExportar.importarDatos({ name: 'android.JSON', type: 'application/octet-stream', size: 10 });
+        ImportarExportar.importarDatos({ name: 'respaldo', type: 'application/json', size: 10 });
+        ImportarExportar.importarDatos({ name: 'foto.png', type: 'image/png', size: 10 });
+        assert.deepEqual(leidos, ['sin-tipo.json', 'android.JSON', 'respaldo']);
+        assert.deepEqual(toasts, ['Solo se permiten archivos JSON']);
+    } finally {
+        delete globalThis.FileReader;
+    }
+});
+
+test('TiempoFuera: menos de 30 s no cuenta, lo demás se suma al registro y la opción de ignorarlo no descuenta', async (t) => {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 28, 10, 0) });
+    const { TiempoFuera: F } = await import('../src/services/tiempo-fuera.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    EstadoApp.setIgnorarTiempoFuera(false);
+    const reg = { tiempoFuera: '00:10' };
+
+    assert.equal(F.corriendo(), false);
+    assert.equal(F.minutosActivos(), 0);
+    assert.equal(F.volcarEnRegistro(reg), 0, 'sin temporizador no hace nada');
+
+    F.iniciar();
+    t.mock.timers.tick(29_000);
+    assert.equal(F.alcanzaMinimo(), false);
+    assert.equal(F.volcarEnRegistro(reg), 0, 'muy corto: se descarta');
+    assert.equal(reg.tiempoFuera, '00:10');
+    assert.equal(F.corriendo(), false);
+
+    F.iniciar();
+    t.mock.timers.tick(5 * 60_000 + 40_000);
+    assert.equal(F.minutosActivos(), 5);
+    EstadoApp.setIgnorarTiempoFuera(true);
+    assert.equal(F.minutosActivos(), 0, 'con la opción activa no descuenta');
+    EstadoApp.setIgnorarTiempoFuera(false);
+    assert.equal(F.volcarEnRegistro(reg), 6, 'redondea a partir de los 30 s');
+    assert.equal(reg.tiempoFuera, '00:16');
+    assert.equal(F.corriendo(), false);
+});
+
+test('Jornada: vigente y activa, con el cruce de medianoche', async () => {
+    const { Jornada: F } = await import('../src/services/jornada.js');
+    const ayer = { entrada: '22:00', salida: null };
+    const abierta = { entrada: '08:00', salida: null };
+    const cerrada = { entrada: '08:00', salida: '15:00' };
+    const especial = { entrada: '12:12', salida: '12:12' };
+
+    assert.equal(F.jornadaVigente(null, ayer, true), ayer, 'ayer abierto y hoy sin registro');
+    assert.equal(F.jornadaVigente(abierta, ayer, true), abierta, 'hoy ya tiene entrada');
+    assert.equal(F.jornadaVigente(null, null, false), null);
+
+    assert.equal(F.jornadaActiva(null, ayer, true), ayer);
+    assert.equal(F.jornadaActiva(abierta, null, false), abierta);
+    assert.equal(F.jornadaActiva(cerrada, null, false), null, 'cerrada no corre');
+    assert.equal(F.jornadaActiva(especial, null, false), null, 'un día especial no corre');
+    assert.equal(F.jornadaActiva(null, null, false), null);
+});
+
+test('EstadoApp.horasTranscurridas: lo corrido hasta ahora, sin la pausa en curso y nunca negativo', async (t) => {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 28, 10, 0) });
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    EstadoApp.setIgnorarTiempoFuera(false);
+    assert.equal(EstadoApp.horasTranscurridas({ entrada: '08:00' }), 2);
+    assert.equal(EstadoApp.horasTranscurridas({ entrada: '08:00', tiempoFuera: '00:30' }), 1.5);
+    assert.equal(EstadoApp.horasTranscurridas({ entrada: '08:00' }, 30), 1.5);
+    assert.equal(EstadoApp.horasTranscurridas({ entrada: '09:59' }, 30), 0);
+});
+
+test('EstadoApp._guardarConCicloSiHoy guarda el perfil antes de la animación de cambio de vista, y si no pudo guardar no cambia de vista', async () => {
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    GestorPerfiles.inicializar();
+    const llamadas = [];
+    let render = null;
+    EstadoApp.configurarNotificaciones({
+        forzarVista: (vista, fn) => { llamadas.push(`forzarVista:${vista}`); render = fn; },
+        prepararMostrarFaseAlRenderizar: (fase) => llamadas.push(`fase:${fase}`),
+        actualizarUI: () => llamadas.push('actualizarUI'),
+        mostrarToast: () => llamadas.push('toast'),
+    });
+    EstadoApp.setVistaActual('semana');
+    const guardados = [];
+    EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: () => { guardados.push(llamadas.length); return true; } });
+    try {
+        await EstadoApp._guardarConCicloSiHoy('id', true, 'entrada');
+        assert.deepEqual(guardados, [0], 'se guarda antes de empezar a cambiar de vista');
+        assert.deepEqual(llamadas, ['forzarVista:diaria']);
+        render();
+        assert.deepEqual(llamadas, ['forzarVista:diaria', 'fase:entrada', 'actualizarUI']);
+
+        llamadas.length = 0;
+        EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: () => false });
+        assert.equal(await EstadoApp._guardarConCicloSiHoy('id', true, 'entrada'), false);
+        assert.deepEqual(llamadas, ['toast'], 'sin guardar no hay cambio de vista ni render');
+    } finally {
+        EstadoApp.setVistaActual('diaria');
+        EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: GestorPerfiles.guardarDatosPerfilActual });
+    }
+});
+
+test('OperacionesLote: devuelve { ok: true } al registrar y { error } si no pudo guardar, sin lanzar', async () => {
+    const { OperacionesLote: L } = await import('../src/services/operaciones-lote.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    GestorPerfiles.inicializar();
+    EstadoApp.configurarNotificaciones({ avisarFichaje: () => { }, mostrarToast: () => { }, actualizarUI: () => { }, forzarVista: (_v, fn) => fn() });
+    EstadoApp._setRegistros([]);
+    try {
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-05', 'feriado'), { ok: true });
+        assert.deepEqual(await L.registrarVacacionesDirecto('2026-10-06', '2026-10-07', 'vacaciones'), { ok: true });
+        assert.equal(EstadoApp.registros().length, 3);
+        assert.deepEqual(await L.registrarVacacionesDirecto('2026-10-06', '2026-10-07', 'vacaciones'), { error: 'Todas las fechas ya están registradas' });
+
+        EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: () => false });
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-08', 'feriado'), { error: 'Error al guardar' });
+    } finally {
+        EstadoApp.setPerfilHooks({ guardarDatosPerfilActual: GestorPerfiles.guardarDatosPerfilActual });
+        EstadoApp._setRegistros([]);
+    }
+});
+
+test('OperacionesLote.registrarDiaEspecial: la descripción opcional queda en las notas del registro (saneada y sin pasar el máximo)', async () => {
+    const { OperacionesLote: L } = await import('../src/services/operaciones-lote.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    const { SeguridadYUtils: S } = await import('../src/core/seguridad.js');
+    GestorPerfiles.inicializar();
+    EstadoApp.configurarNotificaciones({ avisarFichaje: () => { }, mostrarToast: () => { }, actualizarUI: () => { }, forzarVista: (_v, fn) => fn() });
+    EstadoApp._setRegistros([]);
+    try {
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-05', 'feriado', S.notasHastaPalabra('Paso a la Inmortalidad del Gral. Güemes')), { ok: true });
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-06', 'feriado', 'Día <b>Nac</b>'), { ok: true });
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-07', 'feriado'), { ok: true });
+        assert.deepEqual(await L.registrarDiaEspecial('2026-10-08', 'feriado', ''), { ok: true });
+        const porFecha = f => EstadoApp.registroPorFecha(f);
+        assert.equal(porFecha('2026-10-05').notas, 'Paso a la Inmortalidad del Gral');
+        assert.equal(porFecha('2026-10-06').notas, 'Día bNacb', 'la lista blanca de las notas también rige acá');
+        assert.equal('notas' in porFecha('2026-10-07'), false, 'sin descripción el registro queda como antes');
+        assert.equal('notas' in porFecha('2026-10-08'), false);
+        EstadoApp.registros().forEach(r => assert.equal(S.validarRegistroSeguro(r), true));
+    } finally {
+        EstadoApp._setRegistros([]);
+    }
 });

@@ -1,28 +1,28 @@
-import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { horasGte, EPS_HORAS as EPS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { Compensatorios } from './compensatorios.js';
 import { EstadoApp } from './estado-app.js';
+import { Jornada } from './jornada.js';
+import { DiasHabiles } from './dias-habiles.js';
+import { Objetivos } from './objetivos.js';
 
 // ====================================================================
 // SALDO SEMANAL MODULE — (pool de horas)
 // ====================================================================
 function logicaCubiertoActiva() {
-    return !Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_LOGICA_CUBIERTO, false, true);
+    return !Preferencias.IGNORAR_LOGICA_CUBIERTO.get();
 }
 
 /** @param {any} [asignacionesPrecalculadas] */
 function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
-    const lunesDate = TiempoUtils.parsearFechaLocal(lunes);
-    lunesDate.setDate(lunesDate.getDate() + 6);
-    const domingo = TiempoUtils.formatearFechaLocal(lunesDate);
+    const domingo = TiempoUtils.sumarDias(lunes, 6);
     const limite = domingo < hasta ? domingo : hasta;
 
     const registrosSemana = EstadoApp.registros().filter(r => r.fecha >= lunes && r.fecha <= limite);
     const registrosMap = new Map(registrosSemana.map(r => [r.fecha, r]));
 
-    const EPS = 1e-6;
     const pendientes = [];
     const excedentes = [];
     let pool = 0, poolGenerado = 0, poolUsado = 0;
@@ -41,13 +41,13 @@ function calcularPoolSemana(lunes, hasta, asignacionesPrecalculadas = null) {
     for (const isoDate of TiempoUtils.generarRangoFechas(lunes, limite)) {
         const r = registrosMap.get(isoDate);
         const esEspecial = r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida);
-        const esRemoto = esEspecial && Compensatorios.esTipoRemoto(r);
+        const esRemoto = esEspecial && TiposRegistro.esTipoRemoto(r);
         let deltaBruto = 0;
         let montoCompensado = 0;
         if (esRemoto) {
             deltaBruto = 0;
         } else if (r && !esEspecial && r.salida) {
-            const objetivo = TiempoUtils.esFechaHabil(isoDate, Compensatorios.diasHabilesEnFecha(isoDate)) ? Compensatorios.objetivoDeRegistro(r) : 0;
+            const objetivo = DiasHabiles.esDiaLaboral(isoDate) ? Objetivos.objetivoDeRegistro(r) : 0;
             deltaBruto = r.total - objetivo;
             if (deltaBruto > EPS) montoCompensado = Compensatorios.montoCompensadoDeReferencia(r, asignacionesPrecalculadas);
         }
@@ -82,7 +82,6 @@ function cubiertoPorSaldo(fecha, asignacionesPrecalculadas = null) {
     const lunes = TiempoUtils.obtenerLunesSemanaISO(fecha);
     const hoy = TiempoUtils.obtenerFechaHoy();
     const { pendientes } = calcularPoolSemana(lunes, hoy, asignacionesPrecalculadas);
-    const EPS = 1e-6;
     const deuda = pendientes.find(d => d.fecha === fecha);
     return deuda ? deuda.restante <= EPS : false;
 }
@@ -105,12 +104,10 @@ function calcularAprovechamiento(desde, hasta, asignacionesPrecalculadas = null)
             generado += ex.generado;
             usado += ex.usado;
         }
-        const siguienteLunes = TiempoUtils.parsearFechaLocal(lunes);
-        siguienteLunes.setDate(siguienteLunes.getDate() + 7);
-        lunes = TiempoUtils.formatearFechaLocal(siguienteLunes);
+        lunes = TiempoUtils.sumarDias(lunes, 7);
     }
 
-    if (generado <= 1e-6) return null;
+    if (generado <= EPS) return null;
     return {
         porcentaje: Math.round((usado / generado) * 1000) / 10,
         horas: usado,
@@ -130,9 +127,9 @@ function estadoDeRegistro(r, asignaciones = null) {
     const base = { tipo: null, diffText: '', fechaCompensada: null, fechaCompensado: Compensatorios.fechaCompensadoDeRegistro(r, asignaciones) };
     if (r.entrada && !r.salida) return { ...base, estado: 'en-curso' };
     if (!r.entrada) return { ...base, estado: 'sin-datos' };
-    const objetivo = Compensatorios.objetivoDeRegistro(r);
+    const objetivo = Objetivos.objetivoDeRegistro(r);
     const total = r.total || 0;
-    if (!(objetivo > 0 && TiempoUtils.esFechaHabil(r.fecha, Compensatorios.diasHabilesEnFecha(r.fecha)))) {
+    if (!(objetivo > 0 && DiasHabiles.esDiaLaboral(r.fecha))) {
         return { ...base, estado: 'neutro' };
     }
     const estado = horasGte(total, objetivo) ? 'cumplido' : (cubiertoPorSaldo(r.fecha, asignaciones) ? 'cubierto' : 'incompleto');
@@ -144,4 +141,53 @@ function colorDeEstado(est) {
     return { 'en-curso': 'blue', cumplido: 'green', cubierto: 'gold', incompleto: 'red' }[est.estado] || 'neutro';
 }
 
-export const SaldoSemanal = { logicaCubiertoActiva, cubiertoPorSaldo, calcularAprovechamiento, estadoDeRegistro, colorDeEstado };
+/**
+ * Horas objetivo y horas hechas que un día aporta al saldo.
+ * Un día sin terminar (hoy sin salida, o la jornada de ayer que sigue abierta) no cuenta, salvo la jornada en curso cuando ya superó su objetivo.
+ * Un día especial tampoco, salvo el remoto, que cuenta como cumplido.
+ * @param {string} iso
+ * @param {any} r registro del día, si tiene
+ * @param {{ hoy: string, ayerStr: string, ayerAbierto: boolean, regActivo: any, incluirActivoEnVivo: boolean, minutosBreakActivo: number, asignaciones: any }} ctx
+ */
+function _aporteDelDia(iso, r, ctx) {
+    const nada = { objetivo: 0, hechas: 0 };
+    const esDiaHabil = DiasHabiles.esDiaLaboral(iso);
+    const objetivoDia = r ? Objetivos.objetivoDeRegistro(r) : EstadoApp.horasDiarias();
+    const terminado = iso === ctx.hoy ? !!r?.salida : !(ctx.ayerAbierto && iso === ctx.ayerStr);
+
+    if (!terminado) {
+        if (!ctx.incluirActivoEnVivo || !esDiaHabil || !r || r !== ctx.regActivo) return nada;
+        const transcurrido = EstadoApp.horasTranscurridas(r, ctx.minutosBreakActivo);
+        return transcurrido > objetivoDia ? { objetivo: objetivoDia, hechas: transcurrido } : nada;
+    }
+    if (r && TiposRegistro.esRegistroEspecial(r.entrada, r.salida)) {
+        return esDiaHabil && TiposRegistro.esTipoRemoto(r) ? { objetivo: objetivoDia, hechas: objetivoDia } : nada;
+    }
+    return {
+        objetivo: esDiaHabil ? objetivoDia : 0,
+        hechas: r?.salida ? r.total - Compensatorios.montoCompensadoDeReferencia(r, ctx.asignaciones) : 0,
+    };
+}
+
+/** @param {any} [asignacionesPrecalculadas] */
+function calcularBufferPeriodo(desde, hasta, incluirActivoEnVivo = true, minutosBreakActivo = 0, asignacionesPrecalculadas = null) {
+    const hoy = TiempoUtils.obtenerFechaHoy();
+    const regsPorFecha = new Map(EstadoApp.registros().filter(r => r.fecha >= desde && r.fecha <= hasta).map(r => [r.fecha, r]));
+    const { ayerStr, regAyer, ayerAbierto } = Jornada.detectarAyerAbierto(hoy, regsPorFecha);
+    const ctx = {
+        hoy, ayerStr, ayerAbierto, incluirActivoEnVivo, minutosBreakActivo,
+        regActivo: Jornada.jornadaActiva(regsPorFecha.get(hoy) ?? null, regAyer, ayerAbierto),
+        asignaciones: asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio(),
+    };
+
+    let objetivo = 0, hechas = 0;
+    for (const iso of TiempoUtils.generarRangoFechas(desde, hasta)) {
+        if (iso > hoy) break;
+        const aporte = _aporteDelDia(iso, regsPorFecha.get(iso), ctx);
+        objetivo += aporte.objetivo;
+        hechas += aporte.hechas;
+    }
+    return Math.round((hechas - objetivo) * 1e6) / 1e6;
+}
+
+export const SaldoSemanal = { calcularBufferPeriodo, logicaCubiertoActiva, cubiertoPorSaldo, calcularAprovechamiento, estadoDeRegistro, colorDeEstado };

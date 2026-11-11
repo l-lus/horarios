@@ -1,15 +1,15 @@
-import { STORAGE_KEYS, horasGte } from '../core/constantes.js';
+import { Preferencias } from '../core/preferencias.js';
+import { horasGte } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { EstadisticasPeriodo } from '../services/estadisticas-periodo.js';
 import { UIBase } from './base.js';
 import { html, crudo, montar, icono } from '../core/html.js';
-import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { mostrarToast } from './toast.js';
+import { Objetivos } from '../services/objetivos.js';
 
 // ====================================================================
 //                     UI REPORTS MODULE (HTML Report Generator)
@@ -52,7 +52,7 @@ function _resolverPeriodoDatos(esAnual) {
 }
 
 function _seccionDetalleAnual(registrosPeriodo) {
-    const mesesOrdenados = [...new Set(registrosPeriodo.map(r => r.fecha.substring(0, 7)))].sort();
+    const mesesOrdenados = [...new Set(registrosPeriodo.map(r => TiempoUtils.claveMes(r.fecha)))].sort();
     const filas = mesesOrdenados.map(claveMes => {
         const regsM = registrosPeriodo.filter(r => r.fecha.startsWith(claveMes));
 
@@ -113,11 +113,11 @@ function _seccionDetalleDiario(registrosPeriodo) {
         const entrada = r.entrada || '--:--';
         const salida = r.salida || '--:--';
         const total = r.salida ? TiempoUtils.horasATexto(r.total, 'short') : 'Incompleto';
-        const tiempoFuera = (r.tiempoFuera && r.tiempoFuera !== '00:00')
+        const tiempoFuera = (TiposRegistro.tieneTiempoFuera(r))
             ? `${TiempoUtils.horasATexto(TiempoUtils.horaAMinutos(r.tiempoFuera) / 60, 'short')} fuera`
             : '';
-        const salidaTemprano = (r.credito && r.credito !== '00:00') ? html` <span class="tag tag-info">Salida temprana</span>` : '';
-        const cumplido = r.salida ? horasGte(r.total, Compensatorios.objetivoDeRegistro(r)) : null;
+        const salidaTemprano = (TiposRegistro.tieneCredito(r)) ? html` <span class="tag tag-info">Salida temprana</span>` : '';
+        const cumplido = r.salida ? horasGte(r.total, Objetivos.objetivoDeRegistro(r)) : null;
         const indicador = cumplido === null ? '' : (cumplido ? html`<span class="tag tag-ok">✓</span>` : html`<span class="tag tag-bad">✗</span>`);
 
         return html`
@@ -302,12 +302,9 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
 
     const filas = semanasOrdenadas.map(([lunesOriginal, datos], index) => {
         let totalSemanal = datos.trabajados.reduce((sum, r) => sum + r.total, 0);
-        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + Compensatorios.objetivoDeRegistro(r), 0);
+        if (datos.remotos?.length) totalSemanal += datos.remotos.reduce((sum, r) => sum + Objetivos.objetivoDeRegistro(r), 0);
 
-        const fechaLunes = TiempoUtils.parsearFechaLocal(lunesOriginal);
-        const fechaDomingo = new Date(fechaLunes);
-        fechaDomingo.setDate(fechaLunes.getDate() + 6);
-        const domingo = TiempoUtils.formatearFechaLocal(fechaDomingo);
+        const domingo = TiempoUtils.sumarDias(lunesOriginal, 6);
 
         let lunes = lunesOriginal, fechaFin = domingo, esIncompleta = false, continuaEn = '';
 
@@ -360,9 +357,9 @@ function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
 }
 
 function _seccionConfiguracion() {
-    const objetivoTexto = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_OBJETIVO_POR_REGISTRO, false, true)
+    const objetivoTexto = Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get()
         ? '' : ' (objetivo estampado por registro)';
-    const ignorarTF = Almacenamiento.getBoolean(STORAGE_KEYS.IGNORAR_TF, false, true);
+    const ignorarTF = Preferencias.IGNORAR_TF.get();
     const tiempoFueraTexto = ignorarTF ? 'No se descuenta del total' : 'Se descuenta del total';
     return html`
 <section class="seccion">

@@ -11,8 +11,7 @@ const TIPOS = {
         label: 'Feriado',
         labelPlural: 'Feriados',
         descripcion: 'Día no laboral',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     AUSENCIA: {
         id: 'ausencia',
@@ -21,8 +20,7 @@ const TIPOS = {
         label: 'Licencia',
         labelPlural: 'Licencias',
         descripcion: 'Día libre',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     VACACIONES: {
         id: 'vacaciones',
@@ -31,8 +29,7 @@ const TIPOS = {
         label: 'Vacaciones',
         labelPlural: 'Vacaciones',
         descripcion: 'Vacaciones',
-        color: 'orange',
-        contabiliza: true
+        color: 'orange'
     },
     ASUETO: {
         id: 'asueto',
@@ -41,8 +38,7 @@ const TIPOS = {
         label: 'Asueto',
         labelPlural: 'Asuetos',
         descripcion: 'Día de asueto',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     ENFERMEDAD: {
         id: 'enfermedad',
@@ -51,8 +47,7 @@ const TIPOS = {
         label: 'Enfermedad',
         labelPlural: 'Enfermedades',
         descripcion: 'Enfermedad justificada',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     PARO: {
         id: 'paro',
@@ -61,8 +56,7 @@ const TIPOS = {
         label: 'Paro',
         labelPlural: 'Paros',
         descripcion: 'Fuerza mayor',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     REMOTO: {
         id: 'remoto',
@@ -71,8 +65,7 @@ const TIPOS = {
         label: 'Remoto',
         labelPlural: 'Remotos',
         descripcion: 'Trabajo desde casa',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     CAPACITACION: {
         id: 'capacitacion',
@@ -81,8 +74,7 @@ const TIPOS = {
         label: 'Capacitación',
         labelPlural: 'Capacitaciones',
         descripcion: 'Formación profesional',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     },
     COMPENSATORIO: {
         id: 'compensatorio',
@@ -91,8 +83,7 @@ const TIPOS = {
         label: 'Compensatorio',
         labelPlural: 'Compensatorios',
         descripcion: 'Día compensatorio',
-        color: 'purple',
-        contabiliza: true
+        color: 'purple'
     }
 };
 
@@ -132,6 +123,12 @@ function obtenerCodigosPorTipo(id) {
     const tipo = obtenerTipoPorId(id);
     return tipo ? { entrada: tipo.codigo, salida: tipo.codigo } : null;
 }
+
+const esTipoRemoto = (r) => obtenerTipoPorCodigo(r?.entrada, r?.salida)?.id === 'remoto';
+
+/** "00:00" es lo mismo que no tener tiempo fuera o salida temprana. */
+const tieneTiempoFuera = (r) => !!r.tiempoFuera && r.tiempoFuera !== '00:00';
+const tieneCredito = (r) => !!r.credito && r.credito !== '00:00';
 
 function agruparConsecutivos(registros) {
     if (!registros || registros.length === 0) return [];
@@ -178,6 +175,9 @@ function mapaNotasPorRegistro(registros) {
 }
 
 export const TiposRegistro = {
+    esTipoRemoto,
+    tieneTiempoFuera,
+    tieneCredito,
     agruparConsecutivos,
     notaDeGrupo,
     mapaNotasPorRegistro,

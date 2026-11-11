@@ -2,8 +2,9 @@ import { STORAGE_KEYS } from '../core/constantes.js';
 import { FERIADOS_AR } from '../data/feriados.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
+import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp } from './estado-app.js';
-import { FiltrosYPeriodos } from './filtros-periodos.js';
+import { OperacionesLote } from './operaciones-lote.js';
 
 // ====================================================================
 // HOLIDAYS MODULE
@@ -20,9 +21,7 @@ function _cargarProcesados() {
 function _marcarProcesado(fecha) {
     const set = _cargarProcesados();
     set.add(fecha);
-    const limite = new Date();
-    limite.setDate(limite.getDate() - 60);
-    const limiteStr = TiempoUtils.formatearFechaLocal(limite);
+    const limiteStr = TiempoUtils.sumarDias(TiempoUtils.obtenerFechaHoy(), -60);
     set.forEach(f => { if (f < limiteStr) set.delete(f); });
     Almacenamiento.setItem(SK_PROCESADOS, JSON.stringify([...set]), true);
 }
@@ -69,7 +68,8 @@ async function chequearYNotificar() {
 
     if (confirmo) {
         for (const feriado of pendientes) {
-            try { await FiltrosYPeriodos.registrarDiaEspecial(feriado.fecha, 'feriado'); } catch (e) { console.error('Error registrando feriado:', e); }
+            // El nombre del feriado va como descripción del registro, hasta la última palabra que entre en el largo máximo de las notas
+            await OperacionesLote.registrarDiaEspecial(feriado.fecha, 'feriado', S.notasHastaPalabra(feriado.nombre));
         }
     }
 }

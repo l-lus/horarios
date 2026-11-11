@@ -104,7 +104,7 @@ async function ejecutarExportacion() {
             cerrarExportar();
 
         } else if (tipo === 'mes-actual') {
-            const mesActual = TiempoUtils.formatearFechaLocal(new Date()).slice(0, 7);
+            const mesActual = TiempoUtils.claveMes(TiempoUtils.obtenerFechaHoy());
             await exportarRango(mesActual, mesActual, true);
 
         } else if (tipo === 'rango') {

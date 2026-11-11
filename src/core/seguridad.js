@@ -52,6 +52,22 @@ function normalizarNotas(str) {
     return sanitizeNotas(str, true) || null;
 }
 
+/**
+ * Notas a partir de un texto que puede ser más largo que el máximo (p. ej. el nombre de un feriado): aplica la misma lista blanca de caracteres y,
+ * si no entra, lo corta en la última palabra completa que cabe (sin dejar una palabra partida). Una primera palabra más larga que el máximo se corta en el máximo.
+ * @param {any} str
+ * @returns {string | null}
+ */
+function notasHastaPalabra(str) {
+    if (typeof str !== 'string') return null;
+    const limpio = str.replace(REGEX_PATTERNS.NOTAS, '').replace(/ {2,}/g, ' ').trim();
+    if (limpio.length <= SECURITY_LIMITS.MAX_NOTAS_LENGTH) return normalizarNotas(limpio);
+    // Con un caracter más que el máximo se ve si la palabra que llega justo al límite está completa (el siguiente es un espacio)
+    const ventana = limpio.slice(0, SECURITY_LIMITS.MAX_NOTAS_LENGTH + 1);
+    const corte = ventana.lastIndexOf(' ');
+    return normalizarNotas(corte > 0 ? ventana.slice(0, corte) : limpio);
+}
+
 function escapeHtml(s) {
     return s == null ? '' : String(s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -240,6 +256,7 @@ export const SeguridadYUtils = {
     limpiarCamposHorario,
     sanitizeNotas,
     normalizarNotas,
+    notasHastaPalabra,
     escapeHtml,
     generarIDSeguro,
     calcularHashSHA256,

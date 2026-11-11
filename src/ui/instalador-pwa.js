@@ -4,6 +4,7 @@ import { AvisoActualizacion } from './aviso-actualizacion.js';
 import { urlScriptConfiable } from '../core/html.js';
 import { Movimiento } from '../core/movimiento.js';
 import { IconosAnimados } from './iconos-animados.js';
+import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 // PWA INSTALLER MODULE
@@ -11,34 +12,30 @@ import { IconosAnimados } from './iconos-animados.js';
 let deferredPrompt = null;
 const btnInstall = $('btn-install');
 
-// Llamado de atención del botón de instalar (solo cuando el navegador permite instalar): un aro que pulsa a su alrededor y la flecha que rebota.
-// Pocos ciclos y espaciados (una ronda al abrir y otra unos segundos después), para que no moleste; se corta si el usuario se acerca al botón.
-const RONDAS_LLAMADO_MS = [1500, 15000];   // cuándo empieza cada ronda
-const CICLOS_POR_RONDA = 3;
-const PAUSA_ENTRE_CICLOS_MS = 2200;
+// Llamado de atención del botón de instalar (solo cuando el navegador permite instalar): el destello de barrido y onda (el mismo del día de hoy del calendario)
+// y la flecha que rebota. Pocas veces, para que no moleste (3 al abrir); se corta si el usuario se acerca al botón.
+const INICIO_LLAMADO_MS = 1500;
+const CICLOS_LLAMADO = 3;
+const PAUSA_ENTRE_CICLOS_MS = 2000;
 /** @type {ReturnType<typeof setTimeout>[]} */
 let _timersLlamado = [];
 
 function _detenerLlamado() {
     _timersLlamado.forEach(clearTimeout);
     _timersLlamado = [];
-    btnInstall?.classList.remove('llamando');
+    btnInstall?.classList.remove('destello-instalar');
 }
 
 function _cicloLlamado() {
     if (!btnInstall) return;
-    btnInstall.classList.remove('llamando');
-    void btnInstall.offsetWidth;   // reinicia la animación del aro
-    btnInstall.classList.add('llamando');
+    Animaciones._flashElemento(btnInstall, 'destello-instalar');
     IconosAnimados.rebotarFlecha(btnInstall);
 }
 
 function _iniciarLlamado() {
     _detenerLlamado();
     if (Movimiento.reducido()) return;
-    RONDAS_LLAMADO_MS.forEach(inicio => {
-        for (let i = 0; i < CICLOS_POR_RONDA; i++) _timersLlamado.push(setTimeout(_cicloLlamado, inicio + i * PAUSA_ENTRE_CICLOS_MS));
-    });
+    for (let i = 0; i < CICLOS_LLAMADO; i++) _timersLlamado.push(setTimeout(_cicloLlamado, INICIO_LLAMADO_MS + i * PAUSA_ENTRE_CICLOS_MS));
 }
 
 function init() {

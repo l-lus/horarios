@@ -61,9 +61,9 @@ function _fantasmaDe(el) {
 }
 
 const _mutacionAnimEstado = new WeakMap();
-const _CLASES_FLASH = ['campo-flash', 'campo-flash-color', 'mosaico-flash', 'destello-hoy'];
+const _CLASES_FLASH = ['campo-flash', 'campo-flash-color', 'mosaico-flash', 'destello-hoy', 'destello-instalar'];
 /** Destellos que no animan el elemento sino una capa temporal propia (barrido + onda, solo transform/opacity); ver .destello-capa en responsivo-movimiento.css */
-const _CLASES_CAPA = ['mosaico-flash', 'destello-hoy'];
+const _CLASES_CAPA = ['mosaico-flash', 'destello-hoy', 'destello-instalar'];
 
 function _quitarCapaDestello(el) {
     el.querySelectorAll(':scope > .destello-capa').forEach(c => c.remove());

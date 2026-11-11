@@ -130,12 +130,6 @@
     100% { scale: 2; opacity: 0; }
 }
 
-/* Aro del botón de instalar: crece y se desvanece (la misma idea que el pulso de un hito, más contenido porque el botón es grande) */
-@keyframes instalar-pulso {
-    from { transform: scale(1); opacity: 0.75; }
-    to { transform: scale(1.6); opacity: 0; }
-}
-
 @keyframes campo-flash {
 
     0%,
@@ -172,6 +166,13 @@ button.campo-flash {
     --onda-color: var(--text-main);
 }
 
+.icon-btn.destello-instalar {
+    --onda-color: var(--c-blue);
+    --onda-escala: 1.5;
+    --franja-color: color-mix(in srgb, var(--c-blue) 55%, transparent);
+    z-index: 2;
+}
+
 .est-mosaico.mosaico-flash {
     --onda-color: var(--tono);
     --onda-escala: 1.12;
@@ -198,7 +199,7 @@ button.campo-flash {
     bottom: 0;
     left: 0;
     width: 60%;
-    background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.75) 50%, transparent);
+    background: linear-gradient(105deg, transparent, var(--franja-color, rgba(255, 255, 255, 0.75)) 50%, transparent);
     transform: translateX(-100%);
     will-change: transform;
     animation: destello-barrido var(--dur-barrido) ease-in-out forwards;
@@ -234,7 +235,7 @@ button.campo-flash {
     display: none;
 }
 
-:root[data-motion="reduce"] :is(.calendario-dia.destello-hoy, .est-mosaico.mosaico-flash) {
+:root[data-motion="reduce"] :is(.calendario-dia.destello-hoy, .est-mosaico.mosaico-flash, .icon-btn.destello-instalar) {
     --onda-escala: 1;
 }
 

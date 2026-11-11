@@ -786,7 +786,7 @@ function actualizar(resumen, { conteoInicial = false, cargaInicial = false, dura
         void host.offsetWidth;   // el estado vacío tiene que estar aplicado para que el siguiente dibujo transicione hacia el real
     }
     // entrada de la línea de tiempo: la línea se llena y los textos suben, como en la barra con hitos (también en la semana, pero solo en la carga)
-    const entra = id === 'linea' && duracion > 1 && (resumen.tipo === 'semana' ? conteoInicial || cargaInicial : resumen.tipo === 'registro' && carga);
+    const entra = id === 'linea' && duracion > 1 && (resumen.tipo === 'semana' ? conteoInicial || cargaInicial : resumen.tipo === 'registro' && (carga || cargaInicial));
     diseno.pintar(refs, {
         ...resumen,
         ...(contar && { conteoMs: duracion }),   // conteoMs: lo que dura el llenado, para que cada hito se marque cuando el aro llega a él

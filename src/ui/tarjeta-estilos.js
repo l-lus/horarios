@@ -436,7 +436,7 @@ function pintarLinea(r, d) {
     r.titulo.dataset.color = d.tipo === 'especial' ? d.color : 'neutro';
     if (d.tipo === 'espera') {
         fijar(r.texto, d.mensaje);
-        pintarNodosPendientes(r);
+        pintarNodosPendientes(r, d.entradaMs);
         mostrar(r.nodos, !!d.mensaje && !d.libre);
         mostrar(r.banco.raiz, !!d.banco);
         if (d.banco) pintarDato(r.banco, 'Banco de horas', `${d.banco.texto} esta semana`, tonoBanco(d.banco));
@@ -556,8 +556,8 @@ function pintarNodosDias(r, dias, enCurso, entradaMs = 0) {
     animarEntradaLinea(r, r.dias.slice(0, dias.length).map(n => n.raiz), entradaMs);
 }
 
-/** Sin registro: entrada y salida quedan pendientes (nodos punteados). */
-function pintarNodosPendientes(r) {
+/** Sin registro: entrada y salida quedan pendientes (nodos punteados). @param {any} r @param {number} [entradaMs] la entrada de la línea en la carga (ver `animarEntradaLinea`) */
+function pintarNodosPendientes(r, entradaMs = 0) {
     r.nodos.classList.remove('en-curso');
     for (const h of Object.values(r.hitos)) mostrar(h.raiz, false);
     const pendientes = [['entrada', 'Entrada · pendiente'], ['salida', 'Salida estimada · pendiente']];
@@ -572,6 +572,7 @@ function pintarNodosPendientes(r) {
         fijar(nodo.etiqueta, texto);
         fijar(nodo.hora, '');
     });
+    animarEntradaLinea(r, [r.hitos.entrada.raiz, r.hitos.salida.raiz], entradaMs);
 }
 
 // ─── E · Lista de filas ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -778,7 +779,7 @@ function actualizar(resumen, { conteoInicial = false, cargaInicial = false, dura
     if (!_montado || _montado.id !== id || !host.firstChild) _montar(host, id, diseno);
     const refs = _montado?.refs;
     // la carga de la página y el paso automático de semana a día (aviso de pedirDestelloBalance) hacen la misma entrada: número que cuenta, línea que se llena, textos que suben y destello
-    const pendiente = id === 'linea' && resumen.tipo === 'registro' && _destelloPendiente > performance.now();
+    const pendiente = id === 'linea' && (resumen.tipo === 'registro' || resumen.tipo === 'espera') && _destelloPendiente > performance.now();
     const carga = conteoInicial || pendiente;   // `cargaInicial`: la carga de la página aunque el número no cuente (sin horas, día especial...): la línea entra igual
     const contar = carga && duracion > 1 && !!resumen.trabajado && resumen.trabajadoMin > 0;
     if (contar) {
@@ -786,7 +787,7 @@ function actualizar(resumen, { conteoInicial = false, cargaInicial = false, dura
         void host.offsetWidth;   // el estado vacío tiene que estar aplicado para que el siguiente dibujo transicione hacia el real
     }
     // entrada de la línea de tiempo: la línea se llena y los textos suben, como en la barra con hitos (también en la semana, pero solo en la carga)
-    const entra = id === 'linea' && duracion > 1 && (resumen.tipo === 'semana' ? conteoInicial || cargaInicial : resumen.tipo === 'registro' && (carga || cargaInicial));
+    const entra = id === 'linea' && duracion > 1 && (resumen.tipo === 'semana' ? conteoInicial || cargaInicial : resumen.tipo === 'espera' ? cargaInicial || pendiente : resumen.tipo === 'registro' && (carga || cargaInicial));
     diseno.pintar(refs, {
         ...resumen,
         ...(contar && { conteoMs: duracion }),   // conteoMs: lo que dura el llenado, para que cada hito se marque cuando el aro llega a él
@@ -800,6 +801,7 @@ function actualizar(resumen, { conteoInicial = false, cargaInicial = false, dura
         diseno.alinear?.(refs, refsSemana);
     }
     if (contar) _contar(id, refs, resumen.trabajado, duracion);
+    if (id === 'linea' && resumen.tipo === 'espera') _destelloPendiente = 0;
     if (id === 'linea' && resumen.tipo === 'registro') {
         if (carga) destellarBalance(refs, resumen, entra ? BASE_ENTRADA + duracionLinea(duracion) : 0);
         _destelloPendiente = 0;

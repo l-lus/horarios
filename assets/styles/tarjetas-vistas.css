@@ -2098,24 +2098,21 @@
 .est-anillo[data-tipo="espera"] .est-anillo-mensaje { color: var(--text-muted); }
 
 .est-anillo-pie {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
+    display: flex;
     gap: var(--space-sm);
 }
 
-/* El aro ocupa el 60 % y los mosaicos (Faltan / Banco de horas) el 40 % restante, en el móvil y en la PC; el pie reparte 30 / 30 / 40 para que "Con banco" arranque donde empiezan los mosaicos. */
+/* El aro ocupa el 60 % y los mosaicos (Faltan / Banco de horas) el 40 % restante, en el móvil y en la PC. El pie no sigue ese reparto: sus datos (los que haya) se reparten el ancho por igual, cada uno centrado. */
 .est-anillo-principal {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
     gap: var(--space-sm);
 }
 
-.est-anillo-pie {
-    display: grid;
-    grid-auto-flow: row;
-    grid-template-columns: minmax(0, 3fr) minmax(0, 3fr) minmax(0, 4fr);
-    gap: var(--space-sm);
+.est-anillo-pie > .est-dato {
+    flex: 1 1 0;
+    align-items: center;
+    text-align: center;
 }
 
 /* Variantes del anillo (html[data-disposicion-anillo], ver core/estilo-tarjeta.js): "derecha" intercambia las columnas (los mosaicos al 40 % a la izquierda, el aro al 60 %
@@ -2128,18 +2125,9 @@ html:is([data-disposicion-anillo="derecha"], [data-disposicion-anillo="arriba-de
     order: 2;
 }
 
-/* el pie sigue el mismo reparto: la primera columna (la de los mosaicos) es la angosta */
-html:is([data-disposicion-anillo="derecha"], [data-disposicion-anillo="arriba-derecha"]) .est-anillo-pie {
-    grid-template-columns: minmax(0, 4fr) minmax(0, 3fr) minmax(0, 3fr);
-}
-
 html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="arriba-derecha"]) :is(.est-anillo-pie, .est-dias) {
     order: -1;
 }
-
-.est-pie-1 { grid-column: 1; }
-.est-pie-2 { grid-column: 2; }
-.est-pie-3 { grid-column: 3; }
 
 /* ── C · Línea de tiempo vertical ── */
 .est-linea,

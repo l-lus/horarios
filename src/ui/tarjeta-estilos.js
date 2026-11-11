@@ -210,8 +210,6 @@ function crearAnillo() {
     const entrada = crearDato('Entrada');
     const salida = crearDato('Salida');
     const conBanco = crearDato('Con banco');
-    // cada dato tiene su columna fija (ver el CSS): así "Con banco" arranca donde empiezan los mosaicos de la derecha
-    [entrada, salida, conBanco].forEach((d, i) => d.raiz.classList.add(`est-pie-${i + 1}`));
     pie.append(entrada.raiz, salida.raiz, conBanco.raiz);
     const dias = crearDias();
     raiz.append(principal, pie, dias.raiz);

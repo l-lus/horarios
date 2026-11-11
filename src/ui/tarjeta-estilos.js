@@ -759,7 +759,7 @@ function actualizar(resumen, { conteoInicial = false, cargaInicial = false, dura
     if (!_montado || _montado.id !== id || !host.firstChild) _montar(host, id, diseno);
     const refs = _montado?.refs;
     // la carga de la página y el paso automático de semana a día (aviso de pedirDestelloBalance) hacen la misma entrada: número que cuenta, línea que se llena, textos que suben y destello
-    const pendiente = id === 'linea' && resumen.tipo === 'registro' && _destelloPendiente > performance.now();
+    const pendiente = (id === 'linea' || id === 'anillo') && resumen.tipo === 'registro' && _destelloPendiente > performance.now();
     const carga = conteoInicial || pendiente;   // `cargaInicial`: la carga de la página aunque el número no cuente (sin horas, día especial...): la línea entra igual
     const contar = carga && duracion > 1 && !!resumen.trabajado && resumen.trabajadoMin > 0;
     if (contar) {
@@ -781,8 +781,9 @@ function actualizar(resumen, { conteoInicial = false, cargaInicial = false, dura
         diseno.alinear?.(refs, refsSemana);
     }
     if (contar) _contar(id, refs, resumen.trabajado, duracion);
-    if (id === 'linea' && resumen.tipo === 'registro') {
-        if (carga) destellarBalance(refs, resumen, entra ? BASE_ENTRADA + duracionLinea(duracion) : 0);
+    if ((id === 'linea' || id === 'anillo') && resumen.tipo === 'registro') {
+        // la línea espera a que termine su entrada; el anillo, a que el aro y el número terminen de contar
+        if (carga) destellarBalance(refs, resumen, entra ? BASE_ENTRADA + duracionLinea(duracion) : (contar ? duracion : 0));
         _destelloPendiente = 0;
     }
     return true;
@@ -797,7 +798,7 @@ function pedirDestelloBalance() {
 }
 
 /**
- * En la carga de la página, con el registro en curso, el mosaico de balance destella (como el día de hoy del calendario) si hay buenas noticias:
+ * En la carga de la página, con el registro en curso, el mosaico de balance (de la línea de tiempo y del anillo) destella (como el día de hoy del calendario) si hay buenas noticias:
  * el faltante lo cubre el saldo (dorado) o el objetivo ya está cumplido / hay extra (verde). Con el registro cerrado no tiene sentido.
  * Espera a que termine el conteo para que no pase desapercibido.
  * @param {any} refs @param {any} resumen @param {number} espera ms

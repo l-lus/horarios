@@ -1,6 +1,7 @@
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { UIBase } from './base.js';
+import { Animaciones } from './animaciones.js';
 import { mostrarToast } from './toast.js';
 import { FeriadosAR } from '../services/feriados-ar.js';
 
@@ -122,8 +123,10 @@ function bindEventos() {
     $('btn-verificar-feriados')?.addEventListener('click', () => abrirModalVerificarFeriados());
     document.querySelector('#modal-verificar-feriados .btn-cancel')?.addEventListener('click', () => cerrarModalVerificarFeriados());
     $('btn-aplicar-feriados')?.addEventListener('click', () => aplicar());
-    $('verif-feriados-anteriores')?.addEventListener('change', _renderizar);
-    $('verif-feriados-proximos')?.addEventListener('change', _renderizar);
+    // la lista cambia de largo con las opciones: el modal acompaña el cambio de alto con una transición (no salta)
+    const renderizarAnimado = () => Animaciones._animarAlturaCambio(document.querySelector('#modal-verificar-feriados .modal-content'), _renderizar);
+    $('verif-feriados-anteriores')?.addEventListener('change', renderizarAnimado);
+    $('verif-feriados-proximos')?.addEventListener('change', renderizarAnimado);
     $(ID_LISTA)?.addEventListener('change', _actualizarBoton);
 }
 

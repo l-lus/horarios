@@ -12,6 +12,7 @@ import { OrdenTarjetas } from './ui/orden-tarjetas.js';
 import { Notificaciones } from './ui/notificaciones.js';
 import { Configuracion } from './ui/configuracion.js';
 import { HistorialDias } from './ui/historial-dias.js';
+import { VerificarFeriados } from './ui/verificar-feriados.js';
 import { OrquestadorUI } from './ui/orquestador.js';
 import { BienvenidaModal } from './ui/bienvenida-modal.js';
 import { AvisoPush } from './ui/aviso-push.js';
@@ -43,6 +44,7 @@ function _iniciarEventosDOM() {
     Notificaciones.bindEventos();
     Configuracion.bindEventos();
     HistorialDias.bindEventos();
+    VerificarFeriados.bindEventos();
     RecargaGesto.bindEventos();
 
     _mostrarVersion();

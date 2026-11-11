@@ -39,6 +39,7 @@ import { OrdenTarjetas } from './orden-tarjetas.js';
 import { Notificaciones } from './notificaciones.js';
 import { Configuracion } from './configuracion.js';
 import { HistorialDias } from './historial-dias.js';
+import { VerificarFeriados } from './verificar-feriados.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { EstadoApp } from '../services/estado-app.js';
@@ -167,6 +168,7 @@ function _initGlobales() {
     GestorModales.registrarAccionVolver('modal-reporte-secciones', cerrarModalReporteSecciones);
     GestorModales.registrarAccionVolver('modal-ayuda', cerrarModalAyuda);
     GestorModales.registrarAccionVolver('modal-historial-dias', cerrarModalHistorialDias);
+    GestorModales.registrarAccionVolver('modal-verificar-feriados', VerificarFeriados.cerrarModalVerificarFeriados);
     GestorModales.registrarAccionVolver('modal-notificaciones', cerrarModalNotificaciones);
     GestorModales.registrarAccionVolver('modal-editar-tramo-dias', cerrarEditorTramoDias);
 }

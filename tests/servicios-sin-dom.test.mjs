@@ -750,3 +750,49 @@ test('OperacionesLote.registrarDiaEspecial: la descripción opcional queda en la
         EstadoApp._setRegistros([]);
     }
 });
+
+test('FeriadosAR: analiza el catálogo contra los registros y aplica agregar, actualizar y reemplazar en un solo guardado', async () => {
+    const { FeriadosAR } = await import('../src/services/feriados-ar.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    const { TiposRegistro } = await import('../src/services/tipos-registro.js');
+    GestorPerfiles.inicializar();
+    EstadoApp.configurarNotificaciones({ avisarFichaje: () => { }, mostrarToast: () => { }, actualizarUI: () => { }, forzarVista: (_v, fn) => fn() });
+    const { entrada: cod } = TiposRegistro.obtenerCodigosPorTipo('feriado');
+    const feriadoCon = (fecha, notas) => {
+        const r = EstadoApp._construirRegistro(fecha, cod, cod);
+        if (notas) r.notas = notas;
+        return r;
+    };
+    EstadoApp._setRegistros([
+        feriadoCon('2026-01-01', 'Año Nuevo'),                              // al día
+        feriadoCon('2026-02-17'),                                           // feriado sin descripción
+        EstadoApp._construirRegistro('2026-02-16', '09:00', '17:00'),       // jornada: conflicto
+    ]);
+    try {
+        const items = FeriadosAR.analizar({ anteriores: true, proximos: false });
+        const estado = f => items.find(i => i.fecha === f)?.estado;
+        assert.equal(estado('2026-01-01'), undefined, 'un feriado con su descripción no se ofrece');
+        assert.equal(estado('2026-02-17'), 'actualizar');
+        assert.equal(estado('2026-02-16'), 'conflicto');
+        assert.equal(estado('2026-03-23'), 'agregar');
+        assert.ok(items.every((i, k) => k === 0 || items[k - 1].fecha <= i.fecha), 'ordenados por fecha');
+        assert.equal(FeriadosAR.analizar({ anteriores: false, proximos: false }).length, 0);
+
+        // Un conflicto sin "reemplazar" no se toca
+        assert.ok('error' in await FeriadosAR.aplicar([{ fecha: '2026-02-16' }]));
+        assert.equal(EstadoApp.registroPorFecha('2026-02-16').entrada, '09:00');
+
+        const res = await FeriadosAR.aplicar([{ fecha: '2026-02-16', reemplazar: true }, { fecha: '2026-02-17' }, { fecha: '2026-03-23' }]);
+        assert.deepEqual(res, { ok: true, agregados: 1, actualizados: 1, reemplazados: 1 });
+        const porFecha = f => EstadoApp.registroPorFecha(f);
+        assert.equal(porFecha('2026-02-16').entrada, cod);
+        assert.equal(porFecha('2026-02-16').notas, 'Carnaval');
+        assert.equal(porFecha('2026-02-17').notas, 'Carnaval');
+        assert.equal(porFecha('2026-03-23').notas, 'Puente Turístico');
+        assert.equal(EstadoApp.registros().filter(r => r.fecha === '2026-02-16').length, 1, 'el reemplazo no deja duplicados');
+        assert.equal(FeriadosAR.analizar({ anteriores: true, proximos: false }).some(i => ['2026-02-16', '2026-02-17', '2026-03-23'].includes(i.fecha)), false);
+    } finally {
+        EstadoApp._setRegistros([]);
+    }
+});

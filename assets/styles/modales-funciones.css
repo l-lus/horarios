@@ -592,6 +592,28 @@ body.config-onboarding #theme-toggle-config {
     font-weight: var(--fw-bold);
 }
 
+.feriado-fila {
+    cursor: pointer;
+}
+
+.feriado-fila-nombre {
+    flex-wrap: wrap;
+}
+
+.feriado-fila-check {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    accent-color: var(--c-active);
+    cursor: pointer;
+}
+
+.feriado-fila-accion {
+    flex-shrink: 0;
+    width: auto;
+    max-width: 48%;
+}
+
 .btn-perfil-info {
     flex: 1;
     display: flex;

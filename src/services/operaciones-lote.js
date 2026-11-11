@@ -5,6 +5,8 @@ import { EstadoApp } from './estado-app.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { Cambios } from './cambios.js';
 
+const ID_TIPO_FERIADO = 'feriado';
+
 // ====================================================================
 // ALTA DE DÍAS ESPECIALES Y OPERACIONES POR RANGO DE FECHAS
 // ====================================================================
@@ -48,6 +50,61 @@ async function registrarDiaEspecial(fecha, tipo, notas = null) {
     if (!saved) return { error: ERROR_GUARDAR };   // el aviso ya lo dio el guardado
     notify.avisarFichaje(`Registro agregado como ${tipoTexto}`, 'success');
     return { ok: true };
+}
+
+/**
+ * Aplica de una vez (un solo guardado y un solo paso de deshacer) una lista de feriados sobre los registros:
+ * agrega el día si no existe, actualiza la descripción si ya es Feriado y reemplaza el registro existente solo si `reemplazar` es true.
+ * @param {{ fecha: string, nota: string | null, reemplazar?: boolean }[]} acciones
+ */
+async function aplicarFeriados(acciones) {
+    const tipoConfig = TiposRegistro.obtenerTipoPorId(ID_TIPO_FERIADO);
+    if (!tipoConfig) return _rechazar('Tipo inválido');
+    if (!acciones.length) return _rechazar('No hay feriados para aplicar', 'info');
+    if (acciones.length > S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION) {
+        return _rechazar(`Máximo ${S.SECURITY_LIMITS.MAX_REGISTROS_POR_OPERACION} días por operación. Seleccionados: ${acciones.length}`);
+    }
+
+    const esFeriado = r => TiposRegistro.obtenerTipoPorCodigo(r.entrada, r.salida)?.id === ID_TIPO_FERIADO;
+    const aAgregar = [], aActualizar = [], aReemplazar = [];
+    for (const a of acciones) {
+        if (!TiempoUtils.validarFecha(a.fecha)) continue;
+        const existente = EstadoApp.registroPorFecha(a.fecha);
+        if (!existente) aAgregar.push(a);
+        else if (esFeriado(existente)) aActualizar.push({ a, existente });
+        else if (a.reemplazar) aReemplazar.push({ a, existente });
+    }
+    if (!aAgregar.length && !aActualizar.length && !aReemplazar.length) return _rechazar('No hay cambios para aplicar', 'info');
+    if (!EstadoApp._hayEspacioParaRegistros(aAgregar.length)) return _rechazar('Límite de registros alcanzado');
+
+    const ids = [];
+    const nuevoFeriado = a => {
+        const nuevo = EstadoApp._construirRegistro(a.fecha, tipoConfig.codigo, tipoConfig.codigo);
+        const nota = S.normalizarNotas(a.nota);
+        if (nota) nuevo.notas = nota;
+        ids.push(nuevo.id);
+        return nuevo;
+    };
+
+    if (aReemplazar.length) {
+        const reemplazados = new Set(aReemplazar.map(x => x.existente));
+        EstadoApp._setRegistros(EstadoApp.registros().filter(r => !reemplazados.has(r)));
+    }
+    const registros = EstadoApp.registros();
+    [...aAgregar, ...aReemplazar.map(x => x.a)].forEach(a => registros.push(nuevoFeriado(a)));
+    aActualizar.forEach(({ a, existente }) => {
+        const nota = S.normalizarNotas(a.nota);
+        if (nota) existente.notas = nota; else delete existente.notas;
+        ids.push(existente.id);
+    });
+
+    EstadoApp.ordenarRegistros();
+    if (aReemplazar.length) EstadoApp.sincronizarPushHoy();
+    const total = aAgregar.length + aActualizar.length + aReemplazar.length;
+    const incluyeHoy = acciones.some(a => a.fecha === TiempoUtils.obtenerFechaHoy());
+    const saved = await Cambios.confirmarEnTarjeta(`verificar feriados (${TiempoUtils.contar(total, 'día')})`, ids, incluyeHoy);
+    if (!saved) return { error: ERROR_GUARDAR };   // el aviso ya lo dio el guardado
+    return { ok: true, agregados: aAgregar.length, actualizados: aActualizar.length, reemplazados: aReemplazar.length };
 }
 
 async function registrarVacacionesDirecto(desde, hasta, tipo) {
@@ -109,4 +166,4 @@ async function borrarPeriodoDirecto(desde, hasta) {
     return { ok: true };
 }
 
-export const OperacionesLote = { registrarDiaEspecial, registrarVacacionesDirecto, borrarPeriodoDirecto };
+export const OperacionesLote = { registrarDiaEspecial, aplicarFeriados, registrarVacacionesDirecto, borrarPeriodoDirecto };

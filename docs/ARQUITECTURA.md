@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
 **Última actualización:** 2026-11-10  
-**Estado:** Arquitectura modularizada y saneada (91 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Estado:** Arquitectura modularizada y saneada (92 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -39,7 +39,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (91 módulos)
+├── src/                        # Código fuente en ES Modules (92 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
@@ -244,6 +244,7 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | [`src/ui/reportes.js`](../src/ui/reportes.js) | `Reportes` | Generación y descarga de reportes HTML autocontenidos con CSP propia y selector de secciones. |
 | [`src/ui/configuracion.js`](../src/ui/configuracion.js) | `Configuracion` | Modal de configuración (jornada laboral, días hábiles, toggles de cálculo, selector de fondo y modal de ayuda). |
 | [`src/ui/historial-dias.js`](../src/ui/historial-dias.js) | `HistorialDias` | Modal para administrar tramos históricos de días hábiles cuando cambia la jornada laboral del usuario. |
+| [`src/ui/verificar-feriados.js`](../src/ui/verificar-feriados.js) | `VerificarFeriados` | Modal de Ajustes → Jornada laboral para comparar los feriados de Argentina con los registros (anteriores y/o próximos del año): agregar, completar la descripción o, si ese día hay otro registro, elegir entre reemplazarlo o dejarlo. |
 | [`src/ui/perfiles.js`](../src/ui/perfiles.js) | `Perfiles` | Selector de perfil activo y modal de creación/edición/eliminación de perfiles. |
 | [`src/ui/gist-respaldo.js`](../src/ui/gist-respaldo.js) | `GistRespaldo` | Configuración de token/ID de GitHub Gist, sincronización manual/automática y resolución de conflictos. |
 | [`src/ui/gist-resumen-merge.js`](../src/ui/gist-resumen-merge.js) | `GistResumenMerge` | Resumen previo a aplicar lo bajado del Gist: selector Combinar/Reemplazar, registros resultantes, cambios de configuración y alerta de registros locales que se pierden. |

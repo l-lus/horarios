@@ -19,6 +19,7 @@ import { GestorModales } from './gestor-modales.js';
 import { GestorHistorial } from '../services/gestor-historial.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { UIBase } from './base.js';
+import { FraseModal } from './frase-modal.js';
 import { Perfiles } from './perfiles.js';
 import { Calendario } from './calendario.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
@@ -145,7 +146,7 @@ function _initGlobales() {
         animarExitoFichaje, aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
         cerrarTodosModales: GestorModales.cerrarTodos,
         confirmarModal: GestorModales.confirmar,
-        descargarJSON, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+        descargarJSON, descargarArchivo: UIBase.descargarArchivo, pedirFrase: FraseModal.pedir, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
         obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
         setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado, verificarBloqueoCredito,
         formularioRegistro: Formularios.registro, formularioEdicion: Formularios.edicion,
@@ -341,7 +342,7 @@ function _initAutoSync() {
     if (estado === 1 && SincronizacionGist.dentroDelRangoHorario() && !SincronizacionGist.superaLimite('bajar')) {
         setTimeout(async () => { await gistBajar(true); SincronizacionGist.marcarSync('bajar'); }, 2000);
     } else if (estado === 2 && SincronizacionGist.dentroDelRangoHorario() && !SincronizacionGist.superaLimite('subir')) {
-        setTimeout(async () => { await gistSubir(); SincronizacionGist.marcarSync('subir'); }, 2000);
+        setTimeout(async () => { await gistSubir(true); SincronizacionGist.marcarSync('subir'); }, 2000);
     }
 }
 

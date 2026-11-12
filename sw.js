@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261111.2031-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261111.2107-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ const urlsToCache = [
   './assets/styles/responsivo-movimiento.css',
   './src/core/almacenamiento.js',
   './src/core/busqueda-texto.js',
+  './src/core/cifrado.js',
   './src/core/constantes.js',
   './src/core/dom.js',
   './src/core/estilo-calendario.js',
@@ -27,6 +28,7 @@ const urlsToCache = [
   './src/core/preferencias.js',
   './src/core/recarga.js',
   './src/core/resumen-tarjeta.js',
+  './src/core/secretos.js',
   './src/core/seguridad.js',
   './src/core/tema-inicial.js',
   './src/core/tiempo-utils.js',
@@ -44,6 +46,7 @@ const urlsToCache = [
   './src/services/estado-tarjeta.js',
   './src/services/feriados-ar.js',
   './src/services/filtros.js',
+  './src/services/frase-cifrado.js',
   './src/services/gestion-datos.js',
   './src/services/gestor-historial.js',
   './src/services/gestor-perfiles.js',
@@ -53,6 +56,7 @@ const urlsToCache = [
   './src/services/operaciones-lote.js',
   './src/services/orden-cards.js',
   './src/services/recordatorio-push.js',
+  './src/services/respaldo-cifrado.js',
   './src/services/saldo-semanal.js',
   './src/services/sincronizacion-gist.js',
   './src/services/tiempo-fuera.js',
@@ -68,10 +72,12 @@ const urlsToCache = [
   './src/ui/boton-fichar.js',
   './src/ui/calendario-popups.js',
   './src/ui/calendario.js',
+  './src/ui/campo-frase.js',
   './src/ui/configuracion.js',
   './src/ui/estadisticas.js',
   './src/ui/foco-hitos.js',
   './src/ui/formularios.js',
+  './src/ui/frase-modal.js',
   './src/ui/gestor-modales.js',
   './src/ui/gestor-temas.js',
   './src/ui/gestos.js',

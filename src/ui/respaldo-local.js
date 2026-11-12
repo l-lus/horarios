@@ -7,13 +7,32 @@ import { EstadoApp } from '../services/estado-app.js';
 import { ImportarExportar } from '../services/importar-exportar.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { mostrarToast } from './toast.js';
+import { CampoFrase } from './campo-frase.js';
+import { FraseCifrado } from '../services/frase-cifrado.js';
 
 // ====================================================================
 //                     UI LOCAL BACKUP MODULE (Import / Export JSON)
 // ====================================================================
 const ESPERA_MODAL_MS = 50;   // deja abrir el modal antes de lanzar el selector de archivos
 
-const { descargarJSON, obtenerNombrePerfilSafe } = UIBase;
+const { descargarArchivo, obtenerNombrePerfilSafe, _setBtnActivo } = UIBase;
+
+// «Cifrar con la frase» (opcional): es la misma frase del Gist; sin marcar, el archivo sale en claro como siempre
+const _campoFrase = new CampoFrase({ input: 'export-frase', ojo: 'btn-export-frase-ver', generar: 'btn-export-frase-generar' });
+
+const _cifrarExportacion = () => !!$('btn-toggle-export-cifrar')?.classList.contains('btn-activo');
+
+function _setCifrarExportacion(activo, animar = true) {
+    _setBtnActivo('btn-toggle-export-cifrar', activo);
+    setColapsable($('export-frase-bloque'), activo, { animar });
+}
+
+/** La frase con la que sale el archivo ('' = sin cifrar), o null si se pidió cifrar y lo escrito no sirve (ya se avisó). */
+function _fraseParaExportar() {
+    if (!_cifrarExportacion()) return '';
+    if (!_campoFrase.confirmar({ permitirVacia: false })) return null;
+    return FraseCifrado.actual();
+}
 
 let _modalAbiertoDesdeLista = false;
 
@@ -79,6 +98,9 @@ function mostrarExportar(desdeLista = false) {
         $('export-fecha-desde').value = '';
         $('export-fecha-hasta').value = '';
 
+        _campoFrase.cargar();
+        _setCifrarExportacion(FraseCifrado.disponible(), false);
+
         _actualizarBotonVolver('btn-volver-exportar', desdeLista);
     });
 }
@@ -96,16 +118,19 @@ async function ejecutarExportacion() {
     const tipo = $('tipo-exportacion').value;
     const btn = /** @type {HTMLButtonElement} */ (document.querySelector('#modal-exportar .btn-export'));
 
+    const frase = _fraseParaExportar();
+    if (frase === null) return;
+
     btn.disabled = true;
 
     try {
         if (tipo === 'todo') {
-            ImportarExportar.exportarJSON();
+            ImportarExportar.exportarJSON(frase);
             cerrarExportar();
 
         } else if (tipo === 'mes-actual') {
             const mesActual = TiempoUtils.claveMes(TiempoUtils.obtenerFechaHoy());
-            await exportarRango(mesActual, mesActual, true);
+            await exportarRango(mesActual, mesActual, true, frase);
 
         } else if (tipo === 'rango') {
             const desde = S.limpiarTexto($('export-fecha-desde').value, 10);
@@ -129,7 +154,7 @@ async function ejecutarExportacion() {
                 return;
             }
 
-            await exportarRango(desde, hasta, false);
+            await exportarRango(desde, hasta, false, frase);
         }
 
     } catch (error) {
@@ -151,7 +176,7 @@ function _filtrarRegistrosRango(desde, hasta, esMes) {
     return EstadoApp.registros().filter(r => r.fecha >= desde && r.fecha <= hasta);
 }
 
-async function exportarRango(desde, hasta, esMes = false) {
+async function exportarRango(desde, hasta, esMes = false, frase = '') {
     const registrosFiltrados = _filtrarRegistrosRango(desde, hasta, esMes);
     if (registrosFiltrados.length === 0) { mostrarToast('No hay registros en ese rango', 'warning'); return; }
 
@@ -163,9 +188,11 @@ async function exportarRango(desde, hasta, esMes = false) {
     });
 
     try {
+        const salida = await ImportarExportar.textoRespaldo(data, frase);
+        if ('error' in salida) { mostrarToast(salida.error, 'error'); return; }
         const sufijo = esMes ? `_${desde}` : `_${desde}_${hasta}`;
-        descargarJSON(data, `Horarios_${obtenerNombrePerfilSafe()}${sufijo}_${fechaHoy}.json`);
-        mostrarToast(`Exportados ${registrosFiltrados.length} registros${esMes ? ' del mes' : ''}`, 'success');
+        descargarArchivo(salida.texto, ImportarExportar.nombreArchivoRespaldo(`Horarios_${obtenerNombrePerfilSafe()}${sufijo}_${fechaHoy}`, salida.cifrado), 'application/json');
+        mostrarToast(`Exportados ${registrosFiltrados.length} registros${esMes ? ' del mes' : ''}${salida.cifrado ? ' (archivo cifrado)' : ''}`, 'success');
         cerrarExportar();
     } catch (e) {
         console.error(e);
@@ -174,7 +201,13 @@ async function exportarRango(desde, hasta, esMes = false) {
 }
 
 
+function bindEventos() {
+    _campoFrase.vincular();
+    $('btn-toggle-export-cifrar')?.addEventListener('click', () => _setCifrarExportacion(!_cifrarExportacion()));
+}
+
 export const RespaldoLocal = {
+    bindEventos,
     mostrarImportar,
     cerrarImportar,
     mostrarExportar,

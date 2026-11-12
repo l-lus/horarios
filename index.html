@@ -1414,9 +1414,13 @@
                                 apariencia, más la posición del encabezado (PC y celular) y el orden y la visibilidad de las tarjetas (el del celular, el de PC con 2 columnas y el de PC con 3 por separado; estos se aplican al
                                 <strong>Reemplazar</strong>, no al Combinar). El color del <em>tema</em> no se incluye: es de cada dispositivo.
                             </p>
+                            <p>Con <strong>Cifrar con la frase</strong> el archivo (<code>.cifrado.json</code>) no
+                                muestra tus registros y se abre con la misma frase de cifrado del Gist; sin marcarlo
+                                sale en claro, como siempre.</p>
                             <p>Con <strong>Restaurar</strong> importás un backup en este u otro dispositivo: elegís el
                                 archivo y decidís si querés <strong>Combinar</strong> (une el archivo con tus datos
-                                locales) o <strong>Reemplazar</strong> (sustituye tus datos locales).</p>
+                                locales) o <strong>Reemplazar</strong> (sustituye tus datos locales). Si el archivo
+                                está cifrado, la app usa la frase guardada o te la pide (esa no se guarda).</p>
                             <p><strong>Restablecer</strong> elimina los registros del perfil activo y devuelve su
                                 configuración, incluida la apariencia de la app, a los valores por defecto. Los demás
                                 perfiles conservan sus registros. Antes te pide
@@ -1446,6 +1450,16 @@
                                 registros cambian, elegís entre Combinar y Reemplazar y confirmás con Aplicar. Si el
                                 archivo del Gist fue alterado, la app te lo avisa antes de continuar.
                             </p>
+                            <p><strong>Cifrado (opcional):</strong> si cargás una <em>frase de cifrado</em> (mínimo 20
+                                caracteres; el botón de la varita genera una al azar), el Gist se sube cifrado y ni
+                                GitHub ni quien tenga el enlace pueden leer tus registros. Tenés que cargar la misma
+                                frase en cada dispositivo. La frase vale hasta cerrar la app, salvo que actives
+                                <em>Recordar en este navegador</em> (la sincronización automática lo necesita). Si la
+                                perdés, el Gist no se puede abrir; tus datos locales siguen. Antes de pisar un Gist
+                                cifrado con otra frase, la app te pide confirmación. Un Gist que ya subiste en claro
+                                conserva sus versiones viejas en el historial de GitHub: al empezar a cifrar conviene
+                                crear un Gist nuevo y borrar el anterior. Sin frase, todo funciona como siempre, en
+                                claro.</p>
                             <p><strong>Combinar y Reemplazar:</strong> <em>Combinar</em> agrega los días que solo están
                                 en el Gist y completa la salida o el tiempo fuera que falten en tus registros locales,
                                 sin tocar tu configuración. <em>Reemplazar</em> deja exactamente los registros del Gist
@@ -1581,6 +1595,62 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="config-actions">
+                    <label>Cifrado (opcional)</label>
+                    <div class="settings-list">
+                        <button id="btn-gist-panel-cifrado" class="gist-panel-toggle" aria-expanded="false"
+                            aria-controls="gist-panel-cifrado">
+                            <svg class="icon">
+                                <use href="#icon-lock" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Frase de cifrado</span>
+                                <span class="settings-list-desc" id="gist-cifrado-resumen">Sin cifrar</span>
+                            </span>
+                            <svg class="icon icon-indicator">
+                                <use href="#icon-chevron-right" />
+                            </svg>
+                        </button>
+                        <div class="gist-panel collapsible" id="gist-panel-cifrado">
+                            <div class="collapsible-inner">
+                                <div class="gist-panel-contenido">
+                                    <div class="form-group">
+                                        <label for="gist-frase">Frase (mínimo 20 caracteres)</label>
+                                        <div class="input-with-btn">
+                                            <input type="password" id="gist-frase" placeholder="Vacía = sin cifrar"
+                                                maxlength="200" autocomplete="off" spellcheck="false" />
+                                            <button class="time-btn" id="btn-gist-frase-ver" type="button" title="Mostrar/ocultar frase">
+                                                <svg class="icon">
+                                                    <use href="#icon-eye" />
+                                                </svg>
+                                            </button>
+                                            <button class="time-btn" id="btn-gist-frase-generar" type="button" title="Generar una frase al azar">
+                                                <svg class="icon">
+                                                    <use href="#icon-magic" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <p class="frase-nota">Con una frase, el Gist se sube cifrado y GitHub no puede
+                                            leer tus registros. Tenés que cargar la misma en cada dispositivo. Si la
+                                            perdés, el Gist no se puede abrir (tus datos locales siguen).</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="btn-toggle-gist-recordar">
+                            <svg class="icon">
+                                <use href="#icon-lock-open" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Recordar en este navegador</span>
+                                <span class="settings-list-desc">Sin activar, la frase vale hasta cerrar la app. La
+                                    sincronización automática lo necesita.</span>
+                            </span>
+                            <span class="toggle-switch" aria-hidden="true"></span>
+                        </button>
                     </div>
                 </div>
 
@@ -1919,6 +1989,41 @@
                         <div class="form-group">
                             <label for="export-fecha-hasta">Hasta</label>
                             <input type="date" id="export-fecha-hasta" />
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-list">
+                    <button id="btn-toggle-export-cifrar" type="button">
+                        <svg class="icon">
+                            <use href="#icon-lock" />
+                        </svg>
+                        <span class="settings-list-text">
+                            <span>Cifrar con la frase</span>
+                            <span class="settings-list-desc">Para restaurar el archivo hace falta la frase.</span>
+                        </span>
+                        <span class="toggle-switch" aria-hidden="true"></span>
+                    </button>
+                </div>
+                <div id="export-frase-bloque" class="collapsible">
+                    <div class="collapsible-inner">
+                        <div class="form-group">
+                            <label for="export-frase">Frase de cifrado (mínimo 20 caracteres)</label>
+                            <div class="input-with-btn">
+                                <input type="password" id="export-frase" maxlength="200" autocomplete="off"
+                                    spellcheck="false" />
+                                <button class="time-btn" id="btn-export-frase-ver" type="button" title="Mostrar/ocultar frase">
+                                                <svg class="icon">
+                                                    <use href="#icon-eye" />
+                                                </svg>
+                                            </button>
+                                <button class="time-btn" id="btn-export-frase-generar" type="button" title="Generar una frase al azar">
+                                                <svg class="icon">
+                                                    <use href="#icon-magic" />
+                                                </svg>
+                                            </button>
+                            </div>
+                            <p class="frase-nota">Es la misma frase del Gist. Si la perdés, el archivo no se puede
+                                abrir.</p>
                         </div>
                     </div>
                 </div>
@@ -2425,6 +2530,51 @@
                         <svg class="icon">
                             <use href="#icon-lock" />
                         </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal" id="modal-frase" role="dialog" aria-modal="true" aria-labelledby="modal-frase-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3>
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-lock" />
+                        </svg>
+                        <span id="modal-frase-titulo">Contenido cifrado</span>
+                    </span>
+                </h3>
+            </div>
+            <div class="modal-panel-body">
+                <p class="frase-nota" id="modal-frase-motivo"></p>
+                <div class="form-group">
+                    <label for="frase-pedida">Frase de cifrado</label>
+                    <div class="input-with-btn">
+                        <input type="password" id="frase-pedida" maxlength="200" autocomplete="off"
+                            spellcheck="false" />
+                        <button class="time-btn" id="btn-frase-pedida-ver" type="button" title="Mostrar/ocultar frase">
+                                                <svg class="icon">
+                                                    <use href="#icon-eye" />
+                                                </svg>
+                                            </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-export" id="btn-frase-aceptar">
+                        <svg class="icon">
+                            <use href="#icon-check" />
+                        </svg>
+                        Abrir
+                    </button>
+                    <button class="btn-cancel" id="btn-frase-cancelar">
+                        <svg class="icon">
+                            <use href="#icon-cancelar" />
+                        </svg>
+                        Cancelar
                     </button>
                 </div>
             </div>

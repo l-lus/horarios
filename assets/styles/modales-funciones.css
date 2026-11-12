@@ -143,6 +143,23 @@
     background: var(--bg-card);
 }
 
+/* Texto explicativo bajo el campo de la frase de cifrado (Gist, Respaldar y el modal que la pide) */
+.frase-nota {
+    margin: var(--space-sm) 0 0;
+    font-size: var(--text-sm);
+    line-height: var(--lh-normal);
+    color: var(--text-muted);
+}
+
+#modal-frase-motivo {
+    margin: 0 0 var(--space-md);
+    font-size: var(--text-base);
+}
+
+#modal-exportar .settings-list {
+    margin-bottom: var(--space-md);
+}
+
 .gist-panel-toggle .icon-indicator {
     transition: transform var(--dur-fast);
 }
@@ -301,6 +318,7 @@
 }
 
 #modal-gist .settings-list>button,
+#modal-exportar .settings-list>button,
 #modal-config .config-actions button,
 .drag-handle,
 #modal-reporte-secciones .config-actions button,

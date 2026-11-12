@@ -47,7 +47,8 @@ const CAMPOS_SYNC_GIST = Object.freeze([
     'gistLastSync', 'gistAutoSync', 'gistRangoDesde', 'gistRangoHasta', 'gistMergeBehavior',
     'gistSyncFecha_subir', 'gistSyncCount_subir', 'gistSyncFecha_bajar', 'gistSyncCount_bajar'
 ]);
-const CAMPOS_GIST_PERFIL = Object.freeze(['gistId', ...CAMPOS_SYNC_GIST]);
+// gistCifrado es un dato del Gist (ya se subió o bajó cifrado), no de la sincronización: se conserva junto con el gistId.
+const CAMPOS_GIST_PERFIL = Object.freeze(['gistId', 'gistCifrado', ...CAMPOS_SYNC_GIST]);
 
 const _camposGist = (perfil) => Object.fromEntries(
     CAMPOS_GIST_PERFIL.filter(k => perfil[k] != null && perfil[k] !== '').map(k => [k, perfil[k]])

@@ -26,6 +26,9 @@ function getToken() { return Almacenamiento.getItem(STORAGE_KEYS.GIST_TOKEN, '')
 
 function getGistId() { return GestorPerfiles.obtenerDatosPerfil()?.gistId || ''; }
 function getLastSync() { return GestorPerfiles.obtenerDatosPerfil()?.gistLastSync || null; }
+/** ¿Este Gist ya se subió o se bajó cifrado? Mientras lo esté no se acepta en claro (ver RespaldoCifrado.abrir con exigirCifrado). Se reinicia al cambiar de Gist. */
+function getCifrado() { return GestorPerfiles.obtenerDatosPerfil()?.gistCifrado === true; }
+function setCifrado(valor) { _conPerfil(perfil => { if (valor) perfil.gistCifrado = true; else delete perfil.gistCifrado; }); }
 function getMergeBehavior() { return GestorPerfiles.obtenerDatosPerfil()?.gistMergeBehavior || 'replace'; }
 function setMergeBehavior(valor) { _conPerfil(perfil => { perfil.gistMergeBehavior = valor; }); }
 
@@ -108,8 +111,11 @@ function saveCredentials(token, gistId) {
     else Almacenamiento.removeItem(STORAGE_KEYS.GIST_TOKEN);
 
     _conPerfil(perfil => {
+        const anterior = perfil.gistId || '';
         if (gistId && esGistIdValido(gistId)) perfil.gistId = gistId.trim();
         else if (gistId === '') delete perfil.gistId;
+        // otro Gist: lo que se sabía del anterior (que estaba cifrado) ya no vale
+        if ((perfil.gistId || '') !== anterior) delete perfil.gistCifrado;
     });
     return true;
 }
@@ -118,7 +124,10 @@ function saveLastSync(gistId) {
     const ahoraISO = new Date().toISOString();
     _conPerfil(perfil => {
         perfil.gistLastSync = ahoraISO;
-        if (gistId && esGistIdValido(gistId)) perfil.gistId = gistId.trim();
+        if (gistId && esGistIdValido(gistId) && perfil.gistId !== gistId.trim()) {
+            perfil.gistId = gistId.trim();
+            delete perfil.gistCifrado;
+        }
     });
 }
 
@@ -142,8 +151,12 @@ async function _gistFetch(url, options = {}) {
     return response.json();
 }
 
-/** Sube un respaldo ya armado (ImportarExportar.armarRespaldo) al Gist del perfil, o crea uno nuevo. Devuelve el id. */
-async function subir(data) {
+/**
+ * Sube al Gist del perfil (o crea uno nuevo) el texto ya listo: el JSON del respaldo en claro o el sobre cifrado
+ * (ver RespaldoCifrado.sellar). Devuelve el id del Gist.
+ * @param {string} contenido
+ */
+async function subir(contenido) {
     const token = getToken();
     if (!token) throw new Error('Falta el token de GitHub');
 
@@ -155,13 +168,14 @@ async function subir(data) {
     const result = await _gistFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: 'Horarios PWA - Backup automático', public: false, files: { [GIST_FILENAME]: { content: JSON.stringify(data, null, 2) } } })
+        body: JSON.stringify({ description: 'Horarios PWA - Backup automático', public: false, files: { [GIST_FILENAME]: { content: contenido } } })
     });
     saveLastSync(result.id);
     return result.id;
 }
 
-async function bajar() {
+/** El texto del archivo del respaldo en el Gist del perfil, o null si el Gist todavía no lo tiene. No cuenta como sincronización. */
+async function _leerArchivo() {
     const token = getToken();
     const gistId = getGistId();
     if (!token) throw new Error('Falta el token de GitHub');
@@ -169,16 +183,32 @@ async function bajar() {
 
     const respuesta = await _gistFetch(`https://api.github.com/gists/${gistId}`);
     const file = respuesta?.files?.[GIST_FILENAME];
-    if (!file || typeof file.content !== 'string') throw new Error(`Archivo ${GIST_FILENAME} no encontrado en el Gist`);
+    if (!file || typeof file.content !== 'string') return null;
     // La API corta el contenido de archivos de más de 1 MB (truncated): parsearlo daría un JSON roto
     if (file.truncated) throw new Error('El respaldo del Gist es demasiado grande para descargarlo');
     if (file.content.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) throw new Error('El respaldo del Gist es demasiado grande');
-
-    // La validación (estructura, hash e integridad) la hace ImportarExportar.prepararRespaldo, igual que con un archivo local
-    const data = JSON.parse(file.content, S.reviverJSONSeguro);
-
-    saveLastSync(gistId);
-    return data;
+    return /** @type {string} */ (file.content);
 }
 
-export const SincronizacionGist = { getToken, getGistId, getLastSync, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, esTokenValido, subir, bajar };
+/**
+ * Lo que hay hoy en el Gist del perfil, para comprobar antes de pisarlo que la frase lo abre. null si no hay Gist o no tiene el archivo.
+ * @returns {Promise<string | null>}
+ */
+async function leerActual() {
+    if (!esGistIdValido(getGistId())) return null;
+    return _leerArchivo();
+}
+
+/**
+ * Baja el texto del respaldo del Gist (en claro o cifrado): lo abre RespaldoCifrado.abrir y lo valida
+ * ImportarExportar.prepararRespaldo (estructura, hash e integridad), igual que con un archivo local.
+ * @returns {Promise<string>}
+ */
+async function bajar() {
+    const contenido = await _leerArchivo();
+    if (contenido === null) throw new Error(`Archivo ${GIST_FILENAME} no encontrado en el Gist`);
+    saveLastSync(getGistId());
+    return contenido;
+}
+
+export const SincronizacionGist = { getToken, getGistId, getLastSync, getCifrado, setCifrado, leerActual, formatLastSync, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, saveCredentials, esGistIdValido, esTokenValido, subir, bajar };

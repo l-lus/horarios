@@ -9,7 +9,7 @@
 * **Informes detallados:** Generación de reportes mensuales y anuales.
 * **Historial y vistas:** Consulta de registros históricos mediante lista o vista de calendario.
 * **Múltiples perfiles:** Gestión de distintos perfiles (personales o laborales).
-* **Copias de seguridad:** Creación de backups locales y sincronización en la nube mediante GitHub Gist.
+* **Copias de seguridad:** Creación de backups locales y sincronización en la nube mediante GitHub Gist, con cifrado opcional mediante una frase (AES-GCM, PBKDF2) que se puede generar al azar.
 
 ## 🚀 Servidor local
 

@@ -15,6 +15,8 @@ import { EstadoApp as D } from './estado-app.js';
 import { normalizarOrdenCards, leerLayout, columnasDesdeOrden, tamanosDeColumnas, esTamanosColumnasValidos } from './orden-cards.js';
 import { DiasHabiles } from './dias-habiles.js';
 import { Objetivos } from './objetivos.js';
+import { RespaldoCifrado } from './respaldo-cifrado.js';
+import { FraseCifrado } from './frase-cifrado.js';
 
 // ====================================================================
 //           IMPORT / EXPORT & BACKUP NORMALIZATION MODULE
@@ -307,13 +309,33 @@ async function armarRespaldo(registros, extra = {}) {
     };
 }
 
-async function exportarJSON() {
+/**
+ * El texto que se guarda o se sube de un respaldo: con una frase, el sobre cifrado; sin frase, el JSON en claro de siempre.
+ * @param {object} data respaldo ya armado (armarRespaldo)
+ * @param {string} [frase] vacía = sin cifrar
+ * @param {{ sal?: string | null }} [opciones] la sal del sobre anterior del mismo destino (un Gist), para reutilizarla
+ * @returns {Promise<{ texto: string, cifrado: boolean } | { error: string }>}
+ */
+async function textoRespaldo(data, frase = '', { sal = null } = {}) {
+    if (!frase) return { texto: JSON.stringify(data, null, 2), cifrado: false };
+    const sellado = await RespaldoCifrado.sellar(data, frase, { sal });
+    if ('error' in sellado) return { error: sellado.error };
+    return { texto: sellado.texto, cifrado: true };
+}
+
+/** Nombre del archivo de un respaldo: los cifrados terminan en `.cifrado.json` para reconocerlos a simple vista. */
+const nombreArchivoRespaldo = (base, cifrado) => `${base}${cifrado ? '.cifrado' : ''}.json`;
+
+/** @param {string} [frase] con una frase el archivo sale cifrado */
+async function exportarJSON(frase = '') {
     const data = await armarRespaldo(D.registros());
     try {
+        const salida = await textoRespaldo(data, frase);
+        if ('error' in salida) { D._notify().mostrarToast(salida.error, 'error'); return; }
         const nombreSafe = D._notify().obtenerNombrePerfilSafe();
         const fechaHoy = TiempoUtils.fechaLocalISOFull().slice(0, 10);
-        D._notify().descargarJSON(data, `Horarios_${nombreSafe}_${fechaHoy}.json`);
-        D._notify().mostrarToast('Datos exportados', 'success');
+        D._notify().descargarArchivo(salida.texto, nombreArchivoRespaldo(`Horarios_${nombreSafe}_${fechaHoy}`, salida.cifrado), 'application/json');
+        D._notify().mostrarToast(salida.cifrado ? 'Datos exportados (archivo cifrado)' : 'Datos exportados', 'success');
         D._notify().cerrarTodosModales();
     } catch (e) {
         console.error(e);
@@ -434,6 +456,27 @@ async function restaurarRespaldo(data, importados, modo, opciones = {}) {
     return { ok: await _guardarRegistrosImportados(importados, mensaje, `reemplazar ${etiqueta}`, cerrarImportar) };
 }
 
+/**
+ * Texto de un archivo → respaldo. Un archivo en claro se lee como siempre; uno cifrado se abre con la frase guardada y, si falta
+ * o no lo abre, con la que se pide (vale solo para ese archivo: no reemplaza la guardada). Devuelve null si no se pudo o se canceló (ya se avisó).
+ * @param {string} contenido
+ */
+async function _abrirArchivo(contenido) {
+    const notify = D._notify();
+    let frase = FraseCifrado.disponible() ? FraseCifrado.actual() : '';
+    for (;;) {
+        const abierto = await RespaldoCifrado.abrir(contenido, frase);
+        if ('datos' in abierto) return abierto.datos;
+        if (abierto.codigo === 'formato') { notify.mostrarToast('Archivo JSON mal formado o que no es un respaldo', 'error'); return null; }
+        const motivo = abierto.codigo === 'sin-frase' ? 'Este archivo está cifrado. Escribí la frase con la que se exportó.'
+            : abierto.codigo === 'frase' ? abierto.error
+                : 'La frase no abre este archivo (o el archivo fue alterado). Probá con otra.';
+        const pedida = await notify.pedirFrase(motivo);
+        if (pedida === null) return null;
+        frase = pedida;
+    }
+}
+
 /** @param {File|undefined} file archivo elegido por el usuario (lo obtiene la UI del input) */
 function importarDatos(file, modo = 'replace') {
     if (!file) { D._notify().mostrarToast('Seleccioná un archivo primero', 'error'); return; }
@@ -448,7 +491,8 @@ function importarDatos(file, modo = 'replace') {
             if (!contenido || contenido.trim().length === 0) { D._notify().mostrarToast('Archivo vacío', 'error'); return; }
             if (contenido.length > S.SECURITY_LIMITS.MAX_JSON_SIZE) { D._notify().mostrarToast('Contenido del archivo demasiado grande', 'error'); return; }
 
-            const data = JSON.parse(contenido, S.reviverJSONSeguro);
+            const data = await _abrirArchivo(contenido);
+            if (!data) return;
             const preparado = await prepararRespaldo(data, 'archivo');
             if ('error' in preparado) return;
             await restaurarRespaldo(data, preparado.registros, modo === 'merge' ? 'merge' : 'replace');
@@ -482,6 +526,8 @@ export const ImportarExportar = {
     normalizarRegistrosImportados,
     armarRespaldo,
     exportarJSON,
+    textoRespaldo,
+    nombreArchivoRespaldo,
     errorEstructuraRespaldo,
     prepararRespaldo,
     calcularDiferencias,

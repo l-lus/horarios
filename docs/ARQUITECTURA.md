@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
-**Última actualización:** 2026-11-10  
-**Estado:** Arquitectura modularizada y saneada (92 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Última actualización:** 2026-11-11  
+**Estado:** Arquitectura modularizada y saneada (98 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -39,7 +39,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (92 módulos)
+├── src/                        # Código fuente en ES Modules (98 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
@@ -126,6 +126,18 @@ Un error esperado (dato inválido, límite, no se pudo guardar) **no se lanza**:
 
 `throw` queda para lo inesperado y para el cliente de red (`SincronizacionGist`), donde la falla viene de afuera y la captura `gist-respaldo.js`. Un comando que nadie necesita consultar (ej. `EdicionGrupo.guardarEdicionGrupo`) puede avisar y no devolver nada.
 
+## 3.1.1. Cifrado opcional de lo que sale de la app
+
+Sin frase de cifrado todo funciona como siempre (Gist y archivos en claro). Con una frase cargada:
+
+- **Gist:** `gist-respaldo.js` sube el texto que devuelve `ImportarExportar.textoRespaldo(respaldo, frase)` (el sobre de `RespaldoCifrado.sellar`). Antes de pisar un Gist lee lo que hay (`SincronizacionGist.leerActual`): si la frase lo abre reutiliza su sal; si no lo abre, a mano pide confirmación y la subida automática se frena. Al bajar, `RespaldoCifrado.abrir` distingue sobre y JSON en claro; si la frase falta o no abre, a mano se pide (`FraseModal`) y la que abre queda como frase de la app; en automático se frena con un aviso.
+- **Marca `gistCifrado` (por perfil):** un Gist que ya se subió o bajó cifrado no se acepta en claro (`exigirCifrado`, error `sin-cifrar`): si no, quien pudiera escribirlo esquivaría la autenticación reemplazando el sobre por un JSON plano. A mano se puede aceptar con confirmación (por si el cifrado se quitó desde otro dispositivo). Se reinicia al cambiar de Gist.
+- **Archivo local:** «Cifrar con la frase» en Respaldar (activado por defecto si hay frase); el archivo sale como `.cifrado.json`. Al restaurar se usa la frase guardada o la que se pide, que vale solo para ese archivo.
+- **La frase** vive en `sessionStorage` y solo pasa a `localStorage` con «Recordar en este navegador» (la sincronización automática lo necesita). Su clave (`horarios_fraseCifrado`) no está en `STORAGE_KEYS` para que no entre en la migración de claves heredadas. Nunca va en el respaldo ni en un log (lo vigila `tests/respaldo-cifrado.test.mjs`).
+- **Lo que no cubre:** el token de GitHub y los datos locales siguen en claro en el navegador, y las revisiones viejas de un Gist que se subió en claro quedan en su historial.
+
+El formato del sobre es `horarios-cifrado` (mismo esquema que Servicios, con otro nombre: un sobre de una app no se abre en la otra).
+
 ## 3.2. HTML seguro (`core/html.js`)
 
 Para insertar HTML usá la etiqueta ``html`...` ``: escapa cada interpolación (también dentro de atributos entre comillas). Se inserta marcado sin escapar solo si es otro ``html`...` `` anidado o está envuelto en `crudo()`. Un string común **nunca** se interpreta como HTML: `montar(el, contenido)`, `_crearPopupFlotante` y `Animaciones._renderConFirma` rechazan strings comunes. `montar` es el **único** lugar que asigna `innerHTML` (lo verifica `tests/architecture.test.mjs`); para vaciar un elemento se usa `replaceChildren()`.
@@ -171,6 +183,8 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | [`src/core/movimiento.js`](../src/core/movimiento.js) | `Movimiento` | Detección de `prefers-reduced-motion` y helpers de transición. |
 | [`src/core/recarga.js`](../src/core/recarga.js) | `Recarga` | Punto único para recargar la app; la UI registra un manejador con fundido (`ui/recarga-gesto.js`). |
 | [`src/core/seguridad.js`](../src/core/seguridad.js) | `SeguridadYUtils` | `limpiarTexto` (caracteres de control, espacios y largo; el formato de cada campo se valida después con lista blanca), `normalizarNotas`, `escapeHtml`, `validarRegistroSeguro` (respaldos importados), `repararRegistrosGuardados` y `sanitizarDiasHabiles` (datos propios al cargar), `esObjetivoHorasValido`, cálculo SHA-256 (`calcularHashSHA256` con fallback JS puro) y `reviverJSONSeguro`. |
+| [`src/core/cifrado.js`](../src/core/cifrado.js) | `cifrar`, `descifrar`, `esSobre`, `evaluarFrase`, `generarFrase` | Sobre cifrado con una frase: AES-GCM-256, clave PBKDF2-SHA-256 (600 000 iteraciones), sal propia de cada destino e IV nuevo en cada cifrado. Sin DOM, con `crypto` inyectable. Es el único módulo de `core/` que lanza (`ErrorCifrado`); lo envuelve `RespaldoCifrado`. |
+| [`src/core/secretos.js`](../src/core/secretos.js) | `Secretos` | Valores que no deben quedar en el navegador salvo que la persona lo pida (la frase de cifrado): `sessionStorage` o, con «recordar», `localStorage`. |
 | [`src/core/almacenamiento.js`](../src/core/almacenamiento.js) | `Almacenamiento` | Lectura/escritura segura en `localStorage` bajo el namespace `horarios_`, migración automática de claves legadas (`migrarClavesLegadas`), manejo de cuota y resolución de clave por perfil (`setProfileKeyResolver`). |
 | [`src/core/preferencias.js`](../src/core/preferencias.js) | `Preferencias` | Opciones booleanas con su clave, valor por defecto y si van por perfil en un solo lugar (`Preferencias.HINT_INTEGRADO.get()`). |
 | [`src/core/tiempo-utils.js`](../src/core/tiempo-utils.js) | `TiempoUtils` | Aritmética de horas (`HH:MM` ↔ minutos), diferencia entre horarios, cruces de medianoche, formato de fechas ISO y rangos semanales. |
@@ -206,7 +220,9 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | [`src/services/gestor-historial.js`](../src/services/gestor-historial.js) | `GestorHistorial` | Pila de estados en memoria y `localStorage` para Deshacer (`undo`) y Rehacer (`redo`). |
 | [`src/services/gestor-perfiles.js`](../src/services/gestor-perfiles.js) | `GestorPerfiles` | Gestión multi-perfil: alta, renombre y baja con validación del nombre (`crearPerfil`, `renombrarPerfil`, `eliminarPerfil`, que borra las claves por perfil con `Almacenamiento.borrarClavesDePerfil`), cambio de perfil activo y aislamiento de claves en storage. |
 | [`src/services/feriados-ar.js`](../src/services/feriados-ar.js) | `FeriadosAR` | Detección de feriados nacionales del mes en curso y sugerencia automática de carga. |
-| [`src/services/sincronizacion-gist.js`](../src/services/sincronizacion-gist.js) | `SincronizacionGist` | Cliente HTTP de la API de GitHub Gist (crear, subir, descargar respaldos en la nube y verificar hashes). |
+| [`src/services/sincronizacion-gist.js`](../src/services/sincronizacion-gist.js) | `SincronizacionGist` | Cliente HTTP de la API de GitHub Gist: sube y baja el texto del respaldo (en claro o cifrado, no lo interpreta), configuración de la sincronización por perfil y la marca `gistCifrado`. |
+| [`src/services/frase-cifrado.js`](../src/services/frase-cifrado.js) | `FraseCifrado` | La frase de cifrado opcional de la app (una sola, como el token): leer, guardar (sesión o recordada), olvidar, evaluar y generar una al azar. |
+| [`src/services/respaldo-cifrado.js`](../src/services/respaldo-cifrado.js) | `RespaldoCifrado` | `sellar` (respaldo → sobre cifrado) y `abrir` (texto de archivo o Gist → respaldo, en claro o cifrado). No lanza: devuelve `{ error, codigo }`. |
 | [`src/services/recordatorio-push.js`](../src/services/recordatorio-push.js) | `RecordatorioPush` | Suscripción Web Push (VAPID), programación y cancelación de recordatorios de fin de jornada con el Worker, y ping diario anónimo de uso (`registrarUso` → `/api/hola`). |
 | [`src/services/orden-cards.js`](../src/services/orden-cards.js) | `normalizarOrdenCards`, `columnasDesdeOrden`, `prepararColumnas`, `moverCard` | Orden de las tarjetas (ocultas incluidas; la de estado se mueve pero no se oculta) y su corte en hasta 3 columnas de escritorio (diseño libre), sin DOM. |
 
@@ -248,6 +264,8 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | [`src/ui/perfiles.js`](../src/ui/perfiles.js) | `Perfiles` | Selector de perfil activo y modal de creación/edición/eliminación de perfiles. |
 | [`src/ui/gist-respaldo.js`](../src/ui/gist-respaldo.js) | `GistRespaldo` | Configuración de token/ID de GitHub Gist, sincronización manual/automática y resolución de conflictos. |
 | [`src/ui/gist-resumen-merge.js`](../src/ui/gist-resumen-merge.js) | `GistResumenMerge` | Resumen previo a aplicar lo bajado del Gist: selector Combinar/Reemplazar, registros resultantes, cambios de configuración y alerta de registros locales que se pierden. |
+| [`src/ui/campo-frase.js`](../src/ui/campo-frase.js) | `CampoFrase` | Comportamiento del bloque «frase de cifrado» que comparten el modal de Gist y el de Respaldar: ver/ocultar, generar, «Recordar» y guardar validando el largo. |
+| [`src/ui/frase-modal.js`](../src/ui/frase-modal.js) | `FraseModal` | Modal que pide la frase cuando un archivo o un Gist cifrado no abre con la guardada (mismo circuito que `GestorModales.confirmar`). |
 | [`src/ui/respaldo-local.js`](../src/ui/respaldo-local.js) | `RespaldoLocal` | Modales y flujo de exportación (completa, mensual o por rango) e importación de archivos `.json` locales. |
 | [`src/ui/orden-tarjetas.js`](../src/ui/orden-tarjetas.js) | `OrdenTarjetas` | Visibilidad de tarjetas principales y diseño libre por columnas (ver 3.3): arrastre con pulsación larga, teclado (Alt + flechas) y lista de Ajustes. |
 | [`src/ui/header-posicion.js`](../src/ui/header-posicion.js) | `HeaderPosicion` | Reubicar el encabezado manteniéndolo presionado y arrastrándolo: se desliza en vivo al borde más cercano (PC: cuatro; móvil: arriba y abajo) con el mismo `uiArrastreLargo` y `uiAnimarReubicacion` que las tarjetas; al soltar se guarda, con Escape vuelve. Mantener y soltar sin mover abre la vista previa del tema (mismo atajo que las tarjetas). |

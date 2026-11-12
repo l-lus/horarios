@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
 **Última actualización:** 2026-11-11  
-**Estado:** Arquitectura modularizada y saneada (98 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Estado:** Arquitectura modularizada y saneada (99 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -39,7 +39,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (98 módulos)
+├── src/                        # Código fuente en ES Modules (99 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
@@ -262,7 +262,8 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | [`src/ui/historial-dias.js`](../src/ui/historial-dias.js) | `HistorialDias` | Modal para administrar tramos históricos de días hábiles cuando cambia la jornada laboral del usuario. |
 | [`src/ui/verificar-feriados.js`](../src/ui/verificar-feriados.js) | `VerificarFeriados` | Modal de Ajustes → Jornada laboral para comparar los feriados de Argentina con los registros (anteriores y/o próximos del año): agregar, completar la descripción o, si ese día hay otro registro, elegir entre reemplazarlo o dejarlo. |
 | [`src/ui/perfiles.js`](../src/ui/perfiles.js) | `Perfiles` | Selector de perfil activo y modal de creación/edición/eliminación de perfiles. |
-| [`src/ui/gist-respaldo.js`](../src/ui/gist-respaldo.js) | `GistRespaldo` | Configuración de token/ID de GitHub Gist, sincronización manual/automática y resolución de conflictos. |
+| [`src/ui/gist-respaldo.js`](../src/ui/gist-respaldo.js) | `GistRespaldo` | Modal de configuración de GitHub Gist (conexión, cifrado, automatización, límites) y botones de respaldo de la barra del histórico. Los flujos están en `gist-sync.js`. |
+| [`src/ui/gist-sync.js`](../src/ui/gist-sync.js) | `GistSync` | Flujos de subir y bajar del Gist (manuales y automáticos), con el cifrado y el resumen al bajar. Corren también sin el modal abierto; lo que necesitan de él lo reciben por `conectarModal`. |
 | [`src/ui/gist-resumen-merge.js`](../src/ui/gist-resumen-merge.js) | `GistResumenMerge` | Resumen previo a aplicar lo bajado del Gist: selector Combinar/Reemplazar, registros resultantes, cambios de configuración y alerta de registros locales que se pierden. |
 | [`src/ui/campo-frase.js`](../src/ui/campo-frase.js) | `CampoFrase` | Comportamiento del bloque «frase de cifrado» que comparten el modal de Gist y el de Respaldar: ver/ocultar, generar, «Recordar» y guardar validando el largo. |
 | [`src/ui/frase-modal.js`](../src/ui/frase-modal.js) | `FraseModal` | Modal que pide la frase cuando un archivo o un Gist cifrado no abre con la guardada (mismo circuito que `GestorModales.confirmar`). |

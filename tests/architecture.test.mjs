@@ -356,3 +356,34 @@ test('gestor-temas.js: las muestras de cada tema (fondo y acento) coinciden con 
         assert.equal(GestorTemas.MUESTRAS[tema].acento, acento, `acento de ${tema}`);
     }
 });
+
+// Directiva de CLAUDE.md: las animaciones nuevas usan solo `transform` y `opacity` (van al compositor y no repintan).
+// Lo anterior a la regla queda anotado acá abajo: el test falla si aparece algo nuevo, y también si una excepción deja de hacer falta
+// (así la lista solo se achica). La excepción de la regla, el alto de los contenedores, se anima desde JS (Animaciones._animarAlturaCambio).
+const KEYFRAMES_HEREDADOS = ['ajuste-flash', 'brillo-linea', 'campo-flash', 'campo-flash-color', 'toastBarraIndeterminada'];
+// Cuántas transiciones de cada hoja animan una propiedad que repinta (top/left/right/bottom, width/height, filter, box-shadow, outline, background-position)
+const TRANSICIONES_HEREDADAS = { 'base.css': 3, 'modales-funciones.css': 1, 'responsivo-movimiento.css': 1, 'tarjetas-vistas.css': 13 };
+
+test('Animaciones (CSS): los @keyframes nuevos animan solo transform y opacity, y no se agregan transiciones de propiedades que repintan', () => {
+    const DIR = 'assets/styles';
+    // `scale`, `translate` y `rotate` son las formas sueltas de transform: también van al compositor
+    const PERMITIDAS_KEYFRAMES = new Set(['transform', 'opacity', 'scale', 'translate', 'rotate', 'transform-origin', 'animation-timing-function']);
+    const REPINTAN = /(?<![\w-])(top|left|right|bottom|width|height|filter|box-shadow|outline(?:-[a-z]+)?|background-position)(?![\w-])/g;
+
+    const conOtrasPropiedades = [];
+    const transiciones = {};
+    for (const hoja of fs.readdirSync(DIR).filter(f => f.endsWith('.css')).sort()) {
+        const css = fs.readFileSync(`${DIR}/${hoja}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+        for (const k of css.matchAll(/@keyframes\s+([\w-]+)\s*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/g)) {
+            const otras = [...new Set([...k[2].matchAll(/([a-z-]+)\s*:/g)].map(m => m[1]))].filter(p => !PERMITIDAS_KEYFRAMES.has(p));
+            if (otras.length) conOtrasPropiedades.push(k[1]);
+        }
+        const conRepintado = [...css.matchAll(/transition(?:-property)?\s*:\s*([^;}]+)/g)].filter(t => t[1].match(REPINTAN));
+        if (conRepintado.length) transiciones[hoja] = conRepintado.length;
+    }
+
+    assert.deepEqual([...new Set(conOtrasPropiedades)].sort(), KEYFRAMES_HEREDADOS,
+        'Un @keyframes nuevo anima algo que no es transform/opacity (usá una capa temporal que se mueva o se escale), o uno heredado ya se corrigió: en ese caso quitalo de KEYFRAMES_HEREDADOS');
+    assert.deepEqual(transiciones, TRANSICIONES_HEREDADAS,
+        'Cambió la cantidad de transiciones que animan propiedades que repintan: si agregaste una, usá transform/opacity; si quitaste una, bajá el número en TRANSICIONES_HEREDADAS');
+});

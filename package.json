@@ -5,7 +5,8 @@
   "scripts": {
     "test": "node --test tests/*.mjs",
     "typecheck": "tsc -p .",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "test:humo": "node --test tests/e2e/humo.test.mjs"
   },
   "engines": {
     "node": ">=20"

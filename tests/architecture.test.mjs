@@ -219,7 +219,7 @@ function clavesDeObjetoExportado(content, inicio) {
 }
 
 test('Módulos: cada Modulo.miembro y cada const { ... } = Modulo existen en el objeto exportado', () => {
-    const archivos = [...srcFiles, ...fs.readdirSync('tests').map(f => `tests/${f}`)];
+    const archivos = [...srcFiles, ...fs.readdirSync('tests').filter(f => f.endsWith('.mjs')).map(f => `tests/${f}`)];   // solo archivos: tests/e2e es una carpeta
     const contenidos = Object.fromEntries(archivos.map(f => [f, fs.readFileSync(f, 'utf8')]));
     const exportados = {};
     for (const file of srcFiles) {

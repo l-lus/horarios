@@ -104,18 +104,22 @@ function toggleGistPanel(btnId) {
     _gistSetPanel(btnId, btn?.getAttribute('aria-expanded') !== 'true');
 }
 
+/** Fecha de la última sincronización en el encabezado del modal (un solo texto para abrir el modal, subir y bajar). */
+function _mostrarUltimaSync() {
+    const el = $('gist-ultima-sync');
+    if (!el) return;
+    const ultima = SincronizacionGist.getLastSync();
+    el.textContent = ultima ? `Última sync: ${SincronizacionGist.formatLastSync(ultima)}` : 'Sin sincronizar';
+}
+
 function abrirModalGist() {
     _abrirModalConPadre('modal-gist', () => {
         const tokenInput = $('gist-token');
         const gistIdInput = $('gist-id');
-        const lastSyncEl = $('gist-ultima-sync');
 
         if (tokenInput) tokenInput.value = SincronizacionGist.getToken();
         if (gistIdInput) gistIdInput.value = SincronizacionGist.getGistId();
-        if (lastSyncEl) {
-            const last = SincronizacionGist.getLastSync();
-            lastSyncEl.textContent = last ? `Sincronizado: ${SincronizacionGist.formatLastSync(last)}` : 'No sincronizado';
-        }
+        _mostrarUltimaSync();
 
         const rango = SincronizacionGist.getRangoHorario();
         const desdeEl = $('gist-rango-desde');
@@ -282,8 +286,7 @@ async function gistMergeAplicar(modo, modoAutomatico = false) {
     if (ok) TarjetaFichaje.actualizarUI();
     if ((ok || vacio) && !modoAutomatico) _gistMergeCerrarOVolver();
     if (ok) {
-        const lastSyncEl = $('gist-ultima-sync');
-        if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${SincronizacionGist.formatLastSync(SincronizacionGist.getLastSync())}`;
+        _mostrarUltimaSync();
     }
 
     const btn = $('btn-gist-bajar');
@@ -459,8 +462,7 @@ async function gistSubir(modoAutomatico = false) {
         const gistIdInput = $('gist-id');
         if (gistIdInput) gistIdInput.value = nuevoId;
         actualizarEstadoBotonesGist();   // un Gist recién creado: ya hay Gist ID, se habilita Bajar
-        const lastSyncEl = $('gist-ultima-sync');
-        if (lastSyncEl) lastSyncEl.textContent = `Última sync: ${SincronizacionGist.formatLastSync(SincronizacionGist.getLastSync())}`;
+        _mostrarUltimaSync();
         mostrarToast(contenido.cifrado ? 'Datos respaldados en Gist (cifrados)' : 'Datos respaldados en Gist', 'success');
         if (contenido.recienCifrado) mostrarToast('Las versiones anteriores del Gist siguen en claro en su historial: conviene crear un Gist nuevo y borrar el viejo', 'info', 9000);
     });

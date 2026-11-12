@@ -240,17 +240,58 @@ function cerrarTodos() {
     }, 350);
 }
 
-function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones = {}) {
+/**
+ * Circuito común de un modal que hace una pregunta (confirmar, pedir la frase): se abre sobre el modal que esté a la vista
+ * (o solo, si no hay ninguno), y al responder vuelve a ese modal y resuelve la promesa. El botón Atrás del navegador equivale
+ * a cancelar: el modal tiene que tener registrada su acción de volver (registrarAccionVolver) apuntando a su botón de cancelar.
+ * @template T
+ * @param {string} modalId
+ * @param {(responder: (valor: T) => void) => (() => void) | void} preparar deja el modal listo y conecta sus controles;
+ *        llama a `responder(valor)` cuando la persona contesta. Devuelve una función que desconecta lo que conectó.
+ * @param {T} valorSiSeCancela
+ * @returns {Promise<T>}
+ */
+function preguntar(modalId, preparar, valorSiSeCancela) {
     return new Promise((resolve) => {
-        const elTexto = $('modal-confirmar-texto');
+        const modalPadreId = document.querySelector('.modal.show')?.id ?? null;
+        /** @type {(() => void) | void} */
+        let desconectar;
+
+        function soltar() {
+            if (desconectar) desconectar();
+            window.removeEventListener('popstate', alRetroceder);
+        }
+        /** @param {T} valor */
+        function responder(valor) {
+            soltar();
+            if (modalPadreId) alternar(modalId, modalPadreId);
+            else cerrar(modalId);
+            resolve(valor);
+        }
+        function alRetroceder() {
+            soltar();
+            resolve(valorSiSeCancela);
+        }
+
+        desconectar = preparar(responder);
+        window.addEventListener('popstate', alRetroceder, { once: true });
+        if (modalPadreId) alternar(modalPadreId, modalId);
+        else abrir(modalId);
+    });
+}
+
+function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones = {}) {
+    const elTexto = $('modal-confirmar-texto');
+    const btnOk = $('modal-confirmar-ok');
+    const btnCancel = $('modal-confirmar-cancel');
+    if (!elTexto || !btnOk || !btnCancel) return Promise.resolve(false);
+
+    return preguntar('modal-confirmar', (responder) => {
         const elLabel = $('modal-confirmar-label-ok');
         const elLabelCancel = $('modal-confirmar-label-cancel');
         const elTitulo = $('modal-confirmar-titulo');
         const elIcono = document.querySelector('#modal-confirmar-ok svg use');
         const elIconoCancel = document.querySelector('#modal-confirmar-cancel svg use');
-        const btnOk = $('modal-confirmar-ok');
-        const btnCancel = $('modal-confirmar-cancel');
-        if (!elTexto || !btnOk || !btnCancel) { resolve(false); return; }
 
         elTexto.textContent = texto;
         if (elLabel) elLabel.textContent = labelOk;
@@ -259,41 +300,15 @@ function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones
         if (elIcono) elIcono.setAttribute('href', icono);
         if (elIconoCancel) elIconoCancel.setAttribute('href', opciones.iconoCancel || '#icon-cancelar');
 
-        const modalPadre = document.querySelector('.modal.show');
-        const modalPadreId = modalPadre ? modalPadre.id : null;
-
-        function ok() { cleanup(); resolve(true); }
-        function cancel() { cleanup(); resolve(false); }
-
-        function onPopstate() {
-            _removeListeners();
-            resolve(false);
-        }
-
-        function _removeListeners() {
-            btnOk.removeEventListener('click', ok);
-            btnCancel.removeEventListener('click', cancel);
-            window.removeEventListener('popstate', onPopstate);
-        }
-
-        function cleanup() {
-            _removeListeners();
-            if (modalPadreId) {
-                alternar('modal-confirmar', modalPadreId);
-            } else {
-                cerrar('modal-confirmar');
-            }
-        }
-
+        const ok = () => responder(true);
+        const cancel = () => responder(false);
         btnOk.addEventListener('click', ok);
         btnCancel.addEventListener('click', cancel);
-        window.addEventListener('popstate', onPopstate, { once: true });
-        if (modalPadreId) {
-            alternar(modalPadreId, 'modal-confirmar');
-        } else {
-            abrir('modal-confirmar');
-        }
-    });
+        return () => {
+            btnOk.removeEventListener('click', ok);
+            btnCancel.removeEventListener('click', cancel);
+        };
+    }, false);
 }
 
-export const GestorModales = { abrir, cerrar, alternar, cerrarTodos, confirmar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, registrarAccionVolver };
+export const GestorModales = { abrir, cerrar, alternar, cerrarTodos, confirmar, preguntar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, registrarAccionVolver };

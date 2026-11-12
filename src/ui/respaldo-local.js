@@ -1,6 +1,5 @@
 import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { GestorModales } from './gestor-modales.js';
 import { UIBase } from './base.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp } from '../services/estado-app.js';
@@ -15,7 +14,7 @@ import { FraseCifrado } from '../services/frase-cifrado.js';
 // ====================================================================
 const ESPERA_MODAL_MS = 50;   // deja abrir el modal antes de lanzar el selector de archivos
 
-const { descargarArchivo, obtenerNombrePerfilSafe, _setBtnActivo } = UIBase;
+const { descargarArchivo, obtenerNombrePerfilSafe, _setBtnActivo, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
 
 // «Cifrar con la frase» (opcional): es la misma frase del Gist; sin marcar, el archivo sale en claro como siempre
 const _campoFrase = new CampoFrase({ input: 'export-frase', ojo: 'btn-export-frase-ver', generar: 'btn-export-frase-generar' });
@@ -34,8 +33,8 @@ function _fraseParaExportar() {
     return FraseCifrado.actual();
 }
 
-let _modalAbiertoDesdeLista = false;
-
+// Respaldar y Restaurar se abren desde Ajustes (y al cerrar vuelven ahí) o desde la barra del histórico (y al cerrar no queda
+// nada abierto): UIBase._abrirModalConPadre y _cerrarModalConPadre resuelven los dos casos según haya o no un modal a la vista.
 function _actualizarBotonVolver(id, desdeLista) {
     const btn = $(id);
     if (!btn) return;
@@ -43,23 +42,8 @@ function _actualizarBotonVolver(id, desdeLista) {
     setIconoBtn(btn, desdeLista ? '#icon-cancelar' : '#icon-undo');
 }
 
-function _abrirModalConfigHija(modalId, desdeLista, callback) {
-    _modalAbiertoDesdeLista = desdeLista;
-    if (desdeLista) GestorModales.abrir(modalId, callback);
-    else GestorModales.alternar('modal-config', modalId, null, callback);
-}
-
-function _cerrarModalConfigHija(modalId) {
-    if (_modalAbiertoDesdeLista) {
-        _modalAbiertoDesdeLista = false;
-        GestorModales.cerrar(modalId);
-        return;
-    }
-    GestorModales.alternar(modalId, 'modal-config');
-}
-
 function mostrarImportar(desdeLista = false) {
-    _abrirModalConfigHija('modal-importar', desdeLista, () => {
+    _abrirModalConPadre('modal-importar', () => {
         $('file-import').value = '';
 
         const nombreEl = $('nombre-archivo-seleccionado');
@@ -85,11 +69,11 @@ function mostrarImportar(desdeLista = false) {
 
 function cerrarImportar() {
     $('file-import').value = '';
-    _cerrarModalConfigHija('modal-importar');
+    _cerrarModalConPadre('modal-importar');
 }
 
 function mostrarExportar(desdeLista = false) {
-    _abrirModalConfigHija('modal-exportar', desdeLista, () => {
+    _abrirModalConPadre('modal-exportar', () => {
         const tipoSelect = $('tipo-exportacion');
         if (tipoSelect) tipoSelect.value = 'todo';
 
@@ -106,7 +90,7 @@ function mostrarExportar(desdeLista = false) {
 }
 
 function cerrarExportar() {
-    _cerrarModalConfigHija('modal-exportar');
+    _cerrarModalConPadre('modal-exportar');
 }
 
 function toggleCamposRangoExport() {

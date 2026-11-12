@@ -24,6 +24,7 @@ import { Perfiles } from './perfiles.js';
 import { Calendario } from './calendario.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
 import { GistRespaldo } from './gist-respaldo.js';
+import { GistSync } from './gist-sync.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { Historico } from './historico.js';
 import { HistoricoEdicion } from './historico-edicion.js';
@@ -65,8 +66,9 @@ const {
 } = Calendario;
 
 const {
-    actualizarBotonesHistorico, cerrarModalGist, gistMergeCancelar, gistSubir, gistBajar
+    actualizarBotonesHistorico, cerrarModalGist
 } = GistRespaldo;
+const { mergeCancelar: gistMergeCancelar, subir: gistSubir, bajar: gistBajar } = GistSync;
 
 const { cerrarImportar, cerrarExportar, toggleCamposRangoExport } = RespaldoLocal;
 

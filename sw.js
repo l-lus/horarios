@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261111.2119-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261111.2126-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -83,6 +83,7 @@ const urlsToCache = [
   './src/ui/gestos.js',
   './src/ui/gist-respaldo.js',
   './src/ui/gist-resumen-merge.js',
+  './src/ui/gist-sync.js',
   './src/ui/header-posicion.js',
   './src/ui/historial-dias.js',
   './src/ui/historico-edicion.js',

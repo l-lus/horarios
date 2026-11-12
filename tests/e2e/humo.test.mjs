@@ -132,6 +132,45 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.match(r, /no abre lo que hay en el Gist/);
     });
 
+    await t.test('Respaldar y Restaurar: desde Ajustes vuelven a Ajustes; abiertos sin Ajustes (barra del histórico) se cierran sin dejar nada', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const { GestorModales } = await import('/src/ui/gestor-modales.js');
+            const { RespaldoLocal } = await import('/src/ui/respaldo-local.js');
+            const salida = {};
+            await h.hasta(() => h.modales() === 'modal-config', 5000, `Ajustes a la vista (hay: ${h.modales()})`);
+
+            h.clic('.config-actions .btn-export'); await h.modalAbierto('modal-exportar');
+            salida.volverExportar = document.getElementById('btn-volver-exportar').textContent.trim();
+            h.clic('#btn-volver-exportar'); await h.modalAbierto('modal-config');
+            h.clic('.config-actions .btn-backup'); await h.modalAbierto('modal-importar');
+            h.clic('#btn-volver-importar'); await h.modalAbierto('modal-config');
+
+            // una confirmación en el medio no pierde el camino de vuelta
+            h.clic('.config-actions .btn-export'); await h.modalAbierto('modal-exportar');
+            const pregunta = GestorModales.confirmar('¿Seguir?', 'Sí');
+            await h.modalAbierto('modal-confirmar');
+            h.clic('#modal-confirmar-ok');
+            salida.confirmado = await pregunta;
+            await h.modalAbierto('modal-exportar');
+            h.clic('#btn-volver-exportar'); await h.modalAbierto('modal-config');
+
+            GestorModales.ejecutarAccionCierre('modal-config');
+            await h.hasta(() => h.modales() === '', 5000, `sin modales tras cerrar Ajustes (hay: ${h.modales()})`);
+            await h.pausa(400);
+            RespaldoLocal.mostrarExportar(true); await h.modalAbierto('modal-exportar');
+            salida.cerrarExportar = document.getElementById('btn-volver-exportar').textContent.trim();
+            h.clic('#btn-volver-exportar');
+            await h.hasta(() => h.modales() === '', 5000, `sin modales tras cerrar Respaldar (hay: ${h.modales()})`);
+            await h.pausa(300);
+            RespaldoLocal.mostrarImportar(true); await h.modalAbierto('modal-importar');
+            h.clic('#btn-volver-importar');
+            await h.hasta(() => h.modales() === '', 5000, `sin modales tras cerrar Restaurar (hay: ${h.modales()})`);
+            return salida;
+        });
+        assert.deepEqual(r, { volverExportar: 'Volver', confirmado: true, cerrarExportar: 'Cerrar' });
+    });
+
     await t.test('Respaldar: «Cifrar con la frase» anima el alto, no solapa controles y descarga un archivo cifrado', async () => {
         await evaluar(async () => { window.humo.clic('.config-actions .btn-export'); await window.humo.modalAbierto('modal-exportar'); await window.humo.pausa(400); });
         assert.equal(await evaluar(() => document.getElementById('btn-toggle-export-cifrar').classList.contains('btn-activo')), true, 'con frase guardada viene activado');

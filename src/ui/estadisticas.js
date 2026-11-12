@@ -84,7 +84,7 @@ function actualizarEstadisticas(mesAnio = null) {
     if (!mesAnio && selectMes) mesAnio = selectMes.value;
     if (mesAnio && selectMes) {
         const [año, mes] = mesAnio.split('-').map(Number);
-        const tieneRegs = EstadoApp.registros().some(r => { const [a, m] = r.fecha.split('-').map(Number); return a === año && m === mes; });
+        const tieneRegs = EstadoApp.registros().some(r => TiempoUtils.esDelMes(r.fecha, año, mes));
         if (!tieneRegs) {
             mesAnio = TiempoUtils.claveMes(TiempoUtils.obtenerFechaHoy());
             if (selectMes) selectMes.value = mesAnio;

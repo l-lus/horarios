@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, CONSULTA_PUNTERO_FINO } from '../core/dom.js';
 import { CicloStats } from './tarjeta-ciclo-stats.js';
 import { FocoHitos } from './foco-hitos.js';
 
@@ -9,7 +9,7 @@ import { FocoHitos } from './foco-hitos.js';
 // (ver tarjeta-ciclo-stats.js: `fijarFase`/`soltarFase`), y por el tramo de un día de la vista semanal, el total, la entrada y la salida de ese día
 // (el tramo queda a plena opacidad y el resto atenuado). Solo con puntero que puede hacer hover (mouse o trackpad): en móviles no hace nada.
 
-const _consultaHover = window.matchMedia('(hover: hover) and (pointer: fine)');
+const _consultaHover = window.matchMedia(CONSULTA_PUNTERO_FINO);
 
 // Elementos de la vista diaria que enfocan cada hito (el primer tipo que exista: la salida es "salida" con el registro cerrado y "estimada" con él abierto;
 // el remate final solo es hito cuando el registro está cerrado, abierto marca el "ahora")

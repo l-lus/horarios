@@ -9,6 +9,15 @@
  */
 export const $ = id => /** @type {HTMLInputElement} */ (document.getElementById(id));
 
+/** Mouse o trackpad (puede hacer hover y apunta fino): el mismo criterio que usa el CSS para lo que es solo de PC. */
+export const CONSULTA_PUNTERO_FINO = '(hover: hover) and (pointer: fine)';
+export const esPunteroFino = () => window.matchMedia(CONSULTA_PUNTERO_FINO).matches;
+
+/** Alterna un campo de contraseña entre oculto y a la vista (el botón del ojo). @param {HTMLInputElement | null} campo */
+export function alternarVisibilidadClave(campo) {
+    if (campo) campo.type = campo.type === 'password' ? 'text' : 'password';
+}
+
 // ====================================================================
 // COLAPSABLES — shared helper
 // ====================================================================

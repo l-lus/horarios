@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, alternarVisibilidadClave } from '../core/dom.js';
 import { GestorModales } from './gestor-modales.js';
 
 // ====================================================================
@@ -62,10 +62,7 @@ function pedir(motivo) {
 function bindEventos() {
     // Atrás o tocar fuera del modal equivalen a cancelar
     GestorModales.registrarAccionVolver(ID_MODAL, () => $('btn-frase-cancelar')?.click());
-    $('btn-frase-pedida-ver')?.addEventListener('click', () => {
-        const campo = $('frase-pedida');
-        if (campo) campo.type = campo.type === 'password' ? 'text' : 'password';
-    });
+    $('btn-frase-pedida-ver')?.addEventListener('click', () => alternarVisibilidadClave($('frase-pedida')));
 }
 
 export const FraseModal = { pedir, bindEventos };

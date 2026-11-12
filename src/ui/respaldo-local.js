@@ -168,10 +168,7 @@ async function ejecutarExportacion() {
 function _filtrarRegistrosRango(desde, hasta, esMes) {
     if (esMes) {
         const [año, mes] = desde.split('-').map(Number);
-        return EstadoApp.registros().filter(r => {
-            const [aReg, mReg] = r.fecha.split('-').map(Number);
-            return aReg === año && mReg === mes;
-        });
+        return EstadoApp.registros().filter(r => TiempoUtils.esDelMes(r.fecha, año, mes));
     }
     return EstadoApp.registros().filter(r => r.fecha >= desde && r.fecha <= hasta);
 }

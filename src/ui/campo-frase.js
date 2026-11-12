@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, alternarVisibilidadClave } from '../core/dom.js';
 import { FraseCifrado } from '../services/frase-cifrado.js';
 import { mostrarToast } from './toast.js';
 
@@ -35,8 +35,7 @@ export class CampoFrase {
     }
 
     alternarVisible() {
-        const campo = $(this.ids.input);
-        if (campo) campo.type = campo.type === 'password' ? 'text' : 'password';
+        alternarVisibilidadClave($(this.ids.input));
     }
 
     /** Pone una frase nueva al azar, a la vista para poder anotarla. */

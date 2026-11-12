@@ -1,6 +1,6 @@
 import { RespaldoLocal } from './respaldo-local.js';
 import { IconosAnimados } from './iconos-animados.js';
-import { $, setColapsable, alClic } from '../core/dom.js';
+import { $, setColapsable, alClic, alternarVisibilidadClave } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { EventosApp } from '../core/eventos.js';
 import { GestorModales } from './gestor-modales.js';
@@ -348,12 +348,6 @@ function actualizarBotonGistBackup() {
     }
 }
 
-function toggleVerToken() {
-    const input = $('gist-token');
-    if (!input) return;
-    input.type = input.type === 'password' ? 'text' : 'password';
-}
-
 function abrirGistEnBrowser() {
     const gistId = ($('gist-id')?.value || SincronizacionGist.getGistId() || '').trim();
     const url = SincronizacionGist.esGistIdValido(gistId) ? `https://gist.github.com/${gistId}` : 'https://gist.github.com';
@@ -540,7 +534,7 @@ function bindEventos() {
     FraseModal.bindEventos();
     RespaldoLocal.bindEventos();
     alClic({
-        'btn-toggle-token': () => toggleVerToken(),
+        'btn-toggle-token': () => alternarVisibilidadClave($('gist-token')),
         'btn-crear-token': () => window.open('https://github.com/settings/tokens/new?description=Horarios+sync&scopes=gist', '_blank', 'noopener,noreferrer'),
         'btn-gist-abrir': () => abrirGistEnBrowser(),
         'btn-gist-subir': () => { IconosAnimados.animarFlecha($('btn-gist-subir'), 'subir'); gistSubir(); },

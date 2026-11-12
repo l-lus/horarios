@@ -145,10 +145,7 @@ function calcularEstadisticasMes(mesAnio = null, registrosPeriodo = null) {
         const hoy = new Date();
         mesActual = hoy.getMonth(); añoActual = hoy.getFullYear();
     }
-    const registros = registrosPeriodo ?? EstadoApp.registros().filter(r => {
-        const [a, m] = r.fecha.split('-').map(Number);
-        return a === añoActual && m === mesActual + 1;
-    });
+    const registros = registrosPeriodo ?? EstadoApp.registros().filter(r => TiempoUtils.esDelMes(r.fecha, añoActual, mesActual + 1));
     const ultimoDia = TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual + 1, 0));
     const fechaDesde = _fechaDesdeEfectiva(registros, TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual, 1)));
     return calcularEstadisticasRango(registros, { regularidadPorMes: false, desde: fechaDesde, hasta: ultimoDia });

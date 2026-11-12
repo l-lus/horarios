@@ -1,6 +1,6 @@
 import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $ } from '../core/dom.js';
+import { $, esPunteroFino } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EventosApp } from '../core/eventos.js';
@@ -412,7 +412,7 @@ function _registrarRuedaCalendario(grid) {
     let timerReset = null;
 
     const dentroDeZona = (x, y) => zona && x >= zona.left && x <= zona.right && y >= zona.top && y <= zona.bottom;
-    const esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const esPC = esPunteroFino;
 
     contenedor.addEventListener('wheel', (e) => {
         if (e.ctrlKey || e.metaKey) return;   // zoom del navegador / atajos

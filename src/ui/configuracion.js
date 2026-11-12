@@ -1,6 +1,6 @@
 import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $, alClic } from '../core/dom.js';
+import { $, alClic, esPunteroFino } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
@@ -216,7 +216,7 @@ VistaPrevia.registrarVista('tema', () => _configTema());
 VistaPrevia.definirOrden(['tarjeta', 'calendario', 'tema']);
 
 /** PC (mouse): mismo criterio que .config-solo-pc / .config-solo-movil en responsivo-movimiento.css. Las subopciones de la línea de tiempo se muestran según el dispositivo. */
-const _esPC = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+const _esPC = esPunteroFino;
 
 // Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
 function toggleDisposicionLinea() {

@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, esPunteroFino } from '../core/dom.js';
 import { terminosDeBusqueda, textoCoincide, rangosCoincidencia, teclaIniciaBusqueda } from '../core/busqueda-texto.js';
 import { Movimiento } from '../core/movimiento.js';
 import { debounce } from './gestos.js';
@@ -127,9 +127,8 @@ function bindEventos() {
     $('btn-ayuda-buscar-limpiar')?.addEventListener('click', () => { limpiar(); input.focus(); });
 
     // En PC, con la ayuda abierta, escribir una letra empieza la búsqueda: el foco pasa al campo y la tecla se escribe ahí
-    const hayPuntero = window.matchMedia('(hover: hover) and (pointer: fine)');
     document.addEventListener('keydown', (e) => {
-        if (!hayPuntero.matches || !$('modal-ayuda')?.classList.contains('show')) return;
+        if (!esPunteroFino() || !$('modal-ayuda')?.classList.contains('show')) return;
         const activo = document.activeElement;
         const focoEnCampo = !!activo && (activo.matches('input, textarea, select') || /** @type {HTMLElement} */ (activo).isContentEditable);
         if (teclaIniciaBusqueda(e, focoEnCampo)) input.focus();

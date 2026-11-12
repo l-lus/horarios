@@ -36,6 +36,11 @@ function claveMes(fecha) {
     return fecha.substring(0, 7);
 }
 
+/** ¿La fecha ISO cae en ese año y mes (1 a 12)? Para filtrar los registros de un mes sin partir cada fecha. */
+function esDelMes(fecha, año, mes) {
+    return Number(fecha.substring(0, 4)) === año && Number(fecha.substring(5, 7)) === mes;
+}
+
 function nombreDiaPorIndice(indice) {
     return NOMBRES_DIAS[indice] || '';
 }
@@ -266,6 +271,6 @@ export const TiempoUtils = {
     obtenerFechaHoy, obtenerHoraActual, msHastaProximoMinuto, normalizarMinutosDia, minutosAHora, fechaLocalISOFull,
     horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
     obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
-    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, claveMes, pluralizar, contar,
+    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, claveMes, esDelMes, pluralizar, contar,
     generarRangoFechas, errorRangoFechas, fechaCorta, segundosAMinutosRedondeado, horasAMinutosRedondeados, _pad2, esperar
 };

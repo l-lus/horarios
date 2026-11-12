@@ -38,10 +38,7 @@ function _resolverPeriodoDatos(esAnual) {
     const mes = selectMes?.value;
     if (!mes) { mostrarToast('No hay mes seleccionado', 'error'); return null; }
     const [año, mesNum] = mes.split('-').map(Number);
-    const registrosPeriodo = EstadoApp.registros().filter(r => {
-        const [aReg, mReg] = r.fecha.split('-').map(Number);
-        return aReg === año && mReg === mesNum;
-    });
+    const registrosPeriodo = EstadoApp.registros().filter(r => TiempoUtils.esDelMes(r.fecha, año, mesNum));
     return {
         periodoLabel: /** @type {HTMLSelectElement} */ (/** @type {unknown} */ (selectMes)).selectedOptions[0].text,
         nombreArchivo: `reporte_${mes}.html`,

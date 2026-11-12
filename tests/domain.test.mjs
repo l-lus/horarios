@@ -931,6 +931,10 @@ test('Objetivos.creditoPara: lo que falta para el objetivo, sin perder minutos p
 });
 
 test('Helpers de presentación: contar, claveMes, tieneTiempoFuera y tieneCredito', () => {
+    assert.equal(TiempoUtils.esDelMes('2026-10-28', 2026, 10), true);
+    assert.equal(TiempoUtils.esDelMes('2026-01-05', 2026, 1), true);
+    assert.equal(TiempoUtils.esDelMes('2026-10-28', 2026, 1), false, 'octubre no es enero (no se compara por prefijo de texto)');
+    assert.equal(TiempoUtils.esDelMes('2025-10-28', 2026, 10), false);
     assert.equal(TiempoUtils.contar(1, 'día'), '1 día');
     assert.equal(TiempoUtils.contar(0, 'registro'), '0 registros');
     assert.equal(TiempoUtils.contar(3, 'registro'), '3 registros');

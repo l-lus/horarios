@@ -1,3 +1,4 @@
+import { esPunteroFino } from '../core/dom.js';
 import { Preferencias } from '../core/preferencias.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { html, icono } from '../core/html.js';
@@ -320,7 +321,7 @@ function _popupCalendarioHover(event, registroId, asignaciones = null) {
 
 /** @param {any} [asignaciones] */
 function _onclickCalendarioDia(event, registroId, asignaciones = null) {
-    const esDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const esDesktop = esPunteroFino();
     const hoverActivo = esDesktop && Preferencias.HOVER_POPUP.get();
 
     if (hoverActivo) {

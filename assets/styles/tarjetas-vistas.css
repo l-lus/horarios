@@ -2136,6 +2136,39 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
     order: -1;
 }
 
+/* Fila de Entrada / Salida / Con banco: sin ella (el día especial, la semana) no hay nada que mostrar (JS: data-pie). Las copias de los datos (est-anillo-copia) son del otro juego: solo se ven
+   en las variantes "intercambiado" */
+.est-anillo[data-pie="no"] .est-anillo-pie,
+.est-anillo-copia {
+    display: none;
+}
+
+/* Variantes "intercambiado-*": Entrada / Salida / Con banco quedan apilados al costado del aro, como mosaicos, y los mosaicos (Faltan, Banco de horas, Tiempo fuera) pasan a la
+   fila de abajo, repartidos el ancho por igual. Esa fila existe cuando hay mosaicos que mostrar (JS: data-pie-x). El aro va a la izquierda o a la derecha igual que en las otras variantes. */
+html:is([data-disposicion-anillo="intercambiado-izquierda"], [data-disposicion-anillo="intercambiado-derecha"]) :is(.est-anillo-orig, .est-anillo-copia) {
+    display: none;
+}
+
+html:is([data-disposicion-anillo="intercambiado-izquierda"], [data-disposicion-anillo="intercambiado-derecha"]) .est-anillo-copia:not(.hidden) {
+    display: flex;
+}
+
+html:is([data-disposicion-anillo="intercambiado-izquierda"], [data-disposicion-anillo="intercambiado-derecha"]) .est-anillo[data-pie] .est-anillo-pie {
+    display: flex;
+}
+
+html:is([data-disposicion-anillo="intercambiado-izquierda"], [data-disposicion-anillo="intercambiado-derecha"]) .est-anillo[data-pie-x="no"] .est-anillo-pie {
+    display: none;
+}
+
+html[data-disposicion-anillo="intercambiado-derecha"] .est-anillo-principal {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+html[data-disposicion-anillo="intercambiado-derecha"] .est-anillo-aro {
+    order: 2;
+}
+
 /* Día especial con la tarjeta angosta (móvil): el nombre del día ("Compensatorio", "Vacaciones"...) no entra en el 40 % que queda junto al aro y se corta, así que va debajo del aro,
    centrado. Se mide el ancho de la tarjeta (contenedor #stats-estilo), como el resto de las disposiciones. Con "html" delante gana a las variantes "derecha" de más arriba. */
 @container (max-width: 27.99rem) {

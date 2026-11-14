@@ -205,22 +205,35 @@ function crearAnillo() {
     const datos = el('div', 'est-anillo-datos');
     const mensaje = el('div', 'est-anillo-mensaje');
     const sub = el('div', 'est-anillo-sub');
-    const balance = crearDato('', 'est-dato est-mosaico');
-    // tercera línea del mosaico (la misma de la línea de tiempo): "Cubierto", "Te podés ir", "Te podés ir, pero debés tiempo"...
-    balance.raiz.append(el('span', 'est-dato-detalle'));
-    const banco = crearDato('Banco de horas', 'est-dato est-mosaico');
-    const fuera = crearDato('Tiempo fuera', 'est-dato est-mosaico');
-    datos.append(mensaje, sub, balance.raiz, banco.raiz, fuera.raiz);
+    // Cada dato tiene su copia en el otro grupo (la clase est-anillo-copia): las variantes "intercambiado" de la disposición (html[data-disposicion-anillo]) cambian de lugar
+    // los mosaicos (Faltan, Banco de horas, Tiempo fuera) con la fila Entrada / Salida / Con banco, y el CSS muestra solo el juego que corresponde. Se pintan los dos.
+    const mosaico = (/** @type {string} */ etiqueta, /** @type {boolean} */ conDetalle = false, /** @type {boolean} */ copia = false) => {
+        const d = crearDato(etiqueta, copia ? 'est-dato est-anillo-copia' : 'est-dato est-mosaico est-anillo-orig');
+        // tercera línea del mosaico (la misma de la línea de tiempo): "Cubierto", "Te podés ir", "Te podés ir, pero debés tiempo"...
+        if (conDetalle) d.raiz.append(el('span', 'est-dato-detalle'));
+        return d;
+    };
+    const balance = mosaico('', true);
+    const banco = mosaico('Banco de horas');
+    const fuera = mosaico('Tiempo fuera');
+    const balanceX = mosaico('', true, true);
+    const bancoX = mosaico('Banco de horas', false, true);
+    const fueraX = mosaico('Tiempo fuera', false, true);
+    const dato = (/** @type {string} */ etiqueta, /** @type {boolean} */ copia = false) => crearDato(etiqueta, copia ? 'est-dato est-mosaico est-anillo-copia' : 'est-dato est-anillo-orig');
+    const entrada = dato('Entrada');
+    const salida = dato('Salida');
+    const conBanco = dato('Con banco');
+    const entradaX = dato('Entrada', true);
+    const salidaX = dato('Salida', true);
+    const conBancoX = dato('Con banco', true);
+    datos.append(mensaje, sub, balance.raiz, banco.raiz, fuera.raiz, entradaX.raiz, salidaX.raiz, conBancoX.raiz);
     principal.append(aro, datos);
 
     const pie = el('div', 'est-anillo-pie');
-    const entrada = crearDato('Entrada');
-    const salida = crearDato('Salida');
-    const conBanco = crearDato('Con banco');
-    pie.append(entrada.raiz, salida.raiz, conBanco.raiz);
+    pie.append(entrada.raiz, salida.raiz, conBanco.raiz, balanceX.raiz, bancoX.raiz, fueraX.raiz);
     const dias = crearDias();
     raiz.append(principal, pie, dias.raiz);
-    return { raiz, aro, arco, arcosTramo, inicio, hitos, valor, unidad, mensaje, sub, balance, banco, fuera, pie, entrada, salida, conBanco, dias };
+    return { raiz, aro, arco, arcosTramo, inicio, hitos, valor, unidad, mensaje, sub, balance, banco, fuera, pie, entrada, salida, conBanco, balanceX, bancoX, fueraX, entradaX, salidaX, conBancoX, dias };
 }
 
 /**
@@ -264,16 +277,29 @@ function pintarNumeroAnillo(r, { horas, minutos }) {
     fijar(r.unidad, horas > 0 ? 'horas' : 'min');
 }
 
+/** Cada dato del anillo y su copia en el otro grupo (ver crearAnillo). @param {any} r @param {'balance'|'banco'|'fuera'|'entrada'|'salida'|'conBanco'} k */
+const _duo = (r, k) => [r[k], r[`${k}X`]];
+const mostrarDuo = (r, k, visible) => _duo(r, k).forEach(d => mostrar(d.raiz, visible));
+const pintarDuo = (r, k, etiqueta, valor, tono) => _duo(r, k).forEach(d => pintarDato(d, etiqueta, valor, tono));
+
 function pintarAnillo(r, d) {
     r.raiz.dataset.tipo = d.tipo;
     const conTotal = d.tipo === 'registro' || d.tipo === 'semana';
-    mostrar(r.pie, d.tipo === 'registro' || d.tipo === 'espera');
+    // los dos grupos con su contenedor: la fila de abajo (la de siempre: Entrada / Salida / Con banco) y, en las variantes intercambiadas, la de los mosaicos; el CSS
+    // oculta el que no tiene nada que mostrar según la variante (data-pie: ¿hay fila de Entrada?; data-pie-x: ¿hay mosaicos abajo?)
+    r.raiz.dataset.pie = d.tipo === 'registro' || d.tipo === 'espera' ? 'si' : 'no';
+    r.raiz.dataset.pieX = conTotal && (!!d.balance || !!d.banco || (d.tipo === 'registro' && !!d.tiempoFuera)) ? 'si' : 'no';
     mostrar(r.dias.raiz, d.tipo === 'semana');
     mostrar(r.mensaje, !conTotal);
     mostrar(r.sub, !conTotal && (d.tipo === 'especial' || !!d.banco));
-    mostrar(r.balance.raiz, conTotal && !!d.balance);
-    mostrar(r.banco.raiz, conTotal && !!d.banco);
-    mostrar(r.fuera.raiz, false);
+    mostrarDuo(r, 'balance', conTotal && !!d.balance);
+    mostrarDuo(r, 'banco', conTotal && !!d.banco);
+    mostrarDuo(r, 'fuera', false);
+    // fuera del registro (o de la espera) la fila de Entrada / Salida / Con banco no se muestra, y sus copias al costado tampoco
+    const conFila = d.tipo === 'registro' || d.tipo === 'espera';
+    mostrarDuo(r, 'entrada', conFila);
+    mostrarDuo(r, 'salida', conFila);
+    mostrarDuo(r, 'conBanco', conFila);
 
     if (conTotal) {
         pintarNumeroAnillo(r, d.trabajado);
@@ -286,18 +312,18 @@ function pintarAnillo(r, d) {
         // con el registro (o la semana) en curso, el brillo recorre el arco lleno, como el de la barra
         r.aro.classList.toggle('en-curso', d.tipo === 'registro' ? !d.cerrado : !!d.abierta);
         if (d.balance) {
-            pintarDato(r.balance, etiquetaBalance(d), d.balance.texto, d.balance.tono);
-            fijarQueEntre(r.balance.raiz.querySelector('.est-dato-detalle'), d.balance.detalle);
+            pintarDuo(r, 'balance', etiquetaBalance(d), d.balance.texto, d.balance.tono);
+            _duo(r, 'balance').forEach(b => fijarQueEntre(b.raiz.querySelector('.est-dato-detalle'), d.balance.detalle));
         }
-        if (d.banco) pintarDato(r.banco, 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
+        if (d.banco) pintarDuo(r, 'banco', 'Banco de horas', d.banco.texto, tonoBanco(d.banco));
         if (d.tipo === 'semana') { pintarDias(r.dias, d.dias); return; }
-        pintarDato(r.entrada, 'Entrada', d.entrada);
-        mostrar(r.salida.raiz, !!(d.salida || d.salidaEstimada));
-        pintarDato(r.salida, 'Salida', d.salida || d.salidaEstimada);
-        mostrar(r.conBanco.raiz, !!d.salidaBanco);
-        pintarDato(r.conBanco, 'Con banco', d.salidaBanco, tonoBanco(d.banco));
-        mostrar(r.fuera.raiz, !!d.tiempoFuera);
-        if (d.tiempoFuera) pintarDato(r.fuera, d.tiempoFuera.corriendo ? 'Fuera (en curso)' : 'Tiempo fuera', d.tiempoFuera.texto);
+        pintarDuo(r, 'entrada', 'Entrada', d.entrada);
+        mostrarDuo(r, 'salida', !!(d.salida || d.salidaEstimada));
+        pintarDuo(r, 'salida', 'Salida', d.salida || d.salidaEstimada);
+        mostrarDuo(r, 'conBanco', !!d.salidaBanco);
+        pintarDuo(r, 'conBanco', 'Con banco', d.salidaBanco, tonoBanco(d.banco));
+        mostrarDuo(r, 'fuera', !!d.tiempoFuera);
+        if (d.tiempoFuera) pintarDuo(r, 'fuera', d.tiempoFuera.corriendo ? 'Fuera (en curso)' : 'Tiempo fuera', d.tiempoFuera.texto);
         return;
     }
 
@@ -311,10 +337,10 @@ function pintarAnillo(r, d) {
         r.aro.classList.remove('en-curso');
         fijar(r.mensaje, d.mensaje);
         if (d.banco) { fijar(r.sub, fraseBanco(d.banco)); entonar(r.sub, tonoBanco(d.banco)); }
-        pintarDato(r.entrada, 'Entrada', '--:--');
-        pintarDato(r.salida, 'Salida', '--:--');
-        pintarDato(r.conBanco, 'Con banco', '--:--');
-        mostrar(r.salida.raiz, true); mostrar(r.conBanco.raiz, true);
+        pintarDuo(r, 'entrada', 'Entrada', '--:--');
+        pintarDuo(r, 'salida', 'Salida', '--:--');
+        pintarDuo(r, 'conBanco', 'Con banco', '--:--');
+        mostrarDuo(r, 'salida', true); mostrarDuo(r, 'conBanco', true);
     } else {
         r.aro.dataset.color = d.color;
         r.aro.classList.remove('espera');

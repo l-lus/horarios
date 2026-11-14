@@ -1063,9 +1063,10 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
 
     // variantes del estilo anillo: aro a la izquierda o a la derecha, fila de abajo o arriba
     const { DISPOSICIONES_ANILLO, siguienteAnillo, etiquetaAnillo } = await import('../src/core/estilo-tarjeta.js');
-    assert.deepEqual(DISPOSICIONES_ANILLO.map(d => d.id), ['izquierda', 'derecha', 'arriba-izquierda', 'arriba-derecha']);
+    assert.deepEqual(DISPOSICIONES_ANILLO.map(d => d.id), ['izquierda', 'derecha', 'arriba-izquierda', 'arriba-derecha', 'intercambiado-izquierda', 'intercambiado-derecha']);
     assert.equal(siguienteAnillo('izquierda'), 'derecha');
-    assert.equal(siguienteAnillo('arriba-derecha'), 'izquierda');
+    assert.equal(siguienteAnillo('arriba-derecha'), 'intercambiado-izquierda');
+    assert.equal(siguienteAnillo('intercambiado-derecha'), 'izquierda');
     assert.equal(siguienteAnillo('x'), 'izquierda');
     assert.equal(etiquetaAnillo('x'), 'Anillo a la izquierda');
     Almacenamiento.removeItem(STORAGE_KEYS.ANILLO_DISPOSICION);
@@ -1078,6 +1079,7 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
     ImportarExportar.aplicarConfigImportada({ diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8, anilloDisposicion: 'arriba-izquierda' });
     assert.equal(EstiloTarjeta.anillo(), 'arriba-izquierda');
     assert.equal(ImportarExportar.validarCamposConfigImport({ anilloDisposicion: 'arriba-derecha' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ anilloDisposicion: 'intercambiado-derecha' }), true);
     assert.equal(ImportarExportar.validarCamposConfigImport({ anilloDisposicion: 'abajo' }), false);
 
     // se deja como estaba para no alterar los demás tests

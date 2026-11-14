@@ -1,9 +1,11 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261114.1542-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261114.1548-cache`;
 const urlsToCache = [
   './',
   './index.html',
   './oauth-callback.html',
+  './privacidad.html',
+  './assets/privacidad.css',
   './src/core/almacenamiento.js',
   './src/core/busqueda-texto.js',
   './src/core/cifrado.js',

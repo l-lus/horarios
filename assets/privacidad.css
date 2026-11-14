@@ -1,0 +1,58 @@
+/* Página de política de privacidad (privacidad.html): se lee sola, sin la app ni sus capas de estilos */
+:root {
+    color-scheme: light dark;
+    --fondo: #ffffff;
+    --texto: #1f1f1f;
+    --suave: #5f6368;
+    --enlace: #0b57d0;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --fondo: #131314;
+        --texto: #e3e3e3;
+        --suave: #a8abaf;
+        --enlace: #a8c7fa;
+    }
+}
+
+body {
+    margin: 0;
+    background: var(--fondo);
+    color: var(--texto);
+    font: 1rem/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 2rem 1rem 3rem;
+}
+
+h1 {
+    font-size: 1.6rem;
+    line-height: 1.25;
+    margin: 0 0 0.25rem;
+}
+
+h2 {
+    font-size: 1.15rem;
+    margin: 2rem 0 0.5rem;
+}
+
+.fecha,
+.volver {
+    color: var(--suave);
+}
+
+a {
+    color: var(--enlace);
+}
+
+code {
+    font-size: 0.95em;
+}
+
+li {
+    margin-bottom: 0.5rem;
+}

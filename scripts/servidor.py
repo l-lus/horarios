@@ -16,7 +16,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote
 
-RUTAS_PERMITIDAS = ("/", "/index.html", "/oauth-callback.html", "/sw.js")
+RUTAS_PERMITIDAS = ("/", "/index.html", "/oauth-callback.html", "/privacidad.html", "/sw.js")
 CARPETAS_PERMITIDAS = ("/assets/", "/src/")
 
 

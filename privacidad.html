@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self'; base-uri 'none'; form-action 'none'">
+    <meta name="referrer" content="no-referrer">
+    <title>Horarios · Política de privacidad</title>
+    <link rel="stylesheet" href="./assets/privacidad.css">
+</head>
+
+<body>
+    <main>
+        <h1>Política de privacidad de Horarios</h1>
+        <p class="fecha">Última actualización: 14 de noviembre de 2026</p>
+
+        <p>Horarios es una aplicación web gratuita para registrar jornadas de trabajo. Esta página explica qué datos
+            usa, dónde quedan y con quién se comparten. En resumen: <strong>tus registros se guardan en tu
+                dispositivo</strong> y solo salen de él si vos elegís respaldarlos en GitHub Gist o en Google Drive.
+        </p>
+
+        <h2>1. Datos que quedan en tu dispositivo</h2>
+        <p>Tus registros (fechas, horas de entrada y salida, tiempo fuera y notas), perfiles y ajustes se guardan en el
+            almacenamiento del navegador de tu dispositivo. Horarios no tiene servidores que los reciban ni una base de
+            datos con información de las personas que la usan. Si borrás los datos del navegador, se pierden, salvo que
+            tengas un respaldo.</p>
+
+        <h2>2. Respaldo en Google Drive (opcional)</h2>
+        <p>Si conectás tu cuenta de Google desde <em>Ajustes → Datos → Google Drive</em>:</p>
+        <ul>
+            <li><strong>Permiso que se pide:</strong> solo <code>drive.file</code>. Con él, Horarios puede ver y
+                modificar únicamente los archivos que la propia app creó en tu Drive. No puede ver, leer ni borrar
+                ningún otro archivo de tu cuenta.</li>
+            <li><strong>Qué se guarda en tu Drive:</strong> un archivo por perfil con tus registros y la configuración
+                de ese perfil. Si cargaste una frase de cifrado, el archivo sube cifrado y ni Google ni nadie sin la
+                frase puede leer su contenido.</li>
+            <li><strong>Qué datos de tu cuenta se leen:</strong> la dirección de correo de la cuenta conectada, solo
+                para mostrártela en la app. No se lee tu nombre, tus contactos ni ningún otro dato.</li>
+            <li><strong>Autorización:</strong> para conectar y renovar el permiso de Google, la app usa un servicio
+                propio en Cloudflare (el mismo que envía las notificaciones). Ese servicio recibe el código de
+                autorización y los tokens de acceso solo para pasárselos a Google, y no los guarda ni los registra. El
+                permiso queda guardado únicamente en el navegador de tu dispositivo.</li>
+            <li><strong>Desconectar:</strong> desde la app podés desconectar tu cuenta, lo que le quita el acceso a
+                Horarios. También podés hacerlo desde tu cuenta de Google, en <em>Seguridad → Apps y servicios de
+                    terceros</em>. Los respaldos quedan en tu Drive hasta que los borres.</li>
+        </ul>
+        <p>El uso y la transferencia de la información recibida de las API de Google por parte de Horarios cumplen la
+            <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener noreferrer">Política
+                de datos de los usuarios de los servicios de las API de Google</a>, incluidos los requisitos de uso
+            limitado. Los datos de Google se usan solo para guardar y recuperar tus respaldos: no se venden, no se usan
+            para publicidad, no se comparten con terceros y ninguna persona los lee.</p>
+
+        <h2>3. Respaldo en GitHub Gist (opcional)</h2>
+        <p>Si cargás un token de GitHub, la app guarda tus registros en un Gist secreto de tu cuenta. El token queda
+            solo en tu dispositivo. Ese respaldo se rige además por la política de privacidad de GitHub.</p>
+
+        <h2>4. Notificaciones de fin de jornada (opcional)</h2>
+        <p>Si activás los avisos, el servicio en Cloudflare guarda, hasta poco más de un día, lo necesario para enviarte la
+            notificación: la suscripción push de tu navegador, la hora del aviso y su texto. No recibe tus registros.
+        </p>
+
+        <h2>5. Métrica de uso anónima (se puede desactivar)</h2>
+        <p>Para saber cuántas personas usan la app, al abrirla (como máximo una vez cada 30 minutos) se envía a
+            Cloudflare un identificador aleatorio (que se guarda transformado, sin forma de volver al original), si se
+            abrió instalada o desde el navegador, la versión de la app, el sistema operativo, el navegador y el país.
+            Se conserva unos tres meses. No incluye tus registros ni datos de tu cuenta. Se desactiva en <em>Ajustes →
+                Datos → Analítica</em>.</p>
+
+        <h2>6. Con quién se comparten los datos</h2>
+        <p>Con nadie más que los servicios que vos elegís usar (Google Drive, GitHub) y Cloudflare, que aloja el
+            servicio de notificaciones y autorización. No hay publicidad ni venta de datos.</p>
+
+        <h2>7. Cambios y contacto</h2>
+        <p>Si esta política cambia, se actualiza esta página con su fecha. Para consultas o para pedir que se borre
+            algo: <a href="mailto:CONTACTO">CONTACTO</a>.</p>
+
+        <p class="volver"><a href="./">Volver a Horarios</a></p>
+    </main>
+</body>
+
+</html>

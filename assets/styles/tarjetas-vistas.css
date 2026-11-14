@@ -2681,3 +2681,34 @@ html:is([data-disposicion-anillo="arriba-izquierda"], [data-disposicion-anillo="
 /* Lista de filas: el nombre del día */
 .est-fila-etiqueta--dia { text-transform: capitalize; }
 
+
+/* ─── ÉNFASIS DE COLOR (<html data-enfasis>, ver GestorTemas y el final de tokens.css) ──────────────────────────────
+   Sin énfasis (el predeterminado no pone el atributo) nada de esto aplica. Solo colores en reposo, sin animaciones; los días del calendario no cambian. */
+
+/* Fichar: el fondo de la tarjeta no cambia, solo el ícono, el texto y la flecha toman el acento */
+html[data-enfasis] .card-registrar-header :is(.btn-register, #btn-timer-main, .chevron) {
+    color: var(--c-active);
+}
+
+/* Íconos de los títulos de sección, chips (Hoy, período de las estadísticas) y botón de perfil */
+html[data-enfasis] .card-section-title .icon {
+    color: var(--c-active);
+}
+
+html[data-enfasis] :is(.btn-hoy-calendario, .btn-toggle-periodo) {
+    background: var(--c-active);
+    color: var(--c-on-active);
+    border-radius: var(--radius-full);
+    font-weight: var(--fw-bold);
+}
+
+html[data-enfasis] .btn-hoy-calendario {
+    width: auto;
+    padding-inline: var(--space-md);
+}
+
+html[data-enfasis] .header-profile-btn {
+    background: var(--c-active);
+    color: var(--c-on-active);
+    border-color: transparent;
+}

@@ -267,13 +267,15 @@ test('CSP: index.html exige Trusted Types con la única política de core/html.j
     assert.match(fs.readFileSync('src/core/html.js', 'utf8'), /createPolicy\?\.\('horarios'/);
 });
 
-test('tema-inicial.js: sus listas de temas, estilos de calendario y posiciones del encabezado coinciden con las de los módulos', async () => {
+test('tema-inicial.js: sus listas de temas, énfasis, estilos de calendario y posiciones del encabezado coinciden con las de los módulos', async () => {
     const codigo = fs.readFileSync('src/core/tema-inicial.js', 'utf8');
     const lista = (nombre) => JSON.parse(new RegExp(`var ${nombre} = (\\[[^\\]]*\\]);`).exec(codigo)[1].replace(/'/g, '"'));
     const temasModulo = JSON.parse(/const TEMAS = (\[[^\]]*\]);/.exec(fs.readFileSync('src/ui/gestor-temas.js', 'utf8'))[1].replace(/'/g, '"'));
     const { ESTILOS_CALENDARIO } = await import('../src/core/estilo-calendario.js');
     const { POSICIONES_HEADER } = await import('../src/core/posicion-header.js');
     assert.deepEqual(lista('TEMAS_VALIDOS'), temasModulo);
+    const enfasisModulo = JSON.parse(/const ENFASIS = (\[[^\]]*\]);/.exec(fs.readFileSync('src/ui/gestor-temas.js', 'utf8'))[1].replace(/'/g, '"'));
+    assert.deepEqual(lista('ENFASIS_VALIDOS'), enfasisModulo);
     assert.deepEqual(lista('ESTILOS_CALENDARIO_VALIDOS'), ESTILOS_CALENDARIO.map(e => e.id));
     assert.deepEqual(lista('POSICIONES_HEADER_VALIDAS'), POSICIONES_HEADER.map(p => p.id));
 });
@@ -354,6 +356,26 @@ test('gestor-temas.js: las muestras de cada tema (fondo y acento) coinciden con 
         const acento = !activo || activo === 'var(--c-blue)' ? valor(raiz, '--c-blue') : activo;   // sin acento propio vale el azul de la raíz
         assert.equal(GestorTemas.MUESTRAS[tema].fondo, valor(cuerpo, '--bg-body'), `fondo de ${tema}`);
         assert.equal(GestorTemas.MUESTRAS[tema].acento, acento, `acento de ${tema}`);
+    }
+});
+
+test('gestor-temas.js: las muestras de cada énfasis coinciden con el acento de tokens.css, y el bloque claro define lo mismo que el oscuro', async () => {
+    const css = fs.readFileSync('assets/styles/tokens.css', 'utf8');
+    const bloque = (selector) => {
+        const i = css.indexOf(selector);
+        assert.notEqual(i, -1, `tokens.css: no está el bloque ${selector}`);
+        return css.slice(css.indexOf('{', i) + 1, css.indexOf('}', i));
+    };
+    const valor = (cuerpo, variable) => new RegExp(`${variable}:\\s*([^;]+);`).exec(cuerpo)?.[1].trim();
+    const { GestorTemas } = await import('../src/ui/gestor-temas.js');
+    const { predeterminado, ...propios } = GestorTemas.MUESTRAS_ENFASIS;
+    assert.equal(predeterminado.acento, valor(bloque(':root {'), '--c-blue'));
+    for (const [id, muestra] of Object.entries(propios)) {
+        const oscuro = bloque(`html[data-enfasis="${id}"] body,`);
+        const claro = bloque(`html[data-enfasis="${id}"]:not(.dark-mode):not([data-theme="medianoche"]) body,`);
+        assert.equal(muestra.acento, valor(oscuro, '--c-active'), `acento de ${id}`);
+        const variables = (cuerpo) => [...cuerpo.matchAll(/(--[\w-]+):/g)].map(m => m[1]).sort();
+        assert.deepEqual(variables(claro), variables(oscuro), `${id}: el bloque claro define las mismas variables que el oscuro`);
     }
 });
 

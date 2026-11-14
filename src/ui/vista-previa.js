@@ -22,9 +22,10 @@ import { Animaciones } from './animaciones.js';
 
 /** @typedef {{ etiqueta: string, descripcion?: string, icono?: string, valor: () => string, alTocar: () => void, visible?: () => boolean }} FilaVistaPrevia */
 /** @typedef {{ id: string, etiqueta: string, fondo: string, acento: string }} OpcionCirculo */
-/** @typedef {{ opciones: OpcionCirculo[], actual: () => string, alElegir: (id: string) => void }} CirculosVistaPrevia */
+/** Un grupo de círculos; con `titulo` se muestra un rótulo encima (hace falta cuando hay más de un grupo). */
+/** @typedef {{ titulo?: string, opciones: OpcionCirculo[], actual: () => string, alElegir: (id: string) => void }} CirculosVistaPrevia */
 /** `idObjetivo` es la tarjeta que se lleva a la vista (sin él no hay tarjeta); `circulos` reemplaza a las filas; `sinVelo` deja la página sin atenuar. */
-/** @typedef {{ id: string, titulo: string, idObjetivo?: string, filas: FilaVistaPrevia[], circulos?: CirculosVistaPrevia, sinVelo?: boolean, antes?: () => void, alCerrar?: () => void }} ConfigVistaPrevia */
+/** @typedef {{ id: string, titulo: string, idObjetivo?: string, filas: FilaVistaPrevia[], circulos?: CirculosVistaPrevia[], sinVelo?: boolean, antes?: () => void, alCerrar?: () => void }} ConfigVistaPrevia */
 
 const NS_SVG = 'http://www.w3.org/2000/svg';
 /** Demora entre cerrar Ajustes y mostrar la vista previa: deja pasar el popstate del modal para que los dos historiales no se pisen. */
@@ -58,7 +59,7 @@ const _vistas = {};
 /** @type {string[]} */
 let _orden = [];
 
-/** @type {{ cfg: ConfigVistaPrevia, objetivo: HTMLElement | null, restaurar: (() => void) | null, filas: { def: FilaVistaPrevia, envoltorio: HTMLElement, btn: HTMLElement, valor: HTMLElement }[], circulos: { def: CirculosVistaPrevia, btns: { id: string, btn: HTMLElement }[], nombre: HTMLElement } | null, observer: ResizeObserver | null, timer: any } | null} */
+/** @type {{ cfg: ConfigVistaPrevia, objetivo: HTMLElement | null, restaurar: (() => void) | null, filas: { def: FilaVistaPrevia, envoltorio: HTMLElement, btn: HTMLElement, valor: HTMLElement }[], circulos: { def: CirculosVistaPrevia, btns: { id: string, btn: HTMLElement }[], nombre: HTMLElement }[], observer: ResizeObserver | null, timer: any } | null} */
 let _activa = null;
 let _cambiando = false;
 let _iniciada = false;
@@ -129,9 +130,19 @@ function _construirFilas(defs) {
 
 /** En lugar de filas, círculos de color para elegir (el tema): cada uno muestra el fondo y el acento de su opción. @param {HTMLElement} cont @param {CirculosVistaPrevia} def */
 function _construirCirculos(cont, def) {
+    const seccion = document.createElement('div');
+    seccion.className = 'vista-previa-circulos-seccion';
+    if (def.titulo) {
+        const rotulo = document.createElement('span');
+        rotulo.className = 'vista-previa-circulos-titulo';
+        rotulo.textContent = def.titulo;
+        seccion.append(rotulo);
+    }
     const grupo = document.createElement('div');
     grupo.className = 'vista-previa-circulos';
     grupo.setAttribute('role', 'group');
+    if (def.titulo) grupo.setAttribute('aria-label', def.titulo);
+    grupo.dataset.cantidad = String(def.opciones.length);
     const btns = def.opciones.map(op => {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -146,19 +157,20 @@ function _construirCirculos(cont, def) {
     });
     const nombre = document.createElement('span');
     nombre.className = 'vista-previa-circulos-nombre';
-    cont.append(grupo, nombre);
-    if (_activa) _activa.circulos = { def, btns, nombre };
+    seccion.append(grupo, nombre);
+    cont.append(seccion);
+    _activa?.circulos.push({ def, btns, nombre });
 }
 
 function _marcarCirculos() {
-    const c = _activa?.circulos;
-    if (!c) return;
-    const actual = c.def.actual();
-    c.btns.forEach(({ id, btn }) => {
-        btn.classList.toggle('activo', id === actual);
-        btn.setAttribute('aria-pressed', String(id === actual));
+    _activa?.circulos.forEach(c => {
+        const actual = c.def.actual();
+        c.btns.forEach(({ id, btn }) => {
+            btn.classList.toggle('activo', id === actual);
+            btn.setAttribute('aria-pressed', String(id === actual));
+        });
+        c.nombre.textContent = c.def.opciones.find(o => o.id === actual)?.etiqueta ?? '';
     });
-    c.nombre.textContent = c.def.opciones.find(o => o.id === actual)?.etiqueta ?? '';
 }
 
 /** Arma el contenido del panel de la vista activa (título, filas o círculos), sin animar. */
@@ -171,12 +183,12 @@ function _poblar() {
     $('vista-previa-titulo')?.classList.toggle('con-otras', _orden.length > 1);
     document.body.classList.toggle('vista-previa-sin-velo', !!cfg.sinVelo);
     const cont = $('vista-previa-filas');
-    _activa.circulos = null;
+    _activa.circulos = [];
     if (cont) cont.classList.toggle('settings-list', !cfg.circulos);
     if (cfg.circulos && cont) {
         cont.replaceChildren();
         _activa.filas = [];
-        _construirCirculos(cont, cfg.circulos);
+        cfg.circulos.forEach(def => _construirCirculos(cont, def));
     } else {
         _activa.filas = _construirFilas(cfg.filas);
     }
@@ -322,7 +334,7 @@ function abrir(cfg) {
     const objetivo = cfg.idObjetivo ? $(cfg.idObjetivo) : null;
     if (cfg.idObjetivo && !objetivo) return;
     cancelAnimationFrame(_animSalida);
-    _activa = { cfg, objetivo, restaurar: null, filas: [], circulos: null, observer: null, timer: null };
+    _activa = { cfg, objetivo, restaurar: null, filas: [], circulos: [], observer: null, timer: null };
     _cerrando = false;
     cfg.antes?.();
     _activa.restaurar = _preparadores[cfg.id]?.() ?? null;

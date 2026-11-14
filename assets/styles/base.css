@@ -787,7 +787,7 @@ button:disabled {
 
 .btn-activo:not(.settings-list button, .drag-handle) {
     background: var(--c-active);
-    color: var(--c-white);
+    color: var(--c-on-active);
     border-color: transparent;
     font-weight: var(--fw-bold);
 }

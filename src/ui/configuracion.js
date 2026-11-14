@@ -48,6 +48,11 @@ function elegirTema(tema) {
     GestorTemas.aplicarTema(tema);
 }
 
+function elegirEnfasis(enfasis) {
+    Almacenamiento.setItem(STORAGE_KEYS.ENFASIS, enfasis);
+    GestorTemas.aplicarEnfasis(enfasis);
+}
+
 function alternarTema() {
     elegirTema(GestorTemas.siguienteTema(GestorTemas.temaGuardado()));
 }
@@ -205,7 +210,10 @@ function _configTema(desdeSelector = false) {
         antes: desdeSelector ? () => GestorModales.cerrar('modal-selector-perfiles', null, { sinHistorial: true }) : undefined,
         alCerrar: desdeSelector ? () => GestorModales.abrir('modal-selector-perfiles', null, { sinHistorial: true }) : undefined,
         filas: [],
-        circulos: { opciones: GestorTemas.muestras(), actual: () => GestorTemas.temaGuardado(), alElegir: elegirTema }
+        circulos: [
+            { titulo: 'Color de fondo', opciones: GestorTemas.muestras(), actual: () => GestorTemas.temaGuardado(), alElegir: elegirTema },
+            { titulo: 'Énfasis', opciones: GestorTemas.muestrasEnfasis(), actual: () => GestorTemas.enfasisGuardado(), alElegir: elegirEnfasis }
+        ]
     };
 }
 

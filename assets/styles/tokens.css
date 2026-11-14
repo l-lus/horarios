@@ -61,6 +61,7 @@
     --c-orange: rgba(210, 120, 50, 0.8);
     --c-gray-btn: #f0f2f8;
     --c-white: #ffffff;
+    --c-on-active: var(--c-white);   /* texto sobre fondos de --c-active: los énfasis claros (lima, naranja, neutro) lo oscurecen */
     --shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
     --radius-sm: 10px;
     --radius-md: 14px;
@@ -254,3 +255,61 @@ body[data-theme="medianoche"] {
     --hover: brightness(1.2);
 }
 
+/* ─── ÉNFASIS (se combinan con cualquier tema; sin data-enfasis queda el predeterminado) ───────────────
+   Solo cambian el acento (--c-active) y el color del texto sobre él; los colores de los días del calendario no se tocan.
+   El primer bloque vale para los temas oscuros; el segundo, con más especificidad, para los claros. Un test vigila que las muestras de ui/gestor-temas.js coincidan. */
+
+html[data-enfasis="lima"] body,
+body[data-enfasis="lima"] {
+    --c-active: #a3e635;
+    --c-on-active: #1a2e05;
+}
+html[data-enfasis="lima"]:not(.dark-mode):not([data-theme="medianoche"]) body,
+body[data-enfasis="lima"]:not(.dark-mode):not([data-theme="medianoche"]) {
+    --c-active: #4d7c0f;
+    --c-on-active: #ffffff;
+}
+
+html[data-enfasis="naranja"] body,
+body[data-enfasis="naranja"] {
+    --c-active: #fb923c;
+    --c-on-active: #2a1405;
+}
+html[data-enfasis="naranja"]:not(.dark-mode):not([data-theme="medianoche"]) body,
+body[data-enfasis="naranja"]:not(.dark-mode):not([data-theme="medianoche"]) {
+    --c-active: #c2410c;
+    --c-on-active: #ffffff;
+}
+
+html[data-enfasis="neutro"] body,
+body[data-enfasis="neutro"] {
+    --c-active: #e4e4e7;
+    --c-on-active: #18181b;
+}
+html[data-enfasis="neutro"]:not(.dark-mode):not([data-theme="medianoche"]) body,
+body[data-enfasis="neutro"]:not(.dark-mode):not([data-theme="medianoche"]) {
+    --c-active: #3f3f46;
+    --c-on-active: #ffffff;
+}
+
+html[data-enfasis="violeta"] body,
+body[data-enfasis="violeta"] {
+    --c-active: #8b7cf6;
+    --c-on-active: #1a1033;
+}
+html[data-enfasis="violeta"]:not(.dark-mode):not([data-theme="medianoche"]) body,
+body[data-enfasis="violeta"]:not(.dark-mode):not([data-theme="medianoche"]) {
+    --c-active: #6d56d6;
+    --c-on-active: #ffffff;
+}
+
+html[data-enfasis="azul"] body,
+body[data-enfasis="azul"] {
+    --c-active: #3b82f6;
+    --c-on-active: #0b1b3a;
+}
+html[data-enfasis="azul"]:not(.dark-mode):not([data-theme="medianoche"]) body,
+body[data-enfasis="azul"]:not(.dark-mode):not([data-theme="medianoche"]) {
+    --c-active: #2563eb;
+    --c-on-active: #ffffff;
+}

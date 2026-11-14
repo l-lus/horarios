@@ -20,9 +20,38 @@ const MUESTRAS = Object.freeze({
     crema: { etiqueta: 'Crema', fondo: '#fbf6ee', acento: 'rgba(176, 106, 50, 0.9)' }
 });
 
+// Énfasis de color: se combinan con cualquier tema (<html data-enfasis>, ver el final de tokens.css). 'predeterminado' no pone nada. `acento` es el --c-active tal como vale
+// en los temas oscuros y `fondo` el de la mitad de la muestra: un test verifica que coincidan con tokens.css.
+const ENFASIS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul'];
+const FONDO_MUESTRA_ENFASIS = '#1e1f20';
+const MUESTRAS_ENFASIS = Object.freeze({
+    predeterminado: { etiqueta: 'Predeterminado', fondo: FONDO_MUESTRA_ENFASIS, acento: 'rgba(76, 114, 172, 0.8)' },
+    lima: { etiqueta: 'Lima', fondo: FONDO_MUESTRA_ENFASIS, acento: '#a3e635' },
+    naranja: { etiqueta: 'Naranja', fondo: FONDO_MUESTRA_ENFASIS, acento: '#fb923c' },
+    neutro: { etiqueta: 'Neutro', fondo: FONDO_MUESTRA_ENFASIS, acento: '#e4e4e7' },
+    violeta: { etiqueta: 'Violeta', fondo: FONDO_MUESTRA_ENFASIS, acento: '#8b7cf6' },
+    azul: { etiqueta: 'Azul', fondo: FONDO_MUESTRA_ENFASIS, acento: '#3b82f6' }
+});
+
 /** Los temas, en el orden en que rota el botón de tema, con lo necesario para dibujar su muestra. */
 function muestras() {
     return TEMAS.map(id => ({ id, ...MUESTRAS[id] }));
+}
+
+/** Los énfasis, en el orden en que se muestran, con lo necesario para dibujar su muestra. */
+function muestrasEnfasis() {
+    return ENFASIS.map(id => ({ id, ...MUESTRAS_ENFASIS[id] }));
+}
+
+function enfasisGuardado() {
+    const raw = Almacenamiento.getItem(STORAGE_KEYS.ENFASIS, null);
+    return ENFASIS.includes(raw) ? raw : 'predeterminado';
+}
+
+function aplicarEnfasis(enfasis) {
+    if (enfasis === 'predeterminado' || !ENFASIS.includes(enfasis)) document.documentElement.removeAttribute('data-enfasis');
+    else document.documentElement.setAttribute('data-enfasis', enfasis);
+    sincronizarBarraDelSistema();
 }
 
 function temaGuardado() {
@@ -67,4 +96,4 @@ function siguienteTema(temaActual) {
     return TEMAS[(idx + 1) % TEMAS.length];
 }
 
-export const GestorTemas = { temaGuardado, aplicarTema, siguienteTema, muestras, MUESTRAS };
+export const GestorTemas = { temaGuardado, aplicarTema, siguienteTema, muestras, MUESTRAS, enfasisGuardado, aplicarEnfasis, muestrasEnfasis, MUESTRAS_ENFASIS };

@@ -6,10 +6,11 @@ if (window.top !== window.self) {
     try { /** @type {Window} */ (window.top).location = window.self.location.href; } catch (e) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }
 
-// Listas válidas (copias de TEMAS en ui/gestor-temas.js, de ESTILOS_CALENDARIO en core/estilo-calendario.js y de POSICIONES_HEADER en core/posicion-header.js: este
+// Listas válidas (copias de TEMAS y ENFASIS en ui/gestor-temas.js, de ESTILOS_CALENDARIO en core/estilo-calendario.js y de POSICIONES_HEADER en core/posicion-header.js: este
 // script clásico no puede importar módulos; tests/architecture.test.mjs verifica que coincidan). Un valor guardado
 // que no esté en la lista se trata como el valor por defecto, igual que hacen esos módulos.
 var TEMAS_VALIDOS = ['light', 'dark', 'medianoche', 'pink', 'green', 'blue', 'lilac', 'crema'];
+var ENFASIS_VALIDOS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul'];
 var POSICIONES_HEADER_VALIDAS = ['top', 'bottom', 'left', 'right'];
 var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto'];
 
@@ -31,6 +32,14 @@ var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-
         }
         // s === 'light' -> no se aplica nada, queda el tema claro por defecto
     } catch (e) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
+}());
+
+// Énfasis de color (ver GestorTemas): el CSS solo mira <html data-enfasis>; sin valor guardado (o inválido, o 'predeterminado') no se pone nada.
+(function () {
+    try {
+        var e = localStorage.getItem('horarios_enfasis');
+        if (e !== null && e !== 'predeterminado' && ENFASIS_VALIDOS.indexOf(e) !== -1) document.documentElement.setAttribute('data-enfasis', e);
+    } catch (err) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }());
 
 // Estilo de los días del calendario (ver EstiloCalendario): el CSS solo mira <html data-estilo-calendario>; sin valor guardado queda el original ('legacy').

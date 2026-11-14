@@ -3,12 +3,13 @@
 // ====================================================================
 // APP_VERSION debe coincidir con el prefijo de CACHE_NAME en sw.js (lo valida tests/architecture.test.mjs).
 export const APP_NOMBRE = 'LUSHIBOSCA';
-export const APP_VERSION = 'v261111';
+export const APP_VERSION = 'v261114';
 
 export const APP_STORAGE_PREFIX = 'horarios_';
 
 export const STORAGE_KEYS = Object.freeze({
     TEMA_OSCURO: 'temaOscuro',
+    ENFASIS: 'enfasis',                           // énfasis de color sobre el tema (acento de botones e íconos): ver ui/gestor-temas.js; es de cada dispositivo
     VISTA_ACTUAL: 'vistaActual',
     MODO_ESTADISTICAS: 'modoEstadisticas',
     HOVER_POPUP: 'hoverPopupCalendario',

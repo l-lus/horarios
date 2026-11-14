@@ -240,3 +240,42 @@ test('ConfigSync: Gist y Drive guardan su automatización en campos propios del 
     assert.ok(GestorPerfiles.CAMPOS_SYNC_DRIVE.includes('driveAutoSync'));
     assert.ok(!GestorPerfiles.CAMPOS_SYNC_DRIVE.includes('driveFileId'), 'restablecer el perfil conserva el vínculo');
 });
+
+test('Drive: reconectar con otra cuenta revoca el permiso anterior (con la misma no), y un canje fallido no borra la conexión que ya funcionaba', async (t) => {
+    let canjeOk = true;
+    const pedidos = simularRed(t, [
+        ['/api/oauth/google/exchange', () => (canjeOk
+            ? json({ accessToken: 'ya29.nuevo-acceso', refreshToken: '1//0gPermisoNuevo-xyz', expiresIn: 3599 })
+            : json({ error: 'reconectar', codigo: 'reconectar' }, 401))],
+        ['/api/oauth/google/revoke', () => json({ ok: true })],
+        ['/drive/v3/about', () => json({ user: { emailAddress: correo } })],
+    ]);
+    let correo = 'otra@example.com';
+    const volverDeGoogle = async () => {
+        await D.iniciarConexion(BASE, { clientId: 'c' });
+        const { state } = JSON.parse(store.get(APP_STORAGE_PREFIX + STORAGE_KEYS.DRIVE_OAUTH_PENDIENTE));
+        store.set(APP_STORAGE_PREFIX + STORAGE_KEYS.DRIVE_OAUTH_RETORNO, JSON.stringify({ state, code: '4/0AXcodigo-nuevo' }));
+    };
+
+    store.set(APP_STORAGE_PREFIX + STORAGE_KEYS.DRIVE_REFRESH_TOKEN, REFRESH);
+    store.set(APP_STORAGE_PREFIX + STORAGE_KEYS.DRIVE_CUENTA, 'alguien@example.com');
+    await volverDeGoogle();
+    assert.equal((await D.completarConexion()).ok, true);
+    assert.equal(D.getRefreshToken(), '1//0gPermisoNuevo-xyz');
+    assert.equal(D.getCuenta(), 'otra@example.com');
+    const revocaciones = () => pedidos.filter(p => p.url.includes('/revoke'));
+    assert.equal(revocaciones().length, 1);
+    assert.deepEqual(JSON.parse(revocaciones()[0].op.body), { token: REFRESH });
+
+    // Misma cuenta: no se revoca (Google anularía también el permiso nuevo)
+    await volverDeGoogle();
+    assert.equal((await D.completarConexion()).ok, true);
+    assert.equal(revocaciones().length, 1);
+
+    canjeOk = false;
+    await volverDeGoogle();
+    const r = await D.completarConexion();
+    assert.match(r.error, /venció o ya se usó/);
+    assert.equal(D.getRefreshToken(), '1//0gPermisoNuevo-xyz', 'la conexión anterior sigue');
+    store.clear();
+});

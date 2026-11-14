@@ -153,10 +153,15 @@ function _guardarAcceso(token, expiresIn) {
     _acceso = { token, vence: Date.now() + segundos * 1000 };
 }
 
-async function _respuestaWorker(res) {
+/**
+ * El cuerpo de una respuesta del Worker, o lanza. `reconectar` (Google ya no acepta el permiso) olvida la cuenta, salvo en el
+ * canje: un code vencido o reusado no dice nada del permiso que ya funcionaba (pentest H4).
+ */
+async function _respuestaWorker(res, { olvidarSiReconectar = true } = {}) {
     const cuerpo = await res.json().catch(() => ({}));
     if (res.ok) return cuerpo;
     if (cuerpo?.codigo === 'reconectar') {
+        if (!olvidarSiReconectar) throw new Error('Google no aceptó la autorización (venció o ya se usó): volvé a conectar');
         olvidarCuenta();
         throw new Error('Google Drive se desconectó: volvé a conectarlo desde Ajustes → Google Drive');
     }
@@ -174,11 +179,17 @@ async function completarConexion() {
     try {
         const datos = await _respuestaWorker(await WorkerCliente.postOAuth('/api/oauth/google/exchange', {
             code: retorno.code, codeVerifier: retorno.verificador, redirectUri: retorno.redirectUri
-        }));
+        }), { olvidarSiReconectar: false });
         if (!_esTokenGoogle(datos?.refreshToken) || !_esTokenGoogle(datos?.accessToken)) return { error: 'Google no devolvió un permiso permanente: volvé a conectar' };
+        const anterior = { token: getRefreshToken(), cuenta: getCuenta() };
         Almacenamiento.setItem(STORAGE_KEYS.DRIVE_REFRESH_TOKEN, datos.refreshToken);
         _guardarAcceso(datos.accessToken, datos.expiresIn);
         const cuenta = await _leerCuenta().catch(() => '');
+        // Se pasó a otra cuenta: el permiso de la anterior seguiría valiendo y se revoca en segundo plano (pentest H3).
+        // Con la misma cuenta no: Google revoca el permiso entero (también el nuevo), no un token suelto.
+        if (_esTokenGoogle(anterior.token) && anterior.cuenta && cuenta && anterior.cuenta !== cuenta) {
+            WorkerCliente.postOAuth('/api/oauth/google/revoke', { token: anterior.token }).catch(() => { /* si no se puede, vence solo a los 6 meses sin uso */ });
+        }
         if (cuenta) Almacenamiento.setItem(STORAGE_KEYS.DRIVE_CUENTA, cuenta);
         else Almacenamiento.removeItem(STORAGE_KEYS.DRIVE_CUENTA);
         return { ok: true, cuenta };

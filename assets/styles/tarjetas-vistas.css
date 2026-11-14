@@ -2724,12 +2724,14 @@ html[data-enfasis] .card-registrar-header:has(+ #form-registro.expanded) :is(#bt
 html[data-enfasis] .btn-register {
     position: relative;
     isolation: isolate;
+    padding: 10px 17px;   /* el relleno ocupa todo el botón, así que el botón mismo es la píldora (el margen negativo mantiene el layout de siempre) */
+    margin: -10px -17px;
 }
 
 html[data-enfasis] .btn-register::before {
     content: '';
     position: absolute;
-    inset: 10px 0;
+    inset: 0;
     z-index: -1;
     background: var(--c-active);
     border-radius: var(--radius-full);

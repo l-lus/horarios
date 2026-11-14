@@ -141,9 +141,8 @@ button.campo-flash {
 }
 
 .btn-register.destello-fichar {
-    --onda-color: var(--c-active);
+    --onda-color: var(--text-main);   /* neutro, como el destello de un día sin registro en el calendario; el barrido usa su blanco de siempre */
     --onda-escala: 1.4;
-    --franja-color: color-mix(in srgb, var(--c-active) 55%, transparent);
     z-index: 2;
 }
 

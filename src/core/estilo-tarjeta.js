@@ -45,14 +45,15 @@ const _mosaicosValido = id => MOSAICOS_LINEA.some(m => m.id === id);
 // Variantes del estilo "Anillo": el aro a la izquierda (el predeterminado) o a la derecha, intercambiando las columnas, y la fila Entrada / Salida / Con banco
 // abajo (como siempre) o arriba de todo; y las variantes "intercambiado", donde los dos grupos de datos cambian de lugar: Entrada / Salida / Con banco quedan apilados al costado del aro
 // y Faltan / Banco de horas (y Tiempo fuera) pasan a la fila de abajo. El CSS solo mira <html data-disposicion-anillo>, así que cambiarla no redibuja nada (cada grupo tiene su copia
-// en el otro lugar, ver crearAnillo en ui/tarjeta-estilos.js, y el CSS muestra la que corresponde).
+// en el otro lugar, ver crearAnillo en ui/tarjeta-estilos.js, y el CSS muestra la que corresponde). Las etiquetas son cortas a propósito: son el valor de la fila «Disposición» del panel,
+// que no se parte, y en un móvil angosto no entran más de unos 170 px.
 export const DISPOSICIONES_ANILLO = Object.freeze([
     { id: 'izquierda', label: 'Anillo a la izquierda' },
     { id: 'derecha', label: 'Anillo a la derecha' },
-    { id: 'arriba-izquierda', label: 'Fila arriba, anillo a la izquierda' },
-    { id: 'arriba-derecha', label: 'Fila arriba, anillo a la derecha' },
-    { id: 'intercambiado-izquierda', label: 'Datos intercambiados, anillo a la izquierda' },
-    { id: 'intercambiado-derecha', label: 'Datos intercambiados, anillo a la derecha' }
+    { id: 'arriba-izquierda', label: 'Fila arriba, anillo izq.' },
+    { id: 'arriba-derecha', label: 'Fila arriba, anillo der.' },
+    { id: 'intercambiado-izquierda', label: 'Intercambio, anillo izq.' },
+    { id: 'intercambiado-derecha', label: 'Intercambio, anillo der.' }
 ]);
 
 const _anilloValido = id => DISPOSICIONES_ANILLO.some(d => d.id === id);

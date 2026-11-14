@@ -9,7 +9,7 @@ export const APP_STORAGE_PREFIX = 'horarios_';
 
 export const STORAGE_KEYS = Object.freeze({
     TEMA_OSCURO: 'temaOscuro',
-    ENFASIS: 'enfasis',                           // énfasis de color (tarjeta de fichaje, sliders y badge del perfil activo): ver ui/gestor-temas.js; es de cada dispositivo
+    ENFASIS: 'enfasis',                           // énfasis de color (tarjeta de fichaje, sliders, días laborales de Ajustes y badge del perfil activo): ver ui/gestor-temas.js; es de cada dispositivo
     VISTA_ACTUAL: 'vistaActual',
     MODO_ESTADISTICAS: 'modoEstadisticas',
     HOVER_POPUP: 'hoverPopupCalendario',

@@ -790,6 +790,12 @@ body.config-onboarding #theme-toggle-config {
     transform: scale(1.1);
 }
 
+/* Días laborales de Ajustes: llevan el énfasis (sin énfasis, el acento del tema de siempre) */
+#modal-config .day-checkbox input:checked~span {
+    background: var(--c-enfasis, var(--c-active));
+    color: var(--c-on-enfasis);
+}
+
 
 /* Pocas opciones y anchas (p. ej. "Anteriores" / "Próximos del año"): con el agrandado de la marcada se pisarían, así que van separadas y sin escala */
 .week-selector--opciones {

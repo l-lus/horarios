@@ -380,14 +380,13 @@ button.campo-flash-color {
     color: var(--c-red);
 }
 
-/* Feedback de color del botón Fichar (ver destellarResultadoFichar): aro con relleno translúcido que parpadea dos veces, solo con opacity */
+/* Feedback de color del botón Fichar (ver destellarResultadoFichar): aro que parpadea dos veces, solo con opacity */
 .btn-register::after {
     content: '';
     position: absolute;
     inset: 10px 0;
     border: 2px solid var(--fb-color, transparent);
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--fb-color, transparent) 22%, transparent);
     opacity: 0;
     pointer-events: none;
 }

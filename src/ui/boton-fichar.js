@@ -76,7 +76,7 @@ export function animarErrorFichaje(btn) {
     _animarResultadoFichaje(btn, '#icon-x-circle', 'fichaje-error');
 }
 
-// Feedback de color del botón: un aro con relleno translúcido (capa ::after, solo opacity) en el color del resultado; sobre el relleno del énfasis el CSS lo pasa al color del texto
+// Feedback de color del botón: un aro (capa ::after, solo opacity) en el color del resultado; sobre el relleno del énfasis el CSS lo pasa al color del texto
 const _TIPOS_FEEDBACK = ['success', 'error', 'warning', 'info'];
 const _feedbackTimers = new WeakMap();
 

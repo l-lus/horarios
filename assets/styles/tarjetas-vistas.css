@@ -2716,13 +2716,13 @@ html[data-disposicion-anillo="intercambiado-derecha"] .est-anillo-aro {
 
 
 /* ─── ÉNFASIS DE COLOR (<html data-enfasis>, ver GestorTemas y el final de tokens.css) ──────────────────────────────
-   Sin énfasis (el predeterminado no pone el atributo) nada de esto aplica. Solo colores en reposo, sin animaciones; los días del calendario no cambian. */
+   Sin énfasis (el predeterminado no pone el atributo) nada de esto aplica. El énfasis solo toca la tarjeta de fichaje, los sliders (ver .toggle-switch) y el badge del perfil activo. */
 
 /* Fichar: con la tarjeta cerrada se rellena entera con el acento (una capa detrás de la cabecera que cubre la tarjeta); al abrirla la capa se desvanece y el relleno
    pasa solo al botón Fichar (otra capa, en forma de píldora). Las dos capas se animan con opacity */
 html[data-enfasis] .card-registrar-header {
     isolation: isolate;
-    color: var(--c-on-active);
+    color: var(--c-on-enfasis);
 }
 
 html[data-enfasis] .card-registrar-header::before {
@@ -2730,7 +2730,7 @@ html[data-enfasis] .card-registrar-header::before {
     position: absolute;
     inset: calc(-1 * var(--space-xl)) calc(-1 * var(--space-sm));
     z-index: -1;
-    background: var(--c-active);
+    background: var(--c-enfasis);
     border-radius: var(--radius-lg);
     transition: opacity var(--dur-anim) ease;
 }
@@ -2747,11 +2747,11 @@ html[data-enfasis] .card-registrar-header:has(+ #form-registro.expanded)::before
 }
 
 html[data-enfasis] .card-registrar-header :is(.btn-register, #btn-timer-main, .chevron) {
-    color: var(--c-on-active);
+    color: var(--c-on-enfasis);
 }
 
 html[data-enfasis] .card-registrar-header:has(+ #form-registro.expanded) :is(#btn-timer-main, .chevron) {
-    color: var(--c-active);
+    color: var(--c-enfasis);
 }
 
 html[data-enfasis] .btn-register {
@@ -2766,7 +2766,7 @@ html[data-enfasis] .btn-register::before {
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: var(--c-active);
+    background: var(--c-enfasis);
     border-radius: var(--radius-full);
     opacity: 0;
     transition: opacity var(--dur-anim) ease;
@@ -2774,27 +2774,4 @@ html[data-enfasis] .btn-register::before {
 
 html[data-enfasis] .card-registrar-header:has(+ #form-registro.expanded) .btn-register::before {
     opacity: 1;
-}
-
-/* Íconos de los títulos de sección, chips (Hoy, período de las estadísticas) y botón de perfil */
-html[data-enfasis] .card-section-title .icon {
-    color: var(--c-active);
-}
-
-html[data-enfasis] :is(.btn-hoy-calendario, .btn-toggle-periodo) {
-    background: var(--c-active);
-    color: var(--c-on-active);
-    border-radius: var(--radius-full);
-    font-weight: var(--fw-bold);
-}
-
-html[data-enfasis] .btn-hoy-calendario {
-    width: auto;
-    padding-inline: var(--space-md);
-}
-
-html[data-enfasis] .header-profile-btn {
-    background: var(--c-active);
-    color: var(--c-on-active);
-    border-color: transparent;
 }

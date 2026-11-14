@@ -61,7 +61,8 @@
     --c-orange: rgba(210, 120, 50, 0.8);
     --c-gray-btn: #f0f2f8;
     --c-white: #ffffff;
-    --c-on-active: var(--c-white);   /* texto sobre fondos de --c-active: los énfasis claros (lima, naranja, neutro) lo oscurecen */
+    /* --c-enfasis (ver el final de este archivo) solo existe con un énfasis elegido; sin él, quien lo usa (la tarjeta de fichaje, los sliders y el badge del perfil activo) cae en --c-active del tema, con var(--c-enfasis, var(--c-active)) */
+    --c-on-enfasis: var(--c-white);     /* texto sobre fondos de --c-enfasis: los énfasis claros (lima, naranja, neutro) lo oscurecen */
     --shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
     --radius-sm: 10px;
     --radius-md: 14px;
@@ -256,60 +257,60 @@ body[data-theme="medianoche"] {
 }
 
 /* ─── ÉNFASIS (se combinan con cualquier tema; sin data-enfasis queda el predeterminado) ───────────────
-   Solo cambian el acento (--c-active) y el color del texto sobre él; los colores de los días del calendario no se tocan.
+   Solo cambian --c-enfasis (y el color del texto sobre él), que usan únicamente la tarjeta de fichaje, los sliders y el badge del perfil activo.
    El primer bloque vale para los temas oscuros; el segundo, con más especificidad, para los claros. Un test vigila que las muestras de ui/gestor-temas.js coincidan. */
 
 html[data-enfasis="lima"] body,
 body[data-enfasis="lima"] {
-    --c-active: #a3e635;
-    --c-on-active: #1a2e05;
+    --c-enfasis: #a3e635;
+    --c-on-enfasis: #1a2e05;
 }
 html[data-enfasis="lima"]:not(.dark-mode):not([data-theme="medianoche"]) body,
 body[data-enfasis="lima"]:not(.dark-mode):not([data-theme="medianoche"]) {
-    --c-active: #4d7c0f;
-    --c-on-active: #ffffff;
+    --c-enfasis: #4d7c0f;
+    --c-on-enfasis: #ffffff;
 }
 
 html[data-enfasis="naranja"] body,
 body[data-enfasis="naranja"] {
-    --c-active: #fb923c;
-    --c-on-active: #2a1405;
+    --c-enfasis: #fb923c;
+    --c-on-enfasis: #2a1405;
 }
 html[data-enfasis="naranja"]:not(.dark-mode):not([data-theme="medianoche"]) body,
 body[data-enfasis="naranja"]:not(.dark-mode):not([data-theme="medianoche"]) {
-    --c-active: #c2410c;
-    --c-on-active: #ffffff;
+    --c-enfasis: #c2410c;
+    --c-on-enfasis: #ffffff;
 }
 
 html[data-enfasis="neutro"] body,
 body[data-enfasis="neutro"] {
-    --c-active: #e4e4e7;
-    --c-on-active: #18181b;
+    --c-enfasis: #e4e4e7;
+    --c-on-enfasis: #18181b;
 }
 html[data-enfasis="neutro"]:not(.dark-mode):not([data-theme="medianoche"]) body,
 body[data-enfasis="neutro"]:not(.dark-mode):not([data-theme="medianoche"]) {
-    --c-active: #3f3f46;
-    --c-on-active: #ffffff;
+    --c-enfasis: #3f3f46;
+    --c-on-enfasis: #ffffff;
 }
 
 html[data-enfasis="violeta"] body,
 body[data-enfasis="violeta"] {
-    --c-active: #8b7cf6;
-    --c-on-active: #1a1033;
+    --c-enfasis: #8b7cf6;
+    --c-on-enfasis: #1a1033;
 }
 html[data-enfasis="violeta"]:not(.dark-mode):not([data-theme="medianoche"]) body,
 body[data-enfasis="violeta"]:not(.dark-mode):not([data-theme="medianoche"]) {
-    --c-active: #6d56d6;
-    --c-on-active: #ffffff;
+    --c-enfasis: #6d56d6;
+    --c-on-enfasis: #ffffff;
 }
 
 html[data-enfasis="azul"] body,
 body[data-enfasis="azul"] {
-    --c-active: #3b82f6;
-    --c-on-active: #0b1b3a;
+    --c-enfasis: #3b82f6;
+    --c-on-enfasis: #0b1b3a;
 }
 html[data-enfasis="azul"]:not(.dark-mode):not([data-theme="medianoche"]) body,
 body[data-enfasis="azul"]:not(.dark-mode):not([data-theme="medianoche"]) {
-    --c-active: #2563eb;
-    --c-on-active: #ffffff;
+    --c-enfasis: #2563eb;
+    --c-on-enfasis: #ffffff;
 }

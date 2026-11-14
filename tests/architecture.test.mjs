@@ -359,7 +359,7 @@ test('gestor-temas.js: las muestras de cada tema (fondo y acento) coinciden con 
     }
 });
 
-test('gestor-temas.js: las muestras de cada énfasis coinciden con el acento de tokens.css, y el bloque claro define lo mismo que el oscuro', async () => {
+test('gestor-temas.js: las muestras de cada énfasis coinciden con el --c-enfasis de tokens.css, y el bloque claro define lo mismo que el oscuro', async () => {
     const css = fs.readFileSync('assets/styles/tokens.css', 'utf8');
     const bloque = (selector) => {
         const i = css.indexOf(selector);
@@ -373,7 +373,7 @@ test('gestor-temas.js: las muestras de cada énfasis coinciden con el acento de 
     for (const [id, muestra] of Object.entries(propios)) {
         const oscuro = bloque(`html[data-enfasis="${id}"] body,`);
         const claro = bloque(`html[data-enfasis="${id}"]:not(.dark-mode):not([data-theme="medianoche"]) body,`);
-        assert.equal(muestra.acento, valor(oscuro, '--c-active'), `acento de ${id}`);
+        assert.equal(muestra.acento, valor(oscuro, '--c-enfasis'), `acento de ${id}`);
         const variables = (cuerpo) => [...cuerpo.matchAll(/(--[\w-]+):/g)].map(m => m[1]).sort();
         assert.deepEqual(variables(claro), variables(oscuro), `${id}: el bloque claro define las mismas variables que el oscuro`);
     }

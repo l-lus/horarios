@@ -117,7 +117,7 @@
     align-self: flex-start;
     padding: 1px var(--space-sm);
     background: var(--c-active);
-    color: var(--c-on-active);
+    color: var(--c-white);
     border: 1px solid transparent;
     border-radius: var(--radius-full);
     font-size: var(--text-sm);
@@ -477,7 +477,7 @@
 }
 
 .btn-activo .toggle-switch {
-    background: var(--c-active);
+    background: var(--c-enfasis, var(--c-active));
 }
 
 .btn-activo .toggle-switch::after {
@@ -602,8 +602,8 @@ body.config-onboarding #theme-toggle-config {
 .btn-perfil-estado {
     flex-shrink: 0;
     padding: 1px var(--space-sm);
-    background: var(--c-active);
-    color: var(--c-on-active);
+    background: var(--c-enfasis, var(--c-active));
+    color: var(--c-on-enfasis);
     border: 1px solid transparent;
     border-radius: var(--radius-full);
     font-size: var(--text-sm);
@@ -738,7 +738,7 @@ body.config-onboarding #theme-toggle-config {
 .perfil-agregar-toggle[aria-expanded="true"] {
     --giro-plus: 45deg;
     background: var(--c-active);
-    color: var(--c-on-active);
+    color: var(--c-white);
     border-color: transparent;
 }
 
@@ -784,7 +784,7 @@ body.config-onboarding #theme-toggle-config {
 
 .day-checkbox input:checked~span {
     background: var(--c-active);
-    color: var(--c-on-active);
+    color: var(--c-white);
     border-color: transparent;
     font-weight: var(--fw-bold);
     transform: scale(1.1);

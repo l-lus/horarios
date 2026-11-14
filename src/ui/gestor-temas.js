@@ -20,7 +20,7 @@ const MUESTRAS = Object.freeze({
     crema: { etiqueta: 'Crema', fondo: '#fbf6ee', acento: 'rgba(176, 106, 50, 0.9)' }
 });
 
-// Énfasis de color: se combinan con cualquier tema (<html data-enfasis>, ver el final de tokens.css). 'predeterminado' no pone nada. `acento` es el --c-active tal como vale
+// Énfasis de color: se combinan con cualquier tema (<html data-enfasis>, ver el final de tokens.css). 'predeterminado' no pone nada. `acento` es el --c-enfasis tal como vale
 // en los temas oscuros (un test verifica que coincida con tokens.css) y `fondo` sigue al tema que está puesto.
 const ENFASIS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul'];
 const FONDO_MUESTRA_ENFASIS = 'var(--bg-body)';   // la mitad del círculo es el fondo del tema actual (oscuro o claro), no un color fijo

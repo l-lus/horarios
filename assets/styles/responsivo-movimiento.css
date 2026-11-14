@@ -407,11 +407,11 @@ html[data-enfasis] .btn-register::after {
 /* Con énfasis el botón siempre está sobre el relleno del acento (la tarjeta entera cerrada, la píldora abierta), donde el verde, el rojo o el azul no se distinguen: aro e ícono van con el color del texto
    (el resultado lo dicen el ícono —check o X— y el aviso) */
 html[data-enfasis] .btn-register:is(.fichar-feedback, :has(.icon:is(.fichaje-ok, .fichaje-error))) {
-    --fb-color: var(--c-on-active);
+    --fb-color: var(--c-on-enfasis);
 }
 
 html[data-enfasis] .btn-register .icon:is(.fichaje-ok, .fichaje-error) {
-    color: var(--c-on-active);
+    color: var(--c-on-enfasis);
 }
 
 @keyframes fichar-feedback {

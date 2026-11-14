@@ -105,7 +105,13 @@ export async function abrirApp({ ancho = 360, alto = 780, movil = true } = {}) {
         await evaluar(() => window.humo.hasta(() => document.readyState === 'complete' && !!document.querySelector('.config-actions .btn-gist')));
         await esperar(600);
 
-        return { evaluar, tamano, errores, cerrar };
+        /** Guarda una captura de la página en `archivo` (PNG): sirve para mirar cómo quedó algo a mano, no lo usa la prueba de humo. */
+        const captura = async (archivo) => {
+            const r = await cdp('Page.captureScreenshot', { format: 'png' });
+            fs.writeFileSync(archivo, Buffer.from(r.result.data, 'base64'));
+        };
+
+        return { evaluar, tamano, errores, cerrar, captura };
     } catch (err) {
         await cerrar();
         throw err;

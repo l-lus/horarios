@@ -18,7 +18,8 @@ import { WorkerCliente } from './worker-cliente.js';
 // Igual que el cliente del Gist, es el único otro servicio que lanza errores (los de red y de la API).
 
 /** Cliente OAuth "Aplicación web" del proyecto de Google Cloud. Vacío = Drive todavía no está disponible en esta versión. */
-const GOOGLE_CLIENT_ID = '';
+/** @type {string} */
+const GOOGLE_CLIENT_ID = '735444541286-4kadct48eo67jopcbg565ej5e0cd3m4s.apps.googleusercontent.com';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const API = 'https://www.googleapis.com/drive/v3';
@@ -171,7 +172,7 @@ async function completarConexion() {
     const retorno = tomarRetorno();
     if ('error' in retorno) return retorno;
     try {
-        const datos = await _respuestaWorker(await WorkerCliente.post('/api/oauth/google/exchange', {
+        const datos = await _respuestaWorker(await WorkerCliente.postOAuth('/api/oauth/google/exchange', {
             code: retorno.code, codeVerifier: retorno.verificador, redirectUri: retorno.redirectUri
         }));
         if (!_esTokenGoogle(datos?.refreshToken) || !_esTokenGoogle(datos?.accessToken)) return { error: 'Google no devolvió un permiso permanente: volvé a conectar' };
@@ -193,7 +194,7 @@ async function _tokenAcceso() {
     if (!_esTokenGoogle(refreshToken)) throw new Error('Google Drive no está conectado');
     _renovando = (async () => {
         try {
-            const datos = await _respuestaWorker(await WorkerCliente.post('/api/oauth/google/refresh', { refreshToken }));
+            const datos = await _respuestaWorker(await WorkerCliente.postOAuth('/api/oauth/google/refresh', { refreshToken }));
             if (!_esTokenGoogle(datos?.accessToken)) throw new Error('Google no renovó el permiso');
             _guardarAcceso(datos.accessToken, datos.expiresIn);
             return datos.accessToken;
@@ -221,7 +222,7 @@ async function desconectar() {
     olvidarCuenta();
     if (!_esTokenGoogle(refreshToken)) return { revocado: false };
     try {
-        const res = await WorkerCliente.post('/api/oauth/google/revoke', { token: refreshToken });
+        const res = await WorkerCliente.postOAuth('/api/oauth/google/revoke', { token: refreshToken });
         return { revocado: res.ok };
     } catch {
         return { revocado: false };

@@ -57,9 +57,9 @@ test('OAuthPKCE: el code_challenge es el SHA-256 en base64url del verificador y 
     assert.equal(OAuthPKCE.esVerificadorValido('a'.repeat(43) + ' '), false);
 });
 
-test('Drive: sin cliente configurado no se puede conectar; con cliente arma la URL de Google con PKCE, offline y la URI de retorno exacta', async () => {
-    assert.equal(D.disponible(), false);
-    assert.ok('error' in await D.iniciarConexion(BASE));
+test('Drive: sin cliente no se puede conectar; con cliente arma la URL de Google con PKCE, offline y la URI de retorno exacta', async () => {
+    assert.equal(D.disponible(), true);
+    assert.ok('error' in await D.iniciarConexion(BASE, { clientId: '' }));
 
     const r = await D.iniciarConexion(BASE, { clientId: 'cliente.apps.googleusercontent.com' });
     assert.ok('url' in r);

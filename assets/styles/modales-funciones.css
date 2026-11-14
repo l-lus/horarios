@@ -1027,14 +1027,6 @@ body.tarjeta-arrastrando-activa * {
     transform: scale(1.06);
 }
 
-.vista-previa-circulos-nombre {
-    display: block;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    min-height: 1.2em;
-}
-
 /* Tema: se ven los colores de toda la página, sin atenuarla (el velo queda solo para atrapar el toque de afuera y cerrar) */
 body.vista-previa-sin-velo .vista-previa-velo.show {
     background: transparent;

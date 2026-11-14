@@ -59,7 +59,7 @@ const _vistas = {};
 /** @type {string[]} */
 let _orden = [];
 
-/** @type {{ cfg: ConfigVistaPrevia, objetivo: HTMLElement | null, restaurar: (() => void) | null, filas: { def: FilaVistaPrevia, envoltorio: HTMLElement, btn: HTMLElement, valor: HTMLElement }[], circulos: { def: CirculosVistaPrevia, btns: { id: string, btn: HTMLElement }[], nombre: HTMLElement }[], observer: ResizeObserver | null, timer: any } | null} */
+/** @type {{ cfg: ConfigVistaPrevia, objetivo: HTMLElement | null, restaurar: (() => void) | null, filas: { def: FilaVistaPrevia, envoltorio: HTMLElement, btn: HTMLElement, valor: HTMLElement }[], circulos: { def: CirculosVistaPrevia, btns: { id: string, btn: HTMLElement }[] }[], observer: ResizeObserver | null, timer: any } | null} */
 let _activa = null;
 let _cambiando = false;
 let _iniciada = false;
@@ -155,11 +155,9 @@ function _construirCirculos(cont, def) {
         grupo.append(btn);
         return { id: op.id, btn };
     });
-    const nombre = document.createElement('span');
-    nombre.className = 'vista-previa-circulos-nombre';
-    seccion.append(grupo, nombre);
+    seccion.append(grupo);
     cont.append(seccion);
-    _activa?.circulos.push({ def, btns, nombre });
+    _activa?.circulos.push({ def, btns });
 }
 
 function _marcarCirculos() {
@@ -169,7 +167,6 @@ function _marcarCirculos() {
             btn.classList.toggle('activo', id === actual);
             btn.setAttribute('aria-pressed', String(id === actual));
         });
-        c.nombre.textContent = c.def.opciones.find(o => o.id === actual)?.etiqueta ?? '';
     });
 }
 

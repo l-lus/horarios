@@ -27,6 +27,38 @@
     }
 }
 
+/* Rebote del ícono del botón Fichar al cargar la página (ver llamarAtencionFicharAlCargar): una sola vez; solo transform */
+@keyframes llamarAtencion {
+    0% {
+        transform: scale(1, 1);
+    }
+
+    5% {
+        transform: scale(1.25, 0.75);
+    }
+
+    10% {
+        transform: scale(0.75, 1.25);
+    }
+
+    15% {
+        transform: scale(1.15, 0.85);
+    }
+
+    20% {
+        transform: scale(1, 1);
+    }
+
+    100% {
+        transform: scale(1, 1);
+    }
+}
+
+.btn-register .icon.llamar-atencion {
+    transform-origin: bottom;
+    animation: llamarAtencion var(--dur-ambiente) ease-in-out 1;
+}
+
 @keyframes mutacionSalida {
     from {
         opacity: 1;
@@ -140,27 +172,6 @@ button.campo-flash {
     --onda-color: var(--text-main);
 }
 
-.btn-register.destello-fichar {
-    --onda-color: var(--text-main);   /* neutro, como el destello de un día sin registro en el calendario; el barrido usa su blanco de siempre */
-    --onda-escala: 1.4;
-    z-index: 2;
-}
-
-/* el botón tiene un relleno grande para el toque: el destello rodea solo el texto y el ícono (con énfasis el botón mismo es la píldora, ver tarjetas-vistas.css) */
-.btn-register > .destello-capa {
-    inset: 10px 0;
-}
-
-html[data-enfasis] .btn-register > .destello-capa {
-    inset: 0;
-}
-
-/* Con énfasis el botón siempre está sobre el relleno del acento (la tarjeta cerrada o la píldora abierta): el destello va con el color del texto */
-html[data-enfasis] .btn-register.destello-fichar {
-    --onda-color: var(--c-on-active);
-    --franja-color: color-mix(in srgb, var(--c-on-active) 45%, transparent);
-}
-
 .icon-btn.destello-instalar {
     --onda-color: var(--c-blue);
     --onda-escala: 1.5;
@@ -230,7 +241,7 @@ html[data-enfasis] .btn-register.destello-fichar {
     display: none;
 }
 
-:root[data-motion="reduce"] :is(.calendario-dia.destello-hoy, .est-mosaico.mosaico-flash, .icon-btn.destello-instalar, .btn-register.destello-fichar) {
+:root[data-motion="reduce"] :is(.calendario-dia.destello-hoy, .est-mosaico.mosaico-flash, .icon-btn.destello-instalar) {
     --onda-escala: 1;
 }
 
@@ -668,6 +679,7 @@ html[data-enfasis] .btn-register .icon:is(.fichaje-ok, .fichaje-error) {
 
 /* Decorativas o llamadores de atención en bucle: se quitan. El estado sigue
    comunicado por texto y color (badges, botón rojo del timer). */
+:root[data-motion="reduce"] .btn-register .icon,
 :root[data-motion="reduce"] .tf-badge,
 :root[data-motion="reduce"] .estado-badge--en-curso,
 :root[data-motion="reduce"] .timer-btn.running {

@@ -17,10 +17,10 @@ export function resetearBoton(btn) {
     montar(btn, html`${icono('#icon-clock')} <span id="btn-registrar-texto">Fichar</span>`);
 }
 
-// ─── Destello de la carga ───────────────────────────────────────────────────
-// Al cargar la página, una sola vez, el botón destella (el mismo barrido y onda del botón de instalar y del día de hoy del calendario) si hoy se puede fichar:
-// no hay registro o tiene la entrada sin salida. Con un día especial (feriado, vacaciones…) o la jornada ya cerrada no se llama la atención.
-const INICIO_DESTELLO_MS = 1200;
+// ─── Rebote de la carga ─────────────────────────────────────────────────────
+// Al cargar la página, una sola vez, el ícono del botón rebota (estirándose y achatándose) si hoy se puede fichar: no hay registro o tiene la entrada sin salida.
+// Con un día especial (feriado, vacaciones…) o la jornada ya cerrada no se llama la atención.
+const INICIO_REBOTE_MS = 1200;
 
 /** ¿Falta fichar hoy? Sin registro, o con entrada y sin salida que no sea un día especial. @param {any} regHoy */
 export function puedeFicharHoy(regHoy) {
@@ -29,9 +29,15 @@ export function puedeFicharHoy(regHoy) {
 }
 
 /** @param {HTMLElement|null} btn @param {any} regHoy el registro de hoy (o null/undefined si no hay) */
-export function destellarFicharAlCargar(btn, regHoy) {
+export function llamarAtencionFicharAlCargar(btn, regHoy) {
     if (!btn || Movimiento.reducido() || !puedeFicharHoy(regHoy)) return;
-    setTimeout(() => { if (btn.offsetParent) Animaciones._flashElemento(btn, 'destello-fichar'); }, INICIO_DESTELLO_MS);
+    setTimeout(() => {
+        const svg = btn.offsetParent ? btn.querySelector('svg.icon') : null;
+        // si ya se está mostrando el check o la X de un fichaje, no se pisa
+        if (!svg || svg.classList.contains('fichaje-ok') || svg.classList.contains('fichaje-error')) return;
+        svg.classList.add('llamar-atencion');
+        svg.addEventListener('animationend', () => svg.classList.remove('llamar-atencion'), { once: true });
+    }, INICIO_REBOTE_MS);
 }
 
 // ─── Check de éxito en el botón Fichar ──────────────────────────────────────
@@ -42,7 +48,7 @@ const _exitoFichaje = new WeakMap();
 function _limpiarAnimExito(svg) {
     svg.getAnimations?.().forEach(a => a.cancel());
     svg.style.animation = '';
-    svg.classList.remove('fichaje-ok', 'fichaje-error', 'fichaje-ok-vuelta');
+    svg.classList.remove('fichaje-ok', 'fichaje-error', 'fichaje-ok-vuelta', 'llamar-atencion');
 }
 
 function _finalizarExitoFichaje(btn, conVuelta = true) {

@@ -1,32 +1,34 @@
 import { RespaldoLocal } from './respaldo-local.js';
 import { IconosAnimados } from './iconos-animados.js';
 import { $, setColapsable, alClic, alternarVisibilidadClave } from '../core/dom.js';
-import { TiempoUtils } from '../core/tiempo-utils.js';
 import { EventosApp } from '../core/eventos.js';
 import { UIBase } from './base.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
 import { HistoricoEdicion } from './historico-edicion.js';
 import { ImportarExportar } from '../services/importar-exportar.js';
-import { setIconoBtn } from './boton-fichar.js';
-import { _crearPressHold } from './gestos.js';
 import { mostrarToast } from './toast.js';
-import { Animaciones } from './animaciones.js';
 import { GistSync } from './gist-sync.js';
+import { DriveSync } from './drive-sync.js';
 import { CampoFrase } from './campo-frase.js';
 import { FraseModal } from './frase-modal.js';
 import { FraseCifrado } from '../services/frase-cifrado.js';
+import { SyncAutomatizacion } from './sync-automatizacion.js';
+import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
 
 // ====================================================================
 //                     UI GIST AND BACKUP MODULE
 // ====================================================================
 // El modal de configuración de Gist (conexión, cifrado, automatización) y los botones de respaldo. Los flujos de subir y bajar
 // están en gist-sync.js; este módulo le aporta lo que necesitan del modal (GistSync.conectarModal, en bindEventos).
-const { _setBtnDisabled, _setBtnActivo, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
-const { _animarValor } = Animaciones;
+const { _setBtnDisabled, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
 
 const { mostrarImportar, cerrarImportar, mostrarExportar, cerrarExportar, ejecutarExportacion } = RespaldoLocal;
-let _gistAutoSyncTemp = null;
-let _gistLimitesTemp = null;
+// Sincronización automática, comportamiento al bajar, límites y horario (la misma sección que en el modal de Drive)
+const _auto = SyncAutomatizacion.crear({
+    prefijo: 'gist', servicio: SincronizacionGist, nombre: 'Gist',
+    otro: () => ({ servicio: SincronizacionDrive, nombre: 'Google Drive' }),
+    alCambiar: () => actualizarEstadoBotonesGist()
+});
 
 // Frase de cifrado (opcional): con una frase cargada el Gist se sube cifrado; sin frase, en claro como siempre
 const _campoFrase = new CampoFrase(
@@ -45,10 +47,6 @@ function _actualizarResumenCifrado() {
     else el.textContent = _campoFrase.recordar() ? 'Activado · frase recordada en este navegador' : 'Activado · la frase vale hasta cerrar la app';
 }
 
-function _gistEstadoAutoSyncActual() {
-    return parseInt(_gistAutoSyncTemp ?? SincronizacionGist.getAutoSync());
-}
-
 function actualizarEstadoBotonesGist() {
     const token = $('gist-token')?.value.trim() || '';
     const gistId = $('gist-id')?.value.trim() || '';
@@ -57,10 +55,6 @@ function actualizarEstadoBotonesGist() {
 
     _setBtnDisabled('btn-gist-subir', !soloToken);
     _setBtnDisabled('btn-gist-bajar', !ambosCompletos);
-    _setBtnDisabled('btn-toggle-gist-backup', !ambosCompletos);
-
-    const estadoBackup = _gistEstadoAutoSyncActual();
-    _setBtnDisabled('btn-toggle-gist-merge', !(ambosCompletos && estadoBackup === 1));
 
     const estadoEl = $('gist-estado');
     const tituloEl = $('gist-estado-titulo');
@@ -72,18 +66,7 @@ function actualizarEstadoBotonesGist() {
             ? `Configurado · ${gistId.slice(0, 6)}…${gistId.slice(-4)}`
             : soloToken ? 'Token cargado · falta el Gist ID' : 'Ingresá tu token para empezar';
     }
-    _actualizarResumenLimites();
-}
-
-function _actualizarResumenLimites() {
-    const el = $('gist-limites-resumen');
-    if (!el) return;
-    const tipo = _tipoSyncActual();
-    if (!tipo) { el.textContent = 'Desactivado'; return; }
-    const limite = _gistLimitesTemp ? _gistLimitesTemp[tipo] : SincronizacionGist.getSyncLimite(tipo);
-    const desde = $('gist-rango-desde')?.value || '--:--';
-    const hasta = $('gist-rango-hasta')?.value || '--:--';
-    el.textContent = `${limite === 0 ? 'Sin límite' : `${limite} por hora`} · ${desde} – ${hasta}`;
+    _auto.setHabilitado(ambosCompletos);
 }
 
 function _gistSetPanel(btnId, abierto, animar = true) {
@@ -116,15 +99,7 @@ function abrirModalGist() {
         if (gistIdInput) gistIdInput.value = SincronizacionGist.getGistId();
         _mostrarUltimaSync();
 
-        const rango = SincronizacionGist.getRangoHorario();
-        const desdeEl = $('gist-rango-desde');
-        const hastaEl = $('gist-rango-hasta');
-        if (desdeEl) desdeEl.value = rango.desde;
-        if (hastaEl) hastaEl.value = rango.hasta;
-
-        _gistAutoSyncTemp = SincronizacionGist.getAutoSync();
-        actualizarBotonGistBackup();
-        actualizarBotonGistMerge();
+        _auto.cargar();
         actualizarEstadoBotonesGist();
         const _gistCompleto = SincronizacionGist.getToken() && (SincronizacionGist.getGistId() || '').length > 10;
         _gistSetPanel('btn-gist-panel-limites', false, false);
@@ -132,22 +107,6 @@ function abrirModalGist() {
         _gistSetPanel('btn-gist-panel-cifrado', false, false);
         _campoFrase.cargar();
     });
-    _gistLimitesTemp = null;
-    _actualizarCampoLimite();
-}
-
-function _leerRangoHorarioInputs() {
-    const desdeRaw = $('gist-rango-desde')?.value || '';
-    const hastaRaw = $('gist-rango-hasta')?.value || '';
-    const desdeValida = !desdeRaw || TiempoUtils.validarHora(desdeRaw);
-    const hastaValida = !hastaRaw || TiempoUtils.validarHora(hastaRaw);
-    return {
-        desde: desdeRaw || SincronizacionGist.RANGO_HORARIO_DEFAULT.desde,
-        hasta: hastaRaw || SincronizacionGist.RANGO_HORARIO_DEFAULT.hasta,
-        desdeInvalida: desdeRaw !== '' && !desdeValida,
-        hastaInvalida: hastaRaw !== '' && !hastaValida,
-        valida: desdeValida && hastaValida
-    };
 }
 
 /** Guarda lo escrito en el modal antes de subir o bajar. Devuelve false si la frase escrita no es válida (ya se avisó): no se sigue. */
@@ -159,20 +118,25 @@ function _gistGuardarCredencialesSiModalAbierto() {
         $('gist-token')?.value.trim() || '',
         $('gist-id')?.value.trim() || ''
     );
-
-    const { desde, hasta, valida } = _leerRangoHorarioInputs();
-    if (valida) SincronizacionGist.setRangoHorario(desde, hasta);
-
-    if (_gistAutoSyncTemp !== null) {
-        SincronizacionGist.setAutoSync(_gistAutoSyncTemp);
-        _gistAutoSyncTemp = null;
-    }
-    if (_gistLimitesTemp !== null) {
-        SincronizacionGist.setSyncLimite('bajar', _gistLimitesTemp.bajar);
-        SincronizacionGist.setSyncLimite('subir', _gistLimitesTemp.subir);
-        _gistLimitesTemp = null;
-    }
+    _auto.guardar();
     return true;
+}
+
+/**
+ * A qué nube van los botones rápidos de la barra del histórico: el proveedor con la sincronización automática activa; si
+ * ninguno la tiene, el último que se sincronizó; si no hay ninguno listo, null (archivo local).
+ * @returns {'gist' | 'drive' | null}
+ */
+function proveedorRapido() {
+    const gist = SincronizacionGist.conectado();
+    const drive = SincronizacionDrive.listo();
+    if (gist && SincronizacionGist.getAutoSync() !== 0) return 'gist';
+    if (drive && SincronizacionDrive.getAutoSync() !== 0) return 'drive';
+    if (gist && drive) {
+        const fecha = (iso) => new Date(iso || 0).getTime() || 0;
+        return fecha(SincronizacionDrive.getLastSync()) > fecha(SincronizacionGist.getLastSync()) ? 'drive' : 'gist';
+    }
+    return gist ? 'gist' : drive ? 'drive' : null;
 }
 
 function actualizarBotonesHistorico() {
@@ -180,7 +144,7 @@ function actualizarBotonesHistorico() {
     const btnRestaurar = $('btn-hist-restaurar');
     if (!btnRespaldar || !btnRestaurar) return;
 
-    const tieneGist = SincronizacionGist.esGistIdValido(SincronizacionGist.getGistId());
+    const proveedor = proveedorRapido();
 
     const newRespaldar = /** @type {HTMLElement} */ (btnRespaldar.cloneNode(true));
     const newRestaurar = /** @type {HTMLElement} */ (btnRestaurar.cloneNode(true));
@@ -191,13 +155,15 @@ function actualizarBotonesHistorico() {
         HistoricoEdicion.iniciarTimerAutoCierreBotones();
     };
 
-    if (tieneGist) {
-        newRespaldar.title = 'Subir a Gist';
-        newRespaldar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRespaldar, 'subir'); GistSync.subir(); });
+    if (proveedor) {
+        const flujos = proveedor === 'gist' ? GistSync : DriveSync;
+        const nombre = proveedor === 'gist' ? 'Gist' : 'Drive';
+        newRespaldar.title = `Subir a ${nombre}`;
+        newRespaldar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRespaldar, 'subir'); flujos.subir(); });
         IconosAnimados.ponerIconoFlecha(newRespaldar, 'nube', 'subir');
 
-        newRestaurar.title = 'Bajar de Gist';
-        newRestaurar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRestaurar, 'bajar'); GistSync.bajar(); });
+        newRestaurar.title = `Bajar de ${nombre}`;
+        newRestaurar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRestaurar, 'bajar'); flujos.bajar(); });
         IconosAnimados.ponerIconoFlecha(newRestaurar, 'nube', 'bajar');
     } else {
         newRespaldar.title = 'Respaldar';
@@ -214,7 +180,7 @@ function actualizarBotonesHistorico() {
 function guardarConfigGist() {
     const token = $('gist-token')?.value.trim() || '';
     const gistId = $('gist-id')?.value.trim() || '';
-    const { desde, hasta, desdeInvalida, hastaInvalida } = _leerRangoHorarioInputs();
+    const { desdeInvalida, hastaInvalida } = _auto.leerRango();
 
     if (desdeInvalida) {
         mostrarToast('Hora inicial inválida.', 'error');
@@ -236,79 +202,21 @@ function guardarConfigGist() {
     const cambioFrase = _campoFrase.cambio();
     if (!_campoFrase.confirmar()) { _gistSetPanel('btn-gist-panel-cifrado', true); return; }
 
-    const rango = SincronizacionGist.getRangoHorario();
     const huboCambios = cambioFrase
         || token !== SincronizacionGist.getToken()
         || gistId !== SincronizacionGist.getGistId()
-        || desde !== rango.desde
-        || hasta !== rango.hasta
-        || (_gistAutoSyncTemp !== null && _gistAutoSyncTemp !== SincronizacionGist.getAutoSync())
-        || (_gistLimitesTemp !== null);
+        || _auto.hayCambios();
 
-    if (_gistAutoSyncTemp !== null) SincronizacionGist.setAutoSync(_gistAutoSyncTemp);
-    if (_gistLimitesTemp !== null) {
-        SincronizacionGist.setSyncLimite('bajar', _gistLimitesTemp.bajar);
-        SincronizacionGist.setSyncLimite('subir', _gistLimitesTemp.subir);
-    }
+    _auto.guardar();
     SincronizacionGist.saveCredentials(token, gistId);
-    SincronizacionGist.setRangoHorario(desde, hasta);
     mostrarToast(huboCambios ? 'Configuración guardada' : 'Sin cambios', huboCambios ? 'success' : 'info');
     cerrarModalGist();
 }
 
 function cerrarModalGist() {
-    _gistAutoSyncTemp = null;
-    _gistLimitesTemp = null;
+    _auto.descartar();
     _cerrarModalConPadre('modal-gist');
     actualizarBotonesHistorico();
-}
-
-function toggleGistMerge() {
-    const actual = SincronizacionGist.getMergeBehavior();
-    SincronizacionGist.setMergeBehavior(actual === 'merge' ? 'replace' : 'merge');
-    actualizarBotonGistMerge();
-}
-
-function actualizarBotonGistMerge() {
-    const hint = $('hint-gist-merge');
-    const iconEl = $('icon-gist-merge');
-    const esMerge = SincronizacionGist.getMergeBehavior() === 'merge';
-    if (hint) hint.textContent = esMerge ? 'Combinar' : 'Reemplazar';
-    const desc = $('desc-gist-merge');
-    if (desc) desc.textContent = esMerge ? ' · une Gist con tus datos locales' : ' · sustituye tus datos locales';
-    if (iconEl) setIconoBtn(iconEl, esMerge ? '#icon-combine' : '#icon-replace-swap');
-}
-
-function toggleGistBackup() {
-    const actual = _gistEstadoAutoSyncActual();
-    _gistAutoSyncTemp = (actual + 1) % 3;
-    actualizarBotonGistBackup();
-    actualizarEstadoBotonesGist();
-    _actualizarCampoLimite();
-}
-
-function actualizarBotonGistBackup() {
-    const btn = $('btn-toggle-gist-backup');
-    const hint = $('hint-gist-backup');
-    const label = $('label-gist-backup');
-    const rangoEl = $('gist-rango-horario');
-    const estado = _gistEstadoAutoSyncActual();
-    if (!btn) return;
-
-    const configs = [
-        { texto: 'Sin automatizar', hint: ' · solo sincronizás de forma manual', activo: false },
-        { texto: 'Restaurar', hint: ' · baja tus datos de Gist al abrir la app', activo: true },
-        { texto: 'Respaldar', hint: ' · sube tus datos a Gist al abrir la app', activo: true }
-    ];
-    const c = configs[estado];
-    _setBtnActivo(btn.id, c.activo);
-    if (label) label.textContent = c.texto;
-    if (hint) hint.textContent = c.hint;
-
-    if (rangoEl) {
-        const activo = estado === 1 || estado === 2;
-        rangoEl.classList.toggle('disabled', !activo);
-    }
 }
 
 function abrirGistEnBrowser() {
@@ -316,40 +224,6 @@ function abrirGistEnBrowser() {
     const url = SincronizacionGist.esGistIdValido(gistId) ? `https://gist.github.com/${gistId}` : 'https://gist.github.com';
     window.open(url, '_blank', 'noopener,noreferrer');
 }
-
-function _tipoSyncActual() {
-    const estado = _gistEstadoAutoSyncActual();
-    return estado === 1 ? 'bajar' : estado === 2 ? 'subir' : null;
-}
-
-function _actualizarCampoLimite(dir = 0) {
-    const tipo = _tipoSyncActual();
-    const contenedor = $('gist-limite-sync');
-    if (!contenedor) return;
-    if (!tipo) {
-        contenedor.classList.add('disabled');
-        _actualizarResumenLimites();
-        return;
-    }
-    const limite = _gistLimitesTemp ? _gistLimitesTemp[tipo] : SincronizacionGist.getSyncLimite(tipo);
-    const input = $('gist-limite-valor');
-    const label = $('gist-limite-label');
-    if (input) _animarValor(input, limite, dir);
-    if (label) label.textContent = tipo === 'bajar' ? 'Límite bajadas por hora (0 = sin límite)' : 'Límite subidas por hora (0 = sin límite)';
-    contenedor.classList.remove('disabled');
-    _actualizarResumenLimites();
-}
-
-function cambiarLimiteSync(delta) {
-    const tipo = _tipoSyncActual();
-    if (!tipo) return;
-    if (!_gistLimitesTemp) _gistLimitesTemp = { bajar: SincronizacionGist.getSyncLimite('bajar'), subir: SincronizacionGist.getSyncLimite('subir') };
-    const previo = _gistLimitesTemp[tipo];
-    _gistLimitesTemp[tipo] = Math.max(0, Math.min(99, previo + delta));
-    _actualizarCampoLimite(Math.sign(_gistLimitesTemp[tipo] - previo));
-}
-
-const pressHoldLimite = _crearPressHold(delta => cambiarLimiteSync(delta));
 
 function bindEventos() {
     document.querySelector('.config-actions .btn-gist')?.addEventListener('click', () => abrirModalGist());
@@ -378,17 +252,9 @@ function bindEventos() {
         'btn-gist-abrir': () => abrirGistEnBrowser(),
         'btn-gist-subir': () => { IconosAnimados.animarFlecha($('btn-gist-subir'), 'subir'); GistSync.subir(); },
         'btn-gist-bajar': () => { IconosAnimados.animarFlecha($('btn-gist-bajar'), 'bajar'); GistSync.bajar(); },
-        'btn-toggle-gist-backup': () => toggleGistBackup(),
-        'btn-toggle-gist-merge': () => toggleGistMerge(),
     });
     document.querySelectorAll('.gist-panel-toggle').forEach(b => b.addEventListener('click', () => toggleGistPanel(b.id)));
-    const inputLimite = $('gist-limite-valor');
-    if (inputLimite) {
-        const btnDec = $('btn-gist-limite-dec') || inputLimite.closest('.input-number-group')?.querySelectorAll('.btn-increment')?.[0];
-        const btnInc = $('btn-gist-limite-inc') || inputLimite.closest('.input-number-group')?.querySelectorAll('.btn-increment')?.[1];
-        if (btnDec) pressHoldLimite.vincular(btnDec, -1);
-        if (btnInc) pressHoldLimite.vincular(btnInc, 1);
-    }
+    _auto.bindEventos();
 
     $('btn-gist-guardar')?.addEventListener('click', () => guardarConfigGist());
     $('btn-gist-volver')?.addEventListener('click', () => cerrarModalGist());
@@ -405,14 +271,11 @@ function bindEventos() {
 
     document.querySelector('#modal-exportar .btn-export')?.addEventListener('click', () => ejecutarExportacion());
     $('btn-volver-exportar')?.addEventListener('click', () => cerrarExportar());
-
-
-
-    ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => $(id)?.addEventListener('input', () => _actualizarResumenLimites()));
 }
 
 export const GistRespaldo = {
     bindEventos,
     actualizarBotonesHistorico,
+    proveedorRapido,
     cerrarModalGist
 };

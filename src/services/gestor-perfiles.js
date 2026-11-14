@@ -49,9 +49,12 @@ const CAMPOS_SYNC_GIST = Object.freeze([
 ]);
 // gistCifrado es un dato del Gist (ya se subió o bajó cifrado), no de la sincronización: se conserva junto con el gistId.
 const CAMPOS_GIST_PERFIL = Object.freeze(['gistId', 'gistCifrado', ...CAMPOS_SYNC_GIST]);
+// Lo mismo para Google Drive (sincronizacion-drive.js): el archivo vinculado (id y nombre) y si está cifrado se conservan.
+const CAMPOS_SYNC_DRIVE = Object.freeze(CAMPOS_SYNC_GIST.map(k => k.replace(/^gist/, 'drive')));
+const CAMPOS_DRIVE_PERFIL = Object.freeze(['driveFileId', 'driveArchivoNombre', 'driveCifrado', ...CAMPOS_SYNC_DRIVE]);
 
 const _camposGist = (perfil) => Object.fromEntries(
-    CAMPOS_GIST_PERFIL.filter(k => perfil[k] != null && perfil[k] !== '').map(k => [k, perfil[k]])
+    [...CAMPOS_GIST_PERFIL, ...CAMPOS_DRIVE_PERFIL].filter(k => perfil[k] != null && perfil[k] !== '').map(k => [k, perfil[k]])
 );
 
 function guardarDatosPerfilActual() {
@@ -176,6 +179,8 @@ export const GestorPerfiles = {
     guardarPerfiles,
     CAMPOS_SYNC_GIST,
     CAMPOS_GIST_PERFIL,
+    CAMPOS_SYNC_DRIVE,
+    CAMPOS_DRIVE_PERFIL,
     crearPerfil,
     renombrarPerfil,
     eliminarPerfil

@@ -345,7 +345,7 @@ async function exportarJSON(frase = '') {
 
 // Claves que puede traer un respaldo (archivo local o Gist): cualquier otra se considera sospechosa
 const CLAVES_RAIZ_RESPALDO = ['registros', STORAGE_KEYS.DIAS_HABILES, STORAGE_KEYS.HORAS_DIARIAS, STORAGE_KEYS.HISTORIAL_DIAS_HABILES, ...CONFIG_RESPALDO.map(c => c.clave), 'fecha', 'version', 'hash', 'timestamp', 'rangoExportado'];
-const _NOMBRE_ORIGEN = { archivo: 'archivo', gist: 'Gist' };
+const _NOMBRE_ORIGEN = { archivo: 'archivo', gist: 'Gist', drive: 'respaldo de Drive' };
 
 /** Chequeo estructural de un respaldo ya parseado. Devuelve el mensaje de error o null si es válido. */
 function errorEstructuraRespaldo(data, nombre = 'archivo') {
@@ -370,8 +370,8 @@ async function _confirmarIntegridad(data, nombre) {
 
 /**
  * Valida un respaldo (estructura, versión e integridad, con confirmación del usuario si hace falta) y devuelve
- * { registros } con los registros normalizados, o { error } si no se puede usar (ya se avisó al usuario). Mismo camino para archivo y Gist.
- * @param {'archivo'|'gist'} [origen]
+ * { registros } con los registros normalizados, o { error } si no se puede usar (ya se avisó al usuario). Mismo camino para archivo, Gist y Drive.
+ * @param {'archivo'|'gist'|'drive'} [origen]
  */
 async function prepararRespaldo(data, origen = 'archivo') {
     const notify = D._notify();

@@ -25,6 +25,8 @@ import { Calendario } from './calendario.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
 import { GistRespaldo } from './gist-respaldo.js';
 import { GistSync } from './gist-sync.js';
+import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
+import { DriveSync } from './drive-sync.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { Historico } from './historico.js';
 import { HistoricoEdicion } from './historico-edicion.js';
@@ -338,15 +340,17 @@ function _restaurarEstadoVisual(config) {
     }
 }
 
+/** Sincronización automática al abrir la app: con el proveedor que la tenga activa (uno solo por perfil, ver sync-automatizacion.js). */
 function _initAutoSync() {
-    const _tieneCredenciales = SincronizacionGist.getToken() && SincronizacionGist.esGistIdValido(SincronizacionGist.getGistId());
-    if (!_tieneCredenciales) return;
-    const estado = SincronizacionGist.getAutoSync();
-    if (estado === 1 && SincronizacionGist.dentroDelRangoHorario() && !SincronizacionGist.superaLimite('bajar')) {
-        setTimeout(async () => { await gistBajar(true); SincronizacionGist.marcarSync('bajar'); }, 2000);
-    } else if (estado === 2 && SincronizacionGist.dentroDelRangoHorario() && !SincronizacionGist.superaLimite('subir')) {
-        setTimeout(async () => { await gistSubir(true); SincronizacionGist.marcarSync('subir'); }, 2000);
-    }
+    const proveedores = [
+        { listo: SincronizacionGist.conectado(), servicio: SincronizacionGist, flujos: { subir: gistSubir, bajar: gistBajar } },
+        { listo: SincronizacionDrive.listo(), servicio: SincronizacionDrive, flujos: DriveSync },
+    ];
+    const p = proveedores.find(x => x.listo && x.servicio.getAutoSync() !== 0);
+    if (!p) return;
+    const tipo = p.servicio.getAutoSync() === 1 ? 'bajar' : 'subir';
+    if (!p.servicio.dentroDelRangoHorario() || p.servicio.superaLimite(tipo)) return;
+    setTimeout(async () => { await p.flujos[tipo](true); p.servicio.marcarSync(tipo); }, 2000);
 }
 
 // Lo que muestra la tarjeta cambia de minuto en minuto: el reloj actualiza justo después de cada cambio de minuto

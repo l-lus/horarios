@@ -23,10 +23,10 @@ const _mkColapsable = (contenido) => {
     return wrap;
 };
 
-function _crearSelectorModoMerge(onCambio) {
+function _crearSelectorModoMerge(onCambio, origen) {
     const el = _mkEl('div', 'btn-group');
     el.setAttribute('role', 'group');
-    el.setAttribute('aria-label', 'Cómo aplicar los datos del Gist');
+    el.setAttribute('aria-label', `Cómo aplicar los datos ${origen.startsWith('el ') ? `del ${origen.slice(3)}` : `de ${origen}`}`);
     const btns = [['merge', '#icon-combine', 'Combinar'], ['replace', '#icon-replace-swap', 'Reemplazar']].map(([modo, href, texto]) => {
         const btn = _mkEl('button');
         btn.type = 'button';
@@ -93,7 +93,7 @@ function _crearTarjetaResultadoMerge({ nLocal, nGist, nNuevos, nComp }, configCa
     };
 }
 
-function _crearAlertaReemplazoMerge(nSoloLocal) {
+function _crearAlertaReemplazoMerge(nSoloLocal, origen) {
     if (nSoloLocal === 0) return null;
     const alerta = _mkEl('div', 'gist-alerta');
     montar(alerta, icono('#icon-alert-triangle'));
@@ -101,7 +101,7 @@ function _crearAlertaReemplazoMerge(nSoloLocal) {
     txt.append(
         'Se eliminan ',
         _mkEl('strong', null, `${nSoloLocal} ${nSoloLocal === 1 ? 'registro local' : 'registros locales'}`),
-        ` que no ${nSoloLocal === 1 ? 'está' : 'están'} en el Gist.`
+        ` que no ${nSoloLocal === 1 ? 'está' : 'están'} en ${origen}.`
     );
     alerta.appendChild(txt);
     const el = _mkColapsable(alerta);
@@ -109,7 +109,10 @@ function _crearAlertaReemplazoMerge(nSoloLocal) {
     return { el, pintar: (esMerge, animar) => setColapsable(el, !esMerge, { animar }) };
 }
 
-function _buildResumenMerge(resumenEl, { soloImportados, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios) {
+/**
+ * @param {string} [origen] de dónde vienen los datos, con artículo: 'el Gist', 'el respaldo de Drive'
+ */
+function _buildResumenMerge(resumenEl, { soloImportados, enAmbos, soloLocal, complementarios }, registrosNormalizados, configCambios, origen = 'el Gist') {
     const cantidades = {
         nLocal: enAmbos.length + soloLocal.length,
         nGist: registrosNormalizados.length,
@@ -123,9 +126,9 @@ function _buildResumenMerge(resumenEl, { soloImportados, enAmbos, soloLocal, com
         if (resumenEl.dataset.modo === modo) return;
         resumenEl.dataset.modo = modo;
         pintar(true);
-    });
+    }, origen);
     const tarjeta = _crearTarjetaResultadoMerge(cantidades, configCambios);
-    const alerta = _crearAlertaReemplazoMerge(soloLocal.length);
+    const alerta = _crearAlertaReemplazoMerge(soloLocal.length, origen);
     resumenEl.append(selector.el, tarjeta.el);
     if (alerta) resumenEl.appendChild(alerta.el);
 

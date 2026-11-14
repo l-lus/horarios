@@ -328,7 +328,7 @@ test('Ids: todo id que el código busca existe en index.html o lo crea el propio
 
 test('Errores: los servicios no lanzan por errores esperados, devuelven { error } (solo el cliente de red lanza)', () => {
     const conThrow = srcFiles
-        .filter(a => a.startsWith('src/services/') && a !== 'src/services/sincronizacion-gist.js')
+        .filter(a => a.startsWith('src/services/') && !['src/services/sincronizacion-gist.js', 'src/services/sincronizacion-drive.js'].includes(a))
         .filter(a => /\bthrow\b/.test(fs.readFileSync(a, 'utf8')));
     assert.deepEqual(conThrow, []);
 });

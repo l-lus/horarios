@@ -269,7 +269,7 @@ async function borrarTodoHistorial() {
     CLAVES_AJUSTES_INSTALACION.forEach(k => Almacenamiento.removeItem(k));   // la apariencia no es de un perfil: vuelve a la de fábrica
 
     const perfil = GestorPerfiles.obtenerDatosPerfil();
-    if (perfil) GestorPerfiles.CAMPOS_SYNC_GIST.forEach(k => delete perfil[k]);
+    if (perfil) [...GestorPerfiles.CAMPOS_SYNC_GIST, ...GestorPerfiles.CAMPOS_SYNC_DRIVE].forEach(k => delete perfil[k]);
 
     if (await Cambios.confirmar(`restablecer perfil (${TiempoUtils.contar(totalRegistros, 'registro')})`)) Recarga.solicitar();
 }

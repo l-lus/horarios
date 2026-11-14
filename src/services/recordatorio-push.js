@@ -5,13 +5,12 @@ import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from './gestor-perfiles.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { EstadoApp } from './estado-app.js';
+import { WorkerCliente } from './worker-cliente.js';
 
 // ====================================================================
 // PUSH REMINDER MODULE — notification via Cloudflare
 // ====================================================================
-const WORKER_URL = 'https://horarios-push.lushibosca.workers.dev';
 const VAPID_PUBLIC_KEY = 'BMU-iLslFVrTxUKMHRUn8r_CtyCLX41ppVTUgdATAdPYE8ayJ0U_ew6d50CmvghkIdv34fGuXvf-KP5W62rs3ms';
-const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9'; // que mira bobo, anda paya
 const MARGEN_CRON_MS = 60 * 1000;
 const AVISO_FALLO_CADA_MS = 10 * 60 * 1000;
 const REINTENTOS_MAX = 3;
@@ -40,18 +39,7 @@ function _avisarFallo(accion, status) {
     notify.mostrarToast(mensaje, 'warning', TOAST_MS.AVISO, motivo);
 }
 
-function _headersWorker() {
-    return { 'Content-Type': 'application/json', 'X-App-Secret': APP_SECRET };
-}
-
-function _postWorker(path, payload, keepalive = false) {
-    return fetch(`${WORKER_URL}${path}`, {
-        method: 'POST',
-        headers: _headersWorker(),
-        body: JSON.stringify(payload),
-        keepalive: !!keepalive
-    });
-}
+const _postWorker = WorkerCliente.post;
 
 function _urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);

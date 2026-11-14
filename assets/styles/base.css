@@ -327,6 +327,7 @@ body.header-arrastrando-activa * {
 .input-with-btn,
 .input-number-group,
 #gist-rango-horario,
+#drive-rango-horario,
 .modal-title-block,
 #calendario-nav-botones,
 .card-section-title,
@@ -724,7 +725,9 @@ button:disabled {
 
 :where(#btn-toggle-ignorar-tf,
     #btn-toggle-gist-backup,
-    #btn-toggle-gist-merge) {
+    #btn-toggle-drive-backup,
+    #btn-toggle-gist-merge,
+    #btn-toggle-drive-merge) {
     justify-content: center;
     padding: 0.875rem var(--space-lg);
     border: 1px solid var(--border);
@@ -1212,6 +1215,7 @@ mark.ayuda-resaltado--activa {
 
 #modo-normal,
 #gist-limite-sync,
+#drive-limite-sync,
 .contenedor-fechas {
     display: block;
 }

@@ -5,6 +5,7 @@ import { FeriadosAR } from './services/feriados-ar.js';
 import { Perfiles } from './ui/perfiles.js';
 import { Calendario } from './ui/calendario.js';
 import { GistRespaldo } from './ui/gist-respaldo.js';
+import { DriveRespaldo } from './ui/drive-respaldo.js';
 import { Historico } from './ui/historico.js';
 import { Estadisticas } from './ui/estadisticas.js';
 import { TarjetaFichaje } from './ui/tarjeta-fichaje.js';
@@ -37,6 +38,7 @@ function _iniciarEventosDOM() {
     Perfiles.bindEventos();
     Calendario.bindEventos();
     GistRespaldo.bindEventos();
+    DriveRespaldo.bindEventos();
     Historico.bindEventos();
     Estadisticas.bindEventos();
     TarjetaFichaje.bindEventos();
@@ -64,6 +66,7 @@ requestAnimationFrame(() => {
 
 (async () => {
     await BienvenidaModal.chequearYMostrar();
+    DriveRespaldo.completarConexionPendiente();   // se vuelve de autorizar Google Drive (ver oauth-callback.html)
     setTimeout(() => FeriadosAR.chequearYNotificar(), DEMORA_ARRANQUE_MS.FERIADOS);
     setTimeout(() => AvisoPush.chequearYAvisar(), DEMORA_ARRANQUE_MS.AVISO_PUSH);
     setTimeout(() => RecordatorioPush.registrarUso(), DEMORA_ARRANQUE_MS.REGISTRAR_USO);

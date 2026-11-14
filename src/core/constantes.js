@@ -47,6 +47,10 @@ export const STORAGE_KEYS = Object.freeze({
     PERFILES: 'perfiles',
     HISTORY: 'history',
     GIST_TOKEN: 'gistToken',
+    DRIVE_REFRESH_TOKEN: 'driveRefreshToken',   // global, como el token de GitHub: una cuenta de Google por navegador
+    DRIVE_CUENTA: 'driveCuenta',   // el correo de la cuenta conectada, solo para mostrarlo
+    DRIVE_OAUTH_PENDIENTE: 'driveOauthPendiente',   // state y code_verifier mientras se autoriza en Google (vencen a los 10 minutos)
+    DRIVE_OAUTH_RETORNO: 'driveOauthRetorno',   // lo que dejó oauth-callback.html al volver de Google (code o error, y el state)
     BIENVENIDA_VISTA: 'bienvenidaVista',
     FERIADOS_PROCESADOS: 'feriadosAR_procesados',
     PUSH_ANTICIPACION_MIN: 'pushAnticipacionMin',
@@ -63,6 +67,7 @@ export const STORAGE_KEYS = Object.freeze({
 
     BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
     GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
+    DRIVE_LIMITE: (tipo) => `driveSyncLimite_${tipo}`,
     MES_EXPANDIDO: (clave) => `mes-${clave}-expandido`,
     ANIO_EXPANDIDO: (anioId) => `anio-${anioId}-expandido`,
     CARD_VISIBLE: (cual) => `cardVisible_${cual}`,

@@ -4,35 +4,43 @@
 /* ─── GIST ───────────────────────────────────────────────────────────────────── */
 
 #gist-rango-horario,
-#gist-limite-sync {
+#drive-rango-horario,
+#gist-limite-sync,
+#drive-limite-sync {
     margin-top: var(--space-sm);
     transition: opacity var(--transition-ui);
     color: var(--text-muted);
 }
 
 #gist-rango-horario.disabled,
-#gist-limite-sync.disabled {
+#drive-rango-horario.disabled,
+#gist-limite-sync.disabled,
+#drive-limite-sync.disabled {
     opacity: var(--opacity-disabled);
     pointer-events: none;
 }
 
-#gist-limite-sync .input-number-group {
+#gist-limite-sync .input-number-group,
+#drive-limite-sync .input-number-group {
     width: 50%;
     flex: 1;
 }
 
-#gist-limite-sync .input-number-display {
+#gist-limite-sync .input-number-display,
+#drive-limite-sync .input-number-display {
     text-align: center;
 }
 
-#gist-limite-sync .form-group {
+#gist-limite-sync .form-group,
+#drive-limite-sync .form-group {
     display: flex;
     align-items: center;
     gap: var(--space-md);
     margin-bottom: 0;
 }
 
-#gist-limite-label {
+#gist-limite-label,
+#drive-limite-label {
     flex: 1;
     line-height: var(--lh-tight);
 }
@@ -126,7 +134,8 @@
         border-color var(--dur-fast) ease;
 }
 
-#btn-toggle-gist-backup:not(.btn-activo) .gist-valor {
+#btn-toggle-gist-backup:not(.btn-activo) .gist-valor,
+#btn-toggle-drive-backup:not(.btn-activo) .gist-valor {
     background: transparent;
     color: var(--text-muted);
     border-color: transparent;
@@ -304,7 +313,8 @@
 /* ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────── */
 
 .config-actions,
-#modal-gist .modal-panel-body {
+#modal-gist .modal-panel-body,
+#modal-drive .modal-panel-body {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -318,6 +328,8 @@
 }
 
 #modal-gist .settings-list>button,
+#modal-drive .settings-list>button,
+#modal-drive-elegir .settings-list>button,
 #modal-exportar .settings-list>button,
 #modal-config .config-actions button,
 .drag-handle,

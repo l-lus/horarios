@@ -10,7 +10,7 @@
          style-src 'self';
          img-src 'self'; 
          font-src 'self'; 
-         connect-src 'self' https://api.github.com https://horarios-push.lushibosca.workers.dev; 
+         connect-src 'self' https://api.github.com https://www.googleapis.com https://horarios-push.lushibosca.workers.dev; 
          worker-src 'self';
          manifest-src 'self';
          object-src 'none'; 
@@ -245,6 +245,9 @@
                 d="M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5m1.886 6.914L15 7.151V12.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V7.15l6.614 1.764a1.5 1.5 0 0 0 .772 0M1.5 4h13a.5.5 0 0 1 .5.5v1.616L8.129 7.948a.5.5 0 0 1-.258 0L1 6.116V4.5a.5.5 0 0 1 .5-.5z" />
             <path class="icon-plus-giro" d="M13.5 10.9v5.2M10.9 13.5h5.2" fill="none" stroke="currentColor"
                 stroke-width="1.5" stroke-linecap="round" />
+        </symbol>
+        <symbol id="icon-drive" viewBox="0 0 16 16">
+            <path d="M5.5 1h5l5 8.5L13 14H3L.5 9.5zm.6 1.3L1.9 9.5l1.7 3 4.2-7.2zm2.6 4.2L4.6 13h7.9l1.7-3z" />
         </symbol>
         <symbol id="icon-cloud" viewBox="0 0 16 16">
             <path
@@ -1013,6 +1016,15 @@
                                         <use href="#icon-chevron-right" />
                                     </svg>
                                 </button>
+                                <button class="btn-drive">
+                                    <svg class="icon">
+                                        <use href="#icon-drive" />
+                                    </svg>
+                                    <span>Google Drive</span>
+                                    <svg class="icon icon-indicator">
+                                        <use href="#icon-chevron-right" />
+                                    </svg>
+                                </button>
                                 <button class="btn-backup">
                                     <svg class="icon">
                                         <use href="#icon-upload" />
@@ -1134,6 +1146,8 @@
                             restauración</button>
                         <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-gist">- GitHub
                             Gist</button>
+                        <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-drive">- Google
+                            Drive</button>
                         <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-instalar">- Instalar la
                             app</button>
                         <button type="button" class="ayuda-indice-item" data-target="ayuda-sec-analitica">-
@@ -1157,7 +1171,7 @@
                             <p>- Sumar los feriados del mes (Argentina) con una confirmación.</p>
                             <p>- Crear distintos perfiles (de usuario o laborales).</p>
                             <p>- Personalizar la interfaz con temas, fondos y el orden de las tarjetas.</p>
-                            <p>- Crear backups locales o sincronizar con token de GitHub Gist.</p>
+                            <p>- Crear backups locales o sincronizar con GitHub Gist o Google Drive.</p>
                             <p>- Instalarla como app en tu dispositivo.</p>
                             <p>- Actualizarse sola: al detectar una versión nueva muestra el avance de la descarga y, al terminar, te avisa para recargar (en el celular también podés tirar de la página hacia abajo para recargar).</p>
                         </section>
@@ -1403,7 +1417,8 @@
                             <h4>Dónde se guardan tus datos</h4>
                             <p>Tus registros, perfiles y ajustes se guardan localmente en tu dispositivo, en el
                                 almacenamiento del navegador (localStorage). Si borrás el historial del navegador, los
-                                datos se perderán; por eso conviene hacer backups o usar GitHub Gist.</p>
+                                datos se perderán; por eso conviene hacer backups o usar GitHub Gist o Google Drive. Salvo que
+                                uses uno de los dos, tus datos no salen del dispositivo.</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-respaldo">
@@ -1489,6 +1504,34 @@
                                 perfiles; el Gist ID, el modo automático, el comportamiento al bajar y la franja horaria
                                 son de cada perfil. Los cambios de conexión, modo, límites y franja se guardan con el
                                 botón <strong>Guardar</strong> (Subir y Bajar guardan antes el token y el Gist ID).</p>
+                        </section>
+
+                        <section class="ayuda-seccion" id="ayuda-sec-drive">
+                            <h4>Google Drive</h4>
+                            <p>Desde Ajustes → Datos → Google Drive podés guardar los datos de tu perfil en tu Drive y
+                                usarlos entre dispositivos, sin crear tokens: tocás <em>Conectar</em>, elegís tu cuenta
+                                de Google y volvés a la app. La app solo puede ver los archivos que ella misma creó en tu
+                                Drive (permiso <em>drive.file</em>), no el resto.</p>
+                            <p><strong>El respaldo:</strong> cada perfil tiene su archivo
+                                (<code>horarios_&lt;perfil&gt;.json</code>), visible en tu Drive. La primera vez que
+                                subís se crea; en otro dispositivo, al bajar, la app te muestra los respaldos de
+                                Horarios que hay en la cuenta para que elijas cuál usar. Desde <em>Respaldo de este
+                                    perfil</em> podés cambiarlo o crear otro. No lo edites a mano: la app comprueba su
+                                integridad al bajarlo.</p>
+                            <p><strong>Seguridad:</strong> el permiso de Google se guarda solo en este navegador y nunca
+                                va en las copias de seguridad. Para autorizar y renovar ese permiso la app pasa por su
+                                propio servicio (el mismo de las notificaciones), que no guarda nada. <em>Desconectar</em>
+                                le quita el acceso a la app; los respaldos quedan en tu Drive.</p>
+                            <p><strong>Cifrado, Subir y Bajar, Combinar y Reemplazar, automatización, límites y
+                                    horario:</strong> funcionan igual que en el Gist y usan la misma frase de cifrado.
+                                Con frase, Google no puede leer tus registros.</p>
+                            <p><strong>Gist y Drive juntos:</strong> un perfil puede tener los dos conectados, pero
+                                solo uno sincroniza solo: al guardar la sincronización automática en uno, se apaga en el
+                                otro. Los botones rápidos del histórico usan el que tenga la automática activa (si
+                                ninguno, el último que sincronizaste).</p>
+                            <p><strong>Por perfil:</strong> la cuenta de Google y el límite por hora son comunes a todos
+                                los perfiles; el respaldo vinculado, el modo automático, el comportamiento al bajar y la
+                                franja horaria son de cada perfil.</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-instalar">
@@ -1755,6 +1798,246 @@
                             <use href="#icon-back" />
                         </svg>
                         Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal modal-scrollable" id="modal-drive" role="dialog" aria-modal="true"
+        aria-labelledby="modal-drive-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3 id="modal-drive-titulo">
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-drive" />
+                        </svg>
+                        Google Drive
+                    </span>
+                </h3>
+            </div>
+            <div class="modal-panel-body custom-scroll">
+                <div class="gist-estado gist-estado--off" id="drive-estado">
+                    <svg class="icon">
+                        <use href="#icon-cloud" />
+                    </svg>
+                    <div>
+                        <div class="gist-estado-titulo" id="drive-estado-titulo">Sin conectar</div>
+                        <div class="settings-list-desc" id="drive-ultima-sync">Sin sincronizar</div>
+                    </div>
+                </div>
+
+                <div class="config-actions">
+                    <label>Conexión</label>
+                    <div class="settings-list">
+                        <button id="btn-drive-cuenta">
+                            <svg class="icon">
+                                <use href="#icon-drive" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Cuenta de Google</span>
+                                <span class="settings-list-desc" id="drive-cuenta-resumen">Sin conectar</span>
+                                <span class="gist-valor" id="drive-cuenta-accion">Conectar</span>
+                            </span>
+                        </button>
+                        <button id="btn-drive-elegir">
+                            <svg class="icon">
+                                <use href="#icon-list" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Respaldo de este perfil</span>
+                                <span class="settings-list-desc" id="drive-archivo-resumen">Ninguno · se crea al subir</span>
+                            </span>
+                            <svg class="icon icon-indicator">
+                                <use href="#icon-chevron-right" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="config-actions">
+                    <label>Cifrado (opcional)</label>
+                    <div class="settings-list">
+                        <button id="btn-drive-panel-cifrado" class="drive-panel-toggle gist-panel-toggle" aria-expanded="false"
+                            aria-controls="drive-panel-cifrado">
+                            <svg class="icon">
+                                <use href="#icon-lock" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Frase de cifrado</span>
+                                <span class="settings-list-desc" id="drive-cifrado-resumen">Sin cifrar</span>
+                            </span>
+                            <svg class="icon icon-indicator">
+                                <use href="#icon-chevron-right" />
+                            </svg>
+                        </button>
+                        <div class="gist-panel collapsible" id="drive-panel-cifrado">
+                            <div class="collapsible-inner">
+                                <div class="gist-panel-contenido">
+                                    <div class="form-group">
+                                        <label for="drive-frase">Frase (mínimo 20 caracteres)</label>
+                                        <div class="input-with-btn">
+                                            <input type="password" id="drive-frase" placeholder="Vacía = sin cifrar"
+                                                maxlength="200" autocomplete="off" spellcheck="false" />
+                                            <button class="time-btn" id="btn-drive-frase-ver" type="button" title="Mostrar/ocultar frase">
+                                                <svg class="icon">
+                                                    <use href="#icon-eye" />
+                                                </svg>
+                                            </button>
+                                            <button class="time-btn" id="btn-drive-frase-generar" type="button" title="Generar una frase al azar">
+                                                <svg class="icon">
+                                                    <use href="#icon-magic" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <p class="frase-nota">Es la misma frase del Gist. Con ella, el respaldo se sube
+                                            cifrado y Google no puede leer tus registros. Tenés que cargarla en cada
+                                            dispositivo. Si la perdés, el respaldo no se puede abrir (tus datos locales
+                                            siguen).</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="btn-toggle-drive-recordar">
+                            <svg class="icon">
+                                <use href="#icon-lock-open" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Recordar en este navegador</span>
+                                <span class="settings-list-desc">Sin activar, la frase vale hasta cerrar la app. La
+                                    sincronización automática lo necesita.</span>
+                            </span>
+                            <span class="toggle-switch" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="config-actions">
+                    <label>Automatización</label>
+                    <div class="settings-list">
+                        <button id="btn-toggle-drive-backup">
+                            <svg class="icon">
+                                <use href="#icon-cloud" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Sincronización automática</span>
+                                <span class="settings-list-desc" id="hint-drive-backup"></span>
+                                <span class="gist-valor" id="label-drive-backup">Sin automatizar</span>
+                            </span>
+                        </button>
+                        <button id="btn-toggle-drive-merge">
+                            <svg class="icon" id="icon-drive-merge">
+                                <use href="#icon-replace-swap" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Al bajar datos</span>
+                                <span class="settings-list-desc" id="desc-drive-merge"></span>
+                                <span class="gist-valor" id="hint-drive-merge">Reemplazar</span>
+                            </span>
+                        </button>
+                        <button id="btn-drive-panel-limites" class="drive-panel-toggle gist-panel-toggle" aria-expanded="false"
+                            aria-controls="drive-panel-limites">
+                            <svg class="icon">
+                                <use href="#icon-clock" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Límites y horario</span>
+                                <span class="settings-list-desc" id="drive-limites-resumen">—</span>
+                            </span>
+                            <svg class="icon icon-indicator">
+                                <use href="#icon-chevron-right" />
+                            </svg>
+                        </button>
+                        <div class="gist-panel collapsible" id="drive-panel-limites">
+                            <div class="collapsible-inner">
+                                <div class="gist-panel-contenido">
+                                    <div id="drive-limite-sync">
+                                        <div class="form-group">
+                                            <label id="drive-limite-label">Límite por hora</label>
+                                            <div class="input-number-group input-number-group--embed">
+                                                <button id="btn-drive-limite-dec" class="btn-increment" type="button"
+                                                    title="Disminuir límite">-</button>
+                                                <span id="drive-limite-valor" class="input-number-display">0</span>
+                                                <button id="btn-drive-limite-inc" class="btn-increment" type="button"
+                                                    title="Incrementar límite">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="drive-rango-horario">
+                                        <label>Desde</label>
+                                        <input type="text" id="drive-rango-desde" inputmode="numeric" maxlength="5"
+                                            aria-label="Desde" />
+                                        <label>Hasta</label>
+                                        <input type="text" id="drive-rango-hasta" inputmode="numeric" maxlength="5"
+                                            aria-label="Hasta" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gist-acciones">
+                    <button id="btn-drive-subir">
+                        <svg class="icon">
+                            <use href="#icon-nube" />
+                            <use class="icon-flecha" href="#icon-flecha-nube-subir" />
+                        </svg>
+                        <span>Subir</span>
+                    </button>
+                    <button id="btn-drive-bajar">
+                        <svg class="icon">
+                            <use href="#icon-nube" />
+                            <use class="icon-flecha" href="#icon-flecha-nube-bajar" />
+                        </svg>
+                        <span>Bajar</span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-export" id="btn-drive-guardar">
+                        <svg class="icon">
+                            <use href="#icon-check" />
+                        </svg>
+                        Guardar
+                    </button>
+                    <button class="btn-cancel" id="btn-drive-volver">
+                        <svg class="icon">
+                            <use href="#icon-back" />
+                        </svg>
+                        Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal modal-scrollable" id="modal-drive-elegir" role="dialog" aria-modal="true"
+        aria-labelledby="modal-drive-elegir-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3>
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-drive" />
+                        </svg>
+                        <span id="modal-drive-elegir-titulo">Respaldos en Drive</span>
+                    </span>
+                </h3>
+            </div>
+            <div class="modal-panel-body custom-scroll">
+                <p class="frase-nota" id="drive-elegir-motivo"></p>
+                <div class="settings-list" id="drive-elegir-lista"></div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-cancel" id="btn-drive-elegir-cancelar">
+                        <svg class="icon">
+                            <use href="#icon-cancelar" />
+                        </svg>
+                        Cancelar
                     </button>
                 </div>
             </div>

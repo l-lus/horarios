@@ -478,7 +478,8 @@ function _forzarVista(nuevaVista, renderFn) {
 
 function alternarVista() {
     const nuevaVista = EstadoApp.vistaActual() === 'semana' ? 'diaria' : 'semana';
-    _forzarVista(nuevaVista, () => actualizarUI());
+    // el histórico no depende de la vista (día/semana): se deja intacto para que no se reconstruya (parpadeo) ni pierda su scroll
+    _forzarVista(nuevaVista, () => actualizarUI(null, true));
 }
 
 function bindEventos() {

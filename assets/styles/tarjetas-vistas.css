@@ -2716,7 +2716,7 @@ html[data-disposicion-anillo="intercambiado-derecha"] .est-anillo-aro {
 
 
 /* ─── ÉNFASIS DE COLOR (<html data-enfasis>, ver GestorTemas y el final de tokens.css) ──────────────────────────────
-   Sin énfasis (el predeterminado no pone el atributo) nada de esto aplica. El énfasis solo toca la tarjeta de fichaje, los sliders (ver .toggle-switch) y el badge del perfil activo. */
+   Sin énfasis (el predeterminado no pone el atributo) nada de esto aplica. El énfasis solo toca lo que se lista en estas reglas y en modales-funciones.css (sliders, días laborales de Ajustes, badge del perfil activo). */
 
 /* Fichar: con la tarjeta cerrada se rellena entera con el acento (una capa detrás de la cabecera que cubre la tarjeta); al abrirla la capa se desvanece y el relleno
    pasa solo al botón Fichar (otra capa, en forma de píldora). Las dos capas se animan con opacity */
@@ -2774,4 +2774,17 @@ html[data-enfasis] .btn-register::before {
 
 html[data-enfasis] .card-registrar-header:has(+ #form-registro.expanded) .btn-register::before {
     opacity: 1;
+}
+
+/* Flechas de las tarjetas (Estadísticas, Registros), botón del período de las estadísticas y botón del perfil del encabezado */
+html[data-enfasis] .card-header-clickable .chevron {
+    color: var(--c-enfasis);
+}
+
+html[data-enfasis] .btn-toggle-periodo,
+html[data-enfasis] .header-profile-btn {
+    background: var(--c-enfasis);
+    color: var(--c-on-enfasis);
+    border-color: transparent;
+    font-weight: var(--fw-bold);
 }

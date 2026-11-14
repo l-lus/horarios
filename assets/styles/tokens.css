@@ -61,7 +61,7 @@
     --c-orange: rgba(210, 120, 50, 0.8);
     --c-gray-btn: #f0f2f8;
     --c-white: #ffffff;
-    /* --c-enfasis (ver el final de este archivo) solo existe con un énfasis elegido; sin él, quien lo usa (la tarjeta de fichaje, los sliders, los días laborales de Ajustes y el badge del perfil activo) cae en --c-active del tema, con var(--c-enfasis, var(--c-active)) */
+    /* --c-enfasis (ver el final de este archivo) solo existe con un énfasis elegido; sin él, quien lo usa (la tarjeta de fichaje, los sliders, los días laborales de Ajustes, las flechas de las tarjetas, el botón del período, el del perfil y el badge del perfil activo) cae en --c-active del tema, con var(--c-enfasis, var(--c-active)) */
     --c-on-enfasis: var(--c-white);     /* texto sobre fondos de --c-enfasis: los énfasis claros (lima, naranja, neutro) lo oscurecen */
     --shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
     --radius-sm: 10px;
@@ -257,7 +257,7 @@ body[data-theme="medianoche"] {
 }
 
 /* ─── ÉNFASIS (se combinan con cualquier tema; sin data-enfasis queda el predeterminado) ───────────────
-   Solo cambian --c-enfasis (y el color del texto sobre él), que usan únicamente la tarjeta de fichaje, los sliders, los días laborales de Ajustes y el badge del perfil activo.
+   Solo cambian --c-enfasis (y el color del texto sobre él), que usan únicamente la tarjeta de fichaje, los sliders, los días laborales de Ajustes, las flechas de las tarjetas, el botón del período, el del perfil y el badge del perfil activo.
    El primer bloque vale para los temas oscuros; el segundo, con más especificidad, para los claros. Un test vigila que las muestras de ui/gestor-temas.js coincidan. */
 
 html[data-enfasis="lima"] body,

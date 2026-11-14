@@ -27,32 +27,6 @@
     }
 }
 
-@keyframes llamarAtencion {
-    0% {
-        transform: scale(1, 1);
-    }
-
-    5% {
-        transform: scale(1.25, 0.75);
-    }
-
-    10% {
-        transform: scale(0.75, 1.25);
-    }
-
-    15% {
-        transform: scale(1.15, 0.85);
-    }
-
-    20% {
-        transform: scale(1, 1);
-    }
-
-    100% {
-        transform: scale(1, 1);
-    }
-}
-
 @keyframes mutacionSalida {
     from {
         opacity: 1;
@@ -166,6 +140,29 @@ button.campo-flash {
     --onda-color: var(--text-main);
 }
 
+.btn-register.destello-fichar {
+    --onda-color: var(--c-active);
+    --onda-escala: 1.4;
+    --franja-color: color-mix(in srgb, var(--c-active) 55%, transparent);
+    position: relative;
+    z-index: 2;
+}
+
+/* el botón tiene un relleno grande para el toque: el destello rodea solo el texto y el ícono (con énfasis el botón mismo es la píldora, ver tarjetas-vistas.css) */
+.btn-register > .destello-capa {
+    inset: 10px 0;
+}
+
+html[data-enfasis] .btn-register > .destello-capa {
+    inset: 0;
+}
+
+/* Con énfasis y la tarjeta cerrada el botón está sobre el relleno del acento: el destello va con el color del texto */
+html[data-enfasis] .card-registrar-header:not(:has(+ #form-registro.expanded)) .btn-register.destello-fichar {
+    --onda-color: var(--c-on-active);
+    --franja-color: color-mix(in srgb, var(--c-on-active) 45%, transparent);
+}
+
 .icon-btn.destello-instalar {
     --onda-color: var(--c-blue);
     --onda-escala: 1.5;
@@ -235,7 +232,7 @@ button.campo-flash {
     display: none;
 }
 
-:root[data-motion="reduce"] :is(.calendario-dia.destello-hoy, .est-mosaico.mosaico-flash, .icon-btn.destello-instalar) {
+:root[data-motion="reduce"] :is(.calendario-dia.destello-hoy, .est-mosaico.mosaico-flash, .icon-btn.destello-instalar, .btn-register.destello-fichar) {
     --onda-escala: 1;
 }
 
@@ -367,7 +364,6 @@ button.campo-flash-color {
     animation: fichaje-ok var(--dur-fichaje-ok) both;
 }
 
-/* Se deja puesta a propósito: evita que vuelva el llamarAtencion recién fichado */
 .btn-register .icon.fichaje-ok-vuelta {
     transform-origin: center;
     animation: fichaje-ok-vuelta var(--dur-fichaje-vuelta) ease-out;
@@ -627,7 +623,6 @@ button.campo-flash-color {
 
 /* Decorativas o llamadores de atención en bucle: se quitan. El estado sigue
    comunicado por texto y color (badges, botón rojo del timer). */
-:root[data-motion="reduce"] .btn-register .icon,
 :root[data-motion="reduce"] .tf-badge,
 :root[data-motion="reduce"] .estado-badge--en-curso,
 :root[data-motion="reduce"] .timer-btn.running {

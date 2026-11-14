@@ -1,5 +1,6 @@
 import { Movimiento } from '../core/movimiento.js';
 import { Animaciones } from './animaciones.js';
+import { TiposRegistro } from '../services/tipos-registro.js';
 import { icono, html, montar } from '../core/html.js';
 
 const { DUR_FICHAJE_OK, DUR_FICHAJE_SALIDA } = Animaciones;
@@ -14,6 +15,23 @@ export function resetearBoton(btn) {
     // Con el check de éxito en curso no se recrea el ícono: lo restaura su propia salida
     if (_exitoFichaje.has(btn)) return;
     montar(btn, html`${icono('#icon-clock')} <span id="btn-registrar-texto">Fichar</span>`);
+}
+
+// ─── Destello de la carga ───────────────────────────────────────────────────
+// Al cargar la página, una sola vez, el botón destella (el mismo barrido y onda del botón de instalar y del día de hoy del calendario) si hoy se puede fichar:
+// no hay registro o tiene la entrada sin salida. Con un día especial (feriado, vacaciones…) o la jornada ya cerrada no se llama la atención.
+const INICIO_DESTELLO_MS = 1200;
+
+/** ¿Falta fichar hoy? Sin registro, o con entrada y sin salida que no sea un día especial. @param {any} regHoy */
+export function puedeFicharHoy(regHoy) {
+    if (!regHoy) return true;
+    return !!regHoy.entrada && !regHoy.salida && !TiposRegistro.obtenerTipoPorCodigo(regHoy.entrada, regHoy.salida);
+}
+
+/** @param {HTMLElement|null} btn @param {any} regHoy el registro de hoy (o null/undefined si no hay) */
+export function destellarFicharAlCargar(btn, regHoy) {
+    if (!btn || Movimiento.reducido() || !puedeFicharHoy(regHoy)) return;
+    setTimeout(() => { if (btn.offsetParent) Animaciones._flashElemento(btn, 'destello-fichar'); }, INICIO_DESTELLO_MS);
 }
 
 // ─── Check de éxito en el botón Fichar ──────────────────────────────────────

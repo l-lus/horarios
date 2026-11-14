@@ -45,7 +45,7 @@ import { VerificarFeriados } from './verificar-feriados.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { resetearBoton, restaurarBotonGuardarEdicion, animarExitoFichaje } from './boton-fichar.js';
+import { resetearBoton, restaurarBotonGuardarEdicion, animarExitoFichaje, destellarFicharAlCargar } from './boton-fichar.js';
 import { registrarSwipe, debounce } from './gestos.js';
 import { mostrarToast, _habilitarCierreToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
@@ -463,6 +463,7 @@ async function init() {
     actualizarBotonesHistorico();
 
     const hoy = TiempoUtils.obtenerFechaHoy();
+    destellarFicharAlCargar($('btn-agregar'), EstadoApp.registros().find(r => r.fecha === hoy));
     const hoyEsLaborable = DiasHabiles.esDiaLaboral(hoy);
     if (EstadoApp.vistaActual() === 'semana' && hoyEsLaborable) {
         setTimerAutoVista(setTimeout(() => {

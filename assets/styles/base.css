@@ -711,11 +711,6 @@ button:disabled {
     color: var(--c-red);
 }
 
-.btn-register .icon {
-    animation: llamarAtencion var(--dur-ambiente) ease-in-out 1.2s 2;
-    transform-origin: bottom;
-}
-
 .btn-delete {
     background: var(--c-red);
     color: var(--c-white);

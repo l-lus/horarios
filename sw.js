@@ -1,9 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-<<<<<<< HEAD
-const CACHE_NAME = `${CACHE_PREFIX}v261114.0149-cache`;
-=======
-const CACHE_NAME = `${CACHE_PREFIX}v261114.1909-cache`;
->>>>>>> 61097a9 (Alternar vista día/semana ya no reconstruye el histórico: evita el parpadeo y el salto de scroll en la vista de lista)
+const CACHE_NAME = `${CACHE_PREFIX}v261114.1917-cache`;
 const urlsToCache = [
   './',
   './index.html',

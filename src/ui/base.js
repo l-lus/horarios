@@ -8,7 +8,7 @@ import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
 import { debounce, _crearPressHold } from './gestos.js';
 import { mostrarToast, _cerrarToastActual, _habilitarCierreToast } from './toast.js';
-import { resetearBoton, salirExitoFichaje } from './boton-fichar.js';
+import { resetearBoton, salirExitoFichaje, animarErrorFichaje, destellarResultadoFichar } from './boton-fichar.js';
 import { _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante } from './popups.js';
 import { _scrollA, _esperarFinScroll, _scrollHastaVisible } from './scroll.js';
 
@@ -194,8 +194,11 @@ function _vibrarFichar(tipo) {
 }
 
 function _flashCampoTipo(tipo, ...ids) {
-    _flashCampoConClase('campo-flash-color', ids, _COLOR_TOAST_POR_TIPO[tipo] || 'var(--text-main)');
-    if (ids.includes('btn-agregar')) {
+    // el botón Fichar tiene su propio feedback (aro relleno que se ve también sobre el énfasis); el resto de los campos parpadea con el borde
+    const campos = ids.filter(id => id !== 'btn-agregar');
+    _flashCampoConClase('campo-flash-color', campos, _COLOR_TOAST_POR_TIPO[tipo] || 'var(--text-main)');
+    if (campos.length < ids.length) {
+        destellarResultadoFichar($('btn-agregar'), tipo);
         _vibrarFichar(tipo);
     }
 }
@@ -210,6 +213,8 @@ function _avisarFichaje(msg, tipo = 'error', { btn = null, duracion = undefined 
     if (btn) resetearBoton(btn);
     if (msg) mostrarToast(msg, tipo, duracion);
     _flashCampoTipo(tipo, 'btn-agregar');
+    // un fichaje que falla (error o aviso, no un simple «completá los campos») muestra la X con la misma animación que el check
+    if (tipo === 'error' || tipo === 'warning') animarErrorFichaje($('btn-agregar'));
 }
 
 function aplicarFeedbackCampos(campos, texto = '✓ Agregado', claseColor = 'label-feedback--green') {

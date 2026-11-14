@@ -42,7 +42,7 @@ const _exitoFichaje = new WeakMap();
 function _limpiarAnimExito(svg) {
     svg.getAnimations?.().forEach(a => a.cancel());
     svg.style.animation = '';
-    svg.classList.remove('fichaje-ok', 'fichaje-ok-vuelta');
+    svg.classList.remove('fichaje-ok', 'fichaje-error', 'fichaje-ok-vuelta');
 }
 
 function _finalizarExitoFichaje(btn, conVuelta = true) {
@@ -50,10 +50,10 @@ function _finalizarExitoFichaje(btn, conVuelta = true) {
     if (!est) return;
     clearTimeout(est.timer);
     _exitoFichaje.delete(btn);
-    const { svg, use, original } = est;
+    const { svg, use, original, icono: iconoResultado } = est;
     _limpiarAnimExito(svg);
     // Si otro flujo ya cambió el ícono (ej. modo lote), no se pisa
-    if (use.getAttribute('href') !== '#icon-check-circle') return;
+    if (use.getAttribute('href') !== iconoResultado) return;
     use.setAttribute('href', original);
     if (conVuelta && !Movimiento.reducido()) {
         void svg.getBoundingClientRect();
@@ -62,22 +62,46 @@ function _finalizarExitoFichaje(btn, conVuelta = true) {
 }
 
 export function animarExitoFichaje(btn) {
+    _animarResultadoFichaje(btn, '#icon-check-circle', 'fichaje-ok');
+}
+
+/** Lo mismo que el check pero con una X (el fichaje falló): mismo ícono que rebota, misma pausa y misma salida, en rojo. */
+export function animarErrorFichaje(btn) {
+    _animarResultadoFichaje(btn, '#icon-x-circle', 'fichaje-error');
+}
+
+// Feedback de color del botón: un aro con relleno translúcido (capa ::after, solo opacity) en el color del resultado; sobre el relleno del énfasis el CSS lo pasa al color del texto
+const _TIPOS_FEEDBACK = ['success', 'error', 'warning', 'info'];
+const _feedbackTimers = new WeakMap();
+
+/** @param {HTMLElement|null} btn @param {string} tipo success | error | warning | info */
+export function destellarResultadoFichar(btn, tipo) {
+    if (!btn) return;
+    clearTimeout(_feedbackTimers.get(btn));
+    btn.classList.remove('fichar-feedback', ..._TIPOS_FEEDBACK.map(t => `fichar-feedback--${t}`));
+    void btn.offsetWidth;
+    btn.classList.add('fichar-feedback', `fichar-feedback--${_TIPOS_FEEDBACK.includes(tipo) ? tipo : 'info'}`);
+    _feedbackTimers.set(btn, setTimeout(() => btn.classList.remove('fichar-feedback', ..._TIPOS_FEEDBACK.map(t => `fichar-feedback--${t}`)), Animaciones._getCSSdur('--dur-flash') * 2 + 100));
+}
+
+/** @param {HTMLElement|null} btn @param {string} iconoResultado @param {string} clase */
+function _animarResultadoFichaje(btn, iconoResultado, clase) {
     if (!btn || !btn.offsetParent) return;
     const svg = btn.querySelector('svg.icon');
     const use = svg?.querySelector('use');
-    if (!use) return;
+    if (!svg || !use) return;
 
     const previo = _exitoFichaje.get(btn);
     const original = (previo && previo.svg === svg) ? previo.original : use.getAttribute('href');
     if (previo) { clearTimeout(previo.timer); _limpiarAnimExito(previo.svg); }
     else _limpiarAnimExito(svg);
 
-    use.setAttribute('href', '#icon-check-circle');
+    use.setAttribute('href', iconoResultado);
     void svg.getBoundingClientRect();
-    svg.classList.add('fichaje-ok');
+    svg.classList.add(clase);
 
     const timer = setTimeout(() => _finalizarExitoFichaje(btn), DUR_FICHAJE_OK());
-    _exitoFichaje.set(btn, { svg, use, original, timer });
+    _exitoFichaje.set(btn, { svg, use, original, timer, icono: iconoResultado });
 }
 
 export function salirExitoFichaje(btn) {

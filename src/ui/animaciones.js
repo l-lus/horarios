@@ -471,6 +471,7 @@ function _animarTextoHover(el, fn) {
 export const Animaciones = {
     _animarTextoHover,
     _durSiAnima,
+    _getCSSdur,
     DUR_ANIM,
     DUR_CALENDARIO,
     DUR_FICHAJE_OK,

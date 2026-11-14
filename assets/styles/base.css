@@ -696,6 +696,7 @@ button:disabled {
 }
 
 .btn-register {
+    position: relative;
     width: auto;
     padding: 17px;
     margin: -17px;

@@ -390,8 +390,12 @@ async function enviarNotificacionPrueba(demoraMs = 10000) {
     return 'ok';
 }
 
-async function registrarUso() {
-    if (document.visibilityState !== 'visible' || navigator.onLine === false) return;
+/**
+ * Ping diario anónimo de uso. Lo que depende de la página (si está a la vista y si corre instalada) lo lee la UI.
+ * @param {{ visible: boolean, pwa: boolean }} contexto
+ */
+async function registrarUso({ visible, pwa }) {
+    if (!visible || navigator.onLine === false) return;
     if (!Preferencias.STATS_HABILITADO.get()) return;
     const KEY = STORAGE_KEYS.STATS_ULTIMO_PING;
     const ahora = Date.now();
@@ -399,7 +403,6 @@ async function registrarUso() {
     const id = _idEstadisticas();
     if (!id) return;
     Almacenamiento.setItem(KEY, String(ahora));
-    const pwa = window.matchMedia('(display-mode: standalone)').matches || /** @type {any} */ (window.navigator).standalone === true;
     try {
         await _postWorker('/api/hola', { id, modo: pwa ? 'pwa' : 'navegador', version: await _versionApp() });
     } catch { /* sin estadística esta vez, no afecta a la app */ }

@@ -193,8 +193,9 @@ test('CSP: index.html no usa estilos en línea (style-src \'self\' los bloquea)'
     assert.deepEqual(atributos, [], 'hay atributos style="..." en index.html');
 });
 
-test('Capas: src/services no accede al DOM (document / $())', () => {
-    const reDom = /\bdocument\.(getElementById|querySelector|querySelectorAll|body|createElement|documentElement|activeElement)\b|(?<![\w.])\$\(/g;
+test('Capas: src/services no accede al DOM (document / $() / matchMedia)', () => {
+    // Cualquier uso de document (también visibilityState, cookie, title…) y las consultas de medios son de la UI
+    const reDom = /\bdocument\b|\bmatchMedia\b|getComputedStyle|(?<![\w.])\$\(/g;
     const violaciones = [];
     for (const file of srcFiles.filter(f => f.startsWith('src/services/'))) {
         const codigo = fs.readFileSync(file, 'utf8')

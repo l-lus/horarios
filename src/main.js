@@ -72,6 +72,10 @@ requestAnimationFrame(() => {
     await bienvenida.cerrada;
     setTimeout(() => FeriadosAR.chequearYNotificar(), DEMORA_ARRANQUE_MS.FERIADOS);
     setTimeout(() => AvisoPush.chequearYAvisar(), DEMORA_ARRANQUE_MS.AVISO_PUSH);
-    setTimeout(() => RecordatorioPush.registrarUso(), DEMORA_ARRANQUE_MS.REGISTRAR_USO);
-    document.addEventListener('visibilitychange', () => RecordatorioPush.registrarUso());
+    const registrarUso = () => RecordatorioPush.registrarUso({
+        visible: document.visibilityState === 'visible',
+        pwa: window.matchMedia('(display-mode: standalone)').matches || /** @type {any} */ (window.navigator).standalone === true
+    });
+    setTimeout(registrarUso, DEMORA_ARRANQUE_MS.REGISTRAR_USO);
+    document.addEventListener('visibilitychange', registrarUso);
 })();

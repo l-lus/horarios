@@ -26,11 +26,15 @@ export class CampoFrase {
         if (recordar) $(recordar)?.addEventListener('click', () => { $(recordar)?.classList.toggle('btn-activo'); this.alCambiar(); });
     }
 
-    /** Lo que muestra el campo al abrir el modal: la frase guardada (oculta) y el interruptor según esté recordada. */
+    /**
+     * Lo que muestra el campo al abrir el modal: la frase guardada (oculta) y el interruptor «Recordar». Sin frase guardada viene
+     * activado (la sincronización automática lo necesita); con una frase, muestra cómo está guardada (recordada o solo en la sesión).
+     */
     cargar() {
         const campo = $(this.ids.input);
-        if (campo) { campo.value = FraseCifrado.actual(); campo.type = 'password'; }
-        if (this.ids.recordar) $(this.ids.recordar)?.classList.toggle('btn-activo', FraseCifrado.recordada());
+        const actual = FraseCifrado.actual();
+        if (campo) { campo.value = actual; campo.type = 'password'; }
+        if (this.ids.recordar) $(this.ids.recordar)?.classList.toggle('btn-activo', actual ? FraseCifrado.recordada() : true);
         this.alCambiar();
     }
 

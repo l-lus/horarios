@@ -737,8 +737,8 @@ body.config-onboarding #theme-toggle-config {
 
 .perfil-agregar-toggle[aria-expanded="true"] {
     --giro-plus: 45deg;
-    background: var(--c-active);
-    color: var(--c-white);
+    background: var(--c-enfasis, var(--c-active));
+    color: var(--c-on-enfasis, var(--c-white));
     border-color: transparent;
 }
 

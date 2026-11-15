@@ -258,6 +258,31 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(r, { visible: true, dentro: true, oculta: true, icono: true });
     });
 
+    await t.test('Verificar feriados: Aplicar y Volver en la misma fila, sin solapes, y las opciones marcadas llevan el énfasis', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const { GestorModales } = await import('/src/ui/gestor-modales.js');
+            // la app puede ofrecer por su cuenta completar feriados: se rechaza para dejar la pantalla libre
+            await h.pausa(300);
+            if (document.getElementById('modal-confirmar').classList.contains('show')) h.clic('#modal-confirmar-cancel');
+            await h.hasta(() => !document.querySelector('.modal.show'), 5000, 'sin modales');
+            GestorModales.abrir('modal-verificar-feriados');
+            await h.modalAbierto('modal-verificar-feriados');
+            await h.pausa(500);
+            const a = document.getElementById('btn-aplicar-feriados').getBoundingClientRect();
+            const v = document.querySelector('#modal-verificar-feriados .btn-cancel').getBoundingClientRect();
+            document.body.setAttribute('data-enfasis', 'rosa');
+            document.documentElement.setAttribute('data-enfasis', 'rosa');
+            const marcada = getComputedStyle(document.querySelector('#verif-feriados-anteriores ~ span')).backgroundColor;
+            const enfasis = getComputedStyle(document.body).getPropertyValue('--c-enfasis').trim();
+            document.documentElement.removeAttribute('data-enfasis');
+            const solapes = h.solapes();
+            GestorModales.cerrar('modal-verificar-feriados');
+            return { mismaFila: Math.abs(a.top - v.top) < 2 && a.right <= v.left + 1, solapes, usaEnfasis: enfasis !== '' && marcada !== '' };
+        });
+        assert.deepEqual(r, { mismaFila: true, solapes: [], usaEnfasis: true });
+    });
+
     await t.test('escritorio: sin desplazamiento lateral ni controles solapados, y sin errores en toda la corrida', async () => {
         await app.tamano(1280, 800, false);
         await evaluar(() => window.humo.pausa(600));

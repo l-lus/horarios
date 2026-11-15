@@ -1,5 +1,5 @@
 import { Preferencias } from '../core/preferencias.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, CORTES_LAYOUT } from '../core/constantes.js';
 import { $, esPunteroFino } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -289,6 +289,9 @@ function _limpiarEntradaCalendario(grid) {
         .forEach(c => c.classList.remove('cal-entrada', 'cal-entrada-remate'));
 }
 
+/** Lo que dura la entrada inicial (0 si no se animó): el destello de «hoy» de la carga espera a que termine. */
+let _entradaInicialMs = 0;
+
 function animarEntradaInicial() {
     const grid = $('calendario-grid');
     if (!grid || Movimiento.reducido() || !grid.offsetParent || _estaColapsado(grid)) return;
@@ -310,7 +313,16 @@ function animarEntradaInicial() {
 
     const total = _durSiAnima('--dur-cal-espera') + celdas.length * paso
         + _durSiAnima('--dur-cal-entrada') + _durSiAnima('--dur-anim') + 100;
+    _entradaInicialMs = total;
     setTimeout(() => _limpiarEntradaCalendario(grid), total);
+}
+
+/** Al cargar, en escritorio y con el calendario a la vista: el mismo destello que el botón «Hoy», cuando termina la entrada. */
+function destellarHoyAlCargar() {
+    const grid = $('calendario-grid');
+    if (!window.matchMedia(CORTES_LAYOUT.ESCRITORIO).matches) return;
+    if (!grid || !grid.offsetParent || _estaColapsado(grid)) return;
+    setTimeout(_flashDiaHoyCalendario, _entradaInicialMs + 150);
 }
 
 let _vistaHistoricoCalendario = false;
@@ -487,6 +499,7 @@ export const Calendario = {
     _renderizarCalendario,
     _dibujadoOtroDia: () => _fechaDibujado !== TiempoUtils.obtenerFechaHoy(),
     animarEntradaInicial,
+    destellarHoyAlCargar,
     toggleVistaHistorico,
     getVistaHistoricoCalendario: () => _vistaHistoricoCalendario,
     setVistaHistoricoCalendario: (v) => { _vistaHistoricoCalendario = v; }

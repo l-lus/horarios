@@ -797,7 +797,7 @@ test('FeriadosAR: analiza el catálogo contra los registros y aplica agregar, ac
     }
 });
 
-test('GestionDatos.borrarTodoHistorial: la frase y las conexiones solo se olvidan si se marca la casilla, y sin nada guardado no se ofrece', async (t) => {
+test('GestionDatos.borrarTodoHistorial: la frase, las conexiones y el vínculo del perfil activo solo se olvidan si se marca la casilla; los otros perfiles conservan el suyo', async (t) => {
     const sesion = new Map();
     globalThis.sessionStorage = { getItem: k => (sesion.has(k) ? sesion.get(k) : null), setItem: (k, v) => sesion.set(k, String(v)), removeItem: k => sesion.delete(k) };
     t.after(() => { delete globalThis.sessionStorage; });
@@ -819,9 +819,19 @@ test('GestionDatos.borrarTodoHistorial: la frase y las conexiones solo se olvida
     let recargas = 0;
     Recarga.definirManejador(() => { recargas++; });
 
+    // otro perfil con su propio vínculo: no se restablece, así que lo conserva
+    const otro = GestorPerfiles.crearPerfil('Otro perfil para restablecer');
+    assert.ok(!('error' in otro));
+    const datosOtro = Object.values(GestorPerfiles.obtenerTodosPerfiles()).find(p => p !== GestorPerfiles.obtenerDatosPerfil() && p.nombre === 'Otro perfil para restablecer');
+    assert.ok(datosOtro, 'existe el otro perfil');
+    Object.assign(datosOtro, { gistId: 'b'.repeat(32), gistCifrado: true, driveFileId: '1OtroArchivoDeDriveDePrueba', driveCifrado: true });
+    const VINCULO = { gistId: 'a'.repeat(32), gistCifrado: true, gistLastSync: 1, driveFileId: '1AbCdEfGhIjKlMnOpQrStUv', driveArchivoNombre: 'horarios.json', driveCifrado: true, driveLastSync: 1 };
+    const vinculo = () => Object.fromEntries(Object.keys(VINCULO).filter(k => k in GestorPerfiles.obtenerDatosPerfil()).map(k => [k, GestorPerfiles.obtenerDatosPerfil()[k]]));
+
     const conectarTodo = () => {
         FraseCifrado.guardar('cielo-ventana-montaña-río-sombra', true);
-        SincronizacionGist.saveCredentials(`ghp_${'a'.repeat(36)}`, '');
+        SincronizacionGist.saveCredentials(`ghp_${'a'.repeat(36)}`, '');   // con '' borra el gistId: por eso el vínculo se carga después
+        Object.assign(GestorPerfiles.obtenerDatosPerfil(), VINCULO);
         Almacenamiento.setItem(STORAGE_KEYS.DRIVE_REFRESH_TOKEN, '1//0gRefreshTokenDePrueba-abc_def');
     };
     /** @type {any[]} */
@@ -839,6 +849,7 @@ test('GestionDatos.borrarTodoHistorial: la frase y las conexiones solo se olvida
     assert.match(preguntas.at(-1).detalle, /la frase de cifrado, GitHub Gist y Google Drive/);
     assert.equal(recargas, 1);
     assert.ok(FraseCifrado.actual() && SincronizacionGist.conectado() && SincronizacionDrive.conectado(), 'sin marcar no se olvida nada');
+    assert.deepEqual(Object.keys(vinculo()).sort(), ['driveArchivoNombre', 'driveCifrado', 'driveFileId', 'gistCifrado', 'gistId'], 'sin marcar el vínculo queda (solo se borran las fechas de sincronización)');
 
     // Cancelar no toca nada ni recarga
     responder({ confirmado: false, marcada: false });
@@ -854,6 +865,10 @@ test('GestionDatos.borrarTodoHistorial: la frase y las conexiones solo se olvida
     assert.equal(SincronizacionGist.conectado(), false);
     assert.equal(SincronizacionDrive.conectado(), false);
     assert.ok(revocados.some(u => u.includes('/api/oauth/google/revoke')), 'Drive pide revocar el permiso');
+    assert.deepEqual(vinculo(), {}, 'el perfil restablecido deja de apuntar a su Gist y a su archivo de Drive');
+    assert.equal(datosOtro.gistId, 'b'.repeat(32), 'el otro perfil conserva su Gist');
+    assert.equal(datosOtro.driveFileId, '1OtroArchivoDeDriveDePrueba', 'y su archivo de Drive');
+    assert.equal(datosOtro.gistCifrado && datosOtro.driveCifrado, true, 'y sus marcas de cifrado');
 
     // Sin nada guardado no hay casilla: se usa la confirmación de siempre
     const antes = preguntas.length;

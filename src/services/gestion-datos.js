@@ -268,7 +268,7 @@ function _credencialesGuardadas() {
     const conFrase = !!FraseCifrado.actual();
     return {
         titulo: conFrase ? 'Borrar también los datos de cifrado y las conexiones' : 'Borrar también las conexiones',
-        detalle: `Se olvidan ${lista} para todos los perfiles.${conFrase ? ' Sin la frase no se pueden abrir los respaldos cifrados.' : ''} Los respaldos en la nube no se borran.`
+        detalle: `Se olvidan ${lista} para todos los perfiles y este perfil deja de apuntar a su respaldo.${conFrase ? ' Sin la frase no se pueden abrir los respaldos cifrados.' : ''} Los respaldos en la nube no se borran.`
     };
 }
 
@@ -304,6 +304,9 @@ async function borrarTodoHistorial() {
 
     const perfil = GestorPerfiles.obtenerDatosPerfil();
     if (perfil) GestorPerfiles.CAMPOS_SYNC_RESTABLECER.forEach(k => delete perfil[k]);
+    // con la casilla, el perfil restablecido además se desvincula de su Gist y su archivo de Drive (se guarda junto con el resto: todo o nada).
+    // Si no, al volver a conectar seguiría apuntando al respaldo anterior, con la marca de cifrado de una frase que ya no está.
+    if (perfil && marcada) GestorPerfiles.CAMPOS_VINCULO_NUBE.forEach(k => delete perfil[k]);
 
     if (!(await Cambios.confirmar(`restablecer perfil (${TiempoUtils.contar(totalRegistros, 'registro')})`))) return;
     if (marcada) await _olvidarCredenciales();

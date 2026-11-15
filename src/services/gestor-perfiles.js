@@ -47,7 +47,9 @@ function guardarPerfiles() {
 // Lo que cada perfil guarda de sus respaldos en la nube, además de sus registros.
 // - CAMPOS_SYNC: la configuración de la sincronización (una sola por perfil, ver config-sync.js). Restablecer el perfil la borra.
 // - Gist y Drive: a dónde apunta el perfil (gistId, archivo de Drive), si eso está cifrado y cuándo se sincronizó por última vez.
-//   Restablecer conserva el vínculo y si está cifrado (son datos del respaldo remoto, no de la sincronización).
+//   Restablecer conserva el vínculo y si está cifrado (son datos del respaldo remoto, no de la sincronización), salvo que se pida
+//   olvidar también la frase y las conexiones: entonces el perfil restablecido se desvincula (CAMPOS_VINCULO_NUBE). Los demás perfiles
+//   conservan el suyo, porque no se restablecen.
 const CAMPOS_SYNC = Object.freeze([
     'syncDestino', 'syncAuto', 'syncRangoDesde', 'syncRangoHasta', 'syncMergeBehavior',
     'syncFecha_subir', 'syncCount_subir', 'syncFecha_bajar', 'syncCount_bajar'
@@ -57,6 +59,8 @@ const CAMPOS_DRIVE_PERFIL = Object.freeze(['driveFileId', 'driveArchivoNombre', 
 const CAMPOS_NUBE_PERFIL = Object.freeze([...CAMPOS_SYNC, ...CAMPOS_GIST_PERFIL, ...CAMPOS_DRIVE_PERFIL]);
 /** Lo que borra «Restablecer»: la configuración de la sincronización y las fechas de última sincronización. */
 const CAMPOS_SYNC_RESTABLECER = Object.freeze([...CAMPOS_SYNC, 'gistLastSync', 'driveLastSync']);
+/** Lo que además borra «Restablecer» con la casilla de olvidar la frase y las conexiones: a qué Gist y archivo de Drive apunta el perfil y si estaban cifrados. */
+const CAMPOS_VINCULO_NUBE = Object.freeze([...CAMPOS_GIST_PERFIL, ...CAMPOS_DRIVE_PERFIL]);
 
 // Hasta la versión con un solo modal de respaldo, cada proveedor guardaba su propia automatización en el perfil
 const _SUFIJOS_SYNC_ANTERIORES = Object.freeze(['AutoSync', 'RangoDesde', 'RangoHasta', 'MergeBehavior', 'SyncFecha_subir', 'SyncCount_subir', 'SyncFecha_bajar', 'SyncCount_bajar']);
@@ -211,6 +215,7 @@ export const GestorPerfiles = {
     guardarPerfiles,
     CAMPOS_SYNC,
     CAMPOS_SYNC_RESTABLECER,
+    CAMPOS_VINCULO_NUBE,
     migrarCamposSync,
     crearPerfil,
     renombrarPerfil,

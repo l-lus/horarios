@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
-**Última actualización:** 2026-11-11  
-**Estado:** Arquitectura modularizada y saneada (99 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Última actualización:** 2026-11-15  
+**Estado:** Arquitectura modularizada y saneada (114 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -21,6 +21,8 @@
 ```text
 horarios/
 ├── index.html                  # Documento principal (estructura DOM y carga de assets/módulos)
+├── oauth-callback.html         # Retorno de Google (OAuth de Drive): carga solo src/oauth-callback.js
+├── privacidad.html             # Política de privacidad (estática, con su propia CSP)
 ├── sw.js                       # Service Worker (en la raíz para tener scope sobre todo el proyecto)
 ├── README.md                   # Documentación general del proyecto
 ├── LICENSE                     # Licencia MIT
@@ -32,15 +34,17 @@ horarios/
 │   └── tests.yml               # CI: npm ci, typecheck y tests en cada push/PR (permisos mínimos, acciones fijadas por SHA)
 ├── assets/                     # Recursos estáticos (sin lógica de negocio)
 │   ├── manifest.json           # Web App Manifest (PWA)
-│   ├── styles/                 # Hojas de estilo divididas en 5 capas de cascada
+│   ├── styles/                 # Hojas de estilo divididas en 6 capas de cascada (ver 3.4)
 │   │   ├── tokens.css          # 1. Variables (:root), escala de íconos (--icon-sm/md/lg), modo oscuro y temas de color
 │   │   ├── base.css            # 2. Reset, layout, .card, forms, botones, modales base y toast
-│   │   ├── tarjetas-vistas.css     # 3. Fichaje/timer, estadísticas/progreso, histórico y calendario/popups
+│   │   ├── tarjetas-vistas.css     # 3. Fichaje/timer, estadísticas/progreso, histórico, calendario/popups y énfasis de color
+│   │   ├── tarjeta-estilos.css     # 3b. Diseños propios de la tarjeta de estado (anillo, línea de tiempo, lista de filas)
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (99 módulos)
+├── src/                        # Código fuente en ES Modules (114 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
+│   ├── oauth-callback.js       # Script de oauth-callback.html (fuera del grafo de la app, sin imports)
 │   ├── data/                   # Catálogos y datos estáticos puros
 │   ├── core/                   # Utilidades transversales de bajo nivel (sin reglas de negocio ni UI)
 │   ├── services/               # Estado de la aplicación, reglas de dominio y servicios externos
@@ -55,7 +59,12 @@ horarios/
 │   ├── servidor-dev.test.mjs   # El servidor de desarrollo entrega solo la app (ni .env, ni .git, ni datos) y rechaza DNS rebinding
 │   ├── saldo.test.mjs          # Saldo de horas, días cubiertos y aprovechamiento, con resultados calculados a mano
 │   ├── calendario-y-lista.test.mjs # Con DOM mínimo simulado: selector de meses (cierre por inactividad), lista dibujada solo al mostrarla y calendario sin redibujar en cada minuto
-│   └── servicios-sin-dom.test.mjs # Servicios ejecutados en Node sin `document`, con formularios simulados
+│   ├── servicios-sin-dom.test.mjs # Servicios ejecutados en Node sin `document`, con formularios simulados
+│   ├── cifrado.test.mjs        # Sobre cifrado (AES-GCM + PBKDF2): ida y vuelta, frase incorrecta, sobre alterado
+│   ├── respaldo-cifrado.test.mjs # Sellar/abrir respaldos y que la frase nunca vaya al respaldo ni a un log
+│   ├── secretos.test.mjs       # Frase en sessionStorage o, con «recordar», en localStorage
+│   ├── drive.test.mjs          # Google Drive: PKCE, state, retorno de OAuth y cliente de la API (fetch simulado)
+│   └── e2e/humo.test.mjs       # `npm run test:humo`: prueba de humo en Chromium sin ventana (CDP, sin dependencias); se saltea si no hay navegador
 ├── docs/                       # Documentación técnica, seguridad y arquitectura
 └── horarios-push/              # Backend opcional (Cloudflare Worker para Web Push y métricas anónimas)
 ```
@@ -110,7 +119,7 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 
 ## 3.1. Cómo hablan los servicios con la UI (sin tocar el DOM)
 
-`src/services/` **no accede al DOM** (ni `document` ni `$()`); lo verifica `tests/architecture.test.mjs`. Hay tres canales, todos inyectados/escuchados desde la UI:
+`src/services/` **no accede al DOM** (ni `document` —tampoco `document.visibilityState`—, ni `$()`, `matchMedia` o `getComputedStyle`); lo verifica `tests/architecture.test.mjs`. Lo que un servicio necesite saber de la página (si está a la vista, si corre instalada) se lo pasa la UI por parámetro, como `RecordatorioPush.registrarUso({ visible, pwa })` desde `main.js`. Las APIs del navegador que no son DOM (`navigator.serviceWorker`, `PushManager`, `fetch`, `crypto`) sí se usan en servicios. Hay tres canales, todos inyectados/escuchados desde la UI:
 
 | Canal | Cuándo usarlo | Ejemplo |
 |---|---|---|
@@ -151,7 +160,7 @@ montar(lista, html`<li>${registro.notas}</li>`);   // notas con <script> se mues
 
 ## 3.3. Diseño libre de tarjetas por columnas
 
-En escritorio (≥ 1024 px) las tarjetas (`estado`, `registrar`, `estadisticas`, `historico`) se ubican donde las suelta el usuario, en hasta **3 columnas** (3 solo desde 1200 px; con menos ancho el máximo es 2). En móvil van apiladas en una sola columna.
+En escritorio (≥ 1024 px) las tarjetas (`estado`, `registrar`, `estadisticas`, `historico`) se ubican donde las suelta el usuario, en hasta **3 columnas** (3 solo desde 1400 px, `CORTES_LAYOUT.ANCHO`; con menos ancho el máximo es 2). En móvil van apiladas en una sola columna.
 
 | Pieza | Dónde | Qué hace |
 |---|---|---|
@@ -162,7 +171,24 @@ En escritorio (≥ 1024 px) las tarjetas (`estado`, `registrar`, `estadisticas`,
 
 La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las demás pero **no se puede ocultar**; el resto se oculta con la clase `.hidden` (`CARDS`).
 
+## 3.4. CSS: capas, tokens y reglas verificadas
+
+Las hojas se cargan en este orden (lo verifica el test): `tokens.css` → `base.css` → `tarjetas-vistas.css` → `tarjeta-estilos.css` → `modales-funciones.css` → `responsivo-movimiento.css`. Todas las variables globales viven en `tokens.css`; las demás hojas solo definen variables locales a un componente (`--tono`, `--ret`, …).
+
+| Regla | Qué exige | Test |
+|---|---|---|
+| Variables definidas | Toda `var(--x)` usada está definida en alguna hoja o la fija el JS (`setProperty('--x', …)`). Una variable sin definir solo funcionaría por su valor por defecto. | `Tokens (CSS): toda var(--x)…` |
+| Sin literales de diseño | Fuera de `tokens.css`: tamaños de letra con `--text-*` (en rem/px; `clamp()`, `min()` y `em` se permiten), pesos con `--fw-*` y sombras con `--shadow-*` (o `--shadow` del tema). | `Tokens (CSS): fuera de tokens.css…` |
+| Mostrar/ocultar | Con la clase `.hidden`, no con `style.display` (salvo los helpers de `animaciones.js` y el anti-FOUC de `tema-inicial.js`). | `UI: mostrar u ocultar…` |
+| Cortes de ancho | Los `@media` de ancho que también usa el JS salen de `CORTES_LAYOUT` (`constantes.js`): `ESCRITORIO` 1024, `ANCHO` 1400 (solo JS), `TABLETA` 767 y `MOVIL` 600. | `Cortes de ancho…` |
+| Tiempos JS ↔ CSS | El JS que espera a una transición lee su duración del token (`Animaciones._getCSSdur('--dur-pop-in')`) en lugar de repetir el número. | — |
+| Animaciones | Solo `transform` y `opacity` (CLAUDE.md); lo anterior a la regla está anotado en `KEYFRAMES_HEREDADOS` y `TRANSICIONES_HEREDADAS`. | `Animaciones (CSS)…` |
+
+Las máscaras (`mask-image`, el arco del anillo) usan `#000`/`#fff` literales a propósito: ahí solo cuenta el alfa.
+
 ## 4. Catálogo completo de módulos (`src/`)
+
+`src/oauth-callback.js` no forma parte del grafo: es el script de `oauth-callback.html`, sin imports, que guarda el `code` y el `state` que devuelve Google en `localStorage` (`horarios_driveOauthRetorno`), borra la query del historial y vuelve a la app (ver `SincronizacionDrive.tomarRetorno`).
 
 ### 4.1. Datos estáticos (`src/data/`)
 
@@ -176,7 +202,7 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | Archivo | Export | Responsabilidad |
 |---|---|---|
 | [`src/core/tema-inicial.js`](../src/core/tema-inicial.js) | *(script clásico en `<head>`)* | Aplica el tema oscuro, el énfasis de color (`horarios_enfasis`) y modo de animaciones (`horarios_temaOscuro`, `horarios_reducirAnimaciones` con fallback legado) antes del primer pintado (anti-FOUC) y protege contra clickjacking. |
-| [`src/core/constantes.js`](../src/core/constantes.js) | `APP_NOMBRE`, `APP_VERSION`, `APP_STORAGE_PREFIX`, `STORAGE_KEYS`, `CARDS`, `CARDS_ORDEN`, `TOAST_MS`, `DEMORA_ARRANQUE_MS`, `DESDE_SIEMPRE`, `DIAS_HABILES_DEFAULT`, `HORAS_DIARIAS_DEFAULT`, `MARGEN_HORAS`, `MINUTOS_DIA`, `MS_DIA`, `horasGte`, `horasEq` | Prefijo de aplicación (`horarios_`), claves de `localStorage`, tarjetas (`CARDS` = ocultables, `CARDS_ORDEN` = ubicables, con la de estado), duraciones de toasts y demoras de arranque, comparadores de punto flotante con tolerancia y constantes globales. |
+| [`src/core/constantes.js`](../src/core/constantes.js) | `APP_NOMBRE`, `APP_VERSION`, `APP_STORAGE_PREFIX`, `STORAGE_KEYS`, `CARDS`, `CARDS_ORDEN`, `CORTES_LAYOUT`, `TOAST_MS`, `DEMORA_ARRANQUE_MS`, `DESDE_SIEMPRE`, `DIAS_HABILES_DEFAULT`, `HORAS_DIARIAS_DEFAULT`, `MARGEN_HORAS`, `MINUTOS_DIA`, `MS_DIA`, `horasGte`, `horasEq` | Prefijo de aplicación (`horarios_`), claves de `localStorage`, tarjetas (`CARDS` = ocultables, `CARDS_ORDEN` = ubicables, con la de estado), duraciones de toasts y demoras de arranque, comparadores de punto flotante con tolerancia y constantes globales. |
 | [`src/core/html.js`](../src/core/html.js) | ``html`...` ``, `crudo`, `montar`, `esHtmlSeguro`, `icono`, `aHtmlConfiable`, `urlScriptConfiable` | Plantillas HTML con escape automático de cada interpolación (ver 3.2) e `icono(href, clase)` para los íconos del sprite SVG (`'#icon-…'`). |
 | [`src/core/dom.js`](../src/core/dom.js) | `$`, `setColapsable`, `superaUnaLinea`, `alClic` | `$` (`getElementById` tipado), contenedores colapsables, medida de una línea de texto y enlace de varios botones de una vez. |
 | [`src/core/eventos.js`](../src/core/eventos.js) | `EventosApp` | Bus de eventos pub/sub (`on`, `off`, `emit`) (`on` devuelve la función para desuscribirse). |
@@ -250,7 +276,11 @@ La tarjeta de estado (`#stats-card`, id lógico `estado`) se mueve como las dem�
 | [`src/ui/gestor-modales.js`](../src/ui/gestor-modales.js) | `GestorModales` | Apertura/cierre de modales accesibles, historial de navegación entre modales y diálogos de confirmación (`confirmar`). |
 | [`src/ui/tarjeta-fichaje-vista.js`](../src/ui/tarjeta-fichaje-vista.js) | `TarjetaFichajeVista` | Modelo de vista de la tarjeta de fichaje (`derivarVistaHoy`, `derivarVistaSemana`): títulos, hints, colores, línea de salida estimada y preferencias de texto (formato corto, hint integrado). |
 | [`src/ui/tarjeta-fichaje.js`](../src/ui/tarjeta-fichaje.js) | `TarjetaFichaje` | Tarjeta principal de fichaje del día/semana: renderizado (barra de progreso, hints) y actualización general a partir de `EstadoTarjeta` y `TarjetaFichajeVista`. Con el estilo «Barra con hitos» (`EstiloTarjeta`; antes el ajuste «Hint integrado en la barra», `STORAGE_KEYS.HINT_INTEGRADO`) la entrada, la salida estimada y la salida con buffer se dibujan sobre la barra; apagado, se usa el `toggle-hint` de texto. Al cerrar una jornada de ayer que cruzó la medianoche, el servicio avisa por `retenerRegistroAyer` y la tarjeta la muestra ~4 s (salida y total) antes de pasar a hoy; un nuevo fichaje lo anula. |
-| [`src/ui/tarjeta-estilos.js`](../src/ui/tarjeta-estilos.js) | `TarjetaEstilos` | Diseños propios de la tarjeta de estado en la vista diaria (anillo, línea de tiempo y lista de filas). Cada diseño arma su DOM una vez dentro de `#stats-estilo` y lo actualiza con `vista.resumen` (registro abierto o cerrado, sin registro o día especial, con la fila del tiempo fuera cuando lo hay). Con esos estilos `#stats-card` lleva `.estilo-propio`, que oculta el número, la barra y los textos de siempre, tanto en la vista diaria como en la semanal (`vista.resumen`, tipo `semana` con un elemento por día). El anillo (`fija`) se montan junto a copias ocultas dibujadas con el peor caso de cada estado (`resumenesDeMedida`), todas en la misma celda de una cuadrícula: la tarjeta mide lo que el más alto y no cambia de tamaño. En línea de tiempo y lista de filas el alto sigue al contenido y `_animarAlturaCard` (en `tarjeta-fichaje.js`) lo anima al cambiar entre día, semana o estados, con el mismo ritmo que el colapsado de las otras tarjetas; `.estilo-propio` también va en `#stats-card-content` porque el fantasma de las animaciones es una copia de ese contenido colgada del `body`. |
+| [`src/ui/tarjeta-estilos.js`](../src/ui/tarjeta-estilos.js) | `TarjetaEstilos` | Diseños propios de la tarjeta de estado en la vista diaria (anillo, línea de tiempo y lista de filas): monta el elegido, cuenta el número, destella el balance y reubica. Cada diseño vive en un hijo (`tarjeta-estilos-anillo.js`, `-linea.js`, `-filas.js`, con las piezas comunes en `-piezas.js`) y su CSS en `tarjeta-estilos.css`. Cada diseño arma su DOM una vez dentro de `#stats-estilo` y lo actualiza con `vista.resumen` (registro abierto o cerrado, sin registro o día especial, con la fila del tiempo fuera cuando lo hay). Con esos estilos `#stats-card` lleva `.estilo-propio`, que oculta el número, la barra y los textos de siempre, tanto en la vista diaria como en la semanal (`vista.resumen`, tipo `semana` con un elemento por día). El anillo (`fija`) se montan junto a copias ocultas dibujadas con el peor caso de cada estado (`resumenesDeMedida`), todas en la misma celda de una cuadrícula: la tarjeta mide lo que el más alto y no cambia de tamaño. En línea de tiempo y lista de filas el alto sigue al contenido y `_animarAlturaCard` (en `tarjeta-fichaje.js`) lo anima al cambiar entre día, semana o estados, con el mismo ritmo que el colapsado de las otras tarjetas; `.estilo-propio` también va en `#stats-card-content` porque el fantasma de las animaciones es una copia de ese contenido colgada del `body`. |
+| [`src/ui/tarjeta-estilos-piezas.js`](../src/ui/tarjeta-estilos-piezas.js) | `el`, `fijar`, `mostrar`, `fijarQueEntre`, `crearDuracion`, `crearDato`, `crearDias`, … | Piezas comunes de los diseños propios (creación de nodos sin `innerHTML`, duración con unidades, dato etiqueta/valor, días de la semana, textos que eligen la versión que entra). |
+| [`src/ui/tarjeta-estilos-anillo.js`](../src/ui/tarjeta-estilos-anillo.js) | `crearAnillo`, `pintarAnillo`, `pintarNumeroAnillo` | Diseño «Anillo»: aro SVG con máscara y tramos de color, hitos, centro y los dos grupos de datos (con sus copias para las disposiciones intercambiadas). |
+| [`src/ui/tarjeta-estilos-linea.js`](../src/ui/tarjeta-estilos-linea.js) | `crearLinea`, `pintarLinea`, `alinearLinea`, `BASE_ENTRADA`, `duracionLinea` | Diseño «Línea de tiempo»: nodos del día (en orden horario) o de la semana, mosaicos y la entrada animada de la línea. |
+| [`src/ui/tarjeta-estilos-filas.js`](../src/ui/tarjeta-estilos-filas.js) | `crearFilas`, `pintarFilas` | Diseño «Lista de filas». |
 | [`src/ui/vista-previa.js`](../src/ui/vista-previa.js) | `VistaPrevia` | Vista previa en vivo de las opciones de apariencia (estilo de la tarjeta de estado y del calendario): cierra Ajustes, lleva la tarjeta a la vista con scroll sobre un velo (`.vista-previa-objetivo`) y muestra abajo un panel con los controles; "Listo", Escape o Atrás vuelven a Ajustes. No conoce las opciones: recibe las filas del panel y un preparador opcional (`registrarPreparador`, p. ej. el que expande el calendario del histórico y devuelve cómo dejarlo como estaba). Usa una entrada del historial como los modales y cierra siempre por `popstate`, con demoras para no pisarse con `gestor-modales.js`.. Las vistas (tarjeta de estado, calendario y tema) se registran con `registrarVista`/`definirOrden` y desde el panel se pasa de una a otra tocando las flechas del título (anterior / siguiente) o deslizando (táctil) con `cambiar`; la del tema no tiene tarjeta ni velo y muestra círculos de color (`circulos`). |
 | [`src/ui/tarjeta-ciclo-stats.js`](../src/ui/tarjeta-ciclo-stats.js) | `CicloStats` | Ciclo de textos del número grande en la vista diaria (horas → entrada → tiempo fuera → salida si el registro está cerrado; cada 2 s), con su estado propio. Con el hint integrado (`hitosEnBarra`) las fases de entrada, salida y, con el registro abierto, salida estimada y con banco dejan el texto de las horas y solo resaltan su hito en la barra (2,6 s cada una); el tiempo fuera siempre es texto, y sin hint integrado la entrada y la salida también. Avisa la fase que se muestra con `alCambiarFase`. |
 | [`src/ui/tarjeta-tiempo-fuera.js`](../src/ui/tarjeta-tiempo-fuera.js) | `TarjetaTiempoFuera` | Cronómetro en vivo de tiempo fuera (pausa/almuerzo) en la tarjeta principal. |
@@ -356,6 +386,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 | **ARQ-14** | Módulos de UI por debajo de 500 líneas (`calendario-popups`, `historico-items`, `gist-resumen-merge`, `arrastre`, `tarjeta-ciclo-stats`), aviso de fin de jornada en `services/aviso-jornada.js`, tramos de días hábiles y armado de respaldos (`armarRespaldo`) en servicios, fechas del lote y filtros validadas en el servicio, claves heredadas y 60 exportaciones internas eliminadas | ✅ Aplicado |
 | **ARQ-15** | Tarjeta de atajos eliminada; diseño libre de tarjetas en hasta 3 columnas (3.3) con la tarjeta de estado reubicable; `style.display` reemplazado por `.hidden` en los casos aislados; duraciones, tamaño compacto y esperas pasadas a tokens/constantes (`--dur-*`, `--control-sm`, `TOAST_MS`, `DEMORA_ARRANQUE_MS`); `calcularEstadoCard`, `derivarVistaHoy`, `_renderizarCalendario`, `_popupStat` e `iniciarDragTarjetas` divididos en funciones menores | ✅ Aplicado |
 | **ARQ-16** | Refactor de helpers y división de servicios: `Cambios` (un solo camino para cerrar un cambio en los registros, guardando antes de la animación), `TiempoFuera`, `Jornada`, `Preferencias` (clave, valor por defecto y alcance de las opciones booleanas), tabla `CONFIG_RESPALDO` en `importar-exportar.js`; `filtros-periodos.js` se divide en `filtros`, `jornada`, `edicion-grupo`, `operaciones-lote` y `saldo-semanal`, y de `compensatorios.js` salen `dias-habiles` y `objetivos`. La lista se dibuja solo al mostrarla y el reloj corre por minuto | ✅ Aplicado |
+| **ARQ-17** | Revisión de normas (2026-11-15): `RecordatorioPush.registrarUso` sin `document`/`matchMedia` (lo pasa `main.js`) y test de capas que detecta cualquier `document`; `style.display` → `.hidden` (selector de meses con `Calendario.selectorMesesAbierto`, botón Instalar, tramos del anillo); `CORTES_LAYOUT` con `TABLETA` y `MOVIL`; `--dur-pop-in`/`--dur-pop-out` leídos por `popups.js`; tokens de brillo, tipografía grande y sombras; `tarjeta-estilos.js` (875 líneas) dividido en piezas/anillo/línea/filas y su CSS en `tarjeta-estilos.css`; tests nuevos de tokens y cortes (3.4) | ✅ Aplicado |
 
 ---
 

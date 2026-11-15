@@ -247,6 +247,7 @@ button.campo-flash {
 
 /* Filas de ajustes: sin borde propio y dentro de un contenedor con overflow hidden,
    así que el resalte va como sombra interna */
+/* Sin opacity en `to`: la entrada termina en la opacidad propia de la celda (0.5 en un día no laborable sin registro), así no salta al terminar */
 @keyframes calendarioEntradaDia {
     from {
         opacity: 0;
@@ -254,7 +255,6 @@ button.campo-flash {
     }
 
     to {
-        opacity: 1;
         transform: none;
     }
 }

@@ -459,6 +459,7 @@ async function init() {
     _suscribirCambiosPermisoNotificaciones();
     actualizarUI(null, false, false, true, true);
     Calendario.animarEntradaInicial();
+    Calendario.destellarHoyAlCargar();
     _iniciarCicloStats();
     actualizarBotonesHistorico();
 

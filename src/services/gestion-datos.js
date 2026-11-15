@@ -15,6 +15,9 @@ import { Cambios } from './cambios.js';
 import { DiasHabiles } from './dias-habiles.js';
 import { Objetivos } from './objetivos.js';
 import { Jornada } from './jornada.js';
+import { FraseCifrado } from './frase-cifrado.js';
+import { SincronizacionGist } from './sincronizacion-gist.js';
+import { SincronizacionDrive } from './sincronizacion-drive.js';
 
 // ====================================================================
 // DATA MANAGEMENT MODULE
@@ -250,11 +253,42 @@ async function agregarRegistro() {
     await _crearNuevoRegistro(f, e, s, usaHoraActual, btn);
 }
 
+/**
+ * Lo que «Restablecer» puede olvidar además del perfil, si la persona lo pide: la frase de cifrado y las conexiones con GitHub y
+ * Google Drive. Son de toda la app (no del perfil), así que se ofrecen en una casilla aparte, desmarcada. null si no hay nada.
+ */
+function _credencialesGuardadas() {
+    const partes = [
+        FraseCifrado.actual() ? 'la frase de cifrado' : '',
+        SincronizacionGist.conectado() ? 'GitHub Gist' : '',
+        SincronizacionDrive.conectado() ? 'Google Drive' : ''
+    ].filter(Boolean);
+    if (!partes.length) return null;
+    const lista = partes.length === 1 ? partes[0] : `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`;
+    const conFrase = !!FraseCifrado.actual();
+    return {
+        titulo: conFrase ? 'Borrar también los datos de cifrado y las conexiones' : 'Borrar también las conexiones',
+        detalle: `Se olvidan ${lista} para todos los perfiles.${conFrase ? ' Sin la frase no se pueden abrir los respaldos cifrados.' : ''} Los respaldos en la nube no se borran.`
+    };
+}
+
+/** Olvida la frase y las conexiones (Drive también revoca el permiso en Google; si no se puede, la cuenta igual se olvida acá). */
+async function _olvidarCredenciales() {
+    FraseCifrado.olvidar();
+    SincronizacionGist.olvidarToken();
+    if (SincronizacionDrive.conectado()) await SincronizacionDrive.desconectar();
+}
+
 async function borrarTodoHistorial() {
     const registros = EstadoApp.registros();
     const totalRegistros = registros.length;
-    const confirmar = await EstadoApp._notify().confirmarModal(`Esto restablecerá el perfil activo: se eliminarán ${TiempoUtils.contar(totalRegistros, 'registro')} y la configuración, incluida la apariencia de la app, volverá a los valores por defecto. Los demás perfiles conservan sus registros.`, 'Restablecer');
-    if (!confirmar) return;
+    const notify = EstadoApp._notify();
+    const texto = `Esto restablecerá el perfil activo: se eliminarán ${TiempoUtils.contar(totalRegistros, 'registro')} y la configuración, incluida la apariencia de la app, volverá a los valores por defecto. Los demás perfiles conservan sus registros.`;
+    const casilla = _credencialesGuardadas();
+    const { confirmado, marcada } = casilla
+        ? await notify.confirmarConCasilla(texto, 'Restablecer', '#icon-trash', { casilla })
+        : { confirmado: await notify.confirmarModal(texto, 'Restablecer'), marcada: false };
+    if (!confirmado) return;
 
     EstadoApp.setDiasHabiles([...DIAS_HABILES_DEFAULT]);
     EstadoApp.setHorasDiarias(HORAS_DIARIAS_DEFAULT);
@@ -271,7 +305,9 @@ async function borrarTodoHistorial() {
     const perfil = GestorPerfiles.obtenerDatosPerfil();
     if (perfil) GestorPerfiles.CAMPOS_SYNC_RESTABLECER.forEach(k => delete perfil[k]);
 
-    if (await Cambios.confirmar(`restablecer perfil (${TiempoUtils.contar(totalRegistros, 'registro')})`)) Recarga.solicitar();
+    if (!(await Cambios.confirmar(`restablecer perfil (${TiempoUtils.contar(totalRegistros, 'registro')})`))) return;
+    if (marcada) await _olvidarCredenciales();
+    Recarga.solicitar();
 }
 
 function _aplicarEstadoHistorial(resultado, mensaje) {

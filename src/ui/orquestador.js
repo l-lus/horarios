@@ -143,6 +143,7 @@ function _initGlobales() {
         animarExitoFichaje, aplicarFeedbackCampos, cerrarEdicion, cerrarEdicionGrupo, cerrarFiltros, cerrarImportar,
         cerrarTodosModales: GestorModales.cerrarTodos,
         confirmarModal: GestorModales.confirmar,
+        confirmarConCasilla: GestorModales.confirmarConCasilla,
         descargarJSON, descargarArchivo: UIBase.descargarArchivo, pedirFrase: FraseModal.pedir, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
         obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
         setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado, verificarBloqueoCredito,

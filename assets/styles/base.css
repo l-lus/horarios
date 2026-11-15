@@ -1176,6 +1176,12 @@ mark.ayuda-resaltado--activa {
     white-space: pre-line;
 }
 
+/* Casilla opcional del modal de confirmación (ver GestorModales.confirmarConCasilla): su texto ocupa varias líneas y va alineado
+   a la izquierda, junto al ícono (los botones centran el texto por defecto) */
+#modal-confirmar-opcion .settings-list-text {
+    text-align: left;
+}
+
 /* ─── TOAST ──────────────────────────────────────────────────────────────────── */
 
 .toast {

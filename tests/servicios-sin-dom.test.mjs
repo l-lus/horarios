@@ -796,3 +796,68 @@ test('FeriadosAR: analiza el catálogo contra los registros y aplica agregar, ac
         EstadoApp._setRegistros([]);
     }
 });
+
+test('GestionDatos.borrarTodoHistorial: la frase y las conexiones solo se olvidan si se marca la casilla, y sin nada guardado no se ofrece', async (t) => {
+    const sesion = new Map();
+    globalThis.sessionStorage = { getItem: k => (sesion.has(k) ? sesion.get(k) : null), setItem: (k, v) => sesion.set(k, String(v)), removeItem: k => sesion.delete(k) };
+    t.after(() => { delete globalThis.sessionStorage; });
+    const fetchReal = globalThis.fetch;
+    const revocados = [];
+    globalThis.fetch = async (url) => { revocados.push(String(url)); return new Response('{}', { status: 200 }); };
+    t.after(() => { globalThis.fetch = fetchReal; });
+
+    const { GestionDatos: D } = await import('../src/services/gestion-datos.js');
+    const { EstadoApp } = await import('../src/services/estado-app.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    const { FraseCifrado } = await import('../src/services/frase-cifrado.js');
+    const { SincronizacionGist } = await import('../src/services/sincronizacion-gist.js');
+    const { SincronizacionDrive } = await import('../src/services/sincronizacion-drive.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+    const { Recarga } = await import('../src/core/recarga.js');
+    GestorPerfiles.inicializar();
+    let recargas = 0;
+    Recarga.definirManejador(() => { recargas++; });
+
+    const conectarTodo = () => {
+        FraseCifrado.guardar('cielo-ventana-montaña-río-sombra', true);
+        SincronizacionGist.saveCredentials(`ghp_${'a'.repeat(36)}`, '');
+        Almacenamiento.setItem(STORAGE_KEYS.DRIVE_REFRESH_TOKEN, '1//0gRefreshTokenDePrueba-abc_def');
+    };
+    /** @type {any[]} */
+    const preguntas = [];
+    const responder = (respuesta) => EstadoApp.configurarNotificaciones({
+        confirmarModal: async () => { preguntas.push('simple'); return true; },
+        confirmarConCasilla: async (_t, _l, _i, { casilla }) => { preguntas.push(casilla); return respuesta; },
+        actualizarUI: () => { }, mostrarToast: () => { }, forzarVista: (_v, fn) => fn(),
+    });
+
+    // Casilla sin marcar: el perfil se restablece y lo de la app queda
+    conectarTodo();
+    responder({ confirmado: true, marcada: false });
+    await D.borrarTodoHistorial();
+    assert.match(preguntas.at(-1).detalle, /la frase de cifrado, GitHub Gist y Google Drive/);
+    assert.equal(recargas, 1);
+    assert.ok(FraseCifrado.actual() && SincronizacionGist.conectado() && SincronizacionDrive.conectado(), 'sin marcar no se olvida nada');
+
+    // Cancelar no toca nada ni recarga
+    responder({ confirmado: false, marcada: false });
+    await D.borrarTodoHistorial();
+    assert.equal(recargas, 1);
+    assert.ok(FraseCifrado.actual() && SincronizacionGist.conectado() && SincronizacionDrive.conectado());
+
+    // Marcada: se olvidan la frase, el token de GitHub y la cuenta de Drive (con revocación en Google)
+    responder({ confirmado: true, marcada: true });
+    await D.borrarTodoHistorial();
+    assert.equal(recargas, 2);
+    assert.equal(FraseCifrado.actual(), '');
+    assert.equal(SincronizacionGist.conectado(), false);
+    assert.equal(SincronizacionDrive.conectado(), false);
+    assert.ok(revocados.some(u => u.includes('/api/oauth/google/revoke')), 'Drive pide revocar el permiso');
+
+    // Sin nada guardado no hay casilla: se usa la confirmación de siempre
+    const antes = preguntas.length;
+    await D.borrarTodoHistorial();
+    assert.equal(preguntas.length, antes + 1);
+    assert.equal(preguntas.at(-1), 'simple');
+});

@@ -280,11 +280,33 @@ function preguntar(modalId, preparar, valorSiSeCancela) {
     });
 }
 
-function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones = {}) {
+/**
+ * @typedef {{ titulo: string, detalle?: string }} CasillaConfirmar opción extra del modal de confirmación (desmarcada al abrir)
+ * @typedef {{ labelCancel?: string, titulo?: string, iconoCancel?: string, casilla?: CasillaConfirmar }} OpcionesConfirmar
+ */
+
+/** @param {string} texto @param {string} [labelOk] @param {string} [icono] @param {OpcionesConfirmar} [opciones] @returns {Promise<boolean>} */
+async function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones = {}) {
+    const { confirmado } = await _confirmar(texto, labelOk, icono, { ...opciones, casilla: undefined });
+    return confirmado;
+}
+
+/**
+ * Como `confirmar`, con una casilla debajo del texto (desmarcada por defecto) para sumar algo opcional a la acción.
+ * @param {string} texto @param {string} labelOk @param {string} icono @param {OpcionesConfirmar & { casilla: CasillaConfirmar }} opciones
+ * @returns {Promise<{ confirmado: boolean, marcada: boolean }>} marcada solo vale si se confirmó
+ */
+function confirmarConCasilla(texto, labelOk, icono, opciones) {
+    return _confirmar(texto, labelOk, icono, opciones);
+}
+
+/** @param {string} texto @param {string} labelOk @param {string} icono @param {OpcionesConfirmar} opciones @returns {Promise<{ confirmado: boolean, marcada: boolean }>} */
+function _confirmar(texto, labelOk, icono, opciones) {
     const elTexto = $('modal-confirmar-texto');
     const btnOk = $('modal-confirmar-ok');
     const btnCancel = $('modal-confirmar-cancel');
-    if (!elTexto || !btnOk || !btnCancel) return Promise.resolve(false);
+    const NO = { confirmado: false, marcada: false };
+    if (!elTexto || !btnOk || !btnCancel) return Promise.resolve(NO);
 
     return preguntar('modal-confirmar', (responder) => {
         const elLabel = $('modal-confirmar-label-ok');
@@ -300,15 +322,35 @@ function confirmar(texto, labelOk = 'Confirmar', icono = '#icon-trash', opciones
         if (elIcono) elIcono.setAttribute('href', icono);
         if (elIconoCancel) elIconoCancel.setAttribute('href', opciones.iconoCancel || '#icon-cancelar');
 
-        const ok = () => responder(true);
-        const cancel = () => responder(false);
+        // la casilla se arma antes de abrir el modal: su alto ya está incluido cuando aparece (no hay salto)
+        const contenedor = $('modal-confirmar-opcion');
+        const casilla = $('modal-confirmar-casilla');
+        const conCasilla = !!(opciones.casilla && contenedor && casilla);
+        contenedor?.classList.toggle('hidden', !conCasilla);
+        const marcar = (/** @type {boolean} */ v) => {
+            casilla?.classList.toggle('btn-activo', v);
+            casilla?.setAttribute('aria-pressed', String(v));
+        };
+        marcar(false);
+        if (conCasilla && opciones.casilla) {
+            const t = $('modal-confirmar-casilla-titulo');
+            const d = $('modal-confirmar-casilla-detalle');
+            if (t) t.textContent = opciones.casilla.titulo;
+            if (d) { d.textContent = opciones.casilla.detalle || ''; d.classList.toggle('hidden', !opciones.casilla.detalle); }
+        }
+        const alternarCasilla = () => marcar(!casilla?.classList.contains('btn-activo'));
+
+        const ok = () => responder({ confirmado: true, marcada: conCasilla && !!casilla?.classList.contains('btn-activo') });
+        const cancel = () => responder(NO);
         btnOk.addEventListener('click', ok);
         btnCancel.addEventListener('click', cancel);
+        if (conCasilla) casilla?.addEventListener('click', alternarCasilla);
         return () => {
             btnOk.removeEventListener('click', ok);
             btnCancel.removeEventListener('click', cancel);
+            casilla?.removeEventListener('click', alternarCasilla);
         };
-    }, false);
+    }, NO);
 }
 
-export const GestorModales = { abrir, cerrar, alternar, cerrarTodos, confirmar, preguntar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, registrarAccionVolver };
+export const GestorModales = { abrir, cerrar, alternar, cerrarTodos, confirmar, confirmarConCasilla, preguntar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, registrarAccionVolver };

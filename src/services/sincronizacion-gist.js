@@ -129,7 +129,9 @@ async function bajar() {
 
 /** ¿Hay token? Con eso alcanza para subir (la primera subida crea el Gist). */
 function conectado() { return !!getToken(); }
+/** Olvida el token de GitHub en este navegador (es de toda la app). El Gist de cada perfil queda vinculado para cuando se vuelva a conectar. */
+function olvidarToken() { Almacenamiento.removeItem(STORAGE_KEYS.GIST_TOKEN); }
 /** ¿Hay token y Gist ID? Es lo que necesitan bajar, la sincronización automática y los botones rápidos. */
 function listo() { return !!getToken() && esGistIdValido(getGistId()); }
 
-export const SincronizacionGist = { getToken, getGistId, getLastSync, getCifrado, setCifrado, leerActual, formatLastSync, saveCredentials, esGistIdValido, esTokenValido, conectado, listo, subir, bajar };
+export const SincronizacionGist = { getToken, getGistId, getLastSync, getCifrado, setCifrado, leerActual, formatLastSync, saveCredentials, esGistIdValido, esTokenValido, conectado, olvidarToken, listo, subir, bajar };

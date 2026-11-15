@@ -1450,7 +1450,10 @@
                             <p><strong>Restablecer</strong> elimina los registros del perfil activo y devuelve su
                                 configuración, incluida la apariencia de la app, a los valores por defecto. Los demás
                                 perfiles conservan sus registros. Antes te pide
-                                confirmación.</p>
+                                confirmación; si hay una frase de cifrado o una conexión con GitHub Gist o Google Drive,
+                                una casilla (desmarcada) permite borrarlas también. Son de toda la app: se olvidan para
+                                todos los perfiles y, sin la frase, los respaldos cifrados no se pueden abrir. Los
+                                respaldos en la nube no se borran.</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-gist">
@@ -2739,6 +2742,18 @@
             </div>
             <div class="modal-panel-body">
                 <p id="modal-confirmar-texto"></p>
+                <div class="settings-list hidden" id="modal-confirmar-opcion">
+                    <button id="modal-confirmar-casilla" type="button" aria-pressed="false">
+                        <svg class="icon">
+                            <use href="#icon-lock" />
+                        </svg>
+                        <span class="settings-list-text">
+                            <span id="modal-confirmar-casilla-titulo"></span>
+                            <span class="settings-list-desc" id="modal-confirmar-casilla-detalle"></span>
+                        </span>
+                        <span class="toggle-switch" aria-hidden="true"></span>
+                    </button>
+                </div>
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">

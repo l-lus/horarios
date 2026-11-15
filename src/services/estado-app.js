@@ -33,6 +33,7 @@ import { TiposRegistro } from './tipos-registro.js';
  * @typedef {Object} Notificaciones
  * @property {(mensaje: string, tipo?: string, duracion?: number, detalle?: string|null, accion?: Function|null) => void} mostrarToast
  * @property {(texto: string, etiqueta?: string, icono?: string, opciones?: object) => Promise<boolean>} confirmarModal
+ * @property {(texto: string, etiqueta: string, icono: string, opciones: { casilla: { titulo: string, detalle?: string } }) => Promise<{ confirmado: boolean, marcada: boolean }>} confirmarConCasilla confirmar con una casilla opcional (desmarcada al abrir)
  * @property {FormularioRegistro} formularioRegistro
  * @property {FormularioEdicion} formularioEdicion
  * @property {() => boolean} hayUIBloqueante
@@ -84,6 +85,7 @@ let notify = {
     cerrarImportar: () => { },
     cerrarTodosModales: () => { },
     confirmarModal: async () => false,
+    confirmarConCasilla: async () => ({ confirmado: false, marcada: false }),
     descargarJSON: () => { },
     descargarArchivo: () => { },
     pedirFrase: async () => null,

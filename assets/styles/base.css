@@ -270,9 +270,12 @@ html[data-header-pos="bottom"] .header::before {
         rotate: 90deg;
     }
 
-    /* Perfil: solo el ícono. El nombre aparece en horizontal, como una píldora que sale hacia las tarjetas, al pasar el cursor o enfocar el botón */
+    /* Perfil: solo el ícono. Al pasar el cursor o enfocar el botón, el nombre aparece como una prolongación suya hacia las tarjetas: una sola píldora con el ícono.
+       El nombre queda detrás del ícono (arranca en el borde del botón y su relleno es el ancho del botón: el 100% de un relleno se mide sobre el botón) y su fondo (::before) crece desde ahí con scaleX.
+       No ocupa lugar y solo anima transform y opacity. Sin énfasis el botón es un aro: se le saca el borde mientras la píldora lo cubre. */
     html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn {
         position: relative;
+        isolation: isolate;
         writing-mode: horizontal-tb;
         max-width: none;
         padding: var(--space-sm);
@@ -282,29 +285,58 @@ html[data-header-pos="bottom"] .header::before {
 
     html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn span {
         position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
+        top: 0;
+        bottom: 0;
+        z-index: -1;
+        display: flex;
+        align-items: center;
         max-width: 16rem;
-        padding: var(--space-xs) var(--space-md);
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-full);
-        box-shadow: var(--shadow);
+        overflow: hidden;
         opacity: 0;
         pointer-events: none;
         transition: opacity var(--dur-fast);
     }
 
     html[data-header-pos="left"] .header-profile-btn span {
-        left: calc(100% + var(--space-sm));
+        left: 0;
+        padding: 0 var(--space-md) 0 calc(100% + var(--space-xs));
     }
 
     html[data-header-pos="right"] .header-profile-btn span {
-        right: calc(100% + var(--space-sm));
+        right: 0;
+        padding: 0 calc(100% + var(--space-xs)) 0 var(--space-md);
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn span::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: var(--c-enfasis, var(--input-bg));
+        border: 1px solid var(--c-enfasis, var(--border));
+        border-radius: var(--radius-full);
+        transform: scaleX(0.2);
+        transition: transform var(--dur-anim) var(--ease-pop);
+    }
+
+    html[data-header-pos="left"] .header-profile-btn span::before {
+        transform-origin: left center;
+    }
+
+    html[data-header-pos="right"] .header-profile-btn span::before {
+        transform-origin: right center;
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn:is(:hover, :focus-visible) {
+        border-color: transparent;
     }
 
     html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn:is(:hover, :focus-visible) span {
         opacity: 1;
+    }
+
+    html:is([data-header-pos="left"], [data-header-pos="right"]) .header-profile-btn:is(:hover, :focus-visible) span::before {
+        transform: none;
     }
 }
 

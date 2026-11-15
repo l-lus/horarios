@@ -10,7 +10,7 @@ if (window.top !== window.self) {
 // script clásico no puede importar módulos; tests/architecture.test.mjs verifica que coincidan). Un valor guardado
 // que no esté en la lista se trata como el valor por defecto, igual que hacen esos módulos.
 var TEMAS_VALIDOS = ['light', 'dark', 'medianoche', 'pink', 'green', 'blue', 'lilac', 'crema'];
-var ENFASIS_VALIDOS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul'];
+var ENFASIS_VALIDOS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul', 'rosa', 'turquesa'];
 var POSICIONES_HEADER_VALIDAS = ['top', 'bottom', 'left', 'right'];
 var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto'];
 

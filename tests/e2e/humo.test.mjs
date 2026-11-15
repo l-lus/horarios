@@ -228,6 +228,20 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.equal(r.fraseGuardada, '', 'la frase escrita para un archivo no queda guardada');
     });
 
+    await t.test('Énfasis: las dos filas de círculos de la vista previa del tema (ocho de fondo y ocho de énfasis) caben en una fila, sin solaparse, en celular', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const { EventosApp } = await import('/src/core/eventos.js');
+            document.body.classList.remove('config-onboarding');
+            await h.hasta(() => !document.querySelector('.modal.show'), 5000, 'sin modales');
+            EventosApp.emit('tarjeta:personalizar', { tarjeta: 'tema' });
+            await h.hasta(() => document.querySelectorAll('.vista-previa-circulo').length === 16, 5000, 'vista previa del tema con sus círculos');   // 8 temas + 8 énfasis
+            await h.pausa(600);
+            return { solapes: h.solapes(), desborde: h.desbordeHorizontal() <= 0 };
+        });
+        assert.deepEqual(r, { solapes: [], desborde: true });
+    });
+
     await t.test('escritorio: sin desplazamiento lateral ni controles solapados, y sin errores en toda la corrida', async () => {
         await app.tamano(1280, 800, false);
         await evaluar(() => window.humo.pausa(600));

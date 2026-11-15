@@ -22,7 +22,7 @@ const MUESTRAS = Object.freeze({
 
 // Énfasis de color: se combinan con cualquier tema (<html data-enfasis>, ver el final de tokens.css). 'predeterminado' no pone nada. `acento` es el --c-enfasis tal como vale
 // en los temas oscuros (un test verifica que coincida con tokens.css) y `fondo` sigue al tema que está puesto.
-const ENFASIS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul'];
+const ENFASIS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul', 'rosa', 'turquesa'];
 const FONDO_MUESTRA_ENFASIS = 'var(--bg-body)';   // la mitad del círculo es el fondo del tema actual (oscuro o claro), no un color fijo
 const MUESTRAS_ENFASIS = Object.freeze({
     predeterminado: { etiqueta: 'Predeterminado', fondo: FONDO_MUESTRA_ENFASIS, acento: 'rgba(76, 114, 172, 0.8)' },
@@ -30,7 +30,9 @@ const MUESTRAS_ENFASIS = Object.freeze({
     naranja: { etiqueta: 'Naranja', fondo: FONDO_MUESTRA_ENFASIS, acento: '#fb923c' },
     neutro: { etiqueta: 'Neutro', fondo: FONDO_MUESTRA_ENFASIS, acento: '#e4e4e7' },
     violeta: { etiqueta: 'Violeta', fondo: FONDO_MUESTRA_ENFASIS, acento: '#8b7cf6' },
-    azul: { etiqueta: 'Azul', fondo: FONDO_MUESTRA_ENFASIS, acento: '#3b82f6' }
+    azul: { etiqueta: 'Azul', fondo: FONDO_MUESTRA_ENFASIS, acento: '#3b82f6' },
+    rosa: { etiqueta: 'Rosa', fondo: FONDO_MUESTRA_ENFASIS, acento: '#f472b6' },
+    turquesa: { etiqueta: 'Turquesa', fondo: FONDO_MUESTRA_ENFASIS, acento: '#22d3ee' }
 });
 
 /** Los temas, en el orden en que rota el botón de tema, con lo necesario para dibujar su muestra. */

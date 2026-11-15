@@ -668,7 +668,7 @@ body.config-onboarding #theme-toggle-config {
     flex-shrink: 0;
     width: 20px;
     height: 20px;
-    accent-color: var(--c-active);
+    accent-color: var(--c-enfasis, var(--c-active));
     cursor: pointer;
 }
 
@@ -852,6 +852,12 @@ body.config-onboarding #theme-toggle-config {
 
 .week-selector--opciones .day-checkbox input:checked~span {
     transform: none;
+}
+
+/* Las opciones de «Verificar feriados» (qué revisar) también llevan el énfasis */
+#modal-verificar-feriados .day-checkbox input:checked~span {
+    background: var(--c-enfasis, var(--c-active));
+    color: var(--c-on-enfasis, var(--c-white));
 }
 
 #lista-orden-cards {

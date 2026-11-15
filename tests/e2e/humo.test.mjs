@@ -114,6 +114,21 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         }
     });
 
+    await t.test('Frase incompleta al respaldar: abre el desplegable, destella el campo y lo trae a la vista', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const frase = document.getElementById('sync-frase');
+            frase.value = 'corta'; frase.dispatchEvent(new Event('input'));
+            h.clic('#btn-local-respaldar');
+            await h.hasta(() => frase.classList.contains('campo-flash'), 3000, 'destello de la frase');
+            const rect = frase.getBoundingClientRect();
+            const salida = { abierto: document.getElementById('sync-panel-cifrado').classList.contains('expanded'), visible: rect.top >= 0 && rect.bottom <= window.innerHeight, modal: h.modales() };
+            frase.value = ''; frase.dispatchEvent(new Event('input'));
+            return salida;
+        });
+        assert.deepEqual(r, { abierto: true, visible: true, modal: 'modal-respaldo' });
+    });
+
     await t.test('Cifrado: la frase generada es válida, se ve para poder anotarla y habilita «Recordar»', async () => {
         const r = await evaluar(() => {
             const antes = document.getElementById('btn-toggle-sync-recordar').disabled;

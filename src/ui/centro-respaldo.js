@@ -5,6 +5,7 @@ import { GestorModales } from './gestor-modales.js';
 import { IconosAnimados } from './iconos-animados.js';
 import { HistoricoEdicion } from './historico-edicion.js';
 import { mostrarToast } from './toast.js';
+import { _scrollHastaVisible } from './scroll.js';
 import { CampoFrase } from './campo-frase.js';
 import { FraseModal } from './frase-modal.js';
 import { SyncAutomatizacion } from './sync-automatizacion.js';
@@ -30,7 +31,7 @@ import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
 // desplegable «Conexión» (gist-respaldo.js, drive-respaldo.js), que avisa con el evento 'respaldo:conexion' cuando cambia.
 // Todo se guarda en vivo (el destino principal, la automática, «Recordar»), salvo la frase de cifrado: se escribe y se aplica con
 // «Aplicar» (Respaldar, Subir y Bajar aplican la escrita antes, y al cerrar con una sin aplicar se pregunta).
-const { _setBtnDisabled, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
+const { _setBtnDisabled, _abrirModalConPadre, _cerrarModalConPadre, _flashCampo } = UIBase;
 
 const MODAL = 'modal-respaldo';
 const NOMBRE_CORTO = Object.freeze({ local: 'el archivo', gist: 'Gist', drive: 'Drive' });
@@ -152,9 +153,22 @@ function abrir() {
     });
 }
 
+/** Abre el desplegable de cifrado, lleva la vista al campo de la frase si no se ve y lo destella. */
+async function _señalarFrase() {
+    const abierto = $('btn-sync-panel-cifrado')?.getAttribute('aria-expanded') === 'true';
+    _setPanel('btn-sync-panel-cifrado', true);
+    if (!abierto) await new Promise(r => setTimeout(r, 400));   // espera a que termine de desplegarse
+    const campo = $('sync-frase');
+    const cuerpo = /** @type {HTMLElement | null} */ (campo?.closest('.modal-panel-body'));
+    if (!campo || !cuerpo) return;
+    await _scrollHastaVisible(campo, { contenedor: cuerpo });
+    _flashCampo('sync-frase');
+    campo.focus({ preventScroll: true });
+}
+
 /** Aplica la frase escrita (vacía = sin cifrado). Devuelve false si no sirve (ya se avisó). */
 function _aplicarFrase() {
-    if (!_campoFrase.confirmar()) { _setPanel('btn-sync-panel-cifrado', true); return false; }
+    if (!_campoFrase.confirmar()) { _señalarFrase(); return false; }
     _actualizarResumenAjustes();
     return true;
 }

@@ -314,3 +314,25 @@ body[data-enfasis="azul"]:not(.dark-mode):not([data-theme="medianoche"]) {
     --c-enfasis: #2563eb;
     --c-on-enfasis: #ffffff;
 }
+
+html[data-enfasis="rosa"] body,
+body[data-enfasis="rosa"] {
+    --c-enfasis: #f472b6;
+    --c-on-enfasis: #3b0a21;
+}
+html[data-enfasis="rosa"]:not(.dark-mode):not([data-theme="medianoche"]) body,
+body[data-enfasis="rosa"]:not(.dark-mode):not([data-theme="medianoche"]) {
+    --c-enfasis: #be185d;
+    --c-on-enfasis: #ffffff;
+}
+
+html[data-enfasis="turquesa"] body,
+body[data-enfasis="turquesa"] {
+    --c-enfasis: #22d3ee;
+    --c-on-enfasis: #04222b;
+}
+html[data-enfasis="turquesa"]:not(.dark-mode):not([data-theme="medianoche"]) body,
+body[data-enfasis="turquesa"]:not(.dark-mode):not([data-theme="medianoche"]) {
+    --c-enfasis: #0e7490;
+    --c-on-enfasis: #ffffff;
+}

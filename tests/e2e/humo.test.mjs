@@ -242,6 +242,22 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(r, { solapes: [], desborde: true });
     });
 
+    await t.test('Instalar: la etiqueta aparece junto al ícono, queda dentro de la pantalla y a los pocos segundos se oculta', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const btn = document.getElementById('btn-install');
+            window.dispatchEvent(Object.assign(new Event('beforeinstallprompt'), { prompt() { }, userChoice: Promise.resolve({}) }));
+            await h.pausa(500);
+            const et = btn.querySelector('.install-etiqueta');
+            const rect = et.getBoundingClientRect();
+            const visible = getComputedStyle(et).opacity === '1' && btn.classList.contains('con-etiqueta');
+            const dentro = rect.left >= 0 && rect.right <= window.innerWidth;
+            await h.pausa(3600);
+            return { visible, dentro, oculta: getComputedStyle(et).opacity === '0' && !btn.classList.contains('con-etiqueta'), icono: getComputedStyle(btn).display !== 'none' };
+        });
+        assert.deepEqual(r, { visible: true, dentro: true, oculta: true, icono: true });
+    });
+
     await t.test('escritorio: sin desplazamiento lateral ni controles solapados, y sin errores en toda la corrida', async () => {
         await app.tamano(1280, 800, false);
         await evaluar(() => window.humo.pausa(600));

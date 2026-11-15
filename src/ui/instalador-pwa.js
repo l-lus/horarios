@@ -2,9 +2,7 @@ import { $ } from '../core/dom.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { AvisoActualizacion } from './aviso-actualizacion.js';
 import { urlScriptConfiable } from '../core/html.js';
-import { Movimiento } from '../core/movimiento.js';
 import { IconosAnimados } from './iconos-animados.js';
-import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 // PWA INSTALLER MODULE
@@ -12,30 +10,24 @@ import { Animaciones } from './animaciones.js';
 let deferredPrompt = null;
 const btnInstall = $('btn-install');
 
-// Llamado de atención del botón de instalar (solo cuando el navegador permite instalar): el destello de barrido y onda (el mismo del día de hoy del calendario)
-// y la flecha que rebota. Pocas veces, para que no moleste (3 al abrir); se corta si el usuario se acerca al botón.
-const INICIO_LLAMADO_MS = 1500;
-const CICLOS_LLAMADO = 3;
-const PAUSA_ENTRE_CICLOS_MS = 2000;
-/** @type {ReturnType<typeof setTimeout>[]} */
-let _timersLlamado = [];
+// Llamado de atención del botón de instalar (solo cuando el navegador permite instalar): al cargar muestra la etiqueta «Instalar» junto al ícono (con un
+// rebote de la flecha) y a los pocos segundos la oculta, y queda el ícono. Se corta si el usuario se acerca al botón o lo toca.
+const ETIQUETA_VISIBLE_MS = 3000;
+/** @type {ReturnType<typeof setTimeout> | null} */
+let _timerEtiqueta = null;
 
-function _detenerLlamado() {
-    _timersLlamado.forEach(clearTimeout);
-    _timersLlamado = [];
-    btnInstall?.classList.remove('destello-instalar');
+function _ocultarEtiqueta() {
+    if (_timerEtiqueta !== null) clearTimeout(_timerEtiqueta);
+    _timerEtiqueta = null;
+    btnInstall?.classList.remove('con-etiqueta');
 }
 
-function _cicloLlamado() {
+function _mostrarEtiqueta() {
     if (!btnInstall) return;
-    Animaciones._flashElemento(btnInstall, 'destello-instalar');
+    _ocultarEtiqueta();
+    btnInstall.classList.add('con-etiqueta');
     IconosAnimados.rebotarFlecha(btnInstall);
-}
-
-function _iniciarLlamado() {
-    _detenerLlamado();
-    if (Movimiento.reducido()) return;
-    for (let i = 0; i < CICLOS_LLAMADO; i++) _timersLlamado.push(setTimeout(_cicloLlamado, INICIO_LLAMADO_MS + i * PAUSA_ENTRE_CICLOS_MS));
+    _timerEtiqueta = setTimeout(_ocultarEtiqueta, ETIQUETA_VISIBLE_MS);
 }
 
 function init() {
@@ -50,12 +42,12 @@ function init() {
         deferredPrompt = e;
         if (btnInstall) {
             btnInstall.style.display = 'flex';
-            _iniciarLlamado();
+            _mostrarEtiqueta();
         }
     });
 
     window.addEventListener('appinstalled', () => {
-        _detenerLlamado();
+        _ocultarEtiqueta();
         if (btnInstall) btnInstall.style.display = 'none';
         deferredPrompt = null;
         EstadoApp._notify().mostrarToast('¡App instalada con éxito!', 'success');
@@ -71,8 +63,8 @@ async function instalarApp() {
 }
 
 function bindEventos() {
-    $('btn-install')?.addEventListener('click', () => { _detenerLlamado(); instalarApp(); });
-    ['pointerenter', 'focus'].forEach(ev => $('btn-install')?.addEventListener(ev, _detenerLlamado));
+    $('btn-install')?.addEventListener('click', () => { _ocultarEtiqueta(); instalarApp(); });
+    ['pointerenter', 'focus'].forEach(ev => $('btn-install')?.addEventListener(ev, _ocultarEtiqueta));
 }
 
 // Mínimo entre búsquedas de versión nueva al volver a la app (el navegador por sí solo revisa poco si la PWA queda abierta en segundo plano)

@@ -750,9 +750,47 @@ button:disabled {
     background: transparent;
 }
 
-/* Llamado de atención del botón de instalar (ver instalador-pwa.js): el destello de barrido y onda, ver .destello-capa en responsivo-movimiento.css */
+/* Llamado de atención del botón de instalar (ver instalador-pwa.js): al cargar una etiqueta «Instalar» junto al ícono, que a los pocos segundos se desvanece.
+   Es una píldora flotante (no ocupa lugar, así el encabezado no se mueve) y solo anima transform y opacity. */
 #btn-install {
     position: relative;
+}
+
+#btn-install .install-etiqueta {
+    position: absolute;
+    top: 50%;
+    right: calc(100% + var(--space-xs));
+    z-index: 3;
+    writing-mode: horizontal-tb;
+    white-space: nowrap;
+    padding: var(--space-xs) var(--space-md);
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow);
+    font-size: var(--text-sm);
+    font-weight: var(--fw-semibold);
+    opacity: 0;
+    transform: translate(var(--space-sm), -50%);
+    pointer-events: none;
+    transition: opacity var(--dur-anim), transform var(--dur-anim) var(--ease-pop);
+}
+
+#btn-install.con-etiqueta .install-etiqueta {
+    opacity: 1;
+    transform: translate(0, -50%);
+}
+
+/* Encabezado en un costado: el botón queda arriba de la columna y la etiqueta sale hacia las tarjetas, como el nombre del perfil */
+html[data-header-pos="left"] #btn-install .install-etiqueta {
+    right: auto;
+    left: calc(100% + var(--space-xs));
+    transform: translate(calc(-1 * var(--space-sm)), -50%);
+}
+
+html[data-header-pos="left"] #btn-install.con-etiqueta .install-etiqueta {
+    transform: translate(0, -50%);
 }
 
 #btn-lock-toggle.bloqueado,

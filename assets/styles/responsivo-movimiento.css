@@ -172,13 +172,6 @@ button.campo-flash {
     --onda-color: var(--text-main);
 }
 
-.icon-btn.destello-instalar {
-    --onda-color: var(--c-blue);
-    --onda-escala: 1.5;
-    --franja-color: color-mix(in srgb, var(--c-blue) 55%, transparent);
-    z-index: 2;
-}
-
 .est-mosaico.mosaico-flash {
     --onda-color: var(--tono);
     --onda-escala: 1.12;
@@ -241,7 +234,7 @@ button.campo-flash {
     display: none;
 }
 
-:root[data-motion="reduce"] :is(.calendario-dia.destello-hoy, .est-mosaico.mosaico-flash, .icon-btn.destello-instalar) {
+:root[data-motion="reduce"] :is(.calendario-dia.destello-hoy, .est-mosaico.mosaico-flash) {
     --onda-escala: 1;
 }
 

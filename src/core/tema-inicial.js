@@ -37,7 +37,10 @@ var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-
 // Énfasis de color (ver GestorTemas): el CSS solo mira <html data-enfasis>; sin valor guardado (o inválido, o 'predeterminado') no se pone nada.
 (function () {
     try {
-        var e = localStorage.getItem('horarios_enfasis');
+        // Es del perfil activo ('horarios_enfasis_<perfil>'); la clave sin perfil es la de antes de que fuera por perfil (ver GestorTemas.migrarEnfasisLegado)
+        var perfil = localStorage.getItem('horarios_perfilActivo') || 'default';
+        var e = localStorage.getItem('horarios_enfasis_' + perfil);
+        if (e === null) e = localStorage.getItem('horarios_enfasis');
         if (e !== null && e !== 'predeterminado' && ENFASIS_VALIDOS.indexOf(e) !== -1) document.documentElement.setAttribute('data-enfasis', e);
     } catch (err) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }());

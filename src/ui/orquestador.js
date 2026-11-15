@@ -297,6 +297,7 @@ function _initDatosYConfig(config) {
 
 function _restaurarEstadoVisual(config) {
     GestorTemas.aplicarTema(config.tema);
+    GestorTemas.migrarEnfasisLegado(Object.keys(GestorPerfiles.obtenerTodosPerfiles()));
     GestorTemas.aplicarEnfasis(GestorTemas.enfasisGuardado());
     Movimiento.init();
     EstiloCalendario.init();

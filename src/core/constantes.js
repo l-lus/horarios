@@ -9,7 +9,7 @@ export const APP_STORAGE_PREFIX = 'horarios_';
 
 export const STORAGE_KEYS = Object.freeze({
     TEMA_OSCURO: 'temaOscuro',
-    ENFASIS: 'enfasis',                           // énfasis de color (tarjeta de fichaje, sliders, días laborales, flechas de tarjetas, botones de período y de perfil, badge del perfil activo): ver ui/gestor-temas.js; es de cada dispositivo
+    ENFASIS: 'enfasis',                           // énfasis de color (tarjeta de fichaje, sliders, días laborales, flechas de tarjetas, botones de período y de perfil, badge del perfil activo): ver ui/gestor-temas.js; es de cada perfil
     VISTA_ACTUAL: 'vistaActual',
     MODO_ESTADISTICAS: 'modoEstadisticas',
     HOVER_POPUP: 'hoverPopupCalendario',
@@ -67,6 +67,9 @@ export const STORAGE_KEYS = Object.freeze({
     ANIO_EXPANDIDO: (anioId) => `anio-${anioId}-expandido`,
     CARD_VISIBLE: (cual) => `cardVisible_${cual}`,
 });
+
+// Los énfasis de color, en el orden en que se muestran (copiados en core/tema-inicial.js: un test verifica que coincidan)
+export const ENFASIS_IDS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul', 'rosa', 'turquesa'];
 
 // Fondo de la tarjeta de estado de un perfil nuevo o restablecido
 export const FONDO_CARD_POR_DEFECTO = 'golden-gate';

@@ -298,6 +298,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         ruedaCalendario: true,
         persistirTarjetas: true,
         fondoCard: 'golden-gate',
+        enfasis: 'predeterminado',
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico'],
         ordenCardsMovil: ['estado', 'registrar', 'estadisticas', 'historico'],
         columnasCards: [3, 1],
@@ -319,7 +320,7 @@ test('ImportarExportar: la apariencia (estilo del calendario, fondo, formato cor
     assert.ok(STORAGE_KEYS.FONDO_CARD in exportado, 'el fondo de la tarjeta falta en el respaldo');
 
     const base = { diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8 };
-    const cambios = { estiloCalendario: 'punto', fondoCard: 'ninguno', formatoCortoStats: true, hoverPopupCalendario: true, ruedaCalendario: false, persistirTarjetas: false };
+    const cambios = { estiloCalendario: 'punto', fondoCard: 'ninguno', enfasis: 'rosa', formatoCortoStats: true, hoverPopupCalendario: true, ruedaCalendario: false, persistirTarjetas: false };
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, ...cambios }), true);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, estiloCalendario: 'inexistente' }), false);
     // la posición del encabezado: en PC valen los cuatro lados; en móvil solo arriba y abajo
@@ -327,16 +328,21 @@ test('ImportarExportar: la apariencia (estilo del calendario, fondo, formato cor
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeaderMovil: 'left' }), false);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeader: 'centro' }), false);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, fondoCard: 'inexistente' }), false);
+    // el énfasis es del perfil y viaja en su respaldo
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, enfasis: 'turquesa' }), true);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, enfasis: 'rojo' }), false);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, formatoCortoStats: 'si' }), false);
 
     const etiquetas = ImportarExportar.calcularCambiosConfigImport({ ...base, ...cambios });
-    ['estilo del calendario', 'fondo de la tarjeta de estado', 'formato de tiempo corto', 'popup del calendario (PC)', 'rueda del calendario (PC)', 'recordar estado de tarjetas']
+    ['estilo del calendario', 'fondo de la tarjeta de estado', 'énfasis de color', 'formato de tiempo corto', 'popup del calendario (PC)', 'rueda del calendario (PC)', 'recordar estado de tarjetas']
         .forEach(e => assert.ok(etiquetas.includes(e), `no se informa el cambio de ${e}`));
 
     ImportarExportar.aplicarConfigImportada({ ...base, ...cambios });
     assert.equal(EstiloCalendario.actual(), 'punto');
     assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ESTILO_CALENDARIO, null), 'punto');
     assert.equal(Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, null, true), 'ninguno');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ENFASIS, null, true), 'rosa', 'el énfasis se guarda en el perfil');
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ENFASIS, null), null, 'y no en la clave del dispositivo');
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.FORMATO_CORTO_STATS, false), true);
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.HOVER_POPUP, false), true);
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.RUEDA_CALENDARIO, true), false);
@@ -351,6 +357,7 @@ test('ImportarExportar: la apariencia (estilo del calendario, fondo, formato cor
     ImportarExportar.aplicarConfigImportada({ ...base, estiloCalendario: 'legacy', fondoCard: 'golden-gate', formatoCortoStats: false, hoverPopupCalendario: false, ruedaCalendario: true, persistirTarjetas: true });
     CLAVES_AJUSTES_INSTALACION.forEach(k => Almacenamiento.removeItem(k));
     Almacenamiento.removeItem(STORAGE_KEYS.FONDO_CARD, true);
+    Almacenamiento.removeItem(STORAGE_KEYS.ENFASIS, true);
 });
 
 test('ImportarExportar: el diseño de la interfaz (orden y tarjetas visibles) se exporta, valida, compara y restaura', async () => {
@@ -1234,4 +1241,26 @@ test('SeguridadYUtils.notasHastaPalabra: respeta la lista blanca y el largo máx
     for (const t of ['Feriado con un nombre bastante largo para el campo', 'Paso a la Inmortalidad del Gral. San Martín']) {
         assert.ok((S.notasHastaPalabra(t) ?? '').length <= MAX);
     }
+});
+
+test('GestorTemas: el énfasis es de cada perfil y el de antes (uno por dispositivo) pasa a todos los perfiles una sola vez', async () => {
+    const { GestorTemas } = await import('../src/ui/gestor-temas.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+
+    Almacenamiento.setItem(STORAGE_KEYS.ENFASIS, 'violeta');   // la clave vieja, sin perfil
+    GestorTemas.migrarEnfasisLegado(['default', 'perfil_a']);
+    assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ENFASIS, null), null, 'la clave vieja se borra');
+    assert.equal(Almacenamiento.getItem(`${STORAGE_KEYS.ENFASIS}_perfil_a`, null), 'violeta');
+    assert.equal(GestorTemas.enfasisGuardado(), 'violeta', 'el perfil activo (default) lo conserva');
+
+    GestorTemas.guardarEnfasis('rosa');
+    assert.equal(Almacenamiento.getItem(`${STORAGE_KEYS.ENFASIS}_default`, null), 'rosa');
+    assert.equal(Almacenamiento.getItem(`${STORAGE_KEYS.ENFASIS}_perfil_a`, null), 'violeta', 'el de otro perfil no cambia');
+
+    GestorTemas.migrarEnfasisLegado(['default', 'perfil_a']);   // sin clave vieja no toca nada
+    assert.equal(GestorTemas.enfasisGuardado(), 'rosa');
+
+    Almacenamiento.removeItem(`${STORAGE_KEYS.ENFASIS}_default`);
+    Almacenamiento.removeItem(`${STORAGE_KEYS.ENFASIS}_perfil_a`);
 });

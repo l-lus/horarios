@@ -12,10 +12,12 @@ const _DURACION_FLECHA_MS = 600;
 const _DURACION_GIRO_MS = 500;
 const _DURACION_REBOTE_MS = 700;
 
-const _BASES = { nube: '#icon-nube', bandeja: '#icon-bandeja', pantalla: '#icon-pantalla' };
+const _BASES = { nube: '#icon-nube', drive: '#icon-drive-base', bandeja: '#icon-bandeja', pantalla: '#icon-pantalla' };
 const _FLECHAS = {
     'nube-subir': '#icon-flecha-nube-subir',
     'nube-bajar': '#icon-flecha-nube-bajar',
+    'drive-subir': '#icon-flecha-nube-subir',
+    'drive-bajar': '#icon-flecha-nube-bajar',
     'bandeja-subir': '#icon-flecha-bandeja-subir',
     'bandeja-bajar': '#icon-flecha-bandeja-bajar',
     'pantalla-bajar': '#icon-flecha-pantalla-bajar',
@@ -32,7 +34,7 @@ function _usar(href, clase = '') {
 /**
  * Dibuja en el botón la base y la flecha del sentido pedido.
  * @param {Element | null} btn
- * @param {'nube' | 'bandeja' | 'pantalla'} base
+ * @param {'nube' | 'drive' | 'bandeja' | 'pantalla'} base
  * @param {'subir' | 'bajar'} sentido
  */
 function ponerIconoFlecha(btn, base, sentido) {

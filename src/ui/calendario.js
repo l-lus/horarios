@@ -309,7 +309,13 @@ function animarEntradaInicial() {
         celda.style.setProperty('--i', String(i));
         celda.classList.add('cal-entrada');
     });
-    grid.querySelector('.calendario-dia.hoy:not([data-reg-id])')?.classList.add('cal-entrada-remate');
+    // Hoy sin registro entra en su lugar de la secuencia (después de los días con registro que lo preceden), no al final
+    const hoy = /** @type {HTMLElement | null} */ (grid.querySelector('.calendario-dia.hoy:not([data-reg-id])'));
+    if (hoy) {
+        const antes = Array.from(celdas).filter(c => c.compareDocumentPosition(hoy) & Node.DOCUMENT_POSITION_FOLLOWING).length;
+        hoy.style.setProperty('--i', String(antes));
+        hoy.classList.add('cal-entrada-remate');
+    }
 
     const total = _durSiAnima('--dur-cal-espera') + celdas.length * paso
         + _durSiAnima('--dur-cal-entrada') + _durSiAnima('--dur-anim') + 100;

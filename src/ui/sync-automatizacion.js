@@ -4,13 +4,14 @@ import { UIBase } from './base.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { _crearPressHold } from './gestos.js';
 import { Animaciones } from './animaciones.js';
+import { mostrarToast } from './toast.js';
 
 // ====================================================================
 // AUTOMATIZACIÓN DE LA SINCRONIZACIÓN — la sección «Sincronización automática» del modal de respaldo (centro-respaldo.js)
 // ====================================================================
 // Sincronización automática (manual / restaurar / respaldar al abrir la app), comportamiento al bajar, límites por hora y
-// franja horaria. Es una sola por perfil y corre con el destino principal. Los cambios quedan en borrador hasta Guardar
-// (o hasta Subir/Bajar, que guardan antes). Los ids llevan el prefijo dado: btn-toggle-sync-backup, sync-rango-desde, …
+// franja horaria. Es una sola por perfil y corre con el destino principal. Todo se guarda en vivo, al tocar cada control (el rango
+// horario, al salir del campo y solo si es válido). Los ids llevan el prefijo dado: btn-toggle-sync-backup, sync-rango-desde, …
 const { _setBtnDisabled, _setBtnActivo } = UIBase;
 const { _animarValor } = Animaciones;
 
@@ -29,13 +30,9 @@ const { _animarValor } = Animaciones;
  */
 function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
     const id = (patron) => patron.replace('{p}', prefijo);
-    /** @type {number | null} */
-    let _autoSyncTemp = null;
-    /** @type {{ bajar: number, subir: number } | null} */
-    let _limitesTemp = null;
     let _habilitado = false;
 
-    function estadoActual() { return _autoSyncTemp ?? servicio.getAutoSync(); }
+    function estadoActual() { return servicio.getAutoSync(); }
     function _tipoSyncActual() {
         const estado = estadoActual();
         return estado === 1 ? 'bajar' : estado === 2 ? 'subir' : null;
@@ -46,13 +43,13 @@ function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
         if (!el) return;
         const tipo = _tipoSyncActual();
         if (!tipo) { el.textContent = 'Desactivado'; return; }
-        const limite = _limitesTemp ? _limitesTemp[tipo] : servicio.getSyncLimite(tipo);
+        const limite = servicio.getSyncLimite(tipo);
         const desde = $(id('{p}-rango-desde'))?.value || '--:--';
         const hasta = $(id('{p}-rango-hasta'))?.value || '--:--';
         el.textContent = `${limite === 0 ? 'Sin límite' : `${limite} por hora`} · ${desde} – ${hasta}`;
     }
 
-    /** Habilita o no los controles según el destino principal sea un servicio listo para sincronizar (con el modo en borrador). */
+    /** Habilita o no los controles según el destino principal sea un servicio listo para sincronizar. */
     function setHabilitado(conectado) {
         _habilitado = conectado;
         _setBtnDisabled(id('btn-toggle-{p}-backup'), !conectado);
@@ -106,7 +103,7 @@ function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
             actualizarResumen();
             return;
         }
-        const limite = _limitesTemp ? _limitesTemp[tipo] : servicio.getSyncLimite(tipo);
+        const limite = servicio.getSyncLimite(tipo);
         const input = $(id('{p}-limite-valor'));
         const label = $(id('{p}-limite-label'));
         if (input) _animarValor(input, limite, dir);
@@ -116,7 +113,7 @@ function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
     }
 
     function toggleBackup() {
-        _autoSyncTemp = (estadoActual() + 1) % 3;
+        servicio.setAutoSync((estadoActual() + 1) % 3);
         actualizarBotonBackup();
         alCambiar();
         _actualizarCampoLimite();
@@ -125,23 +122,22 @@ function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
     function cambiarLimite(delta) {
         const tipo = _tipoSyncActual();
         if (!tipo) return;
-        if (!_limitesTemp) _limitesTemp = { bajar: servicio.getSyncLimite('bajar'), subir: servicio.getSyncLimite('subir') };
-        const previo = _limitesTemp[tipo];
-        _limitesTemp[tipo] = Math.max(0, Math.min(99, previo + delta));
-        _actualizarCampoLimite(Math.sign(_limitesTemp[tipo] - previo));
+        const previo = servicio.getSyncLimite(tipo);
+        const nuevo = Math.max(0, Math.min(99, previo + delta));
+        if (nuevo === previo) return;
+        servicio.setSyncLimite(tipo, nuevo);
+        _actualizarCampoLimite(Math.sign(nuevo - previo));
     }
 
     const pressHoldLimite = _crearPressHold(delta => cambiarLimite(delta));
 
-    /** Al abrir el modal: borrador vacío y los controles con lo guardado. */
+    /** Al abrir el modal: los controles con lo guardado. */
     function cargar() {
         const rango = servicio.getRangoHorario();
         const desdeEl = $(id('{p}-rango-desde'));
         const hastaEl = $(id('{p}-rango-hasta'));
         if (desdeEl) desdeEl.value = rango.desde;
         if (hastaEl) hastaEl.value = rango.hasta;
-        _autoSyncTemp = servicio.getAutoSync();
-        _limitesTemp = null;
         actualizarBotonBackup();
         actualizarBotonMerge();
         _actualizarCampoLimite();
@@ -161,33 +157,15 @@ function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
         };
     }
 
-    /** ¿El borrador difiere de lo guardado? */
-    function hayCambios() {
-        const { desde, hasta } = leerRango();
-        const rango = servicio.getRangoHorario();
-        return desde !== rango.desde || hasta !== rango.hasta
-            || (_autoSyncTemp !== null && _autoSyncTemp !== servicio.getAutoSync())
-            || _limitesTemp !== null;
-    }
-
-    /** Guarda el borrador (el rango solo si es válido). */
-    function guardar() {
-        const { desde, hasta, valida } = leerRango();
-        if (valida) servicio.setRangoHorario(desde, hasta);
-        if (_autoSyncTemp !== null) {
-            servicio.setAutoSync(_autoSyncTemp);
-            _autoSyncTemp = null;
+    /** Guarda el rango horario si es válido; si no, avisa y deja lo guardado. */
+    function _guardarRango() {
+        const { desde, hasta, desdeInvalida, valida } = leerRango();
+        if (!valida) {
+            mostrarToast(desdeInvalida ? 'Hora inicial inválida.' : 'Hora final inválida.', 'error');
+            return;
         }
-        if (_limitesTemp !== null) {
-            servicio.setSyncLimite('bajar', _limitesTemp.bajar);
-            servicio.setSyncLimite('subir', _limitesTemp.subir);
-            _limitesTemp = null;
-        }
-    }
-
-    function descartar() {
-        _autoSyncTemp = null;
-        _limitesTemp = null;
+        servicio.setRangoHorario(desde, hasta);
+        alCambiar();
     }
 
     function bindEventos() {
@@ -197,10 +175,13 @@ function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
         const btnInc = $(id('btn-{p}-limite-inc'));
         if (btnDec) pressHoldLimite.vincular(btnDec, -1);
         if (btnInc) pressHoldLimite.vincular(btnInc, 1);
-        [id('{p}-rango-desde'), id('{p}-rango-hasta')].forEach(i => $(i)?.addEventListener('input', () => actualizarResumen()));
+        [id('{p}-rango-desde'), id('{p}-rango-hasta')].forEach(i => {
+            $(i)?.addEventListener('input', () => actualizarResumen());
+            $(i)?.addEventListener('change', () => _guardarRango());
+        });
     }
 
-    return { estadoActual, setHabilitado, actualizarResumen, cargar, leerRango, hayCambios, guardar, descartar, bindEventos };
+    return { estadoActual, setHabilitado, actualizarResumen, cargar, leerRango, bindEventos };
 }
 
 export const SyncAutomatizacion = { crear };

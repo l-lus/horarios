@@ -218,6 +218,7 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             h.clic('#modal-confirmar-cancel');
             await h.modalAbierto('modal-respaldo');
             frase.value = window.fraseHumo; frase.dispatchEvent(new Event('input'));
+            h.clic('#btn-sync-frase-aplicar');   // Subir aplicó la otra frase al empezar: se vuelve a la de la prueba
             return texto;
         });
         assert.match(r, /no abre lo que hay en el Gist/);
@@ -235,7 +236,8 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             salida.automaticaLocal = document.getElementById('btn-toggle-sync-backup').disabled;
             h.clic('#btn-principal-gist');
             h.clic('#btn-toggle-sync-backup'); h.clic('#btn-toggle-sync-backup');   // sin automatizar → restaurar → respaldar
-            h.clic('#btn-respaldo-guardar');
+            h.clic('#btn-respaldo-volver'); await h.pausa(200);   // con una frase escrita sin aplicar, Volver pregunta: se sale
+            if (document.getElementById('modal-confirmar').classList.contains('show')) h.clic('#modal-confirmar-ok');   // la automática ya se guardó en vivo
             await h.modalAbierto('modal-config');
             salida.resumenGist = resumen();
             salida.rapidoGist = rapido();
@@ -270,7 +272,9 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             salida.confirmado = await pregunta;
             await h.modalAbierto('modal-exportar');
             h.clic('#btn-volver-exportar'); await h.modalAbierto('modal-respaldo');
-            h.clic('#btn-respaldo-volver'); await h.modalAbierto('modal-config');
+            h.clic('#btn-respaldo-volver'); await h.pausa(200);   // con una frase escrita sin aplicar, Volver pregunta: se sale
+            if (document.getElementById('modal-confirmar').classList.contains('show')) h.clic('#modal-confirmar-ok');
+            await h.modalAbierto('modal-config');
 
             GestorModales.ejecutarAccionCierre('modal-config');
             await h.hasta(() => h.modales() === '', 5000, `sin modales tras cerrar Ajustes (hay: ${h.modales()})`);

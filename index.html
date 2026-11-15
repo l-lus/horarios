@@ -1431,9 +1431,11 @@
                                 cuántas bajadas (o subidas, según el modo) se permiten por hora (0 = sin límite; por
                                 defecto, 2 bajadas o 1 subida) y la franja horaria (Desde / Hasta, puede cruzar la
                                 medianoche; por defecto, de 21:00 a 00:00).</p>
-                            <p><strong>Guardar:</strong> el destino principal se guarda al tocarlo; la frase y la
-                                automatización, con el botón <strong>Guardar</strong> (Respaldar, Subir y Bajar las
-                                guardan antes). El destino principal, el modo automático, el comportamiento al bajar y
+                            <p><strong>Guardado:</strong> el destino principal, <em>Recordar en este navegador</em> y la
+                                automatización se guardan en vivo, al tocarlos (la franja horaria, al salir del campo).
+                                La frase de cifrado se escribe y se aplica con el botón <strong>Aplicar</strong>
+                                (Respaldar, Subir y Bajar aplican la escrita antes; si cerrás con una sin aplicar, la app
+                                te pregunta). El destino principal, el modo automático, el comportamiento al bajar y
                                 la franja horaria son de cada perfil; la frase y el límite por hora son comunes a
                                 todos.</p>
                             <p><strong>Archivo local:</strong> con <strong>Respaldar</strong> exportás un archivo con
@@ -1686,7 +1688,7 @@
                                             <svg class="icon">
                                                 <use href="#icon-check" />
                                             </svg>
-                                            Guardar conexión
+                                            Guardar
                                         </button>
                                     </div>
                                 </div>
@@ -1798,10 +1800,13 @@
                                                 </svg>
                                             </button>
                                         </div>
-                                        <p class="frase-nota">Con una frase, los respaldos salen cifrados (Gist, Drive y
-                                            archivos): ni GitHub ni Google pueden leer tus registros. Tenés que cargar la
-                                            misma en cada dispositivo. Si la perdés, lo cifrado no se puede abrir (tus datos
-                                            locales siguen).</p>
+                                        <p class="frase-nota">Con una frase, los datos se guardan cifrados. Si la perdés, no vas a poder acceder a ellos.</p>
+                                        <button type="button" class="btn-export" id="btn-sync-frase-aplicar">
+                                            <svg class="icon">
+                                                <use href="#icon-check" />
+                                            </svg>
+                                            Aplicar
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1889,12 +1894,6 @@
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">
-                    <button class="btn-export" id="btn-respaldo-guardar">
-                        <svg class="icon">
-                            <use href="#icon-check" />
-                        </svg>
-                        Guardar
-                    </button>
                     <button class="btn-cancel" id="btn-respaldo-volver">
                         <svg class="icon">
                             <use href="#icon-back" />

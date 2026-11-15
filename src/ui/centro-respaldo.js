@@ -27,9 +27,9 @@ import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
 // Reúne los tres destinos (archivo local, GitHub Gist y Google Drive) con sus acciones, y lo que es común a todos y antes se
 // repetía en cada modal: la frase de cifrado y la sincronización automática. Uno de los destinos es el principal del perfil
 // (DestinoRespaldo): con él corren la automática y los botones rápidos del histórico. La conexión de cada servicio sigue en su
-// modal (gist-respaldo.js, drive-respaldo.js), que avisa con el evento 'respaldo:conexion' cuando cambia.
-// El destino principal se guarda al tocarlo; la frase y la automática quedan en borrador hasta Guardar (Respaldar, Subir y
-// Bajar guardan antes).
+// desplegable «Conexión» (gist-respaldo.js, drive-respaldo.js), que avisa con el evento 'respaldo:conexion' cuando cambia.
+// Todo se guarda en vivo (el destino principal, la automática, «Recordar»), salvo la frase de cifrado: se escribe y se aplica con
+// «Aplicar» (Respaldar, Subir y Bajar aplican la escrita antes, y al cerrar con una sin aplicar se pregunta).
 const { _setBtnDisabled, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
 
 const MODAL = 'modal-respaldo';
@@ -42,7 +42,7 @@ const _abierto = () => !!$(MODAL)?.classList.contains('show');
 
 const _auto = SyncAutomatizacion.crear({
     prefijo: 'sync', servicio: ConfigSync, nombre: () => NOMBRE_CORTO[DestinoRespaldo.principal()],
-    alCambiar: () => _auto.setHabilitado(DestinoRespaldo.nubeActiva() !== null)   // «Al bajar datos» solo aplica al modo restaurar
+    alCambiar: () => { _auto.setHabilitado(DestinoRespaldo.nubeActiva() !== null); _actualizarResumenAjustes(); }   // «Al bajar datos» solo aplica al modo restaurar
 });
 
 // La frase de cifrado de la app (FraseCifrado): el único lugar donde se carga
@@ -152,32 +152,36 @@ function abrir() {
     });
 }
 
-/** Valida y guarda el borrador (frase y automática). Devuelve false si algo de lo escrito no sirve (ya se avisó). */
-function _guardarBorrador() {
-    const { desdeInvalida, hastaInvalida } = _auto.leerRango();
-    if (desdeInvalida || hastaInvalida) {
-        mostrarToast(desdeInvalida ? 'Hora inicial inválida.' : 'Hora final inválida.', 'error');
-        _setPanel('btn-sync-panel-limites', true);
-        return false;
-    }
+/** Aplica la frase escrita (vacía = sin cifrado). Devuelve false si no sirve (ya se avisó). */
+function _aplicarFrase() {
     if (!_campoFrase.confirmar()) { _setPanel('btn-sync-panel-cifrado', true); return false; }
-    _auto.guardar();
     _actualizarResumenAjustes();
     return true;
 }
 
-/** Antes de respaldar, subir o bajar: lo escrito en el modal (si está abierto) se guarda primero. */
-const _guardarSiAbierto = () => !_abierto() || _guardarBorrador();
+/** Antes de respaldar, subir o bajar: la frase escrita en el modal (si está abierto) se aplica primero. */
+const _guardarSiAbierto = () => !_abierto() || _aplicarFrase();
 
-function guardar() {
-    const huboCambios = _campoFrase.cambio() || _auto.hayCambios();
-    if (!_guardarBorrador()) return;
-    mostrarToast(huboCambios ? 'Configuración guardada' : 'Sin cambios', huboCambios ? 'success' : 'info');
-    cerrar();
+function _botonAplicarFrase() {
+    const huboCambios = _campoFrase.cambio();
+    if (!_aplicarFrase()) return;
+    const hayFrase = _campoFrase.valor().trim() !== '';
+    mostrarToast(!huboCambios ? 'Sin cambios' : hayFrase ? 'Cifrado activado' : 'Cifrado desactivado', huboCambios ? 'success' : 'info');
 }
 
-function cerrar() {
-    _auto.descartar();
+/** «Recordar» se guarda en vivo, pero solo si lo escrito es la frase ya aplicada: una nueva espera a «Aplicar». */
+function _alCambiarRecordar() {
+    const evaluada = FraseCifrado.evaluar(_campoFrase.valor());
+    if (!evaluada.ok || evaluada.frase !== FraseCifrado.actual()) return;
+    if (!FraseCifrado.guardar(evaluada.frase, _campoFrase.recordar())) mostrarToast('No se pudo guardar la frase en este navegador', 'warning');
+}
+
+async function cerrar() {
+    if (_abierto() && _campoFrase.cambio()) {
+        _setPanel('btn-sync-panel-cifrado', true);
+        const salir = await GestorModales.confirmar('La frase de cifrado que escribiste no se aplicó: si salís, se descarta.', 'Salir', '#icon-back', { titulo: 'Cifrado', labelCancel: 'Seguir editando', iconoCancel: '#icon-edit' });
+        if (!salir) return;
+    }
     _cerrarModalConPadre(MODAL);
     actualizarBotonesHistorico();
 }
@@ -253,6 +257,7 @@ async function alConectarDrive() {
 
 function bindEventos() {
     _campoFrase.vincular();
+    $('btn-toggle-sync-recordar')?.addEventListener('click', _alCambiarRecordar);   // después del cambio que hace _campoFrase
     _auto.bindEventos();
     FraseModal.bindEventos();
     RespaldoLocal.bindEventos();
@@ -274,7 +279,7 @@ function bindEventos() {
     const sincronizar = (destino, tipo) => () => { IconosAnimados.animarFlecha($(`btn-${destino}-${tipo}`), tipo); FLUJOS[destino][tipo](); };
     alClic({
         'btn-abrir-respaldo': () => abrir(),
-        'btn-local-respaldar': () => { if (_guardarBorrador()) RespaldoLocal.mostrarExportar(); },
+        'btn-local-respaldar': () => { if (_aplicarFrase()) RespaldoLocal.mostrarExportar(); },
         'btn-local-restaurar': () => RespaldoLocal.mostrarImportar(),
         'btn-gist-subir': sincronizar('gist', 'subir'),
         'btn-gist-bajar': sincronizar('gist', 'bajar'),
@@ -288,7 +293,7 @@ function bindEventos() {
         'btn-principal-drive': () => _elegirPrincipal('drive'),
         'btn-sync-panel-cifrado': () => _setPanel('btn-sync-panel-cifrado', $('btn-sync-panel-cifrado')?.getAttribute('aria-expanded') !== 'true'),
         'btn-sync-panel-limites': () => _setPanel('btn-sync-panel-limites', $('btn-sync-panel-limites')?.getAttribute('aria-expanded') !== 'true'),
-        'btn-respaldo-guardar': () => guardar(),
+        'btn-sync-frase-aplicar': () => _botonAplicarFrase(),
         'btn-respaldo-volver': () => cerrar(),
         'btn-gist-merge-aplicar': () => SyncNube.mergeAplicar($('gist-merge-resumen')?.dataset.modo === 'replace' ? 'replace' : 'merge'),
         'btn-gist-merge-cancelar': () => SyncNube.mergeCancelar(),

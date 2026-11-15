@@ -328,7 +328,7 @@
     display: none;
 }
 
-.linea-etiqueta--arriba.dia { font-weight: 400; }
+.linea-etiqueta--arriba.dia { font-weight: var(--fw-normal); }
 
 /* Vista semanal: la sigla va en diagonal, siguiendo la línea de su marca (ver geometriaDiagonal). Abajo la línea sube hacia la derecha (-45°) y arriba baja (+45°).
    El giro es sobre el extremo que toca la línea, que queda a ~13 px de la barra; espejada (sin lugar a la izquierda) gira sobre el otro extremo. */
@@ -459,7 +459,7 @@
 /* El centro de la etiqueta queda a la altura donde termina la línea diagonal de su marca */
 .linea-etiqueta--abajo { top: calc(100% + var(--centro-etiqueta) - var(--text-sm) / 2); }
 .linea-etiqueta--abajo.linea-etiqueta--entrada-arriba { top: auto; bottom: calc(100% + var(--centro-etiqueta) - var(--text-sm) / 2); }
-.linea-etiqueta--arriba { bottom: calc(100% + var(--centro-etiqueta) - var(--text-sm) / 2); font-weight: 600; }
+.linea-etiqueta--arriba { bottom: calc(100% + var(--centro-etiqueta) - var(--text-sm) / 2); font-weight: var(--fw-semibold); }
 .linea-etiqueta--arriba.positivo { color: var(--c-green); }
 .linea-etiqueta--arriba.negativo { color: var(--c-red); }
 
@@ -982,7 +982,7 @@
     height: 5px;
     border-radius: 50%;
     background-color: var(--text-main);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--shadow-xs);
     pointer-events: none;
 }
 
@@ -1915,17 +1915,17 @@
     color: var(--text-muted);
 }
 
-.est-duracion--media .est-num { font-size: 2rem; }
-.est-duracion--grande .est-num { font-size: 2.6rem; }
-.est-duracion--enorme .est-num { font-size: 3.4rem; }
+.est-duracion--media .est-num { font-size: var(--text-3xl); }
+.est-duracion--grande .est-num { font-size: var(--text-4xl); }
+.est-duracion--enorme .est-num { font-size: var(--text-5xl); }
 .est-duracion--enorme .est-unidad { font-size: var(--text-lg); }
 
 .est-emoji {
-    font-size: 1.8rem;
+    font-size: var(--text-xl);
     line-height: 1;
 }
 
-.est-emoji--grande { font-size: 2.6rem; }
+.est-emoji--grande { font-size: var(--text-4xl); }
 
 .est-dato {
     display: flex;
@@ -2307,13 +2307,13 @@ html[data-disposicion-anillo="intercambiado-derecha"] .est-anillo-aro {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    font-size: 2rem;
+    font-size: var(--text-3xl);
     font-weight: var(--fw-semibold);
     line-height: var(--lh-tight);
 }
 
 .est-linea[data-tipo="espera"] .est-linea-titulo {
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
     color: var(--text-muted);
 }
 
@@ -2614,7 +2614,7 @@ html[data-disposicion-anillo="intercambiado-derecha"] .est-anillo-aro {
 }
 
 .est-fila-texto {
-    font-size: 2rem;
+    font-size: var(--text-3xl);
     font-weight: var(--fw-semibold);
     line-height: var(--lh-tight);
     color: var(--tono);
@@ -2623,7 +2623,7 @@ html[data-disposicion-anillo="intercambiado-derecha"] .est-anillo-aro {
 .est-fila-valor[data-color] { color: var(--est-color); }
 
 .est-filas[data-tipo="espera"] .est-fila-texto {
-    font-size: 1.15rem;
+    font-size: var(--text-md);
     white-space: nowrap;
     color: var(--text-muted);
 }

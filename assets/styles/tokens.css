@@ -27,6 +27,11 @@
     --text-md: 1.125rem;
     --text-lg: 1.25rem;
     --text-xl: 1.8rem;
+    /* Números grandes de la tarjeta de estado (duraciones y emojis de sus diseños) */
+    --text-2xl: 1.5rem;
+    --text-3xl: 2rem;
+    --text-4xl: 2.6rem;
+    --text-5xl: 3.4rem;
 
     /* Escala de íconos (todos los símbolos del sprite son 16×16).
        sm: tamaño fijo para etiquetas y badges chicos. md/lg: en em, acompañan al texto. */
@@ -68,6 +73,13 @@
     /* --c-enfasis (ver el final de este archivo) solo existe con un énfasis elegido; sin él, quien lo usa (la tarjeta de fichaje, los sliders, los días laborales de Ajustes, las flechas de las tarjetas, el botón del período, el del perfil, el badge del perfil activo, el botón de agregar perfil abierto, los botones principales de los modales (.btn-edit), los días laborales del tramo y los badges del modal de respaldo) cae en --c-active del tema, con var(--c-enfasis, var(--c-active)) */
     --c-on-enfasis: var(--c-white);     /* texto sobre fondos de --c-enfasis: los énfasis claros (lima, naranja, neutro) lo oscurecen */
     --shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    /* Sombras de elementos sueltos (iguales en todos los temas): punto sobre la barra, perilla del toggle,
+       tarjeta que se arrastra, encabezado abajo y panel que sube desde abajo */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.25);
+    --shadow-up-sm: 0 -2px 8px rgba(0, 0, 0, 0.12);
+    --shadow-up: 0 -6px 24px rgba(0, 0, 0, 0.25);
     --radius-sm: 10px;
     --radius-md: 14px;
     --radius-lg: 20px;

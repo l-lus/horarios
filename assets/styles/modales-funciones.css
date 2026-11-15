@@ -518,7 +518,7 @@
     height: calc(1.5rem - 4px);
     border-radius: 50%;
     background: var(--c-white);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-sm);
     transition: transform var(--dur-fast) var(--ease-pop);
 }
 
@@ -887,7 +887,7 @@ body.config-onboarding #theme-toggle-config {
     z-index: 10;
     user-select: none;
     cursor: grabbing;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), var(--shadow);
+    box-shadow: var(--shadow-lg), var(--shadow);
 }
 
 body.tarjeta-arrastrando-activa,
@@ -965,7 +965,7 @@ body.tarjeta-arrastrando-activa * {
     background: var(--bg-card);
     color: var(--text-main);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-up);
     transform: translateY(105%);
     visibility: hidden;
     transition: transform var(--dur-collapse) ease-out, visibility var(--dur-collapse);

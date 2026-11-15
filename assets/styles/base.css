@@ -196,7 +196,7 @@ html[data-header-pos="bottom"] .header {
 
 html[data-header-pos="bottom"] .header::before {
     border-top: 1px solid var(--border);
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-up-sm);
 }
 
 /* A los costados (solo PC): el mismo encabezado girado, en una barra vertical fija. El texto va de costado con la parte de abajo de las letras hacia el

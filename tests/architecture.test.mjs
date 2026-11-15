@@ -444,3 +444,16 @@ test('Cortes de ancho: los de CORTES_LAYOUT que no son solo del JS aparecen tal 
     const faltan = Object.entries(CORTES_LAYOUT).filter(([k, v]) => k !== 'ANCHO' && !consultas.has(v)).map(([k, v]) => `${k} ${v}`);
     assert.deepEqual(faltan, [], 'Un corte del JS no coincide con el de las hojas: cambialo en los dos lados');
 });
+
+test('Tokens (CSS): fuera de tokens.css no hay tamaños de letra en rem/px, pesos numéricos ni sombras con color literal', () => {
+    const DIR = 'assets/styles';
+    const problemas = [];
+    for (const hoja of fs.readdirSync(DIR).filter(f => f.endsWith('.css') && f !== 'tokens.css')) {
+        const css = fs.readFileSync(`${DIR}/${hoja}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+        // clamp(), min() y em siguen permitidos: son tamaños fluidos o relativos al texto que acompañan
+        for (const m of css.matchAll(/font-size\s*:\s*([\d.]+(?:rem|px))\s*[;}]/g)) problemas.push(`${hoja}: font-size ${m[1]} (usá --text-*)`);
+        for (const m of css.matchAll(/font-weight\s*:\s*(\d{3})\b/g)) problemas.push(`${hoja}: font-weight ${m[1]} (usá --fw-*)`);
+        for (const m of css.matchAll(/box-shadow\s*:\s*([^;}]*(?:rgba?\(|#[0-9a-f]{3,8}\b)[^;}]*)/gi)) problemas.push(`${hoja}: box-shadow ${m[1].trim()} (usá --shadow-*)`);
+    }
+    assert.deepEqual(problemas, [], 'Valores que deberían salir de tokens.css');
+});

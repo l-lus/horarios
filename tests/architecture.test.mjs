@@ -410,3 +410,19 @@ test('Animaciones (CSS): los @keyframes nuevos animan solo transform y opacity, 
     assert.deepEqual(transiciones, TRANSICIONES_HEREDADAS,
         'Cambió la cantidad de transiciones que animan propiedades que repintan: si agregaste una, usá transform/opacity; si quitaste una, bajá el número en TRANSICIONES_HEREDADAS');
 });
+
+test('Tokens (CSS): toda var(--x) que usan las hojas está definida en alguna hoja o la fija el JS', () => {
+    const DIR = 'assets/styles';
+    const definidas = new Set();
+    const usadas = new Map();   // variable → hoja
+    for (const hoja of fs.readdirSync(DIR).filter(f => f.endsWith('.css'))) {
+        const css = fs.readFileSync(`${DIR}/${hoja}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+        for (const m of css.matchAll(/(--[\w-]+)\s*:/g)) definidas.add(m[1]);
+        for (const m of css.matchAll(/var\(\s*(--[\w-]+)/g)) if (!usadas.has(m[1])) usadas.set(m[1], hoja);
+    }
+    // Las que se fijan desde el JS (style.setProperty('--x', …) o un objeto de estilos) aparecen como texto en src/
+    const js = srcFiles.map(f => fs.readFileSync(f, 'utf8')).join('\n');
+    for (const m of js.matchAll(/['"`](--[\w-]+)['"`]/g)) definidas.add(m[1]);
+    const sinDefinir = [...usadas].filter(([v]) => !definidas.has(v)).map(([v, hoja]) => `${v} (${hoja})`);
+    assert.deepEqual(sinDefinir, [], 'Variables usadas que nadie define (solo funciona su valor por defecto): definilas en tokens.css o quitá el var()');
+});

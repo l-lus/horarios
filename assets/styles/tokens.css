@@ -61,6 +61,10 @@
     --c-orange: rgba(210, 120, 50, 0.8);
     --c-gray-btn: #f0f2f8;
     --c-white: #ffffff;
+    /* Brillos que recorren una superficie de color (barra, anillo, destellos): blanco translúcido en cualquier tema */
+    --brillo-suave: rgba(255, 255, 255, 0.35);
+    --brillo: rgba(255, 255, 255, 0.55);
+    --brillo-fuerte: rgba(255, 255, 255, 0.75);
     /* --c-enfasis (ver el final de este archivo) solo existe con un énfasis elegido; sin él, quien lo usa (la tarjeta de fichaje, los sliders, los días laborales de Ajustes, las flechas de las tarjetas, el botón del período, el del perfil, el badge del perfil activo, el botón de agregar perfil abierto, los botones principales de los modales (.btn-edit), los días laborales del tramo y los badges del modal de respaldo) cae en --c-active del tema, con var(--c-enfasis, var(--c-active)) */
     --c-on-enfasis: var(--c-white);     /* texto sobre fondos de --c-enfasis: los énfasis claros (lima, naranja, neutro) lo oscurecen */
     --shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);

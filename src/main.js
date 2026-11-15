@@ -64,8 +64,12 @@ requestAnimationFrame(() => {
 });
 
 (async () => {
-    await BienvenidaModal.chequearYMostrar();
-    DriveRespaldo.completarConexionPendiente();   // se vuelve de autorizar Google Drive (ver oauth-callback.html)
+    // Si se vuelve de autorizar Google Drive (ver oauth-callback.html), la conexión se termina ya, sin esperar a que se cierre
+    // la configuración inicial; el modal de respaldo se abre cuando esa configuración (si toca mostrarla) está a la vista.
+    const driveConectado = DriveRespaldo.completarConexionPendiente();
+    const bienvenida = BienvenidaModal.chequearYMostrar();
+    bienvenida.visible.then(async () => { if (await driveConectado) CentroRespaldo.alConectarDrive(); });
+    await bienvenida.cerrada;
     setTimeout(() => FeriadosAR.chequearYNotificar(), DEMORA_ARRANQUE_MS.FERIADOS);
     setTimeout(() => AvisoPush.chequearYAvisar(), DEMORA_ARRANQUE_MS.AVISO_PUSH);
     setTimeout(() => RecordatorioPush.registrarUso(), DEMORA_ARRANQUE_MS.REGISTRAR_USO);

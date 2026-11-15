@@ -16,6 +16,7 @@ import { DriveRespaldo } from './drive-respaldo.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { FraseCifrado } from '../services/frase-cifrado.js';
 import { ConfigSync } from '../services/config-sync.js';
+import { EstadoApp } from '../services/estado-app.js';
 import { DestinoRespaldo } from '../services/destino-respaldo.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
 import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
@@ -226,6 +227,22 @@ function iniciarAutomatica(demoraMs) {
     setTimeout(async () => { await FLUJOS[pendiente.destino][pendiente.tipo](true); ConfigSync.marcarSync(pendiente.tipo); }, demoraMs);
 }
 
+/**
+ * Recién conectada la cuenta de Google (se volvió de autorizar): se sigue en este modal, que es donde están Subir y Bajar.
+ * En un perfil sin registros (dispositivo nuevo, configuración inicial) con respaldos de Horarios en esa cuenta, ofrece
+ * bajar uno ahí mismo: la lista para elegirlo y después el resumen, que se pueden cancelar.
+ */
+async function alConectarDrive() {
+    if (!_abierto()) abrir();
+    if (EstadoApp.registros().length > 0) return;
+    try {
+        if (!SincronizacionDrive.listo() && (await SincronizacionDrive.listarRespaldos()).length === 0) return;
+    } catch {
+        return;   // sin red para listar: queda el modal abierto con Bajar a mano
+    }
+    DriveSync.bajar();
+}
+
 function bindEventos() {
     _campoFrase.vincular();
     _auto.bindEventos();
@@ -272,4 +289,4 @@ function bindEventos() {
     _actualizarResumenAjustes();
 }
 
-export const CentroRespaldo = { bindEventos, abrir, cerrar, refrescar, actualizarBotonesHistorico, iniciarAutomatica };
+export const CentroRespaldo = { bindEventos, abrir, cerrar, refrescar, actualizarBotonesHistorico, iniciarAutomatica, alConectarDrive };

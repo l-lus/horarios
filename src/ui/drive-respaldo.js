@@ -11,7 +11,7 @@ import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
 // GOOGLE DRIVE — modal de conexión: cuenta y respaldo vinculado al perfil
 // ====================================================================
 // Conectar lleva a Google en la misma ventana; al volver (oauth-callback.html → la app) completarConexionPendiente
-// termina el canje y reabre este modal. Subir y Bajar, el cifrado y la automatización están en «Respaldo y sincronización»
+// termina el canje y se sigue en el modal de respaldo. Subir y Bajar, el cifrado y la automatización están en «Respaldo y sincronización»
 // (centro-respaldo.js), que se pone al día con el evento 'respaldo:conexion'. Los flujos (drive-sync.js) le piden a este
 // módulo que elija el respaldo cuando el perfil todavía no tiene uno.
 const { _setBtnDisabled, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
@@ -83,20 +83,21 @@ async function desconectar() {
 }
 
 /**
- * Al arrancar la app: si se vuelve de autorizar en Google, termina la conexión y abre el modal para seguir.
- * Sin retorno pendiente no hace nada (ni red ni almacenamiento).
+ * Al arrancar la app: si se vuelve de autorizar en Google, termina la conexión. Devuelve true si quedó conectada (quien llama
+ * decide cómo seguir, ver CentroRespaldo.alConectarDrive). Sin retorno pendiente no hace nada (ni red ni almacenamiento).
+ * @returns {Promise<boolean>}
  */
 async function completarConexionPendiente() {
-    if (!SincronizacionDrive.hayRetornoPendiente()) return;
+    if (!SincronizacionDrive.hayRetornoPendiente()) return false;
     const r = await SincronizacionDrive.completarConexion();
-    if ('ninguno' in r) return;
+    if ('ninguno' in r) return false;
     if ('error' in r) {
         mostrarToast(r.error, r.cancelado ? 'info' : 'error');
-        return;
+        return false;
     }
     mostrarToast('Google Drive conectado', 'success', undefined, r.cuenta || null);
     EventosApp.emit('respaldo:conexion');
-    abrir();
+    return true;
 }
 
 // --------------------------------------------------------------------

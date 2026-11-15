@@ -28,6 +28,65 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(app.errores, []);
     });
 
+    await t.test('Drive (API simulada): al volver de Google en la configuración inicial queda conectado y ofrece bajar el respaldo de la cuenta', async () => {
+        const r = await evaluar(async (registro) => {
+            const h = window.humo;
+            const { SincronizacionDrive } = await import('/src/services/sincronizacion-drive.js');
+            const { DriveRespaldo } = await import('/src/ui/drive-respaldo.js');
+            const { CentroRespaldo } = await import('/src/ui/centro-respaldo.js');
+            const { ImportarExportar } = await import('/src/services/importar-exportar.js');
+            const { EventosApp } = await import('/src/core/eventos.js');
+            const ID = '1AbCdEfGhIjKlMnOpQrStUv';
+            const respaldo = JSON.stringify(await ImportarExportar.armarRespaldo([registro]));
+            const fetchReal = window.fetch;
+            const json = (o) => new Response(JSON.stringify(o), { status: 200 });
+            window.fetch = async (url, op = {}) => {
+                const u = String(url);
+                if (u.includes('/api/oauth/google/exchange')) return json({ refreshToken: '1//0gRefreshTokenDePrueba-abc_def', accessToken: 'ya29.AccessTokenDePrueba-abc_def', expiresIn: 3600 });
+                if (u.includes('googleapis.com') && u.includes('/about')) return json({ user: { emailAddress: 'prueba@example.com' } });
+                if (u.includes('googleapis.com') && u.includes(`/files/${ID}`)) return new Response(respaldo, { status: 200 });
+                if (u.includes('googleapis.com') && u.includes('/files')) return json({ files: [{ id: ID, name: 'horarios_principal.json', modifiedTime: '2026-11-10T10:00:00Z', appProperties: { app: 'horarios', perfil: 'Principal' } }] });
+                return fetchReal(url, op);
+            };
+            try {
+                // lo que deja la vuelta de Google: el pedido que guardó la app al salir y la respuesta de oauth-callback.html
+                const pedido = await SincronizacionDrive.iniciarConexion(location.href);
+                const state = new URL(pedido.url).searchParams.get('state');
+                localStorage.setItem('horarios_driveOauthRetorno', JSON.stringify({ code: '4/0AX-codigo_de_prueba', state, error: '' }));
+
+                const salida = { onboarding: document.body.classList.contains('config-onboarding') && h.modales() === 'modal-config' };
+                salida.conectado = await DriveRespaldo.completarConexionPendiente();
+                CentroRespaldo.alConectarDrive();
+                await h.modalAbierto('modal-drive-elegir');
+                salida.lista = document.getElementById('drive-elegir-lista').textContent.replace(/\s+/g, ' ').trim();
+                h.clic(`#drive-elegir-lista button[data-id="${ID}"]`);
+                await h.modalAbierto('modal-gist-merge');
+                h.clic('#btn-gist-merge-cancelar');
+                await h.modalAbierto('modal-respaldo');
+                await h.pausa(300);
+                salida.estado = document.getElementById('destino-drive-estado').textContent;
+                salida.principal = document.getElementById('btn-principal-drive').getAttribute('aria-pressed');
+                salida.solapes = h.solapes();
+
+                // se deja todo como al empezar para las pruebas que siguen
+                SincronizacionDrive.vincular(null);
+                SincronizacionDrive.olvidarCuenta();
+                EventosApp.emit('respaldo:conexion');
+                h.clic('#btn-respaldo-volver');
+                await h.modalAbierto('modal-config');
+                return salida;
+            } finally {
+                window.fetch = fetchReal;
+            }
+        }, REGISTRO);
+        assert.equal(r.onboarding, true);
+        assert.equal(r.conectado, true);
+        assert.match(r.lista, /Principal.*horarios_principal\.json/);
+        assert.match(r.estado, /^prueba@example\.com · última sync: /);
+        assert.equal(r.principal, 'true');
+        assert.deepEqual(r.solapes, []);
+    });
+
     await t.test('Respaldo y sincronización: destinos y paneles sin controles solapados, y el panel de cifrado anima el alto', async () => {
         await evaluar(async () => { window.humo.clic('#btn-abrir-respaldo'); await window.humo.modalAbierto('modal-respaldo'); await window.humo.pausa(400); });
         assert.deepEqual(await evaluar(() => window.humo.solapes()), []);

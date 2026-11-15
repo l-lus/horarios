@@ -245,6 +245,7 @@ function mergeCancelar() {
     if (!proveedor) { GestorModales.cerrar('modal-gist-merge'); return; }
     _habilitarBajar(proveedor);
     _mergeCerrarOVolver(proveedor);
+    _alSincronizarDe(proveedor);   // se bajó aunque no se aplicó: la fecha de última sincronización cambió
 }
 
 /** @type {Map<Proveedor, () => void>} */

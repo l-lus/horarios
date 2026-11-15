@@ -361,6 +361,7 @@
 
 .config-actions,
 #modal-respaldo .modal-panel-body,
+#modal-respaldo .respaldo-col,
 #modal-gist .modal-panel-body,
 #modal-drive .modal-panel-body {
     display: flex;

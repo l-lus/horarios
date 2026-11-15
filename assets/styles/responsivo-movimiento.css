@@ -565,6 +565,17 @@ html[data-enfasis] .btn-register .icon:is(.fichaje-ok, .fichaje-error) {
         max-width: 800px;
     }
 
+    #modal-respaldo .modal-content {
+        max-width: 900px;
+    }
+
+    #modal-respaldo .respaldo-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-md) var(--space-xl);
+        align-items: start;
+    }
+
     #modal-config .modal-config-cols {
         display: grid;
         grid-template-columns: 1fr 1fr;

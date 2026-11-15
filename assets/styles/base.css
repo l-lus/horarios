@@ -717,9 +717,10 @@ button:disabled {
     color: var(--c-white);
 }
 
+/* Acción principal de los modales (Guardar, Aplicar, Listo…): lleva el énfasis; sin énfasis, el azul de siempre */
 .btn-edit {
-    background: var(--c-blue);
-    color: var(--c-white);
+    background: var(--c-enfasis, var(--c-blue));
+    color: var(--c-on-enfasis, var(--c-white));
 }
 
 :where(#btn-toggle-ignorar-tf,

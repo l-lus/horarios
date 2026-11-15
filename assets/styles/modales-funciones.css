@@ -790,8 +790,9 @@ body.config-onboarding #theme-toggle-config {
     transform: scale(1.1);
 }
 
-/* Días laborales de Ajustes: llevan el énfasis (sin énfasis, el acento del tema de siempre) */
-#modal-config .day-checkbox input:checked~span {
+/* Días laborales de Ajustes y del tramo del historial: llevan el énfasis (sin énfasis, el acento del tema de siempre) */
+#modal-config .day-checkbox input:checked~span,
+#modal-editar-tramo-dias .day-checkbox input:checked~span {
     background: var(--c-enfasis, var(--c-active));
     color: var(--c-on-enfasis);
 }

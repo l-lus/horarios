@@ -347,8 +347,11 @@
 /* Footer: confirmar + cancelar */
 /* ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────── */
 
+/* En el celular las dos columnas del modal de respaldo se apilan: .respaldo-cols lleva el mismo espacio que separa las secciones
+   dentro de una columna (sin él, «Cifrado», que abre la segunda, quedaba pegado a «Destinos»). En PC es una cuadrícula (responsivo-movimiento.css) */
 .config-actions,
 #modal-respaldo .modal-panel-body,
+#modal-respaldo .respaldo-cols,
 #modal-respaldo .respaldo-col {
     display: flex;
     flex-direction: column;

@@ -401,16 +401,16 @@ test('GestorPerfiles.guardarDatosPerfilActual conserva los campos del Gist con v
     const { GestorPerfiles: G } = await import('../src/services/gestor-perfiles.js');
     G.inicializar();
     const perfil = G.obtenerDatosPerfil();
-    Object.assign(perfil, { gistId: 'abc', gistAutoSync: 0, gistSyncCount_subir: 0, gistLastSync: '', gistRangoDesde: null, otro: 1 });
+    Object.assign(perfil, { gistId: 'abc', syncAuto: 0, syncCount_subir: 0, gistLastSync: '', syncRangoDesde: null, otro: 1 });
     G.guardarDatosPerfilActual();
     const guardado = G.obtenerDatosPerfil();
     assert.equal(guardado.gistId, 'abc');
-    assert.equal(guardado.gistAutoSync, 0);
-    assert.equal(guardado.gistSyncCount_subir, 0);
+    assert.equal(guardado.syncAuto, 0);
+    assert.equal(guardado.syncCount_subir, 0);
     assert.equal('gistLastSync' in guardado, false);
-    assert.equal('gistRangoDesde' in guardado, false);
+    assert.equal('syncRangoDesde' in guardado, false);
     assert.equal('otro' in guardado, false);
-    G.CAMPOS_GIST_PERFIL.forEach(k => delete guardado[k]);
+    ['gistId', ...G.CAMPOS_SYNC].forEach(k => delete guardado[k]);
     G.guardarDatosPerfilActual();
 });
 

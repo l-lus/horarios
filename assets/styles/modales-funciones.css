@@ -3,50 +3,42 @@
    ========================================================================== */
 /* ─── GIST ───────────────────────────────────────────────────────────────────── */
 
-#gist-rango-horario,
-#drive-rango-horario,
-#gist-limite-sync,
-#drive-limite-sync {
+#sync-rango-horario,
+#sync-limite-sync {
     margin-top: var(--space-sm);
     transition: opacity var(--transition-ui);
     color: var(--text-muted);
 }
 
-#gist-rango-horario.disabled,
-#drive-rango-horario.disabled,
-#gist-limite-sync.disabled,
-#drive-limite-sync.disabled {
+#sync-rango-horario.disabled,
+#sync-limite-sync.disabled {
     opacity: var(--opacity-disabled);
     pointer-events: none;
 }
 
-#gist-limite-sync .input-number-group,
-#drive-limite-sync .input-number-group {
+#sync-limite-sync .input-number-group {
     width: 50%;
     flex: 1;
 }
 
-#gist-limite-sync .input-number-display,
-#drive-limite-sync .input-number-display {
+#sync-limite-sync .input-number-display {
     text-align: center;
 }
 
-#gist-limite-sync .form-group,
-#drive-limite-sync .form-group {
+#sync-limite-sync .form-group {
     display: flex;
     align-items: center;
     gap: var(--space-md);
     margin-bottom: 0;
 }
 
-#gist-limite-label,
-#drive-limite-label {
+#sync-limite-label {
     flex: 1;
     line-height: var(--lh-tight);
 }
 
 
-/* ─── GIST: estado, acciones y paneles ───────────────────────────────────────── */
+/* ─── GIST Y DRIVE: estado y paneles ───────────────────────────────────────── */
 
 .gist-estado {
     display: flex;
@@ -76,27 +68,83 @@
     font-weight: var(--fw-bold);
 }
 
-.gist-acciones {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-md);
+/* ─── RESPALDO Y SINCRONIZACIÓN: los tres destinos (archivo, Gist, Drive) ───── */
+
+.destinos {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
 }
 
-.gist-acciones button {
+.destino {
+    display: flex;
     flex-direction: column;
-    /* Botón alto (ícono + texto apilados): una píldora real lo vuelve un óvalo */
-    border-radius: var(--radius-lg);
-    padding: var(--space-xl) var(--space-md);
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
     background: var(--input-bg);
 }
 
-.gist-acciones .icon {
+.destino-cabecera {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.destino-cabecera>.icon {
     width: var(--icon-lg);
     height: var(--icon-lg);
+    flex-shrink: 0;
     color: var(--text-muted);
 }
 
-/* Deshabilitado: mismo criterio que #gist-limite-sync.disabled (todo el contenido atenuado) */
+/* Marca del destino principal: llena en el elegido, contorno en los demás (que se pueden elegir tocándola) */
+.destino-principal {
+    flex: none;
+    width: auto;
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--fw-semibold);
+}
+
+.destino-principal[aria-pressed="true"] {
+    border-color: transparent;
+    background: var(--c-active);
+    color: var(--c-white);
+    font-weight: var(--fw-bold);
+}
+
+.destino-principal:disabled {
+    opacity: var(--opacity-disabled);
+}
+
+/* Acciones del destino: columnas iguales, sin agrandado al pasar el mouse (se pisarían) */
+.destino-acciones {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-sm);
+}
+
+.destino-acciones button {
+    min-width: 0;
+    gap: var(--space-xs);
+    padding: var(--space-md) var(--space-sm);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    font-size: var(--text-sm);
+}
+
+.destino-acciones button:disabled {
+    color: var(--text-muted);
+    opacity: var(--opacity-disabled);
+}
+
+/* Deshabilitado: mismo criterio que #sync-limite-sync.disabled (todo el contenido atenuado) */
 .settings-list>.collapsible>.collapsible-inner>button>*,
 .settings-list>button>* {
     transition: opacity var(--transition-ui);
@@ -134,8 +182,7 @@
         border-color var(--dur-fast) ease;
 }
 
-#btn-toggle-gist-backup:not(.btn-activo) .gist-valor,
-#btn-toggle-drive-backup:not(.btn-activo) .gist-valor {
+#btn-toggle-sync-backup:not(.btn-activo) .gist-valor {
     background: transparent;
     color: var(--text-muted);
     border-color: transparent;
@@ -313,6 +360,7 @@
 /* ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────── */
 
 .config-actions,
+#modal-respaldo .modal-panel-body,
 #modal-gist .modal-panel-body,
 #modal-drive .modal-panel-body {
     display: flex;
@@ -327,7 +375,7 @@
     padding-left: var(--space-xs);
 }
 
-#modal-gist .settings-list>button,
+#modal-respaldo .settings-list>button,
 #modal-drive .settings-list>button,
 #modal-drive-elegir .settings-list>button,
 #modal-exportar .settings-list>button,

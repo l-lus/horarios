@@ -458,7 +458,7 @@ html[data-enfasis] .btn-register .icon:is(.fichaje-ok, .fichaje-error) {
 
     :is([id^="btn-toggle-"],
         #btn-reporte,
-        .icon-btn, .time-btn, .btn-increment, .filter-btn, .btn-gist, .card-section-title, .cal-popup-btn-accion,
+        .icon-btn, .time-btn, .btn-increment, .filter-btn, .card-section-title, .cal-popup-btn-accion,
         .btn-delete, .btn-cancel, .stats-number, .btn-export, .btn-merge, .btn-backup, .btn-edit, .cal-popup-btn-edit,
         .calendario-nav button, .btn-settings, .ayuda-indice-item, .btn-register, .input-icon-btn):hover:not(:disabled) {
         filter: var(--hover);

@@ -9,19 +9,20 @@ import { GistResumenMerge } from './gist-resumen-merge.js';
 import { FraseModal } from './frase-modal.js';
 import { FraseCifrado } from '../services/frase-cifrado.js';
 import { RespaldoCifrado } from '../services/respaldo-cifrado.js';
+import { ConfigSync } from '../services/config-sync.js';
 
 // ====================================================================
 // NUBE: SUBIR Y BAJAR — los flujos de sincronización (manual y automática) con un proveedor (Gist o Google Drive)
 // ====================================================================
-// Cada proveedor aporta su servicio (subir, bajar, leerActual, cifrado y comportamiento al bajar), los ids de su modal y
-// sus textos. El cifrado, la comprobación antes de pisar, el pedido de frase y el resumen al bajar son los mismos para todos.
-// El modal de cada proveedor (gist-respaldo.js, drive-respaldo.js) aporta lo suyo con `conectarModal`.
+// Cada proveedor aporta su servicio (subir, bajar, leerActual y si lo remoto está cifrado), los ids de sus botones y sus
+// textos. El cifrado, la comprobación antes de pisar, el pedido de frase y el resumen al bajar son los mismos para todos.
+// El modal de respaldo (centro-respaldo.js) y el de Drive (drive-respaldo.js) aportan lo suyo con `conectarModal`.
 const { _flashCampo } = UIBase;
 
 /**
  * @typedef {{
  *   getCifrado: () => boolean, setCifrado: (v: boolean) => void, leerActual: () => Promise<string | null>,
- *   subir: (texto: string) => Promise<string>, bajar: () => Promise<string>, getMergeBehavior: () => string
+ *   subir: (texto: string) => Promise<string>, bajar: () => Promise<string>
  * }} ServicioNube
  * @typedef {{
  *   servicio: ServicioNube, origen: 'gist' | 'drive', modalId: string, btnSubir: string, btnBajar: string,
@@ -29,7 +30,7 @@ const { _flashCampo } = UIBase;
  * }} Proveedor
  * - el / este / en: 'el Gist' / 'Este Gist' / 'en Gist' (para armar los mensajes)
  * - etiqueta: para el historial de deshacer ('con Gist')
- * - ajustes: dónde se carga la frase ('Ajustes → GitHub Gist')
+ * - ajustes: dónde se carga la frase
  * - riesgoEnClaro: qué pasa si se sube sin cifrar algo que estaba cifrado
  * - avisoHistorial: qué pasa con las versiones anteriores al cifrar por primera vez
  */
@@ -206,7 +207,7 @@ function crear(proveedor) {
             _mergeDesdeModal = desdeModal;
 
             if (modoAutomatico) {
-                await mergeAplicar(s.getMergeBehavior(), true);
+                await mergeAplicar(ConfigSync.getMergeBehavior(), true);
             } else {
                 const diff = ImportarExportar.calcularDiferencias(registrosNormalizados);
                 const configCambios = ImportarExportar.calcularCambiosConfigImport(data);

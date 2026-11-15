@@ -33,6 +33,9 @@ function cargarPerfiles() {
         const availableIds = Object.keys(perfiles);
         perfilActual = availableIds.length > 0 ? availableIds[0] : 'default';
     }
+
+    const migrados = Object.values(perfiles).filter(p => migrarCamposSync(p)).length;
+    if (migrados > 0) guardarPerfiles();
 }
 
 function guardarPerfiles() {
@@ -41,20 +44,49 @@ function guardarPerfiles() {
     return savedPerfiles && savedActivo;
 }
 
-// Datos de sincronización con el Gist que se guardan dentro de cada perfil (los usa sincronizacion-gist.js).
-// Restablecer el perfil borra los de sync pero conserva el gistId.
-const CAMPOS_SYNC_GIST = Object.freeze([
-    'gistLastSync', 'gistAutoSync', 'gistRangoDesde', 'gistRangoHasta', 'gistMergeBehavior',
-    'gistSyncFecha_subir', 'gistSyncCount_subir', 'gistSyncFecha_bajar', 'gistSyncCount_bajar'
+// Lo que cada perfil guarda de sus respaldos en la nube, además de sus registros.
+// - CAMPOS_SYNC: la configuración de la sincronización (una sola por perfil, ver config-sync.js). Restablecer el perfil la borra.
+// - Gist y Drive: a dónde apunta el perfil (gistId, archivo de Drive), si eso está cifrado y cuándo se sincronizó por última vez.
+//   Restablecer conserva el vínculo y si está cifrado (son datos del respaldo remoto, no de la sincronización).
+const CAMPOS_SYNC = Object.freeze([
+    'syncDestino', 'syncAuto', 'syncRangoDesde', 'syncRangoHasta', 'syncMergeBehavior',
+    'syncFecha_subir', 'syncCount_subir', 'syncFecha_bajar', 'syncCount_bajar'
 ]);
-// gistCifrado es un dato del Gist (ya se subió o bajó cifrado), no de la sincronización: se conserva junto con el gistId.
-const CAMPOS_GIST_PERFIL = Object.freeze(['gistId', 'gistCifrado', ...CAMPOS_SYNC_GIST]);
-// Lo mismo para Google Drive (sincronizacion-drive.js): el archivo vinculado (id y nombre) y si está cifrado se conservan.
-const CAMPOS_SYNC_DRIVE = Object.freeze(CAMPOS_SYNC_GIST.map(k => k.replace(/^gist/, 'drive')));
-const CAMPOS_DRIVE_PERFIL = Object.freeze(['driveFileId', 'driveArchivoNombre', 'driveCifrado', ...CAMPOS_SYNC_DRIVE]);
+const CAMPOS_GIST_PERFIL = Object.freeze(['gistId', 'gistCifrado', 'gistLastSync']);
+const CAMPOS_DRIVE_PERFIL = Object.freeze(['driveFileId', 'driveArchivoNombre', 'driveCifrado', 'driveLastSync']);
+const CAMPOS_NUBE_PERFIL = Object.freeze([...CAMPOS_SYNC, ...CAMPOS_GIST_PERFIL, ...CAMPOS_DRIVE_PERFIL]);
+/** Lo que borra «Restablecer»: la configuración de la sincronización y las fechas de última sincronización. */
+const CAMPOS_SYNC_RESTABLECER = Object.freeze([...CAMPOS_SYNC, 'gistLastSync', 'driveLastSync']);
 
-const _camposGist = (perfil) => Object.fromEntries(
-    [...CAMPOS_GIST_PERFIL, ...CAMPOS_DRIVE_PERFIL].filter(k => perfil[k] != null && perfil[k] !== '').map(k => [k, perfil[k]])
+// Hasta la versión con un solo modal de respaldo, cada proveedor guardaba su propia automatización en el perfil
+const _SUFIJOS_SYNC_ANTERIORES = Object.freeze(['AutoSync', 'RangoDesde', 'RangoHasta', 'MergeBehavior', 'SyncFecha_subir', 'SyncCount_subir', 'SyncFecha_bajar', 'SyncCount_bajar']);
+
+/**
+ * Pasa la automatización por proveedor (`gistAutoSync`, `driveAutoSync`, …) a la única del perfil (`sync*`). Manda el proveedor
+ * que tenía la automática activa (era uno solo; ante los dos, el Gist), que además queda como destino principal; si ninguno
+ * la tenía, se toman las preferencias del Gist y, a falta de ellas, las de Drive. Devuelve true si cambió algo.
+ * @param {Record<string, any>} perfil
+ */
+function migrarCamposSync(perfil) {
+    if (!perfil || typeof perfil !== 'object') return false;
+    const anteriores = ['gist', 'drive'].flatMap(p => _SUFIJOS_SYNC_ANTERIORES.map(s => `${p}${s}`)).filter(k => k in perfil);
+    if (anteriores.length === 0) return false;
+
+    const modo = (p) => { const v = perfil[`${p}AutoSync`]; return v === 1 || v === 2 ? v : v === true ? 1 : 0; };
+    const activo = ['gist', 'drive'].find(p => modo(p) !== 0) || null;
+    if (!('syncAuto' in perfil)) {
+        if (activo) { perfil.syncAuto = modo(activo); perfil.syncDestino = activo; }
+        for (const [nuevo, sufijo] of [['syncRangoDesde', 'RangoDesde'], ['syncRangoHasta', 'RangoHasta'], ['syncMergeBehavior', 'MergeBehavior']]) {
+            const valor = [activo, 'gist', 'drive'].filter(Boolean).map(p => perfil[`${p}${sufijo}`]).find(v => typeof v === 'string' && v !== '');
+            if (valor) perfil[nuevo] = valor;
+        }
+    }
+    anteriores.forEach(k => delete perfil[k]);
+    return true;
+}
+
+const _camposNube = (perfil) => Object.fromEntries(
+    CAMPOS_NUBE_PERFIL.filter(k => perfil[k] != null && perfil[k] !== '').map(k => [k, perfil[k]])
 );
 
 function guardarDatosPerfilActual() {
@@ -66,7 +98,7 @@ function guardarDatosPerfilActual() {
         diasHabiles: EstadoApp.diasHabiles(),
         horasDiarias: EstadoApp.horasDiarias(),
         historialDiasHabiles: EstadoApp.historialDiasHabiles(),
-        ..._camposGist(actual)
+        ..._camposNube(actual)
     };
     return guardarPerfiles();
 }
@@ -177,10 +209,9 @@ export const GestorPerfiles = {
     obtenerListaPerfiles,
     obtenerTodosPerfiles,
     guardarPerfiles,
-    CAMPOS_SYNC_GIST,
-    CAMPOS_GIST_PERFIL,
-    CAMPOS_SYNC_DRIVE,
-    CAMPOS_DRIVE_PERFIL,
+    CAMPOS_SYNC,
+    CAMPOS_SYNC_RESTABLECER,
+    migrarCamposSync,
     crearPerfil,
     renombrarPerfil,
     eliminarPerfil

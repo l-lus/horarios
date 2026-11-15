@@ -3,10 +3,10 @@ import { FraseCifrado } from '../services/frase-cifrado.js';
 import { mostrarToast } from './toast.js';
 
 // ====================================================================
-// CAMPO DE FRASE — el bloque «frase de cifrado» que comparten el modal de Gist y el de Respaldar
+// CAMPO DE FRASE — el bloque «frase de cifrado» del modal de respaldo (centro-respaldo.js)
 // ====================================================================
-// Cada modal tiene su propio marcado (con sus ids); esta clase le da el comportamiento: mostrar u ocultar la frase, generar una al azar,
-// el interruptor «Recordar en este navegador» (solo en Gist) y guardarla validando el largo mínimo.
+// El marcado está en index.html (con sus ids); esta clase le da el comportamiento: mostrar u ocultar la frase, generar una al azar,
+// el interruptor «Recordar en este navegador» y guardarla validando el largo mínimo.
 
 /** @typedef {{ input: string, ojo?: string, generar?: string, recordar?: string }} IdsCampoFrase */
 
@@ -66,17 +66,12 @@ export class CampoFrase {
 
     /**
      * Valida la frase escrita y la guarda (en la sesión o, con «Recordar», en este navegador). Un campo vacío olvida la frase
-     * (sin cifrado), salvo con `permitirVacia` false, donde es un error. Devuelve false si lo escrito no sirve.
-     * Con `avisar` false no muestra nada (para guardar sin molestar).
-     * @param {{ avisar?: boolean, permitirVacia?: boolean }} [opciones]
+     * (sin cifrado). Devuelve false si lo escrito no sirve. Con `avisar` false no muestra nada (para guardar sin molestar).
+     * @param {{ avisar?: boolean }} [opciones]
      */
-    confirmar({ avisar = true, permitirVacia = true } = {}) {
+    confirmar({ avisar = true } = {}) {
         const frase = this.valor();
         if (!frase.trim()) {
-            if (!permitirVacia) {
-                if (avisar) mostrarToast('Escribí o generá una frase de cifrado', 'error');
-                return false;
-            }
             FraseCifrado.olvidar();
             return true;
         }

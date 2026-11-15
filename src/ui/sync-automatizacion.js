@@ -3,16 +3,14 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { UIBase } from './base.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { _crearPressHold } from './gestos.js';
-import { mostrarToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
 
 // ====================================================================
-// AUTOMATIZACIÓN DE LA SINCRONIZACIÓN — la sección del mismo nombre en los modales de Gist y de Google Drive
+// AUTOMATIZACIÓN DE LA SINCRONIZACIÓN — la sección «Sincronización automática» del modal de respaldo (centro-respaldo.js)
 // ====================================================================
 // Sincronización automática (manual / restaurar / respaldar al abrir la app), comportamiento al bajar, límites por hora y
-// franja horaria. Los cambios quedan en borrador hasta Guardar (o hasta Subir/Bajar, que guardan antes). Los ids siguen el
-// mismo patrón con el prefijo del proveedor: btn-toggle-gist-backup / btn-toggle-drive-backup, gist-rango-desde / …
-// Regla: un perfil sincroniza solo con un proveedor. Al guardar la automática en uno, se apaga en el otro (con aviso).
+// franja horaria. Es una sola por perfil y corre con el destino principal. Los cambios quedan en borrador hasta Guardar
+// (o hasta Subir/Bajar, que guardan antes). Los ids llevan el prefijo dado: btn-toggle-sync-backup, sync-rango-desde, …
 const { _setBtnDisabled, _setBtnActivo } = UIBase;
 const { _animarValor } = Animaciones;
 
@@ -26,15 +24,16 @@ const { _animarValor } = Animaciones;
  */
 
 /**
- * @param {{ prefijo: string, servicio: ConfigProveedor, nombre: string, otro: () => { servicio: ConfigProveedor, nombre: string }, alCambiar?: () => void }} opciones
- *   nombre: 'Gist' o 'Drive' (en las pistas); otro: el proveedor con el que no puede convivir la automática; alCambiar: se cambió el modo
+ * @param {{ prefijo: string, servicio: ConfigProveedor, nombre: () => string, alCambiar?: () => void }} opciones
+ *   nombre: el del destino principal ('Gist' o 'Drive'), para las pistas; alCambiar: se cambió el modo
  */
-function crear({ prefijo, servicio, nombre, otro, alCambiar = () => { } }) {
+function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
     const id = (patron) => patron.replace('{p}', prefijo);
     /** @type {number | null} */
     let _autoSyncTemp = null;
     /** @type {{ bajar: number, subir: number } | null} */
     let _limitesTemp = null;
+    let _habilitado = false;
 
     function estadoActual() { return _autoSyncTemp ?? servicio.getAutoSync(); }
     function _tipoSyncActual() {
@@ -53,10 +52,13 @@ function crear({ prefijo, servicio, nombre, otro, alCambiar = () => { } }) {
         el.textContent = `${limite === 0 ? 'Sin límite' : `${limite} por hora`} · ${desde} – ${hasta}`;
     }
 
-    /** Habilita o no los controles según haya conexión completa (con el modo en borrador). */
+    /** Habilita o no los controles según el destino principal sea un servicio listo para sincronizar (con el modo en borrador). */
     function setHabilitado(conectado) {
+        _habilitado = conectado;
         _setBtnDisabled(id('btn-toggle-{p}-backup'), !conectado);
         _setBtnDisabled(id('btn-toggle-{p}-merge'), !(conectado && estadoActual() === 1));
+        actualizarBotonBackup();
+        actualizarBotonMerge();
         actualizarResumen();
     }
 
@@ -66,7 +68,7 @@ function crear({ prefijo, servicio, nombre, otro, alCambiar = () => { } }) {
         const esMerge = servicio.getMergeBehavior() === 'merge';
         if (hint) hint.textContent = esMerge ? 'Combinar' : 'Reemplazar';
         const desc = $(id('desc-{p}-merge'));
-        if (desc) desc.textContent = esMerge ? ` · une ${nombre} con tus datos locales` : ' · sustituye tus datos locales';
+        if (desc) desc.textContent = esMerge ? ' · une lo bajado con tus datos locales' : ' · sustituye tus datos locales';
         if (iconEl) setIconoBtn(iconEl, esMerge ? '#icon-combine' : '#icon-replace-swap');
     }
 
@@ -85,13 +87,13 @@ function crear({ prefijo, servicio, nombre, otro, alCambiar = () => { } }) {
 
         const configs = [
             { texto: 'Sin automatizar', hint: ' · solo sincronizás de forma manual', activo: false },
-            { texto: 'Restaurar', hint: ` · baja tus datos de ${nombre} al abrir la app`, activo: true },
-            { texto: 'Respaldar', hint: ` · sube tus datos a ${nombre} al abrir la app`, activo: true }
+            { texto: 'Restaurar', hint: ` · baja tus datos de ${nombre()} al abrir la app`, activo: true },
+            { texto: 'Respaldar', hint: ` · sube tus datos a ${nombre()} al abrir la app`, activo: true }
         ];
         const c = configs[estado];
         _setBtnActivo(btn.id, c.activo);
         if (label) label.textContent = c.texto;
-        if (hint) hint.textContent = c.hint;
+        if (hint) hint.textContent = _habilitado ? c.hint : ' · necesita Gist o Drive conectado como destino principal';
         rangoEl?.classList.toggle('disabled', !(estado === 1 || estado === 2));
     }
 
@@ -168,18 +170,12 @@ function crear({ prefijo, servicio, nombre, otro, alCambiar = () => { } }) {
             || _limitesTemp !== null;
     }
 
-    /** Guarda el borrador (el rango solo si es válido) y apaga la automática del otro proveedor si hace falta. */
+    /** Guarda el borrador (el rango solo si es válido). */
     function guardar() {
         const { desde, hasta, valida } = leerRango();
         if (valida) servicio.setRangoHorario(desde, hasta);
         if (_autoSyncTemp !== null) {
-            const activa = _autoSyncTemp !== 0 && _autoSyncTemp !== servicio.getAutoSync();
             servicio.setAutoSync(_autoSyncTemp);
-            const o = otro();
-            if (activa && o.servicio.getAutoSync() !== 0) {
-                o.servicio.setAutoSync(0);
-                mostrarToast(`Se apagó la sincronización automática con ${o.nombre}: un perfil sincroniza solo con un servicio`, 'info', 6000);
-            }
             _autoSyncTemp = null;
         }
         if (_limitesTemp !== null) {

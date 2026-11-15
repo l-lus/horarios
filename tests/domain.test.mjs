@@ -471,7 +471,7 @@ test('Almacenamiento: prefijo horarios_ (APP_STORAGE_PREFIX) y migraci√≥n autom√
     assert.equal(rawStore.get(`${APP_STORAGE_PREFIX}history_perfil_custom1`), '{"history":[],"currentIndex":-1}');
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.MES_EXPANDIDO('2026-10')), true);
     assert.equal(Almacenamiento.getBoolean(STORAGE_KEYS.ANIO_EXPANDIDO('2026')), false);
-    assert.equal(Almacenamiento.getNumber(STORAGE_KEYS.GIST_LIMITE('subir')), 15);
+    assert.equal(Almacenamiento.getNumber(STORAGE_KEYS.SYNC_LIMITE('subir')), 15);
 
     // 4. Verificar que las claves de otras apps del mismo origen quedaron intactas
     assert.equal(rawStore.get('gestion_servicios_config'), '{"activo":true}');

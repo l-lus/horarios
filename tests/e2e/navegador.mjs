@@ -101,8 +101,8 @@ export async function abrirApp({ ancho = 360, alto = 780, movil = true } = {}) {
         await tamano(ancho, alto, movil);
         await cdp('Page.addScriptToEvaluateOnNewDocument', { source: fs.readFileSync(new URL('./ayudas-pagina.js', import.meta.url), 'utf8') });
         await cdp('Page.navigate', { url: `http://localhost:${puerto}/index.html` });
-        // La app terminó de arrancar cuando enlazó sus eventos: el botón de Gist responde
-        await evaluar(() => window.humo.hasta(() => document.readyState === 'complete' && !!document.querySelector('.config-actions .btn-gist')));
+        // La app terminó de cargar el documento; el margen de abajo le da tiempo a enlazar sus eventos
+        await evaluar(() => window.humo.hasta(() => document.readyState === 'complete' && !!document.getElementById('btn-abrir-respaldo')));
         await esperar(600);
 
         /** Guarda una captura de la página en `archivo` (PNG): sirve para mirar cómo quedó algo a mano, no lo usa la prueba de humo. */

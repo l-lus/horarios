@@ -326,8 +326,7 @@ body.header-arrastrando-activa * {
 .header-actions,
 .input-with-btn,
 .input-number-group,
-#gist-rango-horario,
-#drive-rango-horario,
+#sync-rango-horario,
 .modal-title-block,
 #calendario-nav-botones,
 .card-section-title,
@@ -724,10 +723,8 @@ button:disabled {
 }
 
 :where(#btn-toggle-ignorar-tf,
-    #btn-toggle-gist-backup,
-    #btn-toggle-drive-backup,
-    #btn-toggle-gist-merge,
-    #btn-toggle-drive-merge) {
+    #btn-toggle-sync-backup,
+    #btn-toggle-sync-merge) {
     justify-content: center;
     padding: 0.875rem var(--space-lg);
     border: 1px solid var(--border);
@@ -1214,8 +1211,7 @@ mark.ayuda-resaltado--activa {
 }
 
 #modo-normal,
-#gist-limite-sync,
-#drive-limite-sync,
+#sync-limite-sync,
 .contenedor-fechas {
     display: block;
 }

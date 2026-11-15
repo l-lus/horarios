@@ -3,7 +3,7 @@
 // ====================================================================
 // APP_VERSION debe coincidir con el prefijo de CACHE_NAME en sw.js (lo valida tests/architecture.test.mjs).
 export const APP_NOMBRE = 'LUSHIBOSCA';
-export const APP_VERSION = 'v261114';
+export const APP_VERSION = 'v261115';
 
 export const APP_STORAGE_PREFIX = 'horarios_';
 
@@ -66,8 +66,7 @@ export const STORAGE_KEYS = Object.freeze({
     STATS_HABILITADO: 'statsHabilitado',
 
     BREAK_TIME: (perfilId) => `breakStartTime_${perfilId}`,
-    GIST_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,
-    DRIVE_LIMITE: (tipo) => `driveSyncLimite_${tipo}`,
+    SYNC_LIMITE: (tipo) => `gistSyncLimite_${tipo}`,   // límite por hora de la sincronización automática (el nombre guardado viene de cuando solo había Gist)
     MES_EXPANDIDO: (clave) => `mes-${clave}-expandido`,
     ANIO_EXPANDIDO: (anioId) => `anio-${anioId}-expandido`,
     CARD_VISIBLE: (cual) => `cardVisible_${cual}`,
@@ -118,6 +117,7 @@ export const TOAST_MS = Object.freeze({
 
 // Demora (ms) de las tareas que se lanzan al arrancar la app, para no competir con el primer render
 export const DEMORA_ARRANQUE_MS = Object.freeze({
+    AUTO_SYNC: 2000,
     AVISO_PUSH: 2000,
     REGISTRAR_USO: 3000,
     FERIADOS: 4000,

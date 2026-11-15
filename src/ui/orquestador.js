@@ -1,5 +1,5 @@
 import { Preferencias } from '../core/preferencias.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, DEMORA_ARRANQUE_MS } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { Formularios } from './formularios.js';
 import { EventosApp } from '../core/eventos.js';
@@ -22,11 +22,7 @@ import { UIBase } from './base.js';
 import { FraseModal } from './frase-modal.js';
 import { Perfiles } from './perfiles.js';
 import { Calendario } from './calendario.js';
-import { SincronizacionGist } from '../services/sincronizacion-gist.js';
-import { GistRespaldo } from './gist-respaldo.js';
-import { GistSync } from './gist-sync.js';
-import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
-import { DriveSync } from './drive-sync.js';
+import { CentroRespaldo } from './centro-respaldo.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { Historico } from './historico.js';
 import { HistoricoEdicion } from './historico-edicion.js';
@@ -67,10 +63,7 @@ const {
     _cerrarSelectorMeses, toggleVistaHistorico, setVistaHistoricoCalendario
 } = Calendario;
 
-const {
-    actualizarBotonesHistorico, cerrarModalGist
-} = GistRespaldo;
-const { mergeCancelar: gistMergeCancelar, subir: gistSubir, bajar: gistBajar } = GistSync;
+const { actualizarBotonesHistorico } = CentroRespaldo;
 
 const { cerrarImportar, cerrarExportar, toggleCamposRangoExport } = RespaldoLocal;
 
@@ -161,8 +154,6 @@ function _initGlobales() {
     Almacenamiento.configurarNotificaciones({ mostrarToast });
     RecordatorioPush.configurarNotificaciones({ mostrarToast });
 
-    GestorModales.registrarAccionVolver('modal-gist', cerrarModalGist);
-    GestorModales.registrarAccionVolver('modal-gist-merge', gistMergeCancelar);
     GestorModales.registrarAccionVolver('modal-config', cerrarConfig);
     GestorModales.registrarAccionVolver('modal-selector-perfiles', cerrarSelectorPerfiles);
     GestorModales.registrarAccionVolver('modal-editar', cerrarEdicion);
@@ -213,7 +204,7 @@ function _initListenersFormulario() {
         }
     });
 
-    ['gist-rango-desde', 'gist-rango-hasta'].forEach(id => {
+    ['sync-rango-desde', 'sync-rango-hasta'].forEach(id => {
         const el = $(id);
         if (el) el.addEventListener('input', formatearInput);
     });
@@ -338,19 +329,6 @@ function _restaurarEstadoVisual(config) {
     } catch (e) {
         console.warn('Error restaurando estado visual:', e);
     }
-}
-
-/** Sincronización automática al abrir la app: con el proveedor que la tenga activa (uno solo por perfil, ver sync-automatizacion.js). */
-function _initAutoSync() {
-    const proveedores = [
-        { listo: SincronizacionGist.conectado(), servicio: SincronizacionGist, flujos: { subir: gistSubir, bajar: gistBajar } },
-        { listo: SincronizacionDrive.listo(), servicio: SincronizacionDrive, flujos: DriveSync },
-    ];
-    const p = proveedores.find(x => x.listo && x.servicio.getAutoSync() !== 0);
-    if (!p) return;
-    const tipo = p.servicio.getAutoSync() === 1 ? 'bajar' : 'subir';
-    if (!p.servicio.dentroDelRangoHorario() || p.servicio.superaLimite(tipo)) return;
-    setTimeout(async () => { await p.flujos[tipo](true); p.servicio.marcarSync(tipo); }, 2000);
 }
 
 // Lo que muestra la tarjeta cambia de minuto en minuto: el reloj actualiza justo después de cada cambio de minuto
@@ -478,7 +456,7 @@ async function init() {
         }, 2500));
     }
 
-    _initAutoSync();
+    CentroRespaldo.iniciarAutomatica(DEMORA_ARRANQUE_MS.AUTO_SYNC);
     _iniciarRelojUI();
     _initListenerVisibility();
 

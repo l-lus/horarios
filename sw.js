@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261114.1909-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261115.1325-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -33,6 +33,7 @@ const urlsToCache = [
   './src/services/cambios.js',
   './src/services/compensatorios.js',
   './src/services/config-sync.js',
+  './src/services/destino-respaldo.js',
   './src/services/dias-habiles.js',
   './src/services/edicion-grupo.js',
   './src/services/edicion-registro.js',
@@ -71,6 +72,7 @@ const urlsToCache = [
   './src/ui/calendario-popups.js',
   './src/ui/calendario.js',
   './src/ui/campo-frase.js',
+  './src/ui/centro-respaldo.js',
   './src/ui/configuracion.js',
   './src/ui/drive-respaldo.js',
   './src/ui/drive-sync.js',
@@ -172,6 +174,7 @@ const urlsToCache = [
   './src/services/sincronizacion-gist.js',
   './src/services/sincronizacion-drive.js',
   './src/services/config-sync.js',
+  './src/services/destino-respaldo.js',
   './src/services/oauth-pkce.js',
   './src/services/worker-cliente.js',
   './src/services/tiempo-fuera.js',
@@ -200,6 +203,7 @@ const urlsToCache = [
   './src/ui/gist-resumen-merge.js',
   './src/ui/gist-sync.js',
   './src/ui/sync-nube.js',
+  './src/ui/centro-respaldo.js',
   './src/ui/sync-automatizacion.js',
   './src/ui/drive-sync.js',
   './src/ui/drive-respaldo.js',

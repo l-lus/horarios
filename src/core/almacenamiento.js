@@ -112,7 +112,7 @@ function migrarClavesLegadas() {
         }
 
         const candidatas = new Set(CLAVES_ESTATICAS_HORARIOS);
-        ['subir', 'bajar'].forEach(t => candidatas.add(STORAGE_KEYS.GIST_LIMITE(t)));
+        ['subir', 'bajar'].forEach(t => candidatas.add(STORAGE_KEYS.SYNC_LIMITE(t)));
         CARDS.forEach(c => candidatas.add(STORAGE_KEYS.CARD_VISIBLE(c)));
         idsPerfiles.forEach(pid => {
             BASES_POR_PERFIL_HORARIOS.forEach(base => candidatas.add(`${base}_${pid}`));

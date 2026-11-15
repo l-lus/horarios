@@ -28,28 +28,32 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(app.errores, []);
     });
 
-    await t.test('Gist: paneles abiertos sin controles solapados, y el panel de cifrado anima el alto', async () => {
-        await evaluar(async () => { window.humo.clic('.config-actions .btn-gist'); await window.humo.modalAbierto('modal-gist'); });
-        const alto = await evaluar(() => window.humo.altosDurante('#gist-panel-cifrado', () => window.humo.clic('#btn-gist-panel-cifrado')));
+    await t.test('Respaldo y sincronización: destinos y paneles sin controles solapados, y el panel de cifrado anima el alto', async () => {
+        await evaluar(async () => { window.humo.clic('#btn-abrir-respaldo'); await window.humo.modalAbierto('modal-respaldo'); await window.humo.pausa(400); });
+        assert.deepEqual(await evaluar(() => window.humo.solapes()), []);
+        const alto = await evaluar(() => window.humo.altosDurante('#sync-panel-cifrado', () => window.humo.clic('#btn-sync-panel-cifrado')));
         assert.ok(alto.final > alto.inicial, `el panel se abre (${JSON.stringify(alto)})`);
         assert.ok(alto.intermedios >= 2, `el alto cambia de a poco, no de golpe (${JSON.stringify(alto)})`);
 
-        await evaluar(async () => {
-            for (const id of ['btn-gist-panel-conexion', 'btn-gist-panel-limites']) {
-                if (document.getElementById(id).getAttribute('aria-expanded') !== 'true') window.humo.clic(`#${id}`);
-            }
+        const r = await evaluar(async () => {
+            window.humo.clic('#btn-sync-panel-limites');
             await window.humo.pausa(500);
+            const pulsado = (d) => document.getElementById(`btn-principal-${d}`).getAttribute('aria-pressed');
+            return { solapes: window.humo.solapes(), principal: ['local', 'gist', 'drive'].map(pulsado).join(','), automatica: document.getElementById('btn-toggle-sync-backup').disabled, subirGist: document.getElementById('btn-gist-subir').disabled };
         });
-        assert.deepEqual(await evaluar(() => window.humo.solapes()), []);
+        assert.deepEqual(r.solapes, []);
+        assert.equal(r.principal, 'true,false,false', 'sin nada conectado el principal es el archivo local');
+        assert.equal(r.automatica, true, 'el archivo local no se sincroniza solo');
+        assert.equal(r.subirGist, true);
     });
 
-    await t.test('Gist: la frase generada es válida, se ve para poder anotarla y habilita «Recordar»', async () => {
+    await t.test('Cifrado: la frase generada es válida, se ve para poder anotarla y habilita «Recordar»', async () => {
         const r = await evaluar(() => {
-            const antes = document.getElementById('btn-toggle-gist-recordar').disabled;
-            window.humo.clic('#btn-gist-frase-generar');
-            const campo = document.getElementById('gist-frase');
+            const antes = document.getElementById('btn-toggle-sync-recordar').disabled;
+            window.humo.clic('#btn-sync-frase-generar');
+            const campo = document.getElementById('sync-frase');
             window.fraseHumo = campo.value;
-            return { antes, frase: campo.value, tipo: campo.type, despues: document.getElementById('btn-toggle-gist-recordar').disabled, resumen: document.getElementById('gist-cifrado-resumen').textContent };
+            return { antes, frase: campo.value, tipo: campo.type, despues: document.getElementById('btn-toggle-sync-recordar').disabled, resumen: document.getElementById('sync-cifrado-resumen').textContent };
         });
         assert.equal(r.antes, true, 'sin frase no se puede recordar');
         assert.match(r.frase, /^([a-z]{6}-){4}[a-z]{6}$/);
@@ -59,7 +63,7 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(await evaluar(() => window.humo.solapes()), []);
     });
 
-    await t.test('Gist (API simulada): sin frase sube en claro; al crear el Gist se habilita Bajar; con frase sube cifrado y baja con el resumen', async () => {
+    await t.test('Gist (API simulada): la conexión se carga en su modal; sin frase sube en claro y queda como principal; con frase sube cifrado y baja con el resumen', async () => {
         const r = await evaluar(async (registro) => {
             const h = window.humo;
             const gist = { contenido: null, pedidos: [] };
@@ -75,18 +79,29 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             const { SincronizacionGist } = await import('/src/services/sincronizacion-gist.js');
             EstadoApp._setRegistros([registro]);
             const salida = {};
+            const estado = () => document.getElementById('destino-gist-estado').textContent;
 
-            // 1. sin frase: en claro, como siempre
-            const frase = document.getElementById('gist-frase');
-            frase.value = ''; frase.dispatchEvent(new Event('input'));
+            // 0. la conexión: en el modal del Gist, que vuelve al de respaldo (la frase escrita ahí sigue en borrador)
+            h.clic('#btn-gist-configurar'); await h.modalAbierto('modal-gist');
+            await h.pausa(300);
+            salida.solapesConexion = h.solapes();
             const token = document.getElementById('gist-token');
             token.value = 'ghp_' + 'x'.repeat(36); token.dispatchEvent(new Event('input'));
+            h.clic('#btn-gist-guardar'); await h.modalAbierto('modal-respaldo');
+            salida.soloToken = estado();
+            salida.bajarSinGist = document.getElementById('btn-gist-bajar').disabled;
+            salida.borrador = document.getElementById('sync-frase').value === window.fraseHumo;
+
+            // 1. sin frase: en claro, como siempre
+            const frase = document.getElementById('sync-frase');
+            frase.value = ''; frase.dispatchEvent(new Event('input'));
             h.clic('#btn-gist-subir');
             await h.hasta(() => gist.contenido !== null, 5000, 'subida en claro');
             await h.hasta(() => !document.getElementById('btn-gist-bajar').disabled, 3000, 'Bajar habilitado tras crear el Gist');
             salida.enClaro = gist.contenido.includes('hospital');
-            salida.estado = document.getElementById('gist-estado-titulo').textContent;
-            salida.ultimaSync = document.getElementById('gist-ultima-sync').textContent;
+            salida.estado = estado();
+            salida.principal = document.getElementById('btn-principal-gist').getAttribute('aria-pressed');
+            salida.automatica = document.getElementById('btn-toggle-sync-backup').disabled;
 
             // 2. con la frase generada: cifrado (lee antes lo que hay para no pisarlo a ciegas)
             gist.pedidos = [];
@@ -94,6 +109,7 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             h.clic('#btn-gist-subir');
             await h.hasta(() => gist.pedidos.includes('PATCH'), 10000, 'subida cifrada');
             await h.hasta(() => SincronizacionGist.getCifrado(), 3000, 'marca de Gist cifrado');
+            await h.hasta(() => /cifrado/.test(estado()), 3000, 'estado del destino al día');
             salida.pedidos = gist.pedidos.join(',');
             salida.formato = JSON.parse(gist.contenido).formato;
             salida.muestraNota = gist.contenido.includes('hospital');
@@ -103,57 +119,89 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             h.clic('#btn-gist-bajar');
             await h.modalAbierto('modal-gist-merge');
             h.clic('#btn-gist-merge-cancelar');
-            await h.modalAbierto('modal-gist');
+            await h.modalAbierto('modal-respaldo');
+            await h.pausa(300);
+            salida.solapes = h.solapes();
             return salida;
         }, REGISTRO);
+        assert.deepEqual(r.solapesConexion, []);
+        assert.match(r.soloToken, /^Token cargado/);
+        assert.equal(r.bajarSinGist, true);
+        assert.equal(r.borrador, true, 'ir a la conexión y volver no pierde lo escrito');
         assert.equal(r.enClaro, true);
-        assert.equal(r.estado, 'Conectado');
-        assert.match(r.ultimaSync, /^Última sync: /);
+        assert.match(r.estado, /^Conectado · última sync: /);
+        assert.equal(r.principal, 'true', 'el único servicio listo pasa a ser el destino principal');
+        assert.equal(r.automatica, false, 'y ya se puede automatizar');
         assert.equal(r.pedidos, 'GET,PATCH');
         assert.equal(r.formato, 'horarios-cifrado');
         assert.equal(r.muestraNota, false, 'el Gist cifrado no deja ver las notas');
+        assert.deepEqual(r.solapes, []);
     });
 
     await t.test('Gist: con otra frase pide confirmación antes de pisar, y al cancelar no cambia nada', async () => {
         const r = await evaluar(async () => {
             const h = window.humo;
-            const frase = document.getElementById('gist-frase');
+            const frase = document.getElementById('sync-frase');
             frase.value = 'otra frase distinta de la anterior 123'; frase.dispatchEvent(new Event('input'));
             h.clic('#btn-gist-subir');
             await h.modalAbierto('modal-confirmar');
             const texto = document.getElementById('modal-confirmar-texto').textContent;
             h.clic('#modal-confirmar-cancel');
-            await h.modalAbierto('modal-gist');
+            await h.modalAbierto('modal-respaldo');
             frase.value = window.fraseHumo; frase.dispatchEvent(new Event('input'));
-            h.clic('#btn-gist-guardar');
-            await h.modalAbierto('modal-config');
             return texto;
         });
         assert.match(r, /no abre lo que hay en el Gist/);
     });
 
-    await t.test('Respaldar y Restaurar: desde Ajustes vuelven a Ajustes; abiertos sin Ajustes (barra del histórico) se cierran sin dejar nada', async () => {
+    await t.test('Destino principal: los botones rápidos del histórico y el resumen de Ajustes siguen al elegido', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const rapido = () => document.getElementById('btn-hist-respaldar').title;
+            const resumen = () => document.getElementById('respaldo-resumen').textContent;
+            const salida = { conGist: rapido() };
+            h.clic('#btn-principal-local');
+            salida.conLocal = rapido();
+            salida.resumenLocal = resumen();
+            salida.automaticaLocal = document.getElementById('btn-toggle-sync-backup').disabled;
+            h.clic('#btn-principal-gist');
+            h.clic('#btn-toggle-sync-backup'); h.clic('#btn-toggle-sync-backup');   // sin automatizar → restaurar → respaldar
+            h.clic('#btn-respaldo-guardar');
+            await h.modalAbierto('modal-config');
+            salida.resumenGist = resumen();
+            salida.rapidoGist = rapido();
+            return salida;
+        });
+        assert.deepEqual(r, {
+            conGist: 'Subir a Gist', conLocal: 'Respaldar', resumenLocal: 'Principal: Archivo local', automaticaLocal: true,
+            resumenGist: 'Principal: GitHub Gist · respalda al abrir', rapidoGist: 'Subir a Gist'
+        });
+    });
+
+    await t.test('Respaldar y Restaurar: desde el modal de respaldo vuelven a él; abiertos sin modales (barra del histórico) se cierran sin dejar nada', async () => {
         const r = await evaluar(async () => {
             const h = window.humo;
             const { GestorModales } = await import('/src/ui/gestor-modales.js');
             const { RespaldoLocal } = await import('/src/ui/respaldo-local.js');
             const salida = {};
             await h.hasta(() => h.modales() === 'modal-config', 5000, `Ajustes a la vista (hay: ${h.modales()})`);
+            h.clic('#btn-abrir-respaldo'); await h.modalAbierto('modal-respaldo');
 
-            h.clic('.config-actions .btn-export'); await h.modalAbierto('modal-exportar');
+            h.clic('#btn-local-respaldar'); await h.modalAbierto('modal-exportar');
             salida.volverExportar = document.getElementById('btn-volver-exportar').textContent.trim();
-            h.clic('#btn-volver-exportar'); await h.modalAbierto('modal-config');
-            h.clic('.config-actions .btn-backup'); await h.modalAbierto('modal-importar');
-            h.clic('#btn-volver-importar'); await h.modalAbierto('modal-config');
+            h.clic('#btn-volver-exportar'); await h.modalAbierto('modal-respaldo');
+            h.clic('#btn-local-restaurar'); await h.modalAbierto('modal-importar');
+            h.clic('#btn-volver-importar'); await h.modalAbierto('modal-respaldo');
 
             // una confirmación en el medio no pierde el camino de vuelta
-            h.clic('.config-actions .btn-export'); await h.modalAbierto('modal-exportar');
+            h.clic('#btn-local-respaldar'); await h.modalAbierto('modal-exportar');
             const pregunta = GestorModales.confirmar('¿Seguir?', 'Sí');
             await h.modalAbierto('modal-confirmar');
             h.clic('#modal-confirmar-ok');
             salida.confirmado = await pregunta;
             await h.modalAbierto('modal-exportar');
-            h.clic('#btn-volver-exportar'); await h.modalAbierto('modal-config');
+            h.clic('#btn-volver-exportar'); await h.modalAbierto('modal-respaldo');
+            h.clic('#btn-respaldo-volver'); await h.modalAbierto('modal-config');
 
             GestorModales.ejecutarAccionCierre('modal-config');
             await h.hasta(() => h.modales() === '', 5000, `sin modales tras cerrar Ajustes (hay: ${h.modales()})`);
@@ -171,15 +219,19 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(r, { volverExportar: 'Volver', confirmado: true, cerrarExportar: 'Cerrar' });
     });
 
-    await t.test('Respaldar: «Cifrar con la frase» anima el alto, no solapa controles y descarga un archivo cifrado', async () => {
-        await evaluar(async () => { window.humo.clic('.config-actions .btn-export'); await window.humo.modalAbierto('modal-exportar'); await window.humo.pausa(400); });
-        assert.equal(await evaluar(() => document.getElementById('btn-toggle-export-cifrar').classList.contains('btn-activo')), true, 'con frase guardada viene activado');
-        assert.deepEqual(await evaluar(() => window.humo.solapes()), []);
-
-        const cerrar = await evaluar(() => window.humo.altosDurante('#export-frase-bloque', () => window.humo.clic('#btn-toggle-export-cifrar')));
-        assert.ok(cerrar.final < cerrar.inicial && cerrar.intermedios >= 2, `el bloque de la frase se cierra de a poco (${JSON.stringify(cerrar)})`);
-        const abrir = await evaluar(() => window.humo.altosDurante('#export-frase-bloque', () => window.humo.clic('#btn-toggle-export-cifrar')));
-        assert.ok(abrir.final > abrir.inicial && abrir.intermedios >= 2, `y se abre de a poco (${JSON.stringify(abrir)})`);
+    await t.test('Respaldar: «Cifrar este archivo» viene marcado con la frase de la app, no solapa controles y descarga un archivo cifrado', async () => {
+        const previo = await evaluar(async () => {
+            const h = window.humo;
+            const { RespaldoLocal } = await import('/src/ui/respaldo-local.js');
+            RespaldoLocal.mostrarExportar(true); await h.modalAbierto('modal-exportar'); await h.pausa(400);
+            const btn = document.getElementById('btn-toggle-export-cifrar');
+            const salida = { activo: btn.classList.contains('btn-activo'), deshabilitado: btn.disabled, solapes: h.solapes() };
+            h.clic('#btn-toggle-export-cifrar');
+            salida.desmarcado = !btn.classList.contains('btn-activo');
+            h.clic('#btn-toggle-export-cifrar');
+            return salida;
+        });
+        assert.deepEqual(previo, { activo: true, deshabilitado: false, solapes: [], desmarcado: true });
 
         const r = await evaluar(async () => {
             const h = window.humo;
@@ -187,7 +239,7 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             const crear = URL.createObjectURL;
             URL.createObjectURL = (b) => { blobs.push(b); return crear.call(URL, b); };
             HTMLAnchorElement.prototype.click = function () { window.nombreDescarga = this.download; };   // sin descargar de verdad
-            h.clic('#modal-exportar .btn-export');
+            h.clic('#btn-exportar-descargar');
             await h.hasta(() => blobs.length > 0, 10000, 'descarga del respaldo');
             window.respaldoHumo = await blobs[0].text();
             return { nombre: window.nombreDescarga, formato: JSON.parse(window.respaldoHumo).formato, muestraNota: window.respaldoHumo.includes('hospital') };
@@ -203,7 +255,7 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             const { ImportarExportar } = await import('/src/services/importar-exportar.js');
             const { EstadoApp } = await import('/src/services/estado-app.js');
             const { FraseCifrado } = await import('/src/services/frase-cifrado.js');
-            await h.hasta(() => !document.querySelector('.modal.show') || h.modales() === 'modal-config', 5000, 'cierre de Respaldar');
+            await h.hasta(() => !document.querySelector('.modal.show'), 5000, 'cierre de Respaldar');
             FraseCifrado.olvidar();
             EstadoApp._setRegistros([]);
             ImportarExportar.importarDatos(new File([window.respaldoHumo], 'respaldo.cifrado.json', { type: 'application/json' }), 'replace');

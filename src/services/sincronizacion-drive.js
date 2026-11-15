@@ -34,8 +34,6 @@ const MARGEN_VENCIMIENTO_MS = 60 * 1000;
 const MAX_NOMBRE_PERFIL = 60;   // appProperties admite 124 bytes por par clave + valor
 
 const { _conPerfil, formatLastSync } = ConfigSync;
-// Modo automático, comportamiento al bajar, franja horaria y límites: campos drive* del perfil (ver config-sync.js)
-const { getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario } = ConfigSync.crear('drive', STORAGE_KEYS.DRIVE_LIMITE);
 
 function disponible() { return GOOGLE_CLIENT_ID !== ''; }
 function esFileIdValido(id) { return typeof id === 'string' && FILE_ID_REGEX.test(id); }
@@ -410,7 +408,6 @@ async function bajar() {
 }
 
 export const SincronizacionDrive = {
-    getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario,
     disponible, esFileIdValido, getRefreshToken, getCuenta, conectado, getFileId, getArchivoNombre, getLastSync, formatLastSync, listo, getCifrado, setCifrado, vincular,
     redirectUri, iniciarConexion, hayRetornoPendiente, tomarRetorno, completarConexion, olvidarCuenta, desconectar,
     listarRespaldos, nombreArchivo, subir, leerActual, bajar

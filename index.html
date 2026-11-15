@@ -1007,38 +1007,15 @@
                                     </span>
                                     <span class="toggle-switch" aria-hidden="true"></span>
                                 </button>
-                                <button class="btn-gist">
+                                <button id="btn-abrir-respaldo">
                                     <svg class="icon">
-                                        <use href="#icon-gist" />
+                                        <use href="#icon-cloud" />
                                     </svg>
-                                    <span>GitHub Gist</span>
-                                    <svg class="icon icon-indicator">
-                                        <use href="#icon-chevron-right" />
-                                    </svg>
-                                </button>
-                                <button class="btn-drive">
-                                    <svg class="icon">
-                                        <use href="#icon-drive" />
-                                    </svg>
-                                    <span>Google Drive</span>
-                                    <svg class="icon icon-indicator">
-                                        <use href="#icon-chevron-right" />
-                                    </svg>
-                                </button>
-                                <button class="btn-backup">
-                                    <svg class="icon">
-                                        <use href="#icon-upload" />
-                                    </svg>
-                                    <span>Restaurar</span>
-                                    <svg class="icon icon-indicator">
-                                        <use href="#icon-chevron-right" />
-                                    </svg>
-                                </button>
-                                <button class="btn-export config-onboarding-hide">
-                                    <svg class="icon">
-                                        <use href="#icon-download" />
-                                    </svg>
-                                    <span>Respaldar</span>
+                                    <span class="settings-list-text">
+                                        <span>Respaldo y sincronización</span>
+                                        <span class="settings-list-desc" id="respaldo-resumen">Archivo local, GitHub Gist
+                                            o Google Drive</span>
+                                    </span>
                                     <svg class="icon icon-indicator">
                                         <use href="#icon-chevron-right" />
                                     </svg>
@@ -1423,8 +1400,40 @@
 
                         <section class="ayuda-seccion" id="ayuda-sec-respaldo">
                             <h4>Backup y restauración</h4>
-                            <p>Desde Perfiles → Ajustes → Respaldar exportás un archivo con los datos del perfil activo.
-                                Podés elegir entre <strong>Todo el perfil</strong>, <strong>Mes actual</strong> o
+                            <p>Todo lo de respaldos está en un solo lugar: Ajustes → Datos → <strong>Respaldo y
+                                    sincronización</strong>. Ahí ves los tres <strong>destinos</strong> (Archivo local,
+                                GitHub Gist y Google Drive), cada uno con su estado y sus acciones, y lo que es común a
+                                los tres: el cifrado y la sincronización automática.</p>
+                            <p><strong>Destino principal:</strong> uno de los destinos lleva la marca
+                                <em>Principal</em> (los demás dicen <em>Elegir</em>: tocala para cambiarlo). Es el que
+                                usan la sincronización automática y los botones rápidos de la barra de Registros. Si
+                                no elegiste ninguno, es el servicio que tengas conectado (con los dos, el último que
+                                sincronizaste) y, sin servicios, el archivo local. Ajustes → Datos muestra cuál es.</p>
+                            <p><strong>Cifrado (opcional):</strong> una sola <em>frase de cifrado</em> (mínimo 20
+                                caracteres; el botón de la varita genera una al azar) vale para los tres destinos: con
+                                ella el Gist y el respaldo de Drive se suben cifrados, y los archivos se pueden
+                                descargar cifrados. Ni GitHub, ni Google, ni quien tenga el archivo pueden leer tus
+                                registros. Tenés que cargar la misma frase en cada dispositivo. Vale hasta cerrar la
+                                app, salvo que actives <em>Recordar en este navegador</em> (la sincronización
+                                automática lo necesita). Si la perdés, lo cifrado no se puede abrir; tus datos locales
+                                siguen. Sin frase todo funciona en claro.</p>
+                            <p><strong>Sincronización automática:</strong> corre con el destino principal cuando es
+                                Gist o Drive. Al tocarla alterna entre <em>Sin automatizar</em> (solo manual),
+                                <em>Restaurar</em> (baja tus datos al abrir la app) y <em>Respaldar</em> (los sube al
+                                abrir la app). Solo ocurre al abrir la app, dentro de la franja horaria y sin superar el
+                                límite por hora. <em>Al bajar datos</em> se habilita con <em>Restaurar</em> y define qué
+                                hace la bajada automática: <em>Combinar</em> o <em>Reemplazar</em> (por defecto),
+                                aplicado directamente, sin mostrar el resumen. En <em>Límites y horario</em> fijás
+                                cuántas bajadas (o subidas, según el modo) se permiten por hora (0 = sin límite; por
+                                defecto, 2 bajadas o 1 subida) y la franja horaria (Desde / Hasta, puede cruzar la
+                                medianoche; por defecto, de 21:00 a 00:00).</p>
+                            <p><strong>Guardar:</strong> el destino principal se guarda al tocarlo; la frase y la
+                                automatización, con el botón <strong>Guardar</strong> (Respaldar, Subir y Bajar las
+                                guardan antes). El destino principal, el modo automático, el comportamiento al bajar y
+                                la franja horaria son de cada perfil; la frase y el límite por hora son comunes a
+                                todos.</p>
+                            <p><strong>Archivo local:</strong> con <strong>Respaldar</strong> exportás un archivo con
+                                los datos del perfil activo. Podés elegir entre <strong>Todo el perfil</strong>, <strong>Mes actual</strong> o
                                 <strong>Rango personalizado</strong> (con fechas desde y hasta).
                             </p>
                             <p>El archivo incluye además tu configuración: horas diarias, días laborales e historial, y
@@ -1435,9 +1444,10 @@
                                 apariencia, más la posición del encabezado (PC y celular) y el orden y la visibilidad de las tarjetas (el del celular, el de PC con 2 columnas y el de PC con 3 por separado; estos se aplican al
                                 <strong>Reemplazar</strong>, no al Combinar). El color del <em>tema</em> no se incluye: es de cada dispositivo.
                             </p>
-                            <p>Con <strong>Cifrar con la frase</strong> el archivo (<code>.cifrado.json</code>) no
-                                muestra tus registros y se abre con la misma frase de cifrado del Gist; sin marcarlo
-                                sale en claro, como siempre.</p>
+                            <p>Con <strong>Cifrar este archivo</strong> el archivo (<code>.cifrado.json</code>) no
+                                muestra tus registros y se abre con la frase de cifrado. Si hay una frase cargada viene
+                                marcado; desmarcalo para que ese archivo salga en claro. Sin frase cargada no se puede
+                                marcar.</p>
                             <p>Con <strong>Restaurar</strong> importás un backup en este u otro dispositivo: elegís el
                                 archivo y decidís si querés <strong>Combinar</strong> (une el archivo con tus datos
                                 locales) o <strong>Reemplazar</strong> (sustituye tus datos locales). Si el archivo
@@ -1450,19 +1460,20 @@
 
                         <section class="ayuda-seccion" id="ayuda-sec-gist">
                             <h4>GitHub Gist</h4>
-                            <p>Desde Ajustes → Datos → GitHub Gist podés guardar los datos de tu perfil en un Gist
-                                secreto de tu cuenta (no aparece en listados, pero cualquiera que tenga el enlace puede
-                                verlo) y usarlos entre dispositivos. Necesitás un token de GitHub: el botón junto al
-                                campo abre la página para crearlo ya con el único permiso necesario (<em>gist</em>). Si
-                                dejás vacío el Gist ID, la primera vez que subas se crea uno nuevo.</p>
+                            <p>En Ajustes → Datos → Respaldo y sincronización, el destino <em>GitHub Gist</em> guarda
+                                los datos de tu perfil en un Gist secreto de tu cuenta (no aparece en listados, pero
+                                cualquiera que tenga el enlace puede verlo) para usarlos entre dispositivos. Con
+                                <em>Conexión</em> cargás el token de GitHub: el botón junto al campo abre la página para
+                                crearlo ya con el único permiso necesario (<em>gist</em>). Si dejás vacío el Gist ID, la
+                                primera vez que subas se crea uno nuevo.</p>
                             <p><strong>Seguridad del token:</strong> se guarda solo en este dispositivo (en el
                                 almacenamiento del navegador) y nunca se incluye en las copias de seguridad. No uses
                                 un token con más permisos que <em>gist</em>; si perdés el dispositivo, revocalo desde
                                 tu cuenta de GitHub.</p>
-                            <p><strong>Estado:</strong> arriba del modal ves si estás <em>Sin configurar</em>, con
-                                <em>Falta el Gist ID</em> o <em>Conectado</em>, y la fecha de la última sincronización.
-                                Con solo el token ya podés subir; para bajar y para la sincronización automática hace
-                                falta también el Gist ID.
+                            <p><strong>Estado:</strong> debajo del nombre del destino ves si está <em>Sin
+                                    configurar</em>, con el token cargado o <em>Conectado</em> (y si está cifrado), con
+                                la fecha de la última sincronización. Con solo el token ya podés subir; para bajar y
+                                para la sincronización automática hace falta también el Gist ID.
                             </p>
                             <p><strong>Subir y Bajar:</strong> <em>Subir</em> reemplaza el contenido del Gist con los
                                 registros y la configuración del perfil activo (horas diarias, días laborales,
@@ -1471,16 +1482,11 @@
                                 registros cambian, elegís entre Combinar y Reemplazar y confirmás con Aplicar. Si el
                                 archivo del Gist fue alterado, la app te lo avisa antes de continuar.
                             </p>
-                            <p><strong>Cifrado (opcional):</strong> si cargás una <em>frase de cifrado</em> (mínimo 20
-                                caracteres; el botón de la varita genera una al azar), el Gist se sube cifrado y ni
-                                GitHub ni quien tenga el enlace pueden leer tus registros. Tenés que cargar la misma
-                                frase en cada dispositivo. La frase vale hasta cerrar la app, salvo que actives
-                                <em>Recordar en este navegador</em> (la sincronización automática lo necesita). Si la
-                                perdés, el Gist no se puede abrir; tus datos locales siguen. Antes de pisar un Gist
-                                cifrado con otra frase, la app te pide confirmación. Un Gist que ya subiste en claro
-                                conserva sus versiones viejas en el historial de GitHub: al empezar a cifrar conviene
-                                crear un Gist nuevo y borrar el anterior. Sin frase, todo funciona como siempre, en
-                                claro.</p>
+                            <p><strong>Cifrado:</strong> con la frase de cifrado cargada (ver <em>Backup y
+                                    restauración</em>) el Gist se sube cifrado. Antes de pisar un Gist cifrado con otra
+                                frase, la app te pide confirmación. Un Gist que ya subiste en claro conserva sus
+                                versiones viejas en el historial de GitHub: al empezar a cifrar conviene crear un Gist
+                                nuevo y borrar el anterior.</p>
                             <p><strong>Combinar y Reemplazar:</strong> <em>Combinar</em> agrega los días que solo están
                                 en el Gist y completa la salida o el tiempo fuera que falten en tus registros locales,
                                 sin tocar tu configuración. <em>Reemplazar</em> deja exactamente los registros del Gist
@@ -1488,50 +1494,35 @@
                                 registros locales que no
                                 están en el Gist, se eliminan (el resumen te avisa cuántos). Ambas se pueden deshacer.
                             </p>
-                            <p><strong>Sincronización automática:</strong> al tocarla alterna entre <em>Sin
-                                    automatizar</em> (solo manual), <em>Restaurar</em> (baja tus datos de Gist al abrir
-                                la app) y <em>Respaldar</em> (los sube al abrir la app). Solo ocurre al abrir la app,
-                                dentro de la franja horaria y sin superar el límite por hora.</p>
-                            <p><strong>Al bajar datos:</strong> se habilita solo con <em>Restaurar</em> y define qué
-                                hace la bajada automática: <em>Combinar</em> o <em>Reemplazar</em> (por defecto),
-                                aplicado directamente, sin mostrar el resumen. Con el botón Bajar siempre elegís vos.
-                            </p>
-                            <p><strong>Límites y horario:</strong> con la sincronización automática activa, podés fijar
-                                cuántas bajadas (o subidas, según el modo) se permiten por hora (0 = sin límite; por
-                                defecto, 2 bajadas o 1 subida) y la franja horaria (Desde / Hasta, puede cruzar la
-                                medianoche) en la que se ejecuta. Por defecto es de 21:00 a 00:00.</p>
-                            <p><strong>Por perfil:</strong> el token y el límite por hora son comunes a todos los
-                                perfiles; el Gist ID, el modo automático, el comportamiento al bajar y la franja horaria
-                                son de cada perfil. Los cambios de conexión, modo, límites y franja se guardan con el
-                                botón <strong>Guardar</strong> (Subir y Bajar guardan antes el token y el Gist ID).</p>
+                            <p><strong>Por perfil:</strong> el token es común a todos los perfiles; el Gist ID es de
+                                cada perfil. Los cambios de conexión se guardan con el botón
+                                <strong>Guardar</strong> de ese modal.</p>
                         </section>
 
                         <section class="ayuda-seccion" id="ayuda-sec-drive">
                             <h4>Google Drive</h4>
-                            <p>Desde Ajustes → Datos → Google Drive podés guardar los datos de tu perfil en tu Drive y
-                                usarlos entre dispositivos, sin crear tokens: tocás <em>Conectar</em>, elegís tu cuenta
-                                de Google y volvés a la app. La app solo puede ver los archivos que ella misma creó en tu
-                                Drive (permiso <em>drive.file</em>), no el resto.</p>
+                            <p>En Ajustes → Datos → Respaldo y sincronización, el destino <em>Google Drive</em> guarda
+                                los datos de tu perfil en tu Drive para usarlos entre dispositivos, sin crear tokens:
+                                en <em>Conexión</em> tocás <em>Conectar</em>, elegís tu cuenta de Google y volvés a la
+                                app. La app solo puede ver los archivos que ella misma creó en tu Drive (permiso
+                                <em>drive.file</em>), no el resto.</p>
                             <p><strong>El respaldo:</strong> cada perfil tiene su archivo
                                 (<code>horarios_&lt;perfil&gt;.json</code>), visible en tu Drive. La primera vez que
                                 subís se crea; en otro dispositivo, al bajar, la app te muestra los respaldos de
-                                Horarios que hay en la cuenta para que elijas cuál usar. Desde <em>Respaldo de este
-                                    perfil</em> podés cambiarlo o crear otro. No lo edites a mano: la app comprueba su
-                                integridad al bajarlo.</p>
+                                Horarios que hay en la cuenta para que elijas cuál usar. Desde <em>Conexión →
+                                    Respaldo de este perfil</em> podés cambiarlo o crear otro. No lo edites a mano: la
+                                app comprueba su integridad al bajarlo.</p>
                             <p><strong>Seguridad:</strong> el permiso de Google se guarda solo en este navegador y nunca
                                 va en las copias de seguridad. Para autorizar y renovar ese permiso la app pasa por su
                                 propio servicio (el mismo de las notificaciones), que no guarda nada. <em>Desconectar</em>
                                 le quita el acceso a la app; los respaldos quedan en tu Drive.</p>
-                            <p><strong>Cifrado, Subir y Bajar, Combinar y Reemplazar, automatización, límites y
-                                    horario:</strong> funcionan igual que en el Gist y usan la misma frase de cifrado.
-                                Con frase, Google no puede leer tus registros.</p>
-                            <p><strong>Gist y Drive juntos:</strong> un perfil puede tener los dos conectados, pero
-                                solo uno sincroniza solo: al guardar la sincronización automática en uno, se apaga en el
-                                otro. Los botones rápidos del histórico usan el que tenga la automática activa (si
-                                ninguno, el último que sincronizaste).</p>
-                            <p><strong>Por perfil:</strong> la cuenta de Google y el límite por hora son comunes a todos
-                                los perfiles; el respaldo vinculado, el modo automático, el comportamiento al bajar y la
-                                franja horaria son de cada perfil.</p>
+                            <p><strong>Subir y Bajar, Combinar y Reemplazar y cifrado:</strong> funcionan igual que en
+                                el Gist y con la misma frase. Con frase, Google no puede leer tus registros.</p>
+                            <p><strong>Gist y Drive juntos:</strong> un perfil puede tener los dos conectados y subir o
+                                bajar a mano con cualquiera, pero la sincronización automática y los botones rápidos
+                                de Registros usan solo el destino principal.</p>
+                            <p><strong>Por perfil:</strong> la cuenta de Google es común a todos los perfiles; el
+                                respaldo vinculado es de cada perfil.</p>
                             <p>Qué datos usa la conexión con Google: <a href="./privacidad.html">política de
                                     privacidad</a>.</p>
                         </section>
@@ -1570,6 +1561,266 @@
         </div>
     </div>
 
+    <div class="modal modal-scrollable" id="modal-respaldo" role="dialog" aria-modal="true"
+        aria-labelledby="modal-respaldo-titulo">
+        <div class="modal-content">
+            <div class="modal-panel-header">
+                <h3 id="modal-respaldo-titulo">
+                    <span class="modal-title-block">
+                        <svg class="icon">
+                            <use href="#icon-cloud" />
+                        </svg>
+                        Respaldo y sincronización
+                    </span>
+                </h3>
+            </div>
+            <div class="modal-panel-body custom-scroll">
+                <div class="config-actions">
+                    <label>Destinos</label>
+                    <div class="destinos">
+                        <div class="destino" id="destino-local">
+                            <div class="destino-cabecera">
+                                <svg class="icon">
+                                    <use href="#icon-pantalla" />
+                                </svg>
+                                <span class="settings-list-text">
+                                    <span>Archivo local</span>
+                                    <span class="settings-list-desc" id="destino-local-estado">Un archivo .json en este dispositivo</span>
+                                </span>
+                                <button type="button" class="destino-principal" id="btn-principal-local"
+                                    aria-pressed="false" title="Usar como destino principal">Elegir</button>
+                            </div>
+                            <div class="destino-acciones">
+                                <button type="button" id="btn-local-respaldar" class="config-onboarding-hide">
+                                    <svg class="icon">
+                                        <use href="#icon-bandeja" />
+                                        <use class="icon-flecha" href="#icon-flecha-bandeja-bajar" />
+                                    </svg>
+                                    <span>Respaldar</span>
+                                </button>
+                                <button type="button" id="btn-local-restaurar">
+                                    <svg class="icon">
+                                        <use href="#icon-bandeja" />
+                                        <use class="icon-flecha" href="#icon-flecha-bandeja-subir" />
+                                    </svg>
+                                    <span>Restaurar</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="destino" id="destino-gist">
+                            <div class="destino-cabecera">
+                                <svg class="icon">
+                                    <use href="#icon-gist" />
+                                </svg>
+                                <span class="settings-list-text">
+                                    <span>GitHub Gist</span>
+                                    <span class="settings-list-desc" id="destino-gist-estado">Sin configurar</span>
+                                </span>
+                                <button type="button" class="destino-principal" id="btn-principal-gist"
+                                    aria-pressed="false" title="Usar como destino principal">Elegir</button>
+                            </div>
+                            <div class="destino-acciones">
+                                <button type="button" id="btn-gist-subir">
+                                    <svg class="icon">
+                                        <use href="#icon-nube" />
+                                        <use class="icon-flecha" href="#icon-flecha-nube-subir" />
+                                    </svg>
+                                    <span>Subir</span>
+                                </button>
+                                <button type="button" id="btn-gist-bajar">
+                                    <svg class="icon">
+                                        <use href="#icon-nube" />
+                                        <use class="icon-flecha" href="#icon-flecha-nube-bajar" />
+                                    </svg>
+                                    <span>Bajar</span>
+                                </button>
+                                <button type="button" id="btn-gist-configurar">
+                                    <svg class="icon">
+                                        <use href="#icon-settings" />
+                                    </svg>
+                                    <span>Conexión</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="destino" id="destino-drive">
+                            <div class="destino-cabecera">
+                                <svg class="icon">
+                                    <use href="#icon-drive" />
+                                </svg>
+                                <span class="settings-list-text">
+                                    <span>Google Drive</span>
+                                    <span class="settings-list-desc" id="destino-drive-estado">Sin conectar</span>
+                                </span>
+                                <button type="button" class="destino-principal" id="btn-principal-drive"
+                                    aria-pressed="false" title="Usar como destino principal">Elegir</button>
+                            </div>
+                            <div class="destino-acciones">
+                                <button type="button" id="btn-drive-subir">
+                                    <svg class="icon">
+                                        <use href="#icon-nube" />
+                                        <use class="icon-flecha" href="#icon-flecha-nube-subir" />
+                                    </svg>
+                                    <span>Subir</span>
+                                </button>
+                                <button type="button" id="btn-drive-bajar">
+                                    <svg class="icon">
+                                        <use href="#icon-nube" />
+                                        <use class="icon-flecha" href="#icon-flecha-nube-bajar" />
+                                    </svg>
+                                    <span>Bajar</span>
+                                </button>
+                                <button type="button" id="btn-drive-configurar">
+                                    <svg class="icon">
+                                        <use href="#icon-settings" />
+                                    </svg>
+                                    <span>Conexión</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-actions">
+                    <label>Cifrado (opcional)</label>
+                    <div class="settings-list">
+                        <button id="btn-sync-panel-cifrado" class="gist-panel-toggle" aria-expanded="false"
+                            aria-controls="sync-panel-cifrado">
+                            <svg class="icon">
+                                <use href="#icon-lock" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Frase de cifrado</span>
+                                <span class="settings-list-desc" id="sync-cifrado-resumen">Sin cifrar</span>
+                            </span>
+                            <svg class="icon icon-indicator">
+                                <use href="#icon-chevron-right" />
+                            </svg>
+                        </button>
+                        <div class="gist-panel collapsible" id="sync-panel-cifrado">
+                            <div class="collapsible-inner">
+                                <div class="gist-panel-contenido">
+                                    <div class="form-group">
+                                        <label for="sync-frase">Frase (mínimo 20 caracteres)</label>
+                                        <div class="input-with-btn">
+                                            <input type="password" id="sync-frase" placeholder="Vacía = sin cifrar"
+                                                maxlength="200" autocomplete="off" spellcheck="false" />
+                                            <button class="time-btn" id="btn-sync-frase-ver" type="button" title="Mostrar/ocultar frase">
+                                                <svg class="icon">
+                                                    <use href="#icon-eye" />
+                                                </svg>
+                                            </button>
+                                            <button class="time-btn" id="btn-sync-frase-generar" type="button" title="Generar una frase al azar">
+                                                <svg class="icon">
+                                                    <use href="#icon-magic" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <p class="frase-nota">Con una frase, los respaldos salen cifrados (Gist, Drive y
+                                            archivos): ni GitHub ni Google pueden leer tus registros. Tenés que cargar la
+                                            misma en cada dispositivo. Si la perdés, lo cifrado no se puede abrir (tus datos
+                                            locales siguen).</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="btn-toggle-sync-recordar">
+                            <svg class="icon">
+                                <use href="#icon-lock-open" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Recordar en este navegador</span>
+                                <span class="settings-list-desc">Sin activar, la frase vale hasta cerrar la app. La
+                                    sincronización automática lo necesita.</span>
+                            </span>
+                            <span class="toggle-switch" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="config-actions">
+                    <label>Automatización</label>
+                    <div class="settings-list">
+                        <button id="btn-toggle-sync-backup">
+                            <svg class="icon">
+                                <use href="#icon-cloud" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Sincronización automática</span>
+                                <span class="settings-list-desc" id="hint-sync-backup"></span>
+                                <span class="gist-valor" id="label-sync-backup">Sin automatizar</span>
+                            </span>
+                        </button>
+                        <button id="btn-toggle-sync-merge">
+                            <svg class="icon" id="icon-sync-merge">
+                                <use href="#icon-replace-swap" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Al bajar datos</span>
+                                <span class="settings-list-desc" id="desc-sync-merge"></span>
+                                <span class="gist-valor" id="hint-sync-merge">Reemplazar</span>
+                            </span>
+                        </button>
+                        <button id="btn-sync-panel-limites" class="gist-panel-toggle" aria-expanded="false"
+                            aria-controls="sync-panel-limites">
+                            <svg class="icon">
+                                <use href="#icon-clock" />
+                            </svg>
+                            <span class="settings-list-text">
+                                <span>Límites y horario</span>
+                                <span class="settings-list-desc" id="sync-limites-resumen">—</span>
+                            </span>
+                            <svg class="icon icon-indicator">
+                                <use href="#icon-chevron-right" />
+                            </svg>
+                        </button>
+                        <div class="gist-panel collapsible" id="sync-panel-limites">
+                            <div class="collapsible-inner">
+                                <div class="gist-panel-contenido">
+                                    <div id="sync-limite-sync">
+                                        <div class="form-group">
+                                            <label id="sync-limite-label">Límite por hora</label>
+                                            <div class="input-number-group input-number-group--embed">
+                                                <button id="btn-sync-limite-dec" class="btn-increment" type="button"
+                                                    title="Disminuir límite">-</button>
+                                                <span id="sync-limite-valor" class="input-number-display">0</span>
+                                                <button id="btn-sync-limite-inc" class="btn-increment" type="button"
+                                                    title="Incrementar límite">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="sync-rango-horario">
+                                        <label>Desde</label>
+                                        <input type="text" id="sync-rango-desde" inputmode="numeric" maxlength="5"
+                                            aria-label="Desde" />
+                                        <label>Hasta</label>
+                                        <input type="text" id="sync-rango-hasta" inputmode="numeric" maxlength="5"
+                                            aria-label="Hasta" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-panel-footer">
+                <div class="btn-group">
+                    <button class="btn-export" id="btn-respaldo-guardar">
+                        <svg class="icon">
+                            <use href="#icon-check" />
+                        </svg>
+                        Guardar
+                    </button>
+                    <button class="btn-cancel" id="btn-respaldo-volver">
+                        <svg class="icon">
+                            <use href="#icon-back" />
+                        </svg>
+                        Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal modal-scrollable" id="modal-gist" role="dialog" aria-modal="true"
         aria-labelledby="modal-gist-titulo">
         <div class="modal-content">
@@ -1594,198 +1845,36 @@
                     </div>
                 </div>
 
-                <div class="config-actions">
-                    <label>Conexión</label>
-                    <div class="settings-list">
-                        <button id="btn-gist-panel-conexion" class="gist-panel-toggle" aria-expanded="false"
-                            aria-controls="gist-panel-conexion">
+                <div class="form-group">
+                    <label for="gist-token">Personal Access Token</label>
+                    <div class="input-with-btn">
+                        <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxx"
+                            maxlength="256" autocomplete="off" />
+                        <button class="time-btn" id="btn-toggle-token"
+                            title="Mostrar/ocultar token">
                             <svg class="icon">
-                                <use href="#icon-gist" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Token y Gist ID</span>
-                                <span class="settings-list-desc" id="gist-conexion-resumen">Sin configurar</span>
-                            </span>
-                            <svg class="icon icon-indicator">
-                                <use href="#icon-chevron-right" />
+                                <use href="#icon-eye" />
                             </svg>
                         </button>
-                        <div class="gist-panel collapsible" id="gist-panel-conexion">
-                            <div class="collapsible-inner">
-                                <div class="gist-panel-contenido">
-                                    <div class="form-group">
-                                        <label for="gist-token">Personal Access Token</label>
-                                        <div class="input-with-btn">
-                                            <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxx"
-                                                maxlength="256" autocomplete="off" />
-                                            <button class="time-btn" id="btn-toggle-token"
-                                                title="Mostrar/ocultar token">
-                                                <svg class="icon">
-                                                    <use href="#icon-eye" />
-                                                </svg>
-                                            </button>
-                                            <button class="time-btn" id="btn-crear-token" title="Crear token en GitHub">
-                                                <svg class="icon">
-                                                    <use href="#icon-plus" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="gist-id">Gist ID</label>
-                                        <div class="input-with-btn">
-                                            <input type="text" id="gist-id"
-                                                placeholder="Dejar vacío para crear uno nuevo" maxlength="40"
-                                                autocomplete="off" />
-                                            <button class="time-btn" id="btn-gist-abrir" title="Abrir en GitHub">
-                                                <svg class="icon">
-                                                    <use href="#icon-external-link" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="config-actions">
-                    <label>Cifrado (opcional)</label>
-                    <div class="settings-list">
-                        <button id="btn-gist-panel-cifrado" class="gist-panel-toggle" aria-expanded="false"
-                            aria-controls="gist-panel-cifrado">
+                        <button class="time-btn" id="btn-crear-token" title="Crear token en GitHub">
                             <svg class="icon">
-                                <use href="#icon-lock" />
+                                <use href="#icon-plus" />
                             </svg>
-                            <span class="settings-list-text">
-                                <span>Frase de cifrado</span>
-                                <span class="settings-list-desc" id="gist-cifrado-resumen">Sin cifrar</span>
-                            </span>
-                            <svg class="icon icon-indicator">
-                                <use href="#icon-chevron-right" />
-                            </svg>
-                        </button>
-                        <div class="gist-panel collapsible" id="gist-panel-cifrado">
-                            <div class="collapsible-inner">
-                                <div class="gist-panel-contenido">
-                                    <div class="form-group">
-                                        <label for="gist-frase">Frase (mínimo 20 caracteres)</label>
-                                        <div class="input-with-btn">
-                                            <input type="password" id="gist-frase" placeholder="Vacía = sin cifrar"
-                                                maxlength="200" autocomplete="off" spellcheck="false" />
-                                            <button class="time-btn" id="btn-gist-frase-ver" type="button" title="Mostrar/ocultar frase">
-                                                <svg class="icon">
-                                                    <use href="#icon-eye" />
-                                                </svg>
-                                            </button>
-                                            <button class="time-btn" id="btn-gist-frase-generar" type="button" title="Generar una frase al azar">
-                                                <svg class="icon">
-                                                    <use href="#icon-magic" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <p class="frase-nota">Con una frase, el Gist se sube cifrado y GitHub no puede
-                                            leer tus registros. Tenés que cargar la misma en cada dispositivo. Si la
-                                            perdés, el Gist no se puede abrir (tus datos locales siguen).</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <button id="btn-toggle-gist-recordar">
-                            <svg class="icon">
-                                <use href="#icon-lock-open" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Recordar en este navegador</span>
-                                <span class="settings-list-desc">Sin activar, la frase vale hasta cerrar la app. La
-                                    sincronización automática lo necesita.</span>
-                            </span>
-                            <span class="toggle-switch" aria-hidden="true"></span>
                         </button>
                     </div>
                 </div>
-
-                <div class="config-actions">
-                    <label>Automatización</label>
-                    <div class="settings-list">
-                        <button id="btn-toggle-gist-backup">
+                <div class="form-group">
+                    <label for="gist-id">Gist ID</label>
+                    <div class="input-with-btn">
+                        <input type="text" id="gist-id"
+                            placeholder="Dejar vacío para crear uno nuevo" maxlength="40"
+                            autocomplete="off" />
+                        <button class="time-btn" id="btn-gist-abrir" title="Abrir en GitHub">
                             <svg class="icon">
-                                <use href="#icon-cloud" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Sincronización automática</span>
-                                <span class="settings-list-desc" id="hint-gist-backup"></span>
-                                <span class="gist-valor" id="label-gist-backup">Sin automatizar</span>
-                            </span>
-                        </button>
-                        <button id="btn-toggle-gist-merge">
-                            <svg class="icon" id="icon-gist-merge">
-                                <use href="#icon-replace-swap" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Al bajar datos</span>
-                                <span class="settings-list-desc" id="desc-gist-merge"></span>
-                                <span class="gist-valor" id="hint-gist-merge">Reemplazar</span>
-                            </span>
-                        </button>
-                        <button id="btn-gist-panel-limites" class="gist-panel-toggle" aria-expanded="false"
-                            aria-controls="gist-panel-limites">
-                            <svg class="icon">
-                                <use href="#icon-clock" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Límites y horario</span>
-                                <span class="settings-list-desc" id="gist-limites-resumen">—</span>
-                            </span>
-                            <svg class="icon icon-indicator">
-                                <use href="#icon-chevron-right" />
+                                <use href="#icon-external-link" />
                             </svg>
                         </button>
-                        <div class="gist-panel collapsible" id="gist-panel-limites">
-                            <div class="collapsible-inner">
-                                <div class="gist-panel-contenido">
-                                    <div id="gist-limite-sync">
-                                        <div class="form-group">
-                                            <label id="gist-limite-label">Límite por hora</label>
-                                            <div class="input-number-group input-number-group--embed">
-                                                <button id="btn-gist-limite-dec" class="btn-increment" type="button"
-                                                    title="Disminuir límite">-</button>
-                                                <span id="gist-limite-valor" class="input-number-display">0</span>
-                                                <button id="btn-gist-limite-inc" class="btn-increment" type="button"
-                                                    title="Incrementar límite">+</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div id="gist-rango-horario">
-                                        <label>Desde</label>
-                                        <input type="text" id="gist-rango-desde" inputmode="numeric" maxlength="5"
-                                            aria-label="Desde" />
-                                        <label>Hasta</label>
-                                        <input type="text" id="gist-rango-hasta" inputmode="numeric" maxlength="5"
-                                            aria-label="Hasta" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
-                </div>
-
-                <div class="gist-acciones">
-                    <button id="btn-gist-subir">
-                        <svg class="icon">
-                                        <use href="#icon-nube" />
-                                        <use class="icon-flecha" href="#icon-flecha-nube-subir" />
-                                    </svg>
-                        <span>Subir</span>
-                    </button>
-                    <button id="btn-gist-bajar">
-                        <svg class="icon">
-                                        <use href="#icon-nube" />
-                                        <use class="icon-flecha" href="#icon-flecha-nube-bajar" />
-                                    </svg>
-                        <span>Bajar</span>
-                    </button>
                 </div>
             </div>
             <div class="modal-panel-footer">
@@ -1858,154 +1947,9 @@
                         </button>
                     </div>
                 </div>
-
-                <div class="config-actions">
-                    <label>Cifrado (opcional)</label>
-                    <div class="settings-list">
-                        <button id="btn-drive-panel-cifrado" class="drive-panel-toggle gist-panel-toggle" aria-expanded="false"
-                            aria-controls="drive-panel-cifrado">
-                            <svg class="icon">
-                                <use href="#icon-lock" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Frase de cifrado</span>
-                                <span class="settings-list-desc" id="drive-cifrado-resumen">Sin cifrar</span>
-                            </span>
-                            <svg class="icon icon-indicator">
-                                <use href="#icon-chevron-right" />
-                            </svg>
-                        </button>
-                        <div class="gist-panel collapsible" id="drive-panel-cifrado">
-                            <div class="collapsible-inner">
-                                <div class="gist-panel-contenido">
-                                    <div class="form-group">
-                                        <label for="drive-frase">Frase (mínimo 20 caracteres)</label>
-                                        <div class="input-with-btn">
-                                            <input type="password" id="drive-frase" placeholder="Vacía = sin cifrar"
-                                                maxlength="200" autocomplete="off" spellcheck="false" />
-                                            <button class="time-btn" id="btn-drive-frase-ver" type="button" title="Mostrar/ocultar frase">
-                                                <svg class="icon">
-                                                    <use href="#icon-eye" />
-                                                </svg>
-                                            </button>
-                                            <button class="time-btn" id="btn-drive-frase-generar" type="button" title="Generar una frase al azar">
-                                                <svg class="icon">
-                                                    <use href="#icon-magic" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <p class="frase-nota">Es la misma frase del Gist. Con ella, el respaldo se sube
-                                            cifrado y Google no puede leer tus registros. Tenés que cargarla en cada
-                                            dispositivo. Si la perdés, el respaldo no se puede abrir (tus datos locales
-                                            siguen).</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <button id="btn-toggle-drive-recordar">
-                            <svg class="icon">
-                                <use href="#icon-lock-open" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Recordar en este navegador</span>
-                                <span class="settings-list-desc">Sin activar, la frase vale hasta cerrar la app. La
-                                    sincronización automática lo necesita.</span>
-                            </span>
-                            <span class="toggle-switch" aria-hidden="true"></span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="config-actions">
-                    <label>Automatización</label>
-                    <div class="settings-list">
-                        <button id="btn-toggle-drive-backup">
-                            <svg class="icon">
-                                <use href="#icon-cloud" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Sincronización automática</span>
-                                <span class="settings-list-desc" id="hint-drive-backup"></span>
-                                <span class="gist-valor" id="label-drive-backup">Sin automatizar</span>
-                            </span>
-                        </button>
-                        <button id="btn-toggle-drive-merge">
-                            <svg class="icon" id="icon-drive-merge">
-                                <use href="#icon-replace-swap" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Al bajar datos</span>
-                                <span class="settings-list-desc" id="desc-drive-merge"></span>
-                                <span class="gist-valor" id="hint-drive-merge">Reemplazar</span>
-                            </span>
-                        </button>
-                        <button id="btn-drive-panel-limites" class="drive-panel-toggle gist-panel-toggle" aria-expanded="false"
-                            aria-controls="drive-panel-limites">
-                            <svg class="icon">
-                                <use href="#icon-clock" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Límites y horario</span>
-                                <span class="settings-list-desc" id="drive-limites-resumen">—</span>
-                            </span>
-                            <svg class="icon icon-indicator">
-                                <use href="#icon-chevron-right" />
-                            </svg>
-                        </button>
-                        <div class="gist-panel collapsible" id="drive-panel-limites">
-                            <div class="collapsible-inner">
-                                <div class="gist-panel-contenido">
-                                    <div id="drive-limite-sync">
-                                        <div class="form-group">
-                                            <label id="drive-limite-label">Límite por hora</label>
-                                            <div class="input-number-group input-number-group--embed">
-                                                <button id="btn-drive-limite-dec" class="btn-increment" type="button"
-                                                    title="Disminuir límite">-</button>
-                                                <span id="drive-limite-valor" class="input-number-display">0</span>
-                                                <button id="btn-drive-limite-inc" class="btn-increment" type="button"
-                                                    title="Incrementar límite">+</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div id="drive-rango-horario">
-                                        <label>Desde</label>
-                                        <input type="text" id="drive-rango-desde" inputmode="numeric" maxlength="5"
-                                            aria-label="Desde" />
-                                        <label>Hasta</label>
-                                        <input type="text" id="drive-rango-hasta" inputmode="numeric" maxlength="5"
-                                            aria-label="Hasta" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gist-acciones">
-                    <button id="btn-drive-subir">
-                        <svg class="icon">
-                            <use href="#icon-nube" />
-                            <use class="icon-flecha" href="#icon-flecha-nube-subir" />
-                        </svg>
-                        <span>Subir</span>
-                    </button>
-                    <button id="btn-drive-bajar">
-                        <svg class="icon">
-                            <use href="#icon-nube" />
-                            <use class="icon-flecha" href="#icon-flecha-nube-bajar" />
-                        </svg>
-                        <span>Bajar</span>
-                    </button>
-                </div>
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">
-                    <button class="btn-export" id="btn-drive-guardar">
-                        <svg class="icon">
-                            <use href="#icon-check" />
-                        </svg>
-                        Guardar
-                    </button>
                     <button class="btn-cancel" id="btn-drive-volver">
                         <svg class="icon">
                             <use href="#icon-back" />
@@ -2290,39 +2234,17 @@
                             <use href="#icon-lock" />
                         </svg>
                         <span class="settings-list-text">
-                            <span>Cifrar con la frase</span>
-                            <span class="settings-list-desc">Para restaurar el archivo hace falta la frase.</span>
+                            <span>Cifrar este archivo</span>
+                            <span class="settings-list-desc" id="export-cifrar-desc">Para restaurarlo hace falta la
+                                frase.</span>
                         </span>
                         <span class="toggle-switch" aria-hidden="true"></span>
                     </button>
                 </div>
-                <div id="export-frase-bloque" class="collapsible">
-                    <div class="collapsible-inner">
-                        <div class="form-group">
-                            <label for="export-frase">Frase de cifrado (mínimo 20 caracteres)</label>
-                            <div class="input-with-btn">
-                                <input type="password" id="export-frase" maxlength="200" autocomplete="off"
-                                    spellcheck="false" />
-                                <button class="time-btn" id="btn-export-frase-ver" type="button" title="Mostrar/ocultar frase">
-                                                <svg class="icon">
-                                                    <use href="#icon-eye" />
-                                                </svg>
-                                            </button>
-                                <button class="time-btn" id="btn-export-frase-generar" type="button" title="Generar una frase al azar">
-                                                <svg class="icon">
-                                                    <use href="#icon-magic" />
-                                                </svg>
-                                            </button>
-                            </div>
-                            <p class="frase-nota">Es la misma frase del Gist. Si la perdés, el archivo no se puede
-                                abrir.</p>
-                        </div>
-                    </div>
-                </div>
             </div>
             <div class="modal-panel-footer">
                 <div class="btn-group">
-                    <button class="btn-export">
+                    <button class="btn-export" id="btn-exportar-descargar">
                         <svg class="icon">
                             <use href="#icon-download" />
                         </svg>

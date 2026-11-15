@@ -4,7 +4,7 @@ import { RecordatorioPush } from './services/recordatorio-push.js';
 import { FeriadosAR } from './services/feriados-ar.js';
 import { Perfiles } from './ui/perfiles.js';
 import { Calendario } from './ui/calendario.js';
-import { GistRespaldo } from './ui/gist-respaldo.js';
+import { CentroRespaldo } from './ui/centro-respaldo.js';
 import { DriveRespaldo } from './ui/drive-respaldo.js';
 import { Historico } from './ui/historico.js';
 import { Estadisticas } from './ui/estadisticas.js';
@@ -37,8 +37,7 @@ function _iniciarEventosDOM() {
     InstaladorPWA.bindEventos();
     Perfiles.bindEventos();
     Calendario.bindEventos();
-    GistRespaldo.bindEventos();
-    DriveRespaldo.bindEventos();
+    CentroRespaldo.bindEventos();
     Historico.bindEventos();
     Estadisticas.bindEventos();
     TarjetaFichaje.bindEventos();

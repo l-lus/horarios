@@ -19,6 +19,7 @@ const { OAuthPKCE } = await import('../src/services/oauth-pkce.js');
 const { SincronizacionDrive: D } = await import('../src/services/sincronizacion-drive.js');
 const { SincronizacionGist } = await import('../src/services/sincronizacion-gist.js');
 const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+const { ConfigSync } = await import('../src/services/config-sync.js');
 const { STORAGE_KEYS, APP_STORAGE_PREFIX } = await import('../src/core/constantes.js');
 GestorPerfiles.inicializar();
 
@@ -218,27 +219,83 @@ test('Drive: vincular valida el id y olvida el cifrado al cambiar de archivo; el
     D.vincular(null);
 });
 
-test('ConfigSync: Gist y Drive guardan su automatización en campos propios del perfil, y el perfil los conserva', () => {
-    SincronizacionGist.setAutoSync(2);
-    D.setAutoSync(1);
-    D.setRangoHorario('08:00', '09:00');
-    D.setSyncLimite('bajar', 5);
+test('ConfigSync: la automatización es una sola por perfil, el perfil la conserva y restablecer no toca el vínculo', () => {
+    ConfigSync.setAutoSync(2);
+    ConfigSync.setRangoHorario('08:00', '09:00');
+    ConfigSync.setMergeBehavior('merge');
+    ConfigSync.setSyncLimite('bajar', 5);
+    ConfigSync.setDestino('drive');
+    ConfigSync.setDestino('cualquiera');   // un destino desconocido no se guarda
     const perfil = GestorPerfiles.obtenerDatosPerfil();
-    assert.equal(perfil.gistAutoSync, 2);
-    assert.equal(perfil.driveAutoSync, 1);
-    assert.equal(perfil.driveRangoDesde, '08:00');
-    assert.equal(SincronizacionGist.getRangoHorario().desde, '21:00');
-    assert.equal(store.get(APP_STORAGE_PREFIX + 'driveSyncLimite_bajar'), '5');
-    assert.equal(SincronizacionGist.getSyncLimite('bajar'), 2);
+    assert.equal(perfil.syncAuto, 2);
+    assert.equal(perfil.syncRangoDesde, '08:00');
+    assert.equal(perfil.syncDestino, 'drive');
+    assert.equal(store.get(APP_STORAGE_PREFIX + 'gistSyncLimite_bajar'), '5');
+    assert.equal(ConfigSync.getSyncLimite('subir'), 1);
 
     D.vincular({ id: FILE_ID, nombre: 'horarios_principal.json' });
     GestorPerfiles.guardarDatosPerfilActual();
     const guardado = GestorPerfiles.obtenerDatosPerfil();
     assert.equal(guardado.driveFileId, FILE_ID);
-    assert.equal(guardado.driveAutoSync, 1);
-    assert.equal(guardado.gistAutoSync, 2);
-    assert.ok(GestorPerfiles.CAMPOS_SYNC_DRIVE.includes('driveAutoSync'));
-    assert.ok(!GestorPerfiles.CAMPOS_SYNC_DRIVE.includes('driveFileId'), 'restablecer el perfil conserva el vínculo');
+    assert.equal(guardado.syncAuto, 2);
+    assert.equal(guardado.syncMergeBehavior, 'merge');
+    assert.equal(ConfigSync.getDestino(), 'drive');
+    assert.ok(GestorPerfiles.CAMPOS_SYNC_RESTABLECER.includes('syncAuto'));
+    assert.ok(GestorPerfiles.CAMPOS_SYNC_RESTABLECER.includes('driveLastSync'));
+    assert.ok(!GestorPerfiles.CAMPOS_SYNC_RESTABLECER.includes('driveFileId'), 'restablecer el perfil conserva el vínculo');
+    assert.ok(!GestorPerfiles.CAMPOS_SYNC_RESTABLECER.includes('gistCifrado'), 'y si lo remoto está cifrado');
+    GestorPerfiles.CAMPOS_SYNC.forEach(k => delete perfil[k]);
+});
+
+test('GestorPerfiles.migrarCamposSync: la automatización por proveedor pasa a ser una sola y manda el que estaba activo', () => {
+    const conDrive = { gistAutoSync: 0, gistRangoDesde: '10:00', gistMergeBehavior: 'replace', driveAutoSync: 1, driveRangoDesde: '08:00', driveRangoHasta: '09:00', driveMergeBehavior: 'merge', driveSyncCount_bajar: 3, driveFileId: FILE_ID, gistLastSync: '2026-11-01T10:00:00.000Z' };
+    assert.equal(GestorPerfiles.migrarCamposSync(conDrive), true);
+    assert.deepEqual(conDrive, { syncAuto: 1, syncDestino: 'drive', syncRangoDesde: '08:00', syncRangoHasta: '09:00', syncMergeBehavior: 'merge', driveFileId: FILE_ID, gistLastSync: '2026-11-01T10:00:00.000Z' });
+    assert.equal(GestorPerfiles.migrarCamposSync(conDrive), false, 'ya migrado: no cambia nada');
+
+    const gistViejo = { gistAutoSync: true, driveAutoSync: 2 };   // true era «restaurar»; con los dos activos queda el Gist
+    GestorPerfiles.migrarCamposSync(gistViejo);
+    assert.deepEqual(gistViejo, { syncAuto: 1, syncDestino: 'gist' });
+
+    const manual = { gistAutoSync: 0, driveMergeBehavior: 'merge', gistRangoHasta: '23:00' };   // sin automática no se elige destino
+    GestorPerfiles.migrarCamposSync(manual);
+    assert.deepEqual(manual, { syncRangoHasta: '23:00', syncMergeBehavior: 'merge' });
+
+    assert.equal(GestorPerfiles.migrarCamposSync({ nombre: 'Principal', registros: [] }), false);
+});
+
+test('DestinoRespaldo: el principal es el elegido o se deduce de lo conectado, y la automática solo corre con una nube lista', async () => {
+    const { DestinoRespaldo } = await import('../src/services/destino-respaldo.js');
+    const perfil = GestorPerfiles.obtenerDatosPerfil();
+    const limpiar = () => { [...GestorPerfiles.CAMPOS_SYNC, 'gistId', 'gistLastSync', 'driveLastSync'].forEach(k => delete perfil[k]); D.vincular(null); store.delete(APP_STORAGE_PREFIX + STORAGE_KEYS.DRIVE_REFRESH_TOKEN); store.delete(APP_STORAGE_PREFIX + STORAGE_KEYS.GIST_TOKEN); };
+    limpiar();
+    assert.equal(DestinoRespaldo.principal(), 'local');
+    assert.equal(DestinoRespaldo.nubeActiva(), null);
+
+    store.set(APP_STORAGE_PREFIX + STORAGE_KEYS.DRIVE_REFRESH_TOKEN, REFRESH);
+    assert.equal(DestinoRespaldo.principal(), 'local', 'Drive conectado pero sin respaldo vinculado todavía no está listo');
+    D.vincular({ id: FILE_ID, nombre: 'horarios_principal.json' });
+    assert.equal(DestinoRespaldo.principal(), 'drive');
+
+    SincronizacionGist.saveCredentials('ghp_' + 'a'.repeat(36), 'b'.repeat(32));
+    perfil.gistLastSync = '2026-11-10T10:00:00.000Z';
+    perfil.driveLastSync = '2026-11-09T10:00:00.000Z';
+    assert.equal(DestinoRespaldo.principal(), 'gist', 'con los dos listos y sin elegir, el último sincronizado');
+
+    ConfigSync.setDestino('local');
+    ConfigSync.setAutoSync(2);
+    ConfigSync.setRangoHorario('00:00', '23:59');
+    ConfigSync.setSyncLimite('subir', 0);
+    assert.equal(DestinoRespaldo.nubeActiva(), null);
+    assert.equal(DestinoRespaldo.automaticaPendiente(), null, 'con el archivo local como principal no hay automática');
+
+    ConfigSync.setDestino('drive');
+    assert.deepEqual(DestinoRespaldo.automaticaPendiente(), { destino: 'drive', tipo: 'subir' });
+    D.vincular(null);
+    assert.equal(DestinoRespaldo.principal(), 'drive', 'el elegido se mantiene aunque deje de estar listo');
+    assert.equal(DestinoRespaldo.automaticaPendiente(), null);
+    ConfigSync.setSyncLimite('subir', 1);
+    limpiar();
 });
 
 test('Drive: reconectar con otra cuenta revoca el permiso anterior (con la misma no), y un canje fallido no borra la conexión que ya funcionaba', async (t) => {

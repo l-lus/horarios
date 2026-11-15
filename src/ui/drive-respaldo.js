@@ -1,49 +1,20 @@
-import { $, alClic, setColapsable } from '../core/dom.js';
+import { $, alClic } from '../core/dom.js';
+import { EventosApp } from '../core/eventos.js';
 import { html, icono, montar } from '../core/html.js';
 import { UIBase } from './base.js';
 import { GestorModales } from './gestor-modales.js';
-import { IconosAnimados } from './iconos-animados.js';
 import { mostrarToast } from './toast.js';
-import { CampoFrase } from './campo-frase.js';
-import { SyncAutomatizacion } from './sync-automatizacion.js';
 import { DriveSync } from './drive-sync.js';
-import { GistRespaldo } from './gist-respaldo.js';
 import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
-import { SincronizacionGist } from '../services/sincronizacion-gist.js';
-import { FraseCifrado } from '../services/frase-cifrado.js';
 
 // ====================================================================
-// GOOGLE DRIVE — modal de configuración: cuenta, respaldo vinculado al perfil, cifrado y automatización
+// GOOGLE DRIVE — modal de conexión: cuenta y respaldo vinculado al perfil
 // ====================================================================
 // Conectar lleva a Google en la misma ventana; al volver (oauth-callback.html → la app) completarConexionPendiente
-// termina el canje y reabre este modal. Los flujos de subir y bajar están en drive-sync.js (los mismos del Gist).
-// Los paneles plegables usan la clase .gist-panel-toggle, que ya conecta gist-respaldo.js para los dos modales.
+// termina el canje y reabre este modal. Subir y Bajar, el cifrado y la automatización están en «Respaldo y sincronización»
+// (centro-respaldo.js), que se pone al día con el evento 'respaldo:conexion'. Los flujos (drive-sync.js) le piden a este
+// módulo que elija el respaldo cuando el perfil todavía no tiene uno.
 const { _setBtnDisabled, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
-
-const _auto = SyncAutomatizacion.crear({
-    prefijo: 'drive', servicio: SincronizacionDrive, nombre: 'Drive',
-    otro: () => ({ servicio: SincronizacionGist, nombre: 'el Gist' }),
-    alCambiar: () => actualizarEstado()
-});
-
-// La frase es la misma de la app (FraseCifrado): el bloque es otro par de controles sobre el mismo dato que en el Gist
-const _campoFrase = new CampoFrase(
-    { input: 'drive-frase', ojo: 'btn-drive-frase-ver', generar: 'btn-drive-frase-generar', recordar: 'btn-toggle-drive-recordar' },
-    () => _actualizarResumenCifrado());
-
-function _actualizarResumenCifrado() {
-    const el = $('drive-cifrado-resumen');
-    if (!el) return;
-    const escrita = _campoFrase.valor();
-    const evaluada = FraseCifrado.evaluar(escrita);
-    const hayFrase = escrita.trim() !== '';
-    _setBtnDisabled('btn-toggle-drive-recordar', !hayFrase);
-    if (!hayFrase) el.textContent = 'Sin cifrar · el respaldo se sube en claro';
-    else if (!evaluada.ok) el.textContent = `Faltan ${Math.max(1, 20 - evaluada.frase.length)} caracteres (mínimo 20)`;
-    else el.textContent = _campoFrase.recordar() ? 'Activado · frase recordada en este navegador' : 'Activado · la frase vale hasta cerrar la app';
-}
-
-const _modalAbierto = () => !!$('modal-drive')?.classList.contains('show');
 
 function _formatearFecha(iso) {
     const d = new Date(iso);
@@ -53,7 +24,6 @@ function _formatearFecha(iso) {
 function actualizarEstado() {
     const disponible = SincronizacionDrive.disponible();
     const conectado = SincronizacionDrive.conectado();
-    const listo = SincronizacionDrive.listo();
     const cuenta = SincronizacionDrive.getCuenta();
 
     $('drive-estado')?.classList.toggle('gist-estado--off', !conectado);
@@ -73,9 +43,6 @@ function actualizarEstado() {
             : 'Ninguno · se crea al subir o se elige al bajar';
     }
     _setBtnDisabled('btn-drive-elegir', !conectado);
-    _setBtnDisabled('btn-drive-subir', !conectado);
-    _setBtnDisabled('btn-drive-bajar', !conectado);
-    _auto.setHabilitado(listo);
 }
 
 function _mostrarUltimaSync() {
@@ -85,49 +52,15 @@ function _mostrarUltimaSync() {
     el.textContent = ultima ? `Última sync: ${SincronizacionDrive.formatLastSync(ultima)}` : 'Sin sincronizar';
 }
 
-function _setPanel(btnId, abierto, animar) {
-    const btn = $(btnId);
-    const panel = $(btn?.getAttribute('aria-controls') || '');
-    if (!btn || !panel) return;
-    btn.setAttribute('aria-expanded', String(abierto));
-    setColapsable(panel, abierto, { animar });
-}
-
-function abrirModalDrive() {
+function abrir() {
     _abrirModalConPadre('modal-drive', () => {
         _mostrarUltimaSync();
-        _auto.cargar();
         actualizarEstado();
-        _setPanel('btn-drive-panel-limites', false, false);
-        _setPanel('btn-drive-panel-cifrado', false, false);
-        _campoFrase.cargar();
     });
 }
 
-function cerrarModalDrive() {
-    _auto.descartar();
+function cerrar() {
     _cerrarModalConPadre('modal-drive');
-    GistRespaldo.actualizarBotonesHistorico();
-}
-
-/** Guarda lo escrito en el modal antes de subir o bajar. false si la frase escrita no es válida (ya se avisó). */
-function _guardarSiModalAbierto() {
-    if (!_modalAbierto()) return true;
-    if (!_campoFrase.confirmar()) { _setPanel('btn-drive-panel-cifrado', true, true); return false; }
-    _auto.guardar();
-    return true;
-}
-
-function guardarConfig() {
-    const { desdeInvalida, hastaInvalida } = _auto.leerRango();
-    if (desdeInvalida) { mostrarToast('Hora inicial inválida.', 'error'); return; }
-    if (hastaInvalida) { mostrarToast('Hora final inválida.', 'error'); return; }
-    const cambioFrase = _campoFrase.cambio();
-    if (!_campoFrase.confirmar()) { _setPanel('btn-drive-panel-cifrado', true, true); return; }
-    const huboCambios = cambioFrase || _auto.hayCambios();
-    _auto.guardar();
-    mostrarToast(huboCambios ? 'Configuración guardada' : 'Sin cambios', huboCambios ? 'success' : 'info');
-    cerrarModalDrive();
 }
 
 // --------------------------------------------------------------------
@@ -136,7 +69,6 @@ function guardarConfig() {
 async function conectar() {
     const r = await SincronizacionDrive.iniciarConexion(location.href);
     if ('error' in r) { mostrarToast(r.error, 'error'); return; }
-    _guardarSiModalAbierto();   // lo que se haya tocado en el modal no se pierde al salir hacia Google
     location.assign(r.url);
 }
 
@@ -147,7 +79,7 @@ async function desconectar() {
     mostrarToast(revocado ? 'Google Drive desconectado' : 'Google Drive desconectado en este navegador', 'success', undefined,
         revocado ? null : 'No se pudo avisar a Google: podés quitar el acceso desde tu cuenta (Seguridad → Apps de terceros)');
     actualizarEstado();
-    GistRespaldo.actualizarBotonesHistorico();
+    EventosApp.emit('respaldo:conexion');
 }
 
 /**
@@ -163,8 +95,8 @@ async function completarConexionPendiente() {
         return;
     }
     mostrarToast('Google Drive conectado', 'success', undefined, r.cuenta || null);
-    GistRespaldo.actualizarBotonesHistorico();
-    abrirModalDrive();
+    EventosApp.emit('respaldo:conexion');
+    abrir();
 }
 
 // --------------------------------------------------------------------
@@ -247,7 +179,7 @@ async function _prepararVinculo(tipo, modoAutomatico) {
     const elegido = await _preguntarRespaldo(tipo, archivos);
     if (elegido === null) return false;
     if (elegido !== NUEVO) SincronizacionDrive.vincular(elegido);
-    if (_modalAbierto()) actualizarEstado();
+    EventosApp.emit('respaldo:conexion');
     return true;
 }
 
@@ -259,6 +191,7 @@ async function cambiarRespaldo() {
         if (elegido === null) return;
         SincronizacionDrive.vincular(elegido === NUEVO ? null : elegido);
         actualizarEstado();
+        EventosApp.emit('respaldo:conexion');
         mostrarToast(elegido === NUEVO ? 'Se va a crear un respaldo nuevo al subir' : 'Respaldo vinculado a este perfil', 'success');
     } catch (e) {
         mostrarToast('No se pudieron listar los respaldos', 'error', undefined, e instanceof Error ? e.message : null);
@@ -266,30 +199,17 @@ async function cambiarRespaldo() {
 }
 
 function bindEventos() {
-    document.querySelector('.config-actions .btn-drive')?.addEventListener('click', () => abrirModalDrive());
-    _campoFrase.vincular();
-    _auto.bindEventos();
     DriveSync.conectarModal({
-        guardarAntes: _guardarSiModalAbierto,
         antesDeSubir: (auto) => _prepararVinculo('subir', auto),
         antesDeBajar: (auto) => _prepararVinculo('bajar', auto),
-        alSincronizar: () => {
-            if (!_modalAbierto()) return;
-            actualizarEstado();
-            _mostrarUltimaSync();
-        },
-        alCambiarFrase: () => { if (_modalAbierto()) _campoFrase.cargar(); },
     });
     alClic({
         'btn-drive-cuenta': () => (SincronizacionDrive.conectado() ? desconectar() : conectar()),
         'btn-drive-elegir': () => cambiarRespaldo(),
-        'btn-drive-subir': () => { IconosAnimados.animarFlecha($('btn-drive-subir'), 'subir'); DriveSync.subir(); },
-        'btn-drive-bajar': () => { IconosAnimados.animarFlecha($('btn-drive-bajar'), 'bajar'); DriveSync.bajar(); },
-        'btn-drive-guardar': () => guardarConfig(),
-        'btn-drive-volver': () => cerrarModalDrive(),
+        'btn-drive-volver': () => cerrar(),
     });
-    GestorModales.registrarAccionVolver('modal-drive', cerrarModalDrive);
+    GestorModales.registrarAccionVolver('modal-drive', cerrar);
     GestorModales.registrarAccionVolver('modal-drive-elegir', () => $('btn-drive-elegir-cancelar')?.click());
 }
 
-export const DriveRespaldo = { bindEventos, completarConexionPendiente, cerrarModalDrive };
+export const DriveRespaldo = { bindEventos, completarConexionPendiente, abrir, cerrar };

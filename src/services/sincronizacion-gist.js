@@ -17,8 +17,6 @@ function esGistIdValido(id) { return typeof id === 'string' && GIST_ID_REGEX.tes
 function esTokenValido(token) { return typeof token === 'string' && TOKEN_REGEX.test(token.trim()); }
 
 const { _conPerfil, formatLastSync } = ConfigSync;
-// Modo automático, comportamiento al bajar, franja horaria y límites: campos gist* del perfil (ver config-sync.js)
-const { getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario } = ConfigSync.crear('gist', STORAGE_KEYS.GIST_LIMITE);
 
 function getToken() { return Almacenamiento.getItem(STORAGE_KEYS.GIST_TOKEN, ''); }
 
@@ -129,7 +127,9 @@ async function bajar() {
     return contenido;
 }
 
-/** ¿Hay token y Gist ID? Sin ellos no hay sincronización automática ni botones rápidos de Gist. */
-function conectado() { return !!getToken() && esGistIdValido(getGistId()); }
+/** ¿Hay token? Con eso alcanza para subir (la primera subida crea el Gist). */
+function conectado() { return !!getToken(); }
+/** ¿Hay token y Gist ID? Es lo que necesitan bajar, la sincronización automática y los botones rápidos. */
+function listo() { return !!getToken() && esGistIdValido(getGistId()); }
 
-export const SincronizacionGist = { getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario, RANGO_HORARIO_DEFAULT, marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario, getToken, getGistId, getLastSync, getCifrado, setCifrado, leerActual, formatLastSync, saveCredentials, esGistIdValido, esTokenValido, conectado, subir, bajar };
+export const SincronizacionGist = { getToken, getGistId, getLastSync, getCifrado, setCifrado, leerActual, formatLastSync, saveCredentials, esGistIdValido, esTokenValido, conectado, listo, subir, bajar };

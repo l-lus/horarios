@@ -245,7 +245,7 @@ function crearAnillo() {
 function pintarTramos(r, tramos, progreso, conteoMs = 0) {
     r.arcosTramo.forEach((/** @type {SVGElement} */ arco, /** @type {number} */ i) => {
         const t = tramos[i];
-        arco.style.display = t ? '' : 'none';
+        mostrar(arco, !!t);
         if (!t) return;
         // el último sigue un poco más allá del avance: ahí se ve el extremo redondeado del arco (sin color debajo quedaría cortado en seco)
         const largo = t.hasta - t.desde + (i < tramos.length - 1 ? 0.3 : 2);
@@ -256,14 +256,14 @@ function pintarTramos(r, tramos, progreso, conteoMs = 0) {
     const cortes = tramos.slice(0, -1).map(t => t.hasta);
     r.hitos.forEach((/** @type {SVGElement} */ h, /** @type {number} */ i) => {
         const corte = cortes[i];
-        h.style.display = corte === undefined ? 'none' : '';
+        mostrar(h, corte !== undefined);
         if (corte === undefined) return;
         h.style.transform = `rotate(${(corte * 3.6).toFixed(2)}deg)`;
         h.classList.toggle('pendiente', progreso < corte);
         const llegada = conteoMs > 0 && progreso >= corte ? 1 - Math.pow(1 - corte / progreso, 1 / 3) : 0;
         h.style.setProperty('--retraso-hito', `${Math.round(llegada * conteoMs)}ms`);
     });
-    r.inicio.style.display = tramos.length ? '' : 'none';
+    mostrar(r.inicio, tramos.length > 0);
     if (tramos.length) {
         // el redondeo del comienzo va donde arranca el primer tramo (en la semana puede haber un hueco antes: un día sin horas)
         r.inicio.dataset.color = tramos[0].color;

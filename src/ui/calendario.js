@@ -49,6 +49,19 @@ function _programarCierreSelector() {
     _timerCierreSelector = setTimeout(() => _cerrarSelectorMeses(), CIERRE_SELECTOR_INACTIVO_MS);
 }
 
+/** El selector de meses reemplaza a la grilla y a las flechas de navegación (todo con .hidden, sin estilos en línea). */
+function selectorMesesAbierto() {
+    const selector = $('calendario-selector-meses');
+    return !!selector && !selector.classList.contains('hidden');
+}
+
+/** @param {boolean} abierto @param {{ selector: HTMLElement | null, grid: HTMLElement | null, navBotones: HTMLElement | null }} els */
+function _mostrarSelectorMeses(abierto, { selector, grid, navBotones }) {
+    selector?.classList.toggle('hidden', !abierto);
+    grid?.classList.toggle('hidden', abierto);
+    navBotones?.classList.toggle('hidden', abierto);
+}
+
 /** @param {any} [idResaltar] */
 function _cerrarSelectorMeses(idResaltar = null) {
     _cancelarCierreSelector();
@@ -56,9 +69,7 @@ function _cerrarSelectorMeses(idResaltar = null) {
     const selector = $('calendario-selector-meses');
     const navBotones = $('calendario-nav-botones');
     _animarMutacion([selector, grid], () => {
-        selector.style.display = 'none';
-        navBotones.style.display = 'flex';
-        grid.style.display = 'grid';
+        _mostrarSelectorMeses(false, { selector, grid, navBotones });
         _renderizarCalendario(idResaltar);
     });
 }
@@ -69,7 +80,7 @@ function abrirSelectorMesesCalendario() {
     const navBotones = $('calendario-nav-botones');
     const titulo = $('calendario-titulo-mes');
 
-    if (selector.style.display !== 'none') { _cerrarSelectorMeses(); return; }
+    if (selectorMesesAbierto()) { _cerrarSelectorMeses(); return; }
 
     const mesesOrdenados = [...new Set(EstadoApp.registros().map(r => TiempoUtils.claveMes(r.fecha)))].sort().reverse();
     selector.replaceChildren();
@@ -108,10 +119,8 @@ function abrirSelectorMesesCalendario() {
 
     selector.style.height = grid.getBoundingClientRect().height + 'px';
     _animarMutacion([grid, selector], () => {
-        grid.style.display = 'none';
-        navBotones.style.display = 'none';
+        _mostrarSelectorMeses(true, { selector, grid, navBotones });
         montar(titulo, html`${icono('#icon-back')} Volver`);
-        selector.style.display = 'grid';
     });
     _selectorMesesAbiertoEn = Date.now();
     _programarCierreSelector();
@@ -360,11 +369,9 @@ function toggleVistaHistorico() {
     const selector = $('calendario-selector-meses');
     const grid = $('calendario-grid');
     const navBotones = $('calendario-nav-botones');
-    if (selector && !selector.classList.contains('hidden') && selector.style.display !== 'none') {
+    if (selectorMesesAbierto()) {
         _cancelarCierreSelector();
-        selector.style.display = 'none';
-        if (grid) grid.style.display = 'grid';
-        if (navBotones) navBotones.style.display = 'flex';
+        _mostrarSelectorMeses(false, { selector, grid, navBotones });
     }
 }
 
@@ -501,6 +508,7 @@ export const Calendario = {
     bindEventos,
     _cerrarSelectorMeses,
     _selectorMesesProtegido,
+    selectorMesesAbierto,
     _activarVistaCalendarioHistorico,
     _renderizarCalendario,
     _dibujadoOtroDia: () => _fechaDibujado !== TiempoUtils.obtenerFechaHoy(),

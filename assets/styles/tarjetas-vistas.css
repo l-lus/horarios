@@ -835,7 +835,7 @@
 /* ─── CALENDARIO ─────────────────────────────────────────────────────────────── */
 
 #calendario-selector-meses {
-    display: none;
+    display: grid;   /* cerrado lleva .hidden (ver calendario.js) */
     grid-template-columns: repeat(3, 1fr);
     align-content: start;
     gap: var(--space-sm);

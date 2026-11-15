@@ -426,3 +426,12 @@ test('Tokens (CSS): toda var(--x) que usan las hojas está definida en alguna ho
     const sinDefinir = [...usadas].filter(([v]) => !definidas.has(v)).map(([v, hoja]) => `${v} (${hoja})`);
     assert.deepEqual(sinDefinir, [], 'Variables usadas que nadie define (solo funciona su valor por defecto): definilas en tokens.css o quitá el var()');
 });
+
+test('UI: mostrar u ocultar se hace con .hidden, no con style.display (salvo los helpers genéricos de animación)', () => {
+    // animaciones.js oculta el elemento real mientras anima su fantasma; tema-inicial.js oculta la página antes del primer pintado
+    const PERMITIDOS = new Set(['src/ui/animaciones.js', 'src/core/tema-inicial.js']);
+    const usos = srcFiles.filter(f => !PERMITIDOS.has(f))
+        .flatMap(f => fs.readFileSync(f, 'utf8').split('\n')
+            .map((l, i) => (/\.style\.display\s*=(?!=)/.test(l) ? `${f}:${i + 1}` : null)).filter(Boolean));
+    assert.deepEqual(usos, [], 'Usá classList.toggle(\'hidden\', …) en lugar de style.display');
+});

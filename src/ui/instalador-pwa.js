@@ -33,7 +33,7 @@ function _mostrarEtiqueta() {
 function init() {
     if (window.matchMedia('(display-mode: standalone)').matches ||
         /** @type {any} */ (window.navigator).standalone === true) {
-        if (btnInstall) btnInstall.style.display = 'none';
+        btnInstall?.classList.add('hidden');
         return;
     }
 
@@ -41,14 +41,14 @@ function init() {
         e.preventDefault();
         deferredPrompt = e;
         if (btnInstall) {
-            btnInstall.style.display = 'flex';
+            btnInstall.classList.remove('hidden');
             _mostrarEtiqueta();
         }
     });
 
     window.addEventListener('appinstalled', () => {
         _ocultarEtiqueta();
-        if (btnInstall) btnInstall.style.display = 'none';
+        btnInstall?.classList.add('hidden');
         deferredPrompt = null;
         EstadoApp._notify().mostrarToast('¡App instalada con éxito!', 'success');
     });

@@ -786,6 +786,7 @@ button:disabled {
    (la etiqueta queda detrás del ícono y su fondo llega hasta el borde del botón), y a los pocos segundos se repliega. No ocupa lugar (el encabezado no se mueve) y solo anima
    transform y opacity: el fondo (::before) crece desde el ícono con scaleX y el texto se funde. */
 #btn-install {
+    display: flex;   /* oculto con .hidden hasta que el navegador ofrece instalar (ver instalador-pwa.js) */
     position: relative;
     isolation: isolate;
 }
@@ -1299,7 +1300,6 @@ mark.ayuda-resaltado--activa {
 }
 
 .svg-sprite,
-#btn-install,
 #file-import {
     display: none;
 }

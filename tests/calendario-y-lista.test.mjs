@@ -3,10 +3,20 @@ import assert from 'node:assert/strict';
 
 // DOM mínimo: cada id devuelve siempre el mismo elemento, para poder mirar el estado del selector de meses entre renders.
 const noop = () => { };
+// classList guarda las clases de verdad: el selector de meses se abre y se cierra con .hidden
+const fakeClassList = () => {
+    const clases = new Set();
+    return {
+        add: (...c) => c.forEach(x => clases.add(x)),
+        remove: (...c) => c.forEach(x => clases.delete(x)),
+        toggle: (c, forzar) => { const poner = forzar ?? !clases.has(c); if (poner) clases.add(c); else clases.delete(c); return poner; },
+        contains: c => clases.has(c),
+    };
+};
 const fakeEl = () => ({
     style: { setProperty: noop, removeProperty: noop },
     dataset: {},
-    classList: { add: noop, remove: noop, toggle: noop, contains: () => false },
+    classList: fakeClassList(),
     oyentes: {},
     addEventListener(tipo, fn) { (this.oyentes[tipo] ??= []).push(fn); },
     disparar(tipo) { (this.oyentes[tipo] ?? []).forEach(fn => fn({})); },
@@ -82,15 +92,15 @@ test('El reloj de la tarjeta no cierra el selector de meses; un render normal s�
 
     // Abierto hace rato: ya pasó la protección de 4 s de _selectorMesesProtegido
     const selector = porId('calendario-selector-meses');
-    selector.style.display = 'grid';
+    selector.classList.remove('hidden');
 
     TarjetaFichaje.actualizarUI(null, true);   // tick del reloj
     await new Promise(r => setTimeout(r, 20));
-    assert.equal(selector.style.display, 'grid', 'el tick no debe cerrarlo');
+    assert.equal(selector.classList.contains('hidden'), false, 'el tick no debe cerrarlo');
 
     TarjetaFichaje.actualizarUI();
     await new Promise(r => setTimeout(r, 20));
-    assert.equal(selector.style.display, 'none', 'un render normal lo cierra');
+    assert.equal(selector.classList.contains('hidden'), true, 'un render normal lo cierra');
 });
 
 test('El selector de meses se cierra solo tras 15 s sin tocarlo, y cada interacción reinicia la cuenta', async (t) => {
@@ -102,30 +112,30 @@ test('El selector de meses se cierra solo tras 15 s sin tocarlo, y cada interacc
     const selector = porId('calendario-selector-meses');
     const titulo = porId('calendario-titulo-mes');
 
-    selector.style.display = 'none';
+    selector.classList.add('hidden');
     titulo.disparar('click');
-    assert.equal(selector.style.display, 'grid', 'se abre');
+    assert.equal(selector.classList.contains('hidden'), false, 'se abre');
 
     t.mock.timers.tick(14000);
-    assert.equal(selector.style.display, 'grid', 'antes de los 15 s sigue abierto');
+    assert.equal(selector.classList.contains('hidden'), false, 'antes de los 15 s sigue abierto');
 
     selector.disparar('pointermove');
     t.mock.timers.tick(14000);
-    assert.equal(selector.style.display, 'grid', 'la interacción reinició la cuenta');
+    assert.equal(selector.classList.contains('hidden'), false, 'la interacción reinició la cuenta');
 
     t.mock.timers.tick(1000);
-    assert.equal(selector.style.display, 'none', 'pasados 15 s sin tocarlo se cierra');
+    assert.equal(selector.classList.contains('hidden'), true, 'pasados 15 s sin tocarlo se cierra');
 
     // Cerrado a mano no queda una cuenta pendiente que después cierre un selector abierto de nuevo
     titulo.disparar('click');
     t.mock.timers.tick(5000);
     titulo.disparar('click');
-    assert.equal(selector.style.display, 'none');
+    assert.equal(selector.classList.contains('hidden'), true);
     titulo.disparar('click');
     t.mock.timers.tick(14000);
-    assert.equal(selector.style.display, 'grid', 'la cuenta empezó de nuevo al reabrir');
+    assert.equal(selector.classList.contains('hidden'), false, 'la cuenta empezó de nuevo al reabrir');
     t.mock.timers.tick(1000);
-    assert.equal(selector.style.display, 'none');
+    assert.equal(selector.classList.contains('hidden'), true);
 });
 
 test('La lista se dibuja solo si se ve: oculta queda pendiente y se dibuja al mostrarla', async (t) => {
@@ -165,7 +175,7 @@ test('El reloj solo redibuja el calendario cuando cambia el día; un render norm
     const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
     GestorPerfiles.inicializar();
     Calendario.setVistaHistoricoCalendario(true);
-    porId('calendario-selector-meses').style.display = 'none';
+    porId('calendario-selector-meses').classList.add('hidden');
     const dibujos = t.mock.method(porId('calendario-grid'), 'replaceChildren', noop);
     const veces = () => dibujos.mock.callCount();
 

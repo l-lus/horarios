@@ -12,7 +12,7 @@ import { uiAnimarDesdePosiciones, REUBICACION_MS } from './arrastre.js';
 // cada elemento (en cada cuadro de un redimensionado, al desplazar y cuando cambia el contenido) y, al cruzar, se compara con esa foto.
 
 /** Los cortes de ancho que cambian el diseño (los mismos que el CSS y orden-tarjetas.js). */
-const CORTES = [CORTES_LAYOUT.ESCRITORIO, CORTES_LAYOUT.ANCHO, '(max-width: 767px)', '(max-width: 600px)'];
+const CORTES = [CORTES_LAYOUT.ESCRITORIO, CORTES_LAYOUT.ANCHO, CORTES_LAYOUT.TABLETA, CORTES_LAYOUT.MOVIL];
 /** Mientras se desliza no se guardan fotos: los elementos están a medio camino. */
 const DURACION_MS = REUBICACION_MS + 100;
 const REINTENTO_FOTO_MS = 250;

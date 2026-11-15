@@ -1,4 +1,5 @@
 import { esHtmlSeguro, montar } from '../core/html.js';
+import { Animaciones } from './animaciones.js';
 
 // ====================================================================
 // POPUPS FLOTANTES — posicionamiento, cierre y creación
@@ -32,7 +33,7 @@ export function _posicionarPopup(popup, event) {
             popup.classList.add('show');
             setTimeout(() => {
                 if (!popup.classList.contains('closing')) popup.classList.add('listo');
-            }, 280);
+            }, Animaciones._getCSSdur('--dur-pop-in'));
         });
     });
 }
@@ -50,7 +51,7 @@ export function _registrarCierrePopup(popup, selectorTrigger, esMismoTrigger, al
         setTimeout(() => {
             popup.remove();
             if (alCerrar) alCerrar(popup);
-        }, 200);
+        }, Animaciones._getCSSdur('--dur-pop-out'));
     };
     popup._cerrar = cerrar;
     const onClick = (e) => {

@@ -1,4 +1,5 @@
 import { $ } from '../core/dom.js';
+import { CORTES_LAYOUT } from '../core/constantes.js';
 import {
     geometriaConector, geometriaDiagonal, holguraHaciaDerecha, repartirLados, entradaDebeSubir, salidaDebeEspejarse,
     holguraDescripcion, nivelDescripcion, MARGEN_DESCRIPCION_DERECHA
@@ -14,7 +15,7 @@ import { Animaciones } from './animaciones.js';
 const { _durSiAnima } = Animaciones;
 
 // En móviles (mismo corte que el CSS responsivo) y con el formato de tiempo corto activo (vista.siglasCortas), las etiquetas de los días usan la inicial, que es más angosta
-const _consultaMovil = window.matchMedia('(max-width: 600px)');
+const _consultaMovil = window.matchMedia(CORTES_LAYOUT.MOVIL);
 
 // La última marca llega al final de la barra; el dominio se estira solo si "ahora" la supera, y ahí las marcas se corren hacia la izquierda.
 function _escalaLinea(L) {

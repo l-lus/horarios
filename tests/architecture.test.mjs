@@ -435,3 +435,12 @@ test('UI: mostrar u ocultar se hace con .hidden, no con style.display (salvo los
             .map((l, i) => (/\.style\.display\s*=(?!=)/.test(l) ? `${f}:${i + 1}` : null)).filter(Boolean));
     assert.deepEqual(usos, [], 'Usá classList.toggle(\'hidden\', …) en lugar de style.display');
 });
+
+test('Cortes de ancho: los de CORTES_LAYOUT que no son solo del JS aparecen tal cual en algún @media de las hojas', async () => {
+    const { CORTES_LAYOUT } = await import('../src/core/constantes.js');
+    const css = fs.readdirSync('assets/styles').filter(f => f.endsWith('.css'))
+        .map(f => fs.readFileSync(`assets/styles/${f}`, 'utf8')).join('\n');
+    const consultas = new Set([...css.matchAll(/@media[^{]*?(\([^)]*\))/g)].map(m => m[1].replace(/\s+/g, ' ')));
+    const faltan = Object.entries(CORTES_LAYOUT).filter(([k, v]) => k !== 'ANCHO' && !consultas.has(v)).map(([k, v]) => `${k} ${v}`);
+    assert.deepEqual(faltan, [], 'Un corte del JS no coincide con el de las hojas: cambialo en los dos lados');
+});

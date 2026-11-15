@@ -155,5 +155,10 @@ export const MS_DIA = MINUTOS_DIA * 60 * 1000;
 export const horasGte = (valor, objetivo) => (valor - objetivo) > -EPS_HORAS;
 export const horasEq = (valor, objetivo) => Math.abs(valor - objetivo) < EPS_HORAS;
 
-/** Cortes de ancho que cambian el diseño (el CSS usa los mismos valores en sus @media): desde ESCRITORIO hay 2 columnas y desde ANCHO, 3. Mantenerlos juntos acá evita que el orden de tarjetas y la transición de layout discrepen. */
-export const CORTES_LAYOUT = Object.freeze({ ESCRITORIO: '(min-width: 1024px)', ANCHO: '(min-width: 1400px)' });
+/** Cortes de ancho que cambian el diseño (el CSS usa los mismos valores en sus @media; ANCHO solo lo usa el JS, que fija data-columnas): desde ESCRITORIO hay 2 columnas y desde ANCHO, 3; hasta TABLETA el diseño es de una columna angosta y hasta MOVIL los modales ocupan todo el alto. Mantenerlos juntos acá evita que el orden de tarjetas, la transición de layout y la barra discrepen. */
+export const CORTES_LAYOUT = Object.freeze({
+    ESCRITORIO: '(min-width: 1024px)',
+    ANCHO: '(min-width: 1400px)',
+    TABLETA: '(max-width: 767px)',
+    MOVIL: '(max-width: 600px)',
+});

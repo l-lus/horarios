@@ -116,8 +116,8 @@
 .gist-valor {
     align-self: flex-start;
     padding: 1px var(--space-sm);
-    background: var(--c-active);
-    color: var(--c-white);
+    background: var(--c-enfasis, var(--c-active));
+    color: var(--c-on-enfasis, var(--c-white));
     border: 1px solid transparent;
     border-radius: var(--radius-full);
     font-size: var(--text-sm);

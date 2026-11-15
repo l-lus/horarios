@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261115.1552-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261115.1555-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -106,6 +106,10 @@ const urlsToCache = [
   './src/ui/sync-automatizacion.js',
   './src/ui/sync-nube.js',
   './src/ui/tarjeta-ciclo-stats.js',
+  './src/ui/tarjeta-estilos-anillo.js',
+  './src/ui/tarjeta-estilos-filas.js',
+  './src/ui/tarjeta-estilos-linea.js',
+  './src/ui/tarjeta-estilos-piezas.js',
   './src/ui/tarjeta-estilos.js',
   './src/ui/tarjeta-fichaje-vista.js',
   './src/ui/tarjeta-fichaje.js',
@@ -124,6 +128,7 @@ const urlsToCache = [
   './assets/styles/tokens.css',
   './assets/styles/base.css',
   './assets/styles/tarjetas-vistas.css',
+  './assets/styles/tarjeta-estilos.css',
   './assets/styles/modales-funciones.css',
   './assets/styles/responsivo-movimiento.css',
   './src/core/almacenamiento.js',

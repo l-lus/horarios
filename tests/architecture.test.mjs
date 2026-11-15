@@ -129,11 +129,12 @@ test('Service Worker (sw.js): Todos los módulos de src/ están en urlsToCache y
     assert.deepEqual(missingFromSw, [], `Módulos de src/ faltantes en sw.js urlsToCache:\n${missingFromSw.join('\n')}`);
 });
 
-test('Arquitectura CSS: Las 5 capas de assets/styles/ se cargan en orden de cascada en index.html y están en sw.js', () => {
+test('Arquitectura CSS: Las capas de assets/styles/ se cargan en orden de cascada en index.html y están en sw.js', () => {
     const expectedCssOrder = [
         'assets/styles/tokens.css',
         'assets/styles/base.css',
         'assets/styles/tarjetas-vistas.css',
+        'assets/styles/tarjeta-estilos.css',
         'assets/styles/modales-funciones.css',
         'assets/styles/responsivo-movimiento.css'
     ];

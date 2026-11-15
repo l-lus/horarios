@@ -12,7 +12,7 @@ const btnInstall = $('btn-install');
 
 // Llamado de atención del botón de instalar (solo cuando el navegador permite instalar): al cargar muestra la etiqueta «Instalar» junto al ícono (con un
 // rebote de la flecha) y a los pocos segundos la oculta, y queda el ícono. Se corta si el usuario se acerca al botón o lo toca.
-const ETIQUETA_VISIBLE_MS = 3000;
+const ETIQUETA_VISIBLE_MS = 2000;
 /** @type {ReturnType<typeof setTimeout> | null} */
 let _timerEtiqueta = null;
 

@@ -1640,12 +1640,56 @@
                                     </svg>
                                     <span>Bajar</span>
                                 </button>
-                                <button type="button" id="btn-gist-configurar">
+                                <button type="button" id="btn-gist-configurar" class="gist-panel-toggle" aria-expanded="false"
+                                    aria-controls="panel-gist-conexion">
                                     <svg class="icon">
                                         <use href="#icon-settings" />
                                     </svg>
                                     <span>Conexión</span>
                                 </button>
+                            </div>
+                            <div class="collapsible destino-conexion gist-panel" id="panel-gist-conexion">
+                                <div class="collapsible-inner">
+                                    <div class="destino-conexion-contenido">
+                                        <div class="form-group">
+                                            <label for="gist-token">Personal Access Token</label>
+                                            <div class="input-with-btn">
+                                                <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxx"
+                                                    maxlength="256" autocomplete="off" />
+                                                <button class="time-btn" id="btn-toggle-token" type="button"
+                                                    title="Mostrar/ocultar token">
+                                                    <svg class="icon">
+                                                        <use href="#icon-eye" />
+                                                    </svg>
+                                                </button>
+                                                <button class="time-btn" id="btn-crear-token" type="button" title="Crear token en GitHub">
+                                                    <svg class="icon">
+                                                        <use href="#icon-plus" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="gist-id">Gist ID</label>
+                                            <div class="input-with-btn">
+                                                <input type="text" id="gist-id"
+                                                    placeholder="Dejar vacío para crear uno nuevo" maxlength="40"
+                                                    autocomplete="off" />
+                                                <button class="time-btn" id="btn-gist-abrir" type="button" title="Abrir en GitHub">
+                                                    <svg class="icon">
+                                                        <use href="#icon-external-link" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn-export" id="btn-gist-guardar">
+                                            <svg class="icon">
+                                                <use href="#icon-check" />
+                                            </svg>
+                                            Guardar conexión
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="destino" id="destino-drive">
@@ -1675,12 +1719,43 @@
                                     </svg>
                                     <span>Bajar</span>
                                 </button>
-                                <button type="button" id="btn-drive-configurar">
+                                <button type="button" id="btn-drive-configurar" class="gist-panel-toggle" aria-expanded="false"
+                                    aria-controls="panel-drive-conexion">
                                     <svg class="icon">
                                         <use href="#icon-settings" />
                                     </svg>
                                     <span>Conexión</span>
                                 </button>
+                            </div>
+                            <div class="collapsible destino-conexion gist-panel" id="panel-drive-conexion">
+                                <div class="collapsible-inner">
+                                    <div class="destino-conexion-contenido">
+                                        <div class="settings-list">
+                                            <button type="button" id="btn-drive-cuenta">
+                                                <svg class="icon">
+                                                    <use href="#icon-drive" />
+                                                </svg>
+                                                <span class="settings-list-text">
+                                                    <span>Cuenta de Google</span>
+                                                    <span class="settings-list-desc" id="drive-cuenta-resumen">Sin conectar</span>
+                                                    <span class="gist-valor" id="drive-cuenta-accion">Conectar</span>
+                                                </span>
+                                            </button>
+                                            <button type="button" id="btn-drive-elegir">
+                                                <svg class="icon">
+                                                    <use href="#icon-list" />
+                                                </svg>
+                                                <span class="settings-list-text">
+                                                    <span>Respaldo de este perfil</span>
+                                                    <span class="settings-list-desc" id="drive-archivo-resumen">Ninguno · se crea al subir</span>
+                                                </span>
+                                                <svg class="icon icon-indicator">
+                                                    <use href="#icon-chevron-right" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1821,146 +1896,6 @@
                         Guardar
                     </button>
                     <button class="btn-cancel" id="btn-respaldo-volver">
-                        <svg class="icon">
-                            <use href="#icon-back" />
-                        </svg>
-                        Volver
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal modal-scrollable" id="modal-gist" role="dialog" aria-modal="true"
-        aria-labelledby="modal-gist-titulo">
-        <div class="modal-content">
-            <div class="modal-panel-header">
-                <h3 id="modal-gist-titulo">
-                    <span class="modal-title-block">
-                        <svg class="icon">
-                            <use href="#icon-gist" />
-                        </svg>
-                        GitHub Gist
-                    </span>
-                </h3>
-            </div>
-            <div class="modal-panel-body custom-scroll">
-                <div class="gist-estado" id="gist-estado">
-                    <svg class="icon">
-                        <use href="#icon-cloud" />
-                    </svg>
-                    <div>
-                        <div class="gist-estado-titulo" id="gist-estado-titulo">Sin configurar</div>
-                        <div class="settings-list-desc" id="gist-ultima-sync">Sin sincronizar</div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="gist-token">Personal Access Token</label>
-                    <div class="input-with-btn">
-                        <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxx"
-                            maxlength="256" autocomplete="off" />
-                        <button class="time-btn" id="btn-toggle-token"
-                            title="Mostrar/ocultar token">
-                            <svg class="icon">
-                                <use href="#icon-eye" />
-                            </svg>
-                        </button>
-                        <button class="time-btn" id="btn-crear-token" title="Crear token en GitHub">
-                            <svg class="icon">
-                                <use href="#icon-plus" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="gist-id">Gist ID</label>
-                    <div class="input-with-btn">
-                        <input type="text" id="gist-id"
-                            placeholder="Dejar vacío para crear uno nuevo" maxlength="40"
-                            autocomplete="off" />
-                        <button class="time-btn" id="btn-gist-abrir" title="Abrir en GitHub">
-                            <svg class="icon">
-                                <use href="#icon-external-link" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-panel-footer">
-                <div class="btn-group">
-                    <button class="btn-export" id="btn-gist-guardar">
-                        <svg class="icon">
-                            <use href="#icon-check" />
-                        </svg>
-                        Guardar
-                    </button>
-                    <button class="btn-cancel" id="btn-gist-volver">
-                        <svg class="icon">
-                            <use href="#icon-back" />
-                        </svg>
-                        Volver
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal modal-scrollable" id="modal-drive" role="dialog" aria-modal="true"
-        aria-labelledby="modal-drive-titulo">
-        <div class="modal-content">
-            <div class="modal-panel-header">
-                <h3 id="modal-drive-titulo">
-                    <span class="modal-title-block">
-                        <svg class="icon">
-                            <use href="#icon-drive" />
-                        </svg>
-                        Google Drive
-                    </span>
-                </h3>
-            </div>
-            <div class="modal-panel-body custom-scroll">
-                <div class="gist-estado gist-estado--off" id="drive-estado">
-                    <svg class="icon">
-                        <use href="#icon-cloud" />
-                    </svg>
-                    <div>
-                        <div class="gist-estado-titulo" id="drive-estado-titulo">Sin conectar</div>
-                        <div class="settings-list-desc" id="drive-ultima-sync">Sin sincronizar</div>
-                    </div>
-                </div>
-
-                <div class="config-actions">
-                    <label>Conexión</label>
-                    <div class="settings-list">
-                        <button id="btn-drive-cuenta">
-                            <svg class="icon">
-                                <use href="#icon-drive" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Cuenta de Google</span>
-                                <span class="settings-list-desc" id="drive-cuenta-resumen">Sin conectar</span>
-                                <span class="gist-valor" id="drive-cuenta-accion">Conectar</span>
-                            </span>
-                        </button>
-                        <button id="btn-drive-elegir">
-                            <svg class="icon">
-                                <use href="#icon-list" />
-                            </svg>
-                            <span class="settings-list-text">
-                                <span>Respaldo de este perfil</span>
-                                <span class="settings-list-desc" id="drive-archivo-resumen">Ninguno · se crea al subir</span>
-                            </span>
-                            <svg class="icon icon-indicator">
-                                <use href="#icon-chevron-right" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-panel-footer">
-                <div class="btn-group">
-                    <button class="btn-cancel" id="btn-drive-volver">
                         <svg class="icon">
                             <use href="#icon-back" />
                         </svg>

@@ -70,6 +70,9 @@ function _setPanel(btnId, abierto, animar = true) {
     setColapsable(panel, abierto, { animar });
 }
 
+/** El desplegable «Conexión» de un destino. */
+const _alternarConexion = (btnId) => _setPanel(btnId, $(btnId)?.getAttribute('aria-expanded') !== 'true');
+
 // --------------------------------------------------------------------
 // Destinos: estado de cada uno y cuál es el principal
 // --------------------------------------------------------------------
@@ -105,6 +108,8 @@ function refrescar() {
     if (estadoGist) estadoGist.textContent = _estadoGist();
     if (estadoDrive) estadoDrive.textContent = _estadoDrive();
 
+    GistRespaldo.cargar();
+    DriveRespaldo.actualizarEstado();
     _setBtnDisabled('btn-gist-subir', !gistConectado);
     _setBtnDisabled('btn-gist-bajar', !SincronizacionGist.listo());
     _setBtnDisabled('btn-drive-subir', !driveConectado);
@@ -141,6 +146,8 @@ function abrir() {
         refrescar();
         _setPanel('btn-sync-panel-limites', false, false);
         _setPanel('btn-sync-panel-cifrado', false, false);
+        _setPanel('btn-gist-configurar', false, false);
+        _setPanel('btn-drive-configurar', false, false);
         _campoFrase.cargar();
     });
 }
@@ -271,10 +278,11 @@ function bindEventos() {
         'btn-local-restaurar': () => RespaldoLocal.mostrarImportar(),
         'btn-gist-subir': sincronizar('gist', 'subir'),
         'btn-gist-bajar': sincronizar('gist', 'bajar'),
-        'btn-gist-configurar': () => GistRespaldo.abrir(),
+        'btn-gist-configurar': () => _alternarConexion('btn-gist-configurar'),
+        'btn-gist-guardar': () => { if (GistRespaldo.guardar()) _setPanel('btn-gist-configurar', false); },
         'btn-drive-subir': sincronizar('drive', 'subir'),
         'btn-drive-bajar': sincronizar('drive', 'bajar'),
-        'btn-drive-configurar': () => DriveRespaldo.abrir(),
+        'btn-drive-configurar': () => _alternarConexion('btn-drive-configurar'),
         'btn-principal-local': () => _elegirPrincipal('local'),
         'btn-principal-gist': () => _elegirPrincipal('gist'),
         'btn-principal-drive': () => _elegirPrincipal('drive'),

@@ -8,13 +8,14 @@ import { DriveSync } from './drive-sync.js';
 import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
 
 // ====================================================================
-// GOOGLE DRIVE — modal de conexión: cuenta y respaldo vinculado al perfil
+// GOOGLE DRIVE — conexión: cuenta y respaldo vinculado al perfil
 // ====================================================================
+// Estas opciones están en el desplegable «Conexión» del destino Drive, dentro de «Respaldo y sincronización» (centro-respaldo.js).
 // Conectar lleva a Google en la misma ventana; al volver (oauth-callback.html → la app) completarConexionPendiente
 // termina el canje y se sigue en el modal de respaldo. Subir y Bajar, el cifrado y la automatización están en «Respaldo y sincronización»
 // (centro-respaldo.js), que se pone al día con el evento 'respaldo:conexion'. Los flujos (drive-sync.js) le piden a este
 // módulo que elija el respaldo cuando el perfil todavía no tiene uno.
-const { _setBtnDisabled, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
+const { _setBtnDisabled } = UIBase;
 
 function _formatearFecha(iso) {
     const d = new Date(iso);
@@ -25,10 +26,6 @@ function actualizarEstado() {
     const disponible = SincronizacionDrive.disponible();
     const conectado = SincronizacionDrive.conectado();
     const cuenta = SincronizacionDrive.getCuenta();
-
-    $('drive-estado')?.classList.toggle('gist-estado--off', !conectado);
-    const titulo = $('drive-estado-titulo');
-    if (titulo) titulo.textContent = !disponible ? 'No disponible todavía' : conectado ? 'Conectado' : 'Sin conectar';
 
     const resumenCuenta = $('drive-cuenta-resumen');
     if (resumenCuenta) resumenCuenta.textContent = conectado ? (cuenta || 'Cuenta conectada') : 'Conectá tu cuenta de Google para empezar';
@@ -43,24 +40,6 @@ function actualizarEstado() {
             : 'Ninguno · se crea al subir o se elige al bajar';
     }
     _setBtnDisabled('btn-drive-elegir', !conectado);
-}
-
-function _mostrarUltimaSync() {
-    const el = $('drive-ultima-sync');
-    if (!el) return;
-    const ultima = SincronizacionDrive.getLastSync();
-    el.textContent = ultima ? `Última sync: ${SincronizacionDrive.formatLastSync(ultima)}` : 'Sin sincronizar';
-}
-
-function abrir() {
-    _abrirModalConPadre('modal-drive', () => {
-        _mostrarUltimaSync();
-        actualizarEstado();
-    });
-}
-
-function cerrar() {
-    _cerrarModalConPadre('modal-drive');
 }
 
 // --------------------------------------------------------------------
@@ -207,10 +186,8 @@ function bindEventos() {
     alClic({
         'btn-drive-cuenta': () => (SincronizacionDrive.conectado() ? desconectar() : conectar()),
         'btn-drive-elegir': () => cambiarRespaldo(),
-        'btn-drive-volver': () => cerrar(),
     });
-    GestorModales.registrarAccionVolver('modal-drive', cerrar);
     GestorModales.registrarAccionVolver('modal-drive-elegir', () => $('btn-drive-elegir-cancelar')?.click());
 }
 
-export const DriveRespaldo = { bindEventos, completarConexionPendiente, abrir, cerrar };
+export const DriveRespaldo = { bindEventos, completarConexionPendiente, actualizarEstado };

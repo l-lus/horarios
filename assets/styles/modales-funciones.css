@@ -40,34 +40,6 @@
 
 /* ─── GIST Y DRIVE: estado y paneles ───────────────────────────────────────── */
 
-.gist-estado {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-lg);
-    border-radius: var(--radius-md);
-    background: var(--input-bg);
-}
-
-.gist-estado .icon {
-    width: var(--icon-lg);
-    height: var(--icon-lg);
-    flex-shrink: 0;
-    color: var(--text-muted);
-}
-
-.gist-estado--off {
-    background: var(--input-bg);
-}
-
-.gist-estado--off .icon {
-    color: var(--text-muted);
-}
-
-.gist-estado-titulo {
-    font-weight: var(--fw-bold);
-}
-
 /* ─── RESPALDO Y SINCRONIZACIÓN: los tres destinos (archivo, Gist, Drive) ───── */
 
 .destinos {
@@ -120,6 +92,22 @@
 
 .destino-principal:disabled {
     opacity: var(--opacity-disabled);
+}
+
+/* Conexión del destino: se despliega bajo los botones. El colapsable cerrado igual deja el gap del contenedor, por eso el margen negativo y el relleno arriba */
+.destino-conexion {
+    margin-top: calc(-1 * var(--space-md));
+}
+
+.destino-conexion-contenido {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding-top: var(--space-md);
+}
+
+.destino-conexion .settings-list {
+    background: var(--bg-card);
 }
 
 /* Acciones del destino: columnas iguales, sin agrandado al pasar el mouse (se pisarían) */
@@ -361,9 +349,7 @@
 
 .config-actions,
 #modal-respaldo .modal-panel-body,
-#modal-respaldo .respaldo-col,
-#modal-gist .modal-panel-body,
-#modal-drive .modal-panel-body {
+#modal-respaldo .respaldo-col {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -377,7 +363,6 @@
 }
 
 #modal-respaldo .settings-list>button,
-#modal-drive .settings-list>button,
 #modal-drive-elegir .settings-list>button,
 #modal-exportar .settings-list>button,
 #modal-config .config-actions button,

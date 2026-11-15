@@ -104,6 +104,14 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.equal(r.principal, 'true,false,false', 'sin nada conectado el principal es el archivo local');
         assert.equal(r.automatica, true, 'el archivo local no se sincroniza solo');
         assert.equal(r.subirGist, true);
+
+        // «Conexión» de Drive y de Gist: se despliega bajo el destino, animando el alto, sin solapes
+        for (const d of ['drive', 'gist']) {
+            const a = await evaluar((d) => window.humo.altosDurante(`#panel-${d}-conexion`, () => window.humo.clic(`#btn-${d}-configurar`)), d);
+            assert.ok(a.final > a.inicial && a.intermedios >= 2, `la conexión de ${d} se despliega de a poco (${JSON.stringify(a)})`);
+            assert.deepEqual(await evaluar(() => window.humo.solapes()), [], `sin solapes con la conexión de ${d} abierta`);
+            await evaluar((d) => { window.humo.clic(`#btn-${d}-configurar`); return window.humo.pausa(500); }, d);
+        }
     });
 
     await t.test('Cifrado: la frase generada es válida, se ve para poder anotarla y habilita «Recordar»', async () => {
@@ -122,7 +130,7 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(await evaluar(() => window.humo.solapes()), []);
     });
 
-    await t.test('Gist (API simulada): la conexión se carga en su modal; sin frase sube en claro y queda como principal; con frase sube cifrado y baja con el resumen', async () => {
+    await t.test('Gist (API simulada): la conexión se carga en su desplegable; sin frase sube en claro y queda como principal; con frase sube cifrado y baja con el resumen', async () => {
         const r = await evaluar(async (registro) => {
             const h = window.humo;
             const gist = { contenido: null, pedidos: [] };
@@ -140,13 +148,15 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             const salida = {};
             const estado = () => document.getElementById('destino-gist-estado').textContent;
 
-            // 0. la conexión: en el modal del Gist, que vuelve al de respaldo (la frase escrita ahí sigue en borrador)
-            h.clic('#btn-gist-configurar'); await h.modalAbierto('modal-gist');
+            // 0. la conexión: en el desplegable del destino Gist, sin salir del modal de respaldo (la frase escrita ahí sigue en borrador)
+            h.clic('#btn-gist-configurar');
+            await h.hasta(() => document.getElementById('panel-gist-conexion').classList.contains('expanded'), 3000, 'desplegable de conexión del Gist');
             await h.pausa(300);
             salida.solapesConexion = h.solapes();
             const token = document.getElementById('gist-token');
             token.value = 'ghp_' + 'x'.repeat(36); token.dispatchEvent(new Event('input'));
-            h.clic('#btn-gist-guardar'); await h.modalAbierto('modal-respaldo');
+            h.clic('#btn-gist-guardar');
+            await h.hasta(() => !document.getElementById('panel-gist-conexion').classList.contains('expanded'), 3000, 'el desplegable se cierra al guardar');
             salida.soloToken = estado();
             salida.bajarSinGist = document.getElementById('btn-gist-bajar').disabled;
             salida.borrador = document.getElementById('sync-frase').value === window.fraseHumo;

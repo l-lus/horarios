@@ -111,7 +111,7 @@ export async function abrirApp({ ancho = 360, alto = 780, movil = true } = {}) {
             fs.writeFileSync(archivo, Buffer.from(r.result.data, 'base64'));
         };
 
-        return { evaluar, tamano, errores, cerrar, captura };
+        return { evaluar, tamano, errores, cerrar, captura, cdp };
     } catch (err) {
         await cerrar();
         throw err;

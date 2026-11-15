@@ -782,7 +782,7 @@ button:disabled {
     background: transparent;
 }
 
-/* Llamado de atención del botón de instalar (ver instalador-pwa.js): al cargar el botón se prolonga hacia un costado con la etiqueta «Instalar», como una sola píldora
+/* Etiqueta del botón de instalar (ver instalador-pwa.js): al cargar, y mientras se pasa el cursor o se enfoca, el botón se prolonga hacia un costado con la etiqueta «Instalar», como una sola píldora
    (la etiqueta queda detrás del ícono y su fondo llega hasta el borde del botón), y a los pocos segundos se repliega. No ocupa lugar (el encabezado no se mueve) y solo anima
    transform y opacity: el fondo (::before) crece desde el ícono con scaleX y el texto se funde. */
 #btn-install {
@@ -826,12 +826,12 @@ button:disabled {
     transition: opacity var(--dur-fast);
 }
 
-#btn-install.con-etiqueta .install-etiqueta::before {
+#btn-install:is(.con-etiqueta, :hover, :focus-visible) .install-etiqueta::before {
     transform: none;
     opacity: 1;
 }
 
-#btn-install.con-etiqueta .install-etiqueta-texto {
+#btn-install:is(.con-etiqueta, :hover, :focus-visible) .install-etiqueta-texto {
     opacity: 1;
     transition-delay: 90ms;
 }

@@ -49,7 +49,7 @@ function elegirTema(tema) {
 }
 
 function elegirEnfasis(enfasis) {
-    Almacenamiento.setItem(STORAGE_KEYS.ENFASIS, enfasis);
+    GestorTemas.guardarEnfasis(enfasis);
     GestorTemas.aplicarEnfasis(enfasis);
 }
 

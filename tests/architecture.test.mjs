@@ -274,8 +274,8 @@ test('tema-inicial.js: sus listas de temas, énfasis, estilos de calendario y po
     const { ESTILOS_CALENDARIO } = await import('../src/core/estilo-calendario.js');
     const { POSICIONES_HEADER } = await import('../src/core/posicion-header.js');
     assert.deepEqual(lista('TEMAS_VALIDOS'), temasModulo);
-    const enfasisModulo = JSON.parse(/const ENFASIS = (\[[^\]]*\]);/.exec(fs.readFileSync('src/ui/gestor-temas.js', 'utf8'))[1].replace(/'/g, '"'));
-    assert.deepEqual(lista('ENFASIS_VALIDOS'), enfasisModulo);
+    const { ENFASIS_IDS } = await import('../src/core/constantes.js');
+    assert.deepEqual(lista('ENFASIS_VALIDOS'), ENFASIS_IDS);
     assert.deepEqual(lista('ESTILOS_CALENDARIO_VALIDOS'), ESTILOS_CALENDARIO.map(e => e.id));
     assert.deepEqual(lista('POSICIONES_HEADER_VALIDAS'), POSICIONES_HEADER.map(p => p.id));
 });

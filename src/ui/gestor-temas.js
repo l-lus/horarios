@@ -1,6 +1,7 @@
 import { $ } from '../core/dom.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, ENFASIS_IDS } from '../core/constantes.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
+import { EventosApp } from '../core/eventos.js';
 
 // ====================================================================
 // THEME MANAGER MODULE
@@ -22,7 +23,7 @@ const MUESTRAS = Object.freeze({
 
 // Énfasis de color: se combinan con cualquier tema (<html data-enfasis>, ver el final de tokens.css). 'predeterminado' no pone nada. `acento` es el --c-enfasis tal como vale
 // en los temas oscuros (un test verifica que coincida con tokens.css) y `fondo` sigue al tema que está puesto.
-const ENFASIS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul', 'rosa', 'turquesa'];
+const ENFASIS = ENFASIS_IDS;
 const FONDO_MUESTRA_ENFASIS = 'var(--bg-body)';   // la mitad del círculo es el fondo del tema actual (oscuro o claro), no un color fijo
 const MUESTRAS_ENFASIS = Object.freeze({
     predeterminado: { etiqueta: 'Predeterminado', fondo: FONDO_MUESTRA_ENFASIS, acento: 'rgba(76, 114, 172, 0.8)' },
@@ -45,10 +46,32 @@ function muestrasEnfasis() {
     return ENFASIS.map(id => ({ id, ...MUESTRAS_ENFASIS[id] }));
 }
 
+/** El énfasis del perfil activo (es de cada perfil, a diferencia del tema). */
 function enfasisGuardado() {
-    const raw = Almacenamiento.getItem(STORAGE_KEYS.ENFASIS, null);
+    const raw = Almacenamiento.getItem(STORAGE_KEYS.ENFASIS, null, true);
     return ENFASIS.includes(raw) ? raw : 'predeterminado';
 }
+
+function guardarEnfasis(enfasis) {
+    Almacenamiento.setItem(STORAGE_KEYS.ENFASIS, enfasis, true);
+}
+
+/**
+ * Antes el énfasis era uno para todo el dispositivo (clave sin perfil): se copia a cada perfil que todavía no tiene el suyo y se borra la vieja.
+ * @param {string[]} idsPerfiles
+ */
+function migrarEnfasisLegado(idsPerfiles) {
+    const legado = Almacenamiento.getItem(STORAGE_KEYS.ENFASIS, null);
+    if (legado === null) return;
+    idsPerfiles.forEach(id => {
+        const clave = `${STORAGE_KEYS.ENFASIS}_${id}`;
+        if (Almacenamiento.getItem(clave) === null) Almacenamiento.setItem(clave, legado);
+    });
+    Almacenamiento.removeItem(STORAGE_KEYS.ENFASIS);
+}
+
+// Al restaurar un respaldo el énfasis cambia desde el servicio: se relee y se aplica
+EventosApp.on('config:enfasis', () => aplicarEnfasis(enfasisGuardado()));
 
 function aplicarEnfasis(enfasis) {
     if (enfasis === 'predeterminado' || !ENFASIS.includes(enfasis)) document.documentElement.removeAttribute('data-enfasis');
@@ -98,4 +121,4 @@ function siguienteTema(temaActual) {
     return TEMAS[(idx + 1) % TEMAS.length];
 }
 
-export const GestorTemas = { temaGuardado, aplicarTema, siguienteTema, muestras, MUESTRAS, enfasisGuardado, aplicarEnfasis, muestrasEnfasis, MUESTRAS_ENFASIS };
+export const GestorTemas = { temaGuardado, aplicarTema, siguienteTema, muestras, MUESTRAS, enfasisGuardado, guardarEnfasis, migrarEnfasisLegado, aplicarEnfasis, muestrasEnfasis, MUESTRAS_ENFASIS };

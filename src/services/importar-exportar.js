@@ -1,6 +1,6 @@
 import { Preferencias } from '../core/preferencias.js';
 import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA, MOSAICOS_LINEA, DISPOSICIONES_ANILLO } from '../core/estilo-tarjeta.js';
-import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, FONDO_CARD_POR_DEFECTO } from '../core/constantes.js';
+import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, FONDO_CARD_POR_DEFECTO, ENFASIS_IDS } from '../core/constantes.js';
 import { EstiloCalendario, ESTILOS_CALENDARIO } from '../core/estilo-calendario.js';
 import { PosicionHeader, posicionesPermitidas } from '../core/posicion-header.js';
 import { FONDOS_SVG } from '../data/fondos.js';
@@ -146,6 +146,14 @@ const CONFIG_RESPALDO = [
         esValido: (v) => v === 'ninguno' || FONDOS_SVG.some(f => f.id === v),
         actual: () => Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, FONDO_CARD_POR_DEFECTO, true),
         aplicar: (v) => { Almacenamiento.setItem(STORAGE_KEYS.FONDO_CARD, v, true); EventosApp.emit('config:fondo-card'); },
+    },
+    // El énfasis de color también es del perfil
+    {
+        clave: STORAGE_KEYS.ENFASIS,
+        etiqueta: 'énfasis de color',
+        esValido: (v) => ENFASIS_IDS.includes(v),
+        actual: () => { const v = Almacenamiento.getItem(STORAGE_KEYS.ENFASIS, 'predeterminado', true); return ENFASIS_IDS.includes(v) ? v : 'predeterminado'; },
+        aplicar: (v) => { Almacenamiento.setItem(STORAGE_KEYS.ENFASIS, v, true); EventosApp.emit('config:enfasis'); },
     },
     // Un respaldo con orden pero sin columnas (versiones anteriores) usa el reparto por defecto: los tamaños viejos no corresponderían al orden nuevo
     _ordenDeTarjetas(STORAGE_KEYS.ORDEN_CARDS, 'orden de tarjetas', _ordenActual, (data) => {

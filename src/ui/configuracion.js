@@ -177,7 +177,7 @@ EventosApp.on('tarjeta:personalizar', (datos) => {
     if (VistaPrevia.activa() || document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding')) return;
     if (datos?.tarjeta === 'estado') abrirVistaPreviaTarjeta(false);
     else if (datos?.tarjeta === 'calendario') abrirVistaPreviaCalendario(false);
-    else if (datos?.tarjeta === 'tema') VistaPrevia.abrir(_configTema(false));
+    else if (datos?.tarjeta === 'tema') VistaPrevia.abrir(_configTema());
 });
 
 /** @param {boolean} [desdeAjustes] */
@@ -201,14 +201,14 @@ function _configCalendario(desdeAjustes = true) {
 
 // El tema no tiene tarjeta ni filas: se ve toda la página y se elige con círculos de color. Se abre desde el encabezado (mantener y soltar, ver header-posicion.js),
 // desde el botón de tema del selector de perfiles (que se oculta mientras, conservando su entrada del historial, y se reabre al terminar) o pasando a él desde las otras vistas
-/** @param {boolean} [desdeSelector] con true (el botón del selector de perfiles) hay un modal que cerrar y al que volver */
-function _configTema(desdeSelector = false) {
+/** @param {'selector' | 'ajustes' | null} [origen] con 'selector' (el botón del selector de perfiles) hay un modal que cerrar y al que volver; con 'ajustes' (Personalizar paneles), Ajustes */
+function _configTema(origen = null) {
     return {
         id: 'tema',
         titulo: 'Tema',
         sinVelo: true,
-        antes: desdeSelector ? () => GestorModales.cerrar('modal-selector-perfiles', null, { sinHistorial: true }) : undefined,
-        alCerrar: desdeSelector ? () => GestorModales.abrir('modal-selector-perfiles', null, { sinHistorial: true }) : undefined,
+        antes: origen === 'selector' ? () => GestorModales.cerrar('modal-selector-perfiles', null, { sinHistorial: true }) : origen === 'ajustes' ? _cerrarAjustesParaVistaPrevia : undefined,
+        alCerrar: origen === 'selector' ? () => GestorModales.abrir('modal-selector-perfiles', null, { sinHistorial: true }) : origen === 'ajustes' ? _volverAAjustes : undefined,
         filas: [],
         circulos: [
             { titulo: 'Color de fondo', opciones: GestorTemas.muestras(), actual: () => GestorTemas.temaGuardado(), alElegir: elegirTema },
@@ -473,8 +473,7 @@ function bindEventos() {
         'btn-toggle-hover-popup': () => toggleHoverPopupCalendario(),
         'btn-toggle-animaciones': () => toggleReducirAnimaciones(),
         // las dos abren la vista previa en vivo: los estilos, subopciones y el fondo se eligen ahí
-        'btn-personalizar-tarjeta': () => abrirVistaPreviaTarjeta(),
-        'btn-personalizar-calendario': () => abrirVistaPreviaCalendario(),
+        'btn-personalizar-paneles': () => VistaPrevia.abrir(_configTema('ajustes')),
         'btn-toggle-logica-cubierto': () => toggleLogicaCubierto(),
         'btn-toggle-objetivo-registro': () => toggleObjetivoPorRegistro(),
         'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
@@ -506,7 +505,7 @@ function bindEventos() {
     if (btnObjetivoDec) pressHoldObjetivoEdicion.vincular(btnObjetivoDec, -0.5);
     document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => mostrarconfig());
     // en el selector de perfiles el botón de tema abre la personalización del tema; el de Ajustes (que solo se ve en el onboarding) sigue cambiando el tema directo
-    $('theme-toggle-modal')?.addEventListener('click', () => { if (!VistaPrevia.activa()) VistaPrevia.abrir(_configTema(true)); });
+    $('theme-toggle-modal')?.addEventListener('click', () => { if (!VistaPrevia.activa()) VistaPrevia.abrir(_configTema('selector')); });
     $('theme-toggle-config')?.addEventListener('click', () => alternarTema());
 }
 

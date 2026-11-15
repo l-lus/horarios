@@ -14,8 +14,8 @@ while [[ $# -gt 0 ]]; do
       echo "     $0 [-p puerto] [-b interfaz]"
       echo ""
       echo "Ejemplos:"
-      echo "  $0                  # http://127.0.0.1:8001"
-      echo "  $0 8060             # http://127.0.0.1:8060"
+      echo "  $0                  # http://localhost:8001"
+      echo "  $0 8060             # http://localhost:8060"
       echo "  $0 8060 0.0.0.0     # http://0.0.0.0:8060 (todas las interfaces)"
       echo "  $0 0.0.0.0 8060     # http://0.0.0.0:8060"
       echo "  $0 0.0.0.0:8060     # http://0.0.0.0:8060"
@@ -84,6 +84,9 @@ fi
 if [[ "${HOST}" == "0.0.0.0" ]]; then
   echo "🚀 Servidor iniciado en todas las interfaces (0.0.0.0) en el puerto ${PORT}"
   echo "   Acceso local: http://localhost:${PORT}"
+elif [[ "${HOST}" == "127.0.0.1" ]]; then
+  # Se anuncia localhost y no la IP: es el origen registrado para conectar Google Drive (la URI de retorno se compara exacta)
+  echo "🚀 Servidor local iniciado en: http://localhost:${PORT}"
 else
   echo "🚀 Servidor local iniciado en: http://${HOST}:${PORT}"
 fi

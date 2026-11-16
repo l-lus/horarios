@@ -203,6 +203,41 @@ async function cerrar() {
 // --------------------------------------------------------------------
 // Botones rápidos de la barra del histórico: van al destino principal
 // --------------------------------------------------------------------
+const MANTENER_MS = 500;
+const MANTENER_TOLERANCIA_PX = 10;
+
+/** Atajo: mantener presionado el botón (clic o dedo) abre el modal de Respaldo y sincronización; el clic que sigue al soltar se descarta. */
+function _atajoMantenerAbreRespaldo(/** @type {HTMLElement} */ btn) {
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    let timer = null;
+    let x0 = 0, y0 = 0, disparado = false;
+    const cancelar = () => { if (timer) clearTimeout(timer); timer = null; };
+    btn.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        disparado = false;
+        x0 = e.clientX; y0 = e.clientY;
+        cancelar();
+        timer = setTimeout(() => {
+            timer = null;
+            disparado = true;
+            if ('vibrate' in navigator && navigator.userActivation?.hasBeenActive) { try { navigator.vibrate(15); } catch { /* opcional */ } }
+            abrir();
+        }, MANTENER_MS);
+    }, { passive: true });
+    btn.addEventListener('pointermove', (e) => {
+        if (timer && Math.hypot(e.clientX - x0, e.clientY - y0) > MANTENER_TOLERANCIA_PX) cancelar();
+    }, { passive: true });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => btn.addEventListener(t, cancelar, { passive: true }));
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());   // el menú del mantener en el celular
+    // En captura y antes que el clic normal: si ya abrió el modal, ese clic no sube ni baja nada
+    btn.addEventListener('click', (e) => {
+        if (!disparado) return;
+        disparado = false;
+        e.stopImmediatePropagation();
+        e.preventDefault();
+    }, true);
+}
+
 /** @type {'gist' | 'drive' | null | undefined} a dónde apuntan hoy los botones (undefined: todavía no se armaron) */
 let _nubeBotones;
 
@@ -243,6 +278,8 @@ function actualizarBotonesHistorico() {
         newRestaurar.addEventListener('click', () => { autoCierre(); RespaldoLocal.mostrarImportar(true); });
         IconosAnimados.ponerIconoFlecha(newRestaurar, 'bandeja', 'subir');
     }
+    _atajoMantenerAbreRespaldo(newRespaldar);
+    _atajoMantenerAbreRespaldo(newRestaurar);
     EventosApp.emit('historico:botones');
 }
 

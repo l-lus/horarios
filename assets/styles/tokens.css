@@ -279,7 +279,7 @@ body[data-theme="medianoche"] {
 
 html[data-enfasis="lima"] body,
 body[data-enfasis="lima"] {
-    --c-enfasis: #a3e635;
+    --c-enfasis: #9ab85a;
     --c-on-enfasis: #1a2e05;
 }
 html[data-enfasis="lima"]:not(.dark-mode):not([data-theme="medianoche"]) body,
@@ -290,7 +290,7 @@ body[data-enfasis="lima"]:not(.dark-mode):not([data-theme="medianoche"]) {
 
 html[data-enfasis="naranja"] body,
 body[data-enfasis="naranja"] {
-    --c-enfasis: #fb923c;
+    --c-enfasis: #d9935f;
     --c-on-enfasis: #2a1405;
 }
 html[data-enfasis="naranja"]:not(.dark-mode):not([data-theme="medianoche"]) body,
@@ -301,7 +301,7 @@ body[data-enfasis="naranja"]:not(.dark-mode):not([data-theme="medianoche"]) {
 
 html[data-enfasis="neutro"] body,
 body[data-enfasis="neutro"] {
-    --c-enfasis: #e4e4e7;
+    --c-enfasis: #d4d4d8;
     --c-on-enfasis: #18181b;
 }
 html[data-enfasis="neutro"]:not(.dark-mode):not([data-theme="medianoche"]) body,
@@ -312,7 +312,7 @@ body[data-enfasis="neutro"]:not(.dark-mode):not([data-theme="medianoche"]) {
 
 html[data-enfasis="violeta"] body,
 body[data-enfasis="violeta"] {
-    --c-enfasis: #8b7cf6;
+    --c-enfasis: #8c84d4;
     --c-on-enfasis: #1a1033;
 }
 html[data-enfasis="violeta"]:not(.dark-mode):not([data-theme="medianoche"]) body,
@@ -323,7 +323,7 @@ body[data-enfasis="violeta"]:not(.dark-mode):not([data-theme="medianoche"]) {
 
 html[data-enfasis="azul"] body,
 body[data-enfasis="azul"] {
-    --c-enfasis: #3b82f6;
+    --c-enfasis: #5b88cc;
     --c-on-enfasis: #0b1b3a;
 }
 html[data-enfasis="azul"]:not(.dark-mode):not([data-theme="medianoche"]) body,
@@ -334,7 +334,7 @@ body[data-enfasis="azul"]:not(.dark-mode):not([data-theme="medianoche"]) {
 
 html[data-enfasis="rosa"] body,
 body[data-enfasis="rosa"] {
-    --c-enfasis: #f472b6;
+    --c-enfasis: #d4829f;
     --c-on-enfasis: #3b0a21;
 }
 html[data-enfasis="rosa"]:not(.dark-mode):not([data-theme="medianoche"]) body,
@@ -345,7 +345,7 @@ body[data-enfasis="rosa"]:not(.dark-mode):not([data-theme="medianoche"]) {
 
 html[data-enfasis="turquesa"] body,
 body[data-enfasis="turquesa"] {
-    --c-enfasis: #22d3ee;
+    --c-enfasis: #5fb4c4;
     --c-on-enfasis: #04222b;
 }
 html[data-enfasis="turquesa"]:not(.dark-mode):not([data-theme="medianoche"]) body,

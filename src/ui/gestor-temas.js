@@ -27,13 +27,13 @@ const ENFASIS = ENFASIS_IDS;
 const FONDO_MUESTRA_ENFASIS = 'var(--bg-body)';   // la mitad del círculo es el fondo del tema actual (oscuro o claro), no un color fijo
 const MUESTRAS_ENFASIS = Object.freeze({
     predeterminado: { etiqueta: 'Predeterminado', fondo: FONDO_MUESTRA_ENFASIS, acento: 'rgba(76, 114, 172, 0.8)' },
-    lima: { etiqueta: 'Lima', fondo: FONDO_MUESTRA_ENFASIS, acento: '#a3e635' },
-    naranja: { etiqueta: 'Naranja', fondo: FONDO_MUESTRA_ENFASIS, acento: '#fb923c' },
-    neutro: { etiqueta: 'Neutro', fondo: FONDO_MUESTRA_ENFASIS, acento: '#e4e4e7' },
-    violeta: { etiqueta: 'Violeta', fondo: FONDO_MUESTRA_ENFASIS, acento: '#8b7cf6' },
-    azul: { etiqueta: 'Azul', fondo: FONDO_MUESTRA_ENFASIS, acento: '#3b82f6' },
-    rosa: { etiqueta: 'Rosa', fondo: FONDO_MUESTRA_ENFASIS, acento: '#f472b6' },
-    turquesa: { etiqueta: 'Turquesa', fondo: FONDO_MUESTRA_ENFASIS, acento: '#22d3ee' }
+    lima: { etiqueta: 'Lima', fondo: FONDO_MUESTRA_ENFASIS, acento: '#9ab85a' },
+    naranja: { etiqueta: 'Naranja', fondo: FONDO_MUESTRA_ENFASIS, acento: '#d9935f' },
+    neutro: { etiqueta: 'Neutro', fondo: FONDO_MUESTRA_ENFASIS, acento: '#d4d4d8' },
+    violeta: { etiqueta: 'Violeta', fondo: FONDO_MUESTRA_ENFASIS, acento: '#8c84d4' },
+    azul: { etiqueta: 'Azul', fondo: FONDO_MUESTRA_ENFASIS, acento: '#5b88cc' },
+    rosa: { etiqueta: 'Rosa', fondo: FONDO_MUESTRA_ENFASIS, acento: '#d4829f' },
+    turquesa: { etiqueta: 'Turquesa', fondo: FONDO_MUESTRA_ENFASIS, acento: '#5fb4c4' }
 });
 
 /** Los temas, en el orden en que rota el botón de tema, con lo necesario para dibujar su muestra. */

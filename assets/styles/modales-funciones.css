@@ -1147,12 +1147,6 @@ body.vista-previa-activa .mutacion-saliente {
     z-index: calc(var(--z-header) + 2) !important;
 }
 
-/* Respaldo: el pie lleva solo «Volver», a medio ancho */
-#modal-respaldo .modal-panel-footer .btn-cancel {
-    width: 50%;
-    margin: 0 auto;
-}
-
 #btn-sync-frase-aplicar {
     width: 100%;
     margin-top: var(--space-md);

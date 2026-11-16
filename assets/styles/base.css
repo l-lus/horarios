@@ -876,6 +876,12 @@ html[data-header-pos="left"] #btn-install .install-etiqueta::before {
     align-items: center;
 }
 
+/* Pie con «Volver» solo (sin otros botones al lado): a medio ancho y centrado, en móvil y en escritorio */
+.modal-panel-footer > .btn-group > .btn-cancel:only-child {
+    width: 50%;
+    margin: 0 auto;
+}
+
 .btn-activo:not(.settings-list button, .drag-handle) {
     background: var(--c-active);
     color: var(--c-white);

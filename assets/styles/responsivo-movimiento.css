@@ -576,8 +576,7 @@ html[data-enfasis] .btn-register .icon:is(.fichaje-ok, .fichaje-error) {
         align-items: start;
     }
 
-    #modal-config .modal-panel-footer .btn-cancel,
-    #modal-ayuda .modal-panel-footer .btn-cancel {
+    #modal-config .modal-panel-footer .btn-cancel {
         width: 50%;
         margin: 0 auto;
     }

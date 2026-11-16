@@ -1861,39 +1861,12 @@
 /* ─── ÉNFASIS DE COLOR (<html data-enfasis>, ver GestorTemas y el final de tokens.css) ──────────────────────────────
    Sin énfasis (el predeterminado no pone el atributo) nada de esto aplica. El énfasis solo toca lo que se lista en estas reglas y en modales-funciones.css (sliders, días laborales de Ajustes, badge del perfil activo). */
 
-/* Fichar: con la tarjeta cerrada se rellena entera con el acento (una capa detrás de la cabecera que cubre la tarjeta); al abrirla la capa se desvanece y el relleno
-   pasa solo al botón Fichar (otra capa, en forma de píldora). Las dos capas se animan con opacity */
-html[data-enfasis] .card-registrar-header {
-    isolation: isolate;
+/* Fichar: el relleno del acento va solo en el botón Fichar (una capa en forma de píldora), con la tarjeta abierta o cerrada */
+html[data-enfasis] .card-registrar-header .btn-register {
     color: var(--c-on-enfasis);
 }
 
-html[data-enfasis] .card-registrar-header::before {
-    content: '';
-    position: absolute;
-    inset: calc(-1 * var(--space-xl)) calc(-1 * var(--space-sm));
-    z-index: -1;
-    background: var(--c-enfasis);
-    border-radius: var(--radius-lg);
-    transition: opacity var(--dur-anim) ease;
-}
-
-/* en PC (≥ 1024px) las tarjetas tienen más relleno a los costados (ver responsivo-movimiento.css) */
-@media (min-width: 1024px) {
-    html[data-enfasis] .card-registrar-header::before {
-        inset-inline: calc(-1 * var(--space-lg));
-    }
-}
-
-html[data-enfasis] .card-registrar-header:has(+ #form-registro.expanded)::before {
-    opacity: 0;
-}
-
-html[data-enfasis] .card-registrar-header :is(.btn-register, #btn-timer-main, .chevron) {
-    color: var(--c-on-enfasis);
-}
-
-html[data-enfasis] .card-registrar-header:has(+ #form-registro.expanded) :is(#btn-timer-main, .chevron) {
+html[data-enfasis] .card-registrar-header :is(#btn-timer-main, .chevron) {
     color: var(--c-enfasis);
 }
 
@@ -1911,12 +1884,6 @@ html[data-enfasis] .btn-register::before {
     z-index: -1;
     background: var(--c-enfasis);
     border-radius: var(--radius-full);
-    opacity: 0;
-    transition: opacity var(--dur-anim) ease;
-}
-
-html[data-enfasis] .card-registrar-header:has(+ #form-registro.expanded) .btn-register::before {
-    opacity: 1;
 }
 
 /* Flechas de las tarjetas (Estadísticas, Registros), botón del período de las estadísticas y botón del perfil del encabezado */

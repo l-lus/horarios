@@ -882,6 +882,12 @@ html[data-header-pos="left"] #btn-install .install-etiqueta::before {
     margin: 0 auto;
 }
 
+/* Ajustes: fuera del onboarding (que muestra tema y ayuda al lado de «Empezar») el pie lleva solo «Volver» */
+body:not(.config-onboarding) #modal-config .modal-panel-footer .btn-cancel {
+    width: 50%;
+    margin: 0 auto;
+}
+
 .btn-activo:not(.settings-list button, .drag-handle) {
     background: var(--c-active);
     color: var(--c-white);

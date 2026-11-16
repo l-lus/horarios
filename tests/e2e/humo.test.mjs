@@ -242,7 +242,7 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
     await t.test('Destino principal: los botones rápidos del histórico y el resumen de Ajustes siguen al elegido', async () => {
         const r = await evaluar(async () => {
             const h = window.humo;
-            const rapido = () => document.getElementById('btn-hist-respaldar').title;
+            const rapido = () => document.getElementById('btn-hist-respaldar').title.split(' (')[0];   // sin la pista de mantener presionado
             const resumen = () => document.getElementById('respaldo-resumen').textContent;
             const salida = { conGist: rapido() };
             h.clic('#btn-principal-local');

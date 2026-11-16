@@ -262,19 +262,19 @@ function actualizarBotonesHistorico() {
         const flujos = FLUJOS[nube];
         const nombre = NOMBRE_CORTO[nube];
         const base = nube === 'drive' ? 'drive' : 'nube';   // Drive dibuja su silueta; el Gist, la nube
-        newRespaldar.title = `Subir a ${nombre}`;
+        newRespaldar.title = `Subir a ${nombre} (mantener presionado: abrir Respaldo y sincronización)`;
         newRespaldar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRespaldar, 'subir'); flujos.subir(); });
         IconosAnimados.ponerIconoFlecha(newRespaldar, base, 'subir');
 
-        newRestaurar.title = `Bajar de ${nombre}`;
+        newRestaurar.title = `Bajar de ${nombre} (mantener presionado: abrir Respaldo y sincronización)`;
         newRestaurar.addEventListener('click', () => { autoCierre(); IconosAnimados.animarFlecha(newRestaurar, 'bajar'); flujos.bajar(); });
         IconosAnimados.ponerIconoFlecha(newRestaurar, base, 'bajar');
     } else {
-        newRespaldar.title = 'Respaldar';
+        newRespaldar.title = 'Respaldar (mantener presionado: abrir Respaldo y sincronización)';
         newRespaldar.addEventListener('click', () => { autoCierre(); RespaldoLocal.mostrarExportar(true); });
         IconosAnimados.ponerIconoFlecha(newRespaldar, 'bandeja', 'bajar');
 
-        newRestaurar.title = 'Restaurar';
+        newRestaurar.title = 'Restaurar (mantener presionado: abrir Respaldo y sincronización)';
         newRestaurar.addEventListener('click', () => { autoCierre(); RespaldoLocal.mostrarImportar(true); });
         IconosAnimados.ponerIconoFlecha(newRestaurar, 'bandeja', 'subir');
     }

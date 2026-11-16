@@ -576,6 +576,12 @@ html[data-enfasis] .btn-register .icon:is(.fichaje-ok, .fichaje-error) {
         align-items: start;
     }
 
+    /* En el onboarding (con tema y ayuda al lado) el 50% solo rige en escritorio; fuera de él, en todos los anchos (base.css) */
+    #modal-config .modal-panel-footer .btn-cancel {
+        width: 50%;
+        margin: 0 auto;
+    }
+
     #modal-ayuda .modal-content {
         max-width: 700px;
     }

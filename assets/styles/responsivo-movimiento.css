@@ -159,9 +159,13 @@ button.campo-flash {
 }
 
 /* Con énfasis personalizado el botón del perfil tiene fondo de color y borde transparente:
-   el destello de borde casi no se nota, así que pulsa la opacidad como el badge "En curso" */
-html[data-enfasis] .header-profile-btn.campo-flash {
-    animation: estadoBadgeParpadeo var(--dur-flash) ease-in-out 2;
+   en lugar del destello de borde, pulsa la opacidad como el badge "En curso" mientras dura la sincronización */
+html[data-enfasis] .header-profile-btn {
+    transition: border-color var(--dur-slow), opacity var(--dur-fast);
+}
+
+html[data-enfasis] .header-profile-btn.sincronizando {
+    animation: estadoBadgeParpadeo var(--dur-parpadeo-rapido) ease-in-out infinite;
 }
 
 /* Destello de "hoy" en el calendario (botón Hoy) y del mosaico de balance de la línea de tiempo en la carga: una sola pasada de ~1 s, solo transform/opacity.

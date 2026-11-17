@@ -85,9 +85,11 @@ function crear(proveedor) {
     async function _conSpinner(btnId, mensajeError, accion) {
         const btn = $(btnId);
         if (btn) btn.disabled = true;
+        const btnPerfil = $('header-profile-btn');
         const iconoPerfil = $('header-profile-icon');
         iconoPerfil?.classList.add('icono-spin');
-        _flashCampo('header-profile-btn');
+        btnPerfil?.classList.add('sincronizando');
+        if (!document.documentElement.hasAttribute('data-enfasis')) _flashCampo('header-profile-btn');
 
         try {
             await accion();
@@ -97,6 +99,7 @@ function crear(proveedor) {
         } finally {
             if (btn) btn.disabled = false;
             iconoPerfil?.classList.remove('icono-spin');
+            btnPerfil?.classList.remove('sincronizando');
         }
     }
 

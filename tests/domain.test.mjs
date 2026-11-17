@@ -998,7 +998,18 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
     assert.equal(etiquetaEstilo('desconocido'), 'Clásica');
     assert.deepEqual(ids.filter(esEstiloPropio), ['linea', 'filas', 'anillo']);
 
-    // sin estilo guardado se deduce del hint integrado: quien ya usaba la app ve lo mismo que antes
+    // sin estilo ni hint integrado guardados (primera vez): línea de tiempo por defecto
+    Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_TARJETA);
+    Almacenamiento.removeItem(STORAGE_KEYS.HINT_INTEGRADO);
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.actual(), 'linea');
+
+    // un valor guardado inválido sin hint integrado cae en línea de tiempo
+    Almacenamiento.setItem(STORAGE_KEYS.ESTILO_TARJETA, 'inexistente');
+    EstiloTarjeta.releer();
+    assert.equal(EstiloTarjeta.actual(), 'linea');
+
+    // sin estilo guardado pero con hint integrado legado: quien ya usaba la app ve lo mismo que antes
     Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_TARJETA);
     Almacenamiento.setItem(STORAGE_KEYS.HINT_INTEGRADO, false);
     EstiloTarjeta.releer();
@@ -1007,7 +1018,7 @@ test('EstiloTarjeta: ciclo, valor deducido del hint integrado y respaldos viejos
     EstiloTarjeta.releer();
     assert.equal(EstiloTarjeta.actual(), 'hitos');
 
-    // un valor guardado inválido se ignora
+    // un valor guardado inválido se ignora (y respeta el hint integrado si estaba guardado)
     Almacenamiento.setItem(STORAGE_KEYS.ESTILO_TARJETA, 'inexistente');
     EstiloTarjeta.releer();
     assert.equal(EstiloTarjeta.actual(), 'hitos');

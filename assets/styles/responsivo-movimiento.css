@@ -158,6 +158,12 @@ button.campo-flash {
     animation: campo-flash var(--dur-flash) ease-in-out 2;
 }
 
+/* Con énfasis personalizado el botón del perfil tiene fondo de color y borde transparente:
+   el destello de borde casi no se nota, así que pulsa la opacidad como el badge "En curso" */
+html[data-enfasis] .header-profile-btn.campo-flash {
+    animation: estadoBadgeParpadeo var(--dur-flash) ease-in-out 2;
+}
+
 /* Destello de "hoy" en el calendario (botón Hoy) y del mosaico de balance de la línea de tiempo en la carga: una sola pasada de ~1 s, solo transform/opacity.
    Lo arma Animaciones._aplicarFlash: agrega al elemento una capa temporal (.destello-capa) con un barrido de luz que cruza el relleno de izquierda a derecha
    (--dur-barrido) y, a mitad de camino, un aro del color del día (--onda-color) que se agranda y se desvanece (onda). Sin registro no hay relleno que recorrer:

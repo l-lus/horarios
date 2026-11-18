@@ -22,7 +22,7 @@ export const STORAGE_KEYS = Object.freeze({
     LINEA_MOSAICOS: 'lineaMosaicos',        // estilo línea de tiempo con la tarjeta angosta (móvil): los mosaicos Faltan y Banco de horas abajo o a la derecha
     ANILLO_DISPOSICION: 'anilloDisposicion', // estilo anillo: de qué lado va el aro y si la fila Entrada / Salida / Con banco va abajo o arriba
     LINEA_DISPOSICION: 'lineaDisposicion',  // estilo línea de tiempo en pantallas anchas: dónde va el tiempo trabajado (arriba, a la izquierda o a la derecha de la línea)
-    ESTILO_TARJETA: 'estiloTarjeta',        // aspecto de la tarjeta de estado (ver core/estilo-tarjeta.js); sin valor usa 'linea' (o se deduce de HINT_INTEGRADO si existe)
+    ESTILO_TARJETA: 'estiloTarjeta',        // aspecto de la tarjeta de estado (ver core/estilo-tarjeta.js); sin valor se deduce de HINT_INTEGRADO
     HINT_INTEGRADO: 'hintIntegrado',
     DESC_HITOS_NUMERO: 'descHitosNumero',   // con el hint integrado: el nombre del hito enfocado va en el número grande en vez de desplegarse en la barra
     CICLO_HINT_AUTO: 'cicloHintAuto',       // con el hint integrado: el ciclo automático de fases del número grande (al tocarlo o al fichar)

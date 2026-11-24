@@ -459,7 +459,7 @@ test('Tokens (CSS): fuera de tokens.css no hay tamaños de letra en rem/px, peso
     assert.deepEqual(problemas, [], 'Valores que deberían salir de tokens.css');
 });
 
-// tsc no aplica noUnusedLocals a los .js (checkJs): un import que ya no se usa pasaría sin aviso
+// En los .js (checkJs) tsc no marca los imports sin usar aunque noUnusedLocals esté activo: un import que ya no se usa pasaría sin aviso
 test('Imports: todo nombre importado se usa en el módulo', () => {
     const errores = [];
     for (const file of srcFiles) {

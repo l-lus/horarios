@@ -11,7 +11,7 @@ import { Configuracion } from './configuracion.js';
 import { html, icono } from '../core/html.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { registrarSwipe } from './gestos.js';
-import { _crearPopupFlotante } from './popups.js';
+import { crearRanuraPopup } from './popups.js';
 import { Animaciones } from './animaciones.js';
 
 // ====================================================================
@@ -168,12 +168,7 @@ function cambiarSemanaStats() { _cambiarPeriodoStats('select-semana-stats', actu
 function cambiarAnioStats() { _cambiarPeriodoStats('select-anio-stats', actualizarEstadisticasAnio); }
 
 function togglePeriodoStats(direccion = 1) {
-    if (_popupStatEl) {
-        const el = _popupStatEl;
-        _popupStatEl = null;
-        if (el._cerrar) el._cerrar();
-        else el.remove();
-    }
+    _ranuraStat.cerrar();
     const selectMes = $('select-mes-stats');
     const selectAnio = $('select-anio-stats');
     const label = $('label-periodo-toggle');
@@ -232,7 +227,7 @@ const AJUSTE_POR_STAT = {
     'stat-promedio-diario': 'config-row-horas-diarias',
 };
 
-let _popupStatEl = null;
+const _ranuraStat = crearRanuraPopup();
 
 /** Título y descripción del popup de una estadística, con los datos actuales (modo, días hábiles, objetivo...) agregados al final. */
 function _infoPopupStat(statId) {
@@ -291,12 +286,7 @@ function _infoPopupStat(statId) {
 
 function _popupStat(event, statId) {
     event.stopPropagation();
-    if (_popupStatEl) {
-        const el = _popupStatEl;
-        _popupStatEl = null;
-        if (el._cerrar) el._cerrar();
-        else el.remove();
-    }
+    _ranuraStat.cerrar();
 
     const info = _infoPopupStat(statId);
 
@@ -307,7 +297,7 @@ function _popupStat(event, statId) {
             Modificar
         </button>` : '';
 
-    const { popup, cerrar } = _crearPopupFlotante({
+    const { popup, cerrar } = _ranuraStat.abrir({
         className: 'stat-popup',
         id: '_stat-popup',
         dataset: { statId },
@@ -318,9 +308,7 @@ function _popupStat(event, statId) {
         event,
         selectorTrigger: '.stat-item',
         esMismoTrigger: item => item.dataset.statId === statId,
-        alCerrar: (p) => { if (_popupStatEl === p) _popupStatEl = null; }
     });
-    _popupStatEl = popup;
 
     popup.querySelector('#_stat-popup-btn-modificar')?.addEventListener('click', () => {
         cerrar();
@@ -332,11 +320,8 @@ function _onclickStatItem(event) {
     const item = event.currentTarget;
     const valueEl = item.querySelector('.stat-value');
     if (!valueEl || !valueEl.id) return;
-    if (_popupStatEl && _popupStatEl.dataset.statId === valueEl.id) {
-        const el = _popupStatEl;
-        _popupStatEl = null;
-        if (el._cerrar) el._cerrar();
-        else el.remove();
+    if (_ranuraStat.actual()?.dataset.statId === valueEl.id) {
+        _ranuraStat.cerrar();
         return;
     }
     item.dataset.statId = valueEl.id;

@@ -12,7 +12,7 @@ import { Configuracion } from './configuracion.js';
 import { html, icono } from '../core/html.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { setIconoBtn } from './boton-fichar.js';
-import { _crearPopupFlotante } from './popups.js';
+import { crearRanuraPopup } from './popups.js';
 import { mostrarToast } from './toast.js';
 import { Objetivos } from '../services/objetivos.js';
 import { EdicionGrupo } from '../services/edicion-grupo.js';
@@ -166,7 +166,7 @@ async function guardarEdicionGrupoDesdeFormulario() {
     if (el) el.addEventListener('change', actualizarHintGrupo);
 });
 
-let _popupFiltrosEl = null;
+const _ranuraFiltros = crearRanuraPopup();
 
 function mostrarFiltros(event) {
     if (Filtros.obtenerRegistrosFiltrados().length !== EstadoApp.registros().length) {
@@ -178,18 +178,12 @@ function mostrarFiltros(event) {
     const btnFiltro = $('btn-filtro');
     if (!btnFiltro) return;
 
-    if (_popupFiltrosEl) {
-        const el = _popupFiltrosEl;
-        _popupFiltrosEl = null;
-        if (el._cerrar) el._cerrar();
-        else el.remove();
-        return;
-    }
+    if (_ranuraFiltros.cerrar()) return;
 
     const tipos = TiposRegistro.obtenerTodosLosTipos();
     const opcionesTipo = tipos.map(t => html`<option value="${t.id}">${t.emoji} ${t.labelPlural}</option>`);
 
-    const popup = _crearPopupFlotante({
+    const popup = _ranuraFiltros.abrir({
         className: 'filtro-popup',
         id: '_filtro-popup',
         html: html`
@@ -216,9 +210,7 @@ function mostrarFiltros(event) {
         event: event && event.currentTarget ? event : { currentTarget: btnFiltro },
         selectorTrigger: '#btn-filtro',
         esMismoTrigger: () => true,
-        alCerrar: (p) => { if (_popupFiltrosEl === p) _popupFiltrosEl = null; }
     }).popup;
-    _popupFiltrosEl = popup;
 
     const aplicarInmediato = () => {
         const desde = $('filtro-fecha-desde').value;
@@ -234,12 +226,7 @@ function mostrarFiltros(event) {
 }
 
 function cerrarFiltros() {
-    if (_popupFiltrosEl) {
-        const el = _popupFiltrosEl;
-        _popupFiltrosEl = null;
-        if (el._cerrar) el._cerrar();
-        else el.remove();
-    }
+    _ranuraFiltros.cerrar();
 }
 
 function _setIconHistorico(icon, estado) {

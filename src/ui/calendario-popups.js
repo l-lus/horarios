@@ -7,7 +7,7 @@ import { SaldoSemanal } from '../services/saldo-semanal.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { TarjetaLote } from './tarjeta-lote.js';
-import { _crearPopupFlotante } from './popups.js';
+import { crearRanuraPopup } from './popups.js';
 import { EdicionRegistro } from '../services/edicion-registro.js';
 import { Objetivos } from '../services/objetivos.js';
 import { EdicionGrupo } from '../services/edicion-grupo.js';
@@ -19,7 +19,7 @@ import { EdicionGrupo } from '../services/edicion-grupo.js';
 // y resumen de la semana (long press en móvil, click secundario en PC). Hay un solo popup abierto a la vez.
 // No depende del estado del calendario (mes mostrado): calendario.js engancha estos handlers en cada celda.
 
-let _popupCalendarioEl = null;
+const _ranuraCalendario = crearRanuraPopup();
 
 /** @param {any} [asignaciones] */
 function _buildInfoHtmlRegistro(reg, asignaciones = null) {
@@ -57,11 +57,7 @@ function _buildInfoHtmlRegistro(reg, asignaciones = null) {
 }
 
 function _cerrarPopupCalendario() {
-    if (!_popupCalendarioEl) return;
-    const el = _popupCalendarioEl;
-    _popupCalendarioEl = null;
-    if (el._cerrar) el._cerrar();
-    else el.remove();
+    _ranuraCalendario.cerrar();
 }
 
 function _cajaPopupHtml(iconoHref, texto) {
@@ -102,7 +98,7 @@ function _popupCalendario(event, registroId, asignaciones = null) {
             Editar grupo
         </button>` : '';
 
-    const { popup, cerrar } = _crearPopupFlotante({
+    const { popup, cerrar } = _ranuraCalendario.abrir({
         className: 'cal-popup',
         id: '_cal-popup',
         dataset: { registroId: reg.id },
@@ -118,9 +114,7 @@ function _popupCalendario(event, registroId, asignaciones = null) {
         event,
         selectorTrigger: '.calendario-dia',
         esMismoTrigger: dia => dia.dataset.regId === reg.id,
-        alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
     });
-    _popupCalendarioEl = popup;
 
     popup.querySelector('#_cal-popup-btn-edit')?.addEventListener('click', () => {
         cerrar();
@@ -251,7 +245,7 @@ function _popupSemana(celda) {
     if (!ancla) return;
 
     const lunes = TiempoUtils.obtenerLunesSemanaISO(fecha);
-    const { popup } = _crearPopupFlotante({
+    _ranuraCalendario.abrir({
         className: 'cal-popup cal-popup-semana',
         id: '_cal-popup',
         dataset: { semana: lunes },
@@ -259,9 +253,7 @@ function _popupSemana(celda) {
         event: { currentTarget: ancla },
         selectorTrigger: '.calendario-dia',
         esMismoTrigger: dia => dia.dataset.dia === fecha,
-        alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
     });
-    _popupCalendarioEl = popup;
 }
 
 let _popupCalendarioEsHover = false;
@@ -272,14 +264,14 @@ function _popupCalendarioDiaSinRegistro(event, fecha) {
     clearTimeout(_popupCalendarioHoverTimer);
     _popupCalendarioEsHover = false;
 
-    const mismaFecha = _popupCalendarioEl?.dataset.fecha === fecha;
+    const mismaFecha = _ranuraCalendario.actual()?.dataset.fecha === fecha;
     _cerrarPopupCalendario();
     if (mismaFecha) return;
 
     const esFechaFutura = fecha > TiempoUtils.obtenerFechaHoy();
     const fechaLabel = _formatearFechaLabelPopup(fecha);
 
-    const { popup, cerrar } = _crearPopupFlotante({
+    const { popup, cerrar } = _ranuraCalendario.abrir({
         className: 'cal-popup',
         id: '_cal-popup',
         dataset: { fecha },
@@ -297,9 +289,7 @@ function _popupCalendarioDiaSinRegistro(event, fecha) {
         event,
         selectorTrigger: '.calendario-dia',
         esMismoTrigger: dia => dia.dataset.fecha === fecha,
-        alCerrar: (p) => { if (_popupCalendarioEl === p) _popupCalendarioEl = null; }
     });
-    _popupCalendarioEl = popup;
 
     popup.querySelector('#_cal-popup-btn-normal')?.addEventListener('click', () => { cerrar(); TarjetaLote._irAFicharConFecha(fecha, false); });
     popup.querySelector('#_cal-popup-btn-especial')?.addEventListener('click', () => { cerrar(); TarjetaLote._irAFicharConFecha(fecha, true); });
@@ -310,8 +300,8 @@ function _popupCalendarioHover(event, registroId, asignaciones = null) {
     if (event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents) return;
     if (!window.matchMedia('(hover: hover)').matches) return;
     if (!Preferencias.HOVER_POPUP.get()) return;
-    if (_popupCalendarioEl && _popupCalendarioEl.dataset.registroId === registroId) return;
-    if (_popupCalendarioEl && !_popupCalendarioEsHover) return;
+    if (_ranuraCalendario.actual()?.dataset.registroId === registroId) return;
+    if (_ranuraCalendario.actual() && !_popupCalendarioEsHover) return;
     clearTimeout(_popupCalendarioHoverTimer);
     _popupCalendarioHoverTimer = setTimeout(() => {
         _popupCalendarioEsHover = true;
@@ -329,7 +319,7 @@ function _onclickCalendarioDia(event, registroId, asignaciones = null) {
         clearTimeout(_popupCalendarioHoverTimer);
         EdicionRegistro.editar(registroId);
     } else {
-        if (_popupCalendarioEl?.dataset.registroId === registroId) {
+        if (_ranuraCalendario.actual()?.dataset.registroId === registroId) {
             _cerrarPopupCalendario();
             return;
         }
@@ -340,7 +330,7 @@ function _onclickCalendarioDia(event, registroId, asignaciones = null) {
 function _cerrarPopupCalendarioHover(event) {
     if (!_popupCalendarioEsHover) return;
     const related = event.relatedTarget;
-    if (related && _popupCalendarioEl && _popupCalendarioEl.contains(related)) return;
+    if (related && _ranuraCalendario.actual()?.contains(related)) return;
     clearTimeout(_popupCalendarioHoverTimer);
     _popupCalendarioHoverTimer = setTimeout(() => {
         _cerrarPopupCalendario();

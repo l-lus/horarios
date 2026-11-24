@@ -81,3 +81,34 @@ export function _crearPopupFlotante({ className, id, dataset = {}, html, event, 
     _posicionarPopup(popup, event);
     return { popup, cerrar };
 }
+
+/**
+ * Un popup a la vez por zona (el del calendario, el de una estadística, el de filtros): guarda el abierto, lo olvida cuando se cierra
+ * solo (clic afuera o scroll) y cierra el anterior al abrir otro.
+ */
+export function crearRanuraPopup() {
+    /** @type {any} */
+    let actual = null;
+    return {
+        /** @returns {any} el popup abierto o null */
+        actual: () => actual,
+        /** Cierra el popup abierto (con su animación). @returns {boolean} si había uno */
+        cerrar() {
+            const el = actual;
+            actual = null;
+            if (!el) return false;
+            if (el._cerrar) el._cerrar();
+            else el.remove();
+            return true;
+        },
+        /** Igual que _crearPopupFlotante, y el popup queda como el abierto de esta zona. @param {any} opciones */
+        abrir(opciones) {
+            const res = _crearPopupFlotante({
+                ...opciones,
+                alCerrar: (/** @type {any} */ p) => { if (actual === p) actual = null; opciones.alCerrar?.(p); }
+            });
+            actual = res.popup;
+            return res;
+        }
+    };
+}

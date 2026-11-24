@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from './constantes.js';
 import { Almacenamiento } from './almacenamiento.js';
 import { Preferencias } from './preferencias.js';
+import { catalogoCiclico, opcionGuardada } from './catalogo.js';
 
 // ====================================================================
 // ESTILO DE LA TARJETA DE ESTADO
@@ -19,8 +20,6 @@ export const ESTILOS_TARJETA = Object.freeze([
 /** Estilos con diseño propio: dibujan la tarjeta en `#stats-estilo` en vez de la barra. */
 const ESTILOS_PROPIOS = Object.freeze(['linea', 'filas', 'anillo']);
 
-const _esValido = id => ESTILOS_TARJETA.some(e => e.id === id);
-
 // Subvariante del estilo "Línea de tiempo": en una tarjeta ancha (PC) elige cómo se reparte la tarjeta: el tiempo trabajado arriba de la línea (como en el móvil), el tiempo
 // a la izquierda o a la derecha de la línea, o los mosaicos "Faltan" y "Banco de horas" apilados a la izquierda o a la derecha.
 // El CSS solo mira <html data-disposicion-linea> (y el ancho de la tarjeta), así que cambiarla no redibuja nada.
@@ -32,15 +31,11 @@ export const DISPOSICIONES_LINEA = Object.freeze([
     { id: 'mosaicos-derecha', label: 'Mosaicos a la derecha' }
 ]);
 
-const _disposicionValida = id => DISPOSICIONES_LINEA.some(d => d.id === id);
-
 // Subvariante para la tarjeta angosta (móvil): los mosaicos "Faltan" y "Banco de horas" abajo (como siempre) o apilados a la derecha, al lado del tiempo y la línea.
 export const MOSAICOS_LINEA = Object.freeze([
     { id: 'abajo', label: 'Horizontal' },   // los mosaicos en fila, abajo
     { id: 'derecha', label: 'Vertical' }     // los mosaicos apilados, a la derecha de la línea
 ]);
-
-const _mosaicosValido = id => MOSAICOS_LINEA.some(m => m.id === id);
 
 // Variantes del estilo "Anillo": el aro a la izquierda (el predeterminado) o a la derecha, intercambiando las columnas, y la fila Entrada / Salida / Con banco
 // abajo (como siempre) o arriba de todo; y las variantes "intercambiado", donde los dos grupos de datos cambian de lugar: Entrada / Salida / Con banco quedan apilados al costado del aro
@@ -56,106 +51,40 @@ export const DISPOSICIONES_ANILLO = Object.freeze([
     { id: 'intercambiado-derecha', label: 'Intercambio, anillo der.' }
 ]);
 
-const _anilloValido = id => DISPOSICIONES_ANILLO.some(d => d.id === id);
-
-/** Variante que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */
-export function siguienteAnillo(id) {
-    const idx = DISPOSICIONES_ANILLO.findIndex(d => d.id === id);
-    return DISPOSICIONES_ANILLO[(idx + 1) % DISPOSICIONES_ANILLO.length].id;
-}
-
-export function etiquetaAnillo(id) {
-    return (DISPOSICIONES_ANILLO.find(d => d.id === id) ?? DISPOSICIONES_ANILLO[0]).label;
-}
-
 /** Sin elección guardada, en el móvil los mosaicos van apilados a la derecha de la línea ("Vertical"). */
 const MOSAICOS_PREDETERMINADO = 'derecha';
 
-/** Posición que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */
-export function siguienteMosaicos(id) {
-    const idx = MOSAICOS_LINEA.findIndex(m => m.id === id);
-    return MOSAICOS_LINEA[(idx + 1) % MOSAICOS_LINEA.length].id;
-}
+// Ciclo y etiqueta de cada lista (un id desconocido cuenta como la primera, salvo en los mosaicos: como la predeterminada)
+const _estilos = catalogoCiclico(ESTILOS_TARJETA);
+const _disposiciones = catalogoCiclico(DISPOSICIONES_LINEA);
+const _posMosaicos = catalogoCiclico(MOSAICOS_LINEA, { porDefecto: MOSAICOS_PREDETERMINADO });
+const _anillos = catalogoCiclico(DISPOSICIONES_ANILLO);
 
-export function etiquetaMosaicos(id) {
-    const posicion = MOSAICOS_LINEA.find(m => m.id === id) ?? MOSAICOS_LINEA.find(m => m.id === MOSAICOS_PREDETERMINADO);
-    return posicion?.label ?? '';
-}
-
-/** Disposición que sigue a `id` en el ciclo (un id desconocido cuenta como la primera). */
-export function siguienteDisposicion(id) {
-    const idx = DISPOSICIONES_LINEA.findIndex(d => d.id === id);
-    return DISPOSICIONES_LINEA[(idx + 1) % DISPOSICIONES_LINEA.length].id;
-}
-
-export function etiquetaDisposicion(id) {
-    return (DISPOSICIONES_LINEA.find(d => d.id === id) ?? DISPOSICIONES_LINEA[0]).label;
-}
-
-/** Estilo que sigue al `id` en el ciclo (vuelve al primero al terminar; un id desconocido cuenta como el primero). */
-export function siguienteEstilo(id) {
-    const idx = ESTILOS_TARJETA.findIndex(e => e.id === id);
-    return ESTILOS_TARJETA[(idx + 1) % ESTILOS_TARJETA.length].id;
-}
-
-export function etiquetaEstilo(id) {
-    return (ESTILOS_TARJETA.find(e => e.id === id) ?? ESTILOS_TARJETA[0]).label;
-}
+export const siguienteEstilo = _estilos.siguiente;
+export const etiquetaEstilo = _estilos.etiqueta;
+export const siguienteDisposicion = _disposiciones.siguiente;
+export const etiquetaDisposicion = _disposiciones.etiqueta;
+export const siguienteMosaicos = _posMosaicos.siguiente;
+export const etiquetaMosaicos = _posMosaicos.etiqueta;
+export const siguienteAnillo = _anillos.siguiente;
+export const etiquetaAnillo = _anillos.etiqueta;
 
 export const esEstiloPropio = id => ESTILOS_PROPIOS.includes(id);
 
-let _estilo = null;
-let _disposicion = null;
-let _mosaicos = null;
-let _anillo = null;
+// Sin estilo guardado: la barra con hitos, salvo que el interruptor antiguo se hubiera apagado a propósito (entonces, la clásica)
+const _estiloGuardado = opcionGuardada(STORAGE_KEYS.ESTILO_TARJETA, _estilos, () => {
+    const hintGuardado = Almacenamiento.getItem(STORAGE_KEYS.HINT_INTEGRADO, null);
+    return hintGuardado !== null && !Preferencias.HINT_INTEGRADO.get() ? 'clasica' : 'hitos';
+});
+const _disposicionGuardada = opcionGuardada(STORAGE_KEYS.LINEA_DISPOSICION, _disposiciones);
+const _mosaicosGuardados = opcionGuardada(STORAGE_KEYS.LINEA_MOSAICOS, _posMosaicos);
+const _anilloGuardado = opcionGuardada(STORAGE_KEYS.ANILLO_DISPOSICION, _anillos);
+const _GUARDADAS = [_estiloGuardado, _disposicionGuardada, _mosaicosGuardados, _anilloGuardado];
 
-function actual() {
-    if (_estilo === null) {
-        const guardado = Almacenamiento.getItem(STORAGE_KEYS.ESTILO_TARJETA, null);
-        // Sin estilo guardado: la barra con hitos, salvo que el interruptor antiguo se hubiera apagado a propósito (entonces, la clásica)
-        const hintGuardado = Almacenamiento.getItem(STORAGE_KEYS.HINT_INTEGRADO, null);
-        _estilo = _esValido(guardado) ? guardado : (hintGuardado !== null && !Preferencias.HINT_INTEGRADO.get() ? 'clasica' : 'hitos');
-    }
-    return _estilo;
-}
-
-function disposicion() {
-    if (_disposicion === null) {
-        const guardado = Almacenamiento.getItem(STORAGE_KEYS.LINEA_DISPOSICION, null);
-        _disposicion = _disposicionValida(guardado) ? guardado : DISPOSICIONES_LINEA[0].id;
-    }
-    return _disposicion;
-}
-
-function mosaicos() {
-    if (_mosaicos === null) {
-        const guardado = Almacenamiento.getItem(STORAGE_KEYS.LINEA_MOSAICOS, null);
-        _mosaicos = _mosaicosValido(guardado) ? guardado : MOSAICOS_PREDETERMINADO;
-    }
-    return _mosaicos;
-}
-
-function anillo() {
-    if (_anillo === null) {
-        const guardado = Almacenamiento.getItem(STORAGE_KEYS.ANILLO_DISPOSICION, null);
-        _anillo = _anilloValido(guardado) ? guardado : DISPOSICIONES_ANILLO[0].id;
-    }
-    return _anillo;
-}
-
-function setAnillo(id) {
-    if (!_anilloValido(id)) return;
-    _anillo = id;
-    Almacenamiento.setItem(STORAGE_KEYS.ANILLO_DISPOSICION, id);
-    _aplicar();
-}
-
-function setMosaicos(id) {
-    if (!_mosaicosValido(id)) return;
-    _mosaicos = id;
-    Almacenamiento.setItem(STORAGE_KEYS.LINEA_MOSAICOS, id);
-    _aplicar();
-}
+const actual = () => _estiloGuardado.get();
+const disposicion = () => _disposicionGuardada.get();
+const mosaicos = () => _mosaicosGuardados.get();
+const anillo = () => _anilloGuardado.get();
 
 function _aplicar() {
     if (typeof document === 'undefined') return;
@@ -165,21 +94,17 @@ function _aplicar() {
     document.documentElement.setAttribute('data-disposicion-anillo', anillo());
 }
 
-function setDisposicion(id) {
-    if (!_disposicionValida(id)) return;
-    _disposicion = id;
-    Almacenamiento.setItem(STORAGE_KEYS.LINEA_DISPOSICION, id);
-    _aplicar();
+/** Guarda la opción (si es válida) y la aplica. @param {ReturnType<typeof opcionGuardada>} opcion @param {any} id */
+function _fijar(opcion, id) {
+    if (opcion.set(id)) _aplicar();
 }
+
+/** @param {any} id */ const setEstilo = id => _fijar(_estiloGuardado, id);
+/** @param {any} id */ const setDisposicion = id => _fijar(_disposicionGuardada, id);
+/** @param {any} id */ const setMosaicos = id => _fijar(_mosaicosGuardados, id);
+/** @param {any} id */ const setAnillo = id => _fijar(_anilloGuardado, id);
 
 function init() {
-    _aplicar();
-}
-
-function setEstilo(id) {
-    if (!_esValido(id)) return;
-    _estilo = id;
-    Almacenamiento.setItem(STORAGE_KEYS.ESTILO_TARJETA, id);
     _aplicar();
 }
 
@@ -189,10 +114,7 @@ function siguiente() {
 
 /** Vuelve a leer el estilo guardado (después de restaurar un respaldo, que escribe el almacenamiento por su cuenta). */
 function releer() {
-    _estilo = null;
-    _disposicion = null;
-    _mosaicos = null;
-    _anillo = null;
+    _GUARDADAS.forEach(o => o.olvidar());
     _aplicar();
 }
 

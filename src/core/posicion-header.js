@@ -1,6 +1,7 @@
 import { STORAGE_KEYS, CORTES_LAYOUT } from './constantes.js';
 import { Almacenamiento } from './almacenamiento.js';
 import { EventosApp } from './eventos.js';
+import { catalogoCiclico } from './catalogo.js';
 
 // ====================================================================
 // POSICIÓN DEL ENCABEZADO
@@ -33,9 +34,7 @@ export function normalizarPosicion(id, escritorio) {
     return posicionesPermitidas(escritorio).includes(id) ? id : ID_POR_DEFECTO;
 }
 
-export function etiquetaPosicion(id) {
-    return (POSICIONES_HEADER.find(p => p.id === id) ?? POSICIONES_HEADER[0]).label;
-}
+export const etiquetaPosicion = catalogoCiclico(POSICIONES_HEADER).etiqueta;
 
 const _clave = (escritorio) => (escritorio ? STORAGE_KEYS.POSICION_HEADER : STORAGE_KEYS.POSICION_HEADER_MOVIL);
 

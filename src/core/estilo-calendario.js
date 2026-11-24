@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from './constantes.js';
-import { Almacenamiento } from './almacenamiento.js';
+import { catalogoCiclico, opcionGuardada } from './catalogo.js';
 
 // ====================================================================
 // ESTILO DE LOS DÍAS DEL CALENDARIO
@@ -19,28 +19,14 @@ export const ESTILOS_CALENDARIO = Object.freeze([
     { id: 'punto', label: 'Punto' }
 ]);
 
-const ID_POR_DEFECTO = 'legacy';
-const _esValido = id => ESTILOS_CALENDARIO.some(e => e.id === id);
+const _catalogo = catalogoCiclico(ESTILOS_CALENDARIO, { porDefecto: 'legacy', desconocidoEsPorDefecto: true });
+const _guardado = opcionGuardada(STORAGE_KEYS.ESTILO_CALENDARIO, _catalogo);
 
 /** Estilo que sigue al `id` en el ciclo (vuelve al primero al terminar; un id desconocido cuenta como el estilo por defecto). */
-export function siguienteEstilo(id) {
-    const idx = ESTILOS_CALENDARIO.findIndex(e => e.id === id);
-    return ESTILOS_CALENDARIO[(Math.max(idx, 0) + 1) % ESTILOS_CALENDARIO.length].id;
-}
+export const siguienteEstilo = _catalogo.siguiente;
+export const etiquetaEstilo = _catalogo.etiqueta;
 
-export function etiquetaEstilo(id) {
-    return (ESTILOS_CALENDARIO.find(e => e.id === id) ?? ESTILOS_CALENDARIO[0]).label;
-}
-
-let _estilo = null;
-
-function actual() {
-    if (_estilo === null) {
-        const guardado = Almacenamiento.getItem(STORAGE_KEYS.ESTILO_CALENDARIO, ID_POR_DEFECTO);
-        _estilo = _esValido(guardado) ? guardado : ID_POR_DEFECTO;
-    }
-    return _estilo;
-}
+const actual = () => _guardado.get();
 
 function _aplicar() {
     if (typeof document === 'undefined') return;
@@ -52,9 +38,7 @@ function init() {
 }
 
 function setEstilo(id) {
-    if (!_esValido(id)) return;
-    _estilo = id;
-    Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO, id);
+    if (!_guardado.set(id)) return;
     _aplicar();   // el CSS lo anima solo (transiciones en .calendario-dia): sin bloquear ni esperar, cada toque cuenta
 }
 

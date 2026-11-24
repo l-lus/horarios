@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from './constantes.js';
 import { Almacenamiento } from './almacenamiento.js';
+import { siguienteEnCiclo } from './catalogo.js';
 
 // ====================================================================
 // MOTION
@@ -36,7 +37,7 @@ function setModo(nuevo) {
     _aplicar();
 }
 function siguienteModo() {
-    setModo(MODOS[(MODOS.indexOf(_modo()) + 1) % MODOS.length]);
+    setModo(siguienteEnCiclo(MODOS, _modo()));
 }
 export const Movimiento = {
     init, reducido, setModo, siguienteModo, modo: _modo,

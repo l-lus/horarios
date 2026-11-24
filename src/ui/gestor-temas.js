@@ -1,4 +1,5 @@
 import { $ } from '../core/dom.js';
+import { siguienteEnCiclo } from '../core/catalogo.js';
 import { STORAGE_KEYS, ENFASIS_IDS } from '../core/constantes.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EventosApp } from '../core/eventos.js';
@@ -116,9 +117,7 @@ function sincronizarBarraDelSistema() {
 }
 
 
-function siguienteTema(temaActual) {
-    const idx = TEMAS.indexOf(temaActual);
-    return TEMAS[(idx + 1) % TEMAS.length];
-}
+/** @param {string} temaActual */
+const siguienteTema = (temaActual) => siguienteEnCiclo(TEMAS, temaActual);
 
 export const GestorTemas = { temaGuardado, aplicarTema, siguienteTema, muestras, MUESTRAS, enfasisGuardado, guardarEnfasis, migrarEnfasisLegado, aplicarEnfasis, muestrasEnfasis, MUESTRAS_ENFASIS };

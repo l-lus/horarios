@@ -177,7 +177,7 @@ function pintarNodos(r, d) {
 }
 
 // La línea se llena más despacio que el número (con su curva ease-out el primer tramo se haría en una fracción de segundo y no se vería) y espera a que termine el fundido de un cambio de vista
-const FACTOR_LINEA = 1.8;
+const FACTOR_LINEA = 1;
 export const BASE_ENTRADA = 120;
 /** Lo que tarda en llenarse la línea, dada la duración del conteo (ms). @param {number} duracion */
 export const duracionLinea = duracion => Math.round(duracion * FACTOR_LINEA);

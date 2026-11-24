@@ -25,6 +25,7 @@ import { AyudaBuscador } from './ayuda-buscador.js';
 import { AvisoJornada } from '../services/aviso-jornada.js';
 import { DiasHabiles } from '../services/dias-habiles.js';
 import { Objetivos } from '../services/objetivos.js';
+import { AccionesUI } from './acciones-ui.js';
 
 // ====================================================================
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
@@ -36,8 +37,7 @@ const { _esperarAnim, _animarValor } = Animaciones;
 
 const _reprogramarPushDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 400);
 
-const verificarBloqueoCredito = (...args) => EstadoApp._notify().verificarBloqueoCredito(...args);
-const actualizarUI = (...args) => EstadoApp._notify().actualizarUI(...args);
+const { verificarBloqueoCredito, actualizarUI } = AccionesUI;
 const { getFondoCard, _getLabelFondo, toggleFondoCard } = TarjetaFondos;
 const _refrescarFormatoCortoStatsCache = () => EventosApp.emit('config:formato-corto-stats');
 const { actualizarEstadoBotonPersistir } = OrdenTarjetas;
@@ -120,7 +120,7 @@ function toggleEstiloTarjeta() {
     EstiloTarjeta.siguiente();
     EventosApp.emit('config:hint-integrado');
     // todo el contenido de la tarjeta se funde del diseño anterior al nuevo, igual que al pasar de día a semana (y el alto se anima, ver _animarAlturaCard)
-    EstadoApp._notify().cambiarConFundido(() => actualizarUI());
+    AccionesUI.cambiarConFundido(() => actualizarUI());
 }
 
 /** Cierra Ajustes (sin volver al modal padre) para dejar la página libre durante la vista previa; al terminar se reabre. */

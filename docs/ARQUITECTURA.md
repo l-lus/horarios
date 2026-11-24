@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
 **Última actualización:** 2026-11-15  
-**Estado:** Arquitectura modularizada y saneada (116 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Estado:** Arquitectura modularizada y saneada (117 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -42,7 +42,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (116 módulos)
+├── src/                        # Código fuente en ES Modules (117 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── oauth-callback.js       # Script de oauth-callback.html (fuera del grafo de la app, sin imports)
 │   ├── data/                   # Catálogos y datos estáticos puros
@@ -126,6 +126,8 @@ La arquitectura se organiza en **4 capas más el punto de entrada (`main.js`)**.
 | `EstadoApp._notify()` (typedef `Notificaciones`) | Órdenes a la UI o consultas con respuesta (toasts, confirmar, cerrar modales). | `notify.mostrarToast(...)`, `notify.confirmarModal(...)` |
 | Puertos de formulario (`FormularioRegistro`, `FormularioEdicion`) | Leer o escribir los campos de un formulario. Los implementa [`src/ui/formularios.js`](../src/ui/formularios.js). | `notify.formularioRegistro.leer()` |
 | `EventosApp` (bus pub/sub) | Avisar que algo cambió, sin esperar respuesta. | `historial:cambio`, `perfil:cambio`, `filtros:cambio`, `grupo:editar`, `config:hint-integrado` |
+
+Entre módulos de la UI que no se pueden importar sin formar un ciclo (redibujar la tarjeta de estado desde Ajustes, revisar el botón de crédito) se usa [`src/ui/acciones-ui.js`](../src/ui/acciones-ui.js) (`AccionesUI`), que registra el orquestador: el puerto `notify` queda solo para lo que piden los servicios. Abrir un modal y esperar a que se pinte también es de la UI: `EdicionRegistro.editar` pobla el formulario y llama a `formularioEdicion.abrir()` (bloqueo, modal y el `requestAnimationFrame` los pone el orquestador).
 
 Los valores que devuelven los puertos son **crudos**: el servicio los sanitiza y valida. Gracias a esto los servicios se prueban sin DOM (ver `tests/servicios-sin-dom.test.mjs`).
 
@@ -269,6 +271,7 @@ Las máscaras (`mask-image`, el arco del anillo) usan `#000`/`#fff` literales a 
 | [`src/ui/recarga-gesto.js`](../src/ui/recarga-gesto.js) | `RecargaGesto` | Reemplaza el pull-to-refresh nativo: las tarjetas se desvanecen al tirar y antes de recargar, y aparecen con fundido al cargar. |
 | [`src/ui/toast.js`](../src/ui/toast.js) | `mostrarToast`, `_cerrarToastActual`, `_habilitarCierreToast` | Cola de avisos (toasts) con cierre por click o swipe. |
 | [`src/ui/boton-fichar.js`](../src/ui/boton-fichar.js) | `resetearBoton`, `animarExitoFichaje`, `setIconoBtn`, ... | Reseteo del botón Fichar y animación del check de éxito. |
+| [`src/ui/acciones-ui.js`](../src/ui/acciones-ui.js) | `AccionesUI` | Acciones de la UI que otros módulos de la UI necesitan sin poder importarlas (ciclo): `actualizarUI`, `actualizarEstadoBotonTimerMain`, `verificarBloqueoCredito`, `cambiarConFundido`. Las registra el orquestador; sin imports. |
 | [`src/ui/popups.js`](../src/ui/popups.js) | `_crearPopupFlotante`, `crearRanuraPopup`, `_posicionarPopup`, `_registrarCierrePopup` | Popups flotantes posicionados junto al elemento disparador; `crearRanuraPopup` mantiene uno solo abierto por zona (calendario, estadísticas, filtros) (exigen ``html`...` ``). |
 | [`src/ui/scroll.js`](../src/ui/scroll.js) | `_scrollA`, `_esperarFinScroll`, `_scrollHastaVisible` | Desplazamiento respetando `prefers-reduced-motion`. |
 | [`src/ui/formularios.js`](../src/ui/formularios.js) | `Formularios` | Implementación en DOM de los puertos `FormularioRegistro` y `FormularioEdicion` que usan los servicios. |

@@ -22,7 +22,7 @@ const registro = {
     },
 };
 
-/** @type {import('../services/estado-app.js').FormularioEdicion} */
+/** Todo el puerto menos `abrir`, que el orquestador agrega (necesita el bloqueo y el modal de historico-edicion.js). @type {Omit<import('../services/estado-app.js').FormularioEdicion, 'abrir'>} */
 const edicion = {
     leer: () => ({
         fecha: $('edit-fecha').value,

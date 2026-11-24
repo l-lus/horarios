@@ -1,8 +1,8 @@
 import { $ } from '../core/dom.js';
-import { EstadoApp } from '../services/estado-app.js';
 import { AvisoActualizacion } from './aviso-actualizacion.js';
 import { urlScriptConfiable } from '../core/html.js';
 import { IconosAnimados } from './iconos-animados.js';
+import { mostrarToast } from './toast.js';
 
 // ====================================================================
 // PWA INSTALLER MODULE
@@ -50,7 +50,7 @@ function init() {
         _ocultarEtiqueta();
         btnInstall?.classList.add('hidden');
         deferredPrompt = null;
-        EstadoApp._notify().mostrarToast('¡App instalada con éxito!', 'success');
+        mostrarToast('¡App instalada con éxito!', 'success');
     });
 }
 

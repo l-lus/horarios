@@ -424,6 +424,43 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(r, { mismaFila: true, solapes: [], usaEnfasis: true });
     });
 
+    await t.test('Editar un registro: el modal abre poblado y bloqueado, se desbloquea con el candado y cierra limpio', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const { EstadoApp } = await import('/src/services/estado-app.js');
+            const { EdicionRegistro } = await import('/src/services/edicion-registro.js');
+            await h.hasta(() => !document.querySelector('.modal.show'), 5000, 'sin modales');
+            EdicionRegistro.editar(EstadoApp.registros()[0].id);
+            await h.modalAbierto('modal-editar');
+            await h.pausa(400);
+            const salida = {
+                notas: /** @type {HTMLInputElement} */ (document.getElementById('edit-notas')).value,
+                bloqueado: /** @type {HTMLInputElement} */ (document.getElementById('edit-fecha')).disabled && document.getElementById('btn-lock-toggle').classList.contains('bloqueado'),
+                solapes: h.solapes()
+            };
+            h.clic('#btn-lock-toggle');
+            salida.desbloqueado = !(/** @type {HTMLInputElement} */ (document.getElementById('edit-fecha')).disabled);
+            h.clic('#modal-editar .btn-cancel');
+            await h.hasta(() => !document.querySelector('.modal.show') && EstadoApp.editandoId() === null, 5000, 'cierre de la edición');
+            return salida;
+        });
+        assert.deepEqual(r, { notas: 'Turno en el hospital', bloqueado: true, solapes: [], desbloqueado: true });
+    });
+
+    await t.test('Filtros: un toque abre el popup y otro lo cierra (un solo popup por zona)', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const { HistoricoEdicion } = await import('/src/ui/historico-edicion.js');
+            HistoricoEdicion.mostrarFiltros(null);
+            await h.pausa(400);
+            const abierto = document.querySelectorAll('#filtro-fecha-desde').length;
+            HistoricoEdicion.mostrarFiltros(null);
+            await h.pausa(600);
+            return { abierto, cerrado: document.querySelectorAll('#filtro-fecha-desde').length };
+        });
+        assert.deepEqual(r, { abierto: 1, cerrado: 0 });
+    });
+
     await t.test('escritorio: sin desplazamiento lateral ni controles solapados, y sin errores en toda la corrida', async () => {
         await app.tamano(1280, 800, false);
         await evaluar(() => window.humo.pausa(600));

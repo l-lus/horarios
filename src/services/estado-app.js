@@ -26,6 +26,7 @@ import { TiposRegistro } from './tipos-registro.js';
  * @property {() => any} bloquearGuardar devuelve handle opaco para notify.restaurarBotonGuardarEdicion
  * @property {() => any} bloquearEliminar
  * @property {(handle: any) => void} liberarEliminar
+ * @property {() => void} abrir abre el modal ya poblado (bloqueado para editar)
  */
 
 /**
@@ -64,9 +65,7 @@ import { TiposRegistro } from './tipos-registro.js';
  * @property {(id: string | null) => void} retenerRegistroAyer
  * @property {(...args: any[]) => void} resetearBoton
  * @property {(...args: any[]) => void} restaurarBotonGuardarEdicion
- * @property {(...args: any[]) => void} setBloqueoEdicion
  * @property {(...args: any[]) => void} setBloqueoEdicionGrupo
- * @property {(...args: any[]) => void} verificarBloqueoCredito
  */
 
 /** @type {Notificaciones} */
@@ -103,6 +102,7 @@ let notify = {
         bloquearGuardar: () => null,
         bloquearEliminar: () => null,
         liberarEliminar: () => { },
+        abrir: () => { },
     },
     hayUIBloqueante: () => false,
     leerObjetivoEdicion: () => NaN,
@@ -116,10 +116,8 @@ let notify = {
     retenerRegistroAyer: () => { },
     resetearBoton: () => { },
     restaurarBotonGuardarEdicion: () => { },
-    setBloqueoEdicion: () => { },
     setBloqueoEdicionGrupo: () => { },
     temaGuardado: () => 'claro',
-    verificarBloqueoCredito: () => { },
 };
 
 /** @param {Partial<Notificaciones>} handlers */

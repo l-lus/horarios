@@ -10,6 +10,7 @@ import { resetearBoton, setIconoBtn, cancelarExitoFichaje, animarExitoFichaje, o
 import { _scrollHastaVisible } from './scroll.js';
 import { Animaciones } from './animaciones.js';
 import { OperacionesLote } from '../services/operaciones-lote.js';
+import { AccionesUI } from './acciones-ui.js';
 
 // ====================================================================
 //           UI CARD BATCH / FORM & INPUT HELPERS MODULE
@@ -18,7 +19,7 @@ const ESPERA_SALIR_LOTE_MS = 350;   // deja terminar el cierre del modal antes d
 
 const { _flashCampo, _avisarFichaje, toggleSeccionGen, _crearOpcion, aplicarFeedbackCampos } = UIBase;
 const { _animarFadeSwap, _animarSlideElemento, _esperarAnim, _animarValor, _durSiAnima } = Animaciones;
-const actualizarEstadoBotonTimerMain = (...args) => EstadoApp._notify().actualizarEstadoBotonTimerMain(...args);
+const { actualizarEstadoBotonTimerMain } = AccionesUI;
 
 let modoLoteActivo = false;
 let _pintandoSinAnimar = false;

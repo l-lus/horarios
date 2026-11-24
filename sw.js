@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261124.1214-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261124.1217-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -62,6 +62,7 @@ const urlsToCache = [
   './src/services/tiempo-fuera.js',
   './src/services/tipos-registro.js',
   './src/services/worker-cliente.js',
+  './src/ui/acciones-ui.js',
   './src/ui/animaciones.js',
   './src/ui/arrastre.js',
   './src/ui/aviso-actualizacion.js',

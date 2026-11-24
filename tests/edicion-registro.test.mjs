@@ -10,7 +10,6 @@ globalThis.localStorage = {
 };
 globalThis.window = globalThis;
 globalThis.addEventListener = () => { };
-globalThis.requestAnimationFrame = (fn) => { fn(); return 0; };
 globalThis.matchMedia = () => ({ matches: false, addEventListener: () => { } });
 
 const { EstadoApp } = await import('../src/services/estado-app.js');
@@ -42,12 +41,12 @@ function editar(id, registros, form = {}) {
             bloquearGuardar: () => 'btn-guardar',
             bloquearEliminar: () => 'btn-eliminar',
             liberarEliminar: () => { },
+            abrir: () => { },
         },
         leerObjetivoEdicion: () => datosForm?.objetivo ?? NaN,
         mostrarToast: (m, t) => toasts.push([m, t]),
         cerrarEdicion: () => { estado.cerrado++; EstadoApp.setEditandoId(null); },
         restaurarBotonGuardarEdicion: () => { },
-        setBloqueoEdicion: () => { }, abrirModal: () => { }, verificarBloqueoCredito: () => { },
         actualizarEstadoBotonTimerMain: () => { }, actualizarUI: () => { },
     });
     EdicionRegistro.editar(id);

@@ -70,13 +70,7 @@ function editarRegistro(id) {
         creditoActivo: TiposRegistro.tieneCredito(r),
     });
 
-    notify.setBloqueoEdicion(true);
-    notify.abrirModal('modal-editar');
-
-    requestAnimationFrame(() => {
-        notify.verificarBloqueoCredito();
-        notify.formularioEdicion.refrescarHintResumen();
-    });
+    notify.formularioEdicion.abrir();
 }
 
 function pegarReferenciaAutomatica() {

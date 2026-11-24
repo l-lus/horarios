@@ -48,6 +48,7 @@ import { registrarSwipe, debounce } from './gestos.js';
 import { mostrarToast, _habilitarCierreToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
 import { DiasHabiles } from '../services/dias-habiles.js';
+import { AccionesUI } from './acciones-ui.js';
 
 const {
     _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced, mostrarError, limpiarError,
@@ -133,10 +134,21 @@ function _suscribirEventosServicios() {
     });
 }
 
+/** Abre el modal de edición ya poblado: bloqueado, y al pintarse revisa el botón de crédito y el resumen. */
+function _abrirModalEdicion() {
+    setBloqueoEdicion(true);
+    GestorModales.abrir('modal-editar');
+    requestAnimationFrame(() => {
+        verificarBloqueoCredito();
+        Formularios.edicion.refrescarHintResumen();
+    });
+}
+
 function _initGlobales() {
     _suscribirEventosServicios();
     GestorPerfiles.inicializar();
     
+    AccionesUI.registrar({ actualizarUI, actualizarEstadoBotonTimerMain, verificarBloqueoCredito, cambiarConFundido: _cambiarConFundido });
     EstadoApp.configurarNotificaciones({
         abrirModal: GestorModales.abrir,
         actualizarEstadoBotonTimerMain, actualizarHintGrupo, actualizarUI,
@@ -145,9 +157,9 @@ function _initGlobales() {
         confirmarModal: GestorModales.confirmar,
         confirmarConCasilla: GestorModales.confirmarConCasilla,
         descargarArchivo: UIBase.descargarArchivo, pedirFrase: FraseModal.pedir, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
-        obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
-        setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado, verificarBloqueoCredito,
-        formularioRegistro: Formularios.registro, formularioEdicion: Formularios.edicion,
+        obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion,
+        setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado,
+        formularioRegistro: Formularios.registro, formularioEdicion: { ...Formularios.edicion, abrir: _abrirModalEdicion },
         leerObjetivoEdicion: () => parseFloat($('edit-objetivo')?.dataset.valor ?? ''),
         hayUIBloqueante: () => !!document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding'),
         forzarVista: _forzarVista, cambiarConFundido: _cambiarConFundido, prepararMostrarFaseAlRenderizar: _prepararMostrarFaseAlRenderizar, retenerRegistroAyer: _retenerRegistroAyer, refrescarConfigSiVisible

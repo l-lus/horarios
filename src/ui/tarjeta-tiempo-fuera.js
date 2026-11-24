@@ -10,6 +10,7 @@ import { mostrarToast } from './toast.js';
 import { icono, html, montar } from '../core/html.js';
 import { AvisoJornada } from '../services/aviso-jornada.js';
 import { Jornada } from '../services/jornada.js';
+import { AccionesUI } from './acciones-ui.js';
 
 // ====================================================================
 //                     UI CARD BREAK TIMER MODULE
@@ -128,12 +129,12 @@ async function _detenerTimerBreak(registroHoy) {
     if (!TiempoFuera.alcanzaMinimo()) {
         TiempoFuera.descartar();
         mostrarToast('Tiempo muy corto, no se registró', 'info');
-        EstadoApp._notify().actualizarUI(); return;
+        AccionesUI.actualizarUI(); return;
     }
     if (!registroHoy) {
         TiempoFuera.descartar();
         mostrarToast('No hay registro para hoy, tiempo fuera descartado', 'warning');
-        EstadoApp._notify().actualizarUI(); return;
+        AccionesUI.actualizarUI(); return;
     }
 
     const minutos = TiempoFuera.volcarEnRegistro(registroHoy);

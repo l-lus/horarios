@@ -139,8 +139,8 @@ function calcularEstadisticasRango(registrosRango, opciones = {}) {
 function calcularEstadisticasMes(mesAnio = null, registrosPeriodo = null) {
     let mesActual, añoActual;
     if (mesAnio) {
-        const [año, mes] = mesAnio.split('-').map(Number);
-        añoActual = año; mesActual = mes - 1;
+        const { anio, mes } = TiempoUtils.partesClaveMes(mesAnio);
+        añoActual = anio; mesActual = mes - 1;
     } else {
         const hoy = new Date();
         mesActual = hoy.getMonth(); añoActual = hoy.getFullYear();

@@ -82,8 +82,7 @@ function actualizarEstadisticas(mesAnio = null) {
     const selectMes = $('select-mes-stats');
     if (!mesAnio && selectMes) mesAnio = selectMes.value;
     if (mesAnio && selectMes) {
-        const [año, mes] = mesAnio.split('-').map(Number);
-        const tieneRegs = EstadoApp.registros().some(r => TiempoUtils.esDelMes(r.fecha, año, mes));
+        const tieneRegs = EstadoApp.registros().some(r => TiempoUtils.esDeClaveMes(r.fecha, mesAnio));
         if (!tieneRegs) {
             mesAnio = TiempoUtils.claveMes(TiempoUtils.obtenerFechaHoy());
             if (selectMes) selectMes.value = mesAnio;
@@ -132,14 +131,8 @@ function actualizarEstadisticasAnio(anio) {
 }
 
 function _obtenerSemanas() {
-    const semanas = new Map();
-    EstadoApp.registros().forEach(r => {
-        const d = new Date(r.fecha + 'T00:00:00');
-        const lunes = TiempoUtils.obtenerLunes(d);
-        const key = TiempoUtils.formatearFechaLocal(lunes);
-        if (!semanas.has(key)) semanas.set(key, lunes);
-    });
-    return Array.from(semanas.keys()).sort().reverse();
+    const semanas = new Set(EstadoApp.registros().map(r => TiempoUtils.obtenerLunesSemanaISO(r.fecha)));
+    return [...semanas].sort().reverse();
 }
 
 function poblarSelectorSemanas() {

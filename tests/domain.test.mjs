@@ -1264,3 +1264,15 @@ test('GestorTemas: el énfasis es de cada perfil y el de antes (uno por disposit
     Almacenamiento.removeItem(`${STORAGE_KEYS.ENFASIS}_default`);
     Almacenamiento.removeItem(`${STORAGE_KEYS.ENFASIS}_perfil_a`);
 });
+
+test('TiempoUtils: formatoDiferencia, claves de mes y fechas ISO armadas', () => {
+    assert.equal(TiempoUtils.formatoDiferencia(8, 8), '');
+    assert.equal(TiempoUtils.formatoDiferencia(9.5, 8), '+1h 30m');
+    assert.equal(TiempoUtils.formatoDiferencia(9, 8), '+1h');
+    assert.equal(TiempoUtils.formatoDiferencia(7.75, 8), '-15m');
+    assert.deepEqual(TiempoUtils.partesClaveMes('2026-03'), { anio: 2026, mes: 3 });
+    assert.equal(TiempoUtils.esDeClaveMes('2026-03-31', '2026-03'), true);
+    assert.equal(TiempoUtils.esDeClaveMes('2026-04-01', '2026-03'), false);
+    assert.equal(TiempoUtils.fechaISO(2026, 0, 5), '2026-01-05');
+    assert.equal(TiempoUtils.claveMesDe(2026, 11), '2026-12');
+});

@@ -30,7 +30,7 @@ function _marcarProcesado(fecha) {
 function _getFeriadosDelMes() {
     const hoy = new Date();
     const anioActual = hoy.getFullYear();
-    const mesActual = TiempoUtils._pad2(hoy.getMonth() + 1);
+    const mesActual = TiempoUtils.pad2(hoy.getMonth() + 1);
     const prefijoMes = `${anioActual}-${mesActual}`;
     const pool = FERIADOS[anioActual] || [];
     return { prefijoMes, feriados: pool.filter(f => f.fecha.startsWith(prefijoMes)) };

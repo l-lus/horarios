@@ -38,8 +38,7 @@ function _resolverPeriodoDatos(esAnual) {
     const selectMes = $('select-mes-stats');
     const mes = selectMes?.value;
     if (!mes) { mostrarToast('No hay mes seleccionado', 'error'); return null; }
-    const [año, mesNum] = mes.split('-').map(Number);
-    const registrosPeriodo = EstadoApp.registros().filter(r => TiempoUtils.esDelMes(r.fecha, año, mesNum));
+    const registrosPeriodo = EstadoApp.registros().filter(r => TiempoUtils.esDeClaveMes(r.fecha, mes));
     return {
         periodoLabel: /** @type {HTMLSelectElement} */ (/** @type {unknown} */ (selectMes)).selectedOptions[0].text,
         nombreArchivo: `reporte_${mes}.html`,
@@ -288,7 +287,7 @@ function _seccionResumenGeneral(stats) {
 
 function _seccionTotalesPorSemana(registrosPeriodo, mesSeleccionado) {
     if (!mesSeleccionado) return '';
-    const [añoActual, mesActual] = mesSeleccionado.split('-').map(Number);
+    const { anio: añoActual, mes: mesActual } = TiempoUtils.partesClaveMes(mesSeleccionado);
     const primerDiaMes = TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual - 1, 1));
     const ultimaDiaMes = TiempoUtils.formatearFechaLocal(new Date(añoActual, mesActual, 0));
 

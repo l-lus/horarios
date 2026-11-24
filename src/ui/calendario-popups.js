@@ -68,7 +68,7 @@ function _cajaPopupHtml(iconoHref, texto) {
 }
 
 function _formatearFechaLabelPopup(fecha) {
-    const d = new Date(fecha + 'T12:00:00');
+    const d = TiempoUtils.parsearFechaLocal(fecha);
     const diaSemana = TiempoUtils.obtenerNombreDia(fecha).toLowerCase();
     const mes = TiempoUtils.nombreMesPorIndice(d.getMonth());
     return `${diaSemana}, ${d.getDate()} de ${mes}`;

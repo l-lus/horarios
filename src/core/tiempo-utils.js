@@ -14,12 +14,12 @@ function nombreMesPorIndice(indice) {
     return NOMBRES_MESES[indice] || '';
 }
 
-function _pad2(n) {
+function pad2(n) {
     return String(n).padStart(2, '0');
 }
 
 function _hhmm(h, m) {
-    return `${_pad2(h)}:${_pad2(m)}`;
+    return `${pad2(h)}:${pad2(m)}`;
 }
 
 function pluralizar(n) {
@@ -39,6 +39,27 @@ function claveMes(fecha) {
 /** ¿La fecha ISO cae en ese año y mes (1 a 12)? Para filtrar los registros de un mes sin partir cada fecha. */
 function esDelMes(fecha, año, mes) {
     return Number(fecha.substring(0, 4)) === año && Number(fecha.substring(5, 7)) === mes;
+}
+
+/** ¿La fecha ISO es del mes de la clave 'AAAA-MM'? */
+function esDeClaveMes(fecha, clave) {
+    return claveMes(fecha) === clave;
+}
+
+/** Año y mes (1 a 12) de una clave 'AAAA-MM'. @param {string} clave */
+function partesClaveMes(clave) {
+    const [anio, mes] = clave.split('-').map(Number);
+    return { anio, mes };
+}
+
+/** Fecha ISO 'AAAA-MM-DD' de un año, un mes (0 a 11, como Date) y un día ya válidos. */
+function fechaISO(anio, mesIndice, dia) {
+    return `${anio}-${pad2(mesIndice + 1)}-${pad2(dia)}`;
+}
+
+/** Clave 'AAAA-MM' de un año y un mes (0 a 11, como Date). */
+function claveMesDe(anio, mesIndice) {
+    return `${anio}-${pad2(mesIndice + 1)}`;
 }
 
 function nombreDiaPorIndice(indice) {
@@ -70,7 +91,7 @@ function normalizarMinutosSueltos(valor) {
     const n = parseInt(valor, 10);
     if (n < 1 || n > 60) return valor;
     if (n === 60) return '01:00';
-    return `00:${_pad2(n)}`;
+    return `00:${pad2(n)}`;
 }
 
 function parsearFechaLocal(fechaStr) {
@@ -78,7 +99,7 @@ function parsearFechaLocal(fechaStr) {
 }
 
 function formatearFechaLocal(date) {
-    return `${date.getFullYear()}-${_pad2(date.getMonth() + 1)}-${_pad2(date.getDate())}`;
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
 function obtenerHoraActual() {
@@ -107,7 +128,7 @@ function msHastaProximoMinuto(ahora = Date.now()) {
 
 function fechaLocalISOFull() {
     const d = new Date();
-    return `${formatearFechaLocal(d)} ${_pad2(d.getHours())}:${_pad2(d.getMinutes())}:${_pad2(d.getSeconds())}`;
+    return `${formatearFechaLocal(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
 
 function horaAMinutos(h) {
@@ -174,9 +195,7 @@ function formatoDiferencia(totalHoras, horasDiariasObjetivo) {
     const diffMinutos = horasAMinutosRedondeados(totalHoras) - (horasDiariasObjetivo * 60);
     if (diffMinutos === 0) return '';
     const abs = Math.abs(diffMinutos);
-    const h = Math.floor(abs / 60);
-    const m = abs % 60;
-    return (diffMinutos > 0 ? '+' : '-') + (h > 0 ? `${h}h` : '') + (h > 0 && m > 0 ? ' ' : '') + (m > 0 || h === 0 ? `${m}m` : '');
+    return (diffMinutos > 0 ? '+' : '-') + partesATexto(Math.floor(abs / 60), abs % 60, 'short');
 }
 
 function formatoTituloMes(claveMes) {
@@ -271,6 +290,6 @@ export const TiempoUtils = {
     obtenerFechaHoy, obtenerHoraActual, msHastaProximoMinuto, normalizarMinutosDia, minutosAHora, fechaLocalISOFull,
     horaAMinutos, sumarMinutosAHora, descomponerHorasDecimales,
     obtenerNombreDia, nombreDiaPorIndice, nombreMesPorIndice, obtenerLunes, obtenerLunesSemanaISO, obtenerSemanaRangoActual,
-    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, claveMes, esDelMes, pluralizar, contar,
-    generarRangoFechas, errorRangoFechas, fechaCorta, segundosAMinutosRedondeado, horasAMinutosRedondeados, _pad2, esperar
+    horasATexto, partesATexto, formatoDiferencia, formatearRangoSemana, formatoTituloMes, claveMes, esDelMes, esDeClaveMes, partesClaveMes, fechaISO, claveMesDe, pluralizar, contar,
+    generarRangoFechas, errorRangoFechas, fechaCorta, segundosAMinutosRedondeado, horasAMinutosRedondeados, pad2, esperar
 };

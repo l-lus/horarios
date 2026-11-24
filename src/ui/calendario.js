@@ -103,8 +103,8 @@ function abrirSelectorMesesCalendario() {
             selector.appendChild(separador);
 
             meses.forEach(mesAnio => {
-                const [aStr, mesStr] = mesAnio.split('-');
-                const anio = parseInt(aStr), mes = parseInt(mesStr) - 1;
+                const { anio, mes: mesNum } = TiempoUtils.partesClaveMes(mesAnio);
+                const mes = mesNum - 1;
                 const btn = Object.assign(document.createElement('button'), {
                     className: 'btn-mes-calendario',
                     textContent: TiempoUtils.nombreMesCapitalizado(mesAnio)
@@ -174,10 +174,9 @@ function _bandasSemanaActual(anio, mes, offsetInicio, diasDelMes) {
     const { inicio: semIni, fin: semFin } = TiempoUtils.obtenerSemanaRangoActual();
     const esLaborable = (f) => DiasHabiles.esDiaLaboral(f);
     const fechaDeDia = (d) => TiempoUtils.formatearFechaLocal(new Date(anio, mes, d));
-    const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
     const segmentosSemana = [];
     for (let d = 1; d <= diasDelMes; d++) {
-        const f = fechaStr(anio, mes, d);
+        const f = TiempoUtils.fechaISO(anio, mes, d);
         if (f < semIni || f > semFin || !esLaborable(f)) continue;
         const idx = offsetInicio + d - 1;
         const fila = 2 + Math.floor(idx / 7);
@@ -219,14 +218,13 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     const anio = _calendarioMes ? _calendarioMes.anio : hoy.getFullYear();
     const mes = _calendarioMes ? _calendarioMes.mes : hoy.getMonth();
     if (titulo) titulo.textContent = `${TiempoUtils.nombreMesPorIndice(mes)} ${anio}`;
-    const fechaStr = (y, m, d) => `${y}-${TiempoUtils._pad2(m + 1)}-${TiempoUtils._pad2(d)}`;
     const registrosFiltrados = Filtros.obtenerRegistrosFiltrados();
     const todosLosRegistros = EstadoApp.registros();
     const regsPorFecha = Object.fromEntries(registrosFiltrados.map(r => [r.fecha, r]));
     const todosRegsPorFecha = Object.fromEntries(todosLosRegistros.map(r => [r.fecha, r]));
     const filtroActivo = registrosFiltrados.length !== todosLosRegistros.length;
     const asignacionesCompensatorio = asignacionesPrecalculadas || Compensatorios.calcularAsignacionesCompensatorio();
-    const claveMes = `${anio}-${TiempoUtils._pad2(mes + 1)}`;
+    const claveMes = TiempoUtils.claveMesDe(anio, mes);
     const notasDelMes = TiposRegistro.mapaNotasPorRegistro(todosLosRegistros.filter(r => r.fecha.startsWith(claveMes)));
     const claseDelDia = (fecha) => {
         const r = regsPorFecha[fecha];
@@ -260,7 +258,7 @@ function _renderizarCalendario(idResaltar = null, asignacionesPrecalculadas = nu
     }
 
     for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
-        const fecha = fechaStr(anio, mes, dia);
+        const fecha = TiempoUtils.fechaISO(anio, mes, dia);
         const clase = claseDelDia(fecha);
         const esHoy = anio === hoy.getFullYear() && mes === hoy.getMonth() && dia === hoy.getDate();
         const reg = regsPorFecha[fecha];

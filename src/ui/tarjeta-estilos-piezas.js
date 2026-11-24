@@ -1,3 +1,4 @@
+import { TiempoUtils } from '../core/tiempo-utils.js';
 import { superaUnaLinea } from '../core/dom.js';
 import { duracionCompacta, horaCorta } from '../core/resumen-tarjeta.js';
 
@@ -48,7 +49,7 @@ export function fijarQueEntre(n, textos) {
     fijar(n, versiones[0]);
     for (let i = 1; i < versiones.length && superaUnaLinea(n, n.scrollHeight); i++) fijar(n, versiones[i]);
 }
-export const pad2 = n => String(n).padStart(2, '0');
+export const pad2 = TiempoUtils.pad2;
 
 /** Frase del banco de horas de la semana: "▲ 19 min extras esta semana". @param {{ minutos: number, positivo: boolean }} banco */
 export const fraseBanco = banco => `${banco.positivo ? '▲' : '▼'} ${duracionCompacta(Math.abs(banco.minutos))} ${banco.positivo ? 'extras' : 'faltantes'} esta semana`;

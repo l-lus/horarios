@@ -12,9 +12,23 @@ import { GestorPerfiles } from './gestor-perfiles.js';
 const RANGO_HORARIO_DEFAULT = Object.freeze({ desde: '21:00', hasta: '00:00' });
 const DESTINOS = Object.freeze(['local', 'gist', 'drive']);
 
-function _conPerfil(fn) {
-    const perfil = GestorPerfiles.obtenerDatosPerfil();
-    if (perfil) { fn(perfil); GestorPerfiles.guardarPerfiles(); }
+const _conPerfil = GestorPerfiles.modificarPerfilActual;
+
+/**
+ * Lo que cada proveedor de nube guarda en el perfil con su prefijo (`gistLastSync`, `driveCifrado`, …): la última sincronización y si su respaldo
+ * ya viajó cifrado (mientras lo esté no se acepta en claro, ver RespaldoCifrado.abrir con exigirCifrado).
+ * @param {'gist' | 'drive'} prefijo
+ */
+function camposNubePerfil(prefijo) {
+    const claveSync = `${prefijo}LastSync`, claveCifrado = `${prefijo}Cifrado`;
+    return Object.freeze({
+        /** @returns {string | null} */
+        getLastSync: () => GestorPerfiles.obtenerDatosPerfil()?.[claveSync] || null,
+        marcarSincronizado: () => { const ahoraISO = new Date().toISOString(); _conPerfil(perfil => { perfil[claveSync] = ahoraISO; }); },
+        getCifrado: () => GestorPerfiles.obtenerDatosPerfil()?.[claveCifrado] === true,
+        /** @param {boolean} valor */
+        setCifrado: (valor) => { _conPerfil(perfil => { if (valor) perfil[claveCifrado] = true; else delete perfil[claveCifrado]; }); }
+    });
 }
 
 function _claveHoraActual() {
@@ -102,7 +116,7 @@ function formatLastSync(isoOrLegacy) {
 }
 
 export const ConfigSync = {
-    DESTINOS, RANGO_HORARIO_DEFAULT, _conPerfil, formatLastSync,
+    DESTINOS, RANGO_HORARIO_DEFAULT, formatLastSync, camposNubePerfil,
     getDestino, setDestino, getMergeBehavior, setMergeBehavior, getAutoSync, setAutoSync, getRangoHorario, setRangoHorario,
     marcarSync, superaLimite, getSyncLimite, setSyncLimite, dentroDelRangoHorario
 };

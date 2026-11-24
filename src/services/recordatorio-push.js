@@ -102,24 +102,13 @@ function setAnticipacionMin(minutos) {
     const seguro = Number.isFinite(n) ? Math.min(60, Math.max(0, n)) : 0;
     Almacenamiento.setItem(STORAGE_KEYS.PUSH_ANTICIPACION_MIN, seguro, true);
 }
-function getUsarBufferSemanal() {
-    return _getLegacyOPerfil(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, false, v => v === 'true');
-}
-function setUsarBufferSemanal(valor) {
-    Almacenamiento.setItem(STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL, !!valor, true);
-}
-function getBufferSoloUltimoDia() {
-    return _getLegacyOPerfil(STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, false, v => v === 'true');
-}
-function setBufferSoloUltimoDia(valor) {
-    Almacenamiento.setItem(STORAGE_KEYS.PUSH_BUFFER_SOLO_ULTIMO_DIA, !!valor, true);
-}
-function getHabilitado() {
-    return _getLegacyOPerfil(STORAGE_KEYS.PUSH_HABILITADO, false, v => v === 'true');
-}
-function setHabilitado(valor) {
-    Almacenamiento.setItem(STORAGE_KEYS.PUSH_HABILITADO, !!valor, true);
-}
+// Los interruptores del aviso son preferencias por perfil (ver core/preferencias.js, que también migra el valor viejo de la instalación)
+const getUsarBufferSemanal = () => Preferencias.PUSH_USAR_BUFFER_SEMANAL.get();
+/** @param {any} valor */ const setUsarBufferSemanal = (valor) => Preferencias.PUSH_USAR_BUFFER_SEMANAL.set(!!valor);
+const getBufferSoloUltimoDia = () => Preferencias.PUSH_BUFFER_SOLO_ULTIMO_DIA.get();
+/** @param {any} valor */ const setBufferSoloUltimoDia = (valor) => Preferencias.PUSH_BUFFER_SOLO_ULTIMO_DIA.set(!!valor);
+const getHabilitado = () => Preferencias.PUSH_HABILITADO.get();
+/** @param {any} valor */ const setHabilitado = (valor) => Preferencias.PUSH_HABILITADO.set(!!valor);
 const UMBRAL_REGISTROS_ACTIVACION = 15;
 const AVISOS_INICIALES = 3;
 function _soportaPush() {

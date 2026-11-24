@@ -33,7 +33,10 @@ const PENDIENTE_TTL_MS = 10 * 60 * 1000;
 const MARGEN_VENCIMIENTO_MS = 60 * 1000;
 const MAX_NOMBRE_PERFIL = 60;   // appProperties admite 124 bytes por par clave + valor
 
-const { _conPerfil, formatLastSync } = ConfigSync;
+const { formatLastSync } = ConfigSync;
+const _conPerfil = GestorPerfiles.modificarPerfilActual;
+/** driveLastSync y driveCifrado del perfil (misma regla de cifrado que con el Gist). */
+const { getLastSync, getCifrado, setCifrado, marcarSincronizado: _marcarSincronizado } = ConfigSync.camposNubePerfil('drive');
 
 function disponible() { return GOOGLE_CLIENT_ID !== ''; }
 function esFileIdValido(id) { return typeof id === 'string' && FILE_ID_REGEX.test(id); }
@@ -48,13 +51,9 @@ function conectado() { return _esTokenGoogle(getRefreshToken()); }
 
 function getFileId() { return GestorPerfiles.obtenerDatosPerfil()?.driveFileId || ''; }
 function getArchivoNombre() { return GestorPerfiles.obtenerDatosPerfil()?.driveArchivoNombre || ''; }
-function getLastSync() { return GestorPerfiles.obtenerDatosPerfil()?.driveLastSync || null; }
 /** ¿Hay cuenta conectada y un respaldo vinculado al perfil? Es lo que necesitan la sincronización automática y los botones rápidos. */
 function listo() { return conectado() && esFileIdValido(getFileId()); }
 
-/** ¿El respaldo vinculado ya se subió o se bajó cifrado? Misma regla que con el Gist (RespaldoCifrado.abrir con exigirCifrado). */
-function getCifrado() { return GestorPerfiles.obtenerDatosPerfil()?.driveCifrado === true; }
-function setCifrado(valor) { _conPerfil(perfil => { if (valor) perfil.driveCifrado = true; else delete perfil.driveCifrado; }); }
 
 /**
  * Vincula el perfil con un respaldo de Drive (o lo desvincula con null). Cambiar de archivo olvida si el anterior estaba cifrado.
@@ -74,11 +73,6 @@ function vincular(archivo) {
         if ((perfil.driveFileId || '') !== anterior) delete perfil.driveCifrado;
     });
     return true;
-}
-
-function _marcarSincronizado() {
-    const ahoraISO = new Date().toISOString();
-    _conPerfil(perfil => { perfil.driveLastSync = ahoraISO; });
 }
 
 // --------------------------------------------------------------------

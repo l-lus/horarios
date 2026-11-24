@@ -876,3 +876,19 @@ test('GestionDatos.borrarTodoHistorial: la frase, las conexiones y el vínculo d
     assert.equal(preguntas.length, antes + 1);
     assert.equal(preguntas.at(-1), 'simple');
 });
+
+test('Preferencias del aviso: el valor viejo de toda la instalación pasa al perfil la primera vez que se lee', async () => {
+    const { Preferencias } = await import('../src/core/preferencias.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { GestorPerfiles } = await import('../src/services/gestor-perfiles.js');
+    GestorPerfiles.inicializar();
+    const clave = STORAGE_KEYS.PUSH_USAR_BUFFER_SEMANAL;
+    Almacenamiento.removeItem(clave, true);
+    Almacenamiento.setItem(clave, true, false);
+    assert.equal(Preferencias.PUSH_USAR_BUFFER_SEMANAL.get(), true);
+    assert.equal(Almacenamiento.getItem(clave, null, false), null, 'el valor global se borra');
+    assert.equal(Almacenamiento.getItem(clave, null, true), 'true', 'y queda en el perfil');
+    Preferencias.PUSH_USAR_BUFFER_SEMANAL.set(false);
+    assert.equal(Preferencias.PUSH_USAR_BUFFER_SEMANAL.get(), false);
+});

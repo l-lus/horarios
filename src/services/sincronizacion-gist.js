@@ -16,15 +16,14 @@ const TOKEN_REGEX = /^[A-Za-z0-9_]{20,255}$/;
 function esGistIdValido(id) { return typeof id === 'string' && GIST_ID_REGEX.test(id.trim()); }
 function esTokenValido(token) { return typeof token === 'string' && TOKEN_REGEX.test(token.trim()); }
 
-const { _conPerfil, formatLastSync } = ConfigSync;
+const { formatLastSync } = ConfigSync;
+const _conPerfil = GestorPerfiles.modificarPerfilActual;
+/** gistLastSync y gistCifrado del perfil. gistCifrado: ¿este Gist ya se subió o se bajó cifrado? Se reinicia al cambiar de Gist. */
+const { getLastSync, getCifrado, setCifrado } = ConfigSync.camposNubePerfil('gist');
 
 function getToken() { return Almacenamiento.getItem(STORAGE_KEYS.GIST_TOKEN, ''); }
 
 function getGistId() { return GestorPerfiles.obtenerDatosPerfil()?.gistId || ''; }
-function getLastSync() { return GestorPerfiles.obtenerDatosPerfil()?.gistLastSync || null; }
-/** ¿Este Gist ya se subió o se bajó cifrado? Mientras lo esté no se acepta en claro (ver RespaldoCifrado.abrir con exigirCifrado). Se reinicia al cambiar de Gist. */
-function getCifrado() { return GestorPerfiles.obtenerDatosPerfil()?.gistCifrado === true; }
-function setCifrado(valor) { _conPerfil(perfil => { if (valor) perfil.gistCifrado = true; else delete perfil.gistCifrado; }); }
 
 /** Guarda token y Gist ID. Un token con caracteres no válidos no se guarda (devuelve false). */
 function saveCredentials(token, gistId) {

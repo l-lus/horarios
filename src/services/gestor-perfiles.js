@@ -195,6 +195,12 @@ function eliminarPerfil(id) {
 
 function obtenerPerfilActual() { return perfilActual; }
 function obtenerDatosPerfil() { return perfiles[perfilActual]; }
+
+/** Cambia los datos del perfil activo con `fn` y los guarda (sin perfil activo no hace nada). @param {(perfil: any) => void} fn */
+function modificarPerfilActual(fn) {
+    const perfil = obtenerDatosPerfil();
+    if (perfil) { fn(perfil); guardarPerfiles(); }
+}
 function obtenerTodosPerfiles() { return perfiles; }
 
 function perfilKey(base) {
@@ -210,6 +216,7 @@ export const GestorPerfiles = {
     guardarDatosPerfilActual,
     obtenerPerfilActual,
     obtenerDatosPerfil,
+    modificarPerfilActual,
     obtenerListaPerfiles,
     obtenerTodosPerfiles,
     guardarPerfiles,

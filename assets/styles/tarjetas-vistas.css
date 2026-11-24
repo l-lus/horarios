@@ -330,25 +330,25 @@
 
 .linea-etiqueta--arriba.dia { font-weight: var(--fw-normal); }
 
-/* Vista semanal: la sigla va en diagonal, siguiendo la línea de su marca (ver geometriaDiagonal). Abajo la línea sube hacia la derecha (-45°) y arriba baja (+45°).
-   El giro es sobre el extremo que toca la línea, que queda a ~13 px de la barra; espejada (sin lugar a la izquierda) gira sobre el otro extremo. */
+/* Vista semanal: la etiqueta va derecha, al final de la línea diagonal de su marca (ver geometriaDiagonal): la sigla junto a la marca y debajo (o arriba, si la etiqueta está
+   arriba de la barra) el tiempo neto o tipo de día. La línea más cercana a la barra queda centrada a ~13 px, como la sigla en diagonal; el resto crece hacia afuera
+   dentro del margen que ya reserva la pista. Alineada a la derecha (pegada a la línea); espejada, a la izquierda. */
 .linea-etiqueta.dia {
-    transform-origin: 100% 50%;
+    display: flex;
+    flex-direction: column;
+    text-align: right;
 }
 
-.linea-etiqueta--abajo.dia {
-    top: calc(100% + 13px - var(--text-sm) / 2);
-    transform: rotate(-45deg);
-}
+.linea-etiqueta.dia > :last-child { font-weight: var(--fw-normal); }
+
+.linea-etiqueta--abajo.dia { top: calc(100% + 13px - var(--text-sm) / 2); }
 
 .linea-etiqueta--arriba.dia {
     bottom: calc(100% + 13px - var(--text-sm) / 2);
-    transform: rotate(45deg);
+    flex-direction: column-reverse;
 }
 
-.linea-etiqueta--espejada.dia { transform-origin: 0 50%; }
-.linea-etiqueta--espejada.linea-etiqueta--abajo.dia { transform: rotate(45deg); }
-.linea-etiqueta--espejada.linea-etiqueta--arriba.dia { transform: rotate(-45deg); }
+.linea-etiqueta--espejada.dia { text-align: left; }
 
 /* Línea diagonal de las marcas de la vista semanal: fina */
 .hito-diagonal {

@@ -257,7 +257,7 @@ function _renderLinea(vista, pista, fill) {
     return x => (x < lo ? 'blue' : (x < hi ? colorMedio : 'green'));
 }
 
-// Marca de cada día en la vista semanal: punto de anclaje y una línea fina a 45° (hacia abajo/arriba y a la izquierda) sobre la que sigue la sigla, también a 45°.
+// Marca de cada día en la vista semanal: punto de anclaje y una línea fina a 45° (hacia abajo/arriba y a la izquierda) al final de la cual va la etiqueta, derecha, con la sigla y debajo el tiempo neto o tipo de día.
 // Mismo svg de 26 x 20 que la vista diaria (punto en x=24); la línea arranca a unos 4 px del punto y termina en (10.2, 10.8).
 const _SVG_NS = 'http://www.w3.org/2000/svg';
 function _crearMarcaSemana() {
@@ -304,10 +304,13 @@ function _renderSemana(vista, pista) {
         }
         et.classList.remove('linea-etiqueta--oculta');   // si estaba oculta hay que volver a medirla
         et.classList.toggle('linea-etiqueta--hoy', !!h.hoy);   // el badge cambia el ancho: tiene que estar antes de medir
-        et.textContent = _consultaMovil.matches && vista.siglasCortas ? h.inicial : h.sigla;
+        // dos líneas: la sigla (junto a la marca) y el tiempo neto o tipo de día
+        if (!et.firstChild) et.append(document.createElement('span'), document.createElement('span'));
+        et.children[0].textContent = _consultaMovil.matches && vista.siglasCortas ? h.inicial : h.sigla;
+        et.children[1].textContent = h.detalle ?? '';
         vigentes.add(h.fecha + 'tick'); vigentes.add(h.fecha + 'et');
         const pct = h.fraccion * 100;   // las franjas se miden sobre toda la pista, no sobre la parte llena
-        const { desde, hasta, left, espejado } = geometriaDiagonal((pct / 100) * ancho, et.offsetWidth, et.offsetHeight);
+        const { desde, hasta, left, espejado } = geometriaDiagonal((pct / 100) * ancho, et.offsetWidth, 6);
         return { h, orden: i, prioridad: h.prioridad, tick, et, pct, desde, hasta, left, espejado, preferido: /** @type {'arriba' | 'abajo'} */ (i % 2 === 1 ? 'arriba' : 'abajo') };
     });
 

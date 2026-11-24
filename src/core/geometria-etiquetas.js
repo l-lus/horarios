@@ -6,8 +6,7 @@
 export const ANCHO_CONECTOR = 27;        // de la marca al final de la línea diagonal (vista diaria; coincide con el path de las marcas de index.html)
 export const SEPARACION_ETIQUETA = 2;    // del final de la línea a la etiqueta
 export const MARGEN_HORAS = 12;          // separación mínima entre horas del mismo lado antes de reubicar la entrada
-const ANCHO_DIAGONAL = 16;        // de la marca al extremo de la sigla rotada (línea diagonal más separación)
-const ANCHO_PASO_DIAGONAL = 24;   // ancho de pista que ocupa cada sigla en diagonal (paralelas entre sí)
+const ANCHO_DIAGONAL = 16;        // de la marca al borde de la etiqueta de la vista semanal (línea diagonal más separación)
 const MEDIO_ANCHO_MARCA = 3;
 
 /**
@@ -32,23 +31,21 @@ export function geometriaConector(x, w, margen = 0, forzarEspejado = false) {
 }
 
 /**
- * Vista semanal con la sigla en diagonal: la línea sale de la marca a 45° (hacia abajo/arriba y a la izquierda) y la sigla, rotada a 45°,
- * sigue la misma recta con su extremo pegado al final de la línea. Si a la izquierda no hay lugar para la sigla rotada, todo se espeja a la derecha.
- * `left` es el borde izquierdo de la etiqueta sin rotar (el giro es sobre el extremo que toca la línea); `desde`/`hasta` es el tramo de pista que ocupa:
- * como las siglas quedan paralelas, dos del mismo lado no se pisan mientras sus marcas estén separadas lo que ocupa una (`ANCHO_PASO_DIAGONAL`).
+ * Vista semanal: la línea sale de la marca a 45° (hacia abajo/arriba y a la izquierda) y la etiqueta (sigla y, debajo, tiempo neto o tipo de día), derecha, queda
+ * con su borde pegado al final de la línea. Si a la izquierda no hay lugar, todo se espeja a la derecha.
+ * `left` es el borde izquierdo de la etiqueta; `desde`/`hasta` es el tramo de pista que ocupa (más `margen / 2` a cada lado), para detectar choques con otras del mismo lado.
  * @param {number} x
- * @param {number} w ancho de la etiqueta sin rotar
- * @param {number} h alto de la etiqueta sin rotar
+ * @param {number} w ancho de la etiqueta (el de su línea más larga)
  * @param {number} [margen]
  */
-export function geometriaDiagonal(x, w, h, margen = 0) {
-    const alcance = ANCHO_DIAGONAL + Math.SQRT1_2 * (w + h / 2);
-    const espejado = x - alcance < 0;
+export function geometriaDiagonal(x, w, margen = 0) {
+    const espejado = x - ANCHO_DIAGONAL - w < 0;
+    const left = espejado ? x + ANCHO_DIAGONAL : x - ANCHO_DIAGONAL - w;
     return {
         espejado,
-        left: espejado ? x + ANCHO_DIAGONAL : x - ANCHO_DIAGONAL - w,
-        desde: x - ANCHO_PASO_DIAGONAL / 2 - margen / 2,
-        hasta: x + ANCHO_PASO_DIAGONAL / 2 + margen / 2
+        left,
+        desde: espejado ? x - MEDIO_ANCHO_MARCA : left - margen / 2,
+        hasta: espejado ? left + w + margen / 2 : x + MEDIO_ANCHO_MARCA
     };
 }
 

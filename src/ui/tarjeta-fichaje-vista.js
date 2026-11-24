@@ -164,6 +164,17 @@ function _textoHoverDia(d, esHoy, conRegistro) {
     return { stats: _horasTextoStats(d.total), mensaje: `${nombre} · ${rango}` };
 }
 
+// Segunda línea de la etiqueta de cada día en la barra semanal: el tiempo neto si tiene horas, si no el tipo de día (corto, para que entre)
+function _detalleDia(d) {
+    if (d.estado === ESTADO_DIA.ACTIVO || d.estado === ESTADO_DIA.CERRADO) return d.total > 0 ? _horasTextoStats(d.total) : 'sin horas';
+    switch (d.estado) {
+        case ESTADO_DIA.ESPECIAL: return d.etiqueta ?? 'especial';
+        case ESTADO_DIA.SIN_SALIDA: return 'sin salida';
+        case ESTADO_DIA.FUTURO: return 'pendiente';
+        default: return 'sin registro';
+    }
+}
+
 const _PESO_DIA_SIN_HORAS = 1;   // en horas
 function _franjasSemana(todosLosDias, horasDiarias, objetivoSemana, hoy) {
     const diasSemana = (todosLosDias ?? []).filter(d => d.estado !== ESTADO_DIA.FUTURO || d.fecha === hoy);
@@ -203,7 +214,7 @@ function _franjasSemana(todosLosDias, horasDiarias, objetivoSemana, hoy) {
             previo.hito.hover = { stats: null, mensaje: `${previo.hito.sigla}: ${_palabraEstadoDia(d)}` };
         } else {
             const hito = {
-                fecha: d.fecha, sigla: nombre(d), inicial: inicial(d), fraccion: fin, hoy: esHoy(d), futuro: !esHoy(d) && d.estado === ESTADO_DIA.FUTURO,   // futuro: su marca va hueca hasta que llegue el día
+                fecha: d.fecha, sigla: nombre(d), inicial: inicial(d), detalle: _detalleDia(d), fraccion: fin, hoy: esHoy(d), futuro: !esHoy(d) && d.estado === ESTADO_DIA.FUTURO,   // futuro: su marca va hueca hasta que llegue el día
                 descripcion: `${nombre(d)}${esHoy(d) ? ' (hoy)' : ''} ${_palabraEstadoDia(d)}`,
                 hover: _textoHoverDia(d, esHoy(d), conRegistro(d)),
                 prioridad: esHoy(d) ? 3 : conRegistro(d) ? 2 : d.estado === ESTADO_DIA.ESPECIAL || d.estado === ESTADO_DIA.SIN_SALIDA ? 1 : 0   // si no entran todas las siglas se conservan primero hoy y los días con horas

@@ -37,11 +37,11 @@ const NUMEROS = {
     filas: (/** @type {any} */ r, /** @type {any} */ t) => pintarDuracion(r.duracion, t)
 };
 
-/** @type {{ cancelado: boolean } | null} */
+/** @type {(() => void) | null} el cancelador del conteo en curso */
 let _conteo = null;
 
 function _cancelarConteo() {
-    if (_conteo) _conteo.cancelado = true;
+    _conteo?.();
     _conteo = null;
 }
 
@@ -51,18 +51,11 @@ function _cancelarConteo() {
  */
 function _contar(id, refs, total, duracion) {
     const pintarNumero = NUMEROS[/** @type {keyof typeof NUMEROS} */ (id)];
-    const estado = { cancelado: false };
-    _conteo = estado;
-    const inicio = performance.now();
     pintarNumero(refs, { horas: 0, minutos: 0 });
-    const paso = (/** @type {number} */ ahora) => {
-        if (estado.cancelado) return;
-        const t = Math.min(1, Math.max(0, (ahora - inicio) / duracion));
-        const e = t >= 1 ? 1 : 1 - Math.pow(1 - t, 3);
+    const cancelar = Animaciones._recorrerCurva(duracion, (e, t) => {
         pintarNumero(refs, t >= 1 ? total : { horas: Math.round(total.horas * e), minutos: Math.round(total.minutos * e) });
-        if (t < 1) requestAnimationFrame(paso); else if (_conteo === estado) _conteo = null;
-    };
-    requestAnimationFrame(paso);
+    }, () => { if (_conteo === cancelar) _conteo = null; });
+    _conteo = cancelar;
 }
 
 /** El mismo resumen sin avance (aro, regla y segmentos vacíos): de ahí parten las transiciones del primer dibujo. @param {any} d */

@@ -304,10 +304,29 @@ function _conteoEnCurso(el) {
     return est ? est.textoFinal : null;
 }
 
+/**
+ * Llama a `alPaso(e, t)` en cada cuadro durante `duracion` ms, con `t` de 0 a 1 y `e` su ease-out cúbico (la curva de los conteos y deslizamientos
+ * hechos a mano); al llegar a 1 llama a `alTerminar`. Si `alPaso` devuelve false se corta ahí. Devuelve la función que lo cancela.
+ * @param {number} duracion @param {(e: number, t: number) => (boolean | void)} alPaso @param {() => void} [alTerminar]
+ */
+function _recorrerCurva(duracion, alPaso, alTerminar) {
+    let cancelado = false;
+    const inicio = performance.now();
+    const paso = (/** @type {number} */ ahora) => {
+        if (cancelado) return;
+        const t = Math.min(1, Math.max(0, (ahora - inicio) / duracion));
+        const e = t >= 1 ? 1 : 1 - Math.pow(1 - t, 3);
+        if (alPaso(e, t) === false) return;
+        if (t < 1) requestAnimationFrame(paso); else alTerminar?.();
+    };
+    requestAnimationFrame(paso);
+    return () => { cancelado = true; };
+}
+
 function _cancelarConteo(el) {
     const est = _conteoEstado.get(el);
     if (!est) return;
-    est.cancelado = true;
+    est.cancelar();
     _conteoEstado.delete(el);
 }
 
@@ -319,20 +338,16 @@ function _animarConteo(el, texto, { duracion = _durSiAnima('--dur-conteo', el) }
         el.textContent = textoFinal;
         return false;
     }
-    const estado = { textoFinal, cancelado: false };
+    const estado = { textoFinal, cancelar: () => { } };
     _conteoEstado.set(el, estado);
     let ultimo = texto(0);
     el.textContent = ultimo;
-    const inicio = performance.now();
-    const paso = ahora => {
-        if (estado.cancelado) return;
-        if (el.textContent !== ultimo) { _cancelarConteo(el); return; }
-        const t = Math.min(1, Math.max(0, (ahora - inicio) / duracion));
-        const actual = t >= 1 ? textoFinal : texto(1 - Math.pow(1 - t, 3));
+    estado.cancelar = _recorrerCurva(duracion, (e, t) => {
+        if (el.textContent !== ultimo) { _cancelarConteo(el); return false; }   // otro lo escribió: el conteo se suelta
+        const actual = t >= 1 ? textoFinal : texto(e);
         if (actual !== ultimo) { el.textContent = actual; ultimo = actual; }
-        if (t < 1) requestAnimationFrame(paso); else _conteoEstado.delete(el);
-    };
-    requestAnimationFrame(paso);
+        return true;
+    }, () => { if (_conteoEstado.get(el) === estado) _conteoEstado.delete(el); });
     return true;
 }
 
@@ -469,6 +484,7 @@ function _animarTextoHover(el, fn) {
 }
 
 export const Animaciones = {
+    _recorrerCurva,
     _animarTextoHover,
     _durSiAnima,
     _getCSSdur,

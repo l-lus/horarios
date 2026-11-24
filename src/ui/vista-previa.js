@@ -330,7 +330,7 @@ function abrir(cfg) {
     if (_activa) return;
     const objetivo = cfg.idObjetivo ? $(cfg.idObjetivo) : null;
     if (cfg.idObjetivo && !objetivo) return;
-    cancelAnimationFrame(_animSalida);
+    _animSalida?.();
     _activa = { cfg, objetivo, restaurar: null, filas: [], circulos: [], observer: null, timer: null };
     _cerrando = false;
     cfg.antes?.();
@@ -448,7 +448,8 @@ function cerrar() {
 }
 
 /** Animación en curso del desplazamiento de salida (ver `_soltarEspacioInferior`). */
-let _animSalida = 0;
+/** @type {(() => void) | null} cancela el desplazamiento de salida en curso */
+let _animSalida = null;
 
 function _quitarEspacioInferior() {
     document.body.classList.remove('vista-previa-activa');
@@ -460,21 +461,17 @@ function _quitarEspacioInferior() {
  * Para que sea suave se lleva primero el desplazamiento hasta donde queda sin ese espacio y recién entonces se lo quita.
  */
 function _soltarEspacioInferior() {
-    cancelAnimationFrame(_animSalida);
+    _animSalida?.();
     const reservado = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
     const maximo = Math.max(0, document.documentElement.scrollHeight - reservado - window.innerHeight);
     const desde = window.scrollY;
     if (desde <= maximo + 1 || Movimiento.reducido()) { _quitarEspacioInferior(); return; }
-    const inicio = performance.now();
-    const paso = (/** @type {number} */ ahora) => {
+    _animSalida = Animaciones._recorrerCurva(DESLIZ_SALIDA_MS, (e) => {
         // otra vista previa abierta mientras tanto se queda con el espacio
-        if (_activa) return;
-        const t = Math.min(1, (ahora - inicio) / DESLIZ_SALIDA_MS);
-        window.scrollTo(0, desde + (maximo - desde) * (1 - Math.pow(1 - t, 3)));
-        if (t < 1) _animSalida = requestAnimationFrame(paso);
-        else _quitarEspacioInferior();
-    };
-    _animSalida = requestAnimationFrame(paso);
+        if (_activa) return false;
+        window.scrollTo(0, desde + (maximo - desde) * e);
+        return true;
+    }, _quitarEspacioInferior);
 }
 
 function _finalizar() {

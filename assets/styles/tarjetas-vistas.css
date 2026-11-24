@@ -333,7 +333,7 @@
 /* Vista semanal: la etiqueta va derecha, al final de la línea diagonal de su marca (ver geometriaDiagonal): la sigla junto a la marca y debajo (o arriba, si la etiqueta está
    arriba de la barra) el tiempo neto o tipo de día. La línea más cercana a la barra queda centrada a ~13 px, como la sigla en diagonal; el resto crece hacia afuera
    dentro del margen que ya reserva la pista. Alineada a la derecha (pegada a la línea); espejada, a la izquierda. */
-.linea-etiqueta.dia {
+.progress-pista.con-linea .linea-etiqueta.dia {   /* con .con-linea para ganarle a su display: block */
     display: flex;
     flex-direction: column;
     text-align: right;
@@ -343,12 +343,10 @@
 
 .linea-etiqueta--abajo.dia { top: calc(100% + 13px - var(--text-sm) / 2); }
 
-.linea-etiqueta--arriba.dia {
-    bottom: calc(100% + 13px - var(--text-sm) / 2);
-    flex-direction: column-reverse;
-}
+.linea-etiqueta--arriba.dia { bottom: calc(100% + 13px - var(--text-sm) / 2); }
 
-.linea-etiqueta--espejada.dia { text-align: left; }
+.progress-pista.con-linea .linea-etiqueta--arriba.dia { flex-direction: column-reverse; }
+.progress-pista.con-linea .linea-etiqueta--espejada.dia { text-align: left; }
 
 /* Línea diagonal de las marcas de la vista semanal: fina */
 .hito-diagonal {

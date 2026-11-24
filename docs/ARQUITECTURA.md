@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
 **Última actualización:** 2026-11-15  
-**Estado:** Arquitectura modularizada y saneada (115 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Estado:** Arquitectura modularizada y saneada (116 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -42,7 +42,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (115 módulos)
+├── src/                        # Código fuente en ES Modules (116 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── oauth-callback.js       # Script de oauth-callback.html (fuera del grafo de la app, sin imports)
 │   ├── data/                   # Catálogos y datos estáticos puros
@@ -216,6 +216,7 @@ Las máscaras (`mask-image`, el arco del anillo) usan `#000`/`#fff` literales a 
 | [`src/core/tiempo-utils.js`](../src/core/tiempo-utils.js) | `TiempoUtils` | Aritmética de horas (`HH:MM` ↔ minutos), diferencia entre horarios, cruces de medianoche, formato de fechas ISO y rangos semanales. |
 | [`src/core/busqueda-texto.js`](../src/core/busqueda-texto.js) | `normalizarBusqueda`, `terminosDeBusqueda`, `textoCoincide`, `rangosCoincidencia`, ... | Búsqueda de texto sin distinguir mayúsculas ni acentos, con mapa de posiciones para resaltar coincidencias en el texto original (sin DOM). |
 | [`src/core/catalogo.js`](../src/core/catalogo.js) | `siguienteEnCiclo`, `catalogoCiclico`, `opcionGuardada` | Listas de opciones `{ id, label }` que un botón recorre en ciclo (estilos, disposiciones, posición del encabezado, temas, modo de animación): ciclo, etiqueta y validación en un solo lugar, y la lectura cacheada del valor guardado. |
+| [`src/core/codificacion.js`](../src/core/codificacion.js) | `bytesABase64`, `base64ABytes`, `bytesABase64Url`, `base64UrlABytes`, `bytesAHex`, `hexAleatorio`, `uuidAleatorio` | Codificación de bytes (base64 del sobre cifrado, base64url de PKCE y de la clave VAPID, hex de hashes y tokens) e ids al azar con su respaldo sin `crypto.randomUUID`. |
 | [`src/core/estilo-calendario.js`](../src/core/estilo-calendario.js) | `EstiloCalendario`, `ESTILOS_CALENDARIO` | Estilo de los días del calendario (`<html data-estilo-calendario>`): lista de estilos, ciclo y etiqueta. `tema-inicial.js` lo aplica antes del primer pintado. |
 | [`src/core/posicion-header.js`](../src/core/posicion-header.js) | `PosicionHeader`, `POSICIONES_HEADER` | Posición del encabezado (`<html data-header-pos>`): arriba, abajo, izquierda o derecha en PC; solo arriba o abajo en móvil (cada modo guarda la suya). Avisa con `header:posicion` y da `altoSuperior()`. Durante el arrastre la posición se ve en vivo sin guardarla (`previsualizar` / `restaurar`). `tema-inicial.js` la aplica antes del primer pintado. |
 | [`src/core/estilo-tarjeta.js`](../src/core/estilo-tarjeta.js) | `EstiloTarjeta`, `ESTILOS_TARJETA` | Estilo de la tarjeta de estado (`<html data-estilo-tarjeta>`): clásica (predeterminada), línea de tiempo, lista de filas, anillo y barra con hitos (el antiguo hint integrado). Opción de la instalación (`STORAGE_KEYS.ESTILO_TARJETA`); sin valor guardado se deduce de `HINT_INTEGRADO`. Los respaldos viejos solo traen ese interruptor (`desdeHintIntegrado`) y los nuevos traen el estilo, que manda. También guarda la disposición de la línea de tiempo en tarjetas anchas (`LINEA_DISPOSICION`, `<html data-disposicion-linea>`: tiempo trabajado arriba, a la izquierda o a la derecha de la línea, o los mosaicos a la izquierda o a la derecha; el CSS la combina con una `@container` sobre `#stats-estilo`, así que en el móvil no tiene efecto). Con la tarjeta angosta, `LINEA_MOSAICOS` (`<html data-mosaicos-linea>`) deja los mosaicos Faltan y Banco de horas abajo o apilados a la derecha de la línea. El estilo anillo tiene su propia variante (`ANILLO_DISPOSICION`, `<html data-disposicion-anillo>`): el aro a la izquierda o a la derecha y la fila Entrada / Salida / Con banco abajo o arriba, o los dos grupos de datos intercambiados (Entrada / Salida / Con banco apilados al costado y los mosaicos Faltan / Banco de horas en la fila de abajo; cada dato tiene una copia en el otro grupo y el CSS muestra la que corresponde). Seis combinaciones, en PC y en móvil. Al cambiar una subopción, `TarjetaEstilos.reubicar` anima lo que se mueve con la misma técnica FLIP de la reubicación de tarjetas (`uiAnimarReubicacion`) y el alto de la tarjeta. Cada subopción solo se muestra en su dispositivo (`.config-solo-pc` / `.config-solo-movil`, y la misma regla en el panel de `VistaPrevia`). |

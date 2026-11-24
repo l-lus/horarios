@@ -1,3 +1,5 @@
+import { bytesABase64, base64ABytes } from './codificacion.js';
+
 // ====================================================================
 // CIFRADO — sobre cifrado con una frase (sin DOM, con `crypto` inyectable)
 // ====================================================================
@@ -39,23 +41,15 @@ export class ErrorCifrado extends Error {
     }
 }
 
-// ---- base64 (por tramos: un archivo grande no desborda la pila)
-/** @param {Uint8Array} bytes */
-function aBase64(bytes) {
-    let s = '';
-    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, /** @type {any} */ (bytes.subarray(i, i + 0x8000)));
-    return btoa(s);
-}
+// ---- base64 (ver core/codificacion.js); al leer un sobre se valida el formato antes de decodificar
+const aBase64 = bytesABase64;
 
 /** @param {unknown} texto @param {number} [largoMax] */
 function desdeBase64(texto, largoMax = MAX_DATOS_BASE64) {
     if (typeof texto !== 'string' || texto.length > largoMax || !/^[A-Za-z0-9+/]*={0,2}$/.test(texto)) {
         throw new ErrorCifrado('el sobre cifrado no tiene el formato esperado', 'formato');
     }
-    const s = atob(texto);
-    const b = new Uint8Array(s.length);
-    for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
-    return b;
+    return base64ABytes(texto);
 }
 
 // ---- la frase

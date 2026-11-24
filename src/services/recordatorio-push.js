@@ -1,3 +1,4 @@
+import { base64UrlABytes, hexAleatorio, uuidAleatorio } from '../core/codificacion.js';
 import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
@@ -41,12 +42,6 @@ function _avisarFallo(accion, status) {
 
 const _postWorker = WorkerCliente.post;
 
-function _urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    return Uint8Array.from([...atob(base64)].map(c => c.charCodeAt(0)));
-}
-
 let _idInstalacionFallback = null;
 
 function _idInstalacion() {
@@ -54,23 +49,15 @@ function _idInstalacion() {
     const existente = Almacenamiento.getItem(KEY, null);
     if (existente) return existente;
 
-    const nuevo = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const nuevo = uuidAleatorio();
     if (Almacenamiento.setItem(KEY, nuevo)) return nuevo;
-    if (!_idInstalacionFallback) {
-        _idInstalacionFallback = crypto.randomUUID
-            ? crypto.randomUUID()
-            : `sin-storage-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    }
+    if (!_idInstalacionFallback) _idInstalacionFallback = uuidAleatorio('sin-storage-');
     return _idInstalacionFallback;
 }
 
 let _ownerTokenFallback = null;
 
-function _generarOwnerToken() {
-    const bytes = new Uint8Array(32);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-}
+const _generarOwnerToken = () => hexAleatorio(32);
 
 function _ownerToken() {
     const KEY = STORAGE_KEYS.PUSH_OWNER_TOKEN;
@@ -196,7 +183,7 @@ async function _asegurarSuscripcion() {
 
         return await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: _urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            applicationServerKey: base64UrlABytes(VAPID_PUBLIC_KEY)
         });
     } catch (err) {
         console.error('No se pudo suscribir a push:', err);

@@ -130,3 +130,16 @@ test('con la misma frase, la sal propia de cada destino hace que uno no abra el 
     await assert.rejects(() => descifrar({ ...a, sal: otroDestino.sal }, FRASE), (e) => e.codigo === 'descifrado');
     assert.equal(await descifrar(b, FRASE), TEXTO);
 });
+
+test('Codificación: base64, base64url y hex van y vuelven, y los valores al azar tienen el largo esperado', async () => {
+    const C = await import('../src/core/codificacion.js');
+    const bytes = new Uint8Array(70000).map((_, i) => (i * 37) % 256);   // más de un tramo de 0x8000
+    assert.deepEqual(C.base64ABytes(C.bytesABase64(bytes)), bytes);
+    assert.equal(C.bytesABase64(new Uint8Array([251, 255])), '+/8=');
+    assert.equal(C.bytesABase64Url(new Uint8Array([251, 255])), '-_8');
+    assert.deepEqual(C.base64UrlABytes('-_8'), new Uint8Array([251, 255]));
+    assert.equal(C.bytesAHex(new Uint8Array([0, 15, 255])), '000fff');
+    assert.match(C.hexAleatorio(32), /^[0-9a-f]{64}$/);
+    assert.match(C.uuidAleatorio(), /^[0-9a-f-]{36}$/);
+    assert.match(C.uuidAleatorio('x-', /** @type {any} */ ({})), /^x-\d+-[a-z0-9]+$/);
+});

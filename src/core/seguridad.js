@@ -1,3 +1,4 @@
+import { bytesAHex } from './codificacion.js';
 import { TiempoUtils } from './tiempo-utils.js';
 
 // ====================================================================
@@ -146,8 +147,7 @@ async function calcularHashSHA256(data) {
     const dataBuffer = encoder.encode(JSON.stringify(data));
     if (globalThis.crypto?.subtle?.digest) {
         const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', dataBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return bytesAHex(new Uint8Array(hashBuffer));
     }
     return _sha256Fallback(dataBuffer);
 }

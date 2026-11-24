@@ -1,3 +1,5 @@
+import { bytesABase64Url } from '../core/codificacion.js';
+
 // ====================================================================
 // OAUTH 2.0 CON PKCE — state, code_verifier y code_challenge (RFC 7636)
 // ====================================================================
@@ -5,12 +7,7 @@
 
 const VERIFICADOR_REGEX = /^[A-Za-z0-9._~-]{43,128}$/;
 
-/** @param {Uint8Array} bytes */
-function base64Url(bytes) {
-    let bin = '';
-    for (const b of bytes) bin += String.fromCharCode(b);
-    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
+const base64Url = bytesABase64Url;
 
 /** Texto al azar en base64url de `n` bytes (32 bytes → 43 caracteres). */
 function aleatorio(n = 32, cripto = globalThis.crypto) {

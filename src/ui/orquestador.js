@@ -51,7 +51,7 @@ import { DiasHabiles } from '../services/dias-habiles.js';
 
 const {
     _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced, mostrarError, limpiarError,
-    obtenerNombrePerfilSafe, descargarJSON, _avisarFichaje, aplicarFeedbackCampos
+    obtenerNombrePerfilSafe, _avisarFichaje, aplicarFeedbackCampos
 } = UIBase;
 const { _esperarAnim } = Animaciones;
 
@@ -144,7 +144,7 @@ function _initGlobales() {
         cerrarTodosModales: GestorModales.cerrarTodos,
         confirmarModal: GestorModales.confirmar,
         confirmarConCasilla: GestorModales.confirmarConCasilla,
-        descargarJSON, descargarArchivo: UIBase.descargarArchivo, pedirFrase: FraseModal.pedir, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+        descargarArchivo: UIBase.descargarArchivo, pedirFrase: FraseModal.pedir, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
         obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion, setBloqueoEdicion,
         setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado, verificarBloqueoCredito,
         formularioRegistro: Formularios.registro, formularioEdicion: Formularios.edicion,

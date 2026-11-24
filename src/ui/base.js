@@ -6,11 +6,9 @@ import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
-import { debounce, _crearPressHold } from './gestos.js';
-import { mostrarToast, _cerrarToastActual, _habilitarCierreToast } from './toast.js';
+import { debounce } from './gestos.js';
+import { mostrarToast } from './toast.js';
 import { resetearBoton, salirExitoFichaje, animarErrorFichaje, destellarResultadoFichar } from './boton-fichar.js';
-import { _posicionarPopup, _registrarCierrePopup, _crearPopupFlotante } from './popups.js';
-import { _scrollA, _esperarFinScroll, _scrollHastaVisible } from './scroll.js';
 
 // ====================================================================
 //                     UI CORE MODULE (generic UI utilities)
@@ -71,10 +69,6 @@ function limpiarError(inputId, errorId) {
 function obtenerNombrePerfilSafe() {
     const nombre = String(GestorPerfiles.obtenerDatosPerfil()?.nombre ?? 'Backup');
     return nombre.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ'\-_ ]/g, '').trim().replace(/\s+/g, '_');
-}
-
-function descargarJSON(data, nombreArchivo) {
-    descargarArchivo(JSON.stringify(data, null, 2), nombreArchivo, 'application/json');
 }
 
 function descargarArchivo(contenido, nombreArchivo, mime) {
@@ -255,7 +249,6 @@ export const UIBase = {
     mostrarError,
     limpiarError,
     obtenerNombrePerfilSafe,
-    descargarJSON,
     descargarArchivo,
     _crearToggleConfig,
     _setBtnActivo,

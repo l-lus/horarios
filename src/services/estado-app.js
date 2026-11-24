@@ -54,7 +54,6 @@ import { TiposRegistro } from './tipos-registro.js';
  * @property {(...args: any[]) => void} cerrarFiltros
  * @property {(...args: any[]) => void} cerrarImportar
  * @property {(...args: any[]) => void} cerrarTodosModales
- * @property {(...args: any[]) => void} descargarJSON
  * @property {(contenido: string, nombreArchivo: string, mime: string) => void} descargarArchivo
  * @property {(motivo: string) => Promise<string | null>} pedirFrase pide la frase de cifrado de un archivo o Gist (null si se cancela)
  * @property {(...args: any[]) => void} iniciarTimerAutoCierreBotones
@@ -86,7 +85,6 @@ let notify = {
     cerrarTodosModales: () => { },
     confirmarModal: async () => false,
     confirmarConCasilla: async () => ({ confirmado: false, marcada: false }),
-    descargarJSON: () => { },
     descargarArchivo: () => { },
     pedirFrase: async () => null,
     forzarVista: (vista, fn) => fn(),

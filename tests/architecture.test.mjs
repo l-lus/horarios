@@ -458,3 +458,22 @@ test('Tokens (CSS): fuera de tokens.css no hay tamaños de letra en rem/px, peso
     }
     assert.deepEqual(problemas, [], 'Valores que deberían salir de tokens.css');
 });
+
+// tsc no aplica noUnusedLocals a los .js (checkJs): un import que ya no se usa pasaría sin aviso
+test('Imports: todo nombre importado se usa en el módulo', () => {
+    const errores = [];
+    for (const file of srcFiles) {
+        const content = fs.readFileSync(file, 'utf8');
+        const cuerpo = content.replace(/^import\s[\s\S]*?from\s+['"][^'"]+['"];?/gm, '');
+        for (const m of content.matchAll(/^import\s*\{([^}]*)\}\s*from/gm)) {
+            for (const parte of m[1].split(',')) {
+                const nombre = parte.trim().split(/\s+as\s+/).pop()?.trim();
+                if (!nombre) continue;
+                // cuenta el nombre suelto o tras un spread (...X), no como propiedad de otro objeto (a.X)
+                const uso = new RegExp(`(?<![\\w$])(?<![^.]\\.)${nombre.replace(/\$/g, '\\$')}(?![\\w$])`);
+                if (!uso.test(cuerpo)) errores.push(`${file}: ${nombre}`);
+            }
+        }
+    }
+    assert.deepEqual(errores, [], `Imports sin usar:\n${errores.join('\n')}`);
+});

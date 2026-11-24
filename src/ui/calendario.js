@@ -11,7 +11,6 @@ import { html, icono, montar } from '../core/html.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { registrarSwipe } from './gestos.js';
-import { _crearPopupFlotante } from './popups.js';
 import { Animaciones } from './animaciones.js';
 import { CalendarioPopups } from './calendario-popups.js';
 import { DiasHabiles } from '../services/dias-habiles.js';

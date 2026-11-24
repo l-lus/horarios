@@ -1,7 +1,8 @@
 import { $, alClic } from '../core/dom.js';
 import { TOAST_MS } from '../core/constantes.js';
 import { RecordatorioPush } from '../services/recordatorio-push.js';
-import { UIBase } from './base.js';
+import { GestorModales } from './gestor-modales.js';
+import { Controles } from './controles.js';
 import { debounce } from './gestos.js';
 import { mostrarToast } from './toast.js';
 import { AvisoJornada } from '../services/aviso-jornada.js';
@@ -9,25 +10,24 @@ import { AvisoJornada } from '../services/aviso-jornada.js';
 // ====================================================================
 // UI NOTIFICATIONS MODULE (push y permisos de notificaciones)
 // ====================================================================
-const {
-    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnActivo, _setBtnDisabled
-} = UIBase;
+const { abrirConPadre, cerrarConPadre } = GestorModales;
+const { crearToggleConfig, setBtnActivo, setBtnDisabled } = Controles;
 
 function _actualizarDisponibilidadBotonesPush() {
     const habilitado = RecordatorioPush.getHabilitado();
     const usaBufferSemanal = RecordatorioPush.getUsarBufferSemanal();
-    _setBtnDisabled('btn-toggle-push-buffer', !habilitado);
-    _setBtnDisabled('btn-toggle-push-buffer-ultimo-dia', !habilitado || !usaBufferSemanal);
+    setBtnDisabled('btn-toggle-push-buffer', !habilitado);
+    setBtnDisabled('btn-toggle-push-buffer-ultimo-dia', !habilitado || !usaBufferSemanal);
 }
 
 function actualizarEstadoBotonNotificaciones() {
-    _setBtnActivo('btn-toggle-notification', RecordatorioPush.getHabilitado());
+    setBtnActivo('btn-toggle-notification', RecordatorioPush.getHabilitado());
 }
 
 const _sincronizarPushHoyDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 400);
 
 const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuffer } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => RecordatorioPush.getUsarBufferSemanal(),
         setVal: (v) => RecordatorioPush.setUsarBufferSemanal(v),
         btnId: 'btn-toggle-push-buffer',
@@ -39,7 +39,7 @@ const { toggle: togglePushBuffer, actualizarEstado: actualizarEstadoBotonPushBuf
     });
 
 const { toggle: togglePushBufferUltimoDia, actualizarEstado: actualizarEstadoBotonPushBufferUltimoDia } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => RecordatorioPush.getBufferSoloUltimoDia(),
         setVal: (v) => RecordatorioPush.setBufferSoloUltimoDia(v),
         btnId: 'btn-toggle-push-buffer-ultimo-dia',
@@ -47,7 +47,7 @@ const { toggle: togglePushBufferUltimoDia, actualizarEstado: actualizarEstadoBot
     });
 
 const { toggle: togglePushHabilitado, actualizarEstado: actualizarEstadoBotonPushHabilitado } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => RecordatorioPush.getHabilitado(),
         setVal: (v) => RecordatorioPush.setHabilitado(v),
         btnId: 'btn-toggle-push-habilitado',
@@ -124,7 +124,7 @@ async function enviarNotificacionPrueba() {
 }
 
 function abrirModalNotificaciones() {
-    _abrirModalConPadre('modal-notificaciones', () => {
+    abrirConPadre('modal-notificaciones', () => {
         actualizarEstadoBotonPushHabilitado();
         actualizarEstadoBotonPushBuffer();
         actualizarEstadoBotonPushBufferUltimoDia();
@@ -136,7 +136,7 @@ function abrirModalNotificaciones() {
 }
 
 function cerrarModalNotificaciones() {
-    _cerrarModalConPadre('modal-notificaciones');
+    cerrarConPadre('modal-notificaciones');
 }
 
 function bindEventos() {

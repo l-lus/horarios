@@ -2,7 +2,7 @@ import { DESDE_SIEMPRE } from '../core/constantes.js';
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
-import { UIBase } from './base.js';
+
 import { Configuracion } from './configuracion.js';
 import { mostrarToast } from './toast.js';
 import { icono, montar } from '../core/html.js';
@@ -11,7 +11,7 @@ import { DiasHabiles } from '../services/dias-habiles.js';
 // ====================================================================
 // UI WORKDAY HISTORY MODULE (historial de días hábiles y horas)
 // ====================================================================
-const { _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
+const { abrirConPadre, cerrarConPadre } = GestorModales;
 
 const { _precargarCamposConfig } = Configuracion;
 
@@ -64,11 +64,11 @@ function _renderizarListaHistorialDias() {
 }
 
 function abrirModalHistorialDias() {
-    _abrirModalConPadre('modal-historial-dias', _renderizarListaHistorialDias);
+    abrirConPadre('modal-historial-dias', _renderizarListaHistorialDias);
 }
 
 function cerrarModalHistorialDias() {
-    _cerrarModalConPadre('modal-historial-dias', (padre) => {
+    cerrarConPadre('modal-historial-dias', (padre) => {
         if (padre === 'modal-config') _precargarCamposConfig();
     });
 }

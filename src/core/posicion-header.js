@@ -8,7 +8,7 @@ import { catalogoCiclico } from './catalogo.js';
 // ====================================================================
 // Dónde va el encabezado: el CSS solo mira <html data-header-pos="top|bottom|left|right"> (lo pone tema-inicial.js antes del primer pintado y lo mantiene este módulo).
 // En PC puede ir arriba, abajo o a un costado; en móvil solo arriba o abajo. Cada modo guarda la suya (como el orden de las tarjetas) y se avisa
-// con 'header:posicion' cada vez que la posición que se ve cambia, para que se vuelvan a medir los desplazamientos (ver ui/base.js).
+// con 'header:posicion' cada vez que la posición que se ve cambia, para que se vuelvan a medir los desplazamientos (ver ui/historico.js).
 // Mientras se lo arrastra (ver ui/header-posicion.js) la posición se muestra en vivo sin guardarla: `previsualizar` la pone y `restaurar` vuelve a la guardada.
 export const POSICIONES_HEADER = Object.freeze([
     { id: 'top', label: 'Arriba' },

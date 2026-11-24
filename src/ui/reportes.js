@@ -5,16 +5,17 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { EstadisticasPeriodo } from '../services/estadisticas-periodo.js';
-import { UIBase } from './base.js';
+import { Descarga } from './descarga.js';
 import { html, crudo, montar, icono } from '../core/html.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { mostrarToast } from './toast.js';
 import { Objetivos } from '../services/objetivos.js';
+import { Controles } from './controles.js';
 
 // ====================================================================
 //                     UI REPORTS MODULE (HTML Report Generator)
 // ====================================================================
-const { descargarArchivo } = UIBase;
+const { descargarArchivo } = Descarga;
 
 const { calcularEstadisticasMes, calcularEstadisticasAnio, sumarHorasEfectivas } = EstadisticasPeriodo;
 
@@ -447,14 +448,14 @@ function cerrarModalReporteSecciones() {
 }
 
 function toggleSeccionReporte(boton) {
-    boton.classList.toggle('btn-activo');
+    Controles.alternarBtnActivo(boton);
 }
 
 function confirmarGenerarReporte() {
     const cont = $('reporte-secciones-lista');
     const opciones = {};
     /** @type {NodeListOf<HTMLElement>} */ (cont?.querySelectorAll('.btn-seccion-reporte')).forEach(btn => {
-        opciones[btn.dataset.seccion] = btn.classList.contains('btn-activo');
+        opciones[btn.dataset.seccion] = Controles.esBtnActivo(btn);
     });
     if (!Object.values(opciones).some(Boolean)) {
         mostrarToast('Seleccioná al menos una sección', 'error');
@@ -463,7 +464,6 @@ function confirmarGenerarReporte() {
     cerrarModalReporteSecciones();
     generarReporte(opciones);
 }
-
 
 export const Reportes = {
     abrirModalReporteSecciones,

@@ -4,9 +4,9 @@ import { PosicionHeader } from '../core/posicion-header.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { resetearBoton, setIconoBtn, cancelarExitoFichaje, animarExitoFichaje, obtenerIconoBtn } from './boton-fichar.js';
+import { resetearBoton, setIconoBtn, cancelarExitoFichaje, animarExitoFichaje, obtenerIconoBtn, avisarFichaje } from './boton-fichar.js';
 import { _scrollHastaVisible } from './scroll.js';
 import { Animaciones } from './animaciones.js';
 import { OperacionesLote } from '../services/operaciones-lote.js';
@@ -17,7 +17,7 @@ import { AccionesUI } from './acciones-ui.js';
 // ====================================================================
 const ESPERA_SALIR_LOTE_MS = 350;   // deja terminar el cierre del modal antes de salir del modo lote
 
-const { _flashCampo, _avisarFichaje, toggleSeccionGen, _crearOpcion, aplicarFeedbackCampos } = UIBase;
+const { flashCampo, toggleSeccionGen, crearOpcion, aplicarFeedbackCampos } = Controles;
 const { _animarFadeSwap, _animarSlideElemento, _esperarAnim, _animarValor, _durSiAnima } = Animaciones;
 const { actualizarEstadoBotonTimerMain } = AccionesUI;
 
@@ -104,7 +104,7 @@ function _limpiarCamposLote() {
 
 async function _registrarEspecial(fecha, tipo, mensajeDuplicado, alExito) {
     if (EstadoApp.existeRegistroEnFecha(fecha)) {
-        _avisarFichaje(mensajeDuplicado, 'warning'); return;
+        avisarFichaje(mensajeDuplicado, 'warning'); return;
     }
     const res = await OperacionesLote.registrarDiaEspecial(fecha, tipo);
     if ('error' in res) return;
@@ -121,7 +121,7 @@ async function registrarLoteDesdeCard() {
 
     if ((inputDesde.value === '' && inputDesde.validity && !inputDesde.validity.valid) ||
         (inputHasta.value === '' && inputHasta.validity && !inputHasta.validity.valid)) {
-        _avisarFichaje('Fecha inválida'); return;
+        avisarFichaje('Fecha inválida'); return;
     }
 
     const desde = inputDesde.value;
@@ -129,25 +129,25 @@ async function registrarLoteDesdeCard() {
 
     if (!desde && !hasta) {
         if (!inputDesde.checkValidity() || !inputHasta.checkValidity()) {
-            _avisarFichaje('Revisá las fechas ingresadas'); return;
+            avisarFichaje('Revisá las fechas ingresadas'); return;
         }
-        if (tipo === 'normal') { _avisarFichaje('Completá ambos campos', 'info'); return; }
+        if (tipo === 'normal') { avisarFichaje('Completá ambos campos', 'info'); return; }
         await _registrarEspecial(TiempoUtils.obtenerFechaHoy(), tipo, 'Ya existe un registro para hoy'); return;
     }
 
     if (desde && !hasta) {
-        if (tipo === 'normal') { _avisarFichaje('Completá ambos campos', 'info'); return; }
+        if (tipo === 'normal') { avisarFichaje('Completá ambos campos', 'info'); return; }
         await _registrarEspecial(desde, tipo, 'Ya existe un registro para esa fecha', () => aplicarFeedbackCampos([
             { id: 'lote-fecha-desde', fallback: 'Desde', mostrar: true },
             { id: 'lote-fecha-hasta', fallback: 'Hasta', mostrar: false }
         ])); return;
     }
 
-    if (!desde && hasta) { _avisarFichaje('Completá ambos campos', 'info'); return; }
-    if (desde > hasta) { _avisarFichaje('La fecha inicial debe ser inferior a la final'); return; }
+    if (!desde && hasta) { avisarFichaje('Completá ambos campos', 'info'); return; }
+    if (desde > hasta) { avisarFichaje('La fecha inicial debe ser inferior a la final'); return; }
 
     if (tipo !== 'normal' && !TiposRegistro.obtenerCodigosPorTipo(tipo)) {
-        _avisarFichaje('Tipo de registro inválido'); return;
+        avisarFichaje('Tipo de registro inválido'); return;
     }
 
     const res = tipo === 'normal'
@@ -167,7 +167,6 @@ async function registrarLoteDesdeCard() {
     animarExitoFichaje($('btn-agregar'));
 }
 
-
 function poblarSelectoresTipos() {
     const tipos = TiposRegistro.obtenerTodosLosTipos();
 
@@ -180,9 +179,9 @@ function poblarSelectoresTipos() {
     cfg.forEach(({ id, getLabel, prefix = [], extra = [] }) => {
         const sel = $(id);
         if (!sel) return;
-        sel.replaceChildren(...prefix.map(e => _crearOpcion(e.value, e.text)));
-        tipos.forEach(t => sel.appendChild(_crearOpcion(t.id, getLabel(t))));
-        extra.forEach(e => sel.appendChild(_crearOpcion(e.value, e.text)));
+        sel.replaceChildren(...prefix.map(e => crearOpcion(e.value, e.text)));
+        tipos.forEach(t => sel.appendChild(crearOpcion(t.id, getLabel(t))));
+        extra.forEach(e => sel.appendChild(crearOpcion(e.value, e.text)));
     });
 }
 
@@ -392,8 +391,8 @@ async function _irAFicharConFecha(fecha, esEspecial) {
     }
 
     await scrollTerminado;
-    if (esEspecial) _flashCampo('lote-fecha-desde', 'lote-fecha-hasta', 'lote-tipo');
-    else _flashCampo('fecha', 'entrada', 'salida');
+    if (esEspecial) flashCampo('lote-fecha-desde', 'lote-fecha-hasta', 'lote-tipo');
+    else flashCampo('fecha', 'entrada', 'salida');
 }
 
 function _scrollACardFichar(el) {

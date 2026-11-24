@@ -9,7 +9,7 @@ import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorTemas } from './gestor-temas.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
 import { TarjetaFondos } from './tarjeta-fondos.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
 import { Notificaciones } from './notificaciones.js';
@@ -30,9 +30,8 @@ import { AccionesUI } from './acciones-ui.js';
 // ====================================================================
 // UI CONFIG MODULE (configuración, ayuda, tema y steppers)
 // ====================================================================
-const {
-    _abrirModalConPadre, _cerrarModalConPadre, _crearToggleConfig, _setBtnDisabled, _flashCampo
-} = UIBase;
+const { abrirConPadre, cerrarConPadre } = GestorModales;
+const { crearToggleConfig, setBtnDisabled, flashCampo } = Controles;
 const { _esperarAnim, _animarValor } = Animaciones;
 
 const _reprogramarPushDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 400);
@@ -58,7 +57,7 @@ function alternarTema() {
 }
 
 const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => EstadoApp.getIgnorarTiempoFuera(),
         setVal: (v) => { EstadoApp.setIgnorarTiempoFuera(v); Preferencias.IGNORAR_TF.set(v); },
         btnId: 'btn-toggle-ignorar-tf',
@@ -66,14 +65,14 @@ const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBoto
     });
 
 const { toggle: toggleHoverPopupCalendario, actualizarEstado: actualizarEstadoBotonHoverPopup } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => Preferencias.HOVER_POPUP.get(),
         setVal: (v) => Preferencias.HOVER_POPUP.set(v),
         btnId: 'btn-toggle-hover-popup',
     });
 
 const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLogicaCubierto } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => Preferencias.IGNORAR_LOGICA_CUBIERTO.get(),
         setVal: (v) => Preferencias.IGNORAR_LOGICA_CUBIERTO.set(v),
         btnId: 'btn-toggle-logica-cubierto',
@@ -81,7 +80,7 @@ const { toggle: toggleLogicaCubierto, actualizarEstado: actualizarEstadoBotonLog
     });
 
 const { toggle: toggleObjetivoPorRegistro, actualizarEstado: actualizarEstadoBotonObjetivoPorRegistro } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get(),
         setVal: (v) => Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.set(v),
         btnId: 'btn-toggle-objetivo-registro',
@@ -89,7 +88,7 @@ const { toggle: toggleObjetivoPorRegistro, actualizarEstado: actualizarEstadoBot
     });
 
 const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBotonFormatoCortoStats } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => Preferencias.FORMATO_CORTO_STATS.get(),
         setVal: (v) => Preferencias.FORMATO_CORTO_STATS.set(v),
         btnId: 'btn-toggle-formato-corto-stats',
@@ -97,7 +96,7 @@ const { toggle: toggleFormatoCortoStats, actualizarEstado: actualizarEstadoBoton
     });
 
 const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRuedaCalendario } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => Preferencias.RUEDA_CALENDARIO.get(),
         setVal: (v) => Preferencias.RUEDA_CALENDARIO.set(v),
         btnId: 'btn-toggle-rueda-calendario',
@@ -248,7 +247,7 @@ function toggleAnimacionHint() {
 }
 
 const { toggle: toggleMetricaUso, actualizarEstado: actualizarEstadoBotonMetricaUso } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => Preferencias.STATS_HABILITADO.get(),
         setVal: (v) => Preferencias.STATS_HABILITADO.set(v),
         btnId: 'btn-toggle-metrica-uso',
@@ -256,7 +255,7 @@ const { toggle: toggleMetricaUso, actualizarEstado: actualizarEstadoBotonMetrica
 
 function actualizarEstadoBotonAplicarHoras() {
     const modoGlobal = Preferencias.IGNORAR_OBJETIVO_POR_REGISTRO.get();
-    _setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
+    setBtnDisabled('btn-aplicar-horas-todos', modoGlobal);
 }
 
 async function aplicarHorasConfiguradasATodos() {
@@ -313,11 +312,11 @@ function cerrarConfig() {
 
 function abrirModalAyuda() {
     AyudaBuscador.limpiar();
-    _abrirModalConPadre('modal-ayuda');
+    abrirConPadre('modal-ayuda');
 }
 
 function cerrarModalAyuda() {
-    _cerrarModalConPadre('modal-ayuda');
+    cerrarConPadre('modal-ayuda');
 }
 
 const _ETIQUETAS_ANIMACIONES = { auto: 'Auto', on: 'Sí', off: 'No' };
@@ -379,7 +378,7 @@ function mostrarConfigEnAjuste(id) {
         const cuerpo = /** @type {HTMLElement|null} */ (el?.closest('.modal-panel-body'));
         if (!el || !cuerpo) return;
         await _scrollHastaVisible(el, { contenedor: cuerpo });
-        _flashCampo(id);
+        flashCampo(id);
     }, 500);
 }
 

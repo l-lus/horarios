@@ -1,6 +1,6 @@
 import { $, setColapsable, alClic } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
 import { GestorModales } from './gestor-modales.js';
 import { IconosAnimados } from './iconos-animados.js';
 import { HistoricoEdicion } from './historico-edicion.js';
@@ -31,7 +31,8 @@ import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
 // desplegable «Conexión» (gist-respaldo.js, drive-respaldo.js), que avisa con el evento 'respaldo:conexion' cuando cambia.
 // Todo se guarda en vivo (el destino principal, la automática, «Recordar»), salvo la frase de cifrado: se escribe y se aplica con
 // «Aplicar» (Respaldar, Subir y Bajar aplican la escrita antes, y al cerrar con una sin aplicar se pregunta).
-const { _setBtnDisabled, _abrirModalConPadre, _cerrarModalConPadre, _flashCampo } = UIBase;
+const { setBtnDisabled, flashCampo } = Controles;
+const { abrirConPadre, cerrarConPadre } = GestorModales;
 
 const MODAL = 'modal-respaldo';
 const NOMBRE_CORTO = Object.freeze({ local: 'el archivo', gist: 'Gist', drive: 'Drive' });
@@ -57,7 +58,7 @@ function _actualizarResumenCifrado() {
     const escrita = _campoFrase.valor();
     const evaluada = FraseCifrado.evaluar(escrita);
     const hayFrase = escrita.trim() !== '';
-    _setBtnDisabled('btn-toggle-sync-recordar', !hayFrase);
+    setBtnDisabled('btn-toggle-sync-recordar', !hayFrase);
     if (!hayFrase) el.textContent = 'Sin cifrar · los respaldos salen en claro';
     else if (!evaluada.ok) el.textContent = `Faltan ${Math.max(1, 20 - evaluada.frase.length)} caracteres (mínimo 20)`;
     else el.textContent = _campoFrase.recordar() ? 'Activado · frase recordada en este navegador' : 'Activado · la frase vale hasta cerrar la app';
@@ -111,10 +112,10 @@ function refrescar() {
 
     GistRespaldo.cargar();
     DriveRespaldo.actualizarEstado();
-    _setBtnDisabled('btn-gist-subir', !gistConectado);
-    _setBtnDisabled('btn-gist-bajar', !SincronizacionGist.listo());
-    _setBtnDisabled('btn-drive-subir', !driveConectado);
-    _setBtnDisabled('btn-drive-bajar', !driveConectado);
+    setBtnDisabled('btn-gist-subir', !gistConectado);
+    setBtnDisabled('btn-gist-bajar', !SincronizacionGist.listo());
+    setBtnDisabled('btn-drive-subir', !driveConectado);
+    setBtnDisabled('btn-drive-bajar', !driveConectado);
 
     const principal = DestinoRespaldo.principal();
     const conectado = { local: true, gist: gistConectado, drive: driveConectado };
@@ -142,7 +143,7 @@ function _elegirPrincipal(destino) {
 // Abrir, guardar y cerrar
 // --------------------------------------------------------------------
 function abrir() {
-    _abrirModalConPadre(MODAL, () => {
+    abrirConPadre(MODAL, () => {
         _auto.cargar();
         refrescar();
         _setPanel('btn-sync-panel-limites', false, false);
@@ -162,7 +163,7 @@ async function _señalarFrase() {
     const cuerpo = /** @type {HTMLElement | null} */ (campo?.closest('.modal-panel-body'));
     if (!campo || !cuerpo) return;
     await _scrollHastaVisible(campo, { contenedor: cuerpo });
-    _flashCampo('sync-frase');
+    flashCampo('sync-frase');
     campo.focus({ preventScroll: true });
 }
 
@@ -196,7 +197,7 @@ async function cerrar() {
         const salir = await GestorModales.confirmar('La frase de cifrado que escribiste no se aplicó: si salís, se descarta.', 'Salir', '#icon-back', { titulo: 'Cifrado', labelCancel: 'Seguir editando', iconoCancel: '#icon-edit' });
         if (!salir) return;
     }
-    _cerrarModalConPadre(MODAL);
+    cerrarConPadre(MODAL);
     actualizarBotonesHistorico();
 }
 

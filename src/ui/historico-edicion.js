@@ -6,7 +6,7 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { GestorModales } from './gestor-modales.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
 import { Calendario } from './calendario.js';
 import { Configuracion } from './configuracion.js';
 import { html, icono } from '../core/html.js';
@@ -22,7 +22,7 @@ import { VistaPrevia } from './vista-previa.js';
 // ====================================================================
 //           UI HISTORY EDIT, FILTERS & HEADER ACTIONS MODULE
 // ====================================================================
-const { _setBtnActivo } = UIBase;
+const { setBtnActivo } = Controles;
 
 let edicionBloqueada = true;
 
@@ -91,7 +91,7 @@ function toggleCredito() {
     const estaActivo = btn.dataset.activo === "true";
 
     btn.dataset.activo = estaActivo ? "false" : "true";
-    _setBtnActivo('btn-toggle-credito', !estaActivo);
+    setBtnActivo('btn-toggle-credito', !estaActivo);
     mostrarToast(!estaActivo ? 'Asueto | Salida temprana activado' : 'Asueto | Salida temprana desactivado', 'info');
 }
 
@@ -120,7 +120,6 @@ function _actualizarHintEdicion() {
         hint.textContent = '';
     }
 }
-
 
 function actualizarHintGrupo() {
     const hint = $('edit-grupo-hint');
@@ -389,7 +388,6 @@ function cerrarEdicionGrupo() {
         setBloqueoEdicionGrupo(true);
     });
 }
-
 
 export const HistoricoEdicion = {
     cerrarEdicion,

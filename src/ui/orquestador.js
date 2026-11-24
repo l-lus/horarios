@@ -18,7 +18,8 @@ import { GestorPerfiles } from '../services/gestor-perfiles.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestorHistorial } from '../services/gestor-historial.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
+import { Descarga } from './descarga.js';
 import { FraseModal } from './frase-modal.js';
 import { Perfiles } from './perfiles.js';
 import { Calendario } from './calendario.js';
@@ -43,17 +44,16 @@ import { VerificarFeriados } from './verificar-feriados.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { resetearBoton, restaurarBotonGuardarEdicion, animarExitoFichaje, llamarAtencionFicharAlCargar } from './boton-fichar.js';
+import { resetearBoton, restaurarBotonGuardarEdicion, animarExitoFichaje, llamarAtencionFicharAlCargar, avisarFichaje } from './boton-fichar.js';
 import { registrarSwipe, debounce } from './gestos.js';
 import { mostrarToast, _habilitarCierreToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
 import { DiasHabiles } from '../services/dias-habiles.js';
 import { AccionesUI } from './acciones-ui.js';
 
-const {
-    _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced, mostrarError, limpiarError,
-    obtenerNombrePerfilSafe, _avisarFichaje, aplicarFeedbackCampos
-} = UIBase;
+const { _actualizarOffsetsStickyMes, actualizarOffsetsStickyMesDebounced } = Historico;
+const { mostrarError, limpiarError, aplicarFeedbackCampos } = Controles;
+const { obtenerNombrePerfilSafe } = Descarga;
 const { _esperarAnim } = Animaciones;
 
 const {
@@ -156,7 +156,7 @@ function _initGlobales() {
         cerrarTodosModales: GestorModales.cerrarTodos,
         confirmarModal: GestorModales.confirmar,
         confirmarConCasilla: GestorModales.confirmarConCasilla,
-        descargarArchivo: UIBase.descargarArchivo, pedirFrase: FraseModal.pedir, avisarFichaje: _avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
+        descargarArchivo: Descarga.descargarArchivo, pedirFrase: FraseModal.pedir, avisarFichaje: avisarFichaje, iniciarTimerAutoCierreBotones, limpiarError, mostrarError, mostrarToast,
         obtenerNombrePerfilSafe, resetearBoton, restaurarBotonGuardarEdicion,
         setBloqueoEdicionGrupo, temaGuardado: GestorTemas.temaGuardado,
         formularioRegistro: Formularios.registro, formularioEdicion: { ...Formularios.edicion, abrir: _abrirModalEdicion },

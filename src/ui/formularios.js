@@ -1,6 +1,7 @@
 import { $, setColapsable } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { icono, html, montar } from '../core/html.js';
+import { Controles } from './controles.js';
 
 // ====================================================================
 // FORMULARIOS — implementación en DOM del puerto que usan los servicios
@@ -56,7 +57,7 @@ const edicion = {
 
         const btnCredito = $('btn-toggle-credito');
         btnCredito.dataset.activo = String(creditoActivo);
-        btnCredito.classList.toggle('btn-activo', creditoActivo);
+        Controles.setBtnActivo(btnCredito, creditoActivo);
     },
 
     refrescarHintResumen: () => {

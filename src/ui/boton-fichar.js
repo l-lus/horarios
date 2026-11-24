@@ -2,6 +2,9 @@ import { Movimiento } from '../core/movimiento.js';
 import { Animaciones } from './animaciones.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { icono, html, montar } from '../core/html.js';
+import { $ } from '../core/dom.js';
+import { mostrarToast } from './toast.js';
+import { Controles } from './controles.js';
 
 const { DUR_FICHAJE_OK, DUR_FICHAJE_SALIDA } = Animaciones;
 
@@ -145,3 +148,42 @@ export function setIconoBtn(btn, icono) {
     if (use) use.setAttribute('href', icono);
 }
 
+// ---- aviso del resultado de fichar: toast, destello del botón (o de los campos) y vibración
+const _COLOR_TOAST_POR_TIPO = {
+    success: 'var(--c-green)', error: 'var(--c-red)', warning: 'var(--c-red)', info: 'var(--c-blue)'
+};
+
+function _vibrarFichar(tipo) {
+    if (!('vibrate' in navigator)) return;
+    try {
+        if (tipo === 'success') {
+            navigator.vibrate(40);
+        } else {
+            navigator.vibrate([50, 60, 50]);
+        }
+    } catch (_) { /* la vibración es opcional: algunos navegadores la bloquean */ }
+}
+
+function _flashCampoTipo(tipo, ...ids) {
+    // el botón Fichar tiene su propio feedback (aro relleno que se ve también sobre el énfasis); el resto de los campos parpadea con el borde
+    const campos = ids.filter(id => id !== 'btn-agregar');
+    Controles.flashCampoConClase('campo-flash-color', campos, _COLOR_TOAST_POR_TIPO[tipo] || 'var(--text-main)');
+    if (campos.length < ids.length) {
+        destellarResultadoFichar($('btn-agregar'), tipo);
+        _vibrarFichar(tipo);
+    }
+}
+
+/**
+ * @param {string} msg
+ * @param {string} [tipo]
+ * @param {{ btn?: HTMLElement|null, duracion?: number }} [opciones]
+ */
+export function avisarFichaje(msg, tipo = 'error', { btn = null, duracion = undefined } = {}) {
+    if (tipo !== 'success') salirExitoFichaje($('btn-agregar'));
+    if (btn) resetearBoton(btn);
+    if (msg) mostrarToast(msg, tipo, duracion);
+    _flashCampoTipo(tipo, 'btn-agregar');
+    // un fichaje que falla (error o aviso, no un simple «completá los campos») muestra la X con la misma animación que el check
+    if (tipo === 'error' || tipo === 'warning') animarErrorFichaje($('btn-agregar'));
+}

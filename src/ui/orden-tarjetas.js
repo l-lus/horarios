@@ -4,7 +4,7 @@ import { clavesDeLayout, leerLayout, columnasDesdeOrden, prepararColumnas, mover
 import { $, alClic } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
 import { uiAnimarReubicacion, uiArrastreLargo, REUBICACION_MS } from './arrastre.js';
 import { mostrarToast, _cerrarToastActual } from './toast.js';
 import { VistaPrevia, VENTANA_PERSONALIZAR_MS, AVISO_PERSONALIZAR_MS } from './vista-previa.js';
@@ -12,10 +12,10 @@ import { VistaPrevia, VENTANA_PERSONALIZAR_MS, AVISO_PERSONALIZAR_MS } from './v
 // ====================================================================
 // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
 // ====================================================================
-const { _crearToggleConfig, _setBtnActivo } = UIBase;
+const { crearToggleConfig, setBtnActivo } = Controles;
 
 const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBotonPersistir } =
-    _crearToggleConfig({
+    crearToggleConfig({
         getVal: () => Preferencias.PERSISTIR_TARJETAS.get(),
         setVal: (v) => Preferencias.PERSISTIR_TARJETAS.set(v),
         btnId: 'btn-toggle-persistir-tarjetas',
@@ -26,7 +26,7 @@ function toggleVisibilidadCard(cual) {
     const nuevo = !Almacenamiento.getBoolean(key, true, true);
     Almacenamiento.setItem(key, nuevo, true);
     aplicarVisibilidadCard(cual, nuevo);
-    _setBtnActivo('btn-toggle-card-' + cual, nuevo);
+    setBtnActivo('btn-toggle-card-' + cual, nuevo);
     aplicarOrdenCards(obtenerOrdenCards());   // una columna sin tarjetas visibles deja de ocupar lugar
     EventosApp.emit('tarjetas:visibilidad');
 }
@@ -40,7 +40,7 @@ function aplicarVisibilidadCards() {
     CARDS.forEach(cual => {
         const visible = Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(cual), true, true);
         aplicarVisibilidadCard(cual, visible);
-        _setBtnActivo('btn-toggle-card-' + cual, visible);
+        setBtnActivo('btn-toggle-card-' + cual, visible);
     });
     EventosApp.emit('tarjetas:visibilidad');
 }
@@ -145,7 +145,6 @@ EventosApp.on('config:tarjetas', () => {
 // Al pasar de escritorio a móvil (o al revés, ej. girar la pantalla o redimensionar) se arma el diseño del modo nuevo
 _consultaEscritorio.addEventListener('change', () => aplicarOrdenCards(obtenerOrdenCards()));
 _consultaAncha.addEventListener('change', () => aplicarOrdenCards(obtenerOrdenCards()));
-
 
 function obtenerCardsVisibles() {
     const cards = [];

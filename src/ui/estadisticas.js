@@ -6,7 +6,7 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { EstadisticasPeriodo } from '../services/estadisticas-periodo.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
 import { Configuracion } from './configuracion.js';
 import { html, icono } from '../core/html.js';
 import { EstadoApp } from '../services/estado-app.js';
@@ -17,14 +17,13 @@ import { Animaciones } from './animaciones.js';
 // ====================================================================
 //                     UI STATISTICS MODULE
 // ====================================================================
-const { _poblarSelect, toggleSeccionGen } = UIBase;
+const { poblarSelect, toggleSeccionGen } = Controles;
 const { _animarSlideElemento, _animarFadeSwap } = Animaciones;
 
 let modoEstadisticas = 'mensual';
 let _ultimosStatsRenderizados = null;
 
 const { calcularEstadisticasMes, calcularEstadisticasAnio, calcularEstadisticasSemana } = EstadisticasPeriodo;
-
 
 function _renderizarStats(stats, opciones = {}) {
     const { mostrarBtnReporte = true } = opciones;
@@ -124,7 +123,7 @@ function _renderSelectorStats() {
 function poblarSelectorAnios() {
     const anios = [...new Set(EstadoApp.registros().map(r => r.fecha.substring(0, 4)))].sort().reverse();
     const anioActual = String(new Date().getFullYear());
-    _poblarSelect('select-anio-stats', anios, a => a, anioActual, actualizarEstadisticasAnio);
+    poblarSelect('select-anio-stats', anios, a => a, anioActual, actualizarEstadisticasAnio);
 }
 
 function actualizarEstadisticasAnio(anio) {
@@ -146,7 +145,7 @@ function _obtenerSemanas() {
 function poblarSelectorSemanas() {
     const semanas = _obtenerSemanas();
     const lunesISO = TiempoUtils.formatearFechaLocal(TiempoUtils.obtenerLunes());
-    _poblarSelect('select-semana-stats', semanas, TiempoUtils.formatearRangoSemana, lunesISO, actualizarEstadisticasSemana, TiempoUtils.agruparMesesPorAnio);
+    poblarSelect('select-semana-stats', semanas, TiempoUtils.formatearRangoSemana, lunesISO, actualizarEstadisticasSemana, TiempoUtils.agruparMesesPorAnio);
 }
 
 function actualizarEstadisticasSemana(lunesISO) {
@@ -202,7 +201,7 @@ function togglePeriodoStats(direccion = 1) {
 function poblarSelectorMeses() {
     const meses = [...new Set(EstadoApp.registros().map(r => TiempoUtils.claveMes(r.fecha)))].sort().reverse();
     const mesActual = TiempoUtils.claveMes(TiempoUtils.obtenerFechaHoy());
-    _poblarSelect('select-mes-stats', meses, TiempoUtils.nombreMesCapitalizado, mesActual, actualizarEstadisticas, TiempoUtils.agruparMesesPorAnio);
+    poblarSelect('select-mes-stats', meses, TiempoUtils.nombreMesCapitalizado, mesActual, actualizarEstadisticas, TiempoUtils.agruparMesesPorAnio);
 }
 
 const {

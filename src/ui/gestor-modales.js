@@ -1,4 +1,5 @@
 import { $ } from '../core/dom.js';
+import { Controles } from './controles.js';
 
 // ====================================================================
 // MODAL MANAGER MODULE
@@ -328,7 +329,7 @@ function _confirmar(texto, labelOk, icono, opciones) {
         const conCasilla = !!(opciones.casilla && contenedor && casilla);
         contenedor?.classList.toggle('hidden', !conCasilla);
         const marcar = (/** @type {boolean} */ v) => {
-            casilla?.classList.toggle('btn-activo', v);
+            Controles.setBtnActivo(casilla, v);
             casilla?.setAttribute('aria-pressed', String(v));
         };
         marcar(false);
@@ -338,9 +339,9 @@ function _confirmar(texto, labelOk, icono, opciones) {
             if (t) t.textContent = opciones.casilla.titulo;
             if (d) { d.textContent = opciones.casilla.detalle || ''; d.classList.toggle('hidden', !opciones.casilla.detalle); }
         }
-        const alternarCasilla = () => marcar(!casilla?.classList.contains('btn-activo'));
+        const alternarCasilla = () => marcar(!Controles.esBtnActivo(casilla));
 
-        const ok = () => responder({ confirmado: true, marcada: conCasilla && !!casilla?.classList.contains('btn-activo') });
+        const ok = () => responder({ confirmado: true, marcada: conCasilla && Controles.esBtnActivo(casilla) });
         const cancel = () => responder(NO);
         btnOk.addEventListener('click', ok);
         btnCancel.addEventListener('click', cancel);
@@ -353,4 +354,20 @@ function _confirmar(texto, labelOk, icono, opciones) {
     }, NO);
 }
 
-export const GestorModales = { abrir, cerrar, alternar, cerrarTodos, confirmar, confirmarConCasilla, preguntar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, registrarAccionVolver };
+/** Abre `modalId` encima del modal que esté abierto (que queda como su padre, al que vuelve al cerrar). @param {any} [setupFn] */
+function abrirConPadre(modalId, setupFn = null) {
+    const modalAbierto = document.querySelector('.modal.show');
+    const padre = modalAbierto ? modalAbierto.id : null;
+    if (setupFn) setupFn();
+    if (padre) alternar(padre, modalId);
+    else abrir(modalId);
+}
+
+/** Cierra `modalId` y vuelve a su padre si lo tiene. @param {any} [callbackAbrirPadre] */
+function cerrarConPadre(modalId, callbackAbrirPadre = null) {
+    const padre = (_padres[modalId] || null);
+    if (padre) alternar(modalId, padre, null, callbackAbrirPadre ? () => callbackAbrirPadre(padre) : null);
+    else cerrar(modalId);
+}
+
+export const GestorModales = { abrir, cerrar, alternar, abrirConPadre, cerrarConPadre, cerrarTodos, confirmar, confirmarConCasilla, preguntar, ejecutarAccionCierre: _ejecutarAccionCierre, getPadre: (id) => _padres[id] || null, registrarAccionVolver };

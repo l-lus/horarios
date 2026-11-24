@@ -1,6 +1,7 @@
 import { $, alternarVisibilidadClave } from '../core/dom.js';
 import { FraseCifrado } from '../services/frase-cifrado.js';
 import { mostrarToast } from './toast.js';
+import { Controles } from './controles.js';
 
 // ====================================================================
 // CAMPO DE FRASE — el bloque «frase de cifrado» del modal de respaldo (centro-respaldo.js)
@@ -23,7 +24,7 @@ export class CampoFrase {
         $(input)?.addEventListener('input', () => this.alCambiar());
         if (ojo) $(ojo)?.addEventListener('click', () => this.alternarVisible());
         if (generar) $(generar)?.addEventListener('click', () => this.generar());
-        if (recordar) $(recordar)?.addEventListener('click', () => { $(recordar)?.classList.toggle('btn-activo'); this.alCambiar(); });
+        if (recordar) $(recordar)?.addEventListener('click', () => { Controles.alternarBtnActivo(recordar); this.alCambiar(); });
     }
 
     /**
@@ -34,7 +35,7 @@ export class CampoFrase {
         const campo = $(this.ids.input);
         const actual = FraseCifrado.actual();
         if (campo) { campo.value = actual; campo.type = 'password'; }
-        if (this.ids.recordar) $(this.ids.recordar)?.classList.toggle('btn-activo', actual ? FraseCifrado.recordada() : true);
+        if (this.ids.recordar) Controles.setBtnActivo(this.ids.recordar, actual ? FraseCifrado.recordada() : true);
         this.alCambiar();
     }
 
@@ -59,7 +60,7 @@ export class CampoFrase {
 
     /** ¿Está activado «Recordar en este navegador»? Sin interruptor propio se mantiene como ya estaba guardada. */
     recordar() {
-        return this.ids.recordar ? !!$(this.ids.recordar)?.classList.contains('btn-activo') : FraseCifrado.recordada();
+        return this.ids.recordar ? Controles.esBtnActivo(this.ids.recordar) : FraseCifrado.recordada();
     }
 
     /** ¿Lo escrito (y el interruptor) difiere de lo guardado? */

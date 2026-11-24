@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
-**Última actualización:** 2026-11-15  
-**Estado:** Arquitectura modularizada y saneada (117 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Última actualización:** 2026-11-24  
+**Estado:** Arquitectura modularizada y saneada (118 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -42,7 +42,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (117 módulos)
+├── src/                        # Código fuente en ES Modules (118 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── oauth-callback.js       # Script de oauth-callback.html (fuera del grafo de la app, sin imports)
 │   ├── data/                   # Catálogos y datos estáticos puros
@@ -266,7 +266,8 @@ Las máscaras (`mask-image`, el arco del anillo) usan `#000`/`#fff` literales a 
 | Archivo | Export | Responsabilidad |
 |---|---|---|
 | [`src/ui/orquestador.js`](../src/ui/orquestador.js) | `OrquestadorUI` | Coordinador principal de UI: inicializa todos los submódulos visuales, listeners globales y conecta las notificaciones de `GestionDatos`. |
-| [`src/ui/base.js`](../src/ui/base.js) | `UIBase` | Helpers de UI propios: errores de campos, toggles de configuración, selects, flashes de campo, descargas, secciones colapsables y apertura de modales con padre. No reexporta: gestos, toasts, botón Fichar, popups, scroll y animaciones se importan de su módulo. |
+| [`src/ui/controles.js`](../src/ui/controles.js) | `Controles` | Controles genéricos: botones con estado (`setBtnActivo`, `esBtnActivo`, `alternarBtnActivo`, `setBtnDisabled`), interruptores de Ajustes (`crearToggleConfig`), selects (`crearOpcion`, `poblarSelect`), secciones plegables (`toggleSeccionGen`), errores de campos y destellos (`flashCampo`, `aplicarFeedbackCampos`). |
+| [`src/ui/descarga.js`](../src/ui/descarga.js) | `Descarga` | Bajar un archivo generado en el navegador (`descargarArchivo`) y el nombre del perfil apto para el archivo (`obtenerNombrePerfilSafe`). |
 | [`src/ui/gestos.js`](../src/ui/gestos.js) | `registrarSwipe`, `debounce`, `_crearPressHold` | Gestos táctiles, debounce y botones de mantener presionado. |
 | [`src/ui/recarga-gesto.js`](../src/ui/recarga-gesto.js) | `RecargaGesto` | Reemplaza el pull-to-refresh nativo: las tarjetas se desvanecen al tirar y antes de recargar, y aparecen con fundido al cargar. |
 | [`src/ui/toast.js`](../src/ui/toast.js) | `mostrarToast`, `_cerrarToastActual`, `_habilitarCierreToast` | Cola de avisos (toasts) con cierre por click o swipe. |
@@ -392,6 +393,7 @@ Cuando necesites agregar una funcionalidad nueva, usá estas preguntas para deci
 | **ARQ-15** | Tarjeta de atajos eliminada; diseño libre de tarjetas en hasta 3 columnas (3.3) con la tarjeta de estado reubicable; `style.display` reemplazado por `.hidden` en los casos aislados; duraciones, tamaño compacto y esperas pasadas a tokens/constantes (`--dur-*`, `--control-sm`, `TOAST_MS`, `DEMORA_ARRANQUE_MS`); `calcularEstadoCard`, `derivarVistaHoy`, `_renderizarCalendario`, `_popupStat` e `iniciarDragTarjetas` divididos en funciones menores | ✅ Aplicado |
 | **ARQ-16** | Refactor de helpers y división de servicios: `Cambios` (un solo camino para cerrar un cambio en los registros, guardando antes de la animación), `TiempoFuera`, `Jornada`, `Preferencias` (clave, valor por defecto y alcance de las opciones booleanas), tabla `CONFIG_RESPALDO` en `importar-exportar.js`; `filtros-periodos.js` se divide en `filtros`, `jornada`, `edicion-grupo`, `operaciones-lote` y `saldo-semanal`, y de `compensatorios.js` salen `dias-habiles` y `objetivos`. La lista se dibuja solo al mostrarla y el reloj corre por minuto | ✅ Aplicado |
 | **ARQ-17** | Revisión de normas (2026-11-15): `RecordatorioPush.registrarUso` sin `document`/`matchMedia` (lo pasa `main.js`) y test de capas que detecta cualquier `document`; `style.display` → `.hidden` (selector de meses con `Calendario.selectorMesesAbierto`, botón Instalar, tramos del anillo); `CORTES_LAYOUT` con `TABLETA` y `MOVIL`; `--dur-pop-in`/`--dur-pop-out` leídos por `popups.js`; tokens de brillo, tipografía grande y sombras; `tarjeta-estilos.js` (875 líneas) dividido en piezas/anillo/línea/filas y su CSS en `tarjeta-estilos.css`; tests nuevos de tokens y cortes (3.4) | ✅ Aplicado |
+| **ARQ-18** | Revisión de funciones (2026-11-24): `ui/base.js` repartido por responsabilidad (`controles.js`, `descarga.js`, `GestorModales.abrirConPadre`/`cerrarConPadre`, `avisarFichaje` en `boton-fichar.js`, medidas pegajosas en `historico.js`); `core/catalogo.js` (ciclos de opciones), `core/codificacion.js` (base64/hex/ids), `crearRanuraPopup`, `ui/acciones-ui.js` (UI → UI sin pasar por el puerto de servicios); test de imports sin usar; lista duplicada de módulos en `sw.js` eliminada | ✅ Aplicado |
 
 ---
 

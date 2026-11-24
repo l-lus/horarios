@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import { GestorModales } from './gestor-modales.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
 import { TarjetaFichaje } from './tarjeta-fichaje.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { ImportarExportar } from '../services/importar-exportar.js';
@@ -17,7 +17,7 @@ import { ConfigSync } from '../services/config-sync.js';
 // Cada proveedor aporta su servicio (subir, bajar, leerActual y si lo remoto está cifrado), los ids de sus botones y sus
 // textos. El cifrado, la comprobación antes de pisar, el pedido de frase y el resumen al bajar son los mismos para todos.
 // El modal de respaldo (centro-respaldo.js) y el de Drive (drive-respaldo.js) aportan lo suyo con `conectarModal`.
-const { _flashCampo } = UIBase;
+const { flashCampo } = Controles;
 
 /**
  * @typedef {{
@@ -89,7 +89,7 @@ function crear(proveedor) {
         const iconoPerfil = $('header-profile-icon');
         iconoPerfil?.classList.add('icono-spin');
         btnPerfil?.classList.add('sincronizando');
-        if (!document.documentElement.hasAttribute('data-enfasis')) _flashCampo('header-profile-btn');
+        if (!document.documentElement.hasAttribute('data-enfasis')) flashCampo('header-profile-btn');
 
         try {
             await accion();

@@ -7,7 +7,8 @@ import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { TiposRegistro } from '../services/tipos-registro.js';
 import { GestionDatos } from '../services/gestion-datos.js';
-import { UIBase } from './base.js';
+import { PosicionHeader } from '../core/posicion-header.js';
+import { debounce } from './gestos.js';
 import { Calendario } from './calendario.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { Compensatorios } from '../services/compensatorios.js';
@@ -24,7 +25,24 @@ import { Filtros } from '../services/filtros.js';
 // ====================================================================
 //                     UI HISTORY MODULE
 // ====================================================================
-const { _actualizarOffsetsStickyMes } = UIBase;
+function _actualizarOffsetsStickyMes() {
+    const header = document.querySelector('.header');
+    const mesHeader = document.querySelector('.registro-mes-header');
+    const root = document.documentElement.style;
+    // --app-header-h es lo que el encabezado le saca a la parte de arriba (los meses del histórico se pegan debajo): 0 si va abajo o a un costado.
+    // --header-alto es su altura sea cual sea la posición (el margen que se le deja abajo cuando va abajo)
+    if (header) {
+        const alto = header.getBoundingClientRect().height;
+        root.setProperty('--app-header-h', (PosicionHeader.actual() === 'top' ? alto : 0) + 'px');
+        root.setProperty('--header-alto', alto + 'px');
+    }
+    // con la lista oculta mide 0: se conserva el valor anterior
+    const altoMes = mesHeader?.getBoundingClientRect().height;
+    if (altoMes) root.setProperty('--mes-header-h', altoMes + 'px');
+}
+const actualizarOffsetsStickyMesDebounced = debounce(_actualizarOffsetsStickyMes, 150);
+// Al mover el encabezado de lugar cambia lo que ocupa arriba: se vuelve a medir
+EventosApp.on('header:posicion', _actualizarOffsetsStickyMes);
 const { _crearFantasmaSiVisible, DUR_ANIM, _aArray, _estaColapsado } = Animaciones;
 
 const {
@@ -437,6 +455,8 @@ function bindEventos() {
 }
 
 export const Historico = {
+    _actualizarOffsetsStickyMes,
+    actualizarOffsetsStickyMesDebounced,
     bindEventos,
     actualizarListaRegistros,
     _initListenerAccionesLista,

@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { UIBase } from './base.js';
+import { GestorModales } from './gestor-modales.js';
 import { Animaciones } from './animaciones.js';
 import { mostrarToast } from './toast.js';
 import { FeriadosAR } from '../services/feriados-ar.js';
@@ -8,7 +8,7 @@ import { FeriadosAR } from '../services/feriados-ar.js';
 // ====================================================================
 // UI VERIFICAR FERIADOS (Ajustes → Jornada laboral)
 // ====================================================================
-const { _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
+const { abrirConPadre, cerrarConPadre } = GestorModales;
 
 const ID_LISTA = 'lista-verificar-feriados';
 
@@ -97,11 +97,11 @@ function _renderizar() {
 }
 
 function abrirModalVerificarFeriados() {
-    _abrirModalConPadre('modal-verificar-feriados', _renderizar);
+    abrirConPadre('modal-verificar-feriados', _renderizar);
 }
 
 function cerrarModalVerificarFeriados() {
-    _cerrarModalConPadre('modal-verificar-feriados');
+    cerrarConPadre('modal-verificar-feriados');
 }
 
 async function aplicar() {

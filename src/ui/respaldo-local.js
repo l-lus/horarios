@@ -1,6 +1,8 @@
 import { $, setColapsable, alClic } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { UIBase } from './base.js';
+import { GestorModales } from './gestor-modales.js';
+import { Descarga } from './descarga.js';
+import { Controles } from './controles.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { ImportarExportar } from '../services/importar-exportar.js';
@@ -13,16 +15,18 @@ import { FraseCifrado } from '../services/frase-cifrado.js';
 // ====================================================================
 const ESPERA_MODAL_MS = 50;   // deja abrir el modal antes de lanzar el selector de archivos
 
-const { descargarArchivo, obtenerNombrePerfilSafe, _setBtnActivo, _setBtnDisabled, _abrirModalConPadre, _cerrarModalConPadre } = UIBase;
+const { descargarArchivo, obtenerNombrePerfilSafe } = Descarga;
+const { setBtnActivo, setBtnDisabled } = Controles;
+const { abrirConPadre, cerrarConPadre } = GestorModales;
 
 // «Cifrar este archivo»: usa la frase de la app, que se carga en «Respaldo y sincronización» (centro-respaldo.js). Sin frase no
 // se puede marcar; con frase viene marcado y se puede desmarcar para sacar ese archivo en claro.
-const _cifrarExportacion = () => !!$('btn-toggle-export-cifrar')?.classList.contains('btn-activo');
+const _cifrarExportacion = () => Controles.esBtnActivo('btn-toggle-export-cifrar');
 
 function _prepararCifrado() {
     const hayFrase = FraseCifrado.disponible();
-    _setBtnActivo('btn-toggle-export-cifrar', hayFrase);
-    _setBtnDisabled('btn-toggle-export-cifrar', !hayFrase);
+    setBtnActivo('btn-toggle-export-cifrar', hayFrase);
+    setBtnDisabled('btn-toggle-export-cifrar', !hayFrase);
     const desc = $('export-cifrar-desc');
     if (desc) desc.textContent = hayFrase ? 'Para restaurarlo hace falta la frase de cifrado.' : 'Primero cargá una frase en Respaldo y sincronización → Cifrado.';
 }
@@ -31,7 +35,7 @@ function _prepararCifrado() {
 const _fraseParaExportar = () => (_cifrarExportacion() && FraseCifrado.disponible() ? FraseCifrado.actual() : '');
 
 // Respaldar y Restaurar se abren desde Ajustes (y al cerrar vuelven ahí) o desde la barra del histórico (y al cerrar no queda
-// nada abierto): UIBase._abrirModalConPadre y _cerrarModalConPadre resuelven los dos casos según haya o no un modal a la vista.
+// nada abierto): GestorModales.abrirConPadre y cerrarConPadre resuelven los dos casos según haya o no un modal a la vista.
 function _actualizarBotonVolver(id, desdeLista) {
     const btn = $(id);
     if (!btn) return;
@@ -40,7 +44,7 @@ function _actualizarBotonVolver(id, desdeLista) {
 }
 
 function mostrarImportar(desdeLista = false) {
-    _abrirModalConPadre('modal-importar', () => {
+    abrirConPadre('modal-importar', () => {
         $('file-import').value = '';
 
         const nombreEl = $('nombre-archivo-seleccionado');
@@ -66,11 +70,11 @@ function mostrarImportar(desdeLista = false) {
 
 function cerrarImportar() {
     $('file-import').value = '';
-    _cerrarModalConPadre('modal-importar');
+    cerrarConPadre('modal-importar');
 }
 
 function mostrarExportar(desdeLista = false) {
-    _abrirModalConPadre('modal-exportar', () => {
+    abrirConPadre('modal-exportar', () => {
         const tipoSelect = $('tipo-exportacion');
         if (tipoSelect) tipoSelect.value = 'todo';
 
@@ -86,7 +90,7 @@ function mostrarExportar(desdeLista = false) {
 }
 
 function cerrarExportar() {
-    _cerrarModalConPadre('modal-exportar');
+    cerrarConPadre('modal-exportar');
 }
 
 function toggleCamposRangoExport() {
@@ -175,10 +179,9 @@ async function exportarRango(desde, hasta, esMes = false, frase = '') {
     }
 }
 
-
 function bindEventos() {
     alClic({
-        'btn-toggle-export-cifrar': () => _setBtnActivo('btn-toggle-export-cifrar', !_cifrarExportacion()),
+        'btn-toggle-export-cifrar': () => setBtnActivo('btn-toggle-export-cifrar', !_cifrarExportacion()),
         'btn-exportar-descargar': () => ejecutarExportacion(),
         'btn-volver-exportar': () => cerrarExportar(),
         'btn-seleccionar-archivo': () => $('file-import').click(),

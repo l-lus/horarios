@@ -1,6 +1,6 @@
 import { $ } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
 import { setIconoBtn } from './boton-fichar.js';
 import { _crearPressHold } from './gestos.js';
 import { Animaciones } from './animaciones.js';
@@ -12,7 +12,7 @@ import { mostrarToast } from './toast.js';
 // Sincronización automática (manual / restaurar / respaldar al abrir la app), comportamiento al bajar, límites por hora y
 // franja horaria. Es una sola por perfil y corre con el destino principal. Todo se guarda en vivo, al tocar cada control (el rango
 // horario, al salir del campo y solo si es válido). Los ids llevan el prefijo dado: btn-toggle-sync-backup, sync-rango-desde, …
-const { _setBtnDisabled, _setBtnActivo } = UIBase;
+const { setBtnDisabled, setBtnActivo } = Controles;
 const { _animarValor } = Animaciones;
 
 /**
@@ -52,8 +52,8 @@ function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
     /** Habilita o no los controles según el destino principal sea un servicio listo para sincronizar. */
     function setHabilitado(conectado) {
         _habilitado = conectado;
-        _setBtnDisabled(id('btn-toggle-{p}-backup'), !conectado);
-        _setBtnDisabled(id('btn-toggle-{p}-merge'), !(conectado && estadoActual() === 1));
+        setBtnDisabled(id('btn-toggle-{p}-backup'), !conectado);
+        setBtnDisabled(id('btn-toggle-{p}-merge'), !(conectado && estadoActual() === 1));
         actualizarBotonBackup();
         actualizarBotonMerge();
         actualizarResumen();
@@ -88,7 +88,7 @@ function crear({ prefijo, servicio, nombre, alCambiar = () => { } }) {
             { texto: 'Respaldar', hint: ` · sube tus datos a ${nombre()} al abrir la app`, activo: true }
         ];
         const c = configs[estado];
-        _setBtnActivo(btn.id, c.activo);
+        setBtnActivo(btn.id, c.activo);
         if (label) label.textContent = c.texto;
         if (hint) hint.textContent = _habilitado ? c.hint : ' · necesita Gist o Drive conectado como destino principal';
         rangoEl?.classList.toggle('disabled', !(estado === 1 || estado === 2));

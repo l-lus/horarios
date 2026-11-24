@@ -1,7 +1,7 @@
 import { $, alClic } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
 import { html, icono, montar } from '../core/html.js';
-import { UIBase } from './base.js';
+import { Controles } from './controles.js';
 import { GestorModales } from './gestor-modales.js';
 import { mostrarToast } from './toast.js';
 import { DriveSync } from './drive-sync.js';
@@ -15,7 +15,7 @@ import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
 // termina el canje y se sigue en el modal de respaldo. Subir y Bajar, el cifrado y la automatización están en «Respaldo y sincronización»
 // (centro-respaldo.js), que se pone al día con el evento 'respaldo:conexion'. Los flujos (drive-sync.js) le piden a este
 // módulo que elija el respaldo cuando el perfil todavía no tiene uno.
-const { _setBtnDisabled } = UIBase;
+const { setBtnDisabled } = Controles;
 
 function _formatearFecha(iso) {
     const d = new Date(iso);
@@ -31,7 +31,7 @@ function actualizarEstado() {
     if (resumenCuenta) resumenCuenta.textContent = conectado ? (cuenta || 'Cuenta conectada') : 'Conectá tu cuenta de Google para empezar';
     const accion = $('drive-cuenta-accion');
     if (accion) accion.textContent = conectado ? 'Desconectar' : 'Conectar';
-    _setBtnDisabled('btn-drive-cuenta', !disponible && !conectado);
+    setBtnDisabled('btn-drive-cuenta', !disponible && !conectado);
 
     const resumenArchivo = $('drive-archivo-resumen');
     if (resumenArchivo) {
@@ -39,7 +39,7 @@ function actualizarEstado() {
             ? (SincronizacionDrive.getArchivoNombre() || 'Respaldo vinculado')
             : 'Ninguno · se crea al subir o se elige al bajar';
     }
-    _setBtnDisabled('btn-drive-elegir', !conectado);
+    setBtnDisabled('btn-drive-elegir', !conectado);
 }
 
 // --------------------------------------------------------------------

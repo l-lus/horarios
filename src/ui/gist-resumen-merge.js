@@ -1,5 +1,6 @@
 import { $, setColapsable } from '../core/dom.js';
 import { icono, montar } from '../core/html.js';
+import { Controles } from './controles.js';
 
 // ====================================================================
 //              UI GIST MERGE SUMMARY (modal "Datos del Gist")
@@ -42,7 +43,7 @@ function _crearSelectorModoMerge(onCambio, origen) {
         pintar(modo) {
             btns.forEach(b => {
                 const activo = b.dataset.modo === modo;
-                b.classList.toggle('btn-activo', activo);
+                Controles.setBtnActivo(b, activo);
                 b.setAttribute('aria-pressed', String(activo));
             });
         }

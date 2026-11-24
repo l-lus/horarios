@@ -560,7 +560,7 @@ function _vistaSinRegistro(est) {
         titulo: _tituloDia(TiempoUtils.obtenerNombreDia(TiempoUtils.obtenerFechaHoy())),
         stats: esDiaHabil ? '🎒' : '🌞',
         mensaje: esDiaHabil
-            ? (horasDiarias === 0 ? '' : 'Esperando registro...')
+            ? (horasDiarias === 0 ? '' : 'Pendiente…')
             : (horasDiarias === 0 ? '' : 'Día libre'),
         mostrarMensaje: horasDiarias > 0,
         colorBarra: 'blue', anchoBarra: 0,
@@ -569,7 +569,7 @@ function _vistaSinRegistro(est) {
         hint: 'Tocá para ver la Semana',
         resumen: {
             tipo: 'espera', emoji: esDiaHabil ? '🎒' : '🌞',
-            mensaje: esDiaHabil ? (horasDiarias === 0 ? '' : 'Esperando registro…') : (horasDiarias === 0 ? '' : 'Día libre'),
+            mensaje: esDiaHabil ? (horasDiarias === 0 ? '' : 'Pendiente…') : (horasDiarias === 0 ? '' : 'Día libre'),
             libre: !esDiaHabil,   // día no laborable: no hay entrada ni salida que esperar
             banco: _resumenBanco(est),
         },

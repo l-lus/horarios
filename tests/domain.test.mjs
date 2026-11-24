@@ -1131,7 +1131,7 @@ test('TarjetaFichajeVista: el resumen del día alimenta los diseños propios (re
 
     const sin = TarjetaFichajeVista.derivarVistaHoy({ ...base, regHoy: null, tiempoHoy: 0 }).resumen;
     assert.equal(sin.tipo, 'espera');
-    assert.equal(sin.mensaje, 'Esperando registro…');
+    assert.equal(sin.mensaje, 'Pendiente…');
     assert.equal(sin.banco.texto, '+30 min');
     assert.equal(sin.banco.positivo, true);
 

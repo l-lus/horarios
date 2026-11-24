@@ -66,7 +66,7 @@ export function resumenesDeMedida() {
             linea: { cerrado: false, ahoraRel: 60, salidaRel: 480, bufferRel: 420, hayBanda: true },
             balance, banco, tiempoFuera: { minutos: 5, corriendo: false, texto: '5 min' }
         },
-        { tipo: 'espera', emoji: '🎒', mensaje: 'Esperando registro…', banco },
+        { tipo: 'espera', emoji: '🎒', mensaje: 'Pendiente…', banco },
         { tipo: 'especial', emoji: '🏖️', etiqueta: 'Vacaciones', descripcion: '¡Vacaciones!', color: 'orange' },
         {
             tipo: 'semana', abierta: true, color: 'blue', mensaje: '', progreso: 50,

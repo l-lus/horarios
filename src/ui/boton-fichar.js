@@ -5,6 +5,7 @@ import { icono, html, montar } from '../core/html.js';
 import { $ } from '../core/dom.js';
 import { mostrarToast } from './toast.js';
 import { Controles } from './controles.js';
+import { vibrar } from './gestos.js';
 
 const { DUR_FICHAJE_OK, DUR_FICHAJE_SALIDA } = Animaciones;
 
@@ -154,14 +155,7 @@ const _COLOR_TOAST_POR_TIPO = {
 };
 
 function _vibrarFichar(tipo) {
-    if (!('vibrate' in navigator)) return;
-    try {
-        if (tipo === 'success') {
-            navigator.vibrate(40);
-        } else {
-            navigator.vibrate([50, 60, 50]);
-        }
-    } catch (_) { /* la vibración es opcional: algunos navegadores la bloquean */ }
+    vibrar(tipo === 'success' ? 40 : [50, 60, 50]);
 }
 
 function _flashCampoTipo(tipo, ...ids) {

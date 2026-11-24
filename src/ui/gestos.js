@@ -89,3 +89,13 @@ export function _crearPressHold(accionFn) {
     };
     return { iniciar, detener, vincular };
 }
+
+/**
+ * Vibración corta de confirmación (opcional: sin soporte, o antes de que la persona toque la página, no hace nada y no avisa).
+ * @param {number | number[]} patron
+ */
+export function vibrar(patron) {
+    if (typeof navigator === 'undefined' || !('vibrate' in navigator)) return;
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;   // el navegador la bloquearía con un aviso en la consola
+    try { navigator.vibrate(patron); } catch (_) { /* algunos navegadores la bloquean */ }
+}

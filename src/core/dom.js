@@ -1,3 +1,5 @@
+import { CORTES_LAYOUT } from './constantes.js';
+
 // ====================================================================
 // DOM & COLLAPSIBLES — shared helpers
 // ====================================================================
@@ -12,6 +14,12 @@ export const $ = id => /** @type {HTMLInputElement} */ (document.getElementById(
 /** Mouse o trackpad (puede hacer hover y apunta fino): el mismo criterio que usa el CSS para lo que es solo de PC. */
 export const CONSULTA_PUNTERO_FINO = '(hover: hover) and (pointer: fine)';
 export const esPunteroFino = () => window.matchMedia(CONSULTA_PUNTERO_FINO).matches;
+
+/** ¿Ancho de PC? El mismo corte que el CSS y el orden de las tarjetas (CORTES_LAYOUT.ESCRITORIO). Sin ventana (Node), no. */
+export const esEscritorio = () => typeof window !== 'undefined' && !!window.matchMedia?.(CORTES_LAYOUT.ESCRITORIO).matches;
+
+/** ¿La app corre instalada (PWA en su propia ventana, o agregada a la pantalla de inicio en iOS)? */
+export const esPWAInstalada = () => window.matchMedia('(display-mode: standalone)').matches || /** @type {any} */ (window.navigator).standalone === true;
 
 /** Alterna un campo de contraseña entre oculto y a la vista (el botón del ojo). @param {HTMLInputElement | null} campo */
 export function alternarVisibilidadClave(campo) {

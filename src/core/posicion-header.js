@@ -2,6 +2,7 @@ import { STORAGE_KEYS, CORTES_LAYOUT } from './constantes.js';
 import { Almacenamiento } from './almacenamiento.js';
 import { EventosApp } from './eventos.js';
 import { catalogoCiclico } from './catalogo.js';
+import { esEscritorio } from './dom.js';
 
 // ====================================================================
 // POSICIÓN DEL ENCABEZADO
@@ -20,9 +21,7 @@ export const POSICIONES_HEADER = Object.freeze([
 const ID_POR_DEFECTO = 'top';
 const _IDS_MOVIL = Object.freeze(['top', 'bottom']);
 
-/** Mismo corte que el CSS y que el orden de las tarjetas (@media min-width: 1024px). */
-const _consulta = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(CORTES_LAYOUT.ESCRITORIO) : null;
-const _esEscritorio = () => !!_consulta && _consulta.matches;
+const _esEscritorio = esEscritorio;
 
 /** Ids de posición que valen en PC (todas) o en móvil (arriba y abajo). */
 export function posicionesPermitidas(escritorio) {
@@ -93,7 +92,7 @@ function altoSuperior() {
 function init() {
     _aplicar();
     // Al cruzar el corte (girar la pantalla, redimensionar) vale la posición del otro modo
-    if (_consulta) _consulta.addEventListener('change', _aplicar);
+    if (typeof window !== 'undefined') window.matchMedia?.(CORTES_LAYOUT.ESCRITORIO).addEventListener('change', _aplicar);
 }
 
 export const PosicionHeader = { init, actual, guardada, fijar, setPosicion, previsualizar, restaurar, altoSuperior };

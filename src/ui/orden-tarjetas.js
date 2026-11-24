@@ -1,13 +1,14 @@
 import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS, CARDS, CORTES_LAYOUT } from '../core/constantes.js';
 import { clavesDeLayout, leerLayout, columnasDesdeOrden, prepararColumnas, moverCard, tamanosDeColumnas } from '../services/orden-cards.js';
-import { $, alClic } from '../core/dom.js';
+import { $, alClic, esEscritorio } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { Controles } from './controles.js';
 import { uiAnimarReubicacion, uiArrastreLargo, REUBICACION_MS } from './arrastre.js';
 import { mostrarToast, _cerrarToastActual } from './toast.js';
 import { VistaPrevia, VENTANA_PERSONALIZAR_MS, AVISO_PERSONALIZAR_MS } from './vista-previa.js';
+import { vibrar } from './gestos.js';
 
 // ====================================================================
 // UI CARDS LAYOUT MODULE (visibilidad y orden de las tarjetas)
@@ -49,7 +50,7 @@ function aplicarVisibilidadCards() {
 // Mientras no se haya ordenado en móvil, se parte del orden de escritorio.
 const _consultaEscritorio = window.matchMedia(CORTES_LAYOUT.ESCRITORIO);
 const _consultaAncha = window.matchMedia(CORTES_LAYOUT.ANCHO);   // 3 columnas desde 1400px (2 columnas entre 1024 y 1399: un rango más amplio que el de 1200, donde 3 columnas quedaban muy justas)
-const _esEscritorio = () => _consultaEscritorio.matches;
+const _esEscritorio = esEscritorio;
 // Cada cantidad de columnas (1 móvil, 2 y 3 en escritorio) tiene su propio orden y tamaños (ver clavesDeLayout / leerLayout en services/orden-cards.js)
 const _modo = () => (!_esEscritorio() ? 1 : _consultaAncha.matches ? 3 : 2);
 const _maxColumnas = () => _modo();
@@ -302,7 +303,7 @@ function iniciarDragTarjetas() {
             // mantener y soltar sin mover (y dentro de la ventana) = personalizar el estilo de la tarjeta
             if (confirmar && !movido && duracion <= VENTANA_PERSONALIZAR_MS && card.id in PERSONALIZABLES) {
                 _cerrarToastActual();
-                if (navigator.vibrate) { try { navigator.vibrate(20); } catch (_) { /* la vibración es opcional */ } }
+                vibrar(20);
                 EventosApp.emit('tarjeta:personalizar', { tarjeta: PERSONALIZABLES[/** @type {keyof typeof PERSONALIZABLES} */ (card.id)] });
             }
         }
@@ -357,7 +358,7 @@ function iniciarDragOrdenCards() {
         });
         document.body.appendChild(dragClone);
         draggingEl.classList.add('arrastrando');
-        if (navigator.vibrate) navigator.vibrate(30);
+        vibrar(30);
     }
 
     function moveDrag(clientY) {

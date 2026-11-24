@@ -11,6 +11,7 @@ import { crearRanuraPopup } from './popups.js';
 import { EdicionRegistro } from '../services/edicion-registro.js';
 import { Objetivos } from '../services/objetivos.js';
 import { EdicionGrupo } from '../services/edicion-grupo.js';
+import { vibrar } from './gestos.js';
 
 // ====================================================================
 //              UI CALENDAR POPUPS (detalle del día y de la semana)
@@ -158,8 +159,7 @@ function _registrarLongPressSemana(grid) {
         timer = setTimeout(() => {
             timer = null;
             _longPressDisparadoTs = performance.now();
-            const puedeVibrar = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
-            if (puedeVibrar && 'vibrate' in navigator) { try { navigator.vibrate(15); } catch (_) { /* la vibración es opcional */ } }
+            vibrar(15);
             _popupSemana(celda);
         }, LONG_PRESS_MS);
     }, { passive: true });

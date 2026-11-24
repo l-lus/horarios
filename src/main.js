@@ -18,6 +18,7 @@ import { OrquestadorUI } from './ui/orquestador.js';
 import { BienvenidaModal } from './ui/bienvenida-modal.js';
 import { AvisoPush } from './ui/aviso-push.js';
 import { RecargaGesto } from './ui/recarga-gesto.js';
+import { esPWAInstalada } from './core/dom.js';
 
 // ====================================================================
 // MAIN — arranque de la aplicación
@@ -74,7 +75,7 @@ requestAnimationFrame(() => {
     setTimeout(() => AvisoPush.chequearYAvisar(), DEMORA_ARRANQUE_MS.AVISO_PUSH);
     const registrarUso = () => RecordatorioPush.registrarUso({
         visible: document.visibilityState === 'visible',
-        pwa: window.matchMedia('(display-mode: standalone)').matches || /** @type {any} */ (window.navigator).standalone === true
+        pwa: esPWAInstalada()
     });
     setTimeout(registrarUso, DEMORA_ARRANQUE_MS.REGISTRAR_USO);
     document.addEventListener('visibilitychange', registrarUso);

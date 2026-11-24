@@ -21,6 +21,7 @@ import { EstadoApp } from '../services/estado-app.js';
 import { DestinoRespaldo } from '../services/destino-respaldo.js';
 import { SincronizacionGist } from '../services/sincronizacion-gist.js';
 import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
+import { vibrar } from './gestos.js';
 
 // ====================================================================
 // RESPALDO Y SINCRONIZACIÓN — el modal único de los respaldos (Ajustes → Datos)
@@ -221,7 +222,7 @@ function _atajoMantenerAbreRespaldo(/** @type {HTMLElement} */ btn) {
         timer = setTimeout(() => {
             timer = null;
             disparado = true;
-            if ('vibrate' in navigator && navigator.userActivation?.hasBeenActive) { try { navigator.vibrate(15); } catch { /* opcional */ } }
+            vibrar(15);
             abrir();
         }, MANTENER_MS);
     }, { passive: true });

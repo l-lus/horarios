@@ -1,4 +1,5 @@
 import { Movimiento } from '../core/movimiento.js';
+import { vibrar } from './gestos.js';
 
 // ====================================================================
 //              UI DRAG HELPERS (arrastre con pulsación larga y reubicación animada)
@@ -197,9 +198,7 @@ export function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar
                 try { targetCaptura.setPointerCapture(pointerId); } catch (_) { /* el puntero ya no está activo */ }
             }
             try { capturar(el).setPointerCapture(pointerId); } catch (_) { /* el puntero ya no está activo */ }
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                try { navigator.vibrate(35); } catch (_) { /* la vibración es opcional */ }
-            }
+            vibrar(35);
             alEmpezar(el, inicio);
         }, PULSACION_LARGA_MS);
 

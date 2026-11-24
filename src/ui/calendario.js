@@ -1,6 +1,6 @@
 import { Preferencias } from '../core/preferencias.js';
-import { STORAGE_KEYS, CORTES_LAYOUT } from '../core/constantes.js';
-import { $, esPunteroFino } from '../core/dom.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
+import { $, esPunteroFino, esEscritorio } from '../core/dom.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Movimiento } from '../core/movimiento.js';
 import { EventosApp } from '../core/eventos.js';
@@ -332,7 +332,7 @@ function animarEntradaInicial() {
 /** Al cargar, en escritorio y con el calendario a la vista: el mismo destello que el botón «Hoy», cuando termina la entrada. */
 function destellarHoyAlCargar() {
     const grid = $('calendario-grid');
-    if (!window.matchMedia(CORTES_LAYOUT.ESCRITORIO).matches) return;
+    if (!esEscritorio()) return;
     if (!grid || !grid.offsetParent || _estaColapsado(grid)) return;
     setTimeout(_flashDiaHoyCalendario, _entradaInicialMs + 150);
 }

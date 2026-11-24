@@ -1,10 +1,11 @@
-import { CORTES_LAYOUT } from '../core/constantes.js';
 import { PosicionHeader, posicionesPermitidas } from '../core/posicion-header.js';
 import { uiAnimarReubicacion, uiArrastreLargo } from './arrastre.js';
 import { elementosDelLayout, claveDelLayout } from './transicion-layout.js';
 import { VistaPrevia, VENTANA_PERSONALIZAR_MS, AVISO_PERSONALIZAR_MS } from './vista-previa.js';
 import { EventosApp } from '../core/eventos.js';
 import { mostrarToast, _cerrarToastActual } from './toast.js';
+import { vibrar } from './gestos.js';
+import { esEscritorio } from '../core/dom.js';
 
 // ====================================================================
 // UI REUBICAR EL ENCABEZADO (mantener presionado y arrastrar, como las tarjetas)
@@ -14,7 +15,6 @@ import { mostrarToast, _cerrarToastActual } from './toast.js';
 // se acomodan al lugar que deja. Al soltar queda ahí (Escape cancela y vuelve a donde estaba). El dibujo de cada posición es del CSS (<html data-header-pos>,
 // ver core/posicion-header.js).
 // Atajo para el tema (igual que el de las tarjetas, ver orden-tarjetas.js): mantener presionado y soltar sin mover dentro de VENTANA_PERSONALIZAR_MS abre la vista previa del tema.
-const _consultaEscritorio = window.matchMedia(CORTES_LAYOUT.ESCRITORIO);   // mismo corte que el CSS
 
 // Controles del encabezado que conservan su toque o clic normal: no inician el arrastre
 const _SELECTOR_CONTROLES = 'button, a, input, select, textarea';
@@ -48,7 +48,7 @@ function iniciar() {
             return header;
         },
         alEmpezar: (header) => {
-            permitidas = posicionesPermitidas(_consultaEscritorio.matches);
+            permitidas = posicionesPermitidas(esEscritorio());
             destino = PosicionHeader.actual();
             header.classList.add('reubicando');
             document.body.classList.add('header-arrastrando-activa');
@@ -73,7 +73,7 @@ function iniciar() {
             // mantener y soltar sin mover (y dentro de la ventana) = personalizar el tema
             if (confirmar && !movido && duracion <= VENTANA_PERSONALIZAR_MS) {
                 _cerrarToastActual();
-                if (navigator.vibrate) { try { navigator.vibrate(20); } catch (_) { /* la vibración es opcional */ } }
+                vibrar(20);
                 EventosApp.emit('tarjeta:personalizar', { tarjeta: 'tema' });
             }
         }

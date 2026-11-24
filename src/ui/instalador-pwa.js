@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, esPWAInstalada } from '../core/dom.js';
 import { AvisoActualizacion } from './aviso-actualizacion.js';
 import { urlScriptConfiable } from '../core/html.js';
 import { IconosAnimados } from './iconos-animados.js';
@@ -31,8 +31,7 @@ function _mostrarEtiqueta() {
 }
 
 function init() {
-    if (window.matchMedia('(display-mode: standalone)').matches ||
-        /** @type {any} */ (window.navigator).standalone === true) {
+    if (esPWAInstalada()) {
         btnInstall?.classList.add('hidden');
         return;
     }

@@ -166,7 +166,7 @@ function _textoHoverDia(d, esHoy, conRegistro) {
 
 // Segunda línea de la etiqueta de cada día en la barra semanal: el tiempo neto si tiene horas, si no el tipo de día (corto, para que entre)
 function _detalleDia(d) {
-    if (d.estado === ESTADO_DIA.ACTIVO || d.estado === ESTADO_DIA.CERRADO) return d.total > 0 ? TiempoUtils.minutosAHora(TiempoUtils.horasAMinutosRedondeados(d.total)) : 'sin horas';
+    if (d.estado === ESTADO_DIA.ACTIVO || d.estado === ESTADO_DIA.CERRADO) return TiempoUtils.horasATexto(d.total, 'short');   // "3m", "1h 32m" (0m si todavía no hay horas)
     switch (d.estado) {
         case ESTADO_DIA.ESPECIAL: return d.etiqueta ?? 'especial';
         case ESTADO_DIA.SIN_SALIDA: return 'sin salida';

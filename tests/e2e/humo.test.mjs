@@ -461,6 +461,21 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(r, { abierto: 1, cerrado: 0 });
     });
 
+    await t.test('Estadísticas: el botón de período recorre Mensual, Anual y Semanal con un solo selector a la vista', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const visibles = () => ['select-mes-stats', 'select-anio-stats', 'select-semana-stats'].filter(id => !document.getElementById(id).classList.contains('hidden'));
+            const pasos = [];
+            for (let i = 0; i < 3; i++) {
+                h.clic('#btn-toggle-periodo');
+                await h.pausa(900);
+                pasos.push([document.getElementById('label-periodo-toggle').textContent, ...visibles()]);
+            }
+            return pasos;
+        });
+        assert.deepEqual(r, [['Anual', 'select-anio-stats'], ['Semanal', 'select-semana-stats'], ['Mensual', 'select-mes-stats']]);
+    });
+
     await t.test('escritorio: sin desplazamiento lateral ni controles solapados, y sin errores en toda la corrida', async () => {
         await app.tamano(1280, 800, false);
         await evaluar(() => window.humo.pausa(600));

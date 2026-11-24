@@ -92,31 +92,28 @@ function actualizarEstadisticas(mesAnio = null) {
     _renderizarStats(stats, { mostrarBtnReporte: true });
 }
 
+// Cada período del selector de estadísticas: su select, su nombre, cómo se llena (llenarlo también dibuja sus estadísticas), cómo se dibuja un valor
+// elegido y la aclaración del popup del banco de horas. El botón y el deslizamiento los recorren en este orden.
+const PERIODOS = {
+    mensual: { etiqueta: 'Mensual', select: 'select-mes-stats', poblar: () => poblarSelectorMeses(), actualizar: (v) => actualizarEstadisticas(v),
+        notaSaldo: 'Se calcula a partir del PRIMER REGISTRO del mes.' },
+    anual: { etiqueta: 'Anual', select: 'select-anio-stats', poblar: () => poblarSelectorAnios(), actualizar: (v) => actualizarEstadisticasAnio(v),
+        notaSaldo: 'Se calcula a partir del PRIMER REGISTRO del año.' },
+    semanal: { etiqueta: 'Semanal', select: 'select-semana-stats', poblar: () => poblarSelectorSemanas(), actualizar: (v) => actualizarEstadisticasSemana(v),
+        notaSaldo: 'Se calcula a partir del PRIMER DÍA LABORAL de la semana.' },
+};
+const ORDEN_PERIODOS = /** @type {(keyof typeof PERIODOS)[]} */ (['mensual', 'anual', 'semanal']);
+
+/** El período elegido (uno desconocido cuenta como el mensual). */
+const _periodoActual = () => PERIODOS[/** @type {keyof typeof PERIODOS} */ (modoEstadisticas)] ?? PERIODOS.mensual;
+
+/** Muestra solo el selector del período elegido, pone su nombre y lo llena. */
 function _renderSelectorStats() {
-    const anioEl = $('select-anio-stats');
-    const mesEl = $('select-mes-stats');
-    const semEl = $('select-semana-stats');
-    const labelEl = $('label-periodo-toggle');
-    if (modoEstadisticas === 'anual') {
-        if (anioEl) anioEl.classList.remove('hidden');
-        if (mesEl) mesEl.classList.add('hidden');
-        if (semEl) semEl.classList.add('hidden');
-        if (labelEl) labelEl.textContent = 'Anual';
-        poblarSelectorAnios();
-    } else if (modoEstadisticas === 'semanal') {
-        if (anioEl) anioEl.classList.add('hidden');
-        if (mesEl) mesEl.classList.add('hidden');
-        if (semEl) semEl.classList.remove('hidden');
-        if (labelEl) labelEl.textContent = 'Semanal';
-        poblarSelectorSemanas();
-        actualizarEstadisticasSemana(semEl?.value);
-    } else {
-        if (anioEl) anioEl.classList.add('hidden');
-        if (mesEl) mesEl.classList.remove('hidden');
-        if (semEl) semEl.classList.add('hidden');
-        if (labelEl) labelEl.textContent = 'Mensual';
-        poblarSelectorMeses();
-    }
+    const actual = _periodoActual();
+    Object.values(PERIODOS).forEach(p => $(p.select)?.classList.toggle('hidden', p !== actual));
+    const label = $('label-periodo-toggle');
+    if (label) label.textContent = actual.etiqueta;
+    actual.poblar();
 }
 
 function poblarSelectorAnios() {
@@ -151,44 +148,18 @@ function _animarCambioStats(fn) {
     _animarFadeSwap(grid, fn);
 }
 
-function _cambiarPeriodoStats(selectId, actualizarFn) {
-    const v = $(selectId)?.value;
-    if (v !== undefined) _animarCambioStats(() => actualizarFn(v));
+/** Al elegir otro valor en el select de un período, sus estadísticas se redibujan con un fundido. @param {typeof PERIODOS[keyof typeof PERIODOS]} periodo */
+function _cambiarPeriodoStats(periodo) {
+    const v = $(periodo.select)?.value;
+    if (v !== undefined) _animarCambioStats(() => periodo.actualizar(v));
 }
-function cambiarMesStats() { _cambiarPeriodoStats('select-mes-stats', actualizarEstadisticas); }
-function cambiarSemanaStats() { _cambiarPeriodoStats('select-semana-stats', actualizarEstadisticasSemana); }
-function cambiarAnioStats() { _cambiarPeriodoStats('select-anio-stats', actualizarEstadisticasAnio); }
 
 function togglePeriodoStats(direccion = 1) {
     _ranuraStat.cerrar();
-    const selectMes = $('select-mes-stats');
-    const selectAnio = $('select-anio-stats');
-    const label = $('label-periodo-toggle');
-    const selectSemana = $('select-semana-stats');
-
-    const orden = ['mensual', 'anual', 'semanal'];
-    const idx = orden.indexOf(modoEstadisticas);
-    modoEstadisticas = orden[(idx + direccion + orden.length) % orden.length];
+    const idx = ORDEN_PERIODOS.indexOf(/** @type {keyof typeof PERIODOS} */ (modoEstadisticas));
+    modoEstadisticas = ORDEN_PERIODOS[(idx + direccion + ORDEN_PERIODOS.length) % ORDEN_PERIODOS.length];
     Almacenamiento.setItem(STORAGE_KEYS.MODO_ESTADISTICAS, modoEstadisticas);
-
-    _animarSlideElemento($('stats-inner'), direccion, () => {
-        selectMes.classList.add('hidden');
-        selectAnio.classList.add('hidden');
-        if (selectSemana) selectSemana.classList.add('hidden');
-        if (modoEstadisticas === 'anual') {
-            selectAnio.classList.remove('hidden');
-            if (label) label.textContent = 'Anual';
-            poblarSelectorAnios();
-        } else if (modoEstadisticas === 'semanal') {
-            if (selectSemana) selectSemana.classList.remove('hidden');
-            if (label) label.textContent = 'Semanal';
-            poblarSelectorSemanas();
-        } else {
-            selectMes.classList.remove('hidden');
-            if (label) label.textContent = 'Mensual';
-            poblarSelectorMeses();
-        }
-    });
+    _animarSlideElemento($('stats-inner'), direccion, _renderSelectorStats);
 }
 
 function poblarSelectorMeses() {
@@ -238,13 +209,7 @@ function _infoPopupStat(statId) {
                 , html`<div class="stat-popup-metric"><span>Utilizado</span><strong>${TiempoUtils.horasATexto(horasUtil, 'short')}</strong></div>`);
         }
 
-        const modoTexto = modoEstadisticas === 'anual'
-            ? 'Se calcula a partir del PRIMER REGISTRO del año.'
-            : modoEstadisticas === 'mensual'
-                ? 'Se calcula a partir del PRIMER REGISTRO del mes.'
-                : modoEstadisticas === 'semanal'
-                    ? 'Se calcula a partir del PRIMER DÍA LABORAL de la semana.'
-                    : null;
+        const modoTexto = PERIODOS[/** @type {keyof typeof PERIODOS} */ (modoEstadisticas)]?.notaSaldo ?? null;
         if (modoTexto) partes.push(nota(modoTexto));
 
         if (partes.length) info = conExtra(partes);
@@ -332,21 +297,13 @@ function _bindStatItemPopups(container) {
 function toggleStats() {
     toggleSeccionGen('form-stats', 'icon-indicator-stats', STORAGE_KEYS.STATS_EXPANDIDO, () => {
         registrarSwipe($('form-stats'), dir => togglePeriodoStats(dir));
-        if (modoEstadisticas === 'anual') {
-            poblarSelectorAnios();
-        } else if (modoEstadisticas === 'semanal') {
-            poblarSelectorSemanas();
-        } else {
-            poblarSelectorMeses();
-        }
+        _periodoActual().poblar();
     });
 }
 
 function bindEventos() {
     document.querySelector('#card-estadisticas .card-header-clickable')?.addEventListener('click', () => toggleStats());
-    $('select-mes-stats')?.addEventListener('change', () => cambiarMesStats());
-    $('select-anio-stats')?.addEventListener('change', () => cambiarAnioStats());
-    $('select-semana-stats')?.addEventListener('change', () => cambiarSemanaStats());
+    Object.values(PERIODOS).forEach(p => $(p.select)?.addEventListener('change', () => _cambiarPeriodoStats(p)));
     $('btn-toggle-periodo')?.addEventListener('click', () => togglePeriodoStats());
     $('btn-reporte')?.addEventListener('click', () => abrirModalReporteSecciones(modoEstadisticas));
     $('reporte-secciones-lista')?.addEventListener('click', (e) => {

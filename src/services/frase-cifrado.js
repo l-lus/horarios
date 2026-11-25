@@ -1,5 +1,6 @@
 import { APP_STORAGE_PREFIX } from '../core/constantes.js';
 import { Secretos } from '../core/secretos.js';
+import { EventosApp } from '../core/eventos.js';
 import { normalizarFrase, evaluarFrase, generarFrase, olvidarClave } from '../core/cifrado.js';
 
 // ====================================================================
@@ -28,7 +29,17 @@ const guardar = (frase, recordar = false) => {
 
 const olvidar = () => { olvidarClave(); Secretos.olvidar(CLAVE); };
 
+/**
+ * La frase escrita en el modal que la pide, una vez que abrió el contenido, pasa a ser la de la app. Avisa con 'respaldo:frase' para que
+ * el campo de «Respaldo y sincronización» no quede mostrando la anterior. Devuelve false si no se pudo guardar. @param {string} frase @param {boolean} recordar
+ */
+const adoptar = (frase, recordar) => {
+    const ok = guardar(frase, recordar);
+    EventosApp.emit('respaldo:frase');
+    return ok;
+};
+
 /** Una frase nueva al azar (5 palabras pronunciables, unos 95 bits). */
 const generar = () => generarFrase((n) => globalThis.crypto.getRandomValues(new Uint8Array(n)));
 
-export const FraseCifrado = { actual, disponible, recordada, guardar, olvidar, generar, evaluar: evaluarFrase };
+export const FraseCifrado = { actual, disponible, recordada, guardar, adoptar, olvidar, generar, evaluar: evaluarFrase };

@@ -1188,9 +1188,10 @@ mark.ayuda-resaltado--activa {
     white-space: pre-line;
 }
 
-/* Casilla opcional del modal de confirmación (ver GestorModales.confirmarConCasilla): su texto ocupa varias líneas y va alineado
-   a la izquierda, junto al ícono (los botones centran el texto por defecto) */
-#modal-confirmar-opcion .settings-list-text {
+/* Casilla opcional del modal de confirmación (ver GestorModales.confirmarConCasilla) y «Recordar» del modal que pide la frase: su texto
+   ocupa varias líneas y va alineado a la izquierda, junto al ícono (los botones centran el texto por defecto) */
+#modal-confirmar-opcion .settings-list-text,
+#btn-frase-recordar .settings-list-text {
     text-align: left;
 }
 

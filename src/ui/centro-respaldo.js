@@ -323,11 +323,12 @@ function bindEventos() {
         // Una primera subida deja listo el destino (crea el Gist o el archivo de Drive): los botones rápidos pasan a usarlo.
         // Si no cambió no se rearman, porque el clic pudo venir de ellos y están animando su flecha.
         alSincronizar: () => { refrescar(); if (DestinoRespaldo.nubeActiva() !== _nubeBotones) actualizarBotonesHistorico(); },
-        alCambiarFrase: () => { if (_abierto()) _campoFrase.cargar(); },
     };
     GistSync.conectarModal(aportes);
     DriveSync.conectarModal(aportes);
     EventosApp.on('respaldo:conexion', () => { refrescar(); actualizarBotonesHistorico(); });
+    // También con el modal oculto detrás de Restaurar: al volver, el campo no puede seguir con la frase anterior
+    EventosApp.on('respaldo:frase', () => _campoFrase.cargar());
 
     const sincronizar = (destino, tipo) => () => { IconosAnimados.animarFlecha($(`btn-${destino}-${tipo}`), tipo); FLUJOS[destino][tipo](); };
     alClic({

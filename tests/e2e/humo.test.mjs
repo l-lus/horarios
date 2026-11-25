@@ -349,7 +349,9 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
             ImportarExportar.importarDatos(new File([window.respaldoHumo], 'respaldo.cifrado.json', { type: 'application/json' }), 'replace');
             await h.hasta(() => h.modales() === 'modal-frase', 5000, 'pedido de la frase');
             await h.pausa(300);
-            const salida = { solapes: h.solapes(), motivo: document.getElementById('modal-frase-motivo').textContent };
+            const recordar = document.getElementById('btn-frase-recordar');
+            const salida = { solapes: h.solapes(), motivo: document.getElementById('modal-frase-motivo').textContent, vieneActivado: recordar.classList.contains('btn-activo') };
+            h.clic('#btn-frase-recordar');
 
             document.getElementById('frase-pedida').value = 'esta frase no es la correcta para nada';
             h.clic('#btn-frase-aceptar');
@@ -365,7 +367,28 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(r.solapes, []);
         assert.match(r.motivo, /está cifrado/);
         assert.equal(r.nota, 'Turno en el hospital');
-        assert.equal(r.fraseGuardada, '', 'la frase escrita para un archivo no queda guardada');
+        assert.equal(r.vieneActivado, true, 'sin frase guardada, «Recordar» viene activado');
+        assert.equal(r.fraseGuardada, '', 'sin «Recordar», la frase escrita para un archivo no queda guardada');
+    });
+
+    await t.test('Restaurar un archivo cifrado con «Recordar»: la frase escrita queda guardada en el navegador', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            const { ImportarExportar } = await import('/src/services/importar-exportar.js');
+            const { EstadoApp } = await import('/src/services/estado-app.js');
+            const { FraseCifrado } = await import('/src/services/frase-cifrado.js');
+            await h.hasta(() => !document.querySelector('.modal.show'), 5000, 'sin modales');
+            EstadoApp._setRegistros([]);
+            ImportarExportar.importarDatos(new File([window.respaldoHumo], 'respaldo.cifrado.json', { type: 'application/json' }), 'replace');
+            await h.hasta(() => h.modales() === 'modal-frase', 5000, 'pedido de la frase');
+            document.getElementById('frase-pedida').value = window.fraseHumo;
+            h.clic('#btn-frase-aceptar');
+            await h.hasta(() => EstadoApp.registros().length === 1, 10000, 'restauración');
+            const salida = { guardada: FraseCifrado.actual() === window.fraseHumo, recordada: FraseCifrado.recordada() };
+            FraseCifrado.olvidar();   // se deja como estaba para las pruebas que siguen
+            return salida;
+        });
+        assert.deepEqual(r, { guardada: true, recordada: true });
     });
 
     await t.test('Énfasis: las dos filas de círculos de la vista previa del tema (ocho de fondo y ocho de énfasis) caben en una fila, sin solaparse, en celular', async () => {

@@ -69,14 +69,12 @@ function crear(proveedor) {
      * - `guardarAntes`: guarda lo escrito en el modal (si está abierto) antes de sincronizar; false si no se puede seguir.
      * - `antesDeSubir` / `antesDeBajar`: preparativos propios (Drive: elegir o crear el respaldo); false cancela.
      * - `alSincronizar`: se subió o se aplicó una bajada (refrescar estado y fecha de última sincronización).
-     * - `alCambiarFrase`: la frase guardada cambió porque se escribió la que abre el respaldo.
      */
     let _modal = {
         guardarAntes: () => true,
         antesDeSubir: async (/** @type {boolean} */ _auto) => true,
         antesDeBajar: async (/** @type {boolean} */ _auto) => true,
-        alSincronizar: () => { },
-        alCambiarFrase: () => { }
+        alSincronizar: () => { }
     };
 
     /** @param {Partial<typeof _modal>} aportes */
@@ -159,20 +157,21 @@ function crear(proveedor) {
 
     /**
      * Texto bajado → respaldo. En claro se lee como siempre; cifrado se abre con la frase guardada y, si falta o no lo abre, con
-     * la que se pide (a mano; la bajada automática se frena). La frase que lo abre queda como la frase de la app.
+     * la que se pide (a mano; la bajada automática se frena). La frase que lo abre queda como la frase de la app (recordada en este
+     * navegador o solo hasta cerrarla, según el interruptor del modal).
      * Devuelve null si la persona canceló.
      */
     async function _abrir(texto, modoAutomatico) {
-        let frase = FraseCifrado.disponible() ? FraseCifrado.actual() : '';
+        const habiaFrase = FraseCifrado.disponible();
+        let frase = habiaFrase ? FraseCifrado.actual() : '';
+        /** @type {{ frase: string, recordar: boolean } | null} */
+        let pedida = null;
         for (;;) {
             const abierto = await RespaldoCifrado.abrir(texto, frase, { exigirCifrado: s.getCifrado() });
             if ('datos' in abierto) {
                 if (abierto.cifrado) {
                     s.setCifrado(true);
-                    if (frase !== FraseCifrado.actual()) {
-                        FraseCifrado.guardar(frase, FraseCifrado.recordada());
-                        _modal.alCambiarFrase();
-                    }
+                    if (pedida && !FraseCifrado.adoptar(pedida.frase, pedida.recordar)) mostrarToast('No se pudo guardar la frase en este navegador', 'warning');
                 }
                 return abierto.datos;
             }
@@ -189,9 +188,10 @@ function crear(proveedor) {
             const motivo = abierto.codigo === 'sin-frase' ? `${El} está cifrado. Escribí la frase con la que se subió.`
                 : abierto.codigo === 'frase' ? abierto.error
                     : `La frase no abre ${p.el} (o su contenido fue alterado). Probá con otra.`;
-            const pedida = await FraseModal.pedir(motivo);
+            const recordar = pedida?.recordar ?? (habiaFrase ? FraseCifrado.recordada() : true);
+            pedida = await FraseModal.pedir(motivo, { recordar, detalle: 'Sin activar, la frase vale hasta cerrar la app.' });
             if (pedida === null) return null;
-            frase = pedida;
+            frase = pedida.frase;
         }
     }
 

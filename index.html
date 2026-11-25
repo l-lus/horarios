@@ -1446,7 +1446,10 @@
                             <p>Con <strong>Restaurar</strong> importás un backup en este u otro dispositivo: elegís el
                                 archivo y decidís si querés <strong>Combinar</strong> (une el archivo con tus datos
                                 locales) o <strong>Reemplazar</strong> (sustituye tus datos locales). Si el archivo
-                                está cifrado, la app usa la frase guardada o te la pide (esa no se guarda).</p>
+                                está cifrado, la app usa la frase guardada o te la pide. La que escribís vale solo para ese archivo, salvo que
+                                actives <em>Recordar en este navegador</em>: ahí queda guardada (viene activado si no había
+                                ninguna). Al bajar de Gist o Drive la frase escrita siempre queda cargada, y ese interruptor
+                                define si se recuerda o vale hasta cerrar la app.</p>
                             <p><strong>Restablecer</strong> elimina los registros del perfil activo y devuelve su
                                 configuración, incluida la apariencia de la app, a los valores por defecto. Los demás
                                 perfiles conservan sus registros. Antes te pide
@@ -2710,6 +2713,18 @@
                                                 </svg>
                                             </button>
                     </div>
+                </div>
+                <div class="settings-list">
+                    <button id="btn-frase-recordar" type="button" aria-pressed="false">
+                        <svg class="icon">
+                            <use href="#icon-lock-open" />
+                        </svg>
+                        <span class="settings-list-text">
+                            <span>Recordar en este navegador</span>
+                            <span class="settings-list-desc" id="frase-recordar-desc"></span>
+                        </span>
+                        <span class="toggle-switch" aria-hidden="true"></span>
+                    </button>
                 </div>
             </div>
             <div class="modal-panel-footer">

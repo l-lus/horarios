@@ -466,22 +466,30 @@ async function restaurarRespaldo(data, importados, modo, opciones = {}) {
 
 /**
  * Texto de un archivo → respaldo. Un archivo en claro se lee como siempre; uno cifrado se abre con la frase guardada y, si falta
- * o no lo abre, con la que se pide (vale solo para ese archivo: no reemplaza la guardada). Devuelve null si no se pudo o se canceló (ya se avisó).
+ * o no lo abre, con la que se pide. La pedida vale solo para ese archivo, salvo que se active «Recordar en este navegador»: ahí pasa a
+ * ser la de la app (viene activado si no había ninguna, para no reemplazar sin querer la guardada). Devuelve null si no se pudo o se canceló (ya se avisó).
  * @param {string} contenido
  */
 async function _abrirArchivo(contenido) {
     const notify = D._notify();
-    let frase = FraseCifrado.disponible() ? FraseCifrado.actual() : '';
+    const habiaFrase = FraseCifrado.disponible();
+    let frase = habiaFrase ? FraseCifrado.actual() : '';
+    const detalle = habiaFrase ? 'Reemplaza la frase guardada. Sin activar, se usa solo para este archivo.' : 'Sin activar, la frase se usa solo para este archivo.';
+    /** @type {{ frase: string, recordar: boolean } | null} */
+    let pedida = null;
     for (;;) {
         const abierto = await RespaldoCifrado.abrir(contenido, frase);
-        if ('datos' in abierto) return abierto.datos;
+        if ('datos' in abierto) {
+            if (abierto.cifrado && pedida?.recordar && !FraseCifrado.adoptar(pedida.frase, true)) notify.mostrarToast('No se pudo guardar la frase en este navegador', 'warning');
+            return abierto.datos;
+        }
         if (abierto.codigo === 'formato') { notify.mostrarToast('Archivo JSON mal formado o que no es un respaldo', 'error'); return null; }
         const motivo = abierto.codigo === 'sin-frase' ? 'Este archivo está cifrado. Escribí la frase con la que se exportó.'
             : abierto.codigo === 'frase' ? abierto.error
                 : 'La frase no abre este archivo (o el archivo fue alterado). Probá con otra.';
-        const pedida = await notify.pedirFrase(motivo);
+        pedida = await notify.pedirFrase(motivo, { recordar: pedida?.recordar ?? !habiaFrase, detalle });
         if (pedida === null) return null;
-        frase = pedida;
+        frase = pedida.frase;
     }
 }
 

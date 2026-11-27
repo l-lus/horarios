@@ -142,7 +142,6 @@ function _construirCirculos(cont, def) {
     grupo.className = 'vista-previa-circulos';
     grupo.setAttribute('role', 'group');
     if (def.titulo) grupo.setAttribute('aria-label', def.titulo);
-    grupo.dataset.cantidad = String(def.opciones.length);
     const btns = def.opciones.map(op => {
         const btn = document.createElement('button');
         btn.type = 'button';

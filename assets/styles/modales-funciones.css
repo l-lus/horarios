@@ -1045,19 +1045,6 @@ body.tarjeta-arrastrando-activa * {
     padding: var(--space-sm) 0;
 }
 
-/* En pantallas angostas no entran los 8 en una fila: se reparten en dos filas parejas de 4 */
-@media (max-width: 519px) {
-    .vista-previa-circulos {
-        max-width: calc(4 * var(--touch-target) + 3 * var(--space-md));
-        margin-inline: auto;
-    }
-
-    /* con 6 (los énfasis) quedan 3 + 3 en vez de 4 + 2 */
-    .vista-previa-circulos[data-cantidad="6"] {
-        max-width: calc(3 * var(--touch-target) + 2 * var(--space-md));
-    }
-}
-
 .vista-previa-circulos-seccion + .vista-previa-circulos-seccion {
     margin-top: var(--space-md);
 }
@@ -1087,6 +1074,32 @@ body.tarjeta-arrastrando-activa * {
 .vista-previa-circulo.activo {
     box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--text-main);
     transform: scale(1.06);
+}
+
+/* En pantallas angostas cada grupo va en una sola fila, para que el panel no tape media pantalla: los círculos se achican hasta entrar.
+   La separación deja lugar al aro del elegido, y el área táctil se extiende hasta la mitad de esa separación */
+@media (max-width: 519px) {
+    .vista-previa-circulos {
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: var(--space-sm);
+        padding-inline: var(--space-xs);
+    }
+
+    .vista-previa-circulo {
+        position: relative;
+        flex: 0 1 2.25rem;
+        min-width: 0;
+        width: 2.25rem;
+        height: auto;
+        aspect-ratio: 1;
+    }
+
+    .vista-previa-circulo::after {
+        content: '';
+        position: absolute;
+        inset: calc(-1 * var(--space-sm)) calc(-1 * var(--space-xs));
+    }
 }
 
 /* Tema: se ven los colores de toda la página, sin atenuarla (el velo queda solo para atrapar el toque de afuera y cerrar) */

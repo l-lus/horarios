@@ -557,11 +557,11 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
     // cada hito lleva su descripción para lectores de pantalla (con el nombre abreviado del día, no la inicial)
     assert.deepEqual(vistaFranjas.hitosSemana.map(h => h.descripcion), ['lun cumplido', 'mar con faltante', 'mié día especial', 'jue–vie sin registro']);
     assert.equal(vistaFranjas.colorInicioSemana, 'green');
-    // al pasar el cursor por el tramo (solo escritorio): con horas, el total y "Lunes · entrada – salida"; sin horas (o fusionado), solo el estado
+    // al pasar el cursor por el tramo (solo escritorio): con horas, el total y "Lunes · entrada – salida"; sin horas (o fusionado), el tipo de día y su estado
     const [hoverLun, hoverMar, , hoverFusion] = vistaFranjas.hitosSemana.map(h => h.hover);
     assert.deepEqual(hoverLun, { stats: '7 horas', mensaje: 'Lunes · 08:00 – 15:00' });
-    assert.deepEqual(hoverMar, { stats: null, mensaje: 'Martes: con faltante' });
-    assert.deepEqual(hoverFusion, { stats: null, mensaje: 'jue–vie: sin registro' });
+    assert.deepEqual(hoverMar, { stats: '3 horas 30 minutos', mensaje: 'Martes: con faltante' });
+    assert.deepEqual(hoverFusion, { stats: 'Sin registro', mensaje: 'jue–vie: sin registro' });
     assert.equal(typeof vistaFranjas.siglasCortas, 'boolean', 'la vista informa si el formato de tiempo corto pide las iniciales');
     // si la primera franja está vacía, el remate del comienzo es neutro aunque más adelante haya rellenos
     const vistaPrimeraVacia = TarjetaFichajeVista.derivarVistaSemana({
@@ -591,6 +591,14 @@ test('TarjetaFichajeVista: derivarVistaHoy y derivarVistaSemana marcan estado ce
     });
     assert.deepEqual(vistaHoy.hitosSemana.map(h => [h.sigla, !!h.hoy]), [['lun–mar', false], ['mié', true]]);
     assert.equal(vistaHoy.hitosSemana[1].descripcion, 'mié (hoy) día especial');
+    // el número grande nombra el tipo del día especial; si los fusionados son de tipos distintos, no nombra a ninguno
+    const hoverEspeciales = (etiquetaMartes) => TarjetaFichajeVista.derivarVistaSemana({
+        ...base,
+        diasSemana: [dia('2026-10-26', 'especial', { objetivo: 0, especial: 'purple', emoji: '🎉', etiqueta: 'Feriado' }),
+            dia('2026-10-27', 'especial', { objetivo: 0, especial: 'purple', emoji: '🎉', etiqueta: etiquetaMartes })]
+    }).hitosSemana.map(h => h.hover.stats);
+    assert.deepEqual(hoverEspeciales('Feriado'), ['🎉 Feriado']);
+    assert.deepEqual(hoverEspeciales('Asueto'), ['Días especiales']);
     const vistaHoySinRegistro = TarjetaFichajeVista.derivarVistaSemana({
         ...base,
         hoy: '2026-10-28',

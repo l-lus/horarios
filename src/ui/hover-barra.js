@@ -24,12 +24,12 @@ const _TIPOS_POR_ID = {
 };
 
 /**
- * @typedef {{ stats: string | null, mensaje: string }} TextoHoverDia
+ * @typedef {{ stats: string, mensaje: string }} TextoHoverDia
  * @typedef {{ fecha: string, fraccion: number, hover?: TextoHoverDia }} HitoSemana
  */
 /** @type {{ hitos: HitoSemana[], fin: number } | null} */
 let _semana = null;
-/** @type {{ mostrar: (stats: string | null, mensaje: string | null) => void, restaurar: () => void } | null} */
+/** @type {{ mostrar: (stats: string, mensaje: string) => void, restaurar: () => void } | null} */
 let _textos = null;
 let _tipoDiario = '';
 let _diaSemana = '';
@@ -46,7 +46,7 @@ function actualizarDatos(semana) {
     if (hito?.hover) _textos?.mostrar(hito.hover.stats, hito.hover.mensaje);
 }
 
-/** @param {{ mostrar: (stats: string | null, mensaje: string | null) => void, restaurar: () => void }} textos */
+/** @param {{ mostrar: (stats: string, mensaje: string) => void, restaurar: () => void }} textos */
 function conectarTextos(textos) {
     _textos = textos;
 }

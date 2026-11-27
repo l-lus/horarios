@@ -155,11 +155,22 @@ function _palabraEstadoDia(d) {
 // Los días futuros no entran, salvo hoy aunque todavía no tenga registro. Los días sin horas (especial, sin salida, sin registro) ocupan un tramo fijo y chico para poder marcarlos;
 // los seguidos del mismo tipo (sin registro o especiales del mismo color) se fusionan en un solo hito con rango (L–X). Hoy nunca se fusiona: lleva el badge.
 // Cada hito trae su sigla (lun, mar...) y su inicial (L, M, X...) para que el dibujo use la que entre mejor.
+// Qué dice el número grande al pasar el cursor por un día sin horas: su tipo (con el emoji, en un día especial)
+function _tipoDiaSinHoras(d) {
+    switch (d.estado) {
+        case ESTADO_DIA.ESPECIAL: return `${d.emoji ?? ''} ${d.etiqueta ?? 'Día especial'}`.trim();
+        case ESTADO_DIA.SIN_SALIDA: return 'Sin salida';
+        case ESTADO_DIA.FUTURO: return 'Pendiente';
+        case ESTADO_DIA.SIN_REGISTRO: return 'Sin registro';
+        default: return _horasTextoStats(d.total);
+    }
+}
+
 // Texto que se ve al pasar el cursor por el tramo de un día (solo escritorio): con horas, el total en el número grande y "Lunes · 13:55 – 21:01" en el mensaje;
-// sin horas (especial, sin registro...) solo el mensaje con su estado. `stats` null = el número no cambia.
+// sin horas (especial, sin registro...), el tipo de día en el número y el mensaje con su estado.
 function _textoHoverDia(d, esHoy, conRegistro) {
     const nombre = `${TiempoUtils.obtenerNombreDia(d.fecha)}${esHoy ? ' (hoy)' : ''}`;
-    if (!conRegistro || !d.entrada) return { stats: null, mensaje: `${nombre}: ${_palabraEstadoDia(d)}` };
+    if (!conRegistro || !d.entrada) return { stats: _tipoDiaSinHoras(d), mensaje: `${nombre}: ${_palabraEstadoDia(d)}` };
     const rango = d.salida ? `${d.entrada} – ${d.salida}` : `${d.entrada} – en curso`;
     return { stats: _horasTextoStats(d.total), mensaje: `${nombre} · ${rango}` };
 }
@@ -211,7 +222,9 @@ function _franjasSemana(todosLosDias, horasDiarias, objetivoSemana, hoy) {
             previo.hito.sigla = `${previo.primera}–${nombre(d)}`;
             previo.hito.inicial = `${previo.inicialPrimera}–${inicial(d)}`;
             previo.hito.descripcion = `${previo.hito.sigla} ${_palabraEstadoDia(d)}`;
-            previo.hito.hover = { stats: null, mensaje: `${previo.hito.sigla}: ${_palabraEstadoDia(d)}` };
+            // especiales del mismo color pueden ser de tipos distintos: en ese caso el número no nombra a ninguno
+            const stats = previo.hito.hover.stats === _tipoDiaSinHoras(d) ? previo.hito.hover.stats : 'Días especiales';
+            previo.hito.hover = { stats, mensaje: `${previo.hito.sigla}: ${_palabraEstadoDia(d)}` };
         } else {
             const hito = {
                 fecha: d.fecha, sigla: nombre(d), inicial: inicial(d), detalle: _detalleDia(d), fraccion: fin, hoy: esHoy(d), futuro: !esHoy(d) && d.estado === ESTADO_DIA.FUTURO,   // futuro: su marca va hueca hasta que llegue el día

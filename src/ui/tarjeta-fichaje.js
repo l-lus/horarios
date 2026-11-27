@@ -489,9 +489,9 @@ function bindEventos() {
     HoverBarra.conectarTextos({
         mostrar: (stats, mensaje) => {
             const num = $('stats-semana');
-            if (num && stats !== null) Animaciones._animarTextoHover(num, () => { num.textContent = stats; });
+            if (num) Animaciones._animarTextoHover(num, () => { num.textContent = stats; });
             const msg = $('stats-mensaje');
-            if (msg && mensaje !== null) Animaciones._animarTextoHover(msg, () => { msg.classList.remove('hidden'); msg.textContent = mensaje; });
+            if (msg) Animaciones._animarTextoHover(msg, () => { msg.classList.remove('hidden'); msg.textContent = mensaje; });
         },
         restaurar: () => {
             const num = $('stats-semana');

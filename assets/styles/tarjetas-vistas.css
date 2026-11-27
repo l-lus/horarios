@@ -245,10 +245,15 @@
     transition: margin var(--dur-slow) var(--ease-conteo);
 }
 
-/* Hint integrado: la pista reserva el alto de la línea (vista diaria o semanal) */
+/* Hint integrado: la pista reserva el alto de la línea (vista diaria o semanal). El aire extra se reparte por igual arriba y abajo,
+   y la tarjeta crece lo mismo que suman los dos */
 .progress-pista.reserva-linea,
 .progress-pista.con-linea {
-    margin: calc(var(--space-lg) + 1.2rem) var(--margen-x) calc(var(--space-lg) + 1.2rem + var(--ajuste-optico));
+    margin: calc(var(--space-lg) + 1.7rem) var(--margen-x) calc(var(--space-lg) + 1.7rem + var(--ajuste-optico));
+}
+
+.stats-card:has(.progress-pista.reserva-linea) {
+    height: 17rem;
 }
 
 /* Al aparecer (display none → block) los elementos de la línea entran con fundido; el estado final es el natural de cada uno */

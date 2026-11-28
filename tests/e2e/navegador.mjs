@@ -6,7 +6,10 @@ import net from 'node:net';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 
-const CANDIDATOS = ['chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable', 'brave-browser', 'microsoft-edge'];
+// Primero Chrome/Chromium (el del sistema o el de Playwright): Brave y Edge sin ventana manejan distinto el tacto simulado
+// (Brave corta el arrastre con pointercancel) y quedan como último recurso
+const CANDIDATOS = ['chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable'];
+const CANDIDATOS_ULTIMO_RECURSO = ['brave-browser', 'microsoft-edge'];
 const ESPERA_ARRANQUE_MS = 15000;
 
 const esperar = ms => new Promise(r => setTimeout(r, ms));
@@ -25,14 +28,15 @@ function chromiumDePlaywright() {
 
 function buscarNavegador() {
     if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
-    return CANDIDATOS.find(bin => spawnSync('which', [bin]).status === 0) ?? chromiumDePlaywright();
+    const enSistema = (lista) => lista.find(bin => spawnSync('which', [bin]).status === 0) ?? null;
+    return enSistema(CANDIDATOS) ?? chromiumDePlaywright() ?? enSistema(CANDIDATOS_ULTIMO_RECURSO);
 }
 
 /** Por qué no se puede correr la prueba (texto para `skip`), o null si se puede. */
 export function motivoParaSaltear() {
     if (typeof WebSocket === 'undefined') return 'hace falta Node 22 o superior (WebSocket global)';
     if (spawnSync('python3', ['--version']).status !== 0) return 'sin python3 (lo usa el servidor de desarrollo)';
-    if (!buscarNavegador()) return `sin navegador Chromium (probé ${CANDIDATOS.join(', ')} y el de Playwright; o definí CHROME_BIN)`;
+    if (!buscarNavegador()) return `sin navegador Chromium (probé ${[...CANDIDATOS, ...CANDIDATOS_ULTIMO_RECURSO].join(', ')} y el de Playwright; o definí CHROME_BIN)`;
     return null;
 }
 

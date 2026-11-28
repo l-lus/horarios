@@ -1285,3 +1285,37 @@ test('TiempoUtils: formatoDiferencia, claves de mes y fechas ISO armadas', () =>
     assert.equal(TiempoUtils.fechaISO(2026, 0, 5), '2026-01-05');
     assert.equal(TiempoUtils.claveMesDe(2026, 11), '2026-12');
 });
+
+test('atajos en el respaldo: se exportan, se comparan, se aplican al perfil con Reemplazar y una forma inválida rechaza el archivo', async () => {
+    const { ImportarExportar } = await import('../src/services/importar-exportar.js');
+    const { Almacenamiento } = await import('../src/core/almacenamiento.js');
+    const { EventosApp } = await import('../src/core/eventos.js');
+    const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+    const { ATAJOS_POR_DEFECTO } = await import('../src/services/atajos.js');
+    Almacenamiento.removeItem(STORAGE_KEYS.ATAJOS, true);
+    let avisos = 0;
+    const off = EventosApp.on('config:atajos', () => { avisos++; });
+    try {
+        // sin lista guardada se exportan los de por defecto, y un respaldo que trae los mismos no cuenta como cambio
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().atajosRapidos, [...ATAJOS_POR_DEFECTO]);
+        assert.deepEqual(ImportarExportar.calcularCambiosConfigImport({ atajosRapidos: [...ATAJOS_POR_DEFECTO] }), []);
+
+        const respaldo = { atajosRapidos: ['subir', 'bajar', 'subir', 'ayuda'] };
+        assert.equal(ImportarExportar.validarCamposConfigImport(respaldo), true);
+        assert.deepEqual(ImportarExportar.calcularCambiosConfigImport(respaldo), ['atajos']);
+        ImportarExportar.aplicarConfigImportada(respaldo);
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ATAJOS, null, true), ['subir', 'bajar', 'ayuda']);   // sin repetidos, en el perfil
+        assert.equal(avisos, 1, 'la tarjeta se redibuja');
+        assert.deepEqual(ImportarExportar.calcularCambiosConfigImport(respaldo), []);
+        assert.deepEqual(ImportarExportar.obtenerConfigExportable().atajosRapidos, ['subir', 'bajar', 'ayuda']);
+
+        // un respaldo sin atajos no los toca; uno con una forma inválida se rechaza entero
+        ImportarExportar.aplicarConfigImportada({});
+        assert.deepEqual(Almacenamiento.getObject(STORAGE_KEYS.ATAJOS, null, true), ['subir', 'bajar', 'ayuda']);
+        assert.equal(ImportarExportar.validarCamposConfigImport({ atajosRapidos: 'ayuda' }), false);
+        assert.equal(ImportarExportar.validarCamposConfigImport({ atajosRapidos: [7] }), false);
+    } finally {
+        off?.();
+        Almacenamiento.removeItem(STORAGE_KEYS.ATAJOS, true);
+    }
+});

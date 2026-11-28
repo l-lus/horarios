@@ -307,6 +307,7 @@ function _mostrar() {
     velo.classList.add('show');
     panel.classList.add('show');
     panel.inert = false;
+    _sinRestaurarScroll();
     history.pushState({ vistaPrevia: true }, '');
 
     _medirPanel();
@@ -437,6 +438,30 @@ function _bindRueda() {
     }, { passive: false });
 }
 
+// Al cerrar se vuelve atrás en el historial, y el navegador restauraría de golpe el scroll que había al abrir (en el celular se ve un salto),
+// pisando el desplazamiento suave de salida (ver _soltarEspacioInferior). Mientras dura la vista previa la restauración queda en manual: el modo
+// es de cada entrada del historial y la nueva lo hereda, así cuenta para la de destino al volver. Después del cierre vuelve a como estaba
+// (al recargar la página el navegador sigue conservando la posición).
+/** @type {ScrollRestoration | null} */
+let _restauracionAnterior = null;
+let _timerRestauracion = 0;
+
+function _sinRestaurarScroll() {
+    clearTimeout(_timerRestauracion);
+    if (!('scrollRestoration' in history)) return;
+    if (_restauracionAnterior === null) _restauracionAnterior = history.scrollRestoration;
+    history.scrollRestoration = 'manual';
+}
+
+function _restaurarScrollComoEstaba() {
+    clearTimeout(_timerRestauracion);
+    _timerRestauracion = window.setTimeout(() => {
+        if (_activa || _restauracionAnterior === null) return;   // se abrió otra vista previa mientras tanto
+        history.scrollRestoration = _restauracionAnterior;
+        _restauracionAnterior = null;
+    }, DESLIZ_SALIDA_MS + 200);
+}
+
 /** Pide cerrar: la vuelta atrás del historial dispara el popstate, que termina el cierre. */
 function cerrar() {
     if (!_activa || _cerrando) return;
@@ -483,6 +508,7 @@ function _finalizar() {
     activa.objetivo?.classList.remove('vista-previa-objetivo');
     document.body.classList.remove('vista-previa-sin-velo');
     _soltarEspacioInferior();
+    _restaurarScrollComoEstaba();
     $('vista-previa-velo')?.classList.remove('show');
     const panel = $('vista-previa-panel');
     // el foco sale del panel antes de ocultarlo (un elemento oculto a los lectores de pantalla no puede conservarlo) y `inert` lo saca del orden de Tab

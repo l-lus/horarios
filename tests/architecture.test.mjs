@@ -390,33 +390,86 @@ test('gestor-temas.js: las muestras de cada énfasis coinciden con el --c-enfasi
 
 // Directiva de CLAUDE.md: las animaciones nuevas usan solo `transform` y `opacity` (van al compositor y no repintan).
 // Lo anterior a la regla queda anotado acá abajo: el test falla si aparece algo nuevo, y también si una excepción deja de hacer falta
-// (así la lista solo se achica). La excepción de la regla, el alto de los contenedores, se anima desde JS (Animaciones._animarAlturaCambio).
+// (así la lista solo se achica). La excepción de la regla, el alto de los contenedores, se anima desde JS (Animaciones._animarAlturaCambio)
+// o con grid-template-rows en los desplegables (.collapsible, --transition-collapse).
 const KEYFRAMES_HEREDADOS = ['ajuste-flash', 'brillo-linea', 'campo-flash', 'campo-flash-color', 'toastBarraIndeterminada'];
-// Cuántas transiciones de cada hoja animan una propiedad que repinta (top/left/right/bottom, width/height, filter, box-shadow, outline, background-position)
-const TRANSICIONES_HEREDADAS = { 'base.css': 3, 'modales-funciones.css': 1, 'responsivo-movimiento.css': 1, 'tarjetas-vistas.css': 13 };
+// Transiciones que animan algo que repinta o recalcula el diseño, una por regla: "hoja selector: propiedades". Las variables (var(--…)) se resuelven,
+// así una transición guardada en una variable también cuenta (ej. --cal-dia-transicion).
+const TRANSICIONES_HEREDADAS = [
+    'base.css .ayuda-indice-item: filter',
+    'base.css .toast-progreso::-webkit-progress-value: width',
+    'base.css body: padding-bottom',
+    'base.css html.recarga-animando .mutacion-saliente: filter',
+    'modales-funciones.css .vista-previa-circulo: box-shadow',
+    'responsivo-movimiento.css .calendario-dia:not(.vacio, .dia-sin-registro): box-shadow, padding, border-width, filter',
+    'tarjetas-vistas.css #botones-historico: padding, margin',
+    'tarjetas-vistas.css .calendario-dia: box-shadow, padding, border-width',
+    'tarjetas-vistas.css .calendario-dia::before: width, height, bottom',
+    'tarjetas-vistas.css .calendario-nav button: filter',
+    'tarjetas-vistas.css .linea-banda: left, width',
+    'tarjetas-vistas.css .linea-etiqueta: left',
+    'tarjetas-vistas.css .linea-etiqueta: left, filter',
+    'tarjetas-vistas.css .linea-etiqueta::after: left, right',
+    'tarjetas-vistas.css .linea-tick: left',
+    'tarjetas-vistas.css .linea-tick: left, filter',
+    'tarjetas-vistas.css .progress-fill: width',
+    'tarjetas-vistas.css .progress-pista: margin',
+    'tarjetas-vistas.css .progress-punto: left',
+    'tarjetas-vistas.css .stats-card.conteo-inicial .progress-fill: width',
+    'tarjetas-vistas.css .stats-card.conteo-inicial .progress-punto: left',
+    'tarjetas-vistas.css .stats-card: box-shadow, height',
+];
 
-test('Animaciones (CSS): los @keyframes nuevos animan solo transform y opacity, y no se agregan transiciones de propiedades que repintan', () => {
+/** Las variables CSS de todas las hojas (nombre → valor), para resolver lo que una transición toma de ellas. */
+function _variablesCss(hojas) {
+    const vars = new Map();
+    for (const css of hojas) for (const m of css.matchAll(/(--[\w-]+)\s*:\s*([^;}]+)/g)) if (!vars.has(m[1])) vars.set(m[1], m[2]);
+    return vars;
+}
+
+/** El valor con las var(--…) reemplazadas por su contenido (varias pasadas: una variable puede usar otra). */
+function _resolverVariables(valor, vars) {
+    let r = valor;
+    for (let i = 0; i < 5 && /var\(--/.test(r); i++) r = r.replace(/var\((--[\w-]+)(?:\s*,[^)]*)?\)/g, (_, n) => vars.get(n) ?? '');
+    return r;
+}
+
+/** El selector de la regla donde está la declaración que empieza en `pos`. */
+function _selectorEn(css, pos) {
+    const abre = css.lastIndexOf('{', pos);
+    const antes = Math.max(css.lastIndexOf('}', abre), css.lastIndexOf('{', abre - 1), css.lastIndexOf(';', abre));
+    return css.slice(antes + 1, abre).replace(/\s+/g, ' ').trim();
+}
+
+test('Animaciones (CSS): los @keyframes nuevos animan solo transform y opacity, y no se agregan transiciones de propiedades que repintan o recalculan el diseño', () => {
     const DIR = 'assets/styles';
     // `scale`, `translate` y `rotate` son las formas sueltas de transform: también van al compositor
     const PERMITIDAS_KEYFRAMES = new Set(['transform', 'opacity', 'scale', 'translate', 'rotate', 'transform-origin', 'animation-timing-function']);
-    const REPINTAN = /(?<![\w-])(top|left|right|bottom|width|height|filter|box-shadow|outline(?:-[a-z]+)?|background-position)(?![\w-])/g;
+    // Repintan (posición, tamaño, filtros, sombras, contornos, fondo) o recalculan el diseño (márgenes, rellenos, bordes, tipografía).
+    // grid-template-rows no está: es el alto de los desplegables, la excepción de la regla.
+    const PROHIBIDAS = /(?<![\w-])(top|left|right|bottom|inset|width|height|filter|box-shadow|outline(?:-[a-z]+)?|background-position|padding(?:-[a-z]+)?|margin(?:-[a-z]+)?|border(?:-[a-z]+)?-width|font-size|letter-spacing)(?![\w-])/g;
+
+    const hojas = fs.readdirSync(DIR).filter(f => f.endsWith('.css')).sort()
+        .map(hoja => ({ hoja, css: fs.readFileSync(`${DIR}/${hoja}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '') }));
+    const vars = _variablesCss(hojas.map(h => h.css));
 
     const conOtrasPropiedades = [];
-    const transiciones = {};
-    for (const hoja of fs.readdirSync(DIR).filter(f => f.endsWith('.css')).sort()) {
-        const css = fs.readFileSync(`${DIR}/${hoja}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const transiciones = [];
+    for (const { hoja, css } of hojas) {
         for (const k of css.matchAll(/@keyframes\s+([\w-]+)\s*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/g)) {
             const otras = [...new Set([...k[2].matchAll(/([a-z-]+)\s*:/g)].map(m => m[1]))].filter(p => !PERMITIDAS_KEYFRAMES.has(p));
             if (otras.length) conOtrasPropiedades.push(k[1]);
         }
-        const conRepintado = [...css.matchAll(/transition(?:-property)?\s*:\s*([^;}]+)/g)].filter(t => t[1].match(REPINTAN));
-        if (conRepintado.length) transiciones[hoja] = conRepintado.length;
+        for (const t of css.matchAll(/(?<![\w-])transition(?:-property)?\s*:\s*([^;}]+)/g)) {
+            const props = [...new Set([..._resolverVariables(t[1], vars).matchAll(PROHIBIDAS)].map(m => m[1]))];
+            if (props.length) transiciones.push(`${hoja} ${_selectorEn(css, t.index ?? 0)}: ${props.join(', ')}`);
+        }
     }
 
     assert.deepEqual([...new Set(conOtrasPropiedades)].sort(), KEYFRAMES_HEREDADOS,
         'Un @keyframes nuevo anima algo que no es transform/opacity (usá una capa temporal que se mueva o se escale), o uno heredado ya se corrigió: en ese caso quitalo de KEYFRAMES_HEREDADOS');
-    assert.deepEqual(transiciones, TRANSICIONES_HEREDADAS,
-        'Cambió la cantidad de transiciones que animan propiedades que repintan: si agregaste una, usá transform/opacity; si quitaste una, bajá el número en TRANSICIONES_HEREDADAS');
+    assert.deepEqual(transiciones.sort(), [...TRANSICIONES_HEREDADAS].sort(),
+        'Cambió la lista de transiciones que animan propiedades que repintan o recalculan el diseño: si agregaste una, usá transform/opacity; si corregiste una, quitala de TRANSICIONES_HEREDADAS');
 });
 
 test('Tokens (CSS): toda var(--x) que usan las hojas está definida en alguna hoja o la fija el JS', () => {

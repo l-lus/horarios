@@ -13,7 +13,7 @@ import { Calendario } from './calendario.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
-import { _scrollA } from './scroll.js';
+import { _revelarDesplegado } from './scroll.js';
 import { Animaciones } from './animaciones.js';
 import { icono, html, montar } from '../core/html.js';
 import { HistoricoItems } from './historico-items.js';
@@ -355,18 +355,12 @@ function _initListenerToggleAnio(lista) {
     });
 }
 
+const MARGEN_ENCABEZADO_PX = 80;   // lo que tapa el encabezado fijo de la app arriba
+
+// Al abrir un mes: si sus primeros registros quedan cortados (abajo de la pantalla, o debajo del encabezado fijo), el mes se lleva arriba
 function _scrollAlExpandir(contenedor, detalle) {
-    setTimeout(() => {
-        const margenHeader = 80;
-        const alturaVentana = window.innerHeight;
-        const registros = detalle.querySelectorAll('.registro-item');
-        if (!registros.length) return;
-        const r0 = registros[0].getBoundingClientRect();
-        const r1 = registros.length > 1 ? registros[1].getBoundingClientRect() : null;
-        const cortado0 = r0.top < margenHeader || r0.bottom > alturaVentana;
-        const cortado1 = r1 && (r1.top < margenHeader || r1.bottom > alturaVentana);
-        if (cortado0 || cortado1) _scrollA(contenedor, 'start');
-    }, 310);
+    const registros = Array.from(detalle.querySelectorAll('.registro-item')).slice(0, 2);
+    _revelarDesplegado(detalle, { ancla: contenedor, objetivo: registros, modo: 'arriba', margenSuperior: MARGEN_ENCABEZADO_PX });
 }
 
 function _initListenerToggleMes(lista) {

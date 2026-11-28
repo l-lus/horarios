@@ -71,21 +71,56 @@ function _finDeDespliegue(panel) {
     });
 }
 
+/** Lo que se ve de `el`: la ventana (debajo de `margenSuperior`) recortada por cada contenedor con scroll que lo rodea. */
+function _areaVisible(el, margenSuperior = 0) {
+    let top = margenSuperior;
+    let bottom = window.innerHeight;
+    for (let a = el.parentElement; a; a = a.parentElement) {
+        const oy = getComputedStyle(a).overflowY;
+        if (oy !== 'auto' && oy !== 'scroll') continue;
+        const r = a.getBoundingClientRect();
+        top = Math.max(top, r.top);
+        bottom = Math.min(bottom, r.bottom);
+    }
+    return { top, bottom };
+}
+
+/** El contenedor que hay que desplazar para mover `el`: el primero con scroll (y algo para desplazar) que lo rodea, o la ventana. */
+function _desplazableDe(el) {
+    for (let a = el.parentElement; a; a = a.parentElement) {
+        const oy = getComputedStyle(a).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && a.scrollHeight > a.clientHeight) return a;
+    }
+    return window;
+}
+
 /**
- * Un desplegable recién abierto dentro de un contenedor con scroll (ej. el cuerpo de un modal): cuando termina de abrirse, si quedó
- * tapado abajo, el contenedor baja lo justo para mostrarlo entero, sin llevar por encima del borde superior al botón que lo abrió
- * (`ancla`): si el desplegable es más alto que lo visible, se ve su comienzo junto al botón.
- * @param {HTMLElement | null} panel @param {{ ancla?: HTMLElement | null, contenedor?: HTMLElement | null }} [opciones]
+ * Un desplegable recién abierto (`.collapsible`): cuando termina de abrirse, si lo que tiene que verse (`objetivo`: el panel entero,
+ * o los elementos que se indiquen) quedó cortado, se lo lleva a la vista. Dos modos:
+ * - 'justo' (por defecto): se desplaza lo mínimo para mostrarlo, sin llevar el botón que lo abrió (`ancla`) por encima del borde
+ *   superior: si no entra entero, se ve su comienzo junto al botón. Ej.: los desplegables de Respaldo y sincronización.
+ * - 'arriba': se lleva el `ancla` al borde superior, para ver todo lo posible de un desplegable largo. Ej.: un mes de la lista de Registros.
+ * Mira la ventana (debajo de `margenSuperior`, lo que tapa un encabezado fijo) y cada contenedor con scroll que lo rodea.
+ * @param {HTMLElement | null} panel
+ * @param {{ ancla?: HTMLElement | null, objetivo?: Element | Element[] | null, modo?: 'justo' | 'arriba', margenSuperior?: number }} [opciones]
  */
-export async function _revelarDesplegado(panel, { ancla = null, contenedor = null } = {}) {
-    const cuerpo = contenedor ?? /** @type {HTMLElement | null} */ (panel?.closest('.modal-panel-body'));
-    if (!panel || !cuerpo) return;
+export async function _revelarDesplegado(panel, { ancla = null, objetivo = null, modo = 'justo', margenSuperior = 0 } = {}) {
+    if (!panel) return;
     await _finDeDespliegue(panel);
     if (!panel.classList.contains('expanded')) return;   // se volvió a cerrar mientras se abría
-    const c = cuerpo.getBoundingClientRect();
-    const falta = panel.getBoundingClientRect().bottom + _MARGEN_DESPLEGADO_PX - c.bottom;
+    const objetivos = objetivo === null ? [panel] : (Array.isArray(objetivo) ? objetivo : [objetivo]);
+    if (!objetivos.length) return;
+    const rects = objetivos.map(o => o.getBoundingClientRect());
+    const arribaObj = Math.min(...rects.map(r => r.top));
+    const abajoObj = Math.max(...rects.map(r => r.bottom));
+    const area = _areaVisible(objetivos[0], margenSuperior);
+    if (arribaObj >= area.top && abajoObj <= area.bottom) return;
+
+    const anc = ancla ?? panel;
+    if (modo === 'arriba') { _scrollA(anc, 'start'); return; }
+    const falta = abajoObj + _MARGEN_DESPLEGADO_PX - area.bottom;
     if (falta <= 0) return;
-    const tope = (ancla ?? panel).getBoundingClientRect().top - _MARGEN_DESPLEGADO_PX - c.top;
+    const tope = anc.getBoundingClientRect().top - _MARGEN_DESPLEGADO_PX - area.top;
     const desplazar = Math.min(falta, Math.max(0, tope));
-    if (desplazar > 0) cuerpo.scrollBy({ top: desplazar, behavior: Movimiento.scrollBehavior() });
+    if (desplazar > 0) _desplazableDe(panel).scrollBy({ top: desplazar, behavior: Movimiento.scrollBehavior() });
 }

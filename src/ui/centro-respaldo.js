@@ -363,4 +363,7 @@ function bindEventos() {
     _actualizarResumenAjustes();
 }
 
+// Lo piden otros módulos que no pueden importar este (ej. el botón de Registros sin registros)
+EventosApp.on('respaldo:abrir', () => abrir());
+
 export const CentroRespaldo = { bindEventos, abrir, cerrar, refrescar, actualizarBotonesHistorico, iniciarAutomatica, alConectarDrive };

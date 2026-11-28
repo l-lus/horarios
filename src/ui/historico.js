@@ -10,7 +10,6 @@ import { GestionDatos } from '../services/gestion-datos.js';
 import { PosicionHeader } from '../core/posicion-header.js';
 import { debounce } from './gestos.js';
 import { Calendario } from './calendario.js';
-import { RespaldoLocal } from './respaldo-local.js';
 import { Compensatorios } from '../services/compensatorios.js';
 import { EstadoApp } from '../services/estado-app.js';
 import { _revelarDesplegado } from './scroll.js';
@@ -122,8 +121,10 @@ function _renderEmptyStateLista(lista) {
     if (EstadoApp.registros().length === 0) {
         const msg = Object.assign(document.createElement('p'), { textContent: 'No hay registros' });
         const btn = Object.assign(document.createElement('button'), { className: 'btn-backup empty-state__btn-restaurar' });
-        montar(btn, html`${icono('#icon-upload')} Restaurar desde archivo`);
-        btn.addEventListener('click', () => RespaldoLocal.mostrarImportar(true));
+        // Sin registros: se ofrece Respaldo y sincronización, desde donde se restaura de un archivo, de Gist o de Drive.
+        // Por evento: centro-respaldo.js ya depende (indirectamente) de este módulo
+        montar(btn, html`${icono('#icon-cloud')} Respaldo y sincronización`);
+        btn.addEventListener('click', () => EventosApp.emit('respaldo:abrir'));
         emptyDiv.appendChild(msg);
         emptyDiv.appendChild(btn);
     } else {

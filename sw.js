@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'horarios-';
-const CACHE_NAME = `${CACHE_PREFIX}v261127.1149-cache`;
+const CACHE_NAME = `${CACHE_PREFIX}v261127.2313-cache`;
 const urlsToCache = [
   './',
   './index.html',
@@ -215,6 +215,8 @@ self.addEventListener('fetch', event => {
   if (!url.pathname.startsWith(self.registration.scope.replace(location.origin, ''))) return;
 
   const matchOpts = { cacheName: CACHE_NAME, ignoreSearch: true };
+  // La vuelta de Google trae el code en la query: esa respuesta nunca se guarda (si el precache no terminó, no hay copia sin query)
+  const guardable = !(url.pathname.endsWith('/oauth-callback.html') && url.search);
 
   event.respondWith(
     caches.match(event.request, matchOpts)
@@ -226,7 +228,8 @@ self.addEventListener('fetch', event => {
             if (
               !networkResponse ||
               networkResponse.status !== 200 ||
-              networkResponse.type !== 'basic'
+              networkResponse.type !== 'basic' ||
+              !guardable
             ) {
               return networkResponse;
             }

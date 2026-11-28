@@ -52,7 +52,7 @@ async function conectar() {
 }
 
 async function desconectar() {
-    const seguir = await GestorModales.confirmar('Se desconecta tu cuenta de Google en este navegador. Los respaldos quedan en tu Drive y podés volver a conectarte cuando quieras.', 'Desconectar', '#icon-exit', { titulo: 'Google Drive' });
+    const seguir = await GestorModales.confirmar('Se desconecta tu cuenta de Google en todos tus dispositivos: Google le quita el permiso a Horarios y en los demás también hay que volver a conectar. Los respaldos quedan en tu Drive y podés volver a conectarte cuando quieras.', 'Desconectar', '#icon-exit', { titulo: 'Google Drive' });
     if (!seguir) return;
     const { revocado } = await SincronizacionDrive.desconectar();
     mostrarToast(revocado ? 'Google Drive desconectado' : 'Google Drive desconectado en este navegador', 'success', undefined,

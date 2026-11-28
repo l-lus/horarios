@@ -34,7 +34,7 @@ function crearEntorno({ fallaEn = null, sinRed = false, enCache = [] } = {}) {
         Response: { error: () => ({ type: 'error' }) },
         fetch: async (pedido) => {
             if (sinRed) throw new TypeError('Failed to fetch');
-            return { ok: pedido.url !== red.fallaEn, status: pedido.url === red.fallaEn ? 500 : 200, clone() { return this; } };
+            return { ok: pedido.url !== red.fallaEn, status: pedido.url === red.fallaEn ? 500 : 200, type: 'basic', clone() { return this; } };
         },
         caches: {
             open: async () => ({ put: async (url) => { guardados.push(url); } }),
@@ -118,4 +118,18 @@ test('Service Worker sin conexión: una navegación cae a index.html precacheado
     };
     assert.equal((await responder('http://localhost/app/otra-pagina', 'navigate')).type, 'cacheada');
     assert.deepEqual(await responder('http://localhost/app/assets/icons/icon-512.png', 'no-cors'), { type: 'error' });
+});
+
+test('Service Worker: la vuelta de Google (oauth-callback.html con el code en la query) no se guarda en la caché; otro recurso sí', async () => {
+    const entorno = crearEntorno();
+    const responder = async (url, mode) => {
+        let promesa;
+        entorno.manejadores.fetch({ request: { method: 'GET', url, mode }, respondWith: p => { promesa = p; } });
+        await promesa;
+        await new Promise(r => setImmediate(r));
+    };
+    await responder('http://localhost/app/oauth-callback.html?code=4/0AX-secreto&state=abc', 'navigate');
+    assert.equal(entorno.guardados.some(p => String(p.url).includes('oauth-callback')), false, 'el code no queda en Cache Storage');
+    await responder('http://localhost/app/assets/icons/icon-512.png', 'no-cors');
+    assert.ok(entorno.guardados.some(p => String(p.url).endsWith('icon-512.png')), 'un recurso común se sigue guardando');
 });

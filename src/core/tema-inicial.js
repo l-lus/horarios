@@ -6,17 +6,12 @@ if (window.top !== window.self) {
     try { /** @type {Window} */ (window.top).location = window.self.location.href; } catch (e) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }
 
-// Listas válidas (copias de TEMAS y ENFASIS en ui/gestor-temas.js, de ESTILOS_CALENDARIO en core/estilo-calendario.js y de POSICIONES_HEADER en core/posicion-header.js: este
+// Listas válidas (copias de TEMAS y ENFASIS en ui/gestor-temas.js y de POSICIONES_HEADER en core/posicion-header.js: este
 // script clásico no puede importar módulos; tests/architecture.test.mjs verifica que coincidan). Un valor guardado
 // que no esté en la lista se trata como el valor por defecto, igual que hacen esos módulos.
 var TEMAS_VALIDOS = ['light', 'dark', 'medianoche', 'pink', 'green', 'blue', 'lilac', 'crema'];
 var ENFASIS_VALIDOS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul', 'rosa', 'turquesa'];
 var POSICIONES_HEADER_VALIDAS = ['top', 'bottom', 'left', 'right'];
-var ESTILOS_CALENDARIO_VALIDOS = ['redondeado', 'cuadrado', 'capsula', 'minimo'];
-// Variantes por familia y familia de cada estilo (copias de VARIANTES_CALENDARIO y de ESTILOS_CALENDARIO), y los estilos de antes (ESTILOS_CALENDARIO_ANTERIORES)
-var VARIANTES_CALENDARIO_VALIDAS = { aro: ['legacy', 'relleno-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo'], minimo: ['subrayado', 'punto'] };
-var FAMILIA_ESTILO_CALENDARIO = { redondeado: 'aro', cuadrado: 'aro', capsula: 'aro', minimo: 'minimo' };
-var ESTILOS_CALENDARIO_ANTERIORES = { 'legacy': ['redondeado', 'legacy'], 'relleno-aro': ['redondeado', 'relleno-aro'], 'cuadrado-aro': ['cuadrado', 'relleno-aro'], 'aro-tinte': ['redondeado', 'aro-tinte'], 'aro-grueso': ['redondeado', 'aro-grueso'], 'contorno-brillo': ['redondeado', 'contorno-brillo'], 'subrayado': ['minimo', 'subrayado'], 'punto': ['minimo', 'punto'] };
 
 (function () {
     try {
@@ -49,23 +44,16 @@ var ESTILOS_CALENDARIO_ANTERIORES = { 'legacy': ['redondeado', 'legacy'], 'relle
     } catch (err) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }());
 
-// Estilo de los días del calendario (ver EstiloCalendario): el CSS solo mira <html data-estilo-calendario> y <html data-variante-calendario>;
-// sin valor guardado queda el original (Redondeado + Legacy). Un estilo de antes se lee como su estilo y variante (la app lo migra al cargar).
+// Estilo de los días del calendario: EstiloCalendario deja guardados los tres atributos ya resueltos ("estilo familia variante"), así este
+// script no repite sus catálogos ni sus conversiones. Sin nada guardado (o con algo que no tiene forma de ids), el de por defecto: Redondeado + Relleno.
 (function () {
     try {
-        var e = localStorage.getItem('horarios_estiloCalendario') || 'redondeado';
-        var v = null;
-        var anterior = ESTILOS_CALENDARIO_ANTERIORES[e];
-        if (anterior) { e = anterior[0]; v = anterior[1]; }
-        if (ESTILOS_CALENDARIO_VALIDOS.indexOf(e) === -1) e = 'redondeado';
-        var familia = FAMILIA_ESTILO_CALENDARIO[e];
-        if (familia && !v) {
-            var guardadas = JSON.parse(localStorage.getItem('horarios_estiloCalendarioVariantes') || '{}') || {};
-            v = guardadas[familia];
-        }
-        if (familia && VARIANTES_CALENDARIO_VALIDAS[familia].indexOf(v) === -1) v = VARIANTES_CALENDARIO_VALIDAS[familia][0];
-        document.documentElement.setAttribute('data-estilo-calendario', e);
-        if (familia) document.documentElement.setAttribute('data-variante-calendario', v);
+        var partes = (localStorage.getItem('horarios_calendarioAtributos') || '').split(' ');
+        var validos = partes.length === 3 && partes.every(function (p) { return /^[a-z][a-z-]{0,29}$/.test(p); });
+        if (!validos) partes = ['redondeado', 'aro', 'legacy'];
+        document.documentElement.setAttribute('data-estilo-calendario', partes[0]);
+        document.documentElement.setAttribute('data-familia-calendario', partes[1]);
+        document.documentElement.setAttribute('data-variante-calendario', partes[2]);
     } catch (err) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }());
 

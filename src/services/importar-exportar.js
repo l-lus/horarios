@@ -1,7 +1,7 @@
 import { Preferencias } from '../core/preferencias.js';
 import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA, MOSAICOS_LINEA, DISPOSICIONES_ANILLO } from '../core/estilo-tarjeta.js';
 import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, FONDO_CARD_POR_DEFECTO, ENFASIS_IDS } from '../core/constantes.js';
-import { EstiloCalendario, ESTILOS_CALENDARIO, ESTILOS_CALENDARIO_ANTERIORES, esVariantesValidas } from '../core/estilo-calendario.js';
+import { EstiloCalendario, ESTILOS_CALENDARIO, ESTILOS_CALENDARIO_ANTERIORES, esVarianteValida } from '../core/estilo-calendario.js';
 import { PosicionHeader, posicionesPermitidas } from '../core/posicion-header.js';
 import { FONDOS_SVG } from '../data/fondos.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -50,6 +50,19 @@ function _atajosActuales() {
     return Array.isArray(guardado) ? guardado.filter(id => typeof id === 'string') : [...ATAJOS_POR_DEFECTO];
 }
 const _atajosSaneados = (lista) => [...new Set(lista)].slice(0, MAX_ATAJOS);
+
+/** Un campo del respaldo por familia de estilos del calendario: la variante elegida en ella. */
+function _variantesCalendario() {
+    const familias = [['aro', STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTE_ARO, 'variante del calendario (Redondeado, Cuadrado y Cápsula)'],
+        ['minimo', STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTE_MINIMO, 'variante del calendario (Mínimo)']];
+    return familias.map(([familia, clave, etiqueta]) => ({
+        clave,
+        etiqueta,
+        esValido: (v) => esVarianteValida(familia, v),
+        actual: () => EstiloCalendario.variantes()[familia],
+        aplicar: (v) => EstiloCalendario.setVariante(familia, v),
+    }));
+}
 
 const _avisarHint = () => EventosApp.emit('config:hint-integrado');
 
@@ -133,14 +146,8 @@ const CONFIG_RESPALDO = [
         distinto: (v) => (ESTILOS_CALENDARIO_ANTERIORES[v]?.[0] ?? v) !== EstiloCalendario.actual(),
         aplicar: (v) => EstiloCalendario.setEstilo(v),
     },
-    {
-        clave: STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES,
-        etiqueta: 'variante del estilo del calendario',
-        esValido: esVariantesValidas,
-        actual: EstiloCalendario.variantes,
-        distinto: (v) => Object.entries(v).some(([familia, id]) => EstiloCalendario.variantes()[familia] !== id),
-        aplicar: (v) => EstiloCalendario.setVariantes(v),
-    },
+    // la variante de cada familia de estilos (Redondeado/Cuadrado/Cápsula y Mínimo), como las subopciones del estilo de la tarjeta
+    ..._variantesCalendario(),
     {
         clave: STORAGE_KEYS.POSICION_HEADER,
         etiqueta: 'posición del encabezado (PC)',

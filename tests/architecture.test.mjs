@@ -269,23 +269,24 @@ test('CSP: index.html exige Trusted Types con la única política de core/html.j
     assert.match(fs.readFileSync('src/core/html.js', 'utf8'), /createPolicy\?\.\('horarios'/);
 });
 
-test('tema-inicial.js: sus listas de temas, énfasis, estilos de calendario y posiciones del encabezado coinciden con las de los módulos', async () => {
+test('tema-inicial.js: sus listas de temas, énfasis y posiciones del encabezado coinciden con las de los módulos', async () => {
     const codigo = fs.readFileSync('src/core/tema-inicial.js', 'utf8');
     const lista = (nombre) => JSON.parse(new RegExp(`var ${nombre} = (\\[[^\\]]*\\]);`).exec(codigo)[1].replace(/'/g, '"'));
     const temasModulo = JSON.parse(/const TEMAS = (\[[^\]]*\]);/.exec(fs.readFileSync('src/ui/gestor-temas.js', 'utf8'))[1].replace(/'/g, '"'));
-    const { ESTILOS_CALENDARIO } = await import('../src/core/estilo-calendario.js');
     const { POSICIONES_HEADER } = await import('../src/core/posicion-header.js');
     assert.deepEqual(lista('TEMAS_VALIDOS'), temasModulo);
     const { ENFASIS_IDS } = await import('../src/core/constantes.js');
     assert.deepEqual(lista('ENFASIS_VALIDOS'), ENFASIS_IDS);
-    assert.deepEqual(lista('ESTILOS_CALENDARIO_VALIDOS'), ESTILOS_CALENDARIO.map(e => e.id));
-    // variantes por familia, familia de cada estilo y estilos de antes: copias de core/estilo-calendario.js
-    const objeto = (nombre) => JSON.parse(new RegExp(`var ${nombre} = (\\{[^;]*\\});`).exec(codigo)[1].replace(/'/g, '"').replace(/([{,]\s*)([a-z]+):/g, '$1"$2":'));
-    const { VARIANTES_CALENDARIO, ESTILOS_CALENDARIO_ANTERIORES } = await import('../src/core/estilo-calendario.js');
-    assert.deepEqual(objeto('VARIANTES_CALENDARIO_VALIDAS'), Object.fromEntries(Object.entries(VARIANTES_CALENDARIO).map(([f, l]) => [f, l.map(v => v.id)])));
-    assert.deepEqual(objeto('FAMILIA_ESTILO_CALENDARIO'), Object.fromEntries(ESTILOS_CALENDARIO.filter(e => e.familia).map(e => [e.id, e.familia])));
-    assert.deepEqual(objeto('ESTILOS_CALENDARIO_ANTERIORES'), ESTILOS_CALENDARIO_ANTERIORES);
     assert.deepEqual(lista('POSICIONES_HEADER_VALIDAS'), POSICIONES_HEADER.map(p => p.id));
+});
+
+test('tema-inicial.js: el estilo de calendario de por defecto (sin atributos guardados) es el mismo que el de EstiloCalendario', async () => {
+    const codigo = fs.readFileSync('src/core/tema-inicial.js', 'utf8');
+    const porDefecto = /if \(!validos\) partes = \['([a-z-]+)', '([a-z-]+)', '([a-z-]+)'\];/.exec(codigo)?.slice(1);
+    const { ESTILOS_CALENDARIO, VARIANTES_CALENDARIO, siguienteEstilo } = await import('../src/core/estilo-calendario.js');
+    const estilo = siguienteEstilo(ESTILOS_CALENDARIO[ESTILOS_CALENDARIO.length - 1].id);   // el que sigue al último es el primero, el de por defecto
+    const familia = ESTILOS_CALENDARIO.find(e => e.id === estilo)?.familia ?? '';
+    assert.deepEqual(porDefecto, [estilo, familia, VARIANTES_CALENDARIO[familia][0].id]);
 });
 
 test('Service Worker (sw.js): todo recurso local que pide la app (index.html, url() de los CSS, íconos y fuentes) está precacheado', () => {

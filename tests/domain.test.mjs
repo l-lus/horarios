@@ -292,7 +292,8 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         cicloHintAuto: true,
         formatoCortoStats: false,
         estiloCalendario: 'redondeado',
-        estiloCalendarioVariantes: { aro: 'legacy', minimo: 'subrayado' },
+        estiloCalendarioVarianteAro: 'legacy',
+        estiloCalendarioVarianteMinimo: 'subrayado',
         posicionHeader: 'top',
         posicionHeaderMovil: 'top',
         hoverPopupCalendario: false,
@@ -322,11 +323,11 @@ test('ImportarExportar: la apariencia (estilo del calendario, fondo, formato cor
     assert.ok(STORAGE_KEYS.FONDO_CARD in exportado, 'el fondo de la tarjeta falta en el respaldo');
 
     const base = { diasHabiles: [1, 2, 3, 4, 5], horasDiarias: 8 };
-    const cambios = { estiloCalendario: 'minimo', estiloCalendarioVariantes: { minimo: 'punto' }, fondoCard: 'ninguno', enfasis: 'rosa', formatoCortoStats: true, hoverPopupCalendario: true, ruedaCalendario: false, persistirTarjetas: false };
+    const cambios = { estiloCalendario: 'minimo', estiloCalendarioVarianteMinimo: 'punto', fondoCard: 'ninguno', enfasis: 'rosa', formatoCortoStats: true, hoverPopupCalendario: true, ruedaCalendario: false, persistirTarjetas: false };
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, ...cambios }), true);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, estiloCalendario: 'inexistente' }), false);
-    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, estiloCalendarioVariantes: { minimo: 'aro-tinte' } }), false, 'una variante de otra familia');
-    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, estiloCalendarioVariantes: 'punto' }), false);
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, estiloCalendarioVarianteMinimo: 'aro-tinte' }), false, 'una variante de otra familia');
+    assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, estiloCalendarioVarianteAro: { aro: 'legacy' } }), false);
     // la posición del encabezado: en PC valen los cuatro lados; en móvil solo arriba y abajo
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeader: 'left', posicionHeaderMovil: 'bottom' }), true);
     assert.equal(ImportarExportar.validarCamposConfigImport({ ...base, posicionHeaderMovil: 'left' }), false);
@@ -369,7 +370,7 @@ test('ImportarExportar: la apariencia (estilo del calendario, fondo, formato cor
     assert.equal(Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, null, true), 'ninguno');
 
     // se deja como estaba para no alterar los demás tests
-    ImportarExportar.aplicarConfigImportada({ ...base, estiloCalendario: 'redondeado', estiloCalendarioVariantes: { aro: 'legacy', minimo: 'subrayado' }, fondoCard: 'golden-gate', formatoCortoStats: false, hoverPopupCalendario: false, ruedaCalendario: true, persistirTarjetas: true });
+    ImportarExportar.aplicarConfigImportada({ ...base, estiloCalendario: 'redondeado', estiloCalendarioVarianteAro: 'legacy', estiloCalendarioVarianteMinimo: 'subrayado', fondoCard: 'golden-gate', formatoCortoStats: false, hoverPopupCalendario: false, ruedaCalendario: true, persistirTarjetas: true });
     CLAVES_AJUSTES_INSTALACION.forEach(k => Almacenamiento.removeItem(k));
     Almacenamiento.removeItem(STORAGE_KEYS.FONDO_CARD, true);
     Almacenamiento.removeItem(STORAGE_KEYS.ENFASIS, true);
@@ -929,42 +930,55 @@ test('EstiloCalendario: cada familia recuerda su variante, las variantes ciclan 
     const { EstiloCalendario } = await import('../src/core/estilo-calendario.js');
     const { Almacenamiento } = await import('../src/core/almacenamiento.js');
     const { STORAGE_KEYS } = await import('../src/core/constantes.js');
+    const limpiar = () => {
+        [STORAGE_KEYS.ESTILO_CALENDARIO, STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTE_ARO, STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTE_MINIMO,
+            STORAGE_KEYS.CALENDARIO_ATRIBUTOS, 'estiloCalendarioVariantes'].forEach(k => Almacenamiento.removeItem(k));
+        EstiloCalendario.releer();
+    };
+    limpiar();
     try {
-        EstiloCalendario.setEstilo('redondeado');
-        assert.equal(EstiloCalendario.tieneVariantes(), true);
-        assert.equal(EstiloCalendario.variante(), 'legacy', 'sin elegir, la primera (el relleno original)');
+        // por defecto: Redondeado + Relleno (id legacy)
+        assert.deepEqual([EstiloCalendario.actual(), EstiloCalendario.familia(), EstiloCalendario.variante()], ['redondeado', 'aro', 'legacy']);
         EstiloCalendario.siguienteVariante();
         EstiloCalendario.siguienteVariante();
         EstiloCalendario.siguienteVariante();
         assert.equal(EstiloCalendario.etiquetaVariante(), 'Aro grueso');
-        EstiloCalendario.setEstilo('cuadrado');
-        assert.equal(EstiloCalendario.variante(), 'aro-grueso', 'Cuadrado usa la misma variante que Redondeado');
+        EstiloCalendario.setEstilo('capsula');
+        assert.equal(EstiloCalendario.variante(), 'aro-grueso', 'Cápsula usa la misma variante que Redondeado');
         EstiloCalendario.setEstilo('minimo');
-        assert.equal(EstiloCalendario.variante(), 'subrayado');
+        assert.deepEqual([EstiloCalendario.familia(), EstiloCalendario.variante()], ['minimo', 'subrayado']);
         EstiloCalendario.siguienteVariante();
         EstiloCalendario.siguienteVariante();
         assert.equal(EstiloCalendario.variante(), 'subrayado', 'el ciclo de variantes vuelve a la primera');
-
-        // una variante guardada que ya no existe vuelve a la primera de su familia, sin tocar la de la otra
-        Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES, { aro: 'aro-grueso', minimo: 'texto' });
-        assert.deepEqual(EstiloCalendario.variantes(), { aro: 'aro-grueso', minimo: 'subrayado' });
         EstiloCalendario.setEstilo('redondeado');
         assert.equal(EstiloCalendario.variante(), 'aro-grueso', 'al volver, sigue la variante que tenía');
-        // el Legacy de antes (un estilo propio) pasa a Redondeado con la variante Legacy
+        // los atributos ya resueltos quedan guardados para el primer pintado (tema-inicial.js)
+        assert.equal(Almacenamiento.getItem(STORAGE_KEYS.CALENDARIO_ATRIBUTOS, null), 'redondeado aro aro-grueso');
+
+        // estilos de antes (un solo valor): pasan a estilo + variante, sin tocar la variante de la otra familia
         EstiloCalendario.setEstilo('legacy');
         assert.deepEqual([EstiloCalendario.actual(), EstiloCalendario.variante()], ['redondeado', 'legacy']);
-
-        // un estilo de antes (un solo valor) pasa a estilo + variante, sin perder la variante de la otra familia
         EstiloCalendario.setEstilo('punto');
         assert.deepEqual([EstiloCalendario.actual(), EstiloCalendario.variante()], ['minimo', 'punto']);
-        assert.equal(EstiloCalendario.variantes().aro, 'legacy', 'la de aro sigue siendo la del paso anterior');
+        assert.equal(EstiloCalendario.variantes().aro, 'legacy');
         assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ESTILO_CALENDARIO, null), 'minimo');
+
+        // una variante guardada que ya no existe vuelve a la primera de su familia
+        Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTE_MINIMO, 'texto');
+        EstiloCalendario.releer();
+        assert.deepEqual(EstiloCalendario.variantes(), { aro: 'legacy', minimo: 'subrayado' });
+
+        // lo guardado al iniciar por versiones anteriores (un estilo viejo, o las variantes juntas de una versión de prueba) se convierte
+        limpiar();
+        Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO, 'cuadrado-aro');
+        Almacenamiento.setItem('estiloCalendarioVariantes', { minimo: 'punto' });
+        EstiloCalendario.releer();
+        EstiloCalendario.init();
+        assert.deepEqual(EstiloCalendario.variantes(), { aro: 'relleno-aro', minimo: 'punto' });
+        assert.equal(EstiloCalendario.actual(), 'cuadrado');
+        assert.equal(Almacenamiento.getItem('estiloCalendarioVariantes', null), null, 'la clave de las variantes juntas se borra');
     } finally {
-        Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_CALENDARIO);
-        Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES);
-        EstiloCalendario.setEstilo('redondeado');
-        Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_CALENDARIO);
-        Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES);
+        limpiar();
     }
 });
 

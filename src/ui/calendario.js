@@ -150,7 +150,8 @@ function _crearCeldaDia({ fecha, dia, clase, esHoy, reg, esNuevo, conComentario,
         clases += ' nuevo-registro-animacion';
         cell.addEventListener('animationend', () => cell.classList.remove('nuevo-registro-animacion'), { once: true });
     }
-    if (reg) clases += ' cursor-pointer';
+    // con registro (y a la vista con los filtros): el estilo de los días se dibuja solo sobre estos (ver .con-registro en tarjetas-vistas.css)
+    if (reg) clases += ' con-registro cursor-pointer';
     if (conComentario) clases += ' tiene-comentario';
     cell.className = clases;
     cell.textContent = String(dia);

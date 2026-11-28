@@ -1,15 +1,15 @@
 import { STORAGE_KEYS } from './constantes.js';
 import { Almacenamiento } from './almacenamiento.js';
-import { catalogoCiclico, opcionGuardada, siguienteEnCiclo } from './catalogo.js';
+import { catalogoCiclico, opcionGuardada } from './catalogo.js';
 
 // ====================================================================
 // ESTILO DE LOS DÍAS DEL CALENDARIO: estilo (forma) y variante
 // ====================================================================
-// El CSS solo mira <html data-estilo-calendario="..." data-variante-calendario="...">. Redondeado, Cuadrado y Cápsula comparten las variantes de aro
-// (cambia solo la forma); la primera, 'legacy' (Relleno), es el relleno original. Mínimo tiene las suyas (barra o punto).
-// Por defecto: Redondeado + Relleno.
-// La variante se recuerda por familia: al pasar de Redondeado a Mínimo y volver, sigue la que estaba.
-// tema-inicial.js aplica los dos atributos antes de que cargue la app (copia de estas listas: un test verifica que coincidan).
+// El CSS solo mira <html data-estilo-calendario data-familia-calendario data-variante-calendario>. Redondeado, Cuadrado y Cápsula son la familia
+// "aro": comparten sus variantes (cambia solo la forma); la primera, 'legacy' (Relleno), es el relleno original. Mínimo es su propia familia
+// (barra o punto). Por defecto: Redondeado + Relleno. Cada familia guarda su variante (como las subopciones de EstiloTarjeta): al pasar de
+// Redondeado a Mínimo y volver, sigue la que estaba.
+// Para el primer pintado (tema-inicial.js, que no puede importar módulos) se guardan además los tres atributos ya resueltos (CALENDARIO_ATRIBUTOS).
 export const ESTILOS_CALENDARIO = Object.freeze([
     { id: 'redondeado', label: 'Redondeado', familia: 'aro' },
     { id: 'cuadrado', label: 'Cuadrado', familia: 'aro' },
@@ -43,58 +43,61 @@ export const ESTILOS_CALENDARIO_ANTERIORES = Object.freeze({
     'punto': ['minimo', 'punto']
 });
 
-const _catalogo = catalogoCiclico(ESTILOS_CALENDARIO, { porDefecto: 'redondeado', desconocidoEsPorDefecto: true });
-const _guardado = opcionGuardada(STORAGE_KEYS.ESTILO_CALENDARIO, _catalogo);
+/** Dónde guarda su variante cada familia. */
+const CLAVES_VARIANTE = Object.freeze({ aro: STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTE_ARO, minimo: STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTE_MINIMO });
+/** Clave de una versión de prueba que guardaba las variantes juntas ({ aro, minimo }): se pasa a las claves por familia y se borra. */
+const CLAVE_VARIANTES_JUNTAS = 'estiloCalendarioVariantes';
+
+const _estilos = catalogoCiclico(ESTILOS_CALENDARIO, { porDefecto: 'redondeado', desconocidoEsPorDefecto: true });
+const _estiloGuardado = opcionGuardada(STORAGE_KEYS.ESTILO_CALENDARIO, _estilos);
+/** Catálogo y opción guardada de la variante de cada familia. */
+const _variantes = Object.fromEntries(Object.entries(VARIANTES_CALENDARIO).map(([fam, lista]) => {
+    const catalogo = catalogoCiclico(lista, { desconocidoEsPorDefecto: true });
+    return [fam, { catalogo, guardada: opcionGuardada(CLAVES_VARIANTE[fam], catalogo) }];
+}));
 
 /** Estilo que sigue al `id` en el ciclo (vuelve al primero al terminar; un id desconocido cuenta como el estilo por defecto). */
-export const siguienteEstilo = _catalogo.siguiente;
-export const etiquetaEstilo = _catalogo.etiqueta;
+export const siguienteEstilo = _estilos.siguiente;
+export const etiquetaEstilo = _estilos.etiqueta;
 
-/** @param {string} estilo @returns {string | null} la familia de variantes del estilo */
-const familiaDe = (estilo) => ESTILOS_CALENDARIO.find(e => e.id === estilo)?.familia ?? null;
+/** @param {string} estilo @returns {string} la familia de variantes del estilo */
+const familiaDe = (estilo) => ESTILOS_CALENDARIO.find(e => e.id === estilo)?.familia ?? 'aro';
 
-/** ¿Es un mapa válido de variantes por familia? (lo que se guarda y viaja en el respaldo) @param {unknown} v */
-export function esVariantesValidas(v) {
-    if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
-    return Object.entries(v).every(([familia, id]) => familia in VARIANTES_CALENDARIO && VARIANTES_CALENDARIO[familia].some(x => x.id === id));
-}
-
-/**
- * La variante elegida en cada familia. Cada una se valida por separado: una que ya no existe (o que no se eligió) vuelve a la primera
- * de su familia sin tocar las demás.
- * @returns {Record<string, string>}
- */
-function variantes() {
-    const guardadas = Almacenamiento.getObject(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES, null);
-    const g = guardadas && typeof guardadas === 'object' ? /** @type {Record<string, unknown>} */ (guardadas) : {};
-    return Object.fromEntries(Object.entries(VARIANTES_CALENDARIO).map(([familia, lista]) =>
-        [familia, lista.some(v => v.id === g[familia]) ? /** @type {string} */ (g[familia]) : lista[0].id]));
-}
-
-/** Los estilos de antes que quedaron guardados pasan a estilo + variante (una vez: después ya está en el formato nuevo). */
-function _migrarGuardado() {
-    const crudo = Almacenamiento.getItem(STORAGE_KEYS.ESTILO_CALENDARIO, null);
-    const anterior = crudo ? ESTILOS_CALENDARIO_ANTERIORES[crudo] : null;
-    if (!anterior) return;
-    Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES, { ...variantes(), [familiaDe(anterior[0]) ?? 'aro']: anterior[1] });
-    Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO, anterior[0]);
-    _guardado.olvidar();
-}
-
-const actual = () => _guardado.get();
+const actual = () => _estiloGuardado.get();
+const familia = () => familiaDe(actual());
 /** La variante del estilo actual. */
-function variante() {
-    const familia = familiaDe(actual());
-    return familia ? variantes()[familia] : null;
-}
+const variante = () => _variantes[familia()].guardada.get();
+/** @returns {Record<string, string>} la variante elegida en cada familia */
+const variantes = () => Object.fromEntries(Object.entries(_variantes).map(([fam, v]) => [fam, v.guardada.get()]));
+
+/** ¿Es una variante de esa familia? (para validar los respaldos) @param {string} fam @param {unknown} id */
+export const esVarianteValida = (fam, id) => !!_variantes[fam]?.catalogo.esValido(id);
 
 function _aplicar() {
     if (typeof document === 'undefined') return;
+    const atributos = { estilo: actual(), familia: familia(), variante: variante() };
     const raiz = document.documentElement;
-    raiz.setAttribute('data-estilo-calendario', actual());
-    const v = variante();
-    if (v) raiz.setAttribute('data-variante-calendario', v);
-    else raiz.removeAttribute('data-variante-calendario');
+    raiz.setAttribute('data-estilo-calendario', atributos.estilo);
+    raiz.setAttribute('data-familia-calendario', atributos.familia);
+    raiz.setAttribute('data-variante-calendario', atributos.variante);
+    Almacenamiento.setItem(STORAGE_KEYS.CALENDARIO_ATRIBUTOS, Object.values(atributos).join(' '));
+}
+
+/** Fija la variante de una familia (sin aplicarla). @param {string} fam @param {unknown} id */
+const _fijarVariante = (fam, id) => _variantes[fam]?.guardada.set(id) ?? false;
+
+/** Lo guardado por versiones anteriores pasa al formato actual (una vez: después ya está así). */
+function _migrarGuardado() {
+    const juntas = Almacenamiento.getObject(CLAVE_VARIANTES_JUNTAS, null);
+    if (juntas !== null) {
+        if (typeof juntas === 'object') Object.entries(juntas).forEach(([fam, id]) => _fijarVariante(fam, id));
+        Almacenamiento.removeItem(CLAVE_VARIANTES_JUNTAS);
+    }
+    const anterior = ESTILOS_CALENDARIO_ANTERIORES[Almacenamiento.getItem(STORAGE_KEYS.ESTILO_CALENDARIO, '') ?? ''];
+    if (anterior) {
+        _fijarVariante(familiaDe(anterior[0]), anterior[1]);
+        _estiloGuardado.set(anterior[0]);
+    }
 }
 
 function init() {
@@ -106,40 +109,36 @@ function init() {
 function setEstilo(id) {
     const anterior = ESTILOS_CALENDARIO_ANTERIORES[id];
     if (anterior) {
-        Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES, { ...variantes(), [familiaDe(anterior[0]) ?? 'aro']: anterior[1] });
+        _fijarVariante(familiaDe(anterior[0]), anterior[1]);
         id = anterior[0];
     }
-    if (!_guardado.set(id)) return;
-    _aplicar();   // el CSS lo anima solo (transiciones en .calendario-dia): sin bloquear ni esperar, cada toque cuenta
+    if (_estiloGuardado.set(id) || anterior) _aplicar();   // el CSS lo anima solo (transiciones en .calendario-dia): sin bloquear ni esperar
 }
 
-/** Fija las variantes de cada familia (al restaurar un respaldo). @param {unknown} v */
-function setVariantes(v) {
-    if (!esVariantesValidas(v)) return;
-    Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES, { ...variantes(), .../** @type {object} */ (v) });
-    _aplicar();
+/** Fija la variante de una familia y la aplica (al restaurar un respaldo). @param {string} fam @param {unknown} id */
+function setVariante(fam, id) {
+    if (_fijarVariante(fam, id)) _aplicar();
 }
 
 function siguiente() {
     setEstilo(siguienteEstilo(actual()));
 }
 
-/** Pasa a la variante siguiente del estilo actual (sin variantes, no hace nada). */
+/** Pasa a la variante siguiente del estilo actual. */
 function siguienteVariante() {
-    const familia = familiaDe(actual());
-    if (!familia) return;
-    const ids = VARIANTES_CALENDARIO[familia].map(x => x.id);
-    Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES, { ...variantes(), [familia]: siguienteEnCiclo(ids, variantes()[familia]) });
+    const fam = familia();
+    setVariante(fam, _variantes[fam].catalogo.siguiente(variante()));
+}
+
+/** Vuelve a leer lo guardado (después de restaurar un respaldo, que escribe el almacenamiento por su cuenta). */
+function releer() {
+    _estiloGuardado.olvidar();
+    Object.values(_variantes).forEach(v => v.guardada.olvidar());
     _aplicar();
 }
 
-function etiquetaVariante() {
-    const familia = familiaDe(actual());
-    const v = variante();
-    return familia && v ? VARIANTES_CALENDARIO[familia].find(x => x.id === v)?.label ?? '' : '';
-}
-
 export const EstiloCalendario = {
-    init, siguiente, actual, setEstilo, etiqueta: () => etiquetaEstilo(actual()),
-    variante, variantes, setVariantes, siguienteVariante, etiquetaVariante, tieneVariantes: () => familiaDe(actual()) !== null
+    init, siguiente, actual, setEstilo, etiqueta: () => etiquetaEstilo(actual()), releer,
+    familia, variante, variantes, setVariante, siguienteVariante,
+    etiquetaVariante: () => _variantes[familia()].catalogo.etiqueta(variante())
 };

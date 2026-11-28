@@ -11,16 +11,28 @@ const ESPERA_ARRANQUE_MS = 15000;
 
 const esperar = ms => new Promise(r => setTimeout(r, ms));
 
+// El Chromium que instala Playwright (npx playwright install chromium), si no hay uno del sistema
+function chromiumDePlaywright() {
+    const base = path.join(os.homedir(), '.cache', 'ms-playwright');
+    if (!fs.existsSync(base)) return null;
+    const versiones = fs.readdirSync(base).filter(d => /^chromium-\d+$/.test(d)).sort().reverse();
+    for (const v of versiones) {
+        const bin = path.join(base, v, 'chrome-linux64', 'chrome');
+        if (fs.existsSync(bin)) return bin;
+    }
+    return null;
+}
+
 function buscarNavegador() {
     if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
-    return CANDIDATOS.find(bin => spawnSync('which', [bin]).status === 0) ?? null;
+    return CANDIDATOS.find(bin => spawnSync('which', [bin]).status === 0) ?? chromiumDePlaywright();
 }
 
 /** Por qué no se puede correr la prueba (texto para `skip`), o null si se puede. */
 export function motivoParaSaltear() {
     if (typeof WebSocket === 'undefined') return 'hace falta Node 22 o superior (WebSocket global)';
     if (spawnSync('python3', ['--version']).status !== 0) return 'sin python3 (lo usa el servidor de desarrollo)';
-    if (!buscarNavegador()) return `sin navegador Chromium (probé ${CANDIDATOS.join(', ')}; o definí CHROME_BIN)`;
+    if (!buscarNavegador()) return `sin navegador Chromium (probé ${CANDIDATOS.join(', ')} y el de Playwright; o definí CHROME_BIN)`;
     return null;
 }
 
@@ -41,7 +53,9 @@ function matarGrupo(proceso) {
  */
 export async function abrirApp({ ancho = 360, alto = 780, movil = true } = {}) {
     const puerto = await puertoLibre();
-    const servidor = spawn('python3', ['scripts/servidor.py', String(puerto), '127.0.0.1', process.cwd()], { stdio: 'ignore', detached: true });
+    // HORARIOS_RAIZ: servir otra carpeta (la copia de producción, ver scripts/publicar.mjs); por defecto, este repo
+    const raiz = path.resolve(process.env.HORARIOS_RAIZ ?? process.cwd());
+    const servidor = spawn('python3', ['scripts/servidor.py', String(puerto), '127.0.0.1', raiz], { stdio: 'ignore', detached: true });
     const perfil = fs.mkdtempSync(path.join(os.tmpdir(), 'horarios-humo-'));
     const navegador = spawn(/** @type {string} */ (buscarNavegador()), [
         '--headless=new', '--no-first-run', '--no-default-browser-check', '--disable-gpu',

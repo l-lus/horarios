@@ -1,9 +1,13 @@
 // ====================================================================
 // WORKER horarios-push — dirección y cabeceras comunes (recordatorios push, estadísticas y OAuth de Google Drive)
 // ====================================================================
-const WORKER_URL = 'https://horarios-push.lushibosca.workers.dev';
-// El OAuth de Google Drive va al mismo Worker. Para probar cambios del OAuth en la cuenta l-lus (`wrangler deploy --env pruebas`),
-// apuntarlo a https://horarios-push.l-lus.workers.dev y sumar ese dominio al connect-src de index.html.
+// Publicada (l-lus.github.io o lushibosca.github.io), la app usa el Worker de producción. Abierta en la computadora
+// (localhost) usa el de pruebas (cuenta l-lus, `wrangler deploy --env pruebas`): el de producción no acepta localhost.
+const WORKER_PRODUCCION = 'https://horarios-push.lushibosca.workers.dev';
+const WORKER_PRUEBAS = 'https://horarios-push.l-lus.workers.dev';
+const _esLocal = ['localhost', '127.0.0.1'].includes(globalThis.location?.hostname ?? '');
+const WORKER_URL = _esLocal ? WORKER_PRUEBAS : WORKER_PRODUCCION;
+// El OAuth de Google Drive va al mismo Worker
 const WORKER_OAUTH_URL = WORKER_URL;
 const APP_SECRET = '487e4c492604b653b56e9ba234cb9eda007fc149c66650e9'; // que mira bobo, anda paya
 

@@ -10,7 +10,7 @@
          style-src 'self';
          img-src 'self'; 
          font-src 'self'; 
-         connect-src 'self' https://api.github.com https://www.googleapis.com https://horarios-push.lushibosca.workers.dev; 
+         connect-src 'self' https://api.github.com https://www.googleapis.com https://horarios-push.lushibosca.workers.dev https://horarios-push.l-lus.workers.dev; 
          worker-src 'self';
          manifest-src 'self';
          object-src 'none'; 
@@ -1650,6 +1650,8 @@
                             <div class="collapsible destino-conexion gist-panel" id="panel-gist-conexion">
                                 <div class="collapsible-inner">
                                     <div class="destino-conexion-contenido">
+                                        <p class="frase-nota gist-nota-privacidad">Un Gist secreto es oculto, no privado: cualquiera que tenga
+                                            el link puede abrirlo. Con una frase de cifrado, lo que vea no se puede leer.</p>
                                         <div class="form-group">
                                             <label for="gist-token">Personal Access Token</label>
                                             <div class="input-with-btn">

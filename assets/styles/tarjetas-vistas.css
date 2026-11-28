@@ -882,6 +882,10 @@
 
 .calendario-grid {
     position: relative;
+    /* Contenedor para medir las celdas (unidades cqi): en Cápsula, cada lado del día se angosta un 16 % del ancho de su celda */
+    container-type: inline-size;
+    --cal-celda: calc((100cqi - 6 * var(--space-xs)) / 7);
+    --cal-capsula-margen: calc(var(--cal-celda) * 0.16);
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
@@ -928,6 +932,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
+    /* sin ancho salvo en Cápsula (ver abajo): existe siempre para que el cambio a ese estilo se anime */
+    border: 0 solid transparent;
     --cal-dia-tam: var(--text-sm);
     font-size: var(--cal-dia-tam);
     font-weight: var(--fw-medium);
@@ -935,7 +941,7 @@
     position: relative;
     /* Cambiar de estilo (o de color del día) es una transición: todo lo que cambia se interpola, y se retoma desde donde esté si se vuelve a cambiar enseguida */
     --cal-dia-transicion: opacity var(--dur-fast), background-color var(--dur-anim), box-shadow var(--dur-anim), color var(--dur-anim),
-        border-radius var(--dur-anim), padding var(--dur-anim);
+        border-radius var(--dur-anim), padding var(--dur-anim), border-width var(--dur-anim);
     transition: var(--cal-dia-transicion);
 }
 
@@ -1022,13 +1028,13 @@
     border-radius: 24%;
 }
 
-/* Cápsula: la misma variante en una píldora vertical. La celda de la grilla sigue cuadrada (no cambia el alto del calendario):
-   el día ocupa el 72 % del ancho con el mismo alto, y los extremos quedan redondos */
+/* Cápsula: la misma variante en una píldora vertical. El día sigue ocupando toda su celda (el calendario no cambia de alto): un borde
+   transparente a cada lado angosta lo que se ve, porque el relleno y los aros (sombra interna) se dibujan por dentro del borde.
+   El borde se anima como el radio, así el paso a Cápsula es tan suave como de Redondeado a Cuadrado. */
 :root[data-estilo-calendario="capsula"] .calendario-dia {
-    width: 72%;
-    aspect-ratio: 0.72;
-    justify-self: center;
-    border-radius: var(--radius-full);
+    border-inline-width: var(--cal-capsula-margen);
+    /* el radio vertical es la mitad del ancho que se ve: por dentro del borde queda una píldora de lados rectos (no una elipse) */
+    border-radius: calc(var(--cal-celda) / 2) / calc(var(--cal-celda) / 2 - var(--cal-capsula-margen));
 }
 
 /* Contorno con brillo: aro fino del color del día con un resplandor suave */

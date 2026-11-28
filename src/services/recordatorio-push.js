@@ -3,6 +3,7 @@ import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
+import { EventosApp } from '../core/eventos.js';
 import { GestorPerfiles } from './gestor-perfiles.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { EstadoApp } from './estado-app.js';
@@ -108,7 +109,11 @@ const getUsarBufferSemanal = () => Preferencias.PUSH_USAR_BUFFER_SEMANAL.get();
 const getBufferSoloUltimoDia = () => Preferencias.PUSH_BUFFER_SOLO_ULTIMO_DIA.get();
 /** @param {any} valor */ const setBufferSoloUltimoDia = (valor) => Preferencias.PUSH_BUFFER_SOLO_ULTIMO_DIA.set(!!valor);
 const getHabilitado = () => Preferencias.PUSH_HABILITADO.get();
-/** @param {any} valor */ const setHabilitado = (valor) => Preferencias.PUSH_HABILITADO.set(!!valor);
+/** Activa o desactiva el aviso de fin de jornada del perfil y avisa ('push:habilitado'; lo escucha la tarjeta de atajos). @param {any} valor */
+const setHabilitado = (valor) => {
+    Preferencias.PUSH_HABILITADO.set(!!valor);
+    EventosApp.emit('push:habilitado', { habilitado: !!valor });
+};
 const UMBRAL_REGISTROS_ACTIVACION = 15;
 const AVISOS_INICIALES = 3;
 function _soportaPush() {

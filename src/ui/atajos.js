@@ -5,6 +5,9 @@ import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
 import { html, montar } from '../core/html.js';
 import { DestinoRespaldo } from '../services/destino-respaldo.js';
+import { RecordatorioPush } from '../services/recordatorio-push.js';
+import { SincronizacionGist } from '../services/sincronizacion-gist.js';
+import { SincronizacionDrive } from '../services/sincronizacion-drive.js';
 import { MAX_ATAJOS, normalizarAtajos, alternarAtajo } from '../services/atajos.js';
 import { Animaciones } from './animaciones.js';
 import { GestorModales } from './gestor-modales.js';
@@ -42,7 +45,7 @@ function _flechaRespaldo(tipo) {
 /**
  * Catálogo de atajos. `estado()` devuelve lo que cambia con la situación (ícono o ícono con flecha, título, si está desactivado);
  * `accion(btn)` lo que hace. El orden de este arreglo es el de la lista del selector.
- * @typedef {{ icono?: string, flecha?: { base: string, sentido: 'subir' | 'bajar' }, titulo: string, desactivado?: boolean }} EstadoAtajo
+ * @typedef {{ icono?: string, flecha?: { base: string, sentido: 'subir' | 'bajar' }, tachado?: boolean, titulo: string, desactivado?: boolean }} EstadoAtajo
  * @type {ReadonlyArray<{ id: string, nombre: string, descripcion: string, estado: () => EstadoAtajo, accion: (btn: HTMLElement) => void }>}
  */
 const CATALOGO = [
@@ -83,7 +86,10 @@ const CATALOGO = [
     },
     {
         id: 'respaldo', nombre: 'Respaldo y sincronización', descripcion: 'Abre el respaldo: destinos, cifrado y sincronización automática',
-        estado: () => ({ icono: '#icon-cloud', titulo: 'Respaldo y sincronización' }),
+        // tachado mientras no hay ninguna nube (Gist o Drive) configurada
+        estado: () => (SincronizacionGist.conectado() || SincronizacionDrive.conectado())
+            ? { icono: '#icon-cloud', titulo: 'Respaldo y sincronización' }
+            : { icono: '#icon-cloud', tachado: true, titulo: 'Respaldo y sincronización (sin Gist ni Drive configurados)' },
         accion: () => CentroRespaldo.abrir()
     },
     {
@@ -98,7 +104,10 @@ const CATALOGO = [
     },
     {
         id: 'notificaciones', nombre: 'Notificaciones', descripcion: 'Activa o configura el aviso de horario cumplido',
-        estado: () => ({ icono: '#icon-bell', titulo: 'Notificaciones' }),
+        // tachado mientras el aviso de fin de jornada está desactivado en el perfil
+        estado: () => RecordatorioPush.getHabilitado()
+            ? { icono: '#icon-bell', titulo: 'Notificaciones' }
+            : { icono: '#icon-bell', tachado: true, titulo: 'Notificaciones (desactivadas)' },
         accion: () => Notificaciones.abrirModalNotificaciones()
     },
     {
@@ -123,16 +132,35 @@ function _guardar(lista) {
  * Pone el ícono en el `<svg>` del botón: uno simple, o el de respaldo con su flecha (ver IconosAnimados.ponerIconoFlecha).
  * Si es el mismo que ya tiene no lo toca: rearmarlo cortaría la animación de la flecha o del giro recién empezada.
  */
+const _SVG_NS = 'http://www.w3.org/2000/svg';
+let _mascaras = 0;
+
+/** `<tag attr...>` en el espacio de nombres de SVG. @param {string} tag @param {Record<string, string>} attrs */
+function _svg(tag, attrs) {
+    const el = document.createElementNS(_SVG_NS, tag);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    return el;
+}
+
+/** El ícono con la barra de "desactivado" encima: el ícono se recorta alrededor de la barra (máscara propia de cada botón) para que se lea. */
+function _iconoTachado(svg, href) {
+    const id = `atajo-tachado-${++_mascaras}`;
+    const mascara = _svg('mask', { id, maskUnits: 'userSpaceOnUse', x: '0', y: '0', width: '16', height: '16' });
+    mascara.append(_svg('rect', { width: '16', height: '16', fill: 'white' }), _svg('path', { d: 'M1.2 1.2 14.8 14.8', stroke: 'black', 'stroke-width': '3.2', 'stroke-linecap': 'round' }));
+    const defs = _svg('defs', {});
+    defs.append(mascara);
+    svg.replaceChildren(defs, _svg('use', { href, mask: `url(#${id})` }), _svg('use', { href: '#icon-tachado' }));
+}
+
 function _ponerIcono(btn, est) {
     const svg = btn.querySelector('svg');
     if (!svg) return;
-    const clave = est.flecha ? `${est.flecha.base}-${est.flecha.sentido}` : (est.icono ?? '');
+    const clave = est.flecha ? `${est.flecha.base}-${est.flecha.sentido}` : `${est.icono ?? ''}${est.tachado ? '|tachado' : ''}`;
     if (svg.dataset.icono === clave) return;
     svg.dataset.icono = clave;
     if (est.flecha) { IconosAnimados.ponerIconoFlecha(btn, est.flecha.base, est.flecha.sentido); return; }
-    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-    use.setAttribute('href', clave);
-    svg.replaceChildren(use);
+    if (est.tachado) { _iconoTachado(svg, est.icono ?? ''); return; }
+    svg.replaceChildren(_svg('use', { href: est.icono ?? '' }));
 }
 
 function _aplicarEstado(btn, def) {
@@ -249,6 +277,8 @@ function bindEventos() {
 // Se escucha desde la carga del módulo: los primeros eventos llegan antes de que se enlace el DOM
 EventosApp.on('historial:cambio', actualizarEstados);
 EventosApp.on('historico:botones', actualizarEstados);   // cambió el destino principal (los botones de Registros se rearmaron)
-EventosApp.on('config:atajos', () => renderizar());              // al restaurar un respaldo o bajar de la nube
+EventosApp.on('config:atajos', () => renderizar());
+EventosApp.on('push:habilitado', actualizarEstados);      // se activaron o desactivaron las notificaciones (barra en su atajo)
+EventosApp.on('respaldo:conexion', actualizarEstados);    // se conectó o desconectó Gist o Drive (barra en Respaldo y sincronización)              // al restaurar un respaldo o bajar de la nube
 
 export const Atajos = { renderizar, actualizarEstados, obtenerAtajos, cerrarModalAtajos, bindEventos };

@@ -1072,11 +1072,6 @@
     color: color-mix(in srgb, var(--cal-color) 55%, var(--text-main));
 }
 
-/* Texto de color: sin marca, solo el número del color del día (en semi negrita y mezclado con el color del texto para que se lea también en temas claros) */
-:root[data-estilo-calendario="minimo"][data-variante-calendario="texto"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
-    color: color-mix(in srgb, var(--cal-color) 75%, var(--text-main));
-    font-weight: var(--fw-semibold);
-}
 
 /* Entrada inicial (una sola vez al cargar): pop escalonado en los días con registro,
    el número sube un instante después y hoy sin registro entra en su lugar de la secuencia.

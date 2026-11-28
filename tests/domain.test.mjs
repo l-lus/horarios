@@ -920,7 +920,7 @@ test('EstiloCalendario: el ciclo recorre los estilos (Redondeado, Cuadrado, Mín
     // Redondeado y Cuadrado comparten las variantes de aro (la primera, Relleno, es el original y la de por defecto); Mínimo tiene las suyas
     assert.equal(VARIANTES_CALENDARIO.aro[0].label, 'Relleno');
     assert.deepEqual(VARIANTES_CALENDARIO.aro.map(v => v.id), ['legacy', 'relleno-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo']);
-    assert.deepEqual(VARIANTES_CALENDARIO.minimo.map(v => v.id), ['subrayado', 'punto', 'texto']);
+    assert.deepEqual(VARIANTES_CALENDARIO.minimo.map(v => v.id), ['subrayado', 'punto']);
     assert.ok(ESTILOS_CALENDARIO.every(e => e.familia), 'todos los estilos tienen variantes');
 });
 
@@ -942,9 +942,11 @@ test('EstiloCalendario: cada familia recuerda su variante, las variantes ciclan 
         assert.equal(EstiloCalendario.variante(), 'subrayado');
         EstiloCalendario.siguienteVariante();
         EstiloCalendario.siguienteVariante();
-        assert.equal(EstiloCalendario.etiquetaVariante(), 'Texto de color');
-        EstiloCalendario.siguienteVariante();
         assert.equal(EstiloCalendario.variante(), 'subrayado', 'el ciclo de variantes vuelve a la primera');
+
+        // una variante guardada que ya no existe vuelve a la primera de su familia, sin tocar la de la otra
+        Almacenamiento.setItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES, { aro: 'aro-grueso', minimo: 'texto' });
+        assert.deepEqual(EstiloCalendario.variantes(), { aro: 'aro-grueso', minimo: 'subrayado' });
         EstiloCalendario.setEstilo('redondeado');
         assert.equal(EstiloCalendario.variante(), 'aro-grueso', 'al volver, sigue la variante que tenía');
         // el Legacy de antes (un estilo propio) pasa a Redondeado con la variante Legacy

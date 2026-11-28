@@ -6,7 +6,7 @@ import { catalogoCiclico, opcionGuardada, siguienteEnCiclo } from './catalogo.js
 // ESTILO DE LOS DÍAS DEL CALENDARIO: estilo (forma) y variante
 // ====================================================================
 // El CSS solo mira <html data-estilo-calendario="..." data-variante-calendario="...">. Redondeado y Cuadrado comparten las variantes de aro
-// (cambia solo la forma); la primera, 'legacy' (Relleno), es el relleno original. Mínimo tiene las suyas (barra, punto o solo el número de color).
+// (cambia solo la forma); la primera, 'legacy' (Relleno), es el relleno original. Mínimo tiene las suyas (barra o punto).
 // Por defecto: Redondeado + Relleno.
 // La variante se recuerda por familia: al pasar de Redondeado a Mínimo y volver, sigue la que estaba.
 // tema-inicial.js aplica los dos atributos antes de que cargue la app (copia de estas listas: un test verifica que coincidan).
@@ -26,8 +26,7 @@ export const VARIANTES_CALENDARIO = Object.freeze({
     ]),
     minimo: Object.freeze([
         { id: 'subrayado', label: 'Subrayado' },
-        { id: 'punto', label: 'Punto' },
-        { id: 'texto', label: 'Texto de color' }
+        { id: 'punto', label: 'Punto' }
     ])
 });
 
@@ -59,11 +58,16 @@ export function esVariantesValidas(v) {
     return Object.entries(v).every(([familia, id]) => familia in VARIANTES_CALENDARIO && VARIANTES_CALENDARIO[familia].some(x => x.id === id));
 }
 
-/** @returns {Record<string, string>} la variante elegida en cada familia (las que no se eligieron, la primera) */
+/**
+ * La variante elegida en cada familia. Cada una se valida por separado: una que ya no existe (o que no se eligió) vuelve a la primera
+ * de su familia sin tocar las demás.
+ * @returns {Record<string, string>}
+ */
 function variantes() {
     const guardadas = Almacenamiento.getObject(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES, null);
-    const validas = esVariantesValidas(guardadas) ? /** @type {Record<string, string>} */ (guardadas) : {};
-    return Object.fromEntries(Object.entries(VARIANTES_CALENDARIO).map(([familia, lista]) => [familia, validas[familia] ?? lista[0].id]));
+    const g = guardadas && typeof guardadas === 'object' ? /** @type {Record<string, unknown>} */ (guardadas) : {};
+    return Object.fromEntries(Object.entries(VARIANTES_CALENDARIO).map(([familia, lista]) =>
+        [familia, lista.some(v => v.id === g[familia]) ? /** @type {string} */ (g[familia]) : lista[0].id]));
 }
 
 /** Los estilos de antes que quedaron guardados pasan a estilo + variante (una vez: después ya está en el formato nuevo). */

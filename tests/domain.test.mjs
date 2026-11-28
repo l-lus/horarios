@@ -299,7 +299,7 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         persistirTarjetas: true,
         fondoCard: 'golden-gate',
         enfasis: 'predeterminado',
-        atajosRapidos: ['deshacer', 'rehacer', 'tema', 'estilo-calendario', 'ayuda'],
+        atajosRapidos: ['personalizar', 'notificaciones', 'respaldo', 'ayuda'],
         ordenCards: ['estado', 'registrar', 'estadisticas', 'historico', 'atajos'],
         ordenCardsMovil: ['estado', 'registrar', 'estadisticas', 'historico', 'atajos'],
         columnasCards: [3, 2],

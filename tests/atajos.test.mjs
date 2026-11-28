@@ -4,9 +4,10 @@ import { normalizarAtajos, alternarAtajo, ATAJOS_POR_DEFECTO, MAX_ATAJOS } from 
 import { normalizarOrdenCards, columnasDesdeOrden, sumarTarjetasNuevas, leerLayout, clavesDeLayout } from '../src/services/orden-cards.js';
 import { CARDS_ORDEN } from '../src/core/constantes.js';
 
-const VALIDOS = ['bajar', 'subir', 'deshacer', 'rehacer', 'tema', 'ayuda', 'ajustes', 'perfiles', 'fichar', 'tiempo-fuera', 'reporte', 'notificaciones', 'animaciones', 'estilo-calendario', 'exportar', 'importar'];
+const VALIDOS = ['bajar', 'subir', 'exportar', 'importar', 'deshacer', 'rehacer', 'personalizar', 'respaldo', 'ayuda', 'ajustes', 'notificaciones', 'animaciones'];
 
-test('atajos: sin lista guardada quedan los de por defecto', () => {
+test('atajos: sin lista guardada quedan los de por defecto (personalizar, notificaciones, respaldo y ayuda)', () => {
+    assert.deepEqual([...ATAJOS_POR_DEFECTO], ['personalizar', 'notificaciones', 'respaldo', 'ayuda']);
     assert.deepEqual(normalizarAtajos(null, VALIDOS), [...ATAJOS_POR_DEFECTO]);
     assert.deepEqual(normalizarAtajos('basura', VALIDOS), [...ATAJOS_POR_DEFECTO]);
 });
@@ -16,7 +17,9 @@ test('atajos: una lista vacía guardada se respeta', () => {
 });
 
 test('atajos: descarta desconocidos y repetidos y respeta el máximo', () => {
-    assert.deepEqual(normalizarAtajos(['tema', 'nada', 'tema', 7, 'ayuda'], VALIDOS), ['tema', 'ayuda']);
+    assert.deepEqual(normalizarAtajos(['respaldo', 'nada', 'respaldo', 7, 'ayuda'], VALIDOS), ['respaldo', 'ayuda']);
+    // los que ya no existen (versiones anteriores: tema, estilo del calendario, fichar...) se descartan
+    assert.deepEqual(normalizarAtajos(['tema', 'fichar', 'ayuda', 'estilo-calendario', 'reporte'], VALIDOS), ['ayuda']);
     const muchos = Array.from({ length: MAX_ATAJOS + 5 }, (_, i) => `a${i}`);
     assert.equal(normalizarAtajos(muchos, muchos).length, MAX_ATAJOS);
 });

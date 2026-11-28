@@ -134,6 +134,11 @@ function _volverAAjustes() {
 /** Abre Ajustes (lo usa la tarjeta de atajos). */
 const abrirConfig = _volverAAjustes;
 
+/** Abre la personalización en vivo (tema y énfasis; desde el panel se pasa a la tarjeta de estado y al calendario). Lo usa la tarjeta de atajos. */
+function abrirPersonalizacion() {
+    if (!VistaPrevia.activa()) VistaPrevia.abrir(_configTema());
+}
+
 // Tocar la opción del estilo de la tarjeta no lo cambia a ciegas: cierra Ajustes, lleva la tarjeta de estado a la vista y deja abajo los controles
 // para probar los estilos en vivo (la tarjeta se puede tocar para ver el día y la semana)
 /** @param {boolean} [desdeAjustes] con false (el atajo de mantener la tarjeta) no hay Ajustes que cerrar ni al que volver */
@@ -515,6 +520,6 @@ export const Configuracion = {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
     actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
-    abrirModalAyuda, abrirConfig, alternarTema, cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
+    abrirModalAyuda, abrirConfig, abrirPersonalizacion, cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
     pressHoldObjetivoEdicion, formatearInput, bindEventos
 };

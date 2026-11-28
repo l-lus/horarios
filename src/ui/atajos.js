@@ -3,14 +3,13 @@ import { STORAGE_KEYS } from '../core/constantes.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
-import { EstiloCalendario } from '../core/estilo-calendario.js';
 import { html, montar } from '../core/html.js';
 import { DestinoRespaldo } from '../services/destino-respaldo.js';
 import { MAX_ATAJOS, normalizarAtajos, alternarAtajo } from '../services/atajos.js';
 import { Animaciones } from './animaciones.js';
 import { GestorModales } from './gestor-modales.js';
-import { GestorTemas } from './gestor-temas.js';
 import { Configuracion } from './configuracion.js';
+import { CentroRespaldo } from './centro-respaldo.js';
 import { Notificaciones } from './notificaciones.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { IconosAnimados } from './iconos-animados.js';
@@ -21,7 +20,6 @@ import { mostrarToast } from './toast.js';
 // ====================================================================
 // Muchas acciones ya existen como botones de otras tarjetas (aunque estén ocultas o colapsadas): se las dispara desde acá para que haya
 // un solo camino. Subir y Bajar usan los botones de Registros, que van al destino principal de Respaldo y sincronización.
-const _click = (id) => () => $(id)?.click();
 const _ETIQUETAS_ANIMACIONES = { auto: 'Auto', on: 'Sí', off: 'No' };
 const _NOMBRE_NUBE = { gist: 'Gist', drive: 'Drive' };
 
@@ -78,9 +76,14 @@ const CATALOGO = [
         accion: (btn) => { IconosAnimados.girarIcono(btn, 1); $('btn-redo')?.click(); }
     },
     {
-        id: 'tema', nombre: 'Cambiar tema', descripcion: 'Pasa al siguiente tema de color',
-        estado: () => ({ icono: GestorTemas.temaGuardado() === 'light' ? '#icon-moon' : '#icon-sun', titulo: 'Cambiar tema' }),
-        accion: () => Configuracion.alternarTema()
+        id: 'personalizar', nombre: 'Personalizar', descripcion: 'Abre la personalización: tema, énfasis, tarjeta de estado y calendario',
+        estado: () => ({ icono: '#icon-grid-group', titulo: 'Personalizar' }),
+        accion: () => Configuracion.abrirPersonalizacion()
+    },
+    {
+        id: 'respaldo', nombre: 'Respaldo y sincronización', descripcion: 'Abre el respaldo: destinos, cifrado y sincronización automática',
+        estado: () => ({ icono: '#icon-cloud', titulo: 'Respaldo y sincronización' }),
+        accion: () => CentroRespaldo.abrir()
     },
     {
         id: 'ayuda', nombre: 'Ayuda', descripcion: 'Abre la ayuda con buscador',
@@ -101,35 +104,6 @@ const CATALOGO = [
         id: 'animaciones', nombre: 'Reducir animaciones', descripcion: 'Alterna entre Auto, Sí y No',
         estado: () => ({ icono: '#icon-activity', titulo: `Reducir animaciones: ${_ETIQUETAS_ANIMACIONES[Movimiento.modo()]}` }),
         accion: () => { Movimiento.siguienteModo(); mostrarToast(`Reducir animaciones: ${_ETIQUETAS_ANIMACIONES[Movimiento.modo()]}`, 'info'); }
-    },
-    {
-        id: 'estilo-calendario', nombre: 'Estilo del calendario', descripcion: 'Pasa al siguiente estilo de los días con registro',
-        // el estilo solo se ve en el calendario: con Registros en vista de lista no hay nada que cambiar
-        estado: () => Almacenamiento.getBoolean(STORAGE_KEYS.VISTA_HISTORICO_CAL, true)
-            ? { icono: '#icon-calendar-simple', titulo: `Estilo del calendario: ${EstiloCalendario.etiqueta()}` }
-            : { icono: '#icon-calendar-simple', titulo: 'Estilo del calendario (disponible en la vista de calendario)', desactivado: true },
-        // aviso fijo (sin el nombre del estilo): al tocar varias veces seguidas los toasts no se acumulan
-        accion: () => { EstiloCalendario.siguiente(); mostrarToast('Estilo de calendario aplicado', 'info'); }
-    },
-    {
-        id: 'perfiles', nombre: 'Perfiles', descripcion: 'Abre el selector de perfiles',
-        estado: () => ({ icono: '#icon-briefcase', titulo: 'Perfiles' }),
-        accion: _click('header-profile-btn')
-    },
-    {
-        id: 'fichar', nombre: 'Fichar', descripcion: 'Registra la entrada o la salida ahora',
-        estado: () => ({ icono: '#icon-clock', titulo: 'Fichar' }),
-        accion: _click('btn-agregar')
-    },
-    {
-        id: 'tiempo-fuera', nombre: 'Tiempo fuera', descripcion: 'Inicia o termina un tiempo fuera',
-        estado: () => ({ icono: '#icon-exit', titulo: 'Tiempo fuera' }),
-        accion: _click('btn-timer-main')
-    },
-    {
-        id: 'reporte', nombre: 'Reporte', descripcion: 'Genera el reporte del período',
-        estado: () => ({ icono: '#icon-stats', titulo: 'Reporte' }),
-        accion: _click('btn-reporte')
     },
 ];
 
@@ -263,11 +237,10 @@ function bindEventos() {
     GestorModales.registrarAccionVolver('modal-atajos', cerrarModalAtajos);
 }
 
-// Lo que cambia solo (deshacer/rehacer disponibles, destino principal, vista de Registros, tema, animaciones) se refleja sin volver a dibujar la tarjeta.
+// Lo que cambia solo (deshacer/rehacer disponibles, destino principal) se refleja sin volver a dibujar la tarjeta.
 // Se escucha desde la carga del módulo: los primeros eventos llegan antes de que se enlace el DOM
 EventosApp.on('historial:cambio', actualizarEstados);
 EventosApp.on('historico:botones', actualizarEstados);   // cambió el destino principal (los botones de Registros se rearmaron)
-EventosApp.on('historico:vista', actualizarEstados);     // Registros pasó de lista a calendario o al revés
 EventosApp.on('config:atajos', () => renderizar());              // al restaurar un respaldo o bajar de la nube
 
 export const Atajos = { renderizar, actualizarEstados, obtenerAtajos, cerrarModalAtajos, bindEventos };

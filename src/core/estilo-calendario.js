@@ -6,7 +6,8 @@ import { catalogoCiclico, opcionGuardada, siguienteEnCiclo } from './catalogo.js
 // ESTILO DE LOS DÍAS DEL CALENDARIO: estilo (forma) y variante
 // ====================================================================
 // El CSS solo mira <html data-estilo-calendario="..." data-variante-calendario="...">. Redondeado y Cuadrado comparten las variantes de aro
-// (cambia solo la forma); la primera, 'legacy', es el relleno original. Mínimo tiene las suyas (barra o punto). Por defecto: Redondeado + Legacy.
+// (cambia solo la forma); la primera, 'legacy' (Relleno), es el relleno original. Mínimo tiene las suyas (barra, punto o solo el número de color).
+// Por defecto: Redondeado + Relleno.
 // La variante se recuerda por familia: al pasar de Redondeado a Mínimo y volver, sigue la que estaba.
 // tema-inicial.js aplica los dos atributos antes de que cargue la app (copia de estas listas: un test verifica que coincidan).
 export const ESTILOS_CALENDARIO = Object.freeze([
@@ -17,7 +18,7 @@ export const ESTILOS_CALENDARIO = Object.freeze([
 
 export const VARIANTES_CALENDARIO = Object.freeze({
     aro: Object.freeze([
-        { id: 'legacy', label: 'Legacy' },
+        { id: 'legacy', label: 'Relleno' },   // el relleno original (el id quedó de cuando era un estilo propio)
         { id: 'relleno-aro', label: 'Relleno con aro' },
         { id: 'aro-tinte', label: 'Aro con tinte' },
         { id: 'aro-grueso', label: 'Aro grueso' },
@@ -25,7 +26,8 @@ export const VARIANTES_CALENDARIO = Object.freeze({
     ]),
     minimo: Object.freeze([
         { id: 'subrayado', label: 'Subrayado' },
-        { id: 'punto', label: 'Punto' }
+        { id: 'punto', label: 'Punto' },
+        { id: 'texto', label: 'Texto de color' }
     ])
 });
 

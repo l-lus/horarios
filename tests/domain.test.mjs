@@ -917,9 +917,10 @@ test('EstiloCalendario: el ciclo recorre los estilos (Redondeado, Cuadrado, Mín
     assert.equal(siguienteEstilo('inventado'), 'cuadrado');
     assert.equal(etiquetaEstilo('inventado'), 'Redondeado');
 
-    // Redondeado y Cuadrado comparten las variantes de aro (la primera, Legacy, es el relleno original y la de por defecto); Mínimo tiene las suyas
+    // Redondeado y Cuadrado comparten las variantes de aro (la primera, Relleno, es el original y la de por defecto); Mínimo tiene las suyas
+    assert.equal(VARIANTES_CALENDARIO.aro[0].label, 'Relleno');
     assert.deepEqual(VARIANTES_CALENDARIO.aro.map(v => v.id), ['legacy', 'relleno-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo']);
-    assert.deepEqual(VARIANTES_CALENDARIO.minimo.map(v => v.id), ['subrayado', 'punto']);
+    assert.deepEqual(VARIANTES_CALENDARIO.minimo.map(v => v.id), ['subrayado', 'punto', 'texto']);
     assert.ok(ESTILOS_CALENDARIO.every(e => e.familia), 'todos los estilos tienen variantes');
 });
 
@@ -940,6 +941,8 @@ test('EstiloCalendario: cada familia recuerda su variante, las variantes ciclan 
         EstiloCalendario.setEstilo('minimo');
         assert.equal(EstiloCalendario.variante(), 'subrayado');
         EstiloCalendario.siguienteVariante();
+        EstiloCalendario.siguienteVariante();
+        assert.equal(EstiloCalendario.etiquetaVariante(), 'Texto de color');
         EstiloCalendario.siguienteVariante();
         assert.equal(EstiloCalendario.variante(), 'subrayado', 'el ciclo de variantes vuelve a la primera');
         EstiloCalendario.setEstilo('redondeado');

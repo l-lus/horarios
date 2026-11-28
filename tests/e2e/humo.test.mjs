@@ -499,6 +499,36 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(r, [['Anual', 'select-anio-stats'], ['Semanal', 'select-semana-stats'], ['Mensual', 'select-mes-stats']]);
     });
 
+    await t.test('Respaldo y sincronización: un desplegable que se abre tapado abajo (Límites y horario, Conexión) se lleva a la vista', async () => {
+        const r = await evaluar(async () => {
+            const h = window.humo;
+            document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
+            document.body.classList.remove('config-onboarding');
+            const { CentroRespaldo } = await import('/src/ui/centro-respaldo.js');
+            CentroRespaldo.abrir();
+            await h.modalAbierto('modal-respaldo');
+            await h.pausa(500);
+            const cuerpo = document.querySelector('#modal-respaldo .modal-panel-body');
+            const salida = {};
+            for (const id of ['btn-sync-panel-limites', 'btn-drive-configurar']) {
+                const btn = document.getElementById(id);
+                btn.scrollIntoView({ block: 'end' });
+                await h.pausa(200);
+                h.clic('#' + id);
+                await h.pausa(1300);
+                const panel = document.getElementById(btn.getAttribute('aria-controls'));
+                const c = cuerpo.getBoundingClientRect();
+                salida[id] = { panelVisible: panel.getBoundingClientRect().bottom <= c.bottom + 1, botonVisible: btn.getBoundingClientRect().top >= c.top - 1 };
+                h.clic('#' + id);
+                await h.pausa(500);
+            }
+            CentroRespaldo.cerrar();
+            await h.pausa(400);
+            return salida;
+        });
+        for (const [id, v] of Object.entries(r)) assert.deepEqual(v, { panelVisible: true, botonVisible: true }, id);
+    });
+
     await t.test('Ocultar tarjetas: arrastrar hasta la franja «Soltá para ocultar» la oculta sin cambiar el orden, y tocar el aviso la vuelve a mostrar', async () => {
         const { cdp } = app;
         const esperar = (ms) => evaluar((m) => window.humo.pausa(m), ms);

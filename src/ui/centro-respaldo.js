@@ -5,7 +5,7 @@ import { GestorModales } from './gestor-modales.js';
 import { IconosAnimados } from './iconos-animados.js';
 import { HistoricoEdicion } from './historico-edicion.js';
 import { mostrarToast } from './toast.js';
-import { _scrollHastaVisible } from './scroll.js';
+import { _scrollHastaVisible, _revelarDesplegado } from './scroll.js';
 import { CampoFrase } from './campo-frase.js';
 import { FraseModal } from './frase-modal.js';
 import { SyncAutomatizacion } from './sync-automatizacion.js';
@@ -65,12 +65,18 @@ function _actualizarResumenCifrado() {
     else el.textContent = _campoFrase.recordar() ? 'Activado · frase recordada en este navegador' : 'Activado · la frase vale hasta cerrar la app';
 }
 
-function _setPanel(btnId, abierto, animar = true) {
+/**
+ * Abre o cierra un desplegable del modal. Al abrirlo con animación, si queda tapado abajo, el cuerpo del modal baja hasta mostrarlo
+ * (`revelar: false` cuando quien lo abre lleva la vista a otro lugar, ej. al campo de la frase).
+ */
+function _setPanel(btnId, abierto, animar = true, { revelar = true } = {}) {
     const btn = $(btnId);
     const panel = $(btn?.getAttribute('aria-controls') || '');
     if (!btn || !panel) return;
+    const yaAbierto = btn.getAttribute('aria-expanded') === 'true';
     btn.setAttribute('aria-expanded', String(abierto));
     setColapsable(panel, abierto, { animar });
+    if (abierto && !yaAbierto && animar && revelar) _revelarDesplegado(panel, { ancla: btn });
 }
 
 /** El desplegable «Conexión» de un destino. */
@@ -158,7 +164,7 @@ function abrir() {
 /** Abre el desplegable de cifrado, lleva la vista al campo de la frase si no se ve y lo destella. */
 async function _señalarFrase() {
     const abierto = $('btn-sync-panel-cifrado')?.getAttribute('aria-expanded') === 'true';
-    _setPanel('btn-sync-panel-cifrado', true);
+    _setPanel('btn-sync-panel-cifrado', true, true, { revelar: false });
     if (!abierto) await new Promise(r => setTimeout(r, 400));   // espera a que termine de desplegarse
     const campo = $('sync-frase');
     const cuerpo = /** @type {HTMLElement | null} */ (campo?.closest('.modal-panel-body'));

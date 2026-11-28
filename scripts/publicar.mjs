@@ -21,7 +21,9 @@ if (!fs.existsSync(path.join(destino, '.git'))) {
 }
 
 // Lo mismo que se copiaba con `git archive`: todo lo versionado menos lo que es solo de este repo
-const NO_SE_PUBLICA = (f) => f.startsWith('.github/') || f === '.gitignore';
+// (tsconfig.json tampoco: sin los comentarios JSDoc no hay tipos que revisar, y el editor marcaría cientos de errores de tipos que no son
+// errores de la app; el chequeo de tipos se hace acá, sobre el código con comentarios)
+const NO_SE_PUBLICA = (f) => f.startsWith('.github/') || f === '.gitignore' || f === 'tsconfig.json';
 const archivos = git(['ls-files']).split('\n').filter(f => f && !NO_SE_PUBLICA(f));
 
 // Lo que corre en el navegador (los tests, scripts y docs se copian tal cual)

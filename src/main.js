@@ -13,6 +13,7 @@ import { TarjetaFichaje } from './ui/tarjeta-fichaje.js';
 import { OrdenTarjetas } from './ui/orden-tarjetas.js';
 import { Notificaciones } from './ui/notificaciones.js';
 import { Configuracion } from './ui/configuracion.js';
+import { Personalizacion } from './ui/personalizacion.js';
 import { HistorialDias } from './ui/historial-dias.js';
 import { VerificarFeriados } from './ui/verificar-feriados.js';
 import { OrquestadorUI } from './ui/orquestador.js';
@@ -47,6 +48,7 @@ function _iniciarEventosDOM() {
     Atajos.bindEventos();
     Notificaciones.bindEventos();
     Configuracion.bindEventos();
+    Personalizacion.bindEventos();
     HistorialDias.bindEventos();
     VerificarFeriados.bindEventos();
     RecargaGesto.bindEventos();

@@ -1,16 +1,12 @@
 import { Preferencias } from '../core/preferencias.js';
 import { STORAGE_KEYS } from '../core/constantes.js';
-import { $, alClic, esPunteroFino } from '../core/dom.js';
+import { $, alClic } from '../core/dom.js';
 import { Movimiento } from '../core/movimiento.js';
-import { EstiloCalendario } from '../core/estilo-calendario.js';
-import { EstiloTarjeta } from '../core/estilo-tarjeta.js';
 import { TiempoUtils } from '../core/tiempo-utils.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
-import { GestorTemas } from './gestor-temas.js';
 import { GestorModales } from './gestor-modales.js';
 import { GestionDatos } from '../services/gestion-datos.js';
 import { Controles } from './controles.js';
-import { TarjetaFondos } from './tarjeta-fondos.js';
 import { OrdenTarjetas } from './orden-tarjetas.js';
 import { Notificaciones } from './notificaciones.js';
 import { EventosApp } from '../core/eventos.js';
@@ -19,16 +15,15 @@ import { _crearPressHold, debounce } from './gestos.js';
 import { _scrollHastaVisible, _scrollA } from './scroll.js';
 import { mostrarToast } from './toast.js';
 import { Animaciones } from './animaciones.js';
-import { VistaPrevia } from './vista-previa.js';
-import { TarjetaEstilos } from './tarjeta-estilos.js';
 import { AyudaBuscador } from './ayuda-buscador.js';
 import { AvisoJornada } from '../services/aviso-jornada.js';
 import { DiasHabiles } from '../services/dias-habiles.js';
 import { Objetivos } from '../services/objetivos.js';
 import { AccionesUI } from './acciones-ui.js';
+import { Personalizacion } from './personalizacion.js';
 
 // ====================================================================
-// UI CONFIG MODULE (configuración, ayuda, tema y steppers)
+// UI CONFIG MODULE (Ajustes, ayuda y steppers; la personalización de estilos y tema está en personalizacion.js)
 // ====================================================================
 const { abrirConPadre, cerrarConPadre } = GestorModales;
 const { crearToggleConfig, setBtnDisabled, flashCampo } = Controles;
@@ -37,24 +32,9 @@ const { _esperarAnim, _animarValor } = Animaciones;
 const _reprogramarPushDebounced = debounce(() => AvisoJornada.sincronizarHoy(), 400);
 
 const { verificarBloqueoCredito, actualizarUI } = AccionesUI;
-const { getFondoCard, _getLabelFondo, toggleFondoCard } = TarjetaFondos;
 const _refrescarFormatoCortoStatsCache = () => EventosApp.emit('config:formato-corto-stats');
 const { actualizarEstadoBotonPersistir } = OrdenTarjetas;
 const { actualizarEstadoBotonNotificaciones } = Notificaciones;
-
-function elegirTema(tema) {
-    Almacenamiento.setItem(STORAGE_KEYS.TEMA_OSCURO, tema);
-    GestorTemas.aplicarTema(tema);
-}
-
-function elegirEnfasis(enfasis) {
-    GestorTemas.guardarEnfasis(enfasis);
-    GestorTemas.aplicarEnfasis(enfasis);
-}
-
-function alternarTema() {
-    elegirTema(GestorTemas.siguienteTema(GestorTemas.temaGuardado()));
-}
 
 const { toggle: toggleIgnorarTiempoFuera, actualizarEstado: actualizarEstadoBotonIgnorarTF } =
     crearToggleConfig({
@@ -103,25 +83,6 @@ const { toggle: toggleRuedaCalendario, actualizarEstado: actualizarEstadoBotonRu
         onAfterToggle: () => { EventosApp.emit('config:rueda-calendario'); }
     });
 
-// El estilo de la tarjeta de estado (EstiloTarjeta) rota con un solo botón. Con el estilo "Barra con hitos" (el antiguo hint integrado) aparece la opción de animación de los hitos, con tres estados en un solo botón:
-// Desactivado (sin ciclo automático del número grande), Barra (cada hito con su descripción desplegada en la barra) y Texto (el nombre del hito en el número grande, el predeterminado).
-// Se guardan en CICLO_HINT_AUTO (false = desactivado) y DESC_HITOS_NUMERO (barra o texto).
-const _MODOS_ANIM_HINT = ['off', 'barra', 'texto'];
-const _ETIQUETAS_ANIM_HINT = { off: 'Desactivado', barra: 'Barra', texto: 'Texto' };
-
-function _modoAnimHint() {
-    if (!Preferencias.CICLO_HINT_AUTO.get()) return 'off';
-    return Preferencias.DESC_HITOS_NUMERO.get() ? 'texto' : 'barra';
-}
-
-// Cada toque pasa al estilo siguiente y redibuja la tarjeta
-function toggleEstiloTarjeta() {
-    EstiloTarjeta.siguiente();
-    EventosApp.emit('config:hint-integrado');
-    // todo el contenido de la tarjeta se funde del diseño anterior al nuevo, igual que al pasar de día a semana (y el alto se anima, ver _animarAlturaCard)
-    AccionesUI.cambiarConFundido(() => actualizarUI());
-}
-
 /** Cierra Ajustes (sin volver al modal padre) para dejar la página libre durante la vista previa; al terminar se reabre. */
 function _cerrarAjustesParaVistaPrevia() {
     GestorModales.cerrar('modal-config');
@@ -134,127 +95,8 @@ function _volverAAjustes() {
 /** Abre Ajustes (lo usa la tarjeta de atajos). */
 const abrirConfig = _volverAAjustes;
 
-/** Abre la personalización en vivo (tema y énfasis; desde el panel se pasa a la tarjeta de estado y al calendario). Lo usa la tarjeta de atajos. */
-function abrirPersonalizacion() {
-    if (!VistaPrevia.activa()) VistaPrevia.abrir(_configTema());
-}
-
-// Tocar la opción del estilo de la tarjeta no lo cambia a ciegas: cierra Ajustes, lleva la tarjeta de estado a la vista y deja abajo los controles
-// para probar los estilos en vivo (la tarjeta se puede tocar para ver el día y la semana)
-/** @param {boolean} [desdeAjustes] con false (el atajo de mantener la tarjeta) no hay Ajustes que cerrar ni al que volver */
-function abrirVistaPreviaTarjeta(desdeAjustes = true) {
-    VistaPrevia.abrir(_configTarjeta(desdeAjustes));
-}
-
-/** @param {boolean} [desdeAjustes] */
-function _configTarjeta(desdeAjustes = true) {
-    return {
-        id: 'tarjeta',
-        titulo: 'Tarjeta de estado',
-        idObjetivo: 'stats-card',
-        antes: desdeAjustes ? _cerrarAjustesParaVistaPrevia : undefined,
-        alCerrar: desdeAjustes ? _volverAAjustes : undefined,
-        // las subopciones arriba y las filas fijas (estilo y fondo) al final: el panel crece hacia arriba y esas filas no cambian de lugar (ver VistaPrevia.abrir)
-        filas: [
-            {
-                etiqueta: 'Disposición', valor: () => EstiloTarjeta.etiquetaDisposicion(),
-                alTocar: toggleDisposicionLinea, visible: () => EstiloTarjeta.actual() === 'linea' && _esPC()
-            },
-            {
-                etiqueta: 'Disposición', valor: () => EstiloTarjeta.etiquetaMosaicos(),
-                alTocar: toggleMosaicosLinea, visible: () => EstiloTarjeta.actual() === 'linea' && !_esPC()
-            },
-            {
-                etiqueta: 'Disposición', valor: () => EstiloTarjeta.etiquetaAnillo(),
-                alTocar: toggleDisposicionAnillo, visible: () => EstiloTarjeta.actual() === 'anillo'
-            },
-            {
-                etiqueta: 'Animación', icono: '#icon-eye', valor: () => _ETIQUETAS_ANIM_HINT[_modoAnimHint()],
-                alTocar: toggleAnimacionHint, visible: () => EstiloTarjeta.hintIntegrado()
-            },
-            { etiqueta: 'Estilo', valor: () => EstiloTarjeta.etiqueta(), alTocar: toggleEstiloTarjeta },
-            // siempre visible (no es una subopción de un estilo): el fondo de la tarjeta, el mismo de Ajustes > Apariencia
-            { etiqueta: 'Fondo', icono: '#icon-landscape', valor: () => _getLabelFondo(getFondoCard()), alTocar: toggleFondoCard }
-        ]
-    };
-}
-
-// Atajo desde las tarjetas (mantener y soltar sin mover, ver orden-tarjetas.js): abre la vista previa de su estilo, salvo que haya un modal u otra vista previa
-EventosApp.on('tarjeta:personalizar', (datos) => {
-    if (VistaPrevia.activa() || document.querySelector('.modal.show') || document.body.classList.contains('config-onboarding')) return;
-    if (datos?.tarjeta === 'estado') abrirVistaPreviaTarjeta(false);
-    else if (datos?.tarjeta === 'calendario') abrirVistaPreviaCalendario(false);
-    else if (datos?.tarjeta === 'tema') VistaPrevia.abrir(_configTema());
-});
-
-/** @param {boolean} [desdeAjustes] */
-function abrirVistaPreviaCalendario(desdeAjustes = true) {
-    VistaPrevia.abrir(_configCalendario(desdeAjustes));
-}
-
-/** @param {boolean} [desdeAjustes] */
-function _configCalendario(desdeAjustes = true) {
-    return {
-        id: 'calendario',
-        titulo: 'Calendario',
-        idObjetivo: 'card-historico',
-        antes: desdeAjustes ? _cerrarAjustesParaVistaPrevia : undefined,
-        alCerrar: desdeAjustes ? _volverAAjustes : undefined,
-        // la variante arriba y el estilo al final (como en la tarjeta de estado): el panel crece hacia arriba y Estilo no cambia de lugar
-        filas: [
-            { etiqueta: 'Variante', valor: () => EstiloCalendario.etiquetaVariante(), alTocar: toggleVarianteCalendario },
-            { etiqueta: 'Estilo', icono: '#icon-calendar-simple', valor: () => EstiloCalendario.etiqueta(), alTocar: toggleEstiloCalendario }
-        ]
-    };
-}
-
-// El tema no tiene tarjeta ni filas: se ve toda la página y se elige con círculos de color. Se abre desde el encabezado (mantener y soltar, ver header-posicion.js),
-// desde el botón de tema del selector de perfiles (que se oculta mientras, conservando su entrada del historial, y se reabre al terminar) o pasando a él desde las otras vistas
-/** @param {'selector' | 'ajustes' | null} [origen] con 'selector' (el botón del selector de perfiles) hay un modal que cerrar y al que volver; con 'ajustes' (Personalizar paneles), Ajustes */
-function _configTema(origen = null) {
-    return {
-        id: 'tema',
-        titulo: 'Tema',
-        sinVelo: true,
-        antes: origen === 'selector' ? () => GestorModales.cerrar('modal-selector-perfiles', null, { sinHistorial: true }) : origen === 'ajustes' ? _cerrarAjustesParaVistaPrevia : undefined,
-        alCerrar: origen === 'selector' ? () => GestorModales.abrir('modal-selector-perfiles', null, { sinHistorial: true }) : origen === 'ajustes' ? _volverAAjustes : undefined,
-        filas: [],
-        circulos: [
-            { titulo: 'Color de fondo', opciones: GestorTemas.muestras(), actual: () => GestorTemas.temaGuardado(), alElegir: elegirTema },
-            { titulo: 'Énfasis', opciones: GestorTemas.muestrasEnfasis(), actual: () => GestorTemas.enfasisGuardado(), alElegir: elegirEnfasis }
-        ]
-    };
-}
-
-// Las tres vistas previas están integradas: desde el panel se pasa de una a otra (tocando las flechas del título o deslizando en pantallas táctiles)
-VistaPrevia.registrarVista('tarjeta', () => _configTarjeta(false));
-VistaPrevia.registrarVista('calendario', () => _configCalendario(false));
-VistaPrevia.registrarVista('tema', () => _configTema());
-VistaPrevia.definirOrden(['tarjeta', 'calendario', 'tema']);
-
-/** PC (mouse): mismo criterio que .config-solo-pc / .config-solo-movil en responsivo-movimiento.css. Las subopciones de la línea de tiempo se muestran según el dispositivo. */
-const _esPC = esPunteroFino;
-
-// Solo cambia un atributo de <html>: el CSS reacciona al instante, sin redibujar la tarjeta
-function toggleDisposicionLinea() {
-    TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteDisposicion());   // lo que se mueve en la tarjeta viaja a su lugar nuevo
-}
-
-function toggleDisposicionAnillo() {
-    TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteAnillo());
-}
-
-function toggleMosaicosLinea() {
-    TarjetaEstilos.reubicar(() => EstiloTarjeta.siguienteMosaicos());
-}
-
-function toggleAnimacionHint() {
-    const siguiente = _MODOS_ANIM_HINT[(_MODOS_ANIM_HINT.indexOf(_modoAnimHint()) + 1) % _MODOS_ANIM_HINT.length];
-    Preferencias.CICLO_HINT_AUTO.set(siguiente !== 'off');
-    if (siguiente !== 'off') Preferencias.DESC_HITOS_NUMERO.set(siguiente === 'texto');
-    EventosApp.emit('config:hint-integrado');
-    actualizarUI();
-}
+/** Personalizar paneles: la vista previa en vivo (empieza por el tema) con Ajustes cerrado mientras y reabierto al terminar. */
+const _personalizarDesdeAjustes = () => Personalizacion.abrir('tema', { antes: _cerrarAjustesParaVistaPrevia, alCerrar: _volverAAjustes });
 
 const { toggle: toggleMetricaUso, actualizarEstado: actualizarEstadoBotonMetricaUso } =
     crearToggleConfig({
@@ -339,17 +181,6 @@ function actualizarHintAnimaciones() {
 function toggleReducirAnimaciones() {
     Movimiento.siguienteModo();
     actualizarHintAnimaciones();
-}
-
-// Cada toque pasa al estilo siguiente; el CSS reacciona solo al atributo de <html>, así que el calendario cambia al instante
-function toggleEstiloCalendario() {
-    // los estilos miden distinto (el alto de las celdas cambia): la tarjeta de Registros acompaña el cambio con una transición de alto
-    Animaciones._animarAlturaCambio($('card-historico'), () => EstiloCalendario.siguiente());
-}
-
-// La variante del estilo actual (Legacy no tiene): mismo criterio que el estilo
-function toggleVarianteCalendario() {
-    Animaciones._animarAlturaCambio($('card-historico'), () => EstiloCalendario.siguienteVariante());
 }
 
 function _refrescarTogglesConfig() {
@@ -481,13 +312,12 @@ function formatearInput(e) {
 }
 
 function bindEventos() {
-    VistaPrevia.bindEventos();
     alClic({
         'btn-toggle-ignorar-tf': () => toggleIgnorarTiempoFuera(),
         'btn-toggle-hover-popup': () => toggleHoverPopupCalendario(),
         'btn-toggle-animaciones': () => toggleReducirAnimaciones(),
-        // las dos abren la vista previa en vivo: los estilos, subopciones y el fondo se eligen ahí
-        'btn-personalizar-paneles': () => VistaPrevia.abrir(_configTema('ajustes')),
+        // la vista previa en vivo: los estilos, subopciones, el fondo, el tema y el énfasis se eligen ahí (ver personalizacion.js)
+        'btn-personalizar-paneles': () => _personalizarDesdeAjustes(),
         'btn-toggle-logica-cubierto': () => toggleLogicaCubierto(),
         'btn-toggle-objetivo-registro': () => toggleObjetivoPorRegistro(),
         'btn-toggle-rueda-calendario': () => toggleRuedaCalendario(),
@@ -518,15 +348,12 @@ function bindEventos() {
     if (btnObjetivoInc) pressHoldObjetivoEdicion.vincular(btnObjetivoInc, 0.5);
     if (btnObjetivoDec) pressHoldObjetivoEdicion.vincular(btnObjetivoDec, -0.5);
     document.querySelector('#modal-selector-perfiles .btn-settings')?.addEventListener('click', () => mostrarconfig());
-    // en el selector de perfiles el botón de tema abre la personalización del tema; el de Ajustes (que solo se ve en el onboarding) sigue cambiando el tema directo
-    $('theme-toggle-modal')?.addEventListener('click', () => { if (!VistaPrevia.activa()) VistaPrevia.abrir(_configTema('selector')); });
-    $('theme-toggle-config')?.addEventListener('click', () => alternarTema());
 }
 
 export const Configuracion = {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
     actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
-    abrirModalAyuda, abrirConfig, abrirPersonalizacion, cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
+    abrirModalAyuda, abrirConfig, cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
     pressHoldObjetivoEdicion, formatearInput, bindEventos
 };

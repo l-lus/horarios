@@ -12,6 +12,7 @@ import { MAX_ATAJOS, normalizarAtajos, alternarAtajo } from '../services/atajos.
 import { Animaciones } from './animaciones.js';
 import { GestorModales } from './gestor-modales.js';
 import { Configuracion } from './configuracion.js';
+import { Personalizacion } from './personalizacion.js';
 import { CentroRespaldo } from './centro-respaldo.js';
 import { Notificaciones } from './notificaciones.js';
 import { RespaldoLocal } from './respaldo-local.js';
@@ -82,7 +83,7 @@ const CATALOGO = [
     {
         id: 'personalizar', nombre: 'Personalizar', descripcion: 'Abre la personalización: tema, énfasis, tarjeta de estado y calendario',
         estado: () => ({ icono: '#icon-grid-group', titulo: 'Personalizar' }),
-        accion: () => Configuracion.abrirPersonalizacion()
+        accion: () => Personalizacion.abrir()
     },
     {
         id: 'respaldo', nombre: 'Respaldo y sincronización', descripcion: 'Abre el respaldo: destinos, cifrado y sincronización automática',

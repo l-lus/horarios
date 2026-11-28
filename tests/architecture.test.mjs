@@ -279,6 +279,12 @@ test('tema-inicial.js: sus listas de temas, énfasis, estilos de calendario y po
     const { ENFASIS_IDS } = await import('../src/core/constantes.js');
     assert.deepEqual(lista('ENFASIS_VALIDOS'), ENFASIS_IDS);
     assert.deepEqual(lista('ESTILOS_CALENDARIO_VALIDOS'), ESTILOS_CALENDARIO.map(e => e.id));
+    // variantes por familia, familia de cada estilo y estilos de antes: copias de core/estilo-calendario.js
+    const objeto = (nombre) => JSON.parse(new RegExp(`var ${nombre} = (\\{[^;]*\\});`).exec(codigo)[1].replace(/'/g, '"').replace(/([{,]\s*)([a-z]+):/g, '$1"$2":'));
+    const { VARIANTES_CALENDARIO, ESTILOS_CALENDARIO_ANTERIORES } = await import('../src/core/estilo-calendario.js');
+    assert.deepEqual(objeto('VARIANTES_CALENDARIO_VALIDAS'), Object.fromEntries(Object.entries(VARIANTES_CALENDARIO).map(([f, l]) => [f, l.map(v => v.id)])));
+    assert.deepEqual(objeto('FAMILIA_ESTILO_CALENDARIO'), Object.fromEntries(ESTILOS_CALENDARIO.filter(e => e.familia).map(e => [e.id, e.familia])));
+    assert.deepEqual(objeto('ESTILOS_CALENDARIO_ANTERIORES'), ESTILOS_CALENDARIO_ANTERIORES);
     assert.deepEqual(lista('POSICIONES_HEADER_VALIDAS'), POSICIONES_HEADER.map(p => p.id));
 });
 

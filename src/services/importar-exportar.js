@@ -1,7 +1,7 @@
 import { Preferencias } from '../core/preferencias.js';
 import { EstiloTarjeta, ESTILOS_TARJETA, DISPOSICIONES_LINEA, MOSAICOS_LINEA, DISPOSICIONES_ANILLO } from '../core/estilo-tarjeta.js';
 import { STORAGE_KEYS, CARDS, DESDE_SIEMPRE, FONDO_CARD_POR_DEFECTO, ENFASIS_IDS } from '../core/constantes.js';
-import { EstiloCalendario, ESTILOS_CALENDARIO } from '../core/estilo-calendario.js';
+import { EstiloCalendario, ESTILOS_CALENDARIO, ESTILOS_CALENDARIO_ANTERIORES, esVariantesValidas } from '../core/estilo-calendario.js';
 import { PosicionHeader, posicionesPermitidas } from '../core/posicion-header.js';
 import { FONDOS_SVG } from '../data/fondos.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -127,9 +127,19 @@ const CONFIG_RESPALDO = [
     {
         clave: STORAGE_KEYS.ESTILO_CALENDARIO,
         etiqueta: 'estilo del calendario',
-        esValido: (v) => ESTILOS_CALENDARIO.some(e => e.id === v),
+        // un respaldo de antes trae uno de los estilos viejos (ej. 'aro-tinte'): se convierte a estilo + variante
+        esValido: (v) => ESTILOS_CALENDARIO.some(e => e.id === v) || (typeof v === 'string' && Object.hasOwn(ESTILOS_CALENDARIO_ANTERIORES, v)),
         actual: EstiloCalendario.actual,
+        distinto: (v) => (ESTILOS_CALENDARIO_ANTERIORES[v]?.[0] ?? v) !== EstiloCalendario.actual(),
         aplicar: (v) => EstiloCalendario.setEstilo(v),
+    },
+    {
+        clave: STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES,
+        etiqueta: 'variante del estilo del calendario',
+        esValido: esVariantesValidas,
+        actual: EstiloCalendario.variantes,
+        distinto: (v) => Object.entries(v).some(([familia, id]) => EstiloCalendario.variantes()[familia] !== id),
+        aplicar: (v) => EstiloCalendario.setVariantes(v),
     },
     {
         clave: STORAGE_KEYS.POSICION_HEADER,

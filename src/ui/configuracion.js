@@ -200,7 +200,9 @@ function _configCalendario(desdeAjustes = true) {
         idObjetivo: 'card-historico',
         antes: desdeAjustes ? _cerrarAjustesParaVistaPrevia : undefined,
         alCerrar: desdeAjustes ? _volverAAjustes : undefined,
+        // la variante arriba y el estilo al final (como en la tarjeta de estado): el panel crece hacia arriba y Estilo no cambia de lugar
         filas: [
+            { etiqueta: 'Variante', valor: () => EstiloCalendario.etiquetaVariante(), alTocar: toggleVarianteCalendario, visible: () => EstiloCalendario.tieneVariantes() },
             { etiqueta: 'Estilo', icono: '#icon-calendar-simple', valor: () => EstiloCalendario.etiqueta(), alTocar: toggleEstiloCalendario }
         ]
     };
@@ -343,6 +345,11 @@ function toggleReducirAnimaciones() {
 function toggleEstiloCalendario() {
     // los estilos miden distinto (el alto de las celdas cambia): la tarjeta de Registros acompaña el cambio con una transición de alto
     Animaciones._animarAlturaCambio($('card-historico'), () => EstiloCalendario.siguiente());
+}
+
+// La variante del estilo actual (Legacy no tiene): mismo criterio que el estilo
+function toggleVarianteCalendario() {
+    Animaciones._animarAlturaCambio($('card-historico'), () => EstiloCalendario.siguienteVariante());
 }
 
 function _refrescarTogglesConfig() {

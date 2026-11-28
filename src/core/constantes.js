@@ -16,7 +16,8 @@ export const STORAGE_KEYS = Object.freeze({
     RUEDA_CALENDARIO: 'ruedaCalendario',
     REDUCIR_ANIMACIONES: 'reducirAnimaciones',
     FORMATO_CORTO_STATS: 'formatoCortoStats',
-    ESTILO_CALENDARIO: 'estiloCalendario',
+    ESTILO_CALENDARIO: 'estiloCalendario',   // legacy, redondeado, cuadrado o minimo (ver core/estilo-calendario.js)
+    ESTILO_CALENDARIO_VARIANTES: 'estiloCalendarioVariantes',   // la variante elegida en cada familia de estilos: { aro, minimo }
     POSICION_HEADER: 'posicionHeader',            // dónde va el encabezado en PC: arriba, abajo, izquierda o derecha (ver core/posicion-header.js)
     POSICION_HEADER_MOVIL: 'posicionHeaderMovil', // ídem en móvil: solo arriba o abajo
     LINEA_MOSAICOS: 'lineaMosaicos',        // estilo línea de tiempo con la tarjeta angosta (móvil): los mosaicos Faltan y Banco de horas abajo o a la derecha
@@ -85,6 +86,7 @@ export const CLAVES_AJUSTES_INSTALACION = Object.freeze([
     STORAGE_KEYS.REDUCIR_ANIMACIONES,
     STORAGE_KEYS.FORMATO_CORTO_STATS,
     STORAGE_KEYS.ESTILO_CALENDARIO,
+    STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES,
     STORAGE_KEYS.POSICION_HEADER,
     STORAGE_KEYS.POSICION_HEADER_MOVIL,
     STORAGE_KEYS.HOVER_POPUP,

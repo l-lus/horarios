@@ -12,7 +12,11 @@ if (window.top !== window.self) {
 var TEMAS_VALIDOS = ['light', 'dark', 'medianoche', 'pink', 'green', 'blue', 'lilac', 'crema'];
 var ENFASIS_VALIDOS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul', 'rosa', 'turquesa'];
 var POSICIONES_HEADER_VALIDAS = ['top', 'bottom', 'left', 'right'];
-var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo', 'subrayado', 'punto'];
+var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'redondeado', 'cuadrado', 'minimo'];
+// Variantes por familia y familia de cada estilo (copias de VARIANTES_CALENDARIO y de ESTILOS_CALENDARIO), y los estilos de antes (ESTILOS_CALENDARIO_ANTERIORES)
+var VARIANTES_CALENDARIO_VALIDAS = { aro: ['relleno-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo'], minimo: ['subrayado', 'punto'] };
+var FAMILIA_ESTILO_CALENDARIO = { redondeado: 'aro', cuadrado: 'aro', minimo: 'minimo' };
+var ESTILOS_CALENDARIO_ANTERIORES = { 'relleno-aro': ['redondeado', 'relleno-aro'], 'cuadrado-aro': ['cuadrado', 'relleno-aro'], 'aro-tinte': ['redondeado', 'aro-tinte'], 'aro-grueso': ['redondeado', 'aro-grueso'], 'contorno-brillo': ['redondeado', 'contorno-brillo'], 'subrayado': ['minimo', 'subrayado'], 'punto': ['minimo', 'punto'] };
 
 (function () {
     try {
@@ -45,11 +49,23 @@ var ESTILOS_CALENDARIO_VALIDOS = ['legacy', 'relleno-aro', 'cuadrado-aro', 'aro-
     } catch (err) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }());
 
-// Estilo de los días del calendario (ver EstiloCalendario): el CSS solo mira <html data-estilo-calendario>; sin valor guardado queda el original ('legacy').
+// Estilo de los días del calendario (ver EstiloCalendario): el CSS solo mira <html data-estilo-calendario> y <html data-variante-calendario>;
+// sin valor guardado queda el original ('legacy', sin variante). Un estilo de antes se lee como su estilo y variante (la app lo migra al cargar).
 (function () {
     try {
         var e = localStorage.getItem('horarios_estiloCalendario') || 'legacy';
-        document.documentElement.setAttribute('data-estilo-calendario', ESTILOS_CALENDARIO_VALIDOS.indexOf(e) === -1 ? 'legacy' : e);
+        var v = null;
+        var anterior = ESTILOS_CALENDARIO_ANTERIORES[e];
+        if (anterior) { e = anterior[0]; v = anterior[1]; }
+        if (ESTILOS_CALENDARIO_VALIDOS.indexOf(e) === -1) e = 'legacy';
+        var familia = FAMILIA_ESTILO_CALENDARIO[e];
+        if (familia && !v) {
+            var guardadas = JSON.parse(localStorage.getItem('horarios_estiloCalendarioVariantes') || '{}') || {};
+            v = guardadas[familia];
+        }
+        if (familia && VARIANTES_CALENDARIO_VALIDAS[familia].indexOf(v) === -1) v = VARIANTES_CALENDARIO_VALIDAS[familia][0];
+        document.documentElement.setAttribute('data-estilo-calendario', e);
+        if (familia) document.documentElement.setAttribute('data-variante-calendario', v);
     } catch (err) { /* sin acceso al almacenamiento o a window.top: se usan los valores por defecto */ }
 }());
 

@@ -914,6 +914,64 @@ body.tarjeta-arrastrando-activa * {
     cursor: grabbing !important;
 }
 
+/* La tarjeta levantada, sobre la franja de ocultar: se desvanece un poco más (soltarla la oculta) */
+.card.reordenando.sobre-ocultar {
+    opacity: 0.35;
+}
+
+/* Franja "Soltá para ocultar": entra desde abajo al empezar a mover una tarjeta que se puede ocultar. Solo se mueve con transform
+   y se resalta con una capa de opacidad (CLAUDE.md). No recibe el puntero: lo tiene capturado la tarjeta que se arrastra */
+.franja-ocultar {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+    z-index: calc(var(--z-header) + 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    width: min(420px, calc(100% - 2 * var(--space-lg)));
+    min-height: var(--touch-target);
+    padding: var(--space-md) var(--space-lg);
+    border: 1px dashed var(--c-red);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-weight: var(--fw-medium);
+    box-shadow: var(--shadow-lg);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, calc(100% + var(--space-lg) + env(safe-area-inset-bottom, 0px)));
+    transition: transform var(--dur-anim) var(--ease-anim), opacity var(--dur-anim) var(--ease-anim);
+}
+
+.franja-ocultar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--c-red-bg);
+    opacity: 0;
+    transition: opacity var(--dur-fast);
+}
+
+.franja-ocultar>* {
+    position: relative;
+}
+
+.franja-ocultar.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.franja-ocultar.activa {
+    transform: translate(-50%, 0) scale(1.04);
+}
+
+.franja-ocultar.activa::before {
+    opacity: 1;
+}
+
 #nombre-archivo-seleccionado {
     text-align: center;
     margin-top: var(--space-sm);

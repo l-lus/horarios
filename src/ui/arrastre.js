@@ -79,9 +79,10 @@ export function uiAnimarDesdePosiciones(obtener, clave, antes, { encima = null }
  * @param {Document|HTMLElement} raiz
  * @param {{ elegir: any, capturar?: (el: any) => any,
  *           alEmpezar?: (el: any, inicio: any) => void, alMover?: (e: any, el: any) => void, alPrimerMovimiento?: (el: any) => void,
- *           alTerminar?: (el: any, confirmar: any, info: { movido: boolean, duracion: number }) => void }} cfg
+ *           alTerminar?: (el: any, confirmar: any, info: { movido: boolean, duracion: number }) => void,
+ *           margenInferior?: () => number }} cfg  margenInferior: px fijos al pie de la pantalla (sin auto-scroll sobre ellos)
  */
-export function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () => {}, alMover = () => {}, alPrimerMovimiento = () => {}, alTerminar = () => {} }) {
+export function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar = () => {}, alMover = () => {}, alPrimerMovimiento = () => {}, alTerminar = () => {}, margenInferior = () => 0 }) {
     let timer = null;
     let arrastrando = false;
     let el = null;
@@ -146,10 +147,12 @@ export function uiArrastreLargo(raiz, { elegir, capturar = (el) => el, alEmpezar
             alPrimerMovimiento(el);
         }
 
-        // Auto-scroll en móviles si se arrastra cerca de los bordes
+        // Auto-scroll en móviles si se arrastra cerca de los bordes. Abajo, el borde sube lo que ocupe lo que esté fijo ahí
+        // (`margenInferior`, ej. la franja de ocultar): sobre eso no se desplaza la página
         if (e.pointerType === 'touch') {
+            const fondo = window.innerHeight - margenInferior();
             if (e.clientY < 70) window.scrollBy(0, -7);
-            else if (e.clientY > window.innerHeight - 70) window.scrollBy(0, 7);
+            else if (e.clientY > fondo - 70 && e.clientY < fondo) window.scrollBy(0, 7);
         }
 
         alMover(e, el);

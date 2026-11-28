@@ -1,5 +1,5 @@
 import { $ } from '../core/dom.js';
-import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
+import { STORAGE_KEYS } from '../core/constantes.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -212,12 +212,10 @@ function cerrarModalAtajos() {
     GestorModales.cerrarConPadre('modal-atajos');
 }
 
-// Ocultar desde el selector: se cierra el modal, se oculta la tarjeta y el aviso dice cómo volver a mostrarla (tocarlo la muestra otra vez)
+// Ocultar desde el selector: se cierra el modal y se oculta la tarjeta con el aviso de siempre (cómo volver a mostrarla; tocarlo la muestra otra vez)
 function _ocultarTarjeta() {
     cerrarModalAtajos();
-    OrdenTarjetas.setVisibilidadCard('atajos', false);
-    mostrarToast('Tarjeta de atajos oculta', 'info', TOAST_MS.AVISO, 'para volver a mostrarla: Perfiles → Ajustes → Tarjetas y posición (tocá acá para deshacer)',
-        () => OrdenTarjetas.setVisibilidadCard('atajos', true));
+    OrdenTarjetas.ocultarConAviso('atajos');
 }
 
 function _alternarDesdeSelector(id) {

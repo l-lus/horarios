@@ -499,6 +499,49 @@ test('Prueba de humo en navegador', { skip: saltear ?? false }, async (t) => {
         assert.deepEqual(r, [['Anual', 'select-anio-stats'], ['Semanal', 'select-semana-stats'], ['Mensual', 'select-mes-stats']]);
     });
 
+    await t.test('Ocultar tarjetas: arrastrar hasta la franja «Soltá para ocultar» la oculta sin cambiar el orden, y tocar el aviso la vuelve a mostrar', async () => {
+        const { cdp } = app;
+        const esperar = (ms) => evaluar((m) => window.humo.pausa(m), ms);
+        const toque = (type, x = 0, y = 0) => cdp('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
+        const centro = (sel) => evaluar((s) => { const r = document.querySelector(s).getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; }, sel);
+        await cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+        await evaluar(async () => {
+            document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
+            document.body.classList.remove('config-onboarding');
+            const { OrdenTarjetas } = await import('/src/ui/orden-tarjetas.js');
+            OrdenTarjetas.setVisibilidadCard('estadisticas', true);
+            document.getElementById('card-estadisticas').scrollIntoView({ block: 'center' });
+            await window.humo.pausa(400);
+        });
+        const ordenAntes = await evaluar(async () => (await import('/src/ui/orden-tarjetas.js')).OrdenTarjetas.obtenerOrdenCards());
+
+        const p = await centro('#card-estadisticas .card-header-clickable');
+        await toque('touchStart', p.x, p.y);
+        await esperar(450);
+        for (let i = 1; i <= 4; i++) { await toque('touchMove', p.x, p.y + i * 12); await esperar(40); }
+        await esperar(400);
+        assert.equal(await evaluar(() => document.getElementById('franja-ocultar').classList.contains('visible')), true, 'al mover entra la franja');
+        const f = await centro('#franja-ocultar');
+        for (let i = 1; i <= 8; i++) { await toque('touchMove', p.x + (f.x - p.x) * i / 8, (p.y + 48) + (f.y - p.y - 48) * i / 8); await esperar(40); }
+        await esperar(200);
+        assert.equal(await evaluar(() => document.getElementById('franja-ocultar').classList.contains('activa')), true, 'sobre la franja se resalta');
+        await toque('touchEnd');
+        await esperar(500);
+
+        const r = await evaluar(async () => ({
+            oculta: document.getElementById('card-estadisticas').classList.contains('hidden'),
+            franjaSeFue: !document.getElementById('franja-ocultar').classList.contains('visible'),
+            ajustes: document.getElementById('btn-toggle-card-estadisticas').classList.contains('btn-activo'),
+            orden: (await import('/src/ui/orden-tarjetas.js')).OrdenTarjetas.obtenerOrdenCards(),
+            aviso: window.humo.toasts()
+        }));
+        assert.deepEqual({ ...r, aviso: undefined }, { oculta: true, franjaSeFue: true, ajustes: false, orden: ordenAntes, aviso: undefined });
+        assert.match(r.aviso, /Perfiles → Ajustes → Tarjetas y posición/);
+        await evaluar(async () => { document.querySelector('.toast')?.click(); await window.humo.pausa(400); });
+        assert.equal(await evaluar(() => document.getElementById('card-estadisticas').classList.contains('hidden')), false, 'tocar el aviso la vuelve a mostrar');
+        await cdp('Emulation.setTouchEmulationEnabled', { enabled: false });
+    });
+
     await t.test('escritorio: sin desplazamiento lateral ni controles solapados, y sin errores en toda la corrida', async () => {
         await app.tamano(1280, 800, false);
         await evaluar(() => window.humo.pausa(600));

@@ -1,5 +1,5 @@
 import { Preferencias } from '../core/preferencias.js';
-import { STORAGE_KEYS, CARDS, CORTES_LAYOUT } from '../core/constantes.js';
+import { STORAGE_KEYS, CARDS, CORTES_LAYOUT, TOAST_MS } from '../core/constantes.js';
 import { clavesDeLayout, leerLayout, columnasDesdeOrden, prepararColumnas, moverCard, tamanosDeColumnas } from '../services/orden-cards.js';
 import { $, alClic, esEscritorio } from '../core/dom.js';
 import { EventosApp } from '../core/eventos.js';
@@ -237,10 +237,61 @@ function columnasTrasTecla(id, tecla) {
 /** Tarjetas con estilo propio: la de estado y Registros (su calendario). Valor: lo que se avisa en 'tarjeta:personalizar'. */
 const PERSONALIZABLES = { 'stats-card': 'estado', 'card-historico': 'calendario' };
 
+// --------------------------------------------------------------------
+// Ocultar una tarjeta sin pasar por Ajustes: arrastrándola hasta la franja "Soltá para ocultar", con Alt + Supr sobre su encabezado,
+// o desde el selector de atajos. Siempre con el mismo aviso, que dice cómo volver a mostrarla y que al tocarlo la muestra otra vez.
+// --------------------------------------------------------------------
+const NOMBRES_CARDS = { registrar: 'Fichar', estadisticas: 'Estadísticas', historico: 'Registros', atajos: 'Atajos' };
+/** La de estado no se oculta nunca (no está en CARDS). @param {string} cual */
+const _sePuedeOcultar = (cual) => CARDS.includes(cual);
+
+/** Oculta la tarjeta (las demás se reacomodan con la animación de reubicación) y avisa cómo volver a mostrarla. @param {string} cual */
+function ocultarConAviso(cual) {
+    if (!_sePuedeOcultar(cual)) return;
+    const cambiarVisibilidad = (visible) => uiAnimarReubicacion(() => obtenerCardsVisibles(), c => c.id, () => setVisibilidadCard(cual, visible));
+    cambiarVisibilidad(false);
+    mostrarToast(`Tarjeta «${NOMBRES_CARDS[cual] ?? cual}» oculta`, 'info', TOAST_MS.AVISO,
+        'para volver a mostrarla: Perfiles → Ajustes → Tarjetas y posición (tocá acá para deshacer)', () => cambiarVisibilidad(true));
+}
+
+const _franja = () => $('franja-ocultar');
+const _franjaVisible = () => !!_franja()?.classList.contains('visible');
+const _TOLERANCIA_FRANJA_PX = 12;   // un poco de margen alrededor: el dedo tapa lo que toca
+
+function _mostrarFranja(mostrar) {
+    _franja()?.classList.toggle('visible', mostrar);
+}
+
+/** ¿El puntero está sobre la franja (ya a la vista)? */
+function _sobreFranja(x, y) {
+    const franja = _franja();
+    if (!franja || !_franjaVisible()) return false;
+    const r = franja.getBoundingClientRect();
+    const t = _TOLERANCIA_FRANJA_PX;
+    return x >= r.left - t && x <= r.right + t && y >= r.top - t && y <= r.bottom + t;
+}
+
+/** Lo que la franja deja fijo al pie de la pantalla mientras está a la vista: ahí el arrastre no desplaza la página. */
+function _altoFranja() {
+    const franja = _franja();
+    if (!franja || !_franjaVisible()) return 0;
+    return Math.max(0, window.innerHeight - franja.getBoundingClientRect().top + _TOLERANCIA_FRANJA_PX);
+}
+
 function iniciarDragTarjetas() {
     let columnasInicial = null;
     let columnasEnCurso = null;
     let deslizandoHasta = 0;
+    let sobreFranja = false;
+
+    // Entrar o salir de la franja: la franja se resalta, la tarjeta se desvanece un poco más y el celular vibra al entrar
+    const marcarSobreFranja = (card, sobre) => {
+        if (sobre === sobreFranja) return;
+        sobreFranja = sobre;
+        _franja()?.classList.toggle('activa', sobre);
+        card?.classList.toggle('sobre-ocultar', sobre);
+        if (sobre) vibrar(15);
+    };
 
     // Dibuja las columnas nuevas con la animación de deslizamiento (las tarjetas ocultas viajan con su columna)
     const reubicar = (columnas, encima) => {
@@ -275,9 +326,18 @@ function iniciarDragTarjetas() {
             if (card.id in PERSONALIZABLES) mostrarToast('Soltá para personalizar', 'info', AVISO_PERSONALIZAR_MS);
             /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.animated-card')).forEach(c => c.style.animation = 'none');
         },
-        // en cuanto el dedo se mueve es una reubicación: el aviso de personalizar ya no corresponde
-        alPrimerMovimiento: () => _cerrarToastActual(),
+        // en cuanto el dedo se mueve es una reubicación: el aviso de personalizar ya no corresponde, y entra la franja para ocultarla
+        // (recién acá: mantener y soltar sin mover sigue abriendo la personalización sin que nada aparezca)
+        alPrimerMovimiento: (card) => {
+            _cerrarToastActual();
+            if (_sePuedeOcultar(_idDeCard(card))) _mostrarFranja(true);
+        },
+        margenInferior: _altoFranja,
         alMover: (e, card) => {
+            // sobre la franja las demás tarjetas no se reacomodan: soltar ahí oculta la que se arrastra
+            const sobre = _sobreFranja(e.clientX, e.clientY);
+            marcarSobreFranja(card, sobre);
+            if (sobre) return;
             if (performance.now() < deslizandoHasta || !columnasEnCurso) return;
             const nuevas = evaluarNuevasColumnas(card, columnasEnCurso, e.clientX, e.clientY);
             if (!nuevas) return;
@@ -287,8 +347,18 @@ function iniciarDragTarjetas() {
             }
         },
         alTerminar: (card, confirmar, { movido, duracion }) => {
+            const ocultar = confirmar && sobreFranja;
+            marcarSobreFranja(card, false);
+            _mostrarFranja(false);
             card.classList.remove('reordenando');
             document.body.classList.remove('tarjeta-arrastrando-activa');
+            if (ocultar) {
+                // Soltada en la franja: no se guarda ninguna reubicación (el orden vuelve al de antes de arrastrar) y la tarjeta se oculta
+                columnasInicial = null;
+                columnasEnCurso = null;
+                ocultarConAviso(_idDeCard(card));
+                return;
+            }
             const destino = confirmar ? columnasEnCurso : columnasInicial;
             if (destino) {
                 // Sin columnas que hayan quedado vacías, y guardando el diseño elegido
@@ -312,10 +382,20 @@ function iniciarDragTarjetas() {
         }
     });
 
-    // Con teclado (Alt + flechas sobre el encabezado), ver columnasTrasTecla
+    // Con teclado (Alt + flechas sobre el encabezado), ver columnasTrasTecla; Alt + Supr la oculta
     const headers = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(_SELECTOR_ENCABEZADOS));
     headers.forEach(header => {
         header.addEventListener('keydown', (e) => {
+            if (e.altKey && e.key === 'Delete') {
+                const card = header.closest(_SELECTOR_CARDS);
+                if (!card || VistaPrevia.activa() || !_sePuedeOcultar(_idDeCard(card))) return;
+                e.preventDefault();
+                ocultarConAviso(_idDeCard(card));
+                // el foco estaba en la tarjeta que se ocultó: pasa al encabezado de la primera que sigue a la vista
+                /** @type {HTMLElement | undefined} */ (Array.from(document.querySelectorAll(_SELECTOR_ENCABEZADOS))
+                    .find(h => !h.closest('.hidden') && h.getClientRects().length > 0))?.focus();
+                return;
+            }
             if (!e.altKey || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
             if (VistaPrevia.activa()) return;   // idem: sin reubicar con teclado durante la vista previa
             const card = header.closest(_SELECTOR_CARDS);
@@ -445,6 +525,6 @@ function bindEventos() {
 }
 
 export const OrdenTarjetas = {
-    actualizarEstadoBotonPersistir, aplicarVisibilidadCards, setVisibilidadCard, obtenerOrdenCards, aplicarOrdenCards,
+    actualizarEstadoBotonPersistir, aplicarVisibilidadCards, setVisibilidadCard, ocultarConAviso, obtenerOrdenCards, aplicarOrdenCards,
     iniciarDragOrdenCards, iniciarDragTarjetas, bindEventos
 };

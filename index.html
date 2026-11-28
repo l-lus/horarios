@@ -703,6 +703,13 @@
         </div><!-- #right-column -->
         <div class="right-column" id="columna-3"></div>
     </div>
+    <!-- Al arrastrar una tarjeta que se puede ocultar, entra desde abajo: soltarla acá la oculta (ver orden-tarjetas.js) -->
+    <div class="franja-ocultar" id="franja-ocultar" aria-hidden="true">
+        <svg class="icon">
+            <use href="#icon-x-circle" />
+        </svg>
+        <span>Soltá para ocultar</span>
+    </div>
     <div class="modal modal-scrollable" id="modal-config" role="dialog" aria-modal="true"
         aria-labelledby="modal-config-titulo">
         <div class="modal-content">
@@ -1392,7 +1399,10 @@
                                 columna nueva (hasta 2 columnas entre 1024 y 1399 px de ancho y hasta 3 desde 1400 px, donde la página se ensancha); la columna que
                                 se queda sin tarjetas desaparece, y un movimiento nunca deja todo en una sola
                                 columna. En la tarjeta de estado y en el encabezado de Registros, mantener y soltar sin mover (hasta 1 segundo
-                                después de que la tarjeta se levanta) abre la vista previa de su estilo. Con teclado, Alt + flechas sobre la tarjeta. El orden del celular (1 columna), el de PC con 2 columnas y el de PC con 3 columnas
+                                después de que la tarjeta se levanta) abre la vista previa de su estilo. Para ocultar una tarjeta sin
+                                entrar a Ajustes, arrastrala hasta la franja <em>Soltá para ocultar</em> que aparece abajo al empezar a
+                                moverla (la de estado no se oculta); el aviso te recuerda cómo volver a mostrarla y, si lo tocás, la
+                                muestra otra vez. Con teclado, Alt + flechas sobre la tarjeta la mueven y Alt + Supr la oculta. El orden del celular (1 columna), el de PC con 2 columnas y el de PC con 3 columnas
                                 son independientes: el que ves acá es el del modo en el que estás ahora.</p>
                             <p><strong>Atajos:</strong> la tarjeta reúne hasta 20 botones (6 por fila en el celular y 10 en PC). Con el botón
                                 <strong>+</strong> elegís cuáles mostrar: subir y bajar (al destino principal de Respaldo y

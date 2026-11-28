@@ -26,6 +26,7 @@ import { Calendario } from './calendario.js';
 import { CentroRespaldo } from './centro-respaldo.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { Historico } from './historico.js';
+import { Atajos } from './atajos.js';
 import { HistoricoEdicion } from './historico-edicion.js';
 import { Estadisticas } from './estadisticas.js';
 import { Reportes } from './reportes.js';
@@ -288,6 +289,7 @@ function _initDatosYConfig(config) {
     actualizarEstadoBotonNotificaciones();
     actualizarSelectPushAnticipacion();
     aplicarVisibilidadCards();
+    Atajos.renderizar(false);
     aplicarOrdenCards(obtenerOrdenCards());
     iniciarDragOrdenCards();
     iniciarDragTarjetas();

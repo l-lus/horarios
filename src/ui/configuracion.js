@@ -131,6 +131,9 @@ function _volverAAjustes() {
     GestorModales.abrir('modal-config', _precargarCamposConfig);
 }
 
+/** Abre Ajustes (lo usa la tarjeta de atajos). */
+const abrirConfig = _volverAAjustes;
+
 // Tocar la opción del estilo de la tarjeta no lo cambia a ciegas: cierra Ajustes, lleva la tarjeta de estado a la vista y deja abajo los controles
 // para probar los estilos en vivo (la tarjeta se puede tocar para ver el día y la semana)
 /** @param {boolean} [desdeAjustes] con false (el atajo de mantener la tarjeta) no hay Ajustes que cerrar ni al que volver */
@@ -512,6 +515,6 @@ export const Configuracion = {
     actualizarEstadoBotonIgnorarTF, actualizarEstadoBotonHoverPopup, actualizarEstadoBotonRuedaCalendario,
     actualizarEstadoBotonLogicaCubierto, actualizarEstadoBotonObjetivoPorRegistro,
     actualizarEstadoBotonFormatoCortoStats, actualizarEstadoBotonMetricaUso, actualizarEstadoBotonAplicarHoras, cerrarConfig,
-    cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
+    abrirModalAyuda, abrirConfig, alternarTema, cerrarModalAyuda, _precargarCamposConfig, refrescarConfigSiVisible, mostrarConfigOnboarding, mostrarConfigEnAjuste,
     pressHoldObjetivoEdicion, formatearInput, bindEventos
 };

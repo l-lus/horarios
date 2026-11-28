@@ -196,9 +196,9 @@ function evaluarNuevasColumnas(arrastrado, columnas, clientX, clientY) {
 }
 
 // Desde dónde se arrastra cada tarjeta: su encabezado
-// (la tarjeta de estado no tiene encabezado: se mantiene presionada la tarjeta entera)
-const _SELECTOR_ENCABEZADOS = '#stats-card, #card-registrar .card-registrar-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable';
-const _SELECTOR_CARDS = '#stats-card, #card-registrar, #card-estadisticas, #card-historico';
+// (la de estado y la de atajos no tienen encabezado: se mantiene presionada la tarjeta entera)
+const _SELECTOR_ENCABEZADOS = '#stats-card, #card-registrar .card-registrar-header, #card-estadisticas .card-header-clickable, #card-historico .card-header-clickable, #card-atajos';
+const _SELECTOR_CARDS = '#stats-card, #card-registrar, #card-estadisticas, #card-historico, #card-atajos';
 
 /**
  * Columnas nuevas al mover una tarjeta con Alt + flecha: arriba/abajo cambia de lugar dentro de la columna; izquierda/derecha pasa a la columna
@@ -325,7 +325,8 @@ function iniciarDragTarjetas() {
             reubicar(nuevas, card);
             _guardarColumnas(nuevas);
             columnasEnCurso = null;
-            header.focus();
+            // en la de atajos el foco estaba en uno de sus botones: se queda ahí
+            (header === card ? /** @type {HTMLElement} */ (e.target) : header).focus();
         });
     });
 }
@@ -436,6 +437,7 @@ function bindEventos() {
         'btn-toggle-card-registrar': () => toggleVisibilidadCard('registrar'),
         'btn-toggle-card-estadisticas': () => toggleVisibilidadCard('estadisticas'),
         'btn-toggle-card-historico': () => toggleVisibilidadCard('historico'),
+        'btn-toggle-card-atajos': () => toggleVisibilidadCard('atajos'),
     });
 }
 

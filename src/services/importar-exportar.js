@@ -12,7 +12,8 @@ import { Cambios } from './cambios.js';
 import { TiposRegistro } from './tipos-registro.js';
 import { SeguridadYUtils as S } from '../core/seguridad.js';
 import { EstadoApp as D } from './estado-app.js';
-import { normalizarOrdenCards, leerLayout, columnasDesdeOrden, tamanosDeColumnas, esTamanosColumnasValidos } from './orden-cards.js';
+import { ATAJOS_POR_DEFECTO, MAX_ATAJOS } from './atajos.js';
+import { normalizarOrdenCards, leerLayout, columnasDesdeOrden, tamanosDeColumnas, esTamanosColumnasValidos, sumarTarjetasNuevas } from './orden-cards.js';
 import { DiasHabiles } from './dias-habiles.js';
 import { Objetivos } from './objetivos.js';
 import { RespaldoCifrado } from './respaldo-cifrado.js';
@@ -40,7 +41,15 @@ const _orden3Actual = () => leerLayout(3, _leer).orden;
 const _tamanosActuales = (modo) => { const { orden, tamanos } = leerLayout(modo, _leer); return tamanosDeColumnas(columnasDesdeOrden(orden, tamanos)); };
 const _columnasActuales = () => _tamanosActuales(2);
 const _columnas3Actuales = () => _tamanosActuales(3);
+// Un respaldo de antes de una tarjeta nueva (ej. atajos) trae tamaños sin ella: se le suma a su columna, como al leer el diseño guardado
+const _tamanosConNuevas = (ordenRespaldo, tamanos) => _esListaDeIds(ordenRespaldo) ? sumarTarjetasNuevas(ordenRespaldo, normalizarOrdenCards(ordenRespaldo), tamanos) : tamanos;
 const _visiblesActuales = () => Object.fromEntries(CARDS.map(c => [c, Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(c), true, true)]));
+
+function _atajosActuales() {
+    const guardado = Almacenamiento.getObject(STORAGE_KEYS.ATAJOS, null, true);
+    return Array.isArray(guardado) ? guardado.filter(id => typeof id === 'string') : [...ATAJOS_POR_DEFECTO];
+}
+const _atajosSaneados = (lista) => [...new Set(lista)].slice(0, MAX_ATAJOS);
 
 const _avisarHint = () => EventosApp.emit('config:hint-integrado');
 
@@ -155,6 +164,16 @@ const CONFIG_RESPALDO = [
         actual: () => { const v = Almacenamiento.getItem(STORAGE_KEYS.ENFASIS, 'predeterminado', true); return ENFASIS_IDS.includes(v) ? v : 'predeterminado'; },
         aplicar: (v) => { Almacenamiento.setItem(STORAGE_KEYS.ENFASIS, v, true); EventosApp.emit('config:enfasis'); },
     },
+    // Los atajos también son del perfil. Sin lista guardada se ven (y se exportan) los de por defecto; los ids que esta versión no conoce
+    // se descartan al leerlos (ver ui/atajos.js)
+    {
+        clave: STORAGE_KEYS.ATAJOS,
+        etiqueta: 'atajos',
+        esValido: _esListaDeIds,
+        actual: _atajosActuales,
+        distinto: (v) => _atajosSaneados(v).join() !== _atajosActuales().join(),
+        aplicar: (v) => { Almacenamiento.setItem(STORAGE_KEYS.ATAJOS, _atajosSaneados(v), true); EventosApp.emit('config:atajos'); },
+    },
     // Un respaldo con orden pero sin columnas (versiones anteriores) usa el reparto por defecto: los tamaños viejos no corresponderían al orden nuevo
     _ordenDeTarjetas(STORAGE_KEYS.ORDEN_CARDS, 'orden de tarjetas', _ordenActual, (data) => {
         if (!Array.isArray(data[STORAGE_KEYS.COLUMNAS_CARDS])) Almacenamiento.removeItem(STORAGE_KEYS.COLUMNAS_CARDS, true);
@@ -169,8 +188,8 @@ const CONFIG_RESPALDO = [
         tarjetas: true,
         esValido: (v) => esTamanosColumnasValidos(v),
         actual: _columnasActuales,
-        distinto: (v) => v.join() !== _columnasActuales().join(),
-        aplicar: (v) => Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS, v, true),
+        distinto: (v, data) => _tamanosConNuevas(data[STORAGE_KEYS.ORDEN_CARDS], v).join() !== _columnasActuales().join(),
+        aplicar: (v, data) => Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS, _tamanosConNuevas(data[STORAGE_KEYS.ORDEN_CARDS], v), true),
     },
     {
         clave: STORAGE_KEYS.COLUMNAS_CARDS_3,
@@ -178,8 +197,8 @@ const CONFIG_RESPALDO = [
         tarjetas: true,
         esValido: (v) => esTamanosColumnasValidos(v),
         actual: _columnas3Actuales,
-        distinto: (v) => v.join() !== _columnas3Actuales().join(),
-        aplicar: (v) => Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS_3, v, true),
+        distinto: (v, data) => _tamanosConNuevas(data[STORAGE_KEYS.ORDEN_CARDS_3], v).join() !== _columnas3Actuales().join(),
+        aplicar: (v, data) => Almacenamiento.setItem(STORAGE_KEYS.COLUMNAS_CARDS_3, _tamanosConNuevas(data[STORAGE_KEYS.ORDEN_CARDS_3], v), true),
     },
     {
         clave: CLAVE_TARJETAS_VISIBLES,
@@ -244,7 +263,7 @@ function calcularCambiosConfigImport(data) {
     }
     CONFIG_RESPALDO.forEach(c => {
         const v = data[c.clave];
-        if (c.esValido(v) && (c.distinto ? c.distinto(v) : v !== c.actual())) cambios.push(c.etiqueta);
+        if (c.esValido(v) && (c.distinto ? c.distinto(v, data) : v !== c.actual())) cambios.push(c.etiqueta);
     });
     return cambios;
 }

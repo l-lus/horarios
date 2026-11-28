@@ -7,6 +7,7 @@ import { Calendario } from './ui/calendario.js';
 import { CentroRespaldo } from './ui/centro-respaldo.js';
 import { DriveRespaldo } from './ui/drive-respaldo.js';
 import { Historico } from './ui/historico.js';
+import { Atajos } from './ui/atajos.js';
 import { Estadisticas } from './ui/estadisticas.js';
 import { TarjetaFichaje } from './ui/tarjeta-fichaje.js';
 import { OrdenTarjetas } from './ui/orden-tarjetas.js';
@@ -43,6 +44,7 @@ function _iniciarEventosDOM() {
     Estadisticas.bindEventos();
     TarjetaFichaje.bindEventos();
     OrdenTarjetas.bindEventos();
+    Atajos.bindEventos();
     Notificaciones.bindEventos();
     Configuracion.bindEventos();
     HistorialDias.bindEventos();

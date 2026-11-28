@@ -3,7 +3,7 @@
 // ====================================================================
 // APP_VERSION debe coincidir con el prefijo de CACHE_NAME en sw.js (lo valida tests/architecture.test.mjs).
 export const APP_NOMBRE = 'LUSHIBOSCA';
-export const APP_VERSION = 'v261127';
+export const APP_VERSION = 'v261128';
 
 export const APP_STORAGE_PREFIX = 'horarios_';
 
@@ -35,6 +35,7 @@ export const STORAGE_KEYS = Object.freeze({
     IGNORAR_OBJETIVO_POR_REGISTRO: 'ignorarObjetivoPorRegistro',
     FONDO_CARD: 'fondoCard',
     PERSISTIR_TARJETAS: 'persistirTarjetas',
+    ATAJOS: 'atajosRapidos',   // los botones de la tarjeta de atajos, en orden (de cada perfil; ver services/atajos.js)
     ORDEN_CARDS: 'ordenCards',
     ORDEN_CARDS_MOVIL: 'ordenCardsMovil',
     COLUMNAS_CARDS: 'columnasCards',   // cuántas tarjetas hay en cada columna de escritorio de 2 columnas (se corta el orden de ORDEN_CARDS)
@@ -99,8 +100,8 @@ export const CLAVES_AJUSTES_INSTALACION = Object.freeze([
 ]);
 
 // Tarjetas que se pueden ocultar y reordenar, en su orden por defecto (la de fichaje con la barra de progreso va siempre arriba y no cuenta).
-// En escritorio las dos últimas pasan a la columna derecha.
-export const CARDS = Object.freeze(['registrar', 'estadisticas', 'historico']);
+// En escritorio, Registros y las que la siguen (la de atajos) pasan a la columna derecha (ver services/orden-cards.js).
+export const CARDS = Object.freeze(['registrar', 'estadisticas', 'historico', 'atajos']);
 // Tarjetas que se pueden ubicar: las anteriores más la de estado ("Hoy", id `stats-card`), que se mueve pero no se oculta. Va primera por defecto.
 export const CARDS_ORDEN = Object.freeze(['estado', ...CARDS]);
 

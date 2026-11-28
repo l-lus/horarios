@@ -5,7 +5,10 @@ import { CARDS_ORDEN, STORAGE_KEYS } from '../core/constantes.js';
 // ====================================================================
 // El orden es una lista con todas las tarjetas, ocultas incluidas. En escritorio esa lista se corta en columnas según los tamaños guardados
 // (ej. [3, 1] = 3 tarjetas en la primera columna y 1 en la segunda); en móvil se muestra apilada. La tarjeta de estado ('estado') nunca se oculta.
-const CARDS_EN_DERECHA = 1;   // reparto por defecto: solo la última (Registros) va a la segunda columna
+// Reparto por defecto: Registros y la de atajos (las últimas del orden por defecto) van a la segunda columna. Se cuentan las que hay
+// en el orden recibido y se toman otras tantas del final (con un orden sin atajos, solo la última).
+const CARDS_A_LA_DERECHA = ['historico', 'atajos'];
+const _enDerechaPorDefecto = (orden) => Math.max(1, orden.filter(c => CARDS_A_LA_DERECHA.includes(c)).length);
 export const MAX_COLUMNAS = 3;
 
 /**
@@ -32,7 +35,32 @@ export function leerLayout(modo, leer) {
     const base = clavesDeLayout(2);
     const guardado = leer(propio.orden);
     const claveTamanos = modo === 3 && !guardado ? base.columnas : propio.columnas;
-    return { orden: normalizarOrdenCards(guardado ?? leer(base.orden)), tamanos: claveTamanos ? leer(claveTamanos) : null };
+    const crudo = guardado ?? leer(base.orden);
+    const orden = normalizarOrdenCards(crudo);
+    return { orden, tamanos: sumarTarjetasNuevas(crudo, orden, claveTamanos ? leer(claveTamanos) : null) };
+}
+
+/**
+ * Tamaños guardados antes de que existiera una tarjeta (ej. la de atajos) → tamaños para el orden con ella: cada tarjeta nueva suma uno
+ * a la columna donde normalizarOrdenCards la ubicó (la de la tarjeta anterior; la primera, si va primera). Así el diseño que ya había
+ * elegido el usuario no se corre de columna. Si los tamaños no corresponden a las tarjetas que ya estaban, se devuelven sin tocar.
+ * @param {unknown} guardado el orden tal como estaba guardado
+ * @param {readonly string[]} orden el mismo orden ya normalizado
+ * @param {unknown} tamanos
+ */
+export function sumarTarjetasNuevas(guardado, orden, tamanos) {
+    if (!Array.isArray(guardado) || !Array.isArray(tamanos)) return tamanos;
+    const previas = orden.filter(c => guardado.includes(c));
+    if (previas.length === orden.length || !esTamanosColumnasValidos(tamanos, previas.length)) return tamanos;
+    let desde = 0;
+    const columnas = /** @type {number[]} */ (tamanos).map(n => { const col = previas.slice(desde, desde + n); desde += n; return col; });
+    orden.forEach((c, i) => {
+        if (previas.includes(c)) return;
+        if (i === 0) { columnas[0].unshift(c); return; }
+        const col = columnas.find(cs => cs.includes(orden[i - 1])) ?? columnas[columnas.length - 1];
+        col.splice(col.indexOf(orden[i - 1]) + 1, 0, c);
+    });
+    return columnas.map(c => c.length);
 }
 
 /**
@@ -75,7 +103,8 @@ export function columnasDesdeOrden(orden, tamanos = null) {
         // Guardados cuando la tarjeta de estado no era movible: ella iba siempre arriba de la primera columna
         t = [/** @type {number[]} */ (tamanos)[0] + 1, .../** @type {number[]} */ (tamanos).slice(1)];
     }
-    t ??= total > CARDS_EN_DERECHA ? [total - CARDS_EN_DERECHA, CARDS_EN_DERECHA] : [total];
+    const enDerecha = _enDerechaPorDefecto(orden);
+    t ??= total > enDerecha ? [total - enDerecha, enDerecha] : [total];
     let desde = 0;
     return t.map(n => { const col = orden.slice(desde, desde + n); desde += n; return col; }).filter(col => col.length > 0);
 }

@@ -547,6 +547,15 @@ html[data-enfasis] .btn-register .icon:is(.fichaje-ok, .fichaje-error) {
         flex-direction: column;
     }
 
+    .atajos-grid {
+        grid-template-columns: repeat(10, 1fr);
+    }
+
+    .atajo-btn {
+        height: auto;
+        aspect-ratio: 1;
+    }
+
     #lista-registros {
         max-height: 1100px;
         overflow-y: auto;

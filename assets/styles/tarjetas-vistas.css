@@ -1414,6 +1414,67 @@
     overflow: visible;
 }
 
+/* ─── TARJETA DE ATAJOS ──────────────────────────────────────────────────────── */
+
+/* 6 por fila en móvil (en escritorio hasta 10, ver responsivo-movimiento.css) */
+.atajos-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--space-sm);
+    padding: 0 var(--space-sm);
+    /* La fila de botones (con su área táctil completa) sobresale del relleno de la tarjeta, así una fila mide lo que una tarjeta cerrada */
+    margin-block: calc((var(--text-base) * var(--lh-normal) - var(--touch-target)) / 2);
+}
+
+/* Los botones de los atajos van directo en la grilla, a continuación del "+" */
+.atajos-botones {
+    display: contents;
+}
+
+/* La tarjeta no tiene encabezado: se mantiene presionada para reordenarla */
+#card-atajos {
+    touch-action: pan-y;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.atajo-agregar {
+    color: var(--text-muted);
+}
+
+.atajo-btn {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: var(--touch-target);
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    touch-action: manipulation;
+}
+
+/* El fondo al tocar es una capa que solo cambia de opacidad (va al compositor, sin repintar el botón) */
+.atajo-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--c-gray-btn);
+    opacity: 0;
+    transition: opacity var(--dur-fast);
+    pointer-events: none;
+}
+
+.atajo-btn:active:not(:disabled)::before {
+    opacity: 1;
+}
+
+.atajo-btn .icon {
+    position: relative;
+}
+
 /* ─── COMPONENTES VARIOS ─────────────────────────────────────────────────────── */
 
 .card-header-clickable {

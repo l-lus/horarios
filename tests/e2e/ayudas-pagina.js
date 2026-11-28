@@ -27,7 +27,7 @@ window.humo = {
      * Revisa las filas visibles (las del modal abierto, o las de la página si no hay modal) y devuelve una lista de problemas.
      */
     solapes() {
-        const FILAS = '.input-with-btn, .btn-group, .importar-btns, .destino-acciones, .destino-cabecera, .input-number-group, #sync-rango-horario, .week-selector, .header-actions';
+        const FILAS = '.input-with-btn, .btn-group, .atajos-grid, .importar-btns, .destino-acciones, .destino-cabecera, .input-number-group, #sync-rango-horario, .week-selector, .header-actions';
         const TOLERANCIA = 1;
         const hayModal = !!document.querySelector('.modal.show');
         const visible = (el) => {

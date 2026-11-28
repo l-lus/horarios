@@ -1,7 +1,7 @@
 # Arquitectura del Frontend — Horarios
 
 **Última actualización:** 2026-11-24  
-**Estado:** Arquitectura modularizada y saneada (118 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
+**Estado:** Arquitectura modularizada y saneada (120 módulos ES en `src/`, grafo 100% acíclico, cero violaciones de capa, `services/` sin acceso al DOM, tests nativos en `tests/` y chequeo de tipos con `tsc`).
 
 ---
 
@@ -42,7 +42,7 @@ horarios/
 │   │   ├── modales-funciones.css # 4. Gist, configuración/toggles, perfiles, onboarding y drag & drop
 │   │   └── responsivo-movimiento.css # 5. Keyframes, @media (hover/móvil/escritorio) y reduced-motion
 │   └── icons/                  # Íconos de la app y del manifest (SVG y PNG)
-├── src/                        # Código fuente en ES Modules (118 módulos)
+├── src/                        # Código fuente en ES Modules (120 módulos)
 │   ├── main.js                 # Punto de entrada (bootstrap de la aplicación)
 │   ├── oauth-callback.js       # Script de oauth-callback.html (fuera del grafo de la app, sin imports)
 │   ├── data/                   # Catálogos y datos estáticos puros
@@ -253,13 +253,14 @@ Las máscaras (`mask-image`, el arco del anillo) usan `#000`/`#fff` literales a 
 | [`src/services/sincronizacion-gist.js`](../src/services/sincronizacion-gist.js) | `SincronizacionGist` | Cliente HTTP de la API de GitHub Gist: sube y baja el texto del respaldo (en claro o cifrado, no lo interpreta), el Gist de cada perfil (`gistId`, `conectado` con solo el token, `listo` con los dos) y la marca `gistCifrado`. |
 | [`src/services/sincronizacion-drive.js`](../src/services/sincronizacion-drive.js) | `SincronizacionDrive` | Google Drive: conexión OAuth con PKCE (por redirección; el Worker canjea, renueva y revoca), respaldo vinculado a cada perfil (`driveFileId`), lista de respaldos de la cuenta, subir y bajar el texto, y la marca `driveCifrado`. Ver `docs/PROPUESTA-GOOGLE-DRIVE.md`. **Estado (2026-11-14): en pruebas** — el proyecto de Google está en modo "En pruebas" (solo usuarios de prueba, el permiso vence a los 7 días) y el OAuth va al Worker de pruebas (`WorkerCliente.WORKER_OAUTH_URL`, cuenta l-lus); push y estadísticas siguen en producción. |
 | [`src/services/config-sync.js`](../src/services/config-sync.js) | `ConfigSync` | Configuración de la sincronización, una sola por perfil (campos `sync*`): destino principal elegido, modo automático, comportamiento al bajar, franja horaria y límites por hora. Los perfiles anteriores, con una configuración por proveedor (`gistAutoSync`, `driveAutoSync`, …), se migran al cargar (`GestorPerfiles.migrarCamposSync`). |
+| [`src/services/atajos.js`](../src/services/atajos.js) | `normalizarAtajos`, `alternarAtajo`, `MAX_ATAJOS`, `ATAJOS_POR_DEFECTO` | Lista de atajos rápidos elegida en cada perfil: normalización y alta/baja, sin DOM. |
 | [`src/services/destino-respaldo.js`](../src/services/destino-respaldo.js) | `DestinoRespaldo` | Destino principal del perfil (`principal`: el elegido o el que se deduce de lo conectado), la nube que usan la automática y los botones rápidos (`nubeActiva`) y qué toca hacer al abrir la app (`automaticaPendiente`). |
 | [`src/services/oauth-pkce.js`](../src/services/oauth-pkce.js) | `OAuthPKCE` | `state`, `code_verifier` y `code_challenge` S256, con `crypto` inyectable. |
 | [`src/services/worker-cliente.js`](../src/services/worker-cliente.js) | `WorkerCliente` | Dirección y cabeceras del Worker `horarios-push` (recordatorios, estadísticas y OAuth). |
 | [`src/services/frase-cifrado.js`](../src/services/frase-cifrado.js) | `FraseCifrado` | La frase de cifrado opcional de la app (una sola, como el token): leer, guardar (sesión o recordada), adoptar la escrita al restaurar (avisa con `respaldo:frase`), olvidar, evaluar y generar una al azar. |
 | [`src/services/respaldo-cifrado.js`](../src/services/respaldo-cifrado.js) | `RespaldoCifrado` | `sellar` (respaldo → sobre cifrado) y `abrir` (texto de archivo o Gist → respaldo, en claro o cifrado). No lanza: devuelve `{ error, codigo }`. |
 | [`src/services/recordatorio-push.js`](../src/services/recordatorio-push.js) | `RecordatorioPush` | Suscripción Web Push (VAPID), programación y cancelación de recordatorios de fin de jornada con el Worker, y ping diario anónimo de uso (`registrarUso` → `/api/hola`). |
-| [`src/services/orden-cards.js`](../src/services/orden-cards.js) | `normalizarOrdenCards`, `columnasDesdeOrden`, `prepararColumnas`, `moverCard` | Orden de las tarjetas (ocultas incluidas; la de estado se mueve pero no se oculta) y su corte en hasta 3 columnas de escritorio (diseño libre), sin DOM. |
+| [`src/services/orden-cards.js`](../src/services/orden-cards.js) | `normalizarOrdenCards`, `columnasDesdeOrden`, `prepararColumnas`, `moverCard`, `sumarTarjetasNuevas` | Orden de las tarjetas (ocultas incluidas; la de estado se mueve pero no se oculta) y su corte en hasta 3 columnas de escritorio (diseño libre), sin DOM. Una tarjeta nueva (ej. la de atajos) se suma a la columna de la anterior en los diseños guardados antes de que existiera. |
 
 ### 4.4. Interfaz de usuario (`src/ui/`)
 
@@ -317,6 +318,7 @@ Las máscaras (`mask-image`, el arco del anillo) usan `#000`/`#fff` literales a 
 | [`src/ui/orden-tarjetas.js`](../src/ui/orden-tarjetas.js) | `OrdenTarjetas` | Visibilidad de tarjetas principales y diseño libre por columnas (ver 3.3): arrastre con pulsación larga, teclado (Alt + flechas) y lista de Ajustes. |
 | [`src/ui/header-posicion.js`](../src/ui/header-posicion.js) | `HeaderPosicion` | Reubicar el encabezado manteniéndolo presionado y arrastrándolo: se desliza en vivo al borde más cercano (PC: cuatro; móvil: arriba y abajo) con el mismo `uiArrastreLargo` y `uiAnimarReubicacion` que las tarjetas; al soltar se guarda, con Escape vuelve. Mantener y soltar sin mover abre la vista previa del tema (mismo atajo que las tarjetas). |
 | [`src/ui/transicion-layout.js`](../src/ui/transicion-layout.js) | `TransicionLayout` | Al cruzar un corte de ancho (celular ↔ escritorio) desliza el encabezado y las tarjetas a su lugar nuevo en vez de saltar (FLIP con `uiAnimarDesdePosiciones`): guarda de antemano dónde está cada uno (en cada cuadro de un redimensionado, al desplazar y cuando cambia el contenido) y al cruzar lo compara con esa foto. |
+| [`src/ui/atajos.js`](../src/ui/atajos.js) | `Atajos` | Tarjeta de atajos rápidos: catálogo de acciones (ícono, estado, acción; Subir y Bajar van al destino principal por los botones de Registros), botones de la tarjeta y modal para elegirlos. La lista es de cada perfil. |
 | [`src/ui/arrastre.js`](../src/ui/arrastre.js) | `uiArrastreLargo`, `uiAnimarReubicacion`, `REUBICACION_MS` | Arrastre con pulsación larga (puntero capturado, cancelación) y reubicación animada FLIP; genéricos, sin conocer qué se arrastra. |
 | [`src/ui/notificaciones.js`](../src/ui/notificaciones.js) | `Notificaciones` | Modal y controles de configuración de avisos Web Push (anticipación, uso de saldo semanal). |
 | [`src/ui/bienvenida-modal.js`](../src/ui/bienvenida-modal.js) | `BienvenidaModal` | Onboarding inicial para configurar horas diarias y días hábiles en el primer uso. |

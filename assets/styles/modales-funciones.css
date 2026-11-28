@@ -200,6 +200,14 @@
     color: var(--text-muted);
 }
 
+/* Contador "n/20" del selector de atajos, a la derecha del título */
+.atajos-contador {
+    margin-left: auto;
+    font-size: var(--text-sm);
+    font-weight: var(--fw-medium);
+    color: var(--text-muted);
+}
+
 #modal-frase-motivo {
     margin: 0 0 var(--space-md);
     font-size: var(--text-base);
@@ -376,7 +384,8 @@
 #modal-config .config-actions button,
 .drag-handle,
 #modal-reporte-secciones .config-actions button,
-#modal-notificaciones .form-group button {
+#modal-notificaciones .form-group button,
+#modal-atajos .settings-list button {
     justify-content: flex-start;
     text-align: left;
 }
@@ -389,7 +398,8 @@
 #modal-config .config-actions button>span:not(.toggle-switch, #hint-animaciones-label),
 .drag-handle>span:not(.toggle-switch),
 #modal-reporte-secciones .config-actions button>span:not(.toggle-switch),
-#modal-notificaciones .form-group button>span:not(.toggle-switch) {
+#modal-notificaciones .form-group button>span:not(.toggle-switch),
+#modal-atajos .settings-list button>span:not(.toggle-switch) {
     flex: 1;
     min-width: 0;   /* permite que el texto se parta en vez de empujar al valor */
 }

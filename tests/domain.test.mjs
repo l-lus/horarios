@@ -291,8 +291,8 @@ test('ImportarExportar: exportación, validación y restauración de flags de co
         descHitosNumero: true,
         cicloHintAuto: true,
         formatoCortoStats: false,
-        estiloCalendario: 'legacy',
-        estiloCalendarioVariantes: { aro: 'relleno-aro', minimo: 'subrayado' },
+        estiloCalendario: 'redondeado',
+        estiloCalendarioVariantes: { aro: 'legacy', minimo: 'subrayado' },
         posicionHeader: 'top',
         posicionHeaderMovil: 'top',
         hoverPopupCalendario: false,
@@ -363,10 +363,13 @@ test('ImportarExportar: la apariencia (estilo del calendario, fondo, formato cor
     assert.deepEqual([EstiloCalendario.actual(), EstiloCalendario.variante()], ['cuadrado', 'relleno-aro']);
     ImportarExportar.aplicarConfigImportada({ ...base, estiloCalendario: 'aro-tinte' });
     assert.deepEqual([EstiloCalendario.actual(), EstiloCalendario.variante()], ['redondeado', 'aro-tinte']);
+    // el Legacy de antes (un estilo propio) es ahora la primera variante de Redondeado
+    ImportarExportar.aplicarConfigImportada({ ...base, estiloCalendario: 'legacy' });
+    assert.deepEqual([EstiloCalendario.actual(), EstiloCalendario.variante()], ['redondeado', 'legacy']);
     assert.equal(Almacenamiento.getItem(STORAGE_KEYS.FONDO_CARD, null, true), 'ninguno');
 
     // se deja como estaba para no alterar los demás tests
-    ImportarExportar.aplicarConfigImportada({ ...base, estiloCalendario: 'legacy', estiloCalendarioVariantes: { aro: 'relleno-aro', minimo: 'subrayado' }, fondoCard: 'golden-gate', formatoCortoStats: false, hoverPopupCalendario: false, ruedaCalendario: true, persistirTarjetas: true });
+    ImportarExportar.aplicarConfigImportada({ ...base, estiloCalendario: 'redondeado', estiloCalendarioVariantes: { aro: 'legacy', minimo: 'subrayado' }, fondoCard: 'golden-gate', formatoCortoStats: false, hoverPopupCalendario: false, ruedaCalendario: true, persistirTarjetas: true });
     CLAVES_AJUSTES_INSTALACION.forEach(k => Almacenamiento.removeItem(k));
     Almacenamiento.removeItem(STORAGE_KEYS.FONDO_CARD, true);
     Almacenamiento.removeItem(STORAGE_KEYS.ENFASIS, true);
@@ -899,25 +902,25 @@ test('PosicionHeader: en PC valen las cuatro posiciones y en móvil solo arriba 
     assert.equal(etiquetaPosicion('inventada'), 'Arriba');
 });
 
-test('EstiloCalendario: el ciclo recorre los estilos (Legacy, Redondeado, Cuadrado, Mínimo), vuelve al original y tolera ids desconocidos', async () => {
+test('EstiloCalendario: el ciclo recorre los estilos (Redondeado, Cuadrado, Mínimo), vuelve al primero y tolera ids desconocidos', async () => {
     const { ESTILOS_CALENDARIO, VARIANTES_CALENDARIO, siguienteEstilo, etiquetaEstilo } = await import('../src/core/estilo-calendario.js');
     const ids = ESTILOS_CALENDARIO.map(e => e.id);
-    assert.deepEqual(ids, ['legacy', 'redondeado', 'cuadrado', 'minimo']);
+    assert.deepEqual(ids, ['redondeado', 'cuadrado', 'minimo']);
 
     const visitados = [];
-    let id = 'legacy';
+    let id = 'redondeado';
     for (let i = 0; i < ids.length; i++) { visitados.push(id); id = siguienteEstilo(id); }
     assert.deepEqual(visitados, ids);
-    assert.equal(id, 'legacy');
+    assert.equal(id, 'redondeado');
 
-    // un valor que no es un estilo se trata como el original
-    assert.equal(siguienteEstilo('inventado'), 'redondeado');
-    assert.equal(etiquetaEstilo('inventado'), 'Legacy');
+    // un valor que no es un estilo se trata como el de por defecto (Redondeado)
+    assert.equal(siguienteEstilo('inventado'), 'cuadrado');
+    assert.equal(etiquetaEstilo('inventado'), 'Redondeado');
 
-    // Redondeado y Cuadrado comparten las variantes de aro; Mínimo tiene las suyas; Legacy, ninguna
-    assert.deepEqual(VARIANTES_CALENDARIO.aro.map(v => v.id), ['relleno-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo']);
+    // Redondeado y Cuadrado comparten las variantes de aro (la primera, Legacy, es el relleno original y la de por defecto); Mínimo tiene las suyas
+    assert.deepEqual(VARIANTES_CALENDARIO.aro.map(v => v.id), ['legacy', 'relleno-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo']);
     assert.deepEqual(VARIANTES_CALENDARIO.minimo.map(v => v.id), ['subrayado', 'punto']);
-    assert.equal(ESTILOS_CALENDARIO.find(e => e.id === 'legacy')?.familia, undefined);
+    assert.ok(ESTILOS_CALENDARIO.every(e => e.familia), 'todos los estilos tienen variantes');
 });
 
 test('EstiloCalendario: cada familia recuerda su variante, las variantes ciclan y lo guardado por versiones anteriores se convierte', async () => {
@@ -927,7 +930,8 @@ test('EstiloCalendario: cada familia recuerda su variante, las variantes ciclan 
     try {
         EstiloCalendario.setEstilo('redondeado');
         assert.equal(EstiloCalendario.tieneVariantes(), true);
-        assert.equal(EstiloCalendario.variante(), 'relleno-aro', 'sin elegir, la primera');
+        assert.equal(EstiloCalendario.variante(), 'legacy', 'sin elegir, la primera (el relleno original)');
+        EstiloCalendario.siguienteVariante();
         EstiloCalendario.siguienteVariante();
         EstiloCalendario.siguienteVariante();
         assert.equal(EstiloCalendario.etiquetaVariante(), 'Aro grueso');
@@ -940,22 +944,21 @@ test('EstiloCalendario: cada familia recuerda su variante, las variantes ciclan 
         assert.equal(EstiloCalendario.variante(), 'subrayado', 'el ciclo de variantes vuelve a la primera');
         EstiloCalendario.setEstilo('redondeado');
         assert.equal(EstiloCalendario.variante(), 'aro-grueso', 'al volver, sigue la variante que tenía');
+        // el Legacy de antes (un estilo propio) pasa a Redondeado con la variante Legacy
         EstiloCalendario.setEstilo('legacy');
-        assert.equal(EstiloCalendario.tieneVariantes(), false);
-        assert.equal(EstiloCalendario.variante(), null);
-        EstiloCalendario.siguienteVariante();   // sin variantes, no hace nada
-        assert.equal(EstiloCalendario.actual(), 'legacy');
+        assert.deepEqual([EstiloCalendario.actual(), EstiloCalendario.variante()], ['redondeado', 'legacy']);
 
         // un estilo de antes (un solo valor) pasa a estilo + variante, sin perder la variante de la otra familia
         EstiloCalendario.setEstilo('punto');
         assert.deepEqual([EstiloCalendario.actual(), EstiloCalendario.variante()], ['minimo', 'punto']);
-        assert.equal(EstiloCalendario.variantes().aro, 'aro-grueso');
+        assert.equal(EstiloCalendario.variantes().aro, 'legacy', 'la de aro sigue siendo la del paso anterior');
         assert.equal(Almacenamiento.getItem(STORAGE_KEYS.ESTILO_CALENDARIO, null), 'minimo');
     } finally {
         Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_CALENDARIO);
         Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES);
-        EstiloCalendario.setEstilo('legacy');
+        EstiloCalendario.setEstilo('redondeado');
         Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_CALENDARIO);
+        Almacenamiento.removeItem(STORAGE_KEYS.ESTILO_CALENDARIO_VARIANTES);
     }
 });
 

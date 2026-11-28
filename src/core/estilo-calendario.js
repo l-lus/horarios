@@ -5,12 +5,11 @@ import { catalogoCiclico, opcionGuardada, siguienteEnCiclo } from './catalogo.js
 // ====================================================================
 // ESTILO DE LOS DÍAS DEL CALENDARIO: estilo (forma) y variante
 // ====================================================================
-// El CSS solo mira <html data-estilo-calendario="..." data-variante-calendario="...">. 'legacy' es el estilo original (círculo relleno)
-// y no tiene variantes. Redondeado y Cuadrado comparten las variantes de aro (cambia solo la forma); Mínimo tiene las suyas (barra o punto).
+// El CSS solo mira <html data-estilo-calendario="..." data-variante-calendario="...">. Redondeado y Cuadrado comparten las variantes de aro
+// (cambia solo la forma); la primera, 'legacy', es el relleno original. Mínimo tiene las suyas (barra o punto). Por defecto: Redondeado + Legacy.
 // La variante se recuerda por familia: al pasar de Redondeado a Mínimo y volver, sigue la que estaba.
 // tema-inicial.js aplica los dos atributos antes de que cargue la app (copia de estas listas: un test verifica que coincidan).
 export const ESTILOS_CALENDARIO = Object.freeze([
-    { id: 'legacy', label: 'Legacy' },
     { id: 'redondeado', label: 'Redondeado', familia: 'aro' },
     { id: 'cuadrado', label: 'Cuadrado', familia: 'aro' },
     { id: 'minimo', label: 'Mínimo', familia: 'minimo' }
@@ -18,6 +17,7 @@ export const ESTILOS_CALENDARIO = Object.freeze([
 
 export const VARIANTES_CALENDARIO = Object.freeze({
     aro: Object.freeze([
+        { id: 'legacy', label: 'Legacy' },
         { id: 'relleno-aro', label: 'Relleno con aro' },
         { id: 'aro-tinte', label: 'Aro con tinte' },
         { id: 'aro-grueso', label: 'Aro grueso' },
@@ -31,6 +31,7 @@ export const VARIANTES_CALENDARIO = Object.freeze({
 
 /** Los estilos de antes (un solo valor por estilo) → estilo y variante. Para lo guardado y para los respaldos viejos. */
 export const ESTILOS_CALENDARIO_ANTERIORES = Object.freeze({
+    'legacy': ['redondeado', 'legacy'],
     'relleno-aro': ['redondeado', 'relleno-aro'],
     'cuadrado-aro': ['cuadrado', 'relleno-aro'],
     'aro-tinte': ['redondeado', 'aro-tinte'],
@@ -40,14 +41,14 @@ export const ESTILOS_CALENDARIO_ANTERIORES = Object.freeze({
     'punto': ['minimo', 'punto']
 });
 
-const _catalogo = catalogoCiclico(ESTILOS_CALENDARIO, { porDefecto: 'legacy', desconocidoEsPorDefecto: true });
+const _catalogo = catalogoCiclico(ESTILOS_CALENDARIO, { porDefecto: 'redondeado', desconocidoEsPorDefecto: true });
 const _guardado = opcionGuardada(STORAGE_KEYS.ESTILO_CALENDARIO, _catalogo);
 
 /** Estilo que sigue al `id` en el ciclo (vuelve al primero al terminar; un id desconocido cuenta como el estilo por defecto). */
 export const siguienteEstilo = _catalogo.siguiente;
 export const etiquetaEstilo = _catalogo.etiqueta;
 
-/** @param {string} estilo @returns {string | null} la familia de variantes del estilo (null: Legacy, sin variantes) */
+/** @param {string} estilo @returns {string | null} la familia de variantes del estilo */
 const familiaDe = (estilo) => ESTILOS_CALENDARIO.find(e => e.id === estilo)?.familia ?? null;
 
 /** ¿Es un mapa válido de variantes por familia? (lo que se guarda y viaja en el respaldo) @param {unknown} v */
@@ -74,7 +75,7 @@ function _migrarGuardado() {
 }
 
 const actual = () => _guardado.get();
-/** La variante del estilo actual, o null si no tiene (Legacy). */
+/** La variante del estilo actual. */
 function variante() {
     const familia = familiaDe(actual());
     return familia ? variantes()[familia] : null;

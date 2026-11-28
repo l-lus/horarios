@@ -23,11 +23,14 @@ const { toggle: togglePersistirTarjetas, actualizarEstado: actualizarEstadoBoton
     });
 
 function toggleVisibilidadCard(cual) {
-    const key = STORAGE_KEYS.CARD_VISIBLE(cual);
-    const nuevo = !Almacenamiento.getBoolean(key, true, true);
-    Almacenamiento.setItem(key, nuevo, true);
-    aplicarVisibilidadCard(cual, nuevo);
-    setBtnActivo('btn-toggle-card-' + cual, nuevo);
+    setVisibilidadCard(cual, !Almacenamiento.getBoolean(STORAGE_KEYS.CARD_VISIBLE(cual), true, true));
+}
+
+/** Muestra u oculta una tarjeta y lo guarda en el perfil (lo usan Tarjetas y posición y el selector de atajos). @param {string} cual @param {boolean} visible */
+function setVisibilidadCard(cual, visible) {
+    Almacenamiento.setItem(STORAGE_KEYS.CARD_VISIBLE(cual), visible, true);
+    aplicarVisibilidadCard(cual, visible);
+    setBtnActivo('btn-toggle-card-' + cual, visible);
     aplicarOrdenCards(obtenerOrdenCards());   // una columna sin tarjetas visibles deja de ocupar lugar
     EventosApp.emit('tarjetas:visibilidad');
 }
@@ -442,6 +445,6 @@ function bindEventos() {
 }
 
 export const OrdenTarjetas = {
-    actualizarEstadoBotonPersistir, aplicarVisibilidadCards, obtenerOrdenCards, aplicarOrdenCards,
+    actualizarEstadoBotonPersistir, aplicarVisibilidadCards, setVisibilidadCard, obtenerOrdenCards, aplicarOrdenCards,
     iniciarDragOrdenCards, iniciarDragTarjetas, bindEventos
 };

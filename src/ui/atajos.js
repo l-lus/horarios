@@ -1,5 +1,5 @@
 import { $ } from '../core/dom.js';
-import { STORAGE_KEYS } from '../core/constantes.js';
+import { STORAGE_KEYS, TOAST_MS } from '../core/constantes.js';
 import { Almacenamiento } from '../core/almacenamiento.js';
 import { EventosApp } from '../core/eventos.js';
 import { Movimiento } from '../core/movimiento.js';
@@ -13,6 +13,7 @@ import { CentroRespaldo } from './centro-respaldo.js';
 import { Notificaciones } from './notificaciones.js';
 import { RespaldoLocal } from './respaldo-local.js';
 import { IconosAnimados } from './iconos-animados.js';
+import { OrdenTarjetas } from './orden-tarjetas.js';
 import { mostrarToast } from './toast.js';
 
 // ====================================================================
@@ -211,6 +212,14 @@ function cerrarModalAtajos() {
     GestorModales.cerrarConPadre('modal-atajos');
 }
 
+// Ocultar desde el selector: se cierra el modal, se oculta la tarjeta y el aviso dice cómo volver a mostrarla (tocarlo la muestra otra vez)
+function _ocultarTarjeta() {
+    cerrarModalAtajos();
+    OrdenTarjetas.setVisibilidadCard('atajos', false);
+    mostrarToast('Tarjeta de atajos oculta', 'info', TOAST_MS.AVISO, 'para volver a mostrarla: Perfiles → Ajustes → Tarjetas y posición (tocá acá para deshacer)',
+        () => OrdenTarjetas.setVisibilidadCard('atajos', true));
+}
+
 function _alternarDesdeSelector(id) {
     const { lista, lleno } = alternarAtajo(obtenerAtajos(), id);
     if (lleno) { mostrarToast(`Máximo ${MAX_ATAJOS} atajos`, 'error'); return; }
@@ -234,6 +243,7 @@ function bindEventos() {
         if (btn) _alternarDesdeSelector(/** @type {HTMLElement} */ (btn).dataset.atajo ?? '');
     });
     document.querySelector('#modal-atajos .btn-cancel')?.addEventListener('click', () => cerrarModalAtajos());
+    $('btn-atajos-ocultar')?.addEventListener('click', () => _ocultarTarjeta());
     GestorModales.registrarAccionVolver('modal-atajos', cerrarModalAtajos);
 }
 

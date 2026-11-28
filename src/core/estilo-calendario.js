@@ -5,7 +5,7 @@ import { catalogoCiclico, opcionGuardada, siguienteEnCiclo } from './catalogo.js
 // ====================================================================
 // ESTILO DE LOS DÍAS DEL CALENDARIO: estilo (forma) y variante
 // ====================================================================
-// El CSS solo mira <html data-estilo-calendario="..." data-variante-calendario="...">. Redondeado y Cuadrado comparten las variantes de aro
+// El CSS solo mira <html data-estilo-calendario="..." data-variante-calendario="...">. Redondeado, Cuadrado y Cápsula comparten las variantes de aro
 // (cambia solo la forma); la primera, 'legacy' (Relleno), es el relleno original. Mínimo tiene las suyas (barra o punto).
 // Por defecto: Redondeado + Relleno.
 // La variante se recuerda por familia: al pasar de Redondeado a Mínimo y volver, sigue la que estaba.
@@ -13,6 +13,7 @@ import { catalogoCiclico, opcionGuardada, siguienteEnCiclo } from './catalogo.js
 export const ESTILOS_CALENDARIO = Object.freeze([
     { id: 'redondeado', label: 'Redondeado', familia: 'aro' },
     { id: 'cuadrado', label: 'Cuadrado', familia: 'aro' },
+    { id: 'capsula', label: 'Cápsula', familia: 'aro' },
     { id: 'minimo', label: 'Mínimo', familia: 'minimo' }
 ]);
 

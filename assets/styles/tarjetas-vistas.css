@@ -1013,7 +1013,7 @@
     background-clip: content-box;
 }
 
-/* Estilos con variantes (core/estilo-calendario.js): Redondeado y Cuadrado comparten las variantes de aro y solo cambian la forma;
+/* Estilos con variantes (core/estilo-calendario.js): Redondeado, Cuadrado y Cápsula comparten las variantes de aro y solo cambian la forma;
    Mínimo marca con una barra o un punto. La variante está en <html data-variante-calendario>. */
 
 /* Relleno (id 'legacy', la primera variante de Redondeado y Cuadrado) es el relleno original de arriba: no necesita reglas propias.
@@ -1022,20 +1022,29 @@
     border-radius: 24%;
 }
 
+/* Cápsula: la misma variante en una píldora vertical. La celda de la grilla sigue cuadrada (no cambia el alto del calendario):
+   el día ocupa el 72 % del ancho con el mismo alto, y los extremos quedan redondos */
+:root[data-estilo-calendario="capsula"] .calendario-dia {
+    width: 72%;
+    aspect-ratio: 0.72;
+    justify-self: center;
+    border-radius: var(--radius-full);
+}
+
 /* Contorno con brillo: aro fino del color del día con un resplandor suave */
-:root:is([data-estilo-calendario="redondeado"], [data-estilo-calendario="cuadrado"])[data-variante-calendario="contorno-brillo"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+:root:is([data-estilo-calendario="redondeado"], [data-estilo-calendario="cuadrado"], [data-estilo-calendario="capsula"])[data-variante-calendario="contorno-brillo"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
     background-color: transparent;
     box-shadow: inset 0 0 0 2px var(--cal-color), 0 0 10px color-mix(in srgb, var(--cal-color) 45%, transparent);
 }
 
 /* Aro con tinte: forma entera (sin hueco) con un relleno oscuro teñido del color del día y un aro del mismo color; el número queda con su color normal */
-:root:is([data-estilo-calendario="redondeado"], [data-estilo-calendario="cuadrado"])[data-variante-calendario="aro-tinte"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+:root:is([data-estilo-calendario="redondeado"], [data-estilo-calendario="cuadrado"], [data-estilo-calendario="capsula"])[data-variante-calendario="aro-tinte"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
     background-color: color-mix(in srgb, var(--cal-color) 20%, transparent);
     box-shadow: inset 0 0 0 2.5px var(--cal-color);
 }
 
 /* Aro grueso: aro ancho del color del día y el número del mismo color */
-:root:is([data-estilo-calendario="redondeado"], [data-estilo-calendario="cuadrado"])[data-variante-calendario="aro-grueso"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+:root:is([data-estilo-calendario="redondeado"], [data-estilo-calendario="cuadrado"], [data-estilo-calendario="capsula"])[data-variante-calendario="aro-grueso"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
     background-color: transparent;
     box-shadow: inset 0 0 0 4px var(--cal-color);
     color: color-mix(in srgb, var(--cal-color) 55%, var(--text-main));
@@ -1043,7 +1052,7 @@
 }
 
 /* Relleno con aro: relleno más chico (algo más oscuro que el color) y, separado por un hueco, un aro fino del color del día */
-:root:is([data-estilo-calendario="redondeado"], [data-estilo-calendario="cuadrado"])[data-variante-calendario="relleno-aro"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
+:root:is([data-estilo-calendario="redondeado"], [data-estilo-calendario="cuadrado"], [data-estilo-calendario="capsula"])[data-variante-calendario="relleno-aro"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
     padding: 4px;
     background-color: color-mix(in srgb, var(--cal-color) 80%, var(--bg-card));
     box-shadow: inset 0 0 0 1.5px var(--cal-color);

@@ -902,10 +902,10 @@ test('PosicionHeader: en PC valen las cuatro posiciones y en móvil solo arriba 
     assert.equal(etiquetaPosicion('inventada'), 'Arriba');
 });
 
-test('EstiloCalendario: el ciclo recorre los estilos (Redondeado, Cuadrado, Mínimo), vuelve al primero y tolera ids desconocidos', async () => {
+test('EstiloCalendario: el ciclo recorre los estilos (Redondeado, Cuadrado, Cápsula, Mínimo), vuelve al primero y tolera ids desconocidos', async () => {
     const { ESTILOS_CALENDARIO, VARIANTES_CALENDARIO, siguienteEstilo, etiquetaEstilo } = await import('../src/core/estilo-calendario.js');
     const ids = ESTILOS_CALENDARIO.map(e => e.id);
-    assert.deepEqual(ids, ['redondeado', 'cuadrado', 'minimo']);
+    assert.deepEqual(ids, ['redondeado', 'cuadrado', 'capsula', 'minimo']);
 
     const visitados = [];
     let id = 'redondeado';
@@ -917,7 +917,8 @@ test('EstiloCalendario: el ciclo recorre los estilos (Redondeado, Cuadrado, Mín
     assert.equal(siguienteEstilo('inventado'), 'cuadrado');
     assert.equal(etiquetaEstilo('inventado'), 'Redondeado');
 
-    // Redondeado y Cuadrado comparten las variantes de aro (la primera, Relleno, es el original y la de por defecto); Mínimo tiene las suyas
+    // Redondeado, Cuadrado y Cápsula comparten las variantes de aro (la primera, Relleno, es el original y la de por defecto); Mínimo tiene las suyas
+    assert.deepEqual(ESTILOS_CALENDARIO.filter(e => e.familia === 'aro').map(e => e.id), ['redondeado', 'cuadrado', 'capsula']);
     assert.equal(VARIANTES_CALENDARIO.aro[0].label, 'Relleno');
     assert.deepEqual(VARIANTES_CALENDARIO.aro.map(v => v.id), ['legacy', 'relleno-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo']);
     assert.deepEqual(VARIANTES_CALENDARIO.minimo.map(v => v.id), ['subrayado', 'punto']);

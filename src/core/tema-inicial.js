@@ -12,10 +12,10 @@ if (window.top !== window.self) {
 var TEMAS_VALIDOS = ['light', 'dark', 'medianoche', 'pink', 'green', 'blue', 'lilac', 'crema'];
 var ENFASIS_VALIDOS = ['predeterminado', 'lima', 'naranja', 'neutro', 'violeta', 'azul', 'rosa', 'turquesa'];
 var POSICIONES_HEADER_VALIDAS = ['top', 'bottom', 'left', 'right'];
-var ESTILOS_CALENDARIO_VALIDOS = ['redondeado', 'cuadrado', 'minimo'];
+var ESTILOS_CALENDARIO_VALIDOS = ['redondeado', 'cuadrado', 'capsula', 'minimo'];
 // Variantes por familia y familia de cada estilo (copias de VARIANTES_CALENDARIO y de ESTILOS_CALENDARIO), y los estilos de antes (ESTILOS_CALENDARIO_ANTERIORES)
 var VARIANTES_CALENDARIO_VALIDAS = { aro: ['legacy', 'relleno-aro', 'aro-tinte', 'aro-grueso', 'contorno-brillo'], minimo: ['subrayado', 'punto'] };
-var FAMILIA_ESTILO_CALENDARIO = { redondeado: 'aro', cuadrado: 'aro', minimo: 'minimo' };
+var FAMILIA_ESTILO_CALENDARIO = { redondeado: 'aro', cuadrado: 'aro', capsula: 'aro', minimo: 'minimo' };
 var ESTILOS_CALENDARIO_ANTERIORES = { 'legacy': ['redondeado', 'legacy'], 'relleno-aro': ['redondeado', 'relleno-aro'], 'cuadrado-aro': ['cuadrado', 'relleno-aro'], 'aro-tinte': ['redondeado', 'aro-tinte'], 'aro-grueso': ['redondeado', 'aro-grueso'], 'contorno-brillo': ['redondeado', 'contorno-brillo'], 'subrayado': ['minimo', 'subrayado'], 'punto': ['minimo', 'punto'] };
 
 (function () {

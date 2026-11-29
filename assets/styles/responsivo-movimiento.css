@@ -128,15 +128,15 @@ button.campo-flash {
     animation: campo-flash 500ms ease-in-out 2;
 }
 
-/* Destello de "hoy" en el calendario: un aro del color del texto que aparece y se apaga alrededor del día, y vuelve al borde de hoy de cada estilo
-   (variables --hoy-* de tarjetas-vistas.css). Es el mismo en todos los estilos de los días, con o sin registro */
+/* Destello de "hoy" en el calendario (botón Hoy). Sin registro no hay nada de color que resaltar: un aro del color del texto que aparece y se apaga
+   alrededor del día. Con registro ver calendario-hoy-pulso más abajo */
 @keyframes calendario-hoy-flash {
 
     0%,
     60%,
     100% {
-        outline: var(--hoy-grosor) solid var(--hoy-color);
-        outline-offset: var(--hoy-offset);
+        outline: 2px solid transparent;
+        outline-offset: 1px;
     }
 
     20%,
@@ -148,6 +148,27 @@ button.campo-flash {
 
 .calendario-dia.hoy.campo-flash {
     animation: calendario-hoy-flash 500ms ease-in-out 2;
+}
+
+/* Con registro el destello es un pulso de la parte de color de cada estilo (el relleno, el aro, la barra o el punto): crece un poco y brilla con el color
+   del día. El resplandor (drop-shadow) sigue lo que cada estilo dibuja, así que no hace falta una versión por estilo; solo transform y filter */
+@keyframes calendario-hoy-pulso {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0 transparent) brightness(1);
+    }
+
+    50% {
+        transform: scale(1.16);
+        filter: drop-shadow(0 0 3px var(--cal-color)) drop-shadow(0 0 7px var(--cal-color)) brightness(1.3);
+    }
+}
+
+.calendario-dia.hoy.campo-flash:not(.dia-sin-registro, .dia-filtrado) {
+    z-index: 2;
+    animation: calendario-hoy-pulso 600ms ease-in-out 2;
 }
 
 /* Filas de ajustes: sin borde propio y dentro de un contenedor con overflow hidden,
@@ -376,7 +397,7 @@ button.campo-flash-color {
     }
 
     .calendario-dia {
-        font-size: var(--text-base);
+        --cal-dia-tam: var(--text-base);
     }
 
     .left-column {

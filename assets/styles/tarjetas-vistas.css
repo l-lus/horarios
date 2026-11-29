@@ -720,7 +720,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    font-size: var(--text-sm);
+    --cal-dia-tam: var(--text-sm);
+    font-size: var(--cal-dia-tam);
     font-weight: var(--fw-medium);
     cursor: pointer;
     position: relative;
@@ -737,14 +738,14 @@
     cursor: default;
 }
 
-/* El borde de hoy va con variables para que cada estilo lo cambie sin tocar el resto y el destello (calendario-hoy-flash) vuelva a él al apagarse */
+/* Hoy se marca con el número más grande (en todos los estilos y con o sin registro); sin registro, además, con el color del texto en vez del atenuado */
 .calendario-dia.hoy {
-    --hoy-color: var(--text-muted);
-    --hoy-grosor: 2px;
-    --hoy-offset: -2px;
-    outline: var(--hoy-grosor) solid var(--hoy-color);
-    outline-offset: var(--hoy-offset);
+    font-size: calc(var(--cal-dia-tam) * 1.25);
     font-weight: var(--fw-bold);
+}
+
+.calendario-dia.hoy.dia-sin-registro {
+    color: var(--text-main);
 }
 
 .calendario-dia.tiene-comentario::after {
@@ -797,7 +798,7 @@
     box-shadow: inset 0 0 0 1.5px var(--cal-color);
 }
 
-/* Subrayado: sin círculo, el número con una barrita del color del día debajo; hoy queda encerrado en un aro fino */
+/* Subrayado: sin círculo, el número con una barrita del color del día debajo*/
 :root[data-estilo-calendario="subrayado"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue) {
     background: transparent;
 }
@@ -813,12 +814,6 @@
     background: var(--cal-color);
     transform: translateX(-50%);
     pointer-events: none;
-}
-
-:root[data-estilo-calendario="subrayado"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {
-    --hoy-color: var(--cal-color);
-    --hoy-grosor: 1.5px;
-    --hoy-offset: -1.5px;
 }
 
 /* Punto: sin círculo, el número con un puntito del color del día debajo; hoy lleva el número del color del día y en negrita */
@@ -841,7 +836,6 @@
 
 :root[data-estilo-calendario="punto"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {
     color: color-mix(in srgb, var(--cal-color) 55%, var(--text-main));
-    --hoy-color: transparent;
 }
 
 /* Solo contorno: aro fino y el número sin color; el color lo lleva únicamente el borde. Hoy va relleno */
@@ -853,18 +847,6 @@
 :root[data-estilo-calendario="solo-contorno"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {
     background: var(--cal-color);
     box-shadow: none;
-}
-
-/* Marca permanente de hoy con registro: en los estilos sin una marca propia, el mismo aro gris fino de legacy y de los días sin registro, pero por fuera del dibujo
-   (en el hueco entre celdas). Subrayado y punto ya se distinguen por su cuenta; solo contorno, porque hoy va relleno */
-:root[data-estilo-calendario="contorno-brillo"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy,
-:root[data-estilo-calendario="aro-grueso"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy,
-:root[data-estilo-calendario="relleno-aro"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {
-    --hoy-offset: 1px;
-}
-
-:root[data-estilo-calendario="solo-contorno"] .calendario-dia:is(.dia-normal, .dia-incompleto, .dia-cubierto, .dia-en-curso, .dia-especial-red, .dia-especial-purple, .dia-especial-orange, .dia-especial-gold, .dia-especial-blue).hoy {
-    --hoy-color: transparent;
 }
 
 /* Entrada inicial (una sola vez al cargar): pop escalonado en los días con registro,

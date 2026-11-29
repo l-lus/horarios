@@ -150,6 +150,21 @@ function renderizar() {
     actualizarEstados();
 }
 
+// Con la lista ya dibujada solo se actualiza el estado de cada fila (no se vuelve a armar), para que los interruptores se animen al cambiar
+function _sincronizarSelector() {
+    const lista = $('lista-atajos-opciones');
+    if (!lista) return;
+    const elegidos = obtenerAtajos();
+    const llena = elegidos.length >= MAX_ATAJOS;
+    lista.querySelectorAll('button[data-atajo]').forEach(btn => {
+        const activo = elegidos.includes(/** @type {HTMLElement} */ (btn).dataset.atajo);
+        btn.classList.toggle('btn-activo', activo);
+        /** @type {HTMLButtonElement} */ (btn).disabled = !activo && llena;
+    });
+    const contador = $('atajos-contador');
+    if (contador) contador.textContent = `${elegidos.length}/${MAX_ATAJOS}`;
+}
+
 function _renderizarSelector() {
     const lista = $('lista-atajos-opciones');
     if (!lista) return;
@@ -179,7 +194,7 @@ function _alternarDesdeSelector(id) {
     const { lista, lleno } = alternarAtajo(obtenerAtajos(), id);
     if (lleno) { mostrarToast(`Máximo ${MAX_ATAJOS} atajos`, 'error'); return; }
     _guardar(lista);
-    _renderizarSelector();
+    _sincronizarSelector();
     renderizar();
 }
 
